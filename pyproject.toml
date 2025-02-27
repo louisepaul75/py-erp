@@ -62,7 +62,7 @@ python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore::DeprecationWarning",
-    "ignore::django.utils.deprecation.RemovedInDjango50Warning",
+    "ignore::django.utils.deprecation.RemovedInDjango60Warning",
 ]
 addopts = "--cov=pyerp --cov-report=term --cov-report=html --no-cov-on-fail"
 
