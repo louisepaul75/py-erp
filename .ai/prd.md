@@ -977,6 +977,138 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - **Phase 3:** Production tracking and dashboard integration
   - **Phase 4:** Collaborative features and advanced notifications
 
+### 4.18 Internationalization & Localization (i18n/l10n) Framework
+
+- **Multilingual User Interface Strategy:**
+  - **Supported Languages:**
+    - **Phase 1:** German (primary), English (secondary)
+    - **Phase 2:** Additional languages based on business expansion (French, Spanish, etc.)
+    - Default language detection based on browser settings with manual override
+  - **UI Language Elements:**
+    - Complete translation of all interface elements, messages, and notifications
+    - Language selection in user preferences and session-based settings
+    - Visual language switcher in the application header
+    - Language-specific login pages
+    - Support for multi-language error messages and form validations
+  - **Right-to-Left (RTL) Support:**
+    - CSS framework with RTL capabilities for future language expansion
+    - Flexible layout components that adapt to text direction
+    - Proper handling of directional elements (arrows, icons, etc.)
+
+- **Content Translation Strategy:**
+  - **Static Content:**
+    - Translation via Django's built-in gettext framework
+    - Message extraction and compilation workflow
+    - Language file management and organization by module
+  - **Dynamic Content:**
+    - Model-level translation for product descriptions, categories, etc.
+    - Translation fields in database models (e.g., `name_de`, `name_en`, etc.)
+    - API support for content translation and language-specific data
+    - Translation fallback mechanism (use primary language if translation missing)
+  
+- **Date, Time, and Number Formatting:**
+  - Locale-specific date and time formats
+  - Number formatting with appropriate decimal and thousand separators
+  - Currency display with proper symbols and formatting
+  - Unit conversion where applicable (metric/imperial)
+  - Calendar localization for date pickers and scheduling interfaces
+
+- **Translation Management Workflow:**
+  - Extraction of translatable strings using Django's `makemessages` command
+  - Translation files (.po) organization by app and language
+  - Translation compilation process into binary (.mo) files
+  - Version control integration for translation files
+  - Translator guidelines and context documentation
+  - Translation quality assurance process
+
+- **Technical Implementation:**
+  - **URL-based Language Switching:**
+    - Integration of Django's language prefix URL pattern
+    - URL format: `/{language_code}/path/to/view/`
+    - Language persistence via session and/or user preferences
+    - Automatic language detection with manual override
+  - **Middleware Configuration:**
+    - Enable Django's `LocaleMiddleware` for language detection and switching
+    - Custom middleware for language-specific business logic if needed
+    - Session-based language persistence
+  - **Template Enhancements:**
+    - Consistent use of translation tags in all templates
+    - Language-specific template overrides when needed
+    - Block-level translation for complex content
+    - Translation context usage for ambiguous terms
+  - **JavaScript Internationalization:**
+    - Client-side translation with Django's JavaScript catalog
+    - AJAX handling for language-specific responses
+    - Dynamic content loading with proper language context
+    - Date and number formatting in JavaScript
+
+- **Translation Resources:**
+  - **Translation Management System:**
+    - Initially Git-based workflow with .po files
+    - Potential integration with translation management tools in future phases
+    - Process for external translator collaboration
+  - **Translation Memory:**
+    - Reuse of previously translated strings
+    - Terminology consistency across the application
+    - Context documentation for translators
+  - **Quality Assurance:**
+    - Translation validation tools
+    - Visual inspection in multiple languages
+    - Automated tests for language switching and display
+
+- **Implementation Phases:**
+  - **Phase 1 (2 months):**
+    - Base framework setup and configuration
+    - German and English language support
+    - Static UI element translation
+    - URL-based language switching
+    - Language selection in user preferences
+  - **Phase 2 (2 months):**
+    - Dynamic content translation in product module
+    - Translation of reporting and dashboard interfaces
+    - Client-side JavaScript translation
+    - Expanded language files to cover all modules
+    - Language-specific import/export formats
+  - **Phase 3 (ongoing):**
+    - Support for additional languages as needed
+    - Translation memory and terminology management
+    - Advanced translation workflow integration
+    - RTL language support if required
+
+- **Integration Points:**
+  - **Product Management:**
+    - Multilingual product descriptions, names, and attributes
+    - Language-specific product display in catalogs and detail views
+    - Translation inheritance from parent to variant products
+  - **Sales & Marketing:**
+    - Multilingual sales documents (quotes, invoices)
+    - Language-specific pricing information
+    - Customer communications in preferred language
+  - **Reporting & Analytics:**
+    - Language-specific report generation
+    - Localized data visualization
+    - Multilingual dashboard interfaces
+  - **User Administration:**
+    - Language preference in user profiles
+    - Role-based language defaults
+    - Language-specific permissions if needed
+
+- **Testing & Quality Assurance:**
+  - **Localization Testing:**
+    - Interface verification in all supported languages
+    - Layout testing for text expansion/contraction
+    - Character encoding and special character handling
+    - Date, time, and number format validation
+  - **Automated Tests:**
+    - Language switching tests
+    - Translation coverage verification
+    - Missing translation detection
+    - Visual regression testing for all languages
+  - **Performance Testing:**
+    - Language switching performance
+    - Translation loading and caching efficiency
+    - Impact of multiple language support on system resources
+
 ## 7. Non-Functional Requirements
 
 ### 7.1 Performance
