@@ -293,5 +293,27 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'pyerp.products.image_api': {
+            'handlers': ['console', 'data_sync_file'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
     },
+}
+
+# Image API Configuration
+IMAGE_API = {
+    'BASE_URL': os.environ.get('IMAGE_API_URL', 'http://webapp.zinnfiguren.de/api/'),
+    'USERNAME': os.environ.get('IMAGE_API_USERNAME', ''),
+    'PASSWORD': os.environ.get('IMAGE_API_PASSWORD', ''),
+    'TIMEOUT': int(os.environ.get('IMAGE_API_TIMEOUT', 30)),
+    'CACHE_ENABLED': os.environ.get('IMAGE_API_CACHE_ENABLED', 'True').lower() == 'true',
+    'CACHE_TIMEOUT': int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600)),  # 1 hour
+}
+
+# Update loggers for image API
+LOGGING['loggers']['pyerp.products.image_api'] = {
+    'handlers': ['console', 'data_sync_file'],
+    'level': LOG_LEVEL,
+    'propagate': False,
 } 

@@ -17,11 +17,18 @@ class ProductCategoryForm(forms.ModelForm):
 
 
 class ProductImageForm(forms.ModelForm):
-    """Form for uploading product images."""
+    """Form for product images."""
     
     class Meta:
         model = ProductImage
-        fields = ['image', 'alt_text', 'is_primary']
+        fields = ['image_url', 'thumbnail_url', 'alt_text', 'is_primary', 'priority']
+        widgets = {
+            'alt_text': forms.TextInput(attrs={'class': 'form-control'}),
+            'is_primary': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'priority': forms.NumberInput(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'thumbnail_url': forms.URLInput(attrs={'class': 'form-control'}),
+        }
 
 
 class ProductForm(forms.ModelForm):

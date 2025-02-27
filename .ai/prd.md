@@ -75,6 +75,49 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Support multi-level assemblies (recursive BOM).  
   - Track cost roll-up from child components.  
 
+### 4.1.1 Product Image Integration
+
+- **External Image Database Integration:**
+  - Connect to external Django application managing product images via API. ✅ *Verified*
+  - Implement secure authentication to the image database API. ✅ *Verified*
+  - Support for different image types (Produktfoto, Markt-Messe-Shop, Szene, etc.). ✅ *Verified*
+  - Prioritize image display based on type and attributes (front=true flag). ✅ *Verified*
+- **Image Management:**
+  - Display product images in the ERP interface with proper prioritization. ✅ *Verified*
+  - Allow users to view all available images for a product.
+  - Enable selection of primary product image for display in various contexts.
+  - Support batch operations for image management across multiple products.
+- **Caching & Performance:**
+  - Implement caching strategy for frequently accessed images to improve performance. ✅ *Verified*
+  - Support for image thumbnails generation and resizing for different UI contexts. ✅ *Verified*
+  - Asynchronous loading of images to prevent UI performance degradation.
+- **Synchronization:**
+  - Regular synchronization with the image database to ensure up-to-date images. ✅ *Verified*
+  - Track image changes and updates for audit purposes. ✅ *Verified*
+  - Handle conflict resolution for image changes.
+- **Format Optimization:** ✅ *Implemented*
+  - Prioritize web-friendly formats (PNG, JPEG) over design formats (PSD, etc.). ✅ *Verified*
+  - Select highest quality available image based on resolution and format. ✅ *Verified*
+  - Support appropriate image formats for different use cases (thumbnails, product detail, etc.). ✅ *Verified*
+
+### 4.1.2 API Structure & Findings ✅ *Implemented*
+
+- **API Endpoint:**
+  - Base URL: `http://webapp.zinnfiguren.de/api/` ✅ *Verified*
+  - Endpoint: `all-files-and-articles/` ✅ *Verified*
+  - Supports pagination with page and page_size parameters ✅ *Verified*
+- **Image Data Structure:**
+  - Each image record contains: ✅ *Verified*
+    - `original_file`: The original uploaded image with type, format, and URL
+    - `exported_files`: Array of derived formats (PNG, JPEG, TIFF) with resolutions
+    - `articles`: Array of associated product articles with number and front flag
+  - Image types include: Produktfoto, Markt-Messe-Shop, Szene, etc. ✅ *Verified*
+  - Resolution options range from thumbnails (200×200) to full size (4032×3024) ✅ *Verified*
+- **Image Prioritization Logic:**
+  - Products with front=true and Produktfoto type have highest priority ✅ *Verified*
+  - File formats are prioritized: PNG > JPEG > original format ✅ *Verified*
+  - Images can be associated with multiple products ✅ *Verified*
+
 ### 4.2 Sales Management
 
 - **Customer Master Data:**  
@@ -123,6 +166,11 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 - **PDF & Document Generation:**  
   - Generate and store PDF documents for quotes, invoices, delivery notes, picking lists.  
   - Option to print directly (local network printer) or allow download.  
+- **Image Database API Integration:**
+  - Secure connection to external image management Django application. ✅ *Verified*
+  - Support for pagination, filtering, and sorting of image data. ✅ *Verified*
+  - Consistent error handling for API connection issues. ✅ *Implemented*
+  - Performance optimization for image retrieval and display.
 
 ### 4.6 Data Migration & Legacy Sync
 
@@ -490,6 +538,13 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Increase test coverage for core modules to 80%
     - Implement tests for product import and management commands
     - Create validation documentation with examples
+  - **Product Image Integration:** *In Progress*
+    - Connect to external image database via API ✅ *Implemented*
+    - Implement image prioritization and display in product views
+    - Create caching mechanism for frequently accessed images
+    - Develop image synchronization process with configurable frequency
+    - Add image management capabilities for product administrators
+    - Implement secure authentication to the image API ✅ *Implemented*
 - **Phase 2:**  
   - Multi-warehouse, advanced production flows, partial/split invoicing.  
   - POS/Ecommerce integrations.  

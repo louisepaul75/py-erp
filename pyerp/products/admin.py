@@ -5,8 +5,9 @@ Admin interface for the products app.
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 from django.db import models
+from django.utils.safestring import mark_safe
 
-from pyerp.products.models import Product, ProductCategory, ProductImage
+from pyerp.products.models import Product, ProductCategory, ProductImage, ImageSyncLog
 
 
 @admin.register(ProductCategory)
@@ -26,7 +27,46 @@ class ProductImageInline(admin.TabularInline):
     """
     model = ProductImage
     extra = 1
-    fields = ('image', 'alt_text', 'is_primary', 'sort_order')
+    fields = ('image_url', 'thumbnail_url', 'image_type', 'alt_text', 'is_primary', 'is_front', 'priority')
+    readonly_fields = ('image_type', 'is_front', 'last_synced')
+    
+    def has_add_permission(self, request, obj=None):
+        """
+        Disable adding images through the admin as they should be synced
+        from the external image database.
+        """
+        return False
+    
+    def image_thumbnail(self, obj):
+        """
+        Display a thumbnail of the image in the admin.
+        """
+        if obj.thumbnail_url:
+            return mark_safe(f'<img src="{obj.thumbnail_url}" width="100" />')
+        return '-'
+    image_thumbnail.short_description = _('Thumbnail')
+
+
+class ImageSyncLogAdmin(admin.ModelAdmin):
+    """
+    Admin interface for ImageSyncLog model.
+    """
+    list_display = ('started_at', 'completed_at', 'status', 'images_added', 'images_updated', 'images_deleted', 'products_affected')
+    list_filter = ('status',)
+    search_fields = ('error_message',)
+    readonly_fields = ('started_at', 'completed_at', 'status', 'images_added', 'images_updated', 'images_deleted', 'products_affected', 'error_message')
+    
+    def has_add_permission(self, request):
+        """
+        Disable adding logs manually as they are created by the sync process.
+        """
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """
+        Disable changing logs as they should be read-only records.
+        """
+        return False
 
 
 @admin.register(Product)
@@ -98,3 +138,6 @@ class ProductAdmin(admin.ModelAdmin):
             # Don't allow changing is_parent if product has variants
             readonly_fields.append('is_parent')
         return readonly_fields 
+
+# Register the ImageSyncLog model
+admin.site.register(ImageSyncLog, ImageSyncLogAdmin) 
