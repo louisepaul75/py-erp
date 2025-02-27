@@ -4,6 +4,14 @@
 
 As of February 27, 2025, we've updated several dependencies to ensure compatibility with Python 3.13.2 and to resolve various issues:
 
+### Major Framework Updates
+
+- **Django**: Upgraded from 4.2.11 to 5.1.6
+  - This is a major version upgrade that includes new features and backward-incompatible changes
+  - Python 3.10+ is now required (we're using Python 3.13.2)
+  - Updated RemovedInDjango60Warning in pytest settings
+  - Successfully passed all system checks and tests
+
 ### Core Dependencies
 
 - **Celery**: Updated from 5.3.6 to 5.4.0

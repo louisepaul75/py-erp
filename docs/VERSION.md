@@ -4,7 +4,7 @@ This document tracks the version history and roadmap for pyERP.
 
 ## Current Version
 
-**0.1.0-alpha.1** (Phase 0: Foundation)
+**0.1.1-alpha.1** (Phase 0: Foundation)
 
 ## Version Scheme
 
@@ -28,7 +28,12 @@ MAJOR.MINOR.PATCH-PHASE
 
 ## Release History
 
-### 0.1.0-alpha.1 (Current)
+### 0.1.1-alpha.1 (Current)
+- Upgraded Django framework from 4.2.11 to 5.1.6
+- Updated associated dependencies
+- Implemented compatibility fixes for Django 5.1
+
+### 0.1.0-alpha.1
 - Initial project structure and organization
 - Development environment setup with Docker
 - Configuration of CI/CD pipeline

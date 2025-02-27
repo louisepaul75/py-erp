@@ -587,6 +587,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Field-level permission controls
   - Enhanced audit logging with UI for review
   - User and role management interfaces
+  - Django framework upgrade to 5.1.6 ✅ *Implemented*
 
 - **Phase 3 (Advanced):**
   - Multi-factor authentication
@@ -600,6 +601,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 The user and roles system will be built on Django's authentication framework with strategic extensions for ERP-specific needs:
 
 - **Core Components:**
+  - **Django Framework:** Now using Django 5.1, with improved performance and security features
   - **Custom User Model:** Extend Django's AbstractUser to include additional fields
     ```python
     # Example structure (not actual implementation)
