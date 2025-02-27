@@ -23,6 +23,29 @@ This project uses a phased development approach:
 
 The development strategy includes building a one-way synchronization with the legacy ERP system to facilitate a module-by-module migration approach.
 
+## Git Workflow & Branching Strategy
+
+This project follows a modified GitFlow workflow:
+
+### Main Branches
+- **`main`**: Production-ready code, always stable and deployable
+- **`develop`**: Integration branch for completed features
+
+### Supporting Branches
+- **`feature/*`**: For new features (e.g., `feature/product-bom-creation`)
+- **`bugfix/*`**: For bug fixes in development
+- **`hotfix/*`**: For critical fixes that need to go directly to production
+- **`release/*`**: For preparing version releases (e.g., `release/1.0.0`)
+
+### Version Strategy
+We use Semantic Versioning (SemVer) with phase indicators: `MAJOR.MINOR.PATCH-PHASE`
+
+- Current version: See [VERSION.md](VERSION.md)
+- Version lifecycle: alpha → beta → release candidate → final release
+
+### Contributing
+For detailed contribution guidelines, including branch naming conventions, commit message formats, and pull request procedures, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Getting Started
 
 ### Prerequisites
@@ -135,10 +158,19 @@ pytest --cov=pyerp
 
 The project uses GitHub Actions for continuous integration with the following workflows:
 
-- **Test and Lint**: Runs on every push to main/master and pull requests to verify code quality
+- **Test and Lint**: Runs on every push and pull request to validate code quality and test coverage
+- **Deploy Application**: Deploys to appropriate environments based on branch/tag:
+  - `develop` branch → Development environment
+  - `release/*` branches → Staging environment
+  - Tags (`v*`) → Production environment
 - **Dependency Security Scan**: Runs weekly to check for security vulnerabilities
 - **Update Dependencies**: Runs weekly to update dependencies and create pull requests with updates
-- **Build Docker Image**: Builds and publishes Docker images on merges to main/master and tags
+- **Build Docker Image**: Builds and publishes Docker images on merges to main/develop and tags
+
+Branch protection rules ensure:
+- Pull request reviews are required for merges to `main` and `develop`
+- CI checks must pass before merging
+- Force pushes are not allowed to protected branches
 
 CI/CD workflows can be found in the `.github/workflows` directory.
 

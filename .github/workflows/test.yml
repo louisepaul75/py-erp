@@ -2,9 +2,9 @@ name: Test and Lint
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, develop, 'release/**', 'feature/**', 'bugfix/**', 'hotfix/**' ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, develop, 'release/**' ]
 
 jobs:
   test:
@@ -57,4 +57,22 @@ jobs:
         DJANGO_SETTINGS_MODULE: pyerp.settings.testing
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
       run: |
-        pytest 
+        pytest --cov=. --cov-report=xml
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        
+    - name: Check coverage thresholds
+      run: |
+        coverage report --fail-under=80 || echo "::warning::Coverage is below 80%"
+        
+    - name: Check branch-specific requirements
+      run: |
+        if [[ $GITHUB_REF == refs/heads/main || $GITHUB_REF =~ refs/heads/release/.* ]]; then
+          echo "Running additional checks for main and release branches"
+          # Add stricter checks for main and release branches
+          coverage report --fail-under=80 || exit 1
+        fi 

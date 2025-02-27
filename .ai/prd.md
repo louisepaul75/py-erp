@@ -380,6 +380,57 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Security headers implementation for enhanced protection ✅ *Implemented*
   - HTTP to HTTPS redirection ✅ *Implemented*
 
+### 4.15 GitHub Repository Structure & Workflow
+
+- **Branching Strategy:**
+  - **Main Branches:**
+    - `main`: Production-ready code, always stable and deployable
+    - `develop`: Integration branch for active development
+  - **Supporting Branches:**
+    - `feature/*`: For new features (e.g., `feature/product-bom-creation`)
+    - `bugfix/*`: For bug fixes in development
+    - `hotfix/*`: For critical fixes that need to go directly to production
+    - `release/*`: For preparing version releases (e.g., `release/1.0.0`)
+  - **Workflow Rules:**
+    - Developers work on `feature/*` or `bugfix/*` branches from `develop`
+    - Complete branches are merged to `develop` via pull requests
+    - For releases, a `release/*` branch is created from `develop`
+    - After testing, release branches merge to `main` and back to `develop`
+    - Production issues are fixed in `hotfix/*` branches and merged to both `main` and `develop`
+
+- **Versioning Strategy:**
+  - Semantic Versioning (SemVer) with phase indicators: `MAJOR.MINOR.PATCH-PHASE`
+  - **MAJOR**: Increment for incompatible API changes
+  - **MINOR**: Increment for new features (backward compatible)
+  - **PATCH**: Increment for bug fixes
+  - **PHASE**: Optional suffix indicating development phase (alpha, beta, rc)
+  - Phase 0 (Foundation): Versions starting with `0.x.y`
+  - Phase 1 (MVP): Versions starting with `1.x.y`
+  - Phase 2: Versions continuing with `1.x.y` with incrementing minor versions
+  - Phase 3+: Versions may move to `2.x.y` if major changes are introduced
+
+- **Release Management:**
+  - Dedicated `release/*` branches for release preparation
+  - Git tags used to mark releases on `main` branch
+  - GitHub Releases feature for documenting changes
+  - Release notes template for consistent documentation
+
+- **CI/CD Configuration:**
+  - Automated testing for all branches and pull requests
+  - Environment-specific deployments based on branch/tag:
+    - Development deployment from `develop` branch
+    - Staging deployment from `release/*` branches
+    - Production deployment from tags on `main`
+  - Security scanning for dependencies and code vulnerabilities
+  - Scheduled dependency updates with automated PRs
+
+- **Branch Protection Rules:**
+  - Protection for `main` and `develop` branches
+  - Required PR reviews before merging
+  - Required CI checks to pass
+  - No force pushes to protected branches
+  - Linear history maintained for cleaner repository
+
 ## 5. Non-Functional Requirements
 
 1. **Performance**  
