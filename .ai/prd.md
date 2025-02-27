@@ -734,6 +734,14 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Implement integration tests for critical business workflows
     - Add tests for API endpoints and views
     - Increase overall test coverage to 60%
+  - **WebSocket & Real-time Updates - Phase 1:**
+    - Implement Django Channels infrastructure with Redis backend
+    - Create core WebSocket authentication and connection handling
+    - Develop the central notification system framework
+    - Build notification preferences management UI
+    - Implement real-time inventory level updates for critical products
+    - Add WebSocket testing framework and basic tests
+
 - **Phase 3+:**  
   - Expand accounting integration, advanced analytics, further automation.  
   - **Testing & Validation Maturity:**
@@ -743,6 +751,13 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Implement continuous performance monitoring
     - Add automated regression testing
     - Maintain test coverage above 80% across all modules
+  - **WebSocket & Real-time Updates - Phase 2:**
+    - Extend real-time features to order processing workflows
+    - Implement live production status tracking
+    - Add real-time dashboard updates for KPIs and metrics
+    - Develop collaborative editing features with conflict prevention
+    - Create comprehensive WebSocket monitoring and diagnostics
+    - Scale WebSocket architecture for high-volume events
 
 ### 4.13 Logging System & Monitoring
 
@@ -896,6 +911,71 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Security scanning for vulnerabilities
   - Dependency validation and updates
   - Documentation generation and validation
+
+### 4.17 WebSockets & Real-time Updates Integration
+
+- **Real-time Communication Framework:**
+  - Integration of Django Channels for WebSocket support
+  - Asynchronous event handling for scalable real-time operations
+  - Redis as the channel layer backend for production
+  - In-memory channel layer for development environments
+  - Secure WebSocket connections with authentication
+
+- **Key Real-time Features:**
+  - **Inventory Monitoring:**
+    - Real-time stock level updates across multiple warehouses
+    - Instant alerts for low stock or stockout conditions
+    - Live inventory adjustment notifications
+  - **Order Processing:**
+    - Immediate order status updates for sales team
+    - Real-time notifications for new orders from all channels (POS, eCommerce)
+    - Live updates for order modifications and cancellations
+  - **Production Workflow:**
+    - Real-time production order status tracking
+    - Instant notification of production milestone completions
+    - Live updates on machine/workstation status
+  - **Collaborative Features:**
+    - Real-time presence indication for users viewing the same records
+    - Live updates when multiple users edit related data
+    - Prevention of conflicting concurrent edits
+  - **Dashboard & Analytics:**
+    - Live KPI updates on management dashboards
+    - Real-time sales metrics and trend visualization
+    - Dynamic production efficiency indicators
+  - **Notification System:**
+    - Centralized real-time notification hub for users
+    - Customizable alert preferences by role and importance
+    - Desktop notifications for critical events
+
+- **Technical Implementation Strategy:**
+  - **Consumer Architecture:**
+    - Modular WebSocket consumers organized by business domain
+    - Consistent authentication and authorization patterns
+    - Standardized message format for all real-time communications
+  - **Event Broadcasting:**
+    - Centralized event dispatch mechanism
+    - Targeted broadcast to specific users, groups, or channels
+    - Event batching for high-frequency updates to prevent UI flooding
+  - **Frontend Integration:**
+    - Standardized JavaScript client for WebSocket connections
+    - Reconnection logic with exponential backoff
+    - Consistent event handling patterns across the application
+  - **Scalability Considerations:**
+    - Proper channel naming conventions to prevent memory leaks
+    - Efficient group management for broadcasting
+    - Connection monitoring and limiting mechanisms
+
+- **Testing & Monitoring:**
+  - Specialized testing framework for WebSocket consumers
+  - Simulation tools for high-volume real-time events
+  - Monitoring of WebSocket connection health and message throughput
+  - Performance testing under various loads
+
+- **Implementation Phases:**
+  - **Phase 1:** Core WebSocket infrastructure and notification system
+  - **Phase 2:** Inventory and order update features
+  - **Phase 3:** Production tracking and dashboard integration
+  - **Phase 4:** Collaborative features and advanced notifications
 
 ## 7. Non-Functional Requirements
 
