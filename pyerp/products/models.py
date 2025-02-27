@@ -47,13 +47,7 @@ class BaseProduct(models.Model):
         blank=True,
         null=True,
         unique=True,
-        help_text=_('ID in the legacy system - maps directly to __KEY in Artikel_Variante/Artikel_Familie')
-    )
-    legacy_uid = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_('UID in the legacy system - maps directly to UID in Artikel_Variante/Artikel_Familie')
+        help_text=_('ID in the legacy system - maps directly to __KEY and UID in legacy system (which had identical values)')
     )
     
     # Basic information
@@ -128,21 +122,7 @@ class VariantProduct(BaseProduct):
         help_text=_('Base SKU without variant')
     )
     
-    # Original legacy system field names - for display purposes
-    legacy_key = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_('Original __KEY field from Artikel_Variante'),
-        db_column='__KEY'  # Actual column name in the database
-    )
-    legacy_uid_original = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_('Original UID field from Artikel_Variante'),
-        db_column='UID'  # Actual column name in the database
-    )
+    # Original legacy system field names - keeping only Familie_ reference
     legacy_familie = models.CharField(
         max_length=50,
         blank=True,

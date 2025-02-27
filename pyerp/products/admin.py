@@ -32,7 +32,7 @@ class ParentProductAdmin(admin.ModelAdmin):
     search_fields = ('sku', 'name', 'base_sku', 'legacy_id')
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('sku', 'base_sku', 'legacy_id', 'legacy_uid', 'name')
+            'fields': ('sku', 'base_sku', 'legacy_id', 'name')
         }),
         (_('Status'), {
             'fields': ('is_active',)
@@ -48,7 +48,7 @@ class VariantProductAdmin(admin.ModelAdmin):
     search_fields = ('sku', 'name', 'base_sku', 'variant_code', 'legacy_id', 'legacy_sku')
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('sku', 'parent', 'variant_code', 'base_sku', 'legacy_id', 'legacy_uid', 'legacy_sku', 'name')
+            'fields': ('sku', 'parent', 'variant_code', 'base_sku', 'legacy_id', 'legacy_sku', 'name')
         }),
         (_('Status'), {
             'fields': ('is_active',)
