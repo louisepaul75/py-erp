@@ -145,31 +145,27 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 ### 4.6.1 Product Data Migration Strategy
 
 - **Product Data Structure Understanding:**
-  - The legacy 4D system uses a two-table structure for products:
-    - **Artikel_Stamm**: Contains product variants (currently being imported)
-    - **Art_Kalkulation**: Contains parent/base products (to be imported in next phase)
-  - Products in Artikel_Stamm have references to their parent products through the `fk_ArtNr` field
-
-- **Multi-Phase Product Import Approach:**
-  - **Phase 1**: Import product variants from Artikel_Stamm
-    - Extract variant codes and base SKUs from the composite SKU (e.g., "745020-BE")
-    - Create placeholder categories based on ArtGruppe codes
-    - Establish proper product variant relationships
-    - Map legacy fields to new system fields
-  - **Phase 2**: Import parent products from Art_Kalkulation
-    - Associate parent products with their variants
-    - Enhance category structure with proper hierarchies
-    - Import shared attributes from parent to variants
-    - Establish complete product relationships
-
+  - The legacy 4D system has evolved its product structure:
+    - **Artikel_Stamm**: Legacy/older product table (no longer primary source)
+    - **Artikel_Variante**: Current primary product table replacing Artikel_Stamm
+    - Products in Artikel_Variante contain all necessary data including variant information
+  
+- **Single-Source Product Import Approach:**
+  - **Primary Import Source**: Import all products from Artikel_Variante
+    - Extract base SKUs and variant codes from the composite SKU format (e.g., "11400-BE")
+    - Establish proper product hierarchies based on base SKU relationships
+    - Create parent products for base SKUs without specific variants
+    - Set variant relationships appropriately for products with variant codes
+  
 - **Product Data Quality Considerations:**
-  - Handle missing or incomplete data with sensible defaults
-  - Implement data validation and cleansing rules
-  - Create logs of problematic records for manual review
-  - Address discrepancies between variant and parent data
+  - Handle products with and without explicit variant codes consistently
+  - Create consistent parent-child relationships based on SKU patterns
+  - Import pricing data from the structured Preise field (Laden, Handel, Empf., Einkauf prices)
+  - Establish proper categorization based on product family information
+  - Ensure products with the same base SKU share appropriate attributes
 
 - **Product Import Technical Implementation:**
-  - Use management commands for both initial and incremental imports
+  - Use management commands for both initial and incremental imports from Artikel_Variante
   - Implement dry-run capability for safe testing
   - Provide proper logging and error tracking
   - Support bulk operations for efficiency
