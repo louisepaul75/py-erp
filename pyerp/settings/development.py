@@ -17,17 +17,25 @@ ALLOWED_HOSTS = [
     '0.0.0.0',
 ]
 
-# Database configuration 
+# Database configuration using SQLite for development simplicity
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-        'USER': os.environ.get('DB_USER', 'admin'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR.parent, 'db.sqlite3'),
     }
 }
+
+# Alternate MySQL configuration if needed
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+#         'USER': os.environ.get('DB_USER', 'admin'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+#         'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
+#         'PORT': os.environ.get('DB_PORT', '3306'),
+#     }
+# }
 
 # Alternative DATABASE_URL configuration (commented out)
 # DATABASES = {
