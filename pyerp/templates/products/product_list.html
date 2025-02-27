@@ -87,7 +87,7 @@
         <div class="col-md-9">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4>{% trans "Products" %}</h4>
+                    <h4>{% trans "Products" %} <small class="text-muted">({% trans "Parent Products" %})</small></h4>
                     
                     <!-- Quick search form -->
                     <form method="get" action="{% url 'products:product_list' %}" class="form-inline">
@@ -136,6 +136,9 @@
                                 <div class="card-body">
                                     <p class="card-text">
                                         <strong>{% trans "SKU" %}:</strong> {{ product.sku }}<br>
+                                        {% if product.variants.count %}
+                                        <strong>{% trans "Variants" %}:</strong> {{ product.variants.count }}<br>
+                                        {% endif %}
                                         <strong>{% trans "Price" %}:</strong> {{ product.list_price }} €<br>
                                         <strong>{% trans "Stock" %}:</strong> {{ product.stock_quantity }}
                                     </p>
@@ -144,9 +147,16 @@
                                     {% endif %}
                                 </div>
                                 <div class="card-footer">
-                                    <a href="{% url 'products:product_detail' product.id %}" class="btn btn-primary">
-                                        {% trans "View Details" %}
-                                    </a>
+                                    <div class="d-flex justify-content-between">
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-primary">
+                                            {% trans "View Details" %}
+                                        </a>
+                                        {% if product.variants.count %}
+                                        <a href="{% url 'products:product_detail' product.id %}#variants" class="btn btn-outline-secondary">
+                                            <i class="fas fa-list"></i> {% trans "View Variants" %}
+                                        </a>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>

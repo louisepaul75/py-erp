@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ variant.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'products:product_list' %}">{% trans "Products" %}</a></li>
+                    {% if parent_product %}
+                    <li class="breadcrumb-item"><a href="{% url 'products:product_detail' parent_product.id %}">{{ parent_product.name }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ variant.name }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Variant Images -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-body">
+                    {% if variant.images.exists %}
+                    <!-- Display images from database -->
+                    <div id="variantCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            {% for image in variant.images.all %}
+                            <div class="carousel-item {% if image.is_primary %}active{% endif %}">
+                                <img src="{{ image.image_url }}" class="d-block w-100" alt="{{ variant.name }}">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if variant.images.count > 1 %}
+                        <button class="carousel-control-prev" type="button" data-bs-target="#variantCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">{% trans "Previous" %}</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#variantCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">{% trans "Next" %}</span>
+                        </button>
+                        {% endif %}
+                        
+                        <!-- Thumbnails for navigation -->
+                        {% if variant.images.count > 1 %}
+                        <div class="row mt-3">
+                            {% for image in variant.images.all %}
+                            <div class="col-3 mb-2">
+                                <button type="button" data-bs-target="#variantCarousel" data-bs-slide-to="{{ forloop.counter0 }}" class="{% if image.is_primary %}active{% endif %} border-0 p-0">
+                                    <img src="{{ image.thumbnail_url|default:image.image_url }}" class="img-thumbnail" alt="{{ variant.name }}">
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center p-5">
+                        <i class="fas fa-image fa-5x text-muted"></i>
+                        <p class="mt-3">{% trans "No images available" %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Variant Details -->
+        <div class="col-md-7">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>{{ variant.name }}</h4>
+                    {% if parent_product %}
+                    <a href="{% url 'products:product_detail' parent_product.id %}#variants" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-arrow-left"></i> {% trans "Back to Parent Product" %}
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>{% trans "SKU" %}:</strong> {{ variant.sku }}</p>
+                            {% if variant.variant_code %}
+                            <p><strong>{% trans "Variant Code" %}:</strong> {{ variant.variant_code }}</p>
+                            {% endif %}
+                            {% if variant.manufacturer %}
+                            <p><strong>{% trans "Manufacturer" %}:</strong> {{ variant.manufacturer }}</p>
+                            {% endif %}
+                            {% if variant.manufacturer_part_number %}
+                            <p><strong>{% trans "MPN" %}:</strong> {{ variant.manufacturer_part_number }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {% if variant.is_active %}
+                            <span class="badge badge-success">{% trans "Active" %}</span>
+                            {% else %}
+                            <span class="badge badge-danger">{% trans "Inactive" %}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h5>{% trans "Description" %}</h5>
+                            {% if variant.description %}
+                            <div class="variant-description">
+                                {{ variant.description|linebreaks }}
+                            </div>
+                            {% else %}
+                            <p class="text-muted">{% trans "No description available." %}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>{% trans "Pricing" %}</h5>
+                            <p><strong>{% trans "List Price" %}:</strong> 
+                                {% if variant.list_price %}
+                                    {{ variant.list_price }} €
+                                {% else %}
+                                    {% trans "N/A" %}
+                                {% endif %}
+                            </p>
+                            {% if variant.sale_price %}
+                            <p><strong>{% trans "Sale Price" %}:</strong> {{ variant.sale_price }} €</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h5>{% trans "Inventory" %}</h5>
+                            <p><strong>{% trans "Stock Quantity" %}:</strong> 
+                                {% if variant.stock_quantity %}
+                                    {{ variant.stock_quantity }}
+                                {% else %}
+                                    {% trans "N/A" %}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if variant.weight or variant.length or variant.width or variant.height %}
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h5>{% trans "Physical Attributes" %}</h5>
+                            <div class="row">
+                                {% if variant.weight %}
+                                <div class="col-md-3">
+                                    <p><strong>{% trans "Weight" %}:</strong> {{ variant.weight }} kg</p>
+                                </div>
+                                {% endif %}
+                                {% if variant.length %}
+                                <div class="col-md-3">
+                                    <p><strong>{% trans "Length" %}:</strong> {{ variant.length }} cm</p>
+                                </div>
+                                {% endif %}
+                                {% if variant.width %}
+                                <div class="col-md-3">
+                                    <p><strong>{% trans "Width" %}:</strong> {{ variant.width }} cm</p>
+                                </div>
+                                {% endif %}
+                                {% if variant.height %}
+                                <div class="col-md-3">
+                                    <p><strong>{% trans "Height" %}:</strong> {{ variant.height }} cm</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

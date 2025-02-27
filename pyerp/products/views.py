@@ -101,7 +101,55 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
         """
         context = super().get_context_data(**kwargs)
         product = self.get_object()
-        context['variants'] = VariantProduct.objects.filter(parent=product)
+        
+        # Get variants and ensure they're ordered appropriately
+        variants = VariantProduct.objects.filter(parent=product).order_by('variant_code', 'name')
+        context['variants'] = variants
+        
+        # Get primary images for variants to avoid template filtering
+        variant_images = {}
+        for variant in variants:
+            if hasattr(variant, 'images') and variant.images.exists():
+                try:
+                    primary_image = variant.images.filter(is_primary=True).first() or variant.images.first()
+                    if primary_image:
+                        variant_images[variant.id] = primary_image
+                except Exception:
+                    # Just log or handle the error and continue
+                    pass
+        
+        context['variant_images'] = variant_images
+        return context
+
+
+class VariantDetailView(LoginRequiredMixin, DetailView):
+    """
+    View for displaying variant details.
+    """
+    model = VariantProduct
+    template_name = 'products/variant_detail.html'
+    context_object_name = 'variant'
+    
+    def get_context_data(self, **kwargs):
+        """
+        Add additional context.
+        """
+        context = super().get_context_data(**kwargs)
+        variant = self.get_object()
+        
+        # Add parent product for navigation
+        context['parent_product'] = variant.parent
+        
+        # Get primary image for variant
+        if hasattr(variant, 'images') and variant.images.exists():
+            try:
+                primary_image = variant.images.filter(is_primary=True).first() or variant.images.first()
+                if primary_image:
+                    context['primary_image'] = primary_image
+            except Exception:
+                # Just log or handle the error and continue
+                pass
+        
         return context
 
 

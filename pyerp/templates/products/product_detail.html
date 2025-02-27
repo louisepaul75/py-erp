@@ -116,9 +116,9 @@
 
         <!-- Product Details -->
         <div class="col-md-7">
-            <div class="card">
+            <div class="card mb-4">
                 <div class="card-header">
-                    <h3>{{ product.name }}</h3>
+                    <h4>{{ product.name }}</h4>
                 </div>
                 <div class="card-body">
                     <div class="row mb-3">
@@ -238,6 +238,74 @@
                     {% endif %}
                 </div>
             </div>
+            
+            <!-- Product Variants -->
+            {% if variants.exists %}
+            <div class="card mt-4" id="variants">
+                <div class="card-header">
+                    <h5>{% trans "Product Variants" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "SKU" %}</th>
+                                    <th>{% trans "Variant" %}</th>
+                                    <th>{% trans "Price" %}</th>
+                                    <th>{% trans "Stock" %}</th>
+                                    <th>{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for variant in variants %}
+                                <tr>
+                                    <td>{{ variant.sku }}</td>
+                                    <td>
+                                        {% if variant.variant_code %}
+                                            {{ variant.variant_code }}
+                                        {% else %}
+                                            {{ variant.name }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if variant.list_price %}
+                                            {{ variant.list_price }} €
+                                        {% else %}
+                                            {% trans "N/A" %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if variant.stock_quantity %}
+                                            {{ variant.stock_quantity }}
+                                        {% else %}
+                                            {% trans "N/A" %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'products:variant_detail' variant.id %}" class="btn btn-sm btn-primary">
+                                            {% trans "View Details" %}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>{% trans "Product Variants" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        {% trans "No variants available for this product." %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
