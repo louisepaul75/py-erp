@@ -4,6 +4,7 @@ Admin interface for the products app.
 
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
+from django.db import models
 
 from pyerp.products.models import Product, ProductCategory, ProductImage
 
@@ -33,8 +34,8 @@ class ProductAdmin(admin.ModelAdmin):
     """
     Admin interface for Product model.
     """
-    list_display = ('sku', 'name', 'category', 'list_price', 'stock_quantity', 'is_active')
-    list_filter = ('is_active', 'is_discontinued', 'category', 'has_bom')
+    list_display = ('sku', 'name', 'category', 'list_price', 'stock_quantity', 'is_active', 'is_parent')
+    list_filter = ('is_active', 'is_discontinued', 'category', 'has_bom', 'is_parent')
     search_fields = ('sku', 'base_sku', 'name', 'name_en', 'description', 'keywords')
     readonly_fields = ('created_at', 'updated_at')
     inlines = [ProductImageInline]
@@ -42,6 +43,10 @@ class ProductAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': ('sku', 'base_sku', 'variant_code', 'legacy_id')
+        }),
+        (_('Relationship'), {
+            'fields': ('parent', 'is_parent'),
+            'classes': ('collapse',),
         }),
         (_('Basic Information'), {
             'fields': ('name', 'name_en', 'category', 'keywords')
@@ -73,10 +78,23 @@ class ProductAdmin(admin.ModelAdmin):
         }),
     )
     
+    def get_queryset(self, request):
+        """
+        Add a count of variants to parent products.
+        """
+        queryset = super().get_queryset(request)
+        queryset = queryset.annotate(variant_count=models.Count('variants'))
+        return queryset
+    
     def get_readonly_fields(self, request, obj=None):
         """
-        Make certain fields readonly when editing an existing object.
+        Make certain fields readonly based on whether the product is a parent or not.
         """
+        readonly_fields = list(super().get_readonly_fields(request, obj))
         if obj:  # Editing an existing object
-            return self.readonly_fields + ('sku', 'legacy_id')
-        return self.readonly_fields 
+            readonly_fields.extend(['sku', 'legacy_id'])
+            
+        if obj and obj.variants.exists():
+            # Don't allow changing is_parent if product has variants
+            readonly_fields.append('is_parent')
+        return readonly_fields 

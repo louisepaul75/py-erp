@@ -75,6 +75,20 @@ class Product(models.Model):
         help_text=_('ID in the legacy system')
     )
     
+    # Parent-child relationship
+    parent = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='variants',
+        help_text=_('Parent product (for variants)')
+    )
+    is_parent = models.BooleanField(
+        default=False, 
+        help_text=_('Whether this is a parent product (maps to Art_Kalkulation records)')
+    )
+    
     # Names and descriptions
     name = models.CharField(
         max_length=255,
@@ -218,7 +232,7 @@ class Product(models.Model):
     )
     is_hanging = models.BooleanField(
         default=False,
-        help_text=_('Whether the product is designed for hanging (maps to haengen in legacy system)')
+        help_text=_('Whether the product is hanging (maps to haengen in legacy system)')
     )
     
     # Timestamps
