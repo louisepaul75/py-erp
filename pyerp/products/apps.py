@@ -19,4 +19,8 @@ class ProductsConfig(AppConfig):
         Initialize app when Django starts.
         """
         # Import signal handlers
-        import pyerp.products.signals  # noqa 
+        try:
+            import pyerp.products.signals  # noqa
+        except ImportError:
+            # During migrations, models might not be available yet
+            pass 

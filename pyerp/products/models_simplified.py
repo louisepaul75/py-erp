@@ -1,5 +1,5 @@
 """
-Models for the products app.
+Models for the products app - SIMPLIFIED VERSION.
 
 These models represent product-related entities in the ERP system,
 with only essential fields required for import.
@@ -47,13 +47,13 @@ class BaseProduct(models.Model):
         blank=True,
         null=True,
         unique=True,
-        help_text=_('ID in the legacy system - maps directly to __KEY in Artikel_Variante/Artikel_Familie')
+        help_text=_('ID in the legacy system (maps to __KEY)')
     )
     legacy_uid = models.CharField(
         max_length=50,
         blank=True,
         null=True,
-        help_text=_('UID in the legacy system - maps directly to UID in Artikel_Variante/Artikel_Familie')
+        help_text=_('UID in the legacy system')
     )
     
     # Basic information
@@ -84,11 +84,6 @@ class ParentProduct(BaseProduct):
         help_text=_('Base SKU for variants')
     )
     
-    is_placeholder = models.BooleanField(
-        default=False,
-        help_text=_('Indicates if this is a placeholder parent created for orphaned variants')
-    )
-    
     class Meta:
         verbose_name = _('Parent Product')
         verbose_name_plural = _('Parent Products')
@@ -109,7 +104,7 @@ class VariantProduct(BaseProduct):
         null=True,
         on_delete=models.CASCADE,
         related_name='variants',
-        help_text=_('Parent product - maps to Familie_ field in Artikel_Variante which references __KEY in Artikel_Familie')
+        help_text=_('Parent product (maps to Familie_ in legacy system)')
     )
     variant_code = models.CharField(
         max_length=10,
@@ -126,29 +121,6 @@ class VariantProduct(BaseProduct):
         max_length=50,
         db_index=True,
         help_text=_('Base SKU without variant')
-    )
-    
-    # Original legacy system field names - for display purposes
-    legacy_key = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_('Original __KEY field from Artikel_Variante'),
-        db_column='__KEY'  # Actual column name in the database
-    )
-    legacy_uid_original = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_('Original UID field from Artikel_Variante'),
-        db_column='UID'  # Actual column name in the database
-    )
-    legacy_familie = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_('Original Familie_ field from Artikel_Variante'),
-        db_column='Familie_'  # Actual column name in the database
     )
     
     class Meta:

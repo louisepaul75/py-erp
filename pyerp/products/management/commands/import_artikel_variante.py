@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from pyerp.products.models import Product, ProductCategory
+from pyerp.products.models import ParentProduct, VariantProduct, ProductCategory
 from decimal import Decimal
 
 # Configure logging
@@ -92,7 +92,7 @@ class Command(BaseCommand):
                     ref_old = row['refOld'] if 'refOld' in row else None
                     
                     # Skip if the variant already exists and skip_existing is True
-                    if skip_existing and Product.objects.filter(legacy_id=legacy_id).exists():
+                    if skip_existing and VariantProduct.objects.filter(legacy_id=legacy_id).exists():
                         self.stdout.write(f'Skipping existing variant: {alte_nummer}')
                         stats['skipped'] += 1
                         continue
@@ -100,29 +100,26 @@ class Command(BaseCommand):
                     # Determine the primary SKU - use Nummer if available, otherwise fallback to alteNummer
                     primary_sku = str(nummer) if nummer is not None else alte_nummer
                     
-                    # Parse SKU and variant code from the primary SKU
-                    if '-' in primary_sku:
-                        base_sku, variant_code = primary_sku.split('-', 1)
+                    # Parse SKU and variant code - split by the last hyphen
+                    if '-' in alte_nummer:
+                        # Split by the last hyphen
+                        last_hyphen_index = alte_nummer.rfind('-')
+                        base_sku = alte_nummer[:last_hyphen_index]  # Everything before the last hyphen
+                        variant_code = alte_nummer[last_hyphen_index+1:]  # Everything after the last hyphen
                     else:
-                        base_sku = primary_sku
+                        base_sku = alte_nummer
                         variant_code = ''
                     
                     # Find parent product by base_sku
                     parent = None
                     if base_sku:
-                        parent_candidates = Product.objects.filter(
-                            base_sku=base_sku, 
-                            is_parent=True
-                        )
+                        parent_candidates = ParentProduct.objects.filter(base_sku=base_sku)
                         if parent_candidates.exists():
                             parent = parent_candidates.first()
                     
                     if not parent and ref_old:
                         # Try to find parent by legacy_id
-                        parent_candidates = Product.objects.filter(
-                            legacy_id=str(ref_old),
-                            is_parent=True
-                        )
+                        parent_candidates = ParentProduct.objects.filter(legacy_id=str(ref_old))
                         if parent_candidates.exists():
                             parent = parent_candidates.first()
                     
@@ -131,6 +128,7 @@ class Command(BaseCommand):
                             self.style.WARNING(f'Parent product not found for variant: {alte_nummer}')
                         )
                         stats['parent_not_found'] += 1
+                        continue  # Skip this variant since we need a parent
                     
                     # Extract pricing information
                     list_price = Decimal('0.00')
@@ -155,10 +153,9 @@ class Command(BaseCommand):
                         'legacy_id': legacy_id,
                         'legacy_sku': alte_nummer,  # Store alteNummer as legacy_sku
                         'parent': parent,
-                        'is_parent': False,
                         'list_price': list_price,
                         'cost_price': cost_price,
-                        'category': parent.category if parent else uncategorized,
+                        'category': parent.category,
                     }
                     
                     # Print variant data in dry run mode
@@ -169,7 +166,7 @@ class Command(BaseCommand):
                     
                     # Create or update the variant
                     with transaction.atomic():
-                        variant, created = Product.objects.update_or_create(
+                        variant, created = VariantProduct.objects.update_or_create(
                             legacy_id=legacy_id,
                             defaults=variant_data
                         )

@@ -2,7 +2,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import Product, ProductCategory, ProductImage
+from .models import ParentProduct, VariantProduct, ProductCategory
 
 
 class ProductCategoryForm(forms.ModelForm):
@@ -10,58 +10,21 @@ class ProductCategoryForm(forms.ModelForm):
     
     class Meta:
         model = ProductCategory
-        fields = ['code', 'name', 'description', 'parent']
+        fields = ['code', 'name']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
 
 
-class ProductImageForm(forms.ModelForm):
-    """Form for product images."""
+class ParentProductForm(forms.ModelForm):
+    """Form for creating and editing parent products."""
     
     class Meta:
-        model = ProductImage
-        fields = ['image_url', 'thumbnail_url', 'alt_text', 'is_primary', 'priority']
-        widgets = {
-            'alt_text': forms.TextInput(attrs={'class': 'form-control'}),
-            'is_primary': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'priority': forms.NumberInput(attrs={'class': 'form-control'}),
-            'image_url': forms.URLInput(attrs={'class': 'form-control'}),
-            'thumbnail_url': forms.URLInput(attrs={'class': 'form-control'}),
-        }
-
-
-class ProductForm(forms.ModelForm):
-    """Form for creating and editing products."""
-    
-    class Meta:
-        model = Product
+        model = ParentProduct
         fields = [
             # Basic information
-            'sku', 'base_sku', 'variant_code', 'name', 'name_en', 'category', 'parent', 'is_parent',
-            
-            # Descriptions
-            'short_description', 'short_description_en', 'description', 'description_en', 'keywords',
-            
-            # Physical attributes
-            'dimensions', 'weight',
-            
-            # Pricing
-            'list_price', 'wholesale_price', 'gross_price', 'cost_price',
-            
-            # Inventory
-            'stock_quantity', 'min_stock_quantity', 'backorder_quantity', 'open_purchase_quantity',
-            
-            # Flags
-            'is_active', 'is_discontinued', 'has_bom', 'is_one_sided', 'is_hanging',
+            'sku', 'base_sku', 'name', 'is_active',
         ]
-        widgets = {
-            'short_description': forms.Textarea(attrs={'rows': 2}),
-            'short_description_en': forms.Textarea(attrs={'rows': 2}),
-            'description': forms.Textarea(attrs={'rows': 5}),
-            'description_en': forms.Textarea(attrs={'rows': 5}),
-            'keywords': forms.Textarea(attrs={'rows': 2}),
-        }
         
     def clean_sku(self):
         """Validate that the SKU is unique."""
@@ -70,34 +33,43 @@ class ProductForm(forms.ModelForm):
         
         if instance and instance.pk:
             # If this is an existing product, exclude it from the uniqueness check
-            if Product.objects.filter(sku=sku).exclude(pk=instance.pk).exists():
+            if ParentProduct.objects.filter(sku=sku).exclude(pk=instance.pk).exists():
                 raise forms.ValidationError(_('A product with this SKU already exists.'))
         else:
             # If this is a new product
-            if Product.objects.filter(sku=sku).exists():
+            if ParentProduct.objects.filter(sku=sku).exists():
                 raise forms.ValidationError(_('A product with this SKU already exists.'))
         
         return sku
+
+
+class VariantProductForm(forms.ModelForm):
+    """Form for creating and editing variant products."""
     
-    def clean(self):
-        """Validate the form data."""
-        cleaned_data = super().clean()
+    class Meta:
+        model = VariantProduct
+        fields = [
+            # Basic information
+            'sku', 'base_sku', 'variant_code', 'name', 'parent', 'is_active',
+            # Legacy info
+            'legacy_sku',
+        ]
         
-        # Ensure parent-variant relationship is valid
-        is_parent = cleaned_data.get('is_parent')
-        variant_code = cleaned_data.get('variant_code')
+    def clean_sku(self):
+        """Validate that the SKU is unique."""
+        sku = self.cleaned_data.get('sku')
+        instance = getattr(self, 'instance', None)
         
-        if is_parent and variant_code:
-            self.add_error('is_parent', _('Parent products should not have variant codes.'))
+        if instance and instance.pk:
+            # If this is an existing product, exclude it from the uniqueness check
+            if VariantProduct.objects.filter(sku=sku).exclude(pk=instance.pk).exists():
+                raise forms.ValidationError(_('A product with this SKU already exists.'))
+        else:
+            # If this is a new product
+            if VariantProduct.objects.filter(sku=sku).exists():
+                raise forms.ValidationError(_('A product with this SKU already exists.'))
         
-        # Ensure list_price is greater than cost_price
-        list_price = cleaned_data.get('list_price')
-        cost_price = cleaned_data.get('cost_price')
-        
-        if list_price and cost_price and list_price < cost_price:
-            self.add_error('list_price', _('List price should not be less than cost price.'))
-        
-        return cleaned_data
+        return sku
 
 
 class ProductSearchForm(forms.Form):
