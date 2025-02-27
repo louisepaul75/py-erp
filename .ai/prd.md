@@ -142,6 +142,39 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Module-by-module migration approach
   - Validation tools to ensure data integrity between systems
 
+### 4.6.1 Product Data Migration Strategy
+
+- **Product Data Structure Understanding:**
+  - The legacy 4D system uses a two-table structure for products:
+    - **Artikel_Stamm**: Contains product variants (currently being imported)
+    - **Art_Kalkulation**: Contains parent/base products (to be imported in next phase)
+  - Products in Artikel_Stamm have references to their parent products through the `fk_ArtNr` field
+
+- **Multi-Phase Product Import Approach:**
+  - **Phase 1**: Import product variants from Artikel_Stamm
+    - Extract variant codes and base SKUs from the composite SKU (e.g., "745020-BE")
+    - Create placeholder categories based on ArtGruppe codes
+    - Establish proper product variant relationships
+    - Map legacy fields to new system fields
+  - **Phase 2**: Import parent products from Art_Kalkulation
+    - Associate parent products with their variants
+    - Enhance category structure with proper hierarchies
+    - Import shared attributes from parent to variants
+    - Establish complete product relationships
+
+- **Product Data Quality Considerations:**
+  - Handle missing or incomplete data with sensible defaults
+  - Implement data validation and cleansing rules
+  - Create logs of problematic records for manual review
+  - Address discrepancies between variant and parent data
+
+- **Product Import Technical Implementation:**
+  - Use management commands for both initial and incremental imports
+  - Implement dry-run capability for safe testing
+  - Provide proper logging and error tracking
+  - Support bulk operations for efficiency
+  - Include rollback mechanisms for failed imports
+
 ### 4.7 Security & Authentication
 
 - **User Management & Roles:**  
@@ -314,9 +347,9 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Configure code quality tools and pre-commit hooks ✅
   - Create core utilities and shared components ✅
   - Configure separate database environments for development and production ✅
-  - Build API utilities for legacy 4D data extraction (In Progress)
-  - Create data synchronization framework and core models (In Progress)
-  - Analyze legacy database structure to guide new schema design (In Progress)
+  - Build API utilities for legacy 4D data extraction ✅ *Implemented*
+  - Create data synchronization framework and core models ✅ *Implemented*
+  - Analyze legacy database structure to guide new schema design ✅ *Implemented*
   - Implement comprehensive testing framework and test-driven development practices (Partially Complete)
   - Set up CI/CD pipeline with automated testing and quality gates ✅ *Implemented*
   - Create testing documentation and example test patterns for each level
@@ -329,9 +362,19 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Implement dependency security scanning in CI/CD pipeline ✅ *Implemented*
   - Document dependency management procedures and upgrade guidelines ✅ *Implemented*
 - **Phase 1 (MVP):**  
-  - Basic Product, BOM, Sales, Inventory, minimal Production.  
-  - Single-warehouse flow, no advanced scheduling.  
-  - Basic PDF invoices, initial and incremental 4D data import.  
+  - Basic Product, BOM, Sales, Inventory, minimal Production.
+  - Single-warehouse flow, no advanced scheduling.
+  - Basic PDF invoices, initial and incremental 4D data import.
+  - **Product Data Migration - Part 1:** ✅ *In Progress*
+    - Import product variants from Artikel_Stamm table
+    - Establish base SKU and variant structure
+    - Map variant-specific attributes (prices, stock, etc.)
+    - Create placeholder categories based on ArtGruppe codes
+  - **Product Data Migration - Part 2:** *Planned*
+    - Import parent products from Art_Kalkulation table
+    - Link variants to parent products
+    - Enhance product categorization with full hierarchy
+    - Consolidate shared attributes between parents and variants 
 - **Phase 2:**  
   - Multi-warehouse, advanced production flows, partial/split invoicing.  
   - POS/Ecommerce integrations.  
@@ -445,123 +488,3 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 - **Versioning Strategy:**
   - Semantic Versioning (SemVer) with phase indicators: `MAJOR.MINOR.PATCH-PHASE`
-  - **MAJOR**: Increment for incompatible API changes
-  - **MINOR**: Increment for new features (backward compatible)
-  - **PATCH**: Increment for bug fixes
-  - **PHASE**: Optional suffix indicating development phase (alpha, beta, rc)
-  - Phase 0 (Foundation): Versions starting with `0.x.y`
-  - Phase 1 (MVP): Versions starting with `1.x.y`
-  - Phase 2: Versions continuing with `1.x.y` with incrementing minor versions
-  - Phase 3+: Versions may move to `2.x.y` if major changes are introduced
-
-- **Release Management:**
-  - Dedicated `release/*` branches for release preparation
-  - Git tags used to mark releases on `main` branch
-  - GitHub Releases feature for documenting changes
-  - Release notes template for consistent documentation
-
-- **CI/CD Configuration:**
-  - Automated testing for all branches and pull requests
-  - Environment-specific deployments based on branch/tag:
-    - Development deployment from `develop` branch
-    - Staging deployment from `release/*` branches
-    - Production deployment from tags on `main`
-  - Security scanning for dependencies and code vulnerabilities
-  - Scheduled dependency updates with automated PRs
-
-- **Branch Protection Rules:**
-  - Protection for `main` and `develop` branches
-  - Required PR reviews before merging
-  - Required CI checks to pass
-  - No force pushes to protected branches
-  - Linear history maintained for cleaner repository
-
-## 5. Non-Functional Requirements
-
-1. **Performance**  
-   - System should handle ~15 concurrent active users without significant UI lag (<1s average response for typical operations).  
-2. **Reliability & Availability**  
-   - Minimal downtime for maintenance. Regular on-prem backups.  
-3. **Security**  
-   - Must ensure role-based access and audit trails for sensitive data.  
-   - HTTPS encryption in all internal/external traffic.  
-4. **Maintainability**  
-   - Code organized into modular Django apps.  
-   - Clean, documented models and views; well-structured tests.  
-5. **Extensibility**  
-   - Future microservices split possible if business grows (keep modular boundaries).  
-
-## 6. Technical Constraints & Assumptions
-
-- **Technology Stack**:  
-  - Python 3.x, Django 3/4.x (LTS versions where possible) ✅ *Implemented*  
-  - MySQL 8+ for database storage ✅ *Implemented*  
-  - Docker/Docker Compose for development and deployment ✅ *Implemented*  
-  - Git for version control, automated CI/CD on internal servers or GitHub/GitLab ✅ *Implemented*  
-
-- **Project Structure**: ✅ *Implemented*
-  - Modular architecture with Django apps separated by business domain ✅
-  - Shared functionality in core module to prevent duplication ✅
-  - Settings organized in tiered structure (base, environment-specific) ✅
-  - Consistent code organization patterns within apps ✅
-  - Docker-based development environment for consistency across team ✅
-
-- **Development Environment**: ✅ *Implemented*
-  - Docker Compose for local development ✅
-  - Code quality tools (linting, formatting, type checking) ✅
-  - Pre-commit hooks for consistent code quality ✅
-  - Environment parity between development and production ✅
-  - Local development uses testing database by default ✅
-
-- **Database Setup**: ✅ *Implemented*
-  - Separate MySQL databases for development/testing and production ✅
-  - Development database (pyerp_testing) focused on testing and isolation ✅
-  - Production database (pyerp_production) optimized for performance and data integrity ✅
-  - Consistent connection to appropriate database regardless of Git operations ✅
-  - Environment variables for credentials management ✅
-  
-- **Testing Framework**: *Partially Implemented*
-  - Test-driven development approach for core business logic
-  - pytest as the primary testing framework with Django-specific plugins ✅
-  - Automated test execution integrated with CI/CD pipeline ✅ *Implemented*
-  - Factory pattern for generating consistent test data
-  - Minimum 80% code coverage requirement for all new code
-  - Integration and E2E tests for critical business workflows
-  - Performance testing for key API endpoints and database queries
-  
-- **Logging Framework**: ✅ *Implemented*
-  - Structured JSON logging format for better parsing and analysis ✅
-  - Python's logging module with custom formatters and handlers ✅
-  - Log rotation keeping individual file sizes below 2MB for LLM processing ✅
-  - Centralized logging with ELK stack (Elasticsearch, Logstash, Kibana) or similar
-  - Environment-specific log levels and configurations ✅
-  - Correlation IDs to track requests across components ✅
-  - Application, security, and performance logging categories ✅
-  - Automated log archiving and retention management
-  
-- **On-Premise Infrastructure**:  
-  - Sufficient server resources (SSD, 16GB+ RAM, 4-8 cores for initial usage).  
-  
-- **Legacy ERP (4D)**:  
-  - Must allow data export to CSV or similar.  
-  - Possibly read-only after go-live or partial parallel runs.  
-
-## 7. Success Criteria
-
-1. **Successful Data Migration**  
-   - Existing product, customer, open order, and inventory data accurately reflected in the new system.  
-   - Minimal downtime or data discrepancy.  
-2. **End-to-End Workflows**  
-   - A sales order can be entered, processed, delivered, and invoiced with correct stock updates.  
-   - Production orders correctly consume materials and update finished goods stock.  
-3. **User Adoption**  
-   - Warehouse, sales, and production staff can perform daily tasks with minimal training overhead.  
-   - Positive feedback from pilot users during UAT.  
-4. **Performance & Reliability**  
-   - System remains stable under normal load.  
-   - No major blockers or show-stopper bugs for day-to-day operations.  
-5. **Security & Audit**  
-   - Properly configured roles and permissions; logs of critical changes.  
-   - Demonstrated compliance with internal auditing/reporting needs (e.g., stock movement history).  
-
-

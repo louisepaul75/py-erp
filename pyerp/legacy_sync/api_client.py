@@ -23,7 +23,7 @@ if WSZ_API_PATH not in sys.path:
 try:
     # Import the WSZ_api modules
     from wsz_api.getTable import fetch_data_from_api
-    from wsz_api.pushField import push_field_to_api
+    from wsz_api.pushField import push_data
     from wsz_api.auth import get_session_cookie
     logger.info("Successfully imported WSZ_api modules")
 except ImportError as e:
@@ -109,11 +109,11 @@ class LegacyAPIClient:
             True if the update was successful, False otherwise.
         """
         try:
-            result = push_field_to_api(
-                table_name=table_name,
-                record_id=record_id,
-                field_name=field_name,
-                field_value=field_value
+            result = push_data(
+                table=table_name,
+                column=field_name,
+                key=record_id,
+                value=field_value
             )
             logger.info(f"Successfully pushed {field_name}={field_value} to {table_name}/{record_id}")
             return result
