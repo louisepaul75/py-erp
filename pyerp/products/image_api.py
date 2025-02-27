@@ -14,6 +14,7 @@ from django.conf import settings
 from django.core.cache import cache
 import json
 import hashlib
+from pyerp.products.models import ParentProduct
 
 logger = logging.getLogger(__name__)
 
@@ -54,24 +55,24 @@ class ImageAPIClient:
         """
         logger.debug(f"Determining appropriate article number for product {product.sku}")
         
-        # For parent products, use the parent SKU
-        if product.is_parent:
+        # For parent products (ParentProduct model)
+        if isinstance(product, ParentProduct):
             logger.debug(f"Using parent SKU: {product.sku}")
             return product.sku
             
-        # For variants, try different approaches
+        # For variants (VariantProduct model)
         # First, check if the variant has its own images
         variant_sku = product.sku
         logger.debug(f"Checking variant SKU: {variant_sku}")
         
         # If it's a variant with a parent, also try the parent's SKU
-        if product.parent:
+        if hasattr(product, 'parent') and product.parent:
             parent_sku = product.parent.sku
             logger.debug(f"Also checking parent SKU: {parent_sku}")
             return parent_sku
             
         # If no parent but has base_sku, use that
-        if product.base_sku and product.base_sku != product.sku:
+        if hasattr(product, 'base_sku') and product.base_sku and product.base_sku != product.sku:
             logger.debug(f"Using base SKU: {product.base_sku}")
             return product.base_sku
             

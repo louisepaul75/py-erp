@@ -134,4 +134,122 @@ class VariantProduct(BaseProduct):
     class Meta:
         verbose_name = _('Variant Product')
         verbose_name_plural = _('Variant Products')
-        ordering = ['parent__name', 'variant_code'] 
+        ordering = ['parent__name', 'variant_code']
+
+
+class ProductImage(models.Model):
+    """
+    Cached information about product images from external system
+    """
+    product = models.ForeignKey(
+        'VariantProduct', 
+        on_delete=models.CASCADE, 
+        related_name='images',
+        help_text=_('Product this image belongs to')
+    )
+    external_id = models.CharField(
+        max_length=255, 
+        help_text=_('ID from external image database')
+    )
+    image_url = models.URLField(
+        max_length=500,
+        help_text=_('URL to the full-size image')
+    )
+    thumbnail_url = models.URLField(
+        max_length=500, 
+        blank=True, 
+        null=True,
+        help_text=_('URL to the thumbnail image')
+    )
+    image_type = models.CharField(
+        max_length=50, 
+        help_text=_('Type of image (e.g., "Produktfoto")')
+    )
+    is_primary = models.BooleanField(
+        default=False, 
+        help_text=_('Whether this is the primary image for the product')
+    )
+    is_front = models.BooleanField(
+        default=False, 
+        help_text=_('Whether this image is marked as "front" in the source system')
+    )
+    priority = models.IntegerField(
+        default=0, 
+        help_text=_('Display priority (lower numbers shown first)')
+    )
+    alt_text = models.CharField(
+        max_length=255, 
+        blank=True,
+        help_text=_('Alternative text for the image')
+    )
+    metadata = models.JSONField(
+        default=dict, 
+        blank=True, 
+        help_text=_('Additional metadata from the source system')
+    )
+    last_synced = models.DateTimeField(
+        auto_now=True,
+        help_text=_('When the image was last synced from the external system')
+    )
+    
+    class Meta:
+        verbose_name = _('Product Image')
+        verbose_name_plural = _('Product Images')
+        ordering = ['priority', 'id']
+        unique_together = [('product', 'external_id')]
+    
+    def __str__(self):
+        return f"Image for {self.product.sku} - {self.image_type}"
+
+
+class ImageSyncLog(models.Model):
+    """
+    Track image synchronization history and results
+    """
+    started_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_('When the sync process started')
+    )
+    completed_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text=_('When the sync process completed')
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('in_progress', 'In Progress'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='in_progress',
+        help_text=_('Current status of the sync process')
+    )
+    images_added = models.IntegerField(
+        default=0,
+        help_text=_('Number of new images added')
+    )
+    images_updated = models.IntegerField(
+        default=0,
+        help_text=_('Number of existing images updated')
+    )
+    images_deleted = models.IntegerField(
+        default=0,
+        help_text=_('Number of images deleted')
+    )
+    products_affected = models.IntegerField(
+        default=0,
+        help_text=_('Number of products affected by the sync')
+    )
+    error_message = models.TextField(
+        blank=True,
+        help_text=_('Error message if the sync failed')
+    )
+    
+    class Meta:
+        verbose_name = _('Image Sync Log')
+        verbose_name_plural = _('Image Sync Logs')
+        ordering = ['-started_at']
+    
+    def __str__(self):
+        return f"Image sync {self.pk} - {self.status} - {self.started_at}" 

@@ -223,6 +223,12 @@ pyERP/
 │   ├── core/                 # Core functionality
 │   ├── legacy_sync/          # Legacy ERP integration
 │   ├── products/             # Product management app
+│   │   ├── management/       # Management commands
+│   │   │   └── commands/     # Custom Django commands
+│   │   │       └── sync_product_images.py  # Product image sync command
+│   │   ├── models/           # Product-related models
+│   │   │   └── product_image.py  # ProductImage and ImageSyncLog models
+│   │   └── image_api.py      # External image API client
 │   ├── sales/                # Sales management app
 │   ├── inventory/            # Inventory management app
 │   ├── production/           # Production management app
@@ -290,6 +296,42 @@ for row in data:
 ```
 
 For detailed documentation on the validation framework, see [Validation Framework Guide](docs/validation_framework.md).
+
+## Product Image Integration
+
+pyERP includes a comprehensive product image integration feature:
+
+### Features
+
+- Connects to an external image database API to retrieve product images
+- Creates and updates local `ProductImage` records linked to products
+- Supports different image types (Produktfoto, Markt-Messe-Shop, Szene, Illustration)
+- Implements smart article number selection for image matching
+- Provides a synchronization command with configurable parameters
+- Tracks synchronization history with detailed logging
+
+### Synchronization Command
+
+The system includes a management command for synchronizing images:
+
+```bash
+# Basic usage
+python manage.py sync_product_images
+
+# With options
+python manage.py sync_product_images --dry-run --limit 5 --page-size 20
+```
+
+### Image Management
+
+- Images are stored as `ProductImage` records linked to products
+- Primary images are automatically selected based on type and front flag
+- Thumbnail URLs are stored for efficient loading
+- Image metadata is preserved for reference
+
+For detailed documentation on the product image integration feature, see:
+- [docs/features/product_image_sync.md](docs/features/product_image_sync.md)
+- [pyerp/products/management/commands/README.md](pyerp/products/management/commands/README.md)
 
 ## Dependency Management
 

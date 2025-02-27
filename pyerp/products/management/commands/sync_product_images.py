@@ -12,7 +12,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
-from pyerp.products.models import Product, ProductImage, ImageSyncLog
+from pyerp.products.models import VariantProduct, ParentProduct, ProductImage, ImageSyncLog
 from pyerp.products.image_api import ImageAPIClient
 
 logger = logging.getLogger(__name__)
@@ -30,12 +30,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--limit',
             type=int,
-            help='Limit the number of products to process',
-        )
-        parser.add_argument(
-            '--product-sku',
-            type=str,
-            help='Sync images for a specific product SKU only',
+            help='Limit the number of API pages to process',
         )
         parser.add_argument(
             '--page-size',
@@ -48,13 +43,19 @@ class Command(BaseCommand):
             action='store_true',
             help='Force update all images even if they have been recently synced',
         )
+        parser.add_argument(
+            '--skip-pages',
+            type=int,
+            default=0,
+            help='Skip this many pages before starting to process',
+        )
     
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         limit = options['limit']
-        product_sku = options['product_sku']
         page_size = options['page_size']
         force = options['force']
+        skip_pages = options['skip_pages']
         
         # Create sync log record (unless in dry-run mode)
         sync_log = None
@@ -68,116 +69,116 @@ class Command(BaseCommand):
             # Initialize counter variables
             images_added = 0
             images_updated = 0
-            images_deleted = 0
-            products_affected = 0
+            products_affected = set()  # Use a set to count unique products
+            processed_images = {}  # Track which images we've processed by product
             
             # Initialize API client
             client = ImageAPIClient()
             
-            # Get products to sync
-            if product_sku:
-                products = Product.objects.filter(sku=product_sku)
-                self.stdout.write(f"Syncing images for product SKU: {product_sku}")
-            else:
-                products = Product.objects.filter(is_active=True).order_by('sku')
-                if limit:
-                    products = products[:limit]
-                self.stdout.write(f"Syncing images for {products.count()} products")
+            # Store client as instance variable for use in helper methods
+            self.client = client
             
-            # Process products
-            for i, product in enumerate(products):
-                # Show progress indicator
-                if (i + 1) % 10 == 0 or i == 0:
-                    self.stdout.write(f"Processing product {i + 1}/{products.count()}")
+            # Get API metadata to know total pages
+            first_page = client._make_request("all-files-and-articles/", params={"page": 1, "page_size": 1})
+            if not first_page:
+                self.stdout.write(self.style.ERROR("Failed to connect to API"))
+                return
                 
-                # Get images for the product from API
-                images = client.search_product_images(product.sku)
+            total_records = first_page.get('count', 0)
+            total_pages = (total_records + page_size - 1) // page_size
+            
+            self.stdout.write(f"Found {total_records} total images across {total_pages} pages")
+            
+            # Limit pages if requested
+            if limit:
+                total_pages = min(total_pages, skip_pages + limit)
                 
-                if not images:
+            # Process each page
+            for page in range(skip_pages + 1, total_pages + 1):
+                self.stdout.write(f"Processing page {page}/{total_pages}")
+                
+                # Get images for this page
+                data = client._make_request("all-files-and-articles/", params={"page": page, "page_size": page_size})
+                if not data:
+                    self.stdout.write(self.style.WARNING(f"Failed to fetch page {page}"))
                     continue
                 
-                product_updated = False
-                parsed_images = []
-                
                 # Process each image
-                for image_data in images:
-                    parsed_image = client.parse_image(image_data)
-                    parsed_images.append(parsed_image)
-                
-                # Sort images by priority
-                parsed_images = sorted(parsed_images, key=lambda x: client.get_image_priority(x))
-                
-                # Track external IDs to detect deleted images
-                external_ids = [img['external_id'] for img in parsed_images]
-                
-                with transaction.atomic():
-                    # Delete images not in the API response
-                    if not dry_run and external_ids:
-                        deleted_count = product.images.exclude(external_id__in=external_ids).delete()[0]
-                        images_deleted += deleted_count
-                        if deleted_count > 0:
-                            product_updated = True
+                for image_data in data.get('results', []):
+                    # Skip if no articles associated with this image
+                    articles = image_data.get('articles', [])
+                    if not articles:
+                        continue
                     
-                    # Create or update images
-                    for i, parsed_image in enumerate(parsed_images):
-                        # Check if this image exists
-                        try:
-                            image = ProductImage.objects.get(
-                                product=product,
-                                external_id=parsed_image['external_id']
-                            )
-                            is_new = False
-                        except ProductImage.DoesNotExist:
-                            if dry_run:
-                                self.stdout.write(f"  Would create new image for {product.sku}: {parsed_image['image_type']}")
-                                continue
+                    # Parse the image into a more usable format
+                    parsed_image = client.parse_image(image_data)
+                    
+                    # Process each article (product) associated with this image
+                    for article in articles:
+                        article_number = article.get('number')
+                        variant_code = article.get('variant')
+                        is_front = article.get('front', False)
+                        
+                        if not article_number:
+                            continue
                             
-                            image = ProductImage(
-                                product=product,
-                                external_id=parsed_image['external_id']
-                            )
-                            is_new = True
-                        
-                        # Set first image as primary if no primary exists
-                        is_primary = i == 0 and not product.images.filter(is_primary=True).exists()
-                        
-                        # Update fields
-                        image.image_url = parsed_image['image_url']
-                        image.thumbnail_url = parsed_image.get('thumbnail_url')
-                        image.image_type = parsed_image['image_type']
-                        image.is_front = parsed_image['is_front']
-                        image.priority = client.get_image_priority(parsed_image)
-                        
-                        # Auto-generate alt text if not set
-                        if not image.alt_text:
-                            image.alt_text = f"{product.name} - {parsed_image['image_type']}"
-                        
-                        # Store metadata
-                        image.metadata = parsed_image['metadata']
-                        
-                        # Set as primary if this is the first image added
-                        if is_primary:
-                            image.is_primary = True
-                        
-                        if not dry_run:
-                            image.save()
-                            if is_new:
-                                images_added += 1
-                                product_updated = True
-                            else:
-                                images_updated += 1
+                        # Create a composite key for the article (SKU + variant)
+                        if variant_code:
+                            full_sku = f"{article_number}-{variant_code}"
                         else:
-                            action = "Create" if is_new else "Update"
-                            self.stdout.write(f"  {action} image: {image.image_type} (Priority: {image.priority})")
-                
-                # Count affected products
-                if product_updated:
-                    products_affected += 1
+                            full_sku = article_number
+                        
+                        # Debug info
+                        self.stdout.write(f"  Checking article: {full_sku} (Number: {article_number}, Variant: {variant_code})")
+                            
+                        # Try to find corresponding product
+                        # First try exact match
+                        product = self._find_product(full_sku, article_number, variant_code)
+                        if not product:
+                            self.stdout.write(f"  No product found for {full_sku}")
+                            continue
+                            
+                        # Set front flag based on article data
+                        parsed_image['is_front'] = is_front
+                        
+                        # Check if this product already has this image
+                        if not dry_run:
+                            try:
+                                with transaction.atomic():
+                                    # Create or update the image
+                                    image, created = self._create_or_update_image(
+                                        product, 
+                                        parsed_image,
+                                        processed_images.get(product.id, [])
+                                    )
+                                    
+                                    # Update counters
+                                    if created:
+                                        images_added += 1
+                                        self.stdout.write(f"  Added image for {product.sku}: {parsed_image['image_type']}")
+                                    else:
+                                        images_updated += 1
+                                        self.stdout.write(f"  Updated image for {product.sku}: {parsed_image['image_type']}")
+                                    
+                                    # Track this product as affected
+                                    products_affected.add(product.id)
+                                    
+                                    # Track that we've processed this image for this product
+                                    if product.id not in processed_images:
+                                        processed_images[product.id] = []
+                                    processed_images[product.id].append(parsed_image['external_id'])
+                            except Exception as e:
+                                self.stdout.write(self.style.WARNING(f"  Error processing image for {product.sku}: {str(e)}"))
+                        else:
+                            self.stdout.write(f"  Would {'create' if not hasattr(product, 'images') or not product.images.filter(external_id=parsed_image['external_id']).exists() else 'update'} image for {product.sku}: {parsed_image['image_type']}")
+                            
+                            # Track this product as affected even in dry run
+                            products_affected.add(product.id)
             
             # Complete the sync log
             self.stdout.write(self.style.SUCCESS(
                 f"Sync completed: {images_added} added, {images_updated} updated, "
-                f"{images_deleted} deleted, {products_affected} products affected"
+                f"{len(products_affected)} products affected"
             ))
             
             if not dry_run and sync_log:
@@ -185,8 +186,7 @@ class Command(BaseCommand):
                 sync_log.completed_at = timezone.now()
                 sync_log.images_added = images_added
                 sync_log.images_updated = images_updated
-                sync_log.images_deleted = images_deleted
-                sync_log.products_affected = products_affected
+                sync_log.products_affected = len(products_affected)
                 sync_log.save()
             
         except Exception as e:
@@ -197,4 +197,106 @@ class Command(BaseCommand):
                 sync_log.status = 'failed'
                 sync_log.completed_at = timezone.now()
                 sync_log.error_message = str(e)
-                sync_log.save() 
+                sync_log.save()
+                
+    def _find_product(self, full_sku, article_number, variant_code):
+        """
+        Find a product matching the article number without variant.
+        
+        Args:
+            full_sku: Combined article number and variant code (e.g. "123456-BE")
+            article_number: The base article number (e.g. "123456")
+            variant_code: The variant code (e.g. "BE")
+        
+        Returns:
+            A Product model instance or None if not found.
+        """
+        product = None
+        
+        # Primary matching: by article number as SKU (without variant)
+        try:
+            product = VariantProduct.objects.get(sku=article_number)
+            self.stdout.write(f"    Found match by SKU: {article_number}")
+            return product
+        except VariantProduct.DoesNotExist:
+            self.stdout.write(f"    No match by SKU: {article_number}")
+            
+        # Fallback: Try as a parent product
+        try:
+            product = ParentProduct.objects.get(sku=article_number)
+            self.stdout.write(f"    Found match as parent product: {article_number}")
+            return product
+        except ParentProduct.DoesNotExist:
+            pass
+        
+        # Not found - just log and return None
+        self.stdout.write(f"    No product found for article number: {article_number}")
+        return None
+        
+    def _create_or_update_image(self, product, parsed_image, existing_image_ids):
+        """
+        Create or update a ProductImage for the given product and image data.
+        
+        Args:
+            product: The Product model instance
+            parsed_image: Parsed image data dictionary
+            existing_image_ids: List of image IDs already processed for this product
+            
+        Returns:
+            Tuple of (image, created) where image is the ProductImage instance and
+            created is a boolean indicating if it was newly created.
+        """
+        # Try to find existing image for this product and external ID
+        image = None
+        created = False
+        
+        # Only search for existing image if the product has an images relation
+        if hasattr(product, 'images'):
+            try:
+                image = ProductImage.objects.get(
+                    product=product,
+                    external_id=parsed_image['external_id']
+                )
+                created = False
+            except ProductImage.DoesNotExist:
+                image = ProductImage(
+                    product=product,
+                    external_id=parsed_image['external_id']
+                )
+                created = True
+        else:
+            # For parent products or other cases without direct relationship
+            image = ProductImage(
+                product=product,
+                external_id=parsed_image['external_id']
+            )
+            created = True
+        
+        # Update fields
+        image.image_url = parsed_image['image_url']
+        image.thumbnail_url = parsed_image.get('thumbnail_url')
+        image.image_type = parsed_image['image_type']
+        image.is_front = parsed_image.get('is_front', False)
+        image.priority = self.client.get_image_priority(parsed_image)
+        
+        # Auto-generate alt text if not set
+        if not image.alt_text:
+            image.alt_text = f"{product.name} - {parsed_image['image_type']}"
+        
+        # Store metadata
+        image.metadata = parsed_image.get('metadata', {})
+        
+        # Set as primary if this is the first image added or marked as front
+        if not existing_image_ids:  # If this is the first image for this product
+            image.is_primary = True
+        elif parsed_image.get('is_front') and not image.is_primary:
+            # If this is a front image and not already primary, make it primary
+            # and remove primary flag from other images
+            if hasattr(product, 'images'):
+                product.images.update(is_primary=False)
+            image.is_primary = True
+        
+        # Save the image
+        image.save()
+        
+        return image, created 
