@@ -18,3 +18,19 @@ def get_item(dictionary, key):
         return None
         
     return dictionary.get(key) 
+
+@register.filter
+def get_primary_image(product):
+    """
+    Get the primary image for a product.
+    
+    Usage in template:
+    {{ product|get_primary_image }}
+    """
+    if hasattr(product, 'images'):
+        # Safely get the first primary image
+        try:
+            return product.images.filter(is_primary=True).first()
+        except:
+            return None
+    return None 

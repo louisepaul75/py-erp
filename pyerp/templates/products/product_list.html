@@ -118,11 +118,11 @@
                                 <!-- Product Image -->
                                 {% if product.images.exists %}
                                 <div class="text-center p-2">
-                                    {% with primary_image=product.images.filter(is_primary=True).first %}
-                                    {% if primary_image %}
-                                    <img src="{{ primary_image.image_url }}" class="img-fluid product-thumbnail" alt="{{ product.name }}" style="max-height: 150px;">
+                                    {% if primary_images and product.id in primary_images %}
+                                    <img src="{{ primary_images|get_item:product.id|get_item:'image_url' }}" class="img-fluid product-thumbnail" alt="{{ product.name }}" style="max-height: 150px;">
+                                    {% else %}
+                                    <img src="{{ product.images.first.image_url }}" class="img-fluid product-thumbnail" alt="{{ product.name }}" style="max-height: 150px;">
                                     {% endif %}
-                                    {% endwith %}
                                 </div>
                                 {% elif product_images and product.sku in product_images %}
                                 <div class="text-center p-2">

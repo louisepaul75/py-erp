@@ -13,6 +13,7 @@ from pyerp.products.views import (
 
 app_name = 'products'
 
+# Regular web interface URLs
 urlpatterns = [
     path('', ProductListView.as_view(), name='product_list'),
     path('categories/', CategoryListView.as_view(), name='category_list'),
