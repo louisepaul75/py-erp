@@ -180,7 +180,7 @@ IMAGE_API = {
    - [ ] Create user guide for image management
    - [ ] Prepare deployment instructions
 
-## Progress Summary (As of 2025-02-28)
+## Progress Summary (As of 2025-03-15)
 
 ### Completed Tasks
 - ✅ Set up proper environment configuration for API credentials
@@ -193,6 +193,31 @@ IMAGE_API = {
 - ✅ Added resolution-based selection to choose the best quality images
 - ✅ Created sync_product_images management command for synchronizing product images
 - ✅ Successfully tested syncing images with a test product
+- ✅ Implemented smart article number selection based on product hierarchy
+- ✅ Created robust fallback logic for image retrieval with multiple strategies
+- ✅ Enhanced ProductListView to preload images for both parent and variant products
+- ✅ Improved ProductDetailView to use the new fallback logic for image retrieval
+- ✅ Updated save_product_images function to use consistent image retrieval logic
+- ✅ Added detailed logging for image retrieval process to aid troubleshooting
+- ✅ Implemented custom template filter for accessing dictionary items by key
+
+### Parent-Variant Product Handling
+- ✅ **Smart Article Number Selection**: Implemented `get_appropriate_article_number` method that intelligently determines which article number to use based on product type:
+  - For parent products: Uses the parent's SKU
+  - For variants with a parent: Uses the parent's SKU for consistent imagery
+  - For variants without a parent: Uses the base_sku if available, otherwise falls back to the variant's own SKU
+
+- ✅ **Fallback Strategy**: Implemented `get_product_images` method with comprehensive fallback logic:
+  1. First tries with the appropriate article number based on product type
+  2. If no images found, tries with the product's own SKU
+  3. If still no images and it's a variant, tries with the base_sku
+  4. If still no images and it has a parent, tries with the parent's SKU
+  
+- ✅ **Optimized Batch Processing**: Enhanced ProductListView to:
+  - Create a mapping of products to their appropriate article numbers
+  - Get unique article numbers to search for (reducing API calls)
+  - Preload images for these article numbers
+  - Map the images back to products for display
 
 ### API Findings
 1. **API Structure**:
@@ -215,6 +240,7 @@ IMAGE_API = {
    - Some images have a `front=true` attribute indicating they should be the primary image
    - Not all images are associated with products (empty articles array)
    - Product SKU must match article number for successful association
+   - Parent-variant relationships require special handling for consistent imagery
 
 ### Next Steps
 1. Complete the admin interface for image management

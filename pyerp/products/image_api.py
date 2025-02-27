@@ -12,6 +12,8 @@ import requests
 from requests.auth import HTTPBasicAuth
 from django.conf import settings
 from django.core.cache import cache
+import json
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,44 @@ class ImageAPIClient:
         if not self.base_url.endswith('/'):
             self.base_url += '/'
 
+    def get_appropriate_article_number(self, product):
+        """
+        Determine the appropriate article number to use for image search
+        based on whether the product is a parent or variant.
+        
+        Args:
+            product: The Product model instance
+            
+        Returns:
+            str: The article number to use for image search
+        """
+        logger.debug(f"Determining appropriate article number for product {product.sku}")
+        
+        # For parent products, use the parent SKU
+        if product.is_parent:
+            logger.debug(f"Using parent SKU: {product.sku}")
+            return product.sku
+            
+        # For variants, try different approaches
+        # First, check if the variant has its own images
+        variant_sku = product.sku
+        logger.debug(f"Checking variant SKU: {variant_sku}")
+        
+        # If it's a variant with a parent, also try the parent's SKU
+        if product.parent:
+            parent_sku = product.parent.sku
+            logger.debug(f"Also checking parent SKU: {parent_sku}")
+            return parent_sku
+            
+        # If no parent but has base_sku, use that
+        if product.base_sku and product.base_sku != product.sku:
+            logger.debug(f"Using base SKU: {product.base_sku}")
+            return product.base_sku
+            
+        # Default to the product's own SKU
+        logger.debug(f"Defaulting to product SKU: {product.sku}")
+        return product.sku
+    
     def _make_request(self, endpoint, params=None):
         """
         Make a request to the API endpoint with authentication.
@@ -53,8 +93,16 @@ class ImageAPIClient:
         # Form the full URL
         url = f"{self.base_url}{endpoint}"
         
+        # Create a safe cache key
+        if params:
+            # Convert params to a sorted JSON string and hash it for a safe cache key
+            params_str = json.dumps(params, sort_keys=True)
+            params_hash = hashlib.md5(params_str.encode()).hexdigest()
+            cache_key = f"image_api_{endpoint}_{params_hash}"
+        else:
+            cache_key = f"image_api_{endpoint}_none"
+        
         # Check if the response is in cache
-        cache_key = f"image_api:{endpoint}:{params}"
         if self.cache_enabled:
             cached_response = cache.get(cache_key)
             if cached_response:
@@ -113,6 +161,14 @@ class ImageAPIClient:
         Returns:
             list: List of image data for the product
         """
+        # Check if we have a cached result for this specific product
+        product_cache_key = f"product_images_{article_number}"
+        if self.cache_enabled:
+            cached_images = cache.get(product_cache_key)
+            if cached_images:
+                logger.debug(f"Using cached images for product {article_number}")
+                return cached_images
+        
         # This could be optimized if the API supports direct filtering
         page = 1
         page_size = 100
@@ -148,6 +204,10 @@ class ImageAPIClient:
                 logger.info(f"Found {len(product_images)} images for article {article_number}")
                 break
         
+        # Cache the results for this product
+        if self.cache_enabled and product_images:
+            cache.set(product_cache_key, product_images, self.cache_timeout)
+            
         return product_images
     
     def parse_image(self, image_data):
@@ -313,4 +373,144 @@ class ImageAPIClient:
         sorted_images = self.sort_images_by_priority(images)
         best_image = sorted_images[0]
         
-        return self.parse_image(best_image) 
+        return self.parse_image(best_image)
+    
+    def preload_product_images(self, article_numbers):
+        """
+        Preload images for multiple products at once.
+        
+        This method is useful for improving performance when displaying
+        lists of products, as it can fetch and cache images for multiple
+        products with fewer API calls.
+        
+        Args:
+            article_numbers (list): List of product article numbers
+            
+        Returns:
+            dict: Dictionary mapping article numbers to their best images
+        """
+        if not article_numbers:
+            return {}
+            
+        # Check which products already have cached images
+        uncached_articles = []
+        result = {}
+        
+        for article in article_numbers:
+            product_cache_key = f"product_images_{article}"
+            cached_images = cache.get(product_cache_key)
+            
+            if cached_images:
+                # Use cached images for this product
+                sorted_images = self.sort_images_by_priority(cached_images)
+                if sorted_images:
+                    result[article] = self.parse_image(sorted_images[0])
+            else:
+                uncached_articles.append(article)
+                
+        if not uncached_articles:
+            return result
+            
+        # Fetch images for products that aren't cached yet
+        logger.info(f"Preloading images for {len(uncached_articles)} products")
+        
+        # Process in batches to avoid excessive API calls
+        page = 1
+        page_size = 100
+        total_pages = None
+        
+        while total_pages is None or page <= total_pages:
+            data = self.get_all_images(page=page, page_size=page_size)
+            
+            if not data:
+                break
+                
+            # Calculate total pages on first response
+            if total_pages is None:
+                count = data.get('count', 0)
+                total_pages = (count + page_size - 1) // page_size
+                
+            # Process each image and check if it matches any of our products
+            for item in data.get('results', []):
+                articles = item.get('articles', [])
+                
+                # Check if this image is associated with any of our uncached products
+                for article in articles:
+                    article_number = article.get('number')
+                    if article_number in uncached_articles:
+                        # Add to the product's image list
+                        product_cache_key = f"product_images_{article_number}"
+                        product_images = cache.get(product_cache_key) or []
+                        product_images.append(item)
+                        
+                        # Cache the updated list
+                        cache.set(product_cache_key, product_images, self.cache_timeout)
+                        
+                        # If this is the first image for this product, add it to the result
+                        if article_number not in result:
+                            result[article_number] = self.parse_image(item)
+            
+            # Move to the next page
+            page += 1
+            
+            # Stop if we've found images for all products
+            if all(article in result for article in uncached_articles):
+                break
+                
+        return result
+        
+    def get_product_images(self, product):
+        """
+        Get images for a product, trying multiple article number formats if needed.
+        
+        This method implements a fallback strategy to find images for a product:
+        1. First tries with the appropriate article number based on product type
+        2. If no images found, tries with the product's own SKU
+        3. If still no images and it's a variant, tries with base_sku
+        4. If still no images and it has a parent, tries with parent's SKU
+        
+        Args:
+            product: The Product model instance
+            
+        Returns:
+            list: List of image data for the product
+        """
+        # Try with the appropriate article number first
+        article_number = self.get_appropriate_article_number(product)
+        logger.info(f"Searching for images with primary article number: {article_number}")
+        images = self.search_product_images(article_number)
+        
+        if images:
+            logger.info(f"Found {len(images)} images using primary article number")
+            return images
+            
+        # If no images found and the article number wasn't the product's own SKU, try that
+        if article_number != product.sku:
+            logger.info(f"No images found with primary article number, trying product SKU: {product.sku}")
+            images = self.search_product_images(product.sku)
+            
+            if images:
+                logger.info(f"Found {len(images)} images using product SKU")
+                return images
+        
+        # If still no images and it's a variant with a base_sku different from what we've tried
+        if not product.is_parent and product.base_sku and product.base_sku != article_number and product.base_sku != product.sku:
+            logger.info(f"Trying base SKU: {product.base_sku}")
+            images = self.search_product_images(product.base_sku)
+            
+            if images:
+                logger.info(f"Found {len(images)} images using base SKU")
+                return images
+        
+        # If still no images and it has a parent that we haven't tried yet
+        if product.parent and product.parent.sku != article_number and product.parent.sku != product.sku:
+            logger.info(f"Trying parent SKU: {product.parent.sku}")
+            images = self.search_product_images(product.parent.sku)
+            
+            if images:
+                logger.info(f"Found {len(images)} images using parent SKU")
+                return images
+        
+        # If we've tried everything and found nothing
+        logger.warning(f"No images found for product {product.sku} after trying all fallback options")
+        return [] 

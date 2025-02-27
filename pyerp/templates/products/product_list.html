@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load product_filters %}
 
 {% block title %}{% trans "Products" %}{% endblock %}
 
@@ -114,6 +115,24 @@
                                 <div class="card-header">
                                     <h5 class="card-title">{{ product.name }}</h5>
                                 </div>
+                                <!-- Product Image -->
+                                {% if product.images.exists %}
+                                <div class="text-center p-2">
+                                    {% with primary_image=product.images.filter(is_primary=True).first %}
+                                    {% if primary_image %}
+                                    <img src="{{ primary_image.image_url }}" class="img-fluid product-thumbnail" alt="{{ product.name }}" style="max-height: 150px;">
+                                    {% endif %}
+                                    {% endwith %}
+                                </div>
+                                {% elif product_images and product.sku in product_images %}
+                                <div class="text-center p-2">
+                                    <img src="{{ product_images|get_item:product.sku|get_item:'image_url' }}" class="img-fluid product-thumbnail" alt="{{ product.name }}" style="max-height: 150px;">
+                                </div>
+                                {% else %}
+                                <div class="text-center p-2">
+                                    <i class="fas fa-image fa-5x text-muted"></i>
+                                </div>
+                                {% endif %}
                                 <div class="card-body">
                                     <p class="card-text">
                                         <strong>{% trans "SKU" %}:</strong> {{ product.sku }}<br>

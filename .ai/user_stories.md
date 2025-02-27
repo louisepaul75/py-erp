@@ -282,6 +282,30 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Create documentation for logging standards and practices ✅
 - Implement log analysis utilities for common debugging tasks
 
+#### Story 15: Database Migration from SQLite to MySQL ✅
+**As a** Developer  
+**I want to** migrate the development environment from SQLite to MySQL  
+**So that** development and production environments use the same database engine for consistency
+
+**Acceptance Criteria:**
+- Development settings updated to use MySQL instead of SQLite ✅
+- Environment variables configured for MySQL connection ✅
+- Connected to existing MySQL server at 192.168.73.64 ✅
+- Database schema created with migrations ✅
+- Documentation updated to reflect MySQL-only workflow ✅
+- All tests passing with MySQL database ✅
+
+**Tasks:**
+- Update development settings to use MySQL ✅
+- Create .env file with MySQL connection parameters ✅
+- Configure environment variables to connect to existing MySQL server ✅
+- Run migrations to create schema in MySQL ✅
+- Update documentation with MySQL setup instructions ✅
+- Create comprehensive MySQL setup guide ✅
+- Run test suite to verify functionality with MySQL ✅
+
+**Status:** Completed
+
 ## Next Steps
 After completing the foundation phase, we will prioritize business modules based on:
 1. Business criticality
@@ -354,4 +378,34 @@ This document outlines the key user stories for the PyERP system. Each story rep
 - Variant products verified with `python manage.py import_artikel_variante --dry-run`
 - See detailed progress in [Product Import from Artikel_Variante](./stories/product_import_artikel_variante.md)
 
-**Status:** In Progress (Major milestones achieved) 
+**Status:** In Progress (Major milestones achieved)
+
+### US-PM-002: Product Image Integration
+
+**As a** Product Manager  
+**I want to** view and manage product images from our external image database within the ERP  
+**So that** I can efficiently work with product visuals while ensuring consistent product representation
+
+**Acceptance Criteria:**
+- ✅ Connect to external image database via API with secure authentication
+- ✅ Display product images in the product detail view with proper prioritization
+- ✅ Implement caching to reduce API calls and improve performance
+- ✅ Handle parent-variant product relationships for consistent image display
+- ✅ Provide fallback mechanisms when images aren't found with primary article number
+- ✅ Preload images for product lists to improve user experience
+- ✅ Add custom template filter for accessing image data in templates
+- ⬜ Allow administrators to select primary images for products
+- ⬜ Implement scheduled synchronization with the external image database
+- ⬜ Provide image management interface in the admin panel
+
+**Implementation Notes:**
+- Created `ImageAPIClient` class with robust connection and caching mechanisms
+- Implemented `get_appropriate_article_number` method for smart article number selection
+- Added `get_product_images` method with comprehensive fallback logic
+- Enhanced `ProductListView` and `ProductDetailView` to use the new image retrieval methods
+- Updated `save_product_images` function for consistent image handling
+- Added detailed logging for troubleshooting image retrieval issues
+- Created custom template filter for accessing dictionary items by key
+- See detailed progress in [Product Image Integration Story](../docs/legacy_erp/product_image_integration_story.md)
+
+**Status:** Mostly Implemented (Core functionality complete) 

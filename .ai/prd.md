@@ -99,6 +99,19 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Prioritize web-friendly formats (PNG, JPEG) over design formats (PSD, etc.). ✅ *Verified*
   - Select highest quality available image based on resolution and format. ✅ *Verified*
   - Support appropriate image formats for different use cases (thumbnails, product detail, etc.). ✅ *Verified*
+- **Parent-Variant Product Handling:** ✅ *Implemented*
+  - Smart article number selection based on product hierarchy. ✅ *Implemented*
+  - Determine appropriate article number for image search based on product type (parent/variant). ✅ *Implemented*
+  - For parent products: Use parent's SKU. ✅ *Implemented*
+  - For variants with parent: Use parent's SKU for consistent imagery. ✅ *Implemented*
+  - For variants without parent: Use base_sku if available, otherwise use variant's SKU. ✅ *Implemented*
+- **Fallback Logic:** ✅ *Implemented*
+  - Implement robust fallback strategy for image retrieval. ✅ *Implemented*
+  - First try with the appropriate article number based on product type. ✅ *Implemented*
+  - If no images found, try with the product's own SKU. ✅ *Implemented*
+  - If still no images and it's a variant, try with base_sku. ✅ *Implemented*
+  - If still no images and it has a parent, try with parent's SKU. ✅ *Implemented*
+  - Detailed logging of fallback attempts for troubleshooting. ✅ *Implemented*
 
 ### 4.1.2 API Structure & Findings ✅ *Implemented*
 
@@ -117,6 +130,11 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Products with front=true and Produktfoto type have highest priority ✅ *Verified*
   - File formats are prioritized: PNG > JPEG > original format ✅ *Verified*
   - Images can be associated with multiple products ✅ *Verified*
+- **Product-Image Matching:**
+  - Parent products use their own SKU for image matching ✅ *Implemented*
+  - Variant products primarily use parent SKU for consistent imagery ✅ *Implemented*
+  - Fallback mechanisms ensure maximum image coverage ✅ *Implemented*
+  - Intelligent article number selection based on product hierarchy ✅ *Implemented*
 
 ### 4.2 Sales Management
 
@@ -203,7 +221,10 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - **Parent Product Import**: Successfully imported from Artikel_Familie ✅
     - Created 1,571 parent products with some exceptions due to missing descriptions ✅
     - Parent products serve as base for variant products ✅
+    - Parent product SKUs are derived from the `Nummer` column in Artikel_Familie ✅
   - **Variant Product Import**: Verified with dry-run from Artikel_Variante ✅
+    - Primary SKU for variants now uses the `Nummer` column from Artikel_Variante ✅
+    - Legacy SKU (`alteNummer`) stored in dedicated `legacy_sku` field for reference ✅
     - Extract base SKUs and variant codes from the composite SKU format (e.g., "11400-BE") ✅
     - Establish proper product hierarchies based on base SKU relationships ✅
   - **Relationship Management**: Successfully updated parent-child relationships ✅
@@ -226,11 +247,20 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Provide proper logging and error tracking ✅
   - Support limiting record count for testing and incremental imports ✅
   - Include exception handling with detailed error reporting ✅
+  - **SKU Handling Strategy:** ✅ *Implemented*
+    - **Parent Products**: Use `Nummer` from Artikel_Familie as the primary SKU ✅
+    - **Variant Products**: Use `Nummer` from Artikel_Variante as the primary SKU ✅
+    - Store `alteNummer` from Artikel_Variante in the `legacy_sku` field for reference ✅
+    - Fallback to `alteNummer` if `Nummer` is not available for variants ✅
+    - Consistent parsing of base SKU and variant code from composite SKUs ✅
+    - Maintain backward compatibility with legacy systems through `legacy_sku` field ✅
 
 - **Progress Summary:**
   - ✅ Parent product import completed successfully (1,571 products created)
   - ✅ Parent-child relationships updated successfully (4,078 relationships)
   - ✅ Variant product import verified with dry-run
+  - ✅ SKU handling strategy updated to use `Nummer` as primary identifier
+  - ✅ Added `legacy_sku` field to store `alteNummer` for reference
   - ⬜ Full variant product import pending
   - ⬜ Product categorization enhancement pending
 
@@ -241,6 +271,44 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Implement full-text search indexing for improved product discovery
   - Add incremental sync capability for ongoing updates from legacy system
   - Create data quality reports to identify potential issues in imported data
+
+### 4.6.2 Database Migration from SQLite to MySQL
+
+- **Migration Objectives:** ✅ *Implemented*
+  - Transition from SQLite to MySQL for improved performance and scalability ✅
+  - Support multi-user concurrent access for production environment ✅
+  - Maintain compatibility with existing application code ✅
+  - Ensure proper data integrity during migration ✅
+
+- **Implementation Strategy:** ✅ *Implemented*
+  - **Configuration Updates**: Successfully modified database settings ✅
+    - Updated development settings to use MySQL configuration ✅
+    - Created dedicated testing settings with MySQL configuration ✅
+    - Implemented environment variable-based connection parameters ✅
+  
+  - **Environment Configuration**: ✅ *Implemented*
+    - Created `.env` file for storing MySQL connection parameters ✅
+    - Configured connection to MySQL server at `192.168.73.64` ✅
+    - Set up appropriate database credentials and connection details ✅
+    - Implemented fallback values for environment variables ✅
+  
+  - **Testing & Validation**: ✅ *Implemented*
+    - Verified database connection through Django's check commands ✅
+    - Successfully ran basic tests with MySQL configuration ✅
+    - Confirmed proper schema creation and data access ✅
+    - Created comprehensive MySQL setup documentation ✅
+
+- **Documentation Updates:** ✅ *Implemented*
+  - Updated README.md with MySQL setup instructions ✅
+  - Created MySQL-specific setup guide for new developers ✅
+  - Updated user stories to reflect completed migration ✅
+  - Documented environment variable requirements ✅
+
+- **Progress Summary:**
+  - ✅ Successfully migrated from SQLite to MySQL
+  - ✅ Configured environment for MySQL connections
+  - ✅ Verified database functionality with tests
+  - ✅ Updated all relevant documentation
 
 ### 4.7 Security & Authentication
 
@@ -412,6 +480,13 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Development environments always connect to testing database (pyerp_testing). ✅
   - Production environments always connect to live database (pyerp_production). ✅
   - Database connection settings persist across Git operations. ✅
+- **Database Migration from SQLite to MySQL:** ✅ *Implemented*
+  - Updated development settings to use MySQL instead of SQLite for consistency with production. ✅
+  - Created .env file with MySQL connection parameters for local development. ✅
+  - Connected to existing MySQL server at 192.168.73.64 instead of installing locally. ✅
+  - Successfully created database schema by running migrations. ✅
+  - Updated documentation to reflect MySQL-only development workflow. ✅
+  - Created comprehensive MySQL setup guide in docs/development/mysql_setup.md. ✅
 - **Environment-Specific Configuration:** ✅ *Implemented*
   - Use environment detection to automatically select appropriate database. ✅
   - Store sensitive credentials (passwords, hostnames) in environment variables or .env files. ✅
@@ -554,13 +629,18 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Create tests for core views, forms, and validators
     - Increase test coverage for core modules to 30%
     - Implement tests for product import and management commands
-  - **Product Image Integration:** *In Progress*
+  - **Product Image Integration:** ✅ *Mostly Implemented*
     - Connect to external image database via API ✅ *Implemented*
-    - Implement image prioritization and display in product views
-    - Create caching mechanism for frequently accessed images
-    - Develop image synchronization process with configurable frequency
-    - Add image management capabilities for product administrators
     - Implement secure authentication to the image API ✅ *Implemented*
+    - Create caching mechanism for frequently accessed images ✅ *Implemented*
+    - Implement image prioritization and display in product views ✅ *Implemented*
+    - Add smart article number selection based on product hierarchy ✅ *Implemented*
+    - Create robust fallback logic for image retrieval ✅ *Implemented*
+    - Enhance ProductListView to preload images for both parent and variant products ✅ *Implemented*
+    - Implement custom template filter for accessing dictionary items by key ✅ *Implemented*
+    - Add detailed logging for image retrieval process ✅ *Implemented*
+    - Develop image synchronization process with configurable frequency (Planned)
+    - Add image management capabilities for product administrators (Planned)
 - **Phase 2:**  
   - Multi-warehouse, advanced production flows, partial/split invoicing.  
   - POS/Ecommerce integrations.  

@@ -78,6 +78,12 @@ class Product(models.Model):
         unique=True,
         help_text=_('ID in the legacy system')
     )
+    legacy_sku = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text=_('Legacy SKU (maps to alteNummer in Artikel_Variante)')
+    )
     
     # Parent-child relationship
     parent = models.ForeignKey(

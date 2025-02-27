@@ -24,25 +24,85 @@
         <div class="col-md-5">
             <div class="card">
                 <div class="card-body">
-                    {% if product.productimage_set.exists %}
-                    <div id="productCarousel" class="carousel slide" data-ride="carousel">
+                    {% if product.images.exists %}
+                    <!-- Display images from database -->
+                    <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
                         <div class="carousel-inner">
-                            {% for image in product.productimage_set.all %}
+                            {% for image in product.images.all %}
                             <div class="carousel-item {% if image.is_primary %}active{% endif %}">
-                                <img src="{{ image.image.url }}" class="d-block w-100" alt="{{ product.name }}">
+                                <img src="{{ image.image_url }}" class="d-block w-100" alt="{{ product.name }}">
                             </div>
                             {% endfor %}
                         </div>
-                        {% if product.productimage_set.count > 1 %}
-                        <a class="carousel-control-prev" href="#productCarousel" role="button" data-slide="prev">
+                        {% if product.images.count > 1 %}
+                        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
                             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                            <span class="sr-only">{% trans "Previous" %}</span>
-                        </a>
-                        <a class="carousel-control-next" href="#productCarousel" role="button" data-slide="next">
+                            <span class="visually-hidden">{% trans "Previous" %}</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
                             <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                            <span class="sr-only">{% trans "Next" %}</span>
-                        </a>
+                            <span class="visually-hidden">{% trans "Next" %}</span>
+                        </button>
                         {% endif %}
+                        
+                        <!-- Thumbnails for navigation -->
+                        {% if product.images.count > 1 %}
+                        <div class="row mt-3">
+                            {% for image in product.images.all %}
+                            <div class="col-3 mb-2">
+                                <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="{{ forloop.counter0 }}" class="{% if image.is_primary %}active{% endif %} border-0 p-0">
+                                    <img src="{{ image.thumbnail_url|default:image.image_url }}" class="img-thumbnail" alt="{{ product.name }}">
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% elif temp_images %}
+                    <!-- Display temporary images from API -->
+                    <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            {% for image in temp_images %}
+                            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                <img src="{{ image.image_url }}" class="d-block w-100" alt="{{ product.name }}">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if temp_images|length > 1 %}
+                        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">{% trans "Previous" %}</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">{% trans "Next" %}</span>
+                        </button>
+                        {% endif %}
+                        
+                        <!-- Thumbnails for navigation -->
+                        {% if temp_images|length > 1 %}
+                        <div class="row mt-3">
+                            {% for image in temp_images %}
+                            <div class="col-3 mb-2">
+                                <button type="button" data-bs-target="#productCarousel" data-bs-slide-to="{{ forloop.counter0 }}" class="{% if forloop.first %}active{% endif %} border-0 p-0">
+                                    <img src="{{ image.thumbnail_url|default:image.image_url }}" class="img-thumbnail" alt="{{ product.name }}">
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="text-muted mt-2 small">
+                            <i class="fas fa-info-circle"></i> {% trans "Images loaded from external database" %}
+                        </div>
+                        
+                        <!-- Save images button -->
+                        <div class="mt-3">
+                            <button id="saveImagesBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-save"></i> {% trans "Save Images to Database" %}
+                            </button>
+                            <div id="saveImagesStatus" class="mt-2"></div>
+                        </div>
                     </div>
                     {% else %}
                     <div class="text-center p-5">
@@ -218,4 +278,52 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle save images button click
+        const saveBtn = document.getElementById('saveImagesBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function() {
+                const statusDiv = document.getElementById('saveImagesStatus');
+                
+                // Disable button and show loading
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {% trans "Saving..." %}';
+                statusDiv.innerHTML = '';
+                
+                // Create fetch request to save images
+                fetch('{% url "products:save_product_images" product.id %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                        // Reload page after a short delay to show the saved images
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        statusDiv.innerHTML = '<div class="alert alert-warning">' + data.message + '</div>';
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-save"></i> {% trans "Save Images to Database" %}';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    statusDiv.innerHTML = '<div class="alert alert-danger">{% trans "An error occurred while saving images." %}</div>';
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> {% trans "Save Images to Database" %}';
+                });
+            });
+        }
+    });
+</script>
 {% endblock %} 

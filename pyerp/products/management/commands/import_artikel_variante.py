@@ -5,6 +5,7 @@ Management command to import product variants from the legacy Artikel_Variante t
 import os
 import sys
 import logging
+import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from pyerp.products.models import Product, ProductCategory
@@ -86,6 +87,7 @@ class Command(BaseCommand):
                     # Extract data from the row
                     legacy_id = row['UID']
                     alte_nummer = row['alteNummer']
+                    nummer = row['Nummer'] if 'Nummer' in row and pd.notna(row['Nummer']) else None
                     bezeichnung = row['Bezeichnung']
                     ref_old = row['refOld'] if 'refOld' in row else None
                     
@@ -95,11 +97,14 @@ class Command(BaseCommand):
                         stats['skipped'] += 1
                         continue
                     
-                    # Parse SKU and variant code
-                    if '-' in alte_nummer:
-                        base_sku, variant_code = alte_nummer.split('-', 1)
+                    # Determine the primary SKU - use Nummer if available, otherwise fallback to alteNummer
+                    primary_sku = str(nummer) if nummer is not None else alte_nummer
+                    
+                    # Parse SKU and variant code from the primary SKU
+                    if '-' in primary_sku:
+                        base_sku, variant_code = primary_sku.split('-', 1)
                     else:
-                        base_sku = alte_nummer
+                        base_sku = primary_sku
                         variant_code = ''
                     
                     # Find parent product by base_sku
@@ -143,11 +148,12 @@ class Command(BaseCommand):
                     
                     # Create variant data
                     variant_data = {
-                        'sku': alte_nummer,
+                        'sku': primary_sku,  # Use Nummer as primary SKU
                         'base_sku': base_sku,
                         'variant_code': variant_code,
                         'name': bezeichnung,
                         'legacy_id': legacy_id,
+                        'legacy_sku': alte_nummer,  # Store alteNummer as legacy_sku
                         'parent': parent,
                         'is_parent': False,
                         'list_price': list_price,
