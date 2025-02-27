@@ -117,6 +117,54 @@ If you encounter issues with dependencies:
 2. **Missing dependency**: Ensure you've added it to the correct `.in` file and recompiled
 3. **Docker caching issues**: Try rebuilding without cache: `docker-compose build --no-cache`
 
+## Known Issues
+
+### psycopg2-binary Installation
+
+The `psycopg2-binary` package requires PostgreSQL development libraries to be installed on the system. If you encounter an error like:
+
+```
+Error: pg_config executable not found.
+
+pg_config is required to build psycopg2 from source.  Please add the directory
+containing pg_config to the $PATH or specify the full executable path with the
+option:
+
+    python setup.py build_ext --pg-config /path/to/pg_config build ...
+```
+
+You have two options:
+
+1. **Install PostgreSQL development libraries**:
+   - On Windows: Install PostgreSQL from the official website
+   - On Ubuntu/Debian: `sudo apt-get install libpq-dev python3-dev`
+   - On CentOS/RHEL: `sudo yum install postgresql-devel python3-devel`
+   - On macOS with Homebrew: `brew install postgresql`
+
+2. **Use a Docker-based development environment**:
+   Our Docker setup includes all necessary dependencies, which avoids these installation issues.
+
+## Environment Variables
+
+Environment variables are used to configure the application without modifying code. It's important to follow these guidelines:
+
+1. **Format**: Environment variables should contain only the value, without comments or additional text.
+   - Correct: `LOG_FILE_SIZE_LIMIT=2097152`
+   - Incorrect: `LOG_FILE_SIZE_LIMIT=2097152  # 2MB in bytes`
+
+2. **Storage**: 
+   - Development: Use `.env` file (not committed to version control)
+   - Production: Use system environment variables or a secure environment variable management system
+
+3. **Types**:
+   - The application converts environment variables to appropriate types (string, int, boolean)
+   - For boolean values, use "true"/"false" (case-insensitive)
+   - For numeric values, use only digits without commas or units
+
+4. **Required Variables**:
+   - Check `.env.example` for the list of required environment variables
+   - Make sure all required variables are set before running the application
+
 ## Production Deployment
 
 We use a multi-stage build process to create optimized and secure Docker images for production:

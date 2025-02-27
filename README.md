@@ -27,7 +27,7 @@ The development strategy includes building a one-way synchronization with the le
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.13.2
 - PostgreSQL 13+
 - Docker and Docker Compose (for development environment)
 
@@ -131,6 +131,17 @@ pytest pyerp/products/tests/
 pytest --cov=pyerp
 ```
 
+## Continuous Integration
+
+The project uses GitHub Actions for continuous integration with the following workflows:
+
+- **Test and Lint**: Runs on every push to main/master and pull requests to verify code quality
+- **Dependency Security Scan**: Runs weekly to check for security vulnerabilities
+- **Update Dependencies**: Runs weekly to update dependencies and create pull requests with updates
+- **Build Docker Image**: Builds and publishes Docker images on merges to main/master and tags
+
+CI/CD workflows can be found in the `.github/workflows` directory.
+
 ## Deployment
 
 For production deployment:
@@ -147,6 +158,7 @@ See detailed deployment instructions in `docs/deployment.md`
 
 ```
 pyERP/
+├── .github/                  # GitHub Actions workflows for CI/CD
 ├── docker/                   # Docker configurations
 ├── docs/                     # Documentation
 ├── pyerp/                    # Main Django project
@@ -165,6 +177,26 @@ pyERP/
 ├── manage.py                 # Django management script
 └── requirements/             # Python dependencies
 ```
+
+## Dependency Management
+
+The project uses pip-tools for dependency management. Dependencies are organized into three categories:
+
+- **Base Dependencies** (`requirements/base.in`): Core dependencies used in all environments
+- **Production Dependencies** (`requirements/production.in`): Dependencies needed specifically for production
+- **Development Dependencies** (`requirements/development.in`): Additional dependencies needed for development and testing
+
+### Adding or Updating Dependencies
+
+1. Add the dependency to the appropriate `.in` file
+2. Compile the requirements using pip-compile
+3. Install the updated dependencies
+
+For detailed instructions, see [Dependency Management Guide](docs/dependency_management.md).
+
+### Known Issues
+
+Some dependencies like `psycopg2-binary` require system-level libraries. See [Dependency Updates](docs/dependency_updates.md) for known issues and solutions.
 
 ## License
 
