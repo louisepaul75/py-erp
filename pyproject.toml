@@ -57,7 +57,7 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "pyerp.settings.test"
+DJANGO_SETTINGS_MODULE = "pyerp.settings.testing"
 python_files = ["test_*.py", "*_test.py"]
 testpaths = ["tests"]
 filterwarnings = [

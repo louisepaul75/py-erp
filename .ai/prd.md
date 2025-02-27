@@ -714,3 +714,72 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Security scanning for vulnerabilities
   - Dependency validation and updates
   - Documentation generation and validation
+
+## 7. Non-Functional Requirements
+
+### 7.1 Performance
+
+- **Response Time:**  
+  - User interface actions should complete within 1-2 seconds under normal load.  
+  - Reports may take up to 10 seconds for complex data analysis.  
+- **Concurrency:**  
+  - Support for 15 simultaneous users with no degradation.  
+  - Handle 50 concurrent API requests from external systems.  
+- **Transaction Volume:**  
+  - Manage up to 500 orders per day with related line items.  
+  - Inventory movements: 1,500 per day.  
+
+### 7.2 Reliability & Availability
+
+- **Uptime Target:**  
+  - 99.5% during business hours (8:00 AM to 6:00 PM, Monday through Friday).  
+  - Scheduled maintenance windows outside business hours.  
+- **Backup:**  
+  - Daily incremental backups.  
+  - Weekly full backups stored securely within the company's premises.  
+- **Disaster Recovery:**  
+  - Backup to production restored within 4 hours maximum.  
+  - Potential for simple Active/Passive setup with automated failover (optional/budget permitting).  
+
+### 7.3 Scalability
+
+- **Data Growth:**  
+  - 20% annual growth in transaction volume.  
+  - No more than 10% degradation in performance with 2x data volume.  
+- **User Growth:**  
+  - Support scaling to 30 concurrent users within 2 years.  
+- **Instance Scaling:**  
+  - Docker Compose configuration allows for vertical scaling (more resources).  
+  - Potential for horizontal scaling in future microservices architecture.  
+
+### 7.4 Security
+
+- **Authentication & Authorization:**  
+  - Role-based access control with fine-grained permissions.  
+  - Password policies enforced (complexity, expiration).  
+  - MFA for admin users (optional/nice-to-have).  
+- **Data Protection:**  
+  - Encryption of sensitive data at rest and in transit.  
+  - In-network deployment with limited exposure to the internet (DMZ for APIs).  
+- **Audit Trail:**  
+  - Logging of all critical data modifications (who, what, when).  
+  - User session tracking.  
+
+### 7.5 Testing Strategy
+
+- **Testing Approach:**  
+  - Unit tests for core business logic components. ✅ *Implemented*
+  - Integration tests for API endpoints and workflows.
+  - User acceptance testing for key business processes.
+- **Mock Objects for Django Testing:** ✅ *Implemented*
+  - Isolated test environment with mock Django models. ✅ *Implemented*
+  - QuerySet simulation without database dependencies. ✅ *Implemented*
+  - Model manager mocks for efficient testing. ✅ *Implemented*
+- **Test Execution Framework:** ✅ *Implemented*
+  - Running targeted tests to avoid Django app registry issues. ✅ *Implemented*
+  - Custom scripts to bypass test collection problems. ✅ *Implemented*
+  - Reporting and coverage analysis. ✅ *Implemented*
+- **Continuous Integration:**
+  - Automated test execution for every pull request.
+  - Enforce minimum code coverage requirements.
+  - Performance regression testing for critical components.

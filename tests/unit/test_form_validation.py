@@ -19,6 +19,45 @@ from pyerp.core.form_validation import (
     ValidatedFormMixin, ValidatedModelForm, ValidatedForm
 )
 
+# Create a proper mock Product model class to use in tests
+class MockOptions:
+    """Mock Options class for Django model metadata."""
+    def __init__(self):
+        self.model_name = 'product'
+        self.app_label = 'products'
+        self.verbose_name = 'Product'
+        self.object_name = 'Product'
+        self.abstract = False
+        self.swapped = False
+        self.fields = {}
+        self.private_fields = []
+        self.many_to_many = []
+        self.related_objects = []
+        self.concrete_fields = []
+        self.local_concrete_fields = []
+        self.proxy = False
+        self.auto_created = False
+        self.get_fields = lambda: []
+
+class Product:
+    """Mock Product model for testing."""
+    __name__ = 'Product'
+    _meta = MockOptions()
+    
+    DoesNotExist = type('DoesNotExist', (Exception,), {})
+    MultipleObjectsReturned = type('MultipleObjectsReturned', (Exception,), {})
+    
+    objects = MagicMock()
+    
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+            
+    def save(self, *args, **kwargs):
+        pass
+    
+    def clean(self):
+        pass
 
 class TestValidatedFormMixin:
     """Tests for the ValidatedFormMixin class."""
@@ -132,15 +171,6 @@ class TestValidatedFormMixin:
 class TestValidatedModelForm:
     """Tests for the ValidatedModelForm class."""
     
-    # Mock Product model for testing
-    class Product(MagicMock):
-        """Mock product model."""
-        
-        def clean(self):
-            """Mock clean method."""
-            # This will be mocked
-            pass
-    
     class ProductForm(ValidatedModelForm):
         """Test model form implementation."""
         
@@ -170,7 +200,7 @@ class TestValidatedModelForm:
     def model_form(self):
         """Create a model form instance for testing."""
         with patch.object(self.ProductForm, 'Meta'):
-            self.ProductForm.Meta.model = self.Product
+            self.ProductForm.Meta.model = Product
             return self.ProductForm()
     
     def test_model_instance_validation(self, model_form):

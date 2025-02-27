@@ -54,6 +54,18 @@ For detailed contribution guidelines, including branch naming conventions, commi
 - PostgreSQL 13+
 - Docker and Docker Compose (for development environment)
 
+### Environment Configuration
+
+Environment configuration files are located in the `pyerp/config/env/` directory:
+
+- `.env` - Development environment variables
+- `.env.production` - Production environment variables
+- `.env.example` - Example development configuration template
+- `.env.production.example` - Example production configuration template
+- `.env.prod.example` - Alternative production configuration template
+
+For compatibility, copies of these files with warning headers exist in the project root. Always make changes to the original files in `pyerp/config/env/`.
+
 ### Development Setup
 
 1. Clone the repository:
