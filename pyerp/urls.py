@@ -46,11 +46,14 @@ urlpatterns = [
     # API endpoints
     # Uncomment these as the app URLs are implemented
     # path('api/core/', include('pyerp.core.urls')),
-    # path('api/products/', include('pyerp.products.urls')),
+    path('api/products/', include('pyerp.products.urls')),
     # path('api/sales/', include('pyerp.sales.urls')),
     # path('api/inventory/', include('pyerp.inventory.urls')),
     # path('api/production/', include('pyerp.production.urls')),
     # path('api/legacy-sync/', include('pyerp.legacy_sync.urls')),
+    
+    # Frontend URLs
+    path('products/', include('pyerp.products.urls')),
 ]
 
 # Serve static and media files in development

@@ -6,7 +6,7 @@ This module provides validators specific to product data, including import valid
 
 from decimal import Decimal, InvalidOperation
 import logging
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Tuple, Optional, TYPE_CHECKING
 
 from django.utils.translation import gettext_lazy as _
 
@@ -14,7 +14,10 @@ from pyerp.core.validators import (
     ImportValidator, ValidationResult, RegexValidator, SkuValidator,
     DecimalValidator, RangeValidator, LengthValidator, RequiredValidator
 )
-from pyerp.products.models import Product, ProductCategory
+
+# Use TYPE_CHECKING to avoid circular imports
+if TYPE_CHECKING:
+    from pyerp.products.models import Product, ProductCategory
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +30,7 @@ class ProductImportValidator(ImportValidator):
     """
     
     def __init__(self, strict: bool = False, transform_data: bool = True,
-                 default_category: Optional[ProductCategory] = None):
+                 default_category: Optional['ProductCategory'] = None):
         super().__init__(strict, transform_data)
         # Default category to use when none is specified
         self.default_category = default_category
@@ -311,7 +314,7 @@ class ProductImportValidator(ImportValidator):
         return value, result
     
     def validate_category(self, value: Any, row_data: Dict[str, Any], 
-                         row_index: Optional[int] = None) -> Tuple[Optional[ProductCategory], ValidationResult]:
+                         row_index: Optional[int] = None) -> Tuple[Optional['ProductCategory'], ValidationResult]:
         """
         Validate the category field.
         

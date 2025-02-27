@@ -10,7 +10,7 @@ class ProductCategoryForm(forms.ModelForm):
     
     class Meta:
         model = ProductCategory
-        fields = ['name', 'slug', 'description', 'is_active']
+        fields = ['code', 'name', 'description', 'parent']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
@@ -31,33 +31,29 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             # Basic information
-            'name', 'sku', 'slug', 'category', 'manufacturer', 'manufacturer_part_number',
+            'sku', 'base_sku', 'variant_code', 'name', 'name_en', 'category', 'parent', 'is_parent',
             
             # Descriptions
-            'short_description', 'description', 'features', 'keywords',
+            'short_description', 'short_description_en', 'description', 'description_en', 'keywords',
             
             # Physical attributes
-            'weight', 'length', 'width', 'height',
+            'dimensions', 'weight',
             
             # Pricing
-            'cost', 'list_price', 'sale_price',
+            'list_price', 'wholesale_price', 'gross_price', 'cost_price',
             
             # Inventory
-            'stock_quantity', 'min_stock_level', 'max_stock_level', 'reorder_point',
+            'stock_quantity', 'min_stock_quantity', 'backorder_quantity', 'open_purchase_quantity',
             
             # Flags
-            'is_active', 'is_featured', 'is_on_sale',
-            
-            # SEO
-            'meta_keywords', 'meta_description',
+            'is_active', 'is_discontinued', 'has_bom', 'is_one_sided', 'is_hanging',
         ]
         widgets = {
             'short_description': forms.Textarea(attrs={'rows': 2}),
+            'short_description_en': forms.Textarea(attrs={'rows': 2}),
             'description': forms.Textarea(attrs={'rows': 5}),
-            'features': forms.Textarea(attrs={'rows': 5}),
+            'description_en': forms.Textarea(attrs={'rows': 5}),
             'keywords': forms.Textarea(attrs={'rows': 2}),
-            'meta_keywords': forms.Textarea(attrs={'rows': 2}),
-            'meta_description': forms.Textarea(attrs={'rows': 2}),
         }
         
     def clean_sku(self):
@@ -80,19 +76,19 @@ class ProductForm(forms.ModelForm):
         """Validate the form data."""
         cleaned_data = super().clean()
         
-        # Ensure sale price is less than list price if provided
-        sale_price = cleaned_data.get('sale_price')
+        # Ensure parent-variant relationship is valid
+        is_parent = cleaned_data.get('is_parent')
+        variant_code = cleaned_data.get('variant_code')
+        
+        if is_parent and variant_code:
+            self.add_error('is_parent', _('Parent products should not have variant codes.'))
+        
+        # Ensure list_price is greater than cost_price
         list_price = cleaned_data.get('list_price')
+        cost_price = cleaned_data.get('cost_price')
         
-        if sale_price and list_price and sale_price >= list_price:
-            self.add_error('sale_price', _('Sale price must be less than list price.'))
-        
-        # Ensure min_stock_level is less than max_stock_level if both are provided
-        min_stock = cleaned_data.get('min_stock_level')
-        max_stock = cleaned_data.get('max_stock_level')
-        
-        if min_stock is not None and max_stock is not None and min_stock > max_stock:
-            self.add_error('min_stock_level', _('Minimum stock level must be less than maximum stock level.'))
+        if list_price and cost_price and list_price < cost_price:
+            self.add_error('list_price', _('List price should not be less than cost price.'))
         
         return cleaned_data
 
