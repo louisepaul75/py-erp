@@ -1,0 +1,52 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+        libpq-dev \
+        postgresql-client \
+        netcat-traditional \
+        wget \
+        curl \
+        # WeasyPrint dependencies
+        libcairo2 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libgdk-pixbuf2.0-0 \
+        shared-mime-info \
+        # Additional tools
+        git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Install pip-tools
+RUN pip install --upgrade pip \
+    && pip install pip-tools
+
+# Copy requirements files
+COPY requirements/ /app/requirements/
+
+# Compile and install requirements
+RUN pip-compile requirements/development.in --output-file=requirements/development.txt \
+    && pip install -r requirements/development.txt
+
+# Create directories for static and media files
+RUN mkdir -p /app/static /app/media /app/logs
+
+# Copy entrypoint script
+COPY ./docker/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Run entrypoint script
+ENTRYPOINT ["entrypoint.sh"]
+
+# Default command
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"] 

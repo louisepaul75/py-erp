@@ -1,0 +1,28 @@
+# Include base requirements
+-r requirements.txt
+
+# Debugging
+django-debug-toolbar==4.2.0
+ipython==8.22.1
+ipdb==0.13.13
+
+# Testing
+pytest-xdist==3.5.0  # Parallel testing
+pytest-sugar==0.9.7  # Better test output formatting
+faker==24.0.0        # Test data generation
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.5.12
+
+# Code quality
+bandit==1.7.7      # Security linting
+safety==2.3.5      # Dependency vulnerabilities
+django-stubs==4.2.7  # Type stubs for Django
+djangorestframework-stubs==3.14.5  # Type stubs for DRF
+
+# Database
+django-extensions==3.2.3  # Graph models and shell plus
+
+# Development server
+watchdog==3.0.0     # Auto-reloading 

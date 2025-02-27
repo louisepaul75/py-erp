@@ -1,0 +1,1 @@
+# pyERP Core App - Common functionality shared across other apps 

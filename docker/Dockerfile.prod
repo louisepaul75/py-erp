@@ -1,0 +1,68 @@
+# Build stage
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    libpq-dev \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pip-tools
+RUN pip install --upgrade pip \
+    && pip install pip-tools
+
+# Copy requirements files
+COPY requirements/ /app/requirements/
+
+# Compile requirements and generate wheels
+RUN pip-compile requirements/production.in --output-file=requirements/production.txt \
+    && pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements/production.txt
+
+# Final stage
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=pyerp.settings.production
+
+# Create non-root user
+RUN useradd -m appuser
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    # WeasyPrint runtime dependencies
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    shared-mime-info \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy wheels from builder
+COPY --from=builder /app/wheels /wheels
+RUN pip install --no-cache /wheels/*
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/static /app/media /app/logs \
+    && chown -R appuser:appuser /app
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Use non-root user
+USER appuser
+
+# Run gunicorn
+CMD ["gunicorn", "pyerp.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"] 
