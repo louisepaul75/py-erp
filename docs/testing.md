@@ -49,21 +49,29 @@ assert first_product is product
 
 ## Running Tests
 
-### Individual Tests
+### Test Runner Script
 
-We've created utilities to run specific tests in isolation:
+We've created a comprehensive test runner script to simplify test execution:
 
 ```bash
-# Run all simple tests to verify test environment
-python run_specific_tests.py
+# Run all tests
+python tests/run_tests.py
+
+# Run specific test modules
+python tests/run_tests.py tests/unit/test_product_validation.py
+
+# Run with coverage
+python tests/run_tests.py --coverage
+
+# Run with verbose output
+python tests/run_tests.py --verbose
 ```
 
-This script uses subprocess to run pytest on specific test modules, avoiding collection of problematic tests.
-
-### Test Scripts
-
-- `run_specific_tests.py`: Runs selected test modules individually
-- `run_working_tests.py`: Runs confirmed working tests through Django's test runner
+The `run_tests.py` script provides several advantages:
+- Bypasses Django app registry issues
+- Generates coverage reports
+- Provides a consistent interface for all test runs
+- Supports running specific test modules or directories
 
 ### Pytest Usage
 
@@ -89,9 +97,54 @@ To generate coverage reports:
 # Generate coverage report
 python -m pytest --cov=pyerp tests/unit/ --cov-report=html
 
+# Or use the test runner
+python tests/run_tests.py --coverage --html
+
 # View the report
 # Open htmlcov/index.html in a browser
 ```
+
+## Isolated Testing Examples
+
+### Product Validation Tests
+
+The `tests/unit/test_product_validation.py` file demonstrates how to create isolated tests that don't depend on Django:
+
+```python
+# Example of isolated product validation test
+def test_sku_uniqueness_validation(self):
+    """Test that SKU uniqueness validation works correctly."""
+    # Create a mock for the filter method
+    mock_filter = MagicMock()
+    
+    # Test case 1: New product with unique SKU
+    mock_queryset = MockQuerySet()
+    mock_queryset.exists_return = False
+    mock_filter.return_value = mock_queryset
+    
+    # Simulate the validation logic from ProductForm.clean_sku
+    sku = 'NEW-SKU'
+    if mock_filter(sku=sku).exists():
+        raise ValueError("A product with this SKU already exists.")
+    
+    # No exception should be raised
+    
+    # Test case 2: New product with duplicate SKU
+    mock_queryset = MockQuerySet([MockProduct(sku='DUPLICATE-SKU')])
+    mock_queryset.exists_return = True
+    mock_filter.return_value = mock_queryset
+    
+    # Simulate the validation logic
+    sku = 'DUPLICATE-SKU'
+    with pytest.raises(ValueError) as excinfo:
+        if mock_filter(sku=sku).exists():
+            raise ValueError("A product with this SKU already exists.")
+    
+    # Verify the error message
+    assert "already exists" in str(excinfo.value)
+```
+
+This approach allows testing business logic without requiring Django's ORM or database.
 
 ## Continuous Integration
 

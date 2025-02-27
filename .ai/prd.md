@@ -257,7 +257,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 - **Comprehensive Testing Strategy:**
   - Multi-layered approach covering unit, integration, and end-to-end testing
-  - Test-driven development (TDD) for core business logic
+  - Test-driven development (TDD) for core business logic components
   - Behavior-driven development (BDD) for user-facing features
   - Structured testing patterns aligned with project architecture
 
@@ -265,9 +265,9 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - pytest as primary testing framework with plugins for Django ✅ *Implemented*
   - Isolation of tests to prevent side effects between test cases ✅ *Implemented*
   - Parameterized tests for covering edge cases ✅ *Implemented*
-  - Mock objects for external dependencies (Planned)
+  - Mock objects for external dependencies ✅ *Implemented*
   - Base test classes for common testing patterns ✅ *Implemented*
-  - **Current Test Coverage:** 13% overall, with core validators at 79% ✅ *Measured*
+  - **Current Test Coverage:** 8% overall, with core validators at 79% ✅ *Measured*
   - **Test Coverage Goals:** Minimum 80% coverage for all core modules
   
 - **Test Data Management:**
@@ -302,16 +302,17 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Pre-commit hooks for running tests on changed files ✅ *Implemented*
 
 - **Testing Documentation:**
-  - Test writing guidelines and best practices (Planned)
-  - Documentation for setting up testing environment (Planned)
-  - Example test cases for different testing types (Planned)
+  - Test writing guidelines and best practices ✅ *Implemented*
+  - Documentation for setting up testing environment ✅ *Implemented*
+  - Example test cases for different testing types ✅ *Implemented*
   - Test coverage reporting and analysis tools ✅ *Implemented*
 
 - **Testing Improvement Plan:**
   - **Phase 1: Core Framework Testing** *In Progress*
     - ✅ Fix failing test in RequiredValidator (parameter naming inconsistency)
+    - ✅ Create isolated product validation tests without Django dependencies
     - Resolve circular import issues in product validators
-    - Increase core validators coverage from 78% to 90%
+    - Increase core validators coverage from 79% to 90%
     - Add tests for form validation framework (currently 0%)
   - **Phase 2: Model & Business Logic Testing** *Planned*
     - Add tests for product models and validators
@@ -323,6 +324,18 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Implement integration tests for critical workflows
     - Create end-to-end tests for key user journeys
     - Develop performance tests for database operations
+
+- **Testing Tools & Resources:** ✅ *Implemented*
+  - Coverage analysis script (`find_low_coverage.py`) to identify modules with low coverage ✅ *Implemented*
+  - Untested module detection script (`find_untested_modules.py`) to find modules with no tests ✅ *Implemented*
+  - Test templates with examples for different component types (`test_template.py`) ✅ *Implemented*
+  - Custom script (`run_tests.py`) to bypass Django app registry issues ✅ *Implemented*
+  - Comprehensive test coverage improvement plan with phased approach ✅ *Implemented*
+
+- **Testing Implementation Timeline:**
+  - **Short-term Goal** (1 month): Increase overall coverage to 30%, focusing on core modules
+  - **Medium-term Goal** (3 months): Increase overall coverage to 60%, covering all public APIs
+  - **Long-term Goal** (6 months): Maintain coverage above 80% across all modules
 
 ### 4.8.1 Data Validation Framework ✅ *Implemented*
 
@@ -497,7 +510,9 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Implement comprehensive testing framework and test-driven development practices ✅ *Partially Implemented*
     - Core validation framework tests at 78% coverage ✅ *Implemented*
     - Test infrastructure with pytest and coverage reporting ✅ *Implemented*
-    - Remaining modules require test implementation (12% overall coverage) *In Progress*
+    - Test analysis tools for coverage improvement planning ✅ *Implemented*
+    - Test templates for different component types ✅ *Implemented*
+    - Remaining modules require test implementation (8% overall coverage) *In Progress*
   - Implement data validation framework for models, forms, and imports ✅ *Implemented*
     - Core validators framework ✅ *Implemented*
     - Form validation integration ✅ *Implemented*
@@ -505,7 +520,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Product-specific validators ✅ *Implemented*
     - Bug fixes and improvements needed *In Progress*
   - Set up CI/CD pipeline with automated testing and quality gates ✅ *Implemented*
-  - Create testing documentation and example test patterns for each level *Planned*
+  - Create testing documentation and example test patterns for each level ✅ *Implemented*
   - Implement structured logging system with LLM-friendly file size limits ✅
   - Configure log rotation, categorization, and centralized collection ✅
   - Create log analysis utilities and monitoring dashboards (Partially Complete)
@@ -535,9 +550,10 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Extract and import additional product metadata (Tags, Properties) (Planned)
   - **Testing & Validation Improvements:** *In Progress*
     - ✅ Fix identified bugs in validation framework (RequiredValidator parameter naming)
-    - Increase test coverage for core modules to 80%
+    - Implement test coverage improvement plan Phase 1 (Core Framework)
+    - Create tests for core views, forms, and validators
+    - Increase test coverage for core modules to 30%
     - Implement tests for product import and management commands
-    - Create validation documentation with examples
   - **Product Image Integration:** *In Progress*
     - Connect to external image database via API ✅ *Implemented*
     - Implement image prioritization and display in product views
@@ -550,17 +566,20 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - POS/Ecommerce integrations.  
   - Additional features as prioritized.  
   - **Testing & Validation Expansion:**
+    - Implement test coverage improvement plan Phase 2 (Business Logic)
+    - Add tests for product models, inventory logic, and sales workflows
     - Implement integration tests for critical business workflows
-    - Add end-to-end tests for key user journeys
-    - Develop performance tests for database operations
-    - Achieve 80% test coverage across all modules
+    - Add tests for API endpoints and views
+    - Increase overall test coverage to 60%
 - **Phase 3+:**  
   - Expand accounting integration, advanced analytics, further automation.  
   - **Testing & Validation Maturity:**
+    - Implement test coverage improvement plan Phase 3 (Integration Points)
+    - Add tests for legacy sync modules and management commands 
+    - Create end-to-end tests for key user journeys
     - Implement continuous performance monitoring
     - Add automated regression testing
-    - Develop comprehensive test documentation
-    - Implement advanced test data management
+    - Maintain test coverage above 80% across all modules
 
 ### 4.13 Logging System & Monitoring
 

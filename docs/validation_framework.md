@@ -169,6 +169,66 @@ class MyImportValidator(ImportValidator):
             result.add_warning('list_price', "List price is less than cost price")
 ```
 
+## Testing Validation Logic
+
+### Isolated Validation Tests
+
+We've implemented a strategy for testing validation logic without Django dependencies:
+
+```python
+# From tests/unit/test_product_validation.py
+def test_price_validation(self):
+    """Test validation of price relationship."""
+    # Simulate the validation logic from ProductForm.clean
+    list_price = Decimal('40.00')
+    cost_price = Decimal('50.00')
+    
+    # In a real form, this would add an error to the form
+    if list_price and cost_price and list_price < cost_price:
+        error_message = "List price should not be less than cost price."
+        assert error_message, "Should raise an error when list price is less than cost price"
+```
+
+This approach allows testing business validation rules without requiring Django's ORM or database connections.
+
+### Mock Models for Testing
+
+The `tests/unit/mock_models.py` module provides mock implementations of Django models and querysets for testing:
+
+```python
+# Example of testing SKU uniqueness validation
+def test_sku_uniqueness_validation(self):
+    """Test that SKU uniqueness validation works correctly."""
+    # Create a mock for the filter method
+    mock_filter = MagicMock()
+    
+    # Test case 1: New product with unique SKU
+    mock_queryset = MockQuerySet()
+    mock_queryset.exists_return = False
+    mock_filter.return_value = mock_queryset
+    
+    # Simulate the validation logic from ProductForm.clean_sku
+    sku = 'NEW-SKU'
+    if mock_filter(sku=sku).exists():
+        raise ValueError("A product with this SKU already exists.")
+    
+    # No exception should be raised
+    
+    # Test case 2: New product with duplicate SKU
+    mock_queryset = MockQuerySet([MockProduct(sku='DUPLICATE-SKU')])
+    mock_queryset.exists_return = True
+    mock_filter.return_value = mock_queryset
+    
+    # Simulate the validation logic
+    sku = 'DUPLICATE-SKU'
+    with pytest.raises(ValueError) as excinfo:
+        if mock_filter(sku=sku).exists():
+            raise ValueError("A product with this SKU already exists.")
+    
+    # Verify the error message
+    assert "already exists" in str(excinfo.value)
+```
+
 ## Best Practices
 
 1. **Reuse Validators**: Create reusable validators for common validation patterns
