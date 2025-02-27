@@ -335,19 +335,23 @@ This document outlines the key user stories for the PyERP system. Each story rep
 **Acceptance Criteria:**
 - ✅ Products are imported from Artikel_Variante table (replacing previous Artikel_Stamm approach)
 - ✅ Base SKUs and variant codes are correctly extracted from composite SKUs
-- ✅ Parent products are automatically created for product variants sharing the same base SKU
+- ✅ Parent products are automatically created from Artikel_Familie
+- ✅ Parent products linked to variants based on base SKU patterns
 - ✅ Product pricing is correctly imported from complex nested price structures
 - ✅ Import supports dry-run mode for testing without making database changes
 - ✅ Import provides detailed logs and error reporting
 - ✅ Import can be limited to a specific number of products for testing
+- ✅ Parent-child relationships successfully updated (4,078 relationships)
 - ⬜ Product categories are imported based on Familie_ field
 - ⬜ Additional product attributes are imported (dimensions, descriptions, tags)
 - ⬜ Product import includes validation and data quality checks
 - ⬜ Image and media assets are imported
 
 **Implementation Notes:**
-- Implementation based on Django management command
+- Implementation based on Django management commands
+- Parent products imported using `import_artikel_familie_as_parents.py`
+- Parent-child relationships updated using `import_artikel_familie_as_parents.py --update-relationships`
+- Variant products verified with `python manage.py import_artikel_variante --dry-run`
 - See detailed progress in [Product Import from Artikel_Variante](./stories/product_import_artikel_variante.md)
-- Command: `python manage.py import_products [options]`
 
-**Status:** In Progress 
+**Status:** In Progress (Major milestones achieved) 

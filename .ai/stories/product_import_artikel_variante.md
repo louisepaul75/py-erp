@@ -29,9 +29,13 @@ To ensure a successful migration, we need to:
 - [x] Implemented proper linking of variants to their parent products
 - [x] Added debug output for troubleshooting
 - [x] Implemented exception handling for robust error recovery
+- [x] Successfully imported parent products from Artikel_Familie (1,571 products created)
+- [x] Successfully updated parent-child relationships for 4,078 variant products
+- [x] Executed variant import with dry-run mode to verify data
 
 ### In Progress
 
+- [ ] Complete full variant import to create all variants in the database
 - [ ] Enhance product categorization based on `Familie_` field and legacy categories
 - [ ] Extract additional product attributes (dimensions, weights, descriptions)
 - [ ] Import product tags and properties from related entities
@@ -49,10 +53,17 @@ To ensure a successful migration, we need to:
 
 ### Command Line Usage
 
-The updated `import_products` command can be used with the following options:
+The updated product import commands can be used with the following options:
 
 ```bash
-python manage.py import_products [options]
+# Import parent products from Artikel_Familie
+python import_artikel_familie_as_parents.py [options]
+
+# Update parent-child relationships
+python import_artikel_familie_as_parents.py --update-relationships
+
+# Import product variants from Artikel_Variante
+python manage.py import_artikel_variante [options]
 ```
 
 Options:
@@ -60,7 +71,21 @@ Options:
 - `--update`: Update existing products (if they already exist in the database)
 - `--dry-run`: Simulate the import without making changes to the database
 - `--debug`: Enable verbose debug output
-- `--create-parents`: Automatically create parent products for variants with the same base SKU
+
+### Migration Results
+
+1. **Parent Product Import**: Successfully created 1,571 parent products from Artikel_Familie
+   - Some products had missing description fields (219 errors)
+   - Example parent products created:
+     - 'Bosch Green Akku für Tacker' (SKU: 915530)
+     - 'Bosch Green Akku Tacker' (SKU: 128052)
+     - 'Straßenlaterne' (SKU: 503011)
+
+2. **Parent-Child Relationship Update**: Successfully linked 4,078 variant products to their parents
+   - Examples of successful links:
+     - Variant 'Straßenlaterne' (SKU: 3411-BL) linked to parent 'Straßenlaterne' (SKU: 503011)
+     - Variant 'Tanne schmal im Winter' (SKU: 4108W-BE) linked to parent 'Tanne schmal im Winter' (SKU: 128609)
+     - Variant 'Bücherwurm' (SKU: 9305BUE-BE) linked to parent 'Bücherwurm' (SKU: 102867)
 
 ### Data Parsing
 
