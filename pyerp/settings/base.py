@@ -80,6 +80,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'pyerp.wsgi.application'
 
+# Authentication settings
+LOGIN_URL = 'login'
+LOGOUT_REDIRECT_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {

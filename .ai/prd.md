@@ -395,14 +395,315 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 ### 4.7 Security & Authentication
 
-- **User Management & Roles:**  
-  - Django's authentication for staff users.  
-  - Role-based permissions (SalesRep, ProductionPlanner, WarehouseClerk, Admin, etc.).  
-- **External Auth Tokens:**  
-  - OAuth2/JWT for POS, eCommerce, or other external integrations.  
-- **Audit Logging:**  
-  - Record create/update/delete actions on critical models (orders, inventory, MOs).  
-  - Log user details and timestamps for changes.  
+#### 4.7.1 User Authentication Framework
+
+- **Authentication Methods:**
+  - **Primary Authentication:** Form-based authentication with username/password for staff users ✅ *Implemented*
+  - **API Authentication:** JWT tokens for integration with external systems ✅ *Partially Implemented*
+  - **SSO Integration:** Support for LDAP/Active Directory integration (future phase)
+  - **Multi-Factor Authentication (MFA):** Optional two-factor authentication for sensitive roles
+  - **Password Management:**
+    - Secure password hashing with Django's built-in mechanisms ✅ *Implemented*
+    - Password complexity requirements enforced via validators ✅ *Implemented*
+    - Password expiration and history policies
+    - Self-service password reset functionality ✅ *Implemented*
+
+- **Session Management:**
+  - Configurable session timeout (default 24 hours for standard users)
+  - Reduced session timeout (4 hours) for administrative users
+  - Session invalidation upon password change
+  - Concurrent session limitations for sensitive roles
+  - Remember-me functionality for non-sensitive interfaces
+
+#### 4.7.2 User & Role Management
+
+- **User Model Structure:**
+  - Extended Django User model with additional fields for ERP-specific requirements
+  - User profile with contact information, preferences, and system settings
+  - User status tracking (active, inactive, suspended, pending approval)
+  - Department and site location associations
+  - Employment information (position, supervisor, hire date)
+
+- **User Types:**
+  - **Internal Users:** Staff members directly employed by the organization
+  - **External Users:** Contractors, temporary workers, consultants
+  - **System Users:** Service accounts for automated processes and integrations
+  - **API Users:** Limited accounts for external system connections
+
+- **User Lifecycle Management:**
+  - User registration with approval workflow
+  - Automated account provisioning based on templates
+  - Account suspension and deactivation workflows
+  - Compliance with data retention policies
+  - User offboarding checklists and automation
+
+- **Role-Based Access Control (RBAC):**
+  - **Core Roles:**
+    - **Viewer:** Read-only access to non-sensitive data
+    - **Operator:** Basic operational capabilities within assigned modules
+    - **Manager:** Enhanced operational capabilities and limited administrative functions
+    - **Administrator:** Full system administration within defined domains
+    - **System Administrator:** Complete system access and configuration
+  
+  - **Functional Roles:**
+    - **Sales Representative:** Manage customers, quotes, orders
+    - **Sales Manager:** Oversee sales operations, approve special pricing
+    - **Production Planner:** Create and manage production orders
+    - **Production Manager:** Manage production capacity and resources
+    - **Warehouse Clerk:** Handle inventory movements and stock management
+    - **Warehouse Manager:** Oversee warehouse operations and transfers
+    - **Purchase Officer:** Create and manage purchase orders
+    - **Finance User:** View and export invoice data, track payments
+    - **Marketing User:** Access product data for marketing materials
+    - **Quality Assurance:** Monitor and record quality control processes
+    - **Customer Service:** Handle customer inquiries and returns
+  
+  - **Role Assignment:**
+    - Users can have multiple roles
+    - Role inheritance hierarchy
+    - Role assignment approval workflow
+    - Temporary role assignments with expiration
+    - Role-based UI customization
+
+#### 4.7.3 Permission Management
+
+- **Permission Granularity:**
+  - **Model-Level Permissions:** Create, read, update, delete
+  - **Field-Level Permissions:** Sensitive field access control
+  - **Function-Level Permissions:** Access to specific actions and operations
+  - **Data-Level Permissions:** Row-level security based on department, location, etc.
+  - **Report-Level Permissions:** Access to specific reports and analysis tools
+
+- **Permission Categories:**
+  - **Products & BOM:**
+    - View products
+    - Create/modify products
+    - Manage product pricing
+    - View BOM structures
+    - Create/modify BOM
+    - Archive/delete products
+  - **Sales:**
+    - View customers
+    - Create/modify customers
+    - Create quotes
+    - Convert quotes to orders
+    - Apply discounts (tiered by discount percentage)
+    - Cancel/modify orders
+    - Issue credits
+  - **Production:**
+    - View production orders
+    - Create production orders
+    - Modify production schedules
+    - Report production completion
+    - Manage production resources
+  - **Inventory:**
+    - View inventory levels
+    - Create stock movements
+    - Adjust inventory
+    - Manage multiple warehouses
+    - Transfer between locations
+  - **System Administration:**
+    - User management
+    - Role/permission management
+    - System configuration
+    - Data import/export
+    - Integration management
+
+- **Permission Assignment:**
+  - Predefined permission sets for common roles
+  - Custom permission configurations for specialized roles
+  - Permission request and approval workflow
+  - Periodic permission review and certification
+
+#### 4.7.4 Security Controls & Compliance
+
+- **Access Control:**
+  - IP-based access restrictions for sensitive operations
+  - Device registration for multi-factor authentication
+  - Login attempt monitoring and lockout policies
+  - Administrative action approval workflows
+
+- **Audit & Logging:**
+  - Comprehensive audit trails for all security-related events
+  - User session recording (login/logout times, IP addresses)
+  - Critical data modification logging (before/after values)
+  - Privileged action monitoring and alerting
+  - Log integrity protection and retention
+
+- **Segregation of Duties:**
+  - Role-based segregation to prevent conflicts of interest
+  - Transaction approval workflows for sensitive operations
+  - Dual control requirements for critical functions
+  - Automated detection of segregation violations
+
+- **Data Protection:**
+  - Field-level encryption for sensitive data
+  - Masked display of sensitive information
+  - Export controls and data loss prevention
+  - Data minimization in API responses
+
+#### 4.7.5 Integration Authentication
+
+- **API Security:**
+  - OAuth2/JWT token-based authentication for all APIs ✅ *Partially Implemented*
+  - API key management for service accounts
+  - Scoped API tokens with limited permissions
+  - Rate limiting and abuse prevention
+  - API audit logging
+
+- **External System Integration:**
+  - Secure credential storage for external connections
+  - OAuth-based authentication with integrated systems
+  - Mutual TLS for secure server-to-server communication
+  - Scheduled credential rotation
+
+#### 4.7.6 User Interface Security
+
+- **UI Security Controls:**
+  - Dynamic menu rendering based on user permissions
+  - Function-level UI element visibility
+  - Form field access control
+  - Context-aware security indicators
+  - Session timeout notifications
+  - Concurrent session alerts
+
+- **Security Notifications:**
+  - User-facing security alerts
+  - Administrative security dashboards
+  - Automated security incident reporting
+  - Compliance status monitoring
+
+#### 4.7.7 Implementation Phases
+
+- **Phase 1 (MVP):**
+  - Basic user authentication with Django's built-in system ✅ *Implemented*
+  - Core role definitions with Django permissions ✅ *Partially Implemented*
+  - JWT authentication for API access ✅ *Implemented*
+  - Basic audit logging for critical actions
+
+- **Phase 2 (Enhanced):**
+  - Extended user profile with additional fields
+  - Complete role-based access control implementation
+  - Field-level permission controls
+  - Enhanced audit logging with UI for review
+  - User and role management interfaces
+
+- **Phase 3 (Advanced):**
+  - Multi-factor authentication
+  - Advanced segregation of duties
+  - Automated compliance reporting
+  - Integration with LDAP/Active Directory
+  - Security analytics and anomaly detection
+
+#### 4.7.8 Technical Architecture
+
+The user and roles system will be built on Django's authentication framework with strategic extensions for ERP-specific needs:
+
+- **Core Components:**
+  - **Custom User Model:** Extend Django's AbstractUser to include additional fields
+    ```python
+    # Example structure (not actual implementation)
+    class User(AbstractUser):
+        status = models.CharField(choices=USER_STATUS_CHOICES, default='active')
+        department = models.ForeignKey('Department', null=True, on_delete=models.SET_NULL)
+        employee_id = models.CharField(max_length=50, blank=True)
+        phone = models.CharField(max_length=20, blank=True)
+        # Additional fields as needed
+    ```
+  
+  - **Profile Model:** One-to-one relationship with User for extended attributes
+    ```python
+    # Example structure (not actual implementation)
+    class UserProfile(models.Model):
+        user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+        position = models.CharField(max_length=100, blank=True)
+        supervisor = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='supervised_users')
+        hire_date = models.DateField(null=True, blank=True)
+        preferences = models.JSONField(default=dict)
+        # Additional profile fields
+    ```
+  
+  - **Role Implementation:**
+    - Leverage Django's Group model for basic roles
+    - Create a Role model that extends Group for advanced features
+    ```python
+    # Example structure (not actual implementation)
+    class Role(models.Model):
+        group = models.OneToOneField(Group, on_delete=models.CASCADE)
+        description = models.TextField(blank=True)
+        is_system_role = models.BooleanField(default=False)
+        parent_role = models.ForeignKey('self', null=True, on_delete=models.SET_NULL)
+        # Additional role metadata
+    ```
+  
+  - **Role Assignment:**
+    - Use a through model for user-role assignments with time limits
+    ```python
+    # Example structure (not actual implementation)
+    class UserRole(models.Model):
+        user = models.ForeignKey(User, on_delete=models.CASCADE)
+        role = models.ForeignKey(Role, on_delete=models.CASCADE)
+        assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='role_assignments')
+        assigned_at = models.DateTimeField(auto_now_add=True)
+        expires_at = models.DateTimeField(null=True, blank=True)
+        is_active = models.BooleanField(default=True)
+        # Additional assignment metadata
+    ```
+  
+  - **Permission Extensions:**
+    - Create models for function-level and object-level permissions
+    ```python
+    # Example structure (not actual implementation)
+    class FunctionPermission(models.Model):
+        name = models.CharField(max_length=100, unique=True)
+        code = models.CharField(max_length=100, unique=True)
+        description = models.TextField(blank=True)
+        roles = models.ManyToManyField(Role, related_name='function_permissions')
+        
+    class ObjectPermission(models.Model):
+        user = models.ForeignKey(User, on_delete=models.CASCADE)
+        content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+        object_id = models.PositiveIntegerField()
+        content_object = GenericForeignKey('content_type', 'object_id')
+        can_view = models.BooleanField(default=False)
+        can_edit = models.BooleanField(default=False)
+        can_delete = models.BooleanField(default=False)
+        # Additional permission flags
+    ```
+
+- **Authentication Flow:**
+  1. User submits credentials via login form or API
+  2. Django authenticates against the User model
+  3. Optional MFA verification step (Phase 3)
+  4. Session creation with role and permission caching
+  5. Middleware loads user permissions for request processing
+
+- **Authorization Process:**
+  1. Permission checking via decorators on views/API endpoints
+  2. Template-level permission checks for UI elements
+  3. Object-level permission verification for data access
+  4. Function-level permission validation for business operations
+
+- **Audit Logging Architecture:**
+  - Use Django signals to capture model changes
+  - Central AuditLog model for all security events
+  - Specialized logging for authentication events
+  - Integration with Django logging framework
+
+- **Security Considerations:**
+  - Password hashing with Django's PBKDF2 algorithm
+  - CSRF protection for all form submissions
+  - HTTP-only cookies for session management
+  - Session timeout configuration
+  - XSS prevention in templates
+
+- **Integration Points:**
+  - Role-based menu rendering in base templates
+  - Permission checking in view decorators
+  - Object permission filtering in querysets
+  - Session-based permission caching for performance
+
+This architecture provides a solid foundation that can be implemented incrementally according to the phased approach outlined in section 4.7.7.
 
 ### 4.8 Testing & Quality Assurance
 
@@ -1181,3 +1482,362 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Automated test execution for every pull request.
   - Enforce minimum code coverage requirements.
   - Performance regression testing for critical components.
+
+## 8. User Stories
+
+### 8.1 User and Roles Management
+
+#### 8.1.1 User Management
+
+1. **User Registration**
+   ```
+   As an administrator,
+   I want to create new user accounts with basic profile information,
+   So that staff members can access the system with appropriate permissions.
+   ```
+   - Acceptance Criteria:
+     - Administrators can create users with username, password, name, email, department
+     - System enforces password complexity requirements
+     - New users receive email with account information and temporary password
+     - Administrators can specify initial roles during user creation
+     - User status is set to "Pending Activation" until first login
+
+2. **User Self-Registration**
+   ```
+   As a new staff member,
+   I want to self-register for an account,
+   So that I can request access to the ERP system.
+   ```
+   - Acceptance Criteria:
+     - Registration form captures basic user information
+     - Registration requires email verification
+     - New accounts require administrator approval
+     - System notifies administrators of pending registrations
+     - Users receive notification when account is approved
+
+3. **User Profile Management**
+   ```
+   As a user,
+   I want to manage my profile information,
+   So that my contact details and preferences are up-to-date.
+   ```
+   - Acceptance Criteria:
+     - Users can update name, email, phone, and other contact details
+     - Users can set UI preferences and language settings
+     - Users can upload a profile photo
+     - Changes to critical fields require re-authentication
+     - Profile history is maintained for audit purposes
+
+4. **Password Management**
+   ```
+   As a user,
+   I want to manage my password securely,
+   So that I can maintain access to my account while ensuring security.
+   ```
+   - Acceptance Criteria:
+     - Users can change their password after authentication
+     - System enforces password complexity rules
+     - System prevents reuse of recent passwords
+     - Password reset process uses secure email verification
+     - Temporary passwords expire after first use or 24 hours
+
+5. **User Deactivation**
+   ```
+   As an administrator,
+   I want to deactivate user accounts,
+   So that former employees cannot access the system.
+   ```
+   - Acceptance Criteria:
+     - Administrators can deactivate accounts immediately
+     - Deactivation terminates all active sessions
+     - Deactivated users cannot log in
+     - System maintains deactivated user records for audit purposes
+     - Deactivation includes a reason and is logged for compliance
+
+#### 8.1.2 Role Management
+
+6. **Role Creation**
+   ```
+   As a system administrator,
+   I want to create and define roles with specific permissions,
+   So that I can assign standardized access levels to users.
+   ```
+   - Acceptance Criteria:
+     - Create roles with unique names and descriptions
+     - Define permission sets for each role
+     - Set role hierarchy and inheritance
+     - Include optional time restrictions for temporary roles
+     - Provide role templates for common job functions
+
+7. **Role Assignment**
+   ```
+   As an administrator,
+   I want to assign roles to users,
+   So that they have appropriate access based on their job responsibilities.
+   ```
+   - Acceptance Criteria:
+     - Assign multiple roles to a single user
+     - Set expiration dates for temporary role assignments
+     - Require approval workflow for sensitive role assignments
+     - Notify users when roles are assigned or changed
+     - Maintain history of role assignments for audit
+
+8. **Role-Based Access**
+   ```
+   As a department manager,
+   I want access limited to data relevant to my department,
+   So that I can focus on my area of responsibility while maintaining data privacy.
+   ```
+   - Acceptance Criteria:
+     - Sales managers only see sales-related data
+     - Production managers only see production-related data
+     - Warehouse staff only see inventory-related data
+     - Cross-functional roles provide limited access to multiple areas
+     - System enforces data boundaries based on role
+
+9. **Permission Review**
+   ```
+   As a compliance officer,
+   I want to review user permissions and role assignments,
+   So that I can ensure proper access controls are maintained.
+   ```
+   - Acceptance Criteria:
+     - Generate reports of all users with specific roles
+     - View comprehensive permission sets for any user
+     - Identify users with conflicting role assignments
+     - Schedule automated permission reviews
+     - Flag potential segregation of duties violations
+
+10. **Temporary Access Management**
+    ```
+    As a manager,
+    I want to grant temporary elevated access to team members,
+    So they can handle exceptional situations or cover for absent colleagues.
+    ```
+    - Acceptance Criteria:
+      - Grant time-limited role assignments
+      - Specify exact start and end dates/times
+      - System automatically revokes access when expired
+      - Require approval for extending temporary access
+      - Log all actions performed under temporary access
+
+#### 8.1.3 Authentication and Security
+
+11. **Multi-Factor Authentication**
+    ```
+    As a security-conscious user,
+    I want to enable multi-factor authentication for my account,
+    So that my account remains secure even if my password is compromised.
+    ```
+    - Acceptance Criteria:
+      - Support for email/SMS verification codes
+      - Option for authenticator app integration
+      - Remember trusted devices functionality
+      - Bypass options for internal network access
+      - Recovery process for lost MFA devices
+
+12. **Session Management**
+    ```
+    As a user,
+    I want to view and manage my active sessions,
+    So that I can ensure no unauthorized access is occurring.
+    ```
+    - Acceptance Criteria:
+      - List all active sessions with device/location information
+      - Allow termination of individual sessions
+      - Terminate all sessions except current one
+      - Automatically expire inactive sessions
+      - Alert on suspicious concurrent sessions
+
+13. **Access Audit Trail**
+    ```
+    As a security administrator,
+    I want to review comprehensive access logs,
+    So that I can investigate security incidents and ensure compliance.
+    ```
+    - Acceptance Criteria:
+      - Log all authentication attempts (successful and failed)
+      - Record session details (IP, device, duration)
+      - Track permission changes and role assignments
+      - Filter and search audit logs by various criteria
+      - Export audit logs for external analysis
+
+14. **Secure API Access**
+    ```
+    As an integration developer,
+    I want to obtain and manage API access tokens,
+    So that external systems can securely interact with the ERP.
+    ```
+    - Acceptance Criteria:
+      - Generate API tokens with specific permission scopes
+      - Set expiration and usage limits for tokens
+      - Revoke tokens immediately when needed
+      - View token usage history and access patterns
+      - Receive notifications for unusual API usage
+
+15. **Login Monitoring**
+    ```
+    As a security administrator,
+    I want to monitor login attempts,
+    So that I can detect and respond to unauthorized access attempts.
+    ```
+    - Acceptance Criteria:
+      - Track failed login attempts by username and IP
+      - Implement account lockout after multiple failures
+      - Alert on unusual login patterns or locations
+      - Provide real-time monitoring dashboard
+      - Generate periodic security reports
+
+#### 8.1.4 User Experience
+
+16. **Role-Based Interface**
+    ```
+    As a user,
+    I want the UI to be tailored to my role,
+    So that I only see relevant functionality and am not overwhelmed by options.
+    ```
+    - Acceptance Criteria:
+      - Menu items filtered based on user permissions
+      - Role-specific dashboards and home pages
+      - Hide UI elements for unauthorized functions
+      - Consistent presentation of access restrictions
+      - Provide clear indicators of current access level
+
+17. **Permission Request**
+    ```
+    As a user,
+    I want to request additional permissions or roles,
+    So that I can access functionality needed for my job.
+    ```
+    - Acceptance Criteria:
+      - Submit request with business justification
+      - Route requests to appropriate approvers
+      - Track request status and history
+      - Receive notification upon approval/denial
+      - Implement temporary access if urgently needed
+
+18. **User Directory**
+    ```
+    As a user,
+    I want to view a directory of system users and their roles,
+    So that I can find the right person to contact for specific functions.
+    ```
+    - Acceptance Criteria:
+      - List users with basic contact information
+      - Filter users by department, role, or location
+      - Show user status (active, away, inactive)
+      - Respect privacy settings and information visibility
+      - Provide search functionality
+
+19. **Permission Explanation**
+    ```
+    As a user,
+    I want to understand why I can't access certain functionality,
+    So that I can request appropriate permissions if needed.
+    ```
+    - Acceptance Criteria:
+      - Show informative messages when access is denied
+      - Explain which permission or role is required
+      - Provide option to request access directly from error message
+      - Log access denial events for pattern analysis
+      - Maintain consistent messaging across the application
+
+20. **User Onboarding**
+    ```
+    As a new user,
+    I want a guided introduction to my available features,
+    So that I can quickly become productive with the system.
+    ```
+    - Acceptance Criteria:
+      - Role-specific welcome screens and tutorials
+      - Interactive guide to available functions
+      - Highlight key features based on assigned roles
+      - Optional training modules for complex functionality
+      - Check-in notifications after initial period
+
+#### 8.1.5 Implementation Tasks and Prioritization
+
+The following implementation plan outlines the tasks and their priorities for building the user and roles system:
+
+**Phase 1 (MVP) - High Priority**
+1. Create a dedicated `users` Django app
+2. Implement extended User model with profile fields
+   - Department/location fields
+   - Status field (active, inactive, pending)
+   - Contact information
+3. Create basic user management views
+   - User creation form
+   - User list view with filtering
+   - User detail/edit view
+4. Implement core roles using Django's Group model
+   - Define initial set of functional roles
+   - Create permissions for core modules
+   - Map views and actions to permissions
+5. Build role management interface
+   - Role creation and editing
+   - Permission assignment to roles
+   - User-role assignment
+6. Enhance authentication features
+   - Customized login/logout views
+   - Password reset functionality
+   - Account activation workflow
+7. Implement basic audit logging
+   - Authentication event logging
+   - Critical model change tracking
+   - User action history
+
+**Phase 2 (Enhanced) - Medium Priority**
+1. Add advanced role features
+   - Role hierarchy and inheritance
+   - Time-limited role assignments
+   - Department-based access control
+2. Implement permission request workflow
+   - Request form with justification
+   - Approval routing
+   - Email notifications
+3. Build user self-service features
+   - Profile management
+   - Password change with history
+   - Session management
+4. Enhance security controls
+   - Failed login monitoring
+   - Account lockout mechanism
+   - IP-based access restrictions
+5. Create administration dashboards
+   - User activity monitoring
+   - Permission audit reports
+   - Security event visualization
+6. Implement dynamic UI adaptation
+   - Permission-based menu filtering
+   - Role-specific dashboards
+   - Access-denied handling
+
+**Phase 3 (Advanced) - Low Priority**
+1. Add multi-factor authentication
+   - Email/SMS verification
+   - Authenticator app integration
+   - Trusted device management
+2. Implement advanced audit features
+   - Comprehensive audit trail
+   - Data access logging
+   - Audit report generation
+3. Segregation of duties enforcement
+   - Conflict detection
+   - Approval workflows for conflicting actions
+   - Compliance reporting
+4. LDAP/Active Directory integration
+   - User synchronization
+   - Group mapping
+   - Single sign-on
+5. Advanced API authentication
+   - Scoped API tokens
+   - Usage analytics
+   - Rate limiting and security features
+
+**Development Approach**
+- Leverage Django's built-in authentication system as the foundation
+- Use Django's permission and group models, extending as needed
+- Create a custom middleware for advanced permission checking
+- Implement a decorator-based approach for function-level permissions
+- Build on Django Rest Framework for API authentication needs
+- Use signals for audit logging to minimize code duplication
