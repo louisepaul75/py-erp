@@ -432,6 +432,12 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Production-optimized Docker images with multi-stage builds ✅ *Implemented*
   - Non-root user execution in production containers ✅ *Implemented*
   - Environment-specific entrypoint scripts with appropriate verification steps ✅ *Implemented*
+  - **System Dependencies Management:** ✅ *Implemented*
+    - Comprehensive identification of system-level dependencies for Python packages
+    - Two-tier dependency strategy: build-time vs runtime dependencies
+    - Special handling for graphical libraries (WeasyPrint, PDF generation)
+    - MySQL client libraries for database connectivity
+    - Font packages for document rendering
 
 - **Python Dependency Versioning:**
   - Explicit pinning of all dependency versions with exact version numbers ✅ *Implemented*
@@ -453,6 +459,11 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Image versioning and deployment rollback capabilities ✅ *Implemented*
   - Registry-based image distribution instead of source-based builds ✅ *Implemented*
   - Dependency audit trail for compliance and security tracking ✅ *Implemented*
+  - **GitHub Container Registry Integration:** ✅ *Implemented*
+    - Container image hosting in GitHub Container Registry (ghcr.io)
+    - Proper permission configuration for GitHub Actions workflows
+    - Automated image building and pushing on commits to main branches
+    - Semantic versioning tags for released images
 
 - **Dependency Documentation:**
   - Clear documentation of all third-party dependencies ✅ *Implemented*
@@ -488,3 +499,38 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 - **Versioning Strategy:**
   - Semantic Versioning (SemVer) with phase indicators: `MAJOR.MINOR.PATCH-PHASE`
+
+### 4.16 CI/CD Pipeline Configuration
+
+- **GitHub Actions Workflows:**
+  - **Permissions Management:** ✅ *Implemented*
+    - Explicit permission declarations for each workflow
+    - Principle of least privilege for security
+    - Specific package write permissions for GitHub Container Registry
+  - **Workflow Structure:**
+    - Parallel job execution for faster feedback
+    - Build matrix for testing across environments
+    - Reusable workflow components for maintainability
+  - **Docker Integration:** ✅ *Implemented*
+    - Docker Buildx for efficient, multi-platform builds
+    - Layer caching for faster builds
+    - Metadata extraction for consistent tagging
+    - Multi-stage builds for optimized image size
+  
+- **Automated Testing Pipeline:** ✅ *Implemented*
+  - Unit tests executed for all code changes
+  - Integration tests for critical business flows
+  - Code coverage reports and minimum thresholds
+  - Performance benchmarks for key operations
+
+- **Deployment Automation:**
+  - Staging environment deployments for verification
+  - Production deployment with approval gates
+  - Automated rollback capabilities for failed deployments
+  - Health checks after deployment
+
+- **Quality Assurance:**
+  - Static code analysis for quality issues
+  - Security scanning for vulnerabilities
+  - Dependency validation and updates
+  - Documentation generation and validation
