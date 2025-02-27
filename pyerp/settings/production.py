@@ -5,6 +5,8 @@ These settings extend the base settings with production-specific configurations
 focused on security and performance.
 """
 
+import os
+import dj_database_url
 from .base import *  # noqa
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -12,6 +14,29 @@ DEBUG = False
 
 # Must be set from environment in production
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+
+# Database configuration
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_NAME', 'pyerp_production'),
+        'USER': os.environ.get('DB_USER', 'admin'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
+    }
+}
+
+# Alternative DATABASE_URL configuration (commented out)
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=os.environ.get(
+#             'DATABASE_URL', 
+#             'mysql://user:password@localhost:3306/pyerp_production'
+#         ),
+#         conn_max_age=600,
+#     )
+# }
 
 # Production security settings
 SECURE_SSL_REDIRECT = True

@@ -64,23 +64,67 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 **So that** development work doesn't affect production data and settings persist across Git operations
 
 **Acceptance Criteria:**
-- Separate PostgreSQL databases for testing and production ✅
+- Separate MySQL databases for testing and production ✅
 - Environment-specific Django settings that automatically select the correct database ✅
-- Development environments always connect to testing database ✅
-- Production environments always connect to live database ✅
+- Development environments always connect to testing database (pyerp_testing) ✅
+- Production environments always connect to live database (pyerp_production) ✅
 - Connection settings persist across Git operations (pulls, merges, etc.) ✅
 - Environment variables for database credentials ✅
 - Documentation for database setup and connection ✅
 
 **Tasks:**
-- Create development/testing PostgreSQL database ✅
-- Create production PostgreSQL database ✅
+- Create development/testing MySQL database (pyerp_testing) ✅
+- Create production MySQL database (pyerp_production) ✅
 - Configure Django settings for environment-specific database connections ✅
 - Implement environment detection for automatic database selection ✅
 - Set up .env file templates for environment variables ✅
 - Add .env files to .gitignore to prevent credentials from being committed ✅
 - Create database initialization scripts for fresh installations ✅
 - Document database configuration in project wiki/documentation ✅
+- Install necessary MySQL client libraries (mysqlclient) ✅
+
+#### Story 3.1: MySQL Database Migration ✅
+**As a** Developer  
+**I want to** migrate the database configuration from PostgreSQL to MySQL  
+**So that** the system can use MySQL for all environments
+
+**Acceptance Criteria:**
+- Django settings updated to use MySQL database engine ✅
+- MySQL client libraries installed and configured ✅
+- Development and production settings updated with MySQL-specific configurations ✅
+- Database connection verified in all environments ✅
+- Migration commands tested and working ✅
+
+**Tasks:**
+- Install MySQL client library (mysqlclient) ✅
+- Update development.py with MySQL database configuration ✅
+- Update production.py with MySQL database configuration ✅
+- Update testing.py with MySQL database configuration ✅
+- Test database connectivity with python manage.py check ✅
+- Verify migration status with python manage.py showmigrations ✅
+- Update documentation to reflect MySQL usage ✅
+- Update PRD to replace PostgreSQL references with MySQL ✅
+
+#### Story 3.2: Secure Database Credential Management ✅
+**As a** Developer  
+**I want to** implement secure handling of database credentials  
+**So that** sensitive information is not exposed in code or documentation
+
+**Acceptance Criteria:**
+- All database credentials removed from settings files and stored in environment variables ✅
+- Development and production credentials kept separate ✅
+- Use of DATABASE_URL format for simplified configuration ✅
+- Example templates provided with placeholders instead of actual credentials ✅
+- Documentation updated to not include actual credentials ✅
+- .env files excluded from version control ✅
+
+**Tasks:**
+- Remove hardcoded credentials from all Django settings files ✅
+- Update settings to read credentials from environment variables ✅
+- Create example .env templates with placeholders ✅
+- Update the PRD to document credential management strategy without exposing actual credentials ✅
+- Ensure .env files are in .gitignore ✅
+- Refactor relevant code to use dj-database-url package for connection handling ✅
 
 #### Story 4: Legacy ERP API Client
 **As a** Developer  
@@ -253,9 +297,10 @@ Our implementation sequence will be:
    - Establish development workflow and practices ✅
 
 2. **Environment & Database Setup** ✅
-   - Set up consistent development and production database environments ✅
+   - Set up consistent development and production MySQL database environments ✅
    - Ensure environment-specific settings persist across Git operations ✅
    - Create database initialization and migration scripts ✅
+   - Configure proper MySQL database connections and client libraries ✅
 
 3. **Legacy System Integration** (In Progress)
    - Implement API client for legacy 4D ERP

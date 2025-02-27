@@ -5,6 +5,8 @@ These settings extend the base settings with testing-specific configurations
 focused on test performance and isolation.
 """
 
+import os
+import dj_database_url
 from .base import *  # noqa
 
 # Configure for test environment
@@ -12,13 +14,28 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
-# Use in-memory SQLite database for faster tests
+# Use MySQL database for testing
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+        'USER': os.environ.get('DB_USER', 'admin'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
+
+# Alternative DATABASE_URL configuration (commented out)
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=os.environ.get(
+#             'DATABASE_URL', 
+#             'mysql://user:password@localhost:3306/pyerp_testing'
+#         ),
+#         conn_max_age=600,
+#     )
+# }
 
 # Use the fastest possible password hasher
 PASSWORD_HASHERS = [

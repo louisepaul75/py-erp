@@ -4,6 +4,8 @@ Development settings for pyERP project.
 These settings extend the base settings with development-specific configurations.
 """
 
+import os
+import dj_database_url
 from .base import *  # noqa
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -14,6 +16,29 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '0.0.0.0',
 ]
+
+# Database configuration 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+        'USER': os.environ.get('DB_USER', 'admin'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
+    }
+}
+
+# Alternative DATABASE_URL configuration (commented out)
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=os.environ.get(
+#             'DATABASE_URL', 
+#             'mysql://user:password@localhost:3306/pyerp_testing'
+#         ),
+#         conn_max_age=600,
+#     )
+# }
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True

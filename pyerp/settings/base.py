@@ -83,11 +83,27 @@ WSGI_APPLICATION = 'pyerp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
-    'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
-        conn_max_age=600,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+        'USER': os.environ.get('DB_USER', 'admin'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
+    }
 }
+
+# Alternative DATABASE_URL configuration
+# from the env (commented out, uncomment to use)
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=os.environ.get(
+#             'DATABASE_URL', 
+#             'mysql://user:password@localhost:3306/pyerp_testing'
+#         ),
+#         conn_max_age=600,
+#     )
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -161,7 +177,11 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 # Logging Configuration
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
 JSON_LOGGING = os.environ.get('JSON_LOGGING', 'False').lower() == 'true'
-LOG_FILE_SIZE_LIMIT = int(os.environ.get('LOG_FILE_SIZE_LIMIT', 2097152))  # Default to 2MB
+try:
+    LOG_FILE_SIZE_LIMIT = int(os.environ.get('LOG_FILE_SIZE_LIMIT', 2097152))  # Default to 2MB
+except ValueError:
+    # Fallback in case the environment variable has issues
+    LOG_FILE_SIZE_LIMIT = 2097152  # 2MB in bytes
 
 LOGGING = {
     'version': 1,

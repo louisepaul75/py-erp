@@ -216,27 +216,72 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 ### 4.10 Database Configuration Strategy
 
-- **Separate Database Environments:**  
-  - Maintain separate PostgreSQL databases for development/testing and production.  
-  - Configure environment-specific settings that consistently select the correct database.  
-  - Development environments always connect to testing database.  
-  - Production environments always connect to live database.  
-  - Database connection settings persist across Git operations.  
-- **Environment-Specific Configuration:**  
-  - Use environment detection to automatically select appropriate database.  
-  - Store sensitive credentials (passwords, hostnames) in environment variables or .env files.  
-  - Create separate baseline scripts for each environment.  
-- **Database Security:**  
-  - Testing database contains sanitized data with no sensitive information.  
-  - Production database accessible only from authorized production servers.  
-  - Role-based access control at database level.  
-- **Data Synchronization:**  
-  - Tools to create sanitized copies of production data for testing environments.  
-  - One-way sync from production to development (never development to production).  
-- **Migration Strategy:**  
-  - Database migrations tracked in version control.  
-  - Testing migrations on development database before applying to production.  
-  - Rollback procedures documented for each migration.
+- **Separate Database Environments:** ✅ *Implemented*
+  - Maintain separate MySQL databases for development/testing and production. ✅
+  - Configure environment-specific settings that consistently select the correct database. ✅
+  - Development environments always connect to testing database (pyerp_testing). ✅
+  - Production environments always connect to live database (pyerp_production). ✅
+  - Database connection settings persist across Git operations. ✅
+- **Environment-Specific Configuration:** ✅ *Implemented*
+  - Use environment detection to automatically select appropriate database. ✅
+  - Store sensitive credentials (passwords, hostnames) in environment variables or .env files. ✅
+  - Create separate baseline scripts for each environment. ✅
+- **Secure Credential Management:** ✅ *Implemented*
+  - All database credentials stored in environment variables or .env files (not in code) ✅
+  - Development credentials kept separate from production credentials ✅
+  - .env files excluded from version control via .gitignore ✅
+  - Template .env.example files provided with placeholders instead of actual values ✅
+  - Different .env files for development, testing, and production environments ✅
+  - Using environment variables for individual connection parameters ✅
+- **Database Connection Structure:** ✅ *Implemented*
+  - Development/Testing Environment:
+    ```python
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+            'USER': os.environ.get('DB_USER', 'admin'),  # Default fallback value
+            'PASSWORD': os.environ.get('DB_PASSWORD'),   # Should be provided in .env
+            'HOST': os.environ.get('DB_HOST'),           # Should be provided in .env
+            'PORT': os.environ.get('DB_PORT', '3306'),   # Default MySQL port
+        }
+    }
+    ```
+  - Production Environment:
+    ```python
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME', 'pyerp_production'),
+            'USER': os.environ.get('DB_USER'),           # Should be provided in .env
+            'PASSWORD': os.environ.get('DB_PASSWORD'),   # Should be provided in .env
+            'HOST': os.environ.get('DB_HOST'),           # Should be provided in .env
+            'PORT': os.environ.get('DB_PORT', '3306'),   # Default MySQL port
+        }
+    }
+    ```
+  - Alternative using DATABASE_URL (implemented but commented out in code):
+    ```python
+    import dj_database_url
+    
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL', 'mysql://user:pass@localhost:3306/dbname'),
+            conn_max_age=600,
+        )
+    }
+    ```
+- **Database Security:** ✅ *Implemented*
+  - Testing database contains sanitized data with no sensitive information. ✅
+  - Production database accessible only from authorized production servers. ✅
+  - Role-based access control at database level. ✅
+- **Data Synchronization:**
+  - Tools to create sanitized copies of production data for testing environments.
+  - One-way sync from production to development (never development to production).
+- **Migration Strategy:** ✅ *Implemented*
+  - Database migrations tracked in version control. ✅
+  - Testing migrations on development database before applying to production. ✅
+  - Rollback procedures documented for each migration. ✅
 
 ### 4.11 Project Structure & Organization
 
@@ -450,7 +495,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 - **Technology Stack**:  
   - Python 3.x, Django 3/4.x (LTS versions where possible) ✅ *Implemented*  
-  - PostgreSQL 13+ (with possibility for read replicas) ✅ *Implemented*  
+  - MySQL 8+ for database storage ✅ *Implemented*  
   - Docker/Docker Compose for development and deployment ✅ *Implemented*  
   - Git for version control, automated CI/CD on internal servers or GitHub/GitLab ✅ *Implemented*  
 
@@ -469,9 +514,9 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Local development uses testing database by default ✅
 
 - **Database Setup**: ✅ *Implemented*
-  - Separate PostgreSQL databases for development and production ✅
-  - Development database focused on testing and isolation ✅
-  - Production database optimized for performance and data integrity ✅
+  - Separate MySQL databases for development/testing and production ✅
+  - Development database (pyerp_testing) focused on testing and isolation ✅
+  - Production database (pyerp_production) optimized for performance and data integrity ✅
   - Consistent connection to appropriate database regardless of Git operations ✅
   - Environment variables for credentials management ✅
   
@@ -518,4 +563,5 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 5. **Security & Audit**  
    - Properly configured roles and permissions; logs of critical changes.  
    - Demonstrated compliance with internal auditing/reporting needs (e.g., stock movement history).  
+
 
