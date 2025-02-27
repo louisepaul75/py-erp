@@ -6,6 +6,11 @@ on:
     tags: [ 'v*' ]
   workflow_dispatch:  # Allow manual triggering
 
+# Add permissions needed for GitHub Container Registry
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
