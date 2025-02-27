@@ -318,4 +318,36 @@ Our implementation sequence will be:
    - Follow with Inventory Management
    - Finally implement Production Management
 
-Each module will be developed with a test-driven approach, ensuring proper test coverage before moving to the next module. 
+Each module will be developed with a test-driven approach, ensuring proper test coverage before moving to the next module.
+
+# User Stories for PyERP
+
+This document outlines the key user stories for the PyERP system. Each story represents a specific user need or feature requirement.
+
+## Product Management
+
+### US-PM-001: Import Products from Legacy System
+
+**As a** Product Manager  
+**I want to** import products from the legacy 4D system  
+**So that** I can migrate our product catalog to the new ERP system without manual data entry
+
+**Acceptance Criteria:**
+- ✅ Products are imported from Artikel_Variante table (replacing previous Artikel_Stamm approach)
+- ✅ Base SKUs and variant codes are correctly extracted from composite SKUs
+- ✅ Parent products are automatically created for product variants sharing the same base SKU
+- ✅ Product pricing is correctly imported from complex nested price structures
+- ✅ Import supports dry-run mode for testing without making database changes
+- ✅ Import provides detailed logs and error reporting
+- ✅ Import can be limited to a specific number of products for testing
+- ⬜ Product categories are imported based on Familie_ field
+- ⬜ Additional product attributes are imported (dimensions, descriptions, tags)
+- ⬜ Product import includes validation and data quality checks
+- ⬜ Image and media assets are imported
+
+**Implementation Notes:**
+- Implementation based on Django management command
+- See detailed progress in [Product Import from Artikel_Variante](./stories/product_import_artikel_variante.md)
+- Command: `python manage.py import_products [options]`
+
+**Status:** In Progress 

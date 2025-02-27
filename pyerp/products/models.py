@@ -6,6 +6,10 @@ These models represent product-related entities in the ERP system.
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+
+# Add import for our validation utility
+from pyerp.products.validators import validate_product_model
 
 
 class ProductCategory(models.Model):
@@ -271,6 +275,16 @@ class Product(models.Model):
         Check if product needs reordering.
         """
         return (self.stock_quantity + self.open_purchase_quantity) < self.min_stock_quantity
+
+    def clean(self):
+        """
+        Validate the model instance beyond field-level validation.
+        
+        This method is called during model.full_clean() and 
+        before save in admin forms.
+        """
+        # Use our validation utility to validate the model
+        validate_product_model(self)
 
 
 class ProductImage(models.Model):

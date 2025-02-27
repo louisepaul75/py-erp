@@ -210,6 +210,62 @@ pyERP/
 └── requirements/             # Python dependencies
 ```
 
+## Data Validation Framework
+
+pyERP includes a robust data validation framework designed to enforce data integrity across the application:
+
+- **Core Validation**: The `pyerp/core/validators.py` module provides a flexible, extensible validation system
+- **Multiple Validation Levels**:
+  - Model-level validation (using Django's clean method)
+  - Form-level validation (with custom Django form integrations)
+  - Import-level validation (for data importing from legacy systems or files)
+- **Validation Features**:
+  - Field-specific validators (required fields, regex patterns, numeric ranges, etc.)
+  - Cross-field validation (business rules that span multiple fields)
+  - Compound validators (combine multiple validation rules)
+  - Warning vs. Error distinction (flexibility in validation strictness)
+  - Data transformation during validation
+
+### Using Validation
+
+**Model Validation Example**:
+```python
+from pyerp.core.validators import validate_model_data
+
+def clean(self):
+    # Apply validators to model instance
+    validate_model_data(self)
+    super().clean()
+```
+
+**Form Validation Example**:
+```python
+from pyerp.core.form_validation import ValidatedForm
+from pyerp.core.validators import RequiredValidator, RegexValidator
+
+class ProductForm(ValidatedForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_validator('sku', RegexValidator(pattern=r'^[A-Z0-9-]+$'))
+```
+
+**Import Validation Example**:
+```python
+from pyerp.core.validators import ImportValidator
+
+validator = ProductImportValidator(strict=False)
+for row in data:
+    is_valid, validated_data, result = validator.validate_row(row)
+    if is_valid:
+        # Process valid data
+        create_product(validated_data)
+    else:
+        # Handle validation errors
+        log_errors(result.errors)
+```
+
+For detailed documentation on the validation framework, see [Validation Framework Guide](docs/validation_framework.md).
+
 ## Dependency Management
 
 The project uses pip-tools for dependency management. Dependencies are organized into three categories:

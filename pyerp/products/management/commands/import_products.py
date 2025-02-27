@@ -10,6 +10,9 @@ from django.db import transaction
 from decimal import Decimal
 
 from pyerp.products.models import Product, ProductCategory
+# Import our validation classes
+from pyerp.products.validators import ProductImportValidator
+from pyerp.core.validators import ImportValidationError
 
 # Add the WSZ_api path to the Python path
 WSZ_API_PATH = r'C:\Users\Joan-Admin\PycharmProjects\WSZ_api'
@@ -70,6 +73,13 @@ class Command(BaseCommand):
                 'name': 'Uncategorized',
                 'description': 'Default category for products without a specific category'
             }
+        )
+        
+        # Initialize the validator with the default category
+        self.validator = ProductImportValidator(
+            strict=False,  # Don't treat warnings as errors
+            transform_data=True,  # Transform data during validation
+            default_category=self.default_category
         )
         
         # Fetch data from Artikel_Variante
@@ -181,55 +191,46 @@ class Command(BaseCommand):
                 self.stdout.write(f"\nProcessing row {index}:")
                 self.stdout.write(f"  UID: {legacy_id}")
                 self.stdout.write(f"  Bezeichnung: {self.get_value(row, 'Bezeichnung', '')}")
-                
-            # Get SKU (alteNummer in Artikel_Variante)
-            sku = self.get_value(row, 'alteNummer', '')
-            if not sku:
-                if self.debug:
-                    self.stdout.write(f"  Skipping row {index} - No valid SKU")
-                return None
             
-            # Parse base_sku and variant_code
-            if '-' in sku:
-                base_sku, variant_code = sku.split('-', 1)
-                is_parent = False
-            else:
-                base_sku = sku
-                variant_code = ''
-                is_parent = True  # If there's no variant code, treat as a parent product
-            
-            # Extract pricing information from Preise field
-            list_price = Decimal('0.00')
-            wholesale_price = Decimal('0.00')
-            cost_price = Decimal('0.00')
-            recommended_price = Decimal('0.00')
-            
-            preise = self.get_value(row, 'Preise', None)
-            if preise and isinstance(preise, dict) and 'Coll' in preise:
-                for price_item in preise['Coll']:
-                    if isinstance(price_item, dict):
-                        if price_item.get('Art') == 'Laden':
-                            list_price = Decimal(str(price_item.get('Preis', 0)))
-                        elif price_item.get('Art') == 'Handel':
-                            wholesale_price = Decimal(str(price_item.get('Preis', 0)))
-                        elif price_item.get('Art') == 'Einkauf':
-                            cost_price = Decimal(str(price_item.get('Preis', 0)))
-                        elif price_item.get('Art') == 'Empf.':
-                            recommended_price = Decimal(str(price_item.get('Preis', 0)))
-            
-            # Create product data dictionary with all available fields
-            product_data = {
-                'sku': sku,
-                'base_sku': base_sku,
-                'variant_code': variant_code,
+            # Prepare row data with raw values for validation
+            row_data = {
+                'sku': self.get_value(row, 'alteNummer', ''),
                 'name': self.get_value(row, 'Bezeichnung', ''),
                 'legacy_id': str(legacy_id),
-                'list_price': list_price,
-                'wholesale_price': wholesale_price,
-                'cost_price': cost_price,
+                'Preise': self.get_value(row, 'Preise', None),
                 'is_active': self.get_value(row, 'Aktiv', True),
-                'is_parent': is_parent,
-                'category': self.default_category,  # Default category, can be refined later
+                'ArtGruppe': self.get_value(row, 'ArtGruppe', None),
+            }
+            
+            # Validate and transform the data
+            is_valid, validated_data, validation_result = self.validator.validate_row(row_data, index)
+            
+            # Log warnings
+            for field, warnings in validation_result.warnings.items():
+                for warning in warnings:
+                    self.stdout.write(self.style.WARNING(f"Warning for row {index}, field {field}: {warning}"))
+            
+            # If validation failed, log errors and return None
+            if not is_valid:
+                self.stdout.write(self.style.ERROR(f"Validation failed for row {index}:"))
+                for field, errors in validation_result.errors.items():
+                    for error in errors:
+                        self.stdout.write(self.style.ERROR(f"  {field}: {error}"))
+                return None
+            
+            # Use the transformed data for product creation/update
+            product_data = {
+                'sku': validated_data['sku'],
+                'base_sku': validated_data.get('base_sku', ''),
+                'variant_code': validated_data.get('variant_code', ''),
+                'legacy_id': validated_data['legacy_id'],
+                'name': validated_data['name'],
+                'list_price': validated_data.get('list_price', Decimal('0.00')),
+                'wholesale_price': validated_data.get('wholesale_price', Decimal('0.00')),
+                'cost_price': validated_data.get('cost_price', Decimal('0.00')),
+                'is_active': validated_data.get('is_active', True),
+                'is_parent': validated_data.get('is_parent', False),
+                'category': validated_data.get('category', self.default_category),
             }
             
             # Set created_at if creation date exists
