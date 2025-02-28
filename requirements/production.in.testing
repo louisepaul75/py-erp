@@ -13,6 +13,6 @@ django-storages>=1.14.0,<1.15.0
 django-prometheus>=2.3.0,<2.4.0
 sentry-sdk>=1.40.0,<1.41.0
 
-# PDF Generation - temporarily removed as not in use yet
+# PDF Generation removed for testing
 # WeasyPrint>=60.2,<60.3
 # reportlab>=4.1.0,<4.2.0 
