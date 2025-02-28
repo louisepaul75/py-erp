@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pip-tools
+# Update pip
 RUN pip install --upgrade pip
 
 # Copy requirements files
@@ -30,47 +30,64 @@ RUN echo "Running dependency scanner..." && \
     python -c "import os; os.makedirs('scripts', exist_ok=True)" && \
     python scripts/check_dependencies.py > /app/dependency_scan.log || true
 
-# Update pip and install requirements
-RUN pip install --upgrade pip
+# Create a Python script to install packages with error handling
+RUN echo 'import sys, subprocess, time\n\
+def install_package(package):\n\
+    print(f"Installing {package}...")\n\
+    try:\n\
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", package])\n\
+        return True\n\
+    except Exception as e:\n\
+        print(f"Error installing {package}: {e}")\n\
+        return False\n\
+\n\
+def install_from_file(file_path):\n\
+    print(f"Installing packages from {file_path}")\n\
+    success = True\n\
+    try:\n\
+        # First try to install all at once\n\
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", "-r", file_path])\n\
+        print(f"Successfully installed all packages from {file_path}")\n\
+    except Exception as e:\n\
+        print(f"Failed to install all packages at once: {e}")\n\
+        # If that fails, try one by one\n\
+        print("Trying to install packages individually...")\n\
+        with open(file_path, "r") as f:\n\
+            for line in f:\n\
+                line = line.strip()\n\
+                if line and not line.startswith("#") and not line.startswith("-r"):\n\
+                    success = install_package(line) and success\n\
+                    # Add a small delay to avoid overwhelming the system\n\
+                    time.sleep(0.1)\n\
+    return success\n\
+\n\
+# Main program\n\
+if __name__ == "__main__":\n\
+    if len(sys.argv) < 2:\n\
+        print("Usage: python install_packages.py <requirements_file>")\n\
+        sys.exit(1)\n\
+    \n\
+    success = install_from_file(sys.argv[1])\n\
+    sys.exit(0 if success else 1)\n' > /app/install_packages.py
 
-# Try to install from base.in directly with better error handling
+# Install requirements using the Python script
 RUN echo "Installing base requirements..." && \
-    pip install --no-cache-dir -r requirements/base.in || \
-    (echo "Failed to install directly from base.in, installing packages individually..." && \
-    grep -v "^#" requirements/base.in | grep -v "^$" | xargs -n 1 pip install --no-cache-dir)
+    python /app/install_packages.py requirements/base.in
 
-# Try to install from production.in directly with better error handling
 RUN echo "Installing production requirements..." && \
-    pip install --no-cache-dir -r requirements/production.in || \
-    (echo "Failed to install directly from production.in, installing packages individually..." && \
-    grep -v "^#" requirements/production.in | grep -v "^$" | xargs -n 1 pip install --no-cache-dir)
+    python /app/install_packages.py requirements/production.in
 
 # Install additional packages individually to ensure they're installed properly
-RUN echo "Installing Celery and related packages..." && \
-    pip install --no-cache-dir celery redis django-celery-results django-celery-beat
-
-RUN echo "Installing logging packages..." && \
-    pip install --no-cache-dir python-json-logger structlog
-
-RUN echo "Installing django-filter..." && \
-    pip install --no-cache-dir django-filter
-
-RUN echo "Installing CORS headers package..." && \
-    pip install --no-cache-dir "django-cors-headers>=4.3.1,<4.4.0"
-
-RUN echo "Installing Swagger docs package..." && \
-    pip install --no-cache-dir "drf-yasg>=1.21.7,<1.22.0"
-
-RUN echo "Installing JWT authentication..." && \
-    pip install --no-cache-dir "djangorestframework-simplejwt>=5.3.0,<5.4.0"
-
-RUN echo "Installing mysql packages..." && \
-    pip install --no-cache-dir "mysqlclient>=2.2.0,<2.3.0" "pymysql>=1.1.0,<1.2.0"
+RUN pip install --no-cache-dir celery redis django-celery-results django-celery-beat
+RUN pip install --no-cache-dir python-json-logger structlog
+RUN pip install --no-cache-dir django-filter
+RUN pip install --no-cache-dir "django-cors-headers>=4.3.1,<4.4.0"
+RUN pip install --no-cache-dir "drf-yasg>=1.21.7,<1.22.0"
+RUN pip install --no-cache-dir "djangorestframework-simplejwt>=5.3.0,<5.4.0"
+RUN pip install --no-cache-dir "mysqlclient>=2.2.0,<2.3.0" "pymysql>=1.1.0,<1.2.0"
 
 # Verify critical packages are installed
-RUN echo "Verifying critical packages..." && \
-    pip install --no-cache-dir "django-redis>=5.4.0,<5.5.0" && \
-    pip install --no-cache-dir "redis>=5.0.0,<5.1.0"
+RUN pip install --no-cache-dir "django-redis>=5.4.0,<5.5.0" "redis>=5.0.0,<5.1.0"
 
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \
