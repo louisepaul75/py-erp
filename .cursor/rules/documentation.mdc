@@ -1,275 +1,294 @@
 ---
-description: 
-globs: 
-alwaysApply: false
----
----
-description: This document outlines the documentation standards for the Inventory Management System. It provides guidelines for writing clear, consistent, and maintainable documentation across the codebase. These standards ensure that all team members and AI tools can easily understand and work with the code.
+description: This document outlines the documentation standards for the pyERP system. It provides guidelines for writing clear, consistent, and maintainable documentation across the codebase. These standards ensure that all team members and AI tools can easily understand and work with the code.
 globs: 
 ---
-# Documentation Standards for Maler Zeiterfassung
+# Documentation Standards for pyERP
 
 ## Overview
-This document outlines documentation standards for the Maler Zeiterfassung (Painter Time Tracking System). These standards ensure clear, consistent, and maintainable documentation across the codebase.
+This document outlines documentation standards for the pyERP system (Django-based ERP). These standards ensure clear, consistent, and maintainable documentation across the codebase.
 
 ## Code Documentation
 
 ### Function Documentation
 ```python
-def calculate_work_hours(start_time: datetime, end_time: datetime, breaks: List[Break]) -> float:
+def calculate_stock_value(product_id: int, warehouse_id: int, currency: Optional[str] = None) -> Decimal:
     """
-    Calculate the total work hours for a time period, accounting for breaks.
+    Calculate the total stock value for a specific product in a warehouse.
     
     Args:
-        start_time (datetime): The start time of the work period
-        end_time (datetime): The end time of the work period
-        breaks (List[Break]): List of break periods taken
+        product_id (int): The ID of the product
+        warehouse_id (int): The ID of the warehouse
+        currency (Optional[str]): Currency code for conversion, uses default if None
         
     Returns:
-        float: Total work hours excluding breaks
+        Decimal: Total value of the product stock in the specified currency
         
     Raises:
-        ValidationError: If end_time is before start_time or if breaks overlap
+        ProductNotFound: If the product ID is invalid
+        WarehouseNotFound: If the warehouse ID is invalid
+        CurrencyConversionError: If currency conversion fails
     """
 ```
 
 ### Class Documentation
 ```python
-class TimeEntry:
+class LegacyAPIClient:
     """
-    Represents a time entry in the system.
+    Client for interacting with the legacy 4D-based ERP system.
+    
+    Handles authentication, session management, and API requests to the legacy system.
     
     Attributes:
-        painter_id (int): ID of the painter
-        project_id (int): ID of the project
-        start_time (datetime): Start time of work
-        end_time (datetime): End time of work
-        breaks (List[Break]): List of breaks taken
+        base_url (str): Base URL of the legacy API
+        environment (str): Current environment ('test' or 'live')
+        timeout (int): Request timeout in seconds
         
     Methods:
-        calculate_duration(): Calculate total duration excluding breaks
-        validate(): Validate the time entry data
+        authenticate(): Authenticate with the legacy system
+        get_table_data(): Retrieve data from a specific table
+        push_field_update(): Update a field in the legacy system
     """
 ```
 
 ## File Header Template
 ```python
 """
-Maler Zeiterfassung - Time Entry Management Module
+pyERP - Legacy API Integration Module
 
-This module handles the creation, validation, and management of time entries
-in the painting time tracking system.
+This module provides integration with the legacy 4D-based ERP system.
+It handles authentication, data retrieval, and updates to the legacy system.
 
-Created: YYYY-MM-DD
-Last Modified: YYYY-MM-DD
 Author: [Author Name]
+Created: [Date]
 """
+```
+
+## Django Model Documentation
+
+```python
+class Product(models.Model):
+    """
+    Represents a product in the inventory system.
+    
+    Products can be raw materials, manufactured items, or finished goods.
+    They may have a bill of materials (BOM) if they are manufactured.
+    
+    Attributes:
+        sku (str): Stock Keeping Unit - unique product identifier
+        name (str): Product name
+        description (TextField): Detailed product description
+        category (ForeignKey): Product category
+        price (Decimal): Standard selling price
+        cost (Decimal): Standard cost price
+        is_manufactured (bool): Whether product is manufactured in-house
+        is_active (bool): Whether product is active in the system
+        created_at (DateTime): When the product was created
+        updated_at (DateTime): When the product was last updated
+    
+    Related Models:
+        - ProductImage: Images of the product
+        - BOMItem: Bill of materials components
+        - StockMovement: Stock movements for this product
+    """
+    sku = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=255)
+    # ... other fields
+```
+
+## API Documentation
+
+```python
+@api_view(['GET'])
+@permission_required('products.view_product')
+def product_detail(request, product_id):
+    """
+    Get detailed information about a product.
+    
+    URL Parameters:
+        product_id (int): The ID of the product
+        
+    Query Parameters:
+        include_images (bool): Whether to include product images
+        include_bom (bool): Whether to include bill of materials
+        warehouse_id (int): Limit stock info to specific warehouse
+        
+    Returns:
+        200 OK: Product details including requested information
+        404 Not Found: If product doesn't exist
+        
+    Example Response:
+        {
+            "id": 123,
+            "sku": "PROD-001",
+            "name": "Sample Product",
+            "description": "A sample product",
+            "price": "99.99",
+            "stock": {
+                "total": 15,
+                "warehouses": [
+                    {"id": 1, "name": "Main", "quantity": 10},
+                    {"id": 2, "name": "Secondary", "quantity": 5}
+                ]
+            },
+            "images": [...],
+            "bom_items": [...]
+        }
+    """
+```
+
+## Module-Level Documentation
+
+```python
+"""
+pyERP Legacy API Integration Module
+===================================
+
+This module provides integration with the legacy 4D-based ERP system.
+It replaces the external WSZ_api package with an improved implementation.
+
+Key Components:
+--------------
+- auth.py: Handles authentication and session management
+- client.py: Main client for interacting with the legacy API
+- getters.py: Functions for retrieving data from the legacy system
+- setters.py: Functions for updating data in the legacy system
+- utils.py: Utility functions and helpers
+- config.py: Configuration management
+
+Usage:
+------
+```python
+from pyerp.legacy_api import LegacyAPIClient
+
+# Create client (environment from settings)
+client = LegacyAPIClient()
+
+# Authenticate
+client.authenticate()
+
+# Get data from a table
+products = client.get_table_data("products", limit=100)
+
+# Update a field
+client.push_field_update("products", 123, "price", 99.99)
+```
+
+Configuration:
+-------------
+The module uses Django settings for configuration:
+
+```python
+# settings.py
+LEGACY_API = {
+    'base_url': 'https://legacy-api.example.com',
+    'environments': {
+        'test': {
+            'username': 'test_user',
+            'password': os.environ.get('LEGACY_TEST_PASSWORD'),
+        },
+        'live': {
+            'username': 'prod_user',
+            'password': os.environ.get('LEGACY_PROD_PASSWORD'),
+        }
+    },
+    'default_environment': 'test',
+    'timeout': 30,
+    'cache_ttl': 3600,
+}
+```
+"""
+```
+
+## README Standard
+
+```markdown
+# Module Name
+
+## Overview
+Brief description of the module's purpose and functionality.
+
+## Installation
+Steps to install or set up the module.
+
+## Configuration
+How to configure the module, including settings and environment variables.
+
+## Usage
+Examples of common use cases with code snippets.
+
+## API Reference
+Detailed API documentation if applicable.
+
+## Testing
+How to run tests for the module.
+
+## Troubleshooting
+Common issues and their solutions.
 ```
 
 ## Documentation Types
 
 ### 1. Code Documentation
-- Clear and concise docstrings
-- Type hints for all functions
+- Docstrings for modules, classes, methods, and functions
 - Inline comments for complex logic
-- Examples for non-obvious usage
+- Type hints for improved clarity
 
 ### 2. API Documentation
 - Endpoint descriptions
-- Request/response formats
+- Parameter explanations
+- Response formats
 - Authentication requirements
-- Error codes and handling
+- Example requests and responses
 
 ### 3. User Documentation
-- Setup instructions
 - User guides
-- Feature documentation
-- Troubleshooting guides
+- Feature explanations
+- Screenshots and illustrations
+- Step-by-step instructions
+
+### 4. Technical Documentation
+- System architecture
+- Data models
+- Integration points
+- Deployment processes
+- Environment requirements
 
 ## Best Practices
 
-1. Keep documentation up to date
-2. Use clear, consistent terminology
-3. Include examples for complex features
-4. Document assumptions and limitations
-5. Maintain a changelog
-
-## Validation Rules
-- Document all validation rules
-- Include error messages
-- Specify data constraints
-- Document edge cases
-
-## Testing Documentation
-- Document test scenarios
-- Include test data examples
-- Document mocking strategies
-- Explain test coverage requirements
-
-## Maintenance
-- Regular documentation reviews
-- Update on feature changes
-- Remove obsolete documentation
-- Keep examples current
-
-# Documentation Guidelines
-
-
-
-## Description
-
-This document outlines the documentation standards for the Inventory Management System. It provides guidelines for writing clear, consistent, and maintainable documentation across the codebase. These standards ensure that all team members and AI tools can easily understand and work with the code.
-
-
-
-Key aspects covered:
-
-- File and module documentation
-
-- Function and class documentation
-
-- Database model documentation
-
-- API documentation
-
-- Code comments and inline documentation
-
-- Test documentation
-
-
-
-## General Principles
-
-- All code must be documented in English
-
-- Documentation should be clear, concise, and actionable
-
-- Keep documentation up-to-date with code changes
-
-
-
-## File Documentation
-
-- Each file should start with a docstring describing its purpose
-
-- Include any important notes about dependencies or requirements
-
-- List any assumptions or limitations
-
-
-
-## Function Documentation
-
-```python
-
-def function_name(param1: type, param2: type) -> return_type:
-
-    """
-
-    Brief description of function purpose.
-
-
-
-    Args:
-
-        param1: Description of first parameter
-
-        param2: Description of second parameter
-
-
-
-    Returns:
-
-        Description of return value
-
-
-
-    Raises:
-
-        ExceptionType: Description of when/why exception is raised
-
-    """
-
-```
-
-
-
-## Class Documentation
-
-```python
-
-class ClassName:
-
-    """
-
-    Brief description of class purpose.
-
-
-
-    Attributes:
-
-        attr1: Description of first attribute
-
-        attr2: Description of second attribute
-
-    """
-
-```
-
-
-
-## Model Documentation
-
-- Document all database models with field descriptions
-
-- Include relationships between models
-
-- Document any constraints or validations
-
-- Explain JSON structures for complex fields
-
-
-
-## API Documentation
-
-- Document all API endpoints
-
-- Include request/response formats
-
-- List possible error codes and meanings
-
-- Provide example requests and responses
-
-
-
-## Comments
-
-- Use comments to explain complex logic
-
-- Avoid obvious comments that don't add value
-
-- Keep comments up-to-date with code changes
-
-- Use TODO comments for future improvements
-
-
-
-## Validation Documentation
-
-- Document all validation rules
-
-- Explain error messages and their meaning
-
-- Include examples of valid/invalid inputs
-
-
-
-## Testing Documentation
-
-- Document test cases and their purpose
-
-- Explain test data setup and teardown
-
-- Document any test environment requirements
-
-- Include examples of test execution 
+### 1. Clarity and Consistency
+- Use consistent formatting
+- Write in clear, simple language
+- Avoid technical jargon unless necessary
+- Be concise while being complete
+
+### 2. Keeping Documentation Current
+- Update documentation when code changes
+- Review documentation regularly
+- Mark outdated sections clearly
+- Version documentation with code
+
+### 3. Accessibility
+- Make documentation easy to find
+- Use appropriate formatting for readability
+- Include a table of contents for longer documents
+- Provide search functionality when possible
+
+## Special Considerations for pyERP
+
+### 1. Legacy System Integration
+- Document all integration points with the legacy 4D system
+- Clearly explain data mappings and transformations
+- Include error handling procedures
+- Note any environment-specific behaviors
+
+### 2. Environment Configuration
+- Document environment variables and settings
+- Provide examples for development, testing, and production
+- Explain differences between environments
+- Include troubleshooting for common environment issues
+
+### 3. Database Documentation
+- Document schema changes with migrations
+- Explain model relationships
+- Document custom queries and optimizations
+- Include index information for performance-critical tables 
