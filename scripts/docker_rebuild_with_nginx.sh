@@ -56,6 +56,10 @@ echo -e "${YELLOW}Searching for Docker Compose files...${NC}"
 
 # Search for possible Docker Compose files
 POSSIBLE_COMPOSE_FILES=(
+  "docker-compose.prod.yml"
+  "docker-compose.prod.yaml"
+  "docker/docker-compose.prod.yml"
+  "docker/docker-compose.prod.yaml"
   "docker-compose.yml"
   "docker-compose.yaml"
   "docker/docker-compose.yml"
@@ -89,26 +93,46 @@ if [ -z "$COMPOSE_FILE" ]; then
 fi
 
 # Check if Nginx is in a separate compose file or the same one
-grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
-if [ $? -eq 0 ]; then
-  echo -e "  ${GREEN}Nginx configuration found in main compose file${NC}"
-  NGINX_COMPOSE_FILE="$COMPOSE_FILE"
-else
-  # Check docker/docker-compose.yml specifically for Nginx
-  if [ -f "docker/docker-compose.yml" ]; then
-    grep -q "nginx" "docker/docker-compose.yml" 2>/dev/null
-    if [ $? -eq 0 ]; then
-      echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.yml${NC}"
-      NGINX_COMPOSE_FILE="docker/docker-compose.yml"
+if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
+  # In production, Nginx should be part of the docker-compose.prod.yml file
+  grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  if [ $? -eq 0 ]; then
+    echo -e "  ${GREEN}Nginx configuration found in production compose file${NC}"
+    NGINX_COMPOSE_FILE="$COMPOSE_FILE"
+  else
+    echo -e "  ${YELLOW}Nginx not found in production compose file. Looking for separate Nginx config...${NC}"
+    # Continue with the existing Nginx lookup logic
+    if [ -f "docker/docker-compose.prod.yml" ]; then
+      grep -q "nginx" "docker/docker-compose.prod.yml" 2>/dev/null
+      if [ $? -eq 0 ]; then
+        echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.prod.yml${NC}"
+        NGINX_COMPOSE_FILE="docker/docker-compose.prod.yml"
+      fi
     fi
   fi
-  
-  # If still not found, ask user
-  if [ -z "$NGINX_COMPOSE_FILE" ]; then
-    echo -e "  ${YELLOW}Nginx configuration not found. Please specify the path to your Nginx Docker Compose file${NC}"
-    echo -e "  ${YELLOW}(or press Enter to skip if Nginx is run separately):${NC}"
-    read -p "  Nginx compose file path: " NGINX_COMPOSE_FILE
+else
+  # For development, continue with regular Nginx check
+  grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  if [ $? -eq 0 ]; then
+    echo -e "  ${GREEN}Nginx configuration found in main compose file${NC}"
+    NGINX_COMPOSE_FILE="$COMPOSE_FILE"
+  else
+    # Check docker/docker-compose.yml specifically for Nginx
+    if [ -f "docker/docker-compose.yml" ]; then
+      grep -q "nginx" "docker/docker-compose.yml" 2>/dev/null
+      if [ $? -eq 0 ]; then
+        echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.yml${NC}"
+        NGINX_COMPOSE_FILE="docker/docker-compose.yml"
+      fi
+    fi
   fi
+fi
+
+# If still not found, ask user
+if [ -z "$NGINX_COMPOSE_FILE" ]; then
+  echo -e "  ${YELLOW}Nginx configuration not found. Please specify the path to your Nginx Docker Compose file${NC}"
+  echo -e "  ${YELLOW}(or press Enter to skip if Nginx is run separately):${NC}"
+  read -p "  Nginx compose file path: " NGINX_COMPOSE_FILE
 fi
 
 # Step 1: Stop and remove existing containers
@@ -136,12 +160,35 @@ fi
 # Step 3: Build Django container
 echo -e "\n${GREEN}[3/5] Building Django container...${NC}"
 if [ -n "$COMPOSE_FILE" ]; then
-    echo -e "  ${YELLOW}Using compose file: $COMPOSE_FILE${NC}"
-    if docker-compose -f "$COMPOSE_FILE" build --no-cache; then
-        echo -e "  ${GREEN}✓ Django container rebuilt successfully${NC}"
+    # Check if we have a production file - prefer that over development
+    PROD_FILE=""
+    if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
+        PROD_FILE="$COMPOSE_FILE"
+    elif [ -f "docker/docker-compose.prod.yml" ]; then
+        PROD_FILE="docker/docker-compose.prod.yml"
+    elif [ -f "docker-compose.prod.yml" ]; then
+        PROD_FILE="docker-compose.prod.yml"
+    fi
+    
+    if [ -n "$PROD_FILE" ]; then
+        echo -e "  ${YELLOW}Using production compose file: $PROD_FILE${NC}"
+        if docker-compose -f "$PROD_FILE" build --no-cache; then
+            echo -e "  ${GREEN}✓ Django container rebuilt successfully${NC}"
+            # Update COMPOSE_FILE to use production for starting containers
+            COMPOSE_FILE="$PROD_FILE"
+        else
+            echo -e "  ${RED}✗ Error rebuilding Django container${NC}"
+            exit 1
+        fi
     else
-        echo -e "  ${RED}✗ Error rebuilding Django container${NC}"
-        exit 1
+        echo -e "  ${YELLOW}Using compose file: $COMPOSE_FILE${NC}"
+        echo -e "  ${YELLOW}Warning: This may be a development configuration file.${NC}"
+        if docker-compose -f "$COMPOSE_FILE" build --no-cache; then
+            echo -e "  ${GREEN}✓ Django container rebuilt successfully${NC}"
+        else
+            echo -e "  ${RED}✗ Error rebuilding Django container${NC}"
+            exit 1
+        fi
     fi
 else
     echo -e "  ${RED}No Docker Compose file specified for Django${NC}"
@@ -165,8 +212,48 @@ else
     echo -e "  ${YELLOW}No Nginx compose file specified, skipping Nginx build${NC}"
 fi
 
+# Check for port conflicts before starting containers
+check_port() {
+    local port=$1
+    local service=$2
+    
+    # Check if the port is in use
+    if command -v nc >/dev/null 2>&1; then
+        if nc -z localhost $port >/dev/null 2>&1; then
+            echo -e "  ${RED}Port $port is already in use! This will conflict with $service.${NC}"
+            echo -e "  ${YELLOW}You can:${NC}"
+            echo -e "  ${YELLOW}1. Stop the service using this port${NC}"
+            echo -e "  ${YELLOW}2. Modify the docker-compose file to use a different port${NC}"
+            echo -e "  ${YELLOW}3. Continue anyway (may fail)${NC}"
+            read -p "  Continue anyway? (y/n): " continue_anyway
+            if [[ "$continue_anyway" != "y" && "$continue_anyway" != "Y" ]]; then
+                echo -e "  ${RED}Aborting deployment.${NC}"
+                exit 1
+            fi
+        fi
+    fi
+}
+
+# Check for port conflicts before starting containers
+check_for_port_conflicts() {
+    echo -e "\n${YELLOW}Checking for potential port conflicts...${NC}"
+    
+    # Extract ports from the docker-compose file
+    if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
+        check_port 80 "Nginx (HTTP)"
+        check_port 443 "Nginx (HTTPS)"
+    else
+        # Development setup typically uses port 8000
+        check_port 8000 "Django development server"
+    fi
+}
+
 # Step 5: Start containers
 echo -e "\n${GREEN}[5/5] Starting containers...${NC}"
+
+# Check for port conflicts first
+check_for_port_conflicts
+
 # Start Django container
 if [ -n "$COMPOSE_FILE" ]; then
     echo -e "  ${YELLOW}Starting containers using: $COMPOSE_FILE${NC}"
