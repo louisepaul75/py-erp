@@ -21,7 +21,9 @@ COPY requirements/minimal.in /app/requirements/minimal.in
 RUN pip install --upgrade pip && \
     pip install -r /app/requirements/minimal.in && \
     echo "Verifying Celery installation..." && \
-    pip install celery redis django-celery-results django-celery-beat
+    pip install celery redis django-celery-results django-celery-beat && \
+    echo "Verifying logging packages..." && \
+    pip install python-json-logger structlog
 
 # Copy application code
 COPY . .

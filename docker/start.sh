@@ -25,7 +25,8 @@ python -c "import redis; r = redis.from_url('${REDIS_URL:-redis://redis:6379/0}'
 
 # Attempt to import the application module with better error handling
 echo "Checking application imports..."
-python -c "try:
+python -c "
+try:
     import pyerp
     print('pyerp module found')
     import pyerp.wsgi
@@ -48,29 +49,29 @@ RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   python -c "
-  try:
-      import dj_database_url
-      import psycopg2
-      db_url = '${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'
-      db_config = dj_database_url.parse(db_url)
-      print(f'Attempting to connect to database: {db_config}')
-      # This will raise an exception if connection fails
-      conn = psycopg2.connect(
-          host=db_config['HOST'],
-          port=db_config['PORT'],
-          dbname=db_config['NAME'],
-          user=db_config['USER'],
-          password=db_config['PASSWORD']
-      )
-      print('Database connection successful')
-      conn.close()
-      exit(0)
-  except Exception as e:
-      print(f'Database connection error: {e}')
-      import traceback
-      traceback.print_exc()
-      exit(1)
-  "
+try:
+    import dj_database_url
+    import psycopg2
+    db_url = '${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'
+    db_config = dj_database_url.parse(db_url)
+    print(f'Attempting to connect to database: {db_config}')
+    # This will raise an exception if connection fails
+    conn = psycopg2.connect(
+        host=db_config['HOST'], 
+        port=db_config['PORT'],
+        dbname=db_config['NAME'],
+        user=db_config['USER'],
+        password=db_config['PASSWORD']
+    )
+    print('Database connection successful')
+    conn.close()
+    exit(0)
+except Exception as e:
+    print(f'Database connection error: {e}')
+    import traceback
+    traceback.print_exc()
+    exit(1)
+"
   
   if [ $? -eq 0 ]; then
     echo "Database connection established!"
