@@ -25,6 +25,8 @@ RUN pip install --upgrade pip && \
     pip install "PyMySQL>=1.1.0" && \
     # Core packages
     pip install "Django>=5.1.0,<5.2.0" "djangorestframework>=3.14.0,<3.15.0" "django-filter>=23.5,<24.0" && \
+    # CORS headers package
+    pip install "django-cors-headers>=4.3.1,<4.4.0" && \
     # Server and environment
     pip install "gunicorn>=21.2.0,<21.3.0" "whitenoise>=6.6.0,<6.7.0" && \
     pip install "python-dotenv>=1.0.0,<1.1.0" "dj-database-url>=2.1.0,<2.2.0" && \

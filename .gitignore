@@ -35,6 +35,12 @@ media
 !.env.*.example
 temp_env*
 
+# Docker environment files
+docker/docker.env
+docker/docker.local.env
+!docker/docker.env.example
+!docker/docker.local.env.example
+
 # Docker
 .docker/data/
 

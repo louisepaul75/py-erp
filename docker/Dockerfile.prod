@@ -36,6 +36,8 @@ RUN pip install --upgrade pip && \
     pip install python-json-logger structlog && \
     echo "Verifying django-filter..." && \
     pip install django-filter && \
+    echo "Installing CORS headers package..." && \
+    pip install "django-cors-headers>=4.3.1,<4.4.0" && \
     echo "Installing PyMySQL instead of mysqlclient..." && \
     pip install "PyMySQL>=1.1.0"
 
