@@ -30,7 +30,9 @@ RUN pip install --upgrade pip && \
     echo "Installing base requirements..." && \
     pip install -r requirements/base.in && \
     echo "Installing production requirements..." && \
-    pip install -r requirements/production.in
+    pip install -r requirements/production.in && \
+    echo "Verifying Celery installation..." && \
+    pip install celery redis django-celery-results django-celery-beat
 
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \

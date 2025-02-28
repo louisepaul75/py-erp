@@ -18,7 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy requirements and install directly
 COPY requirements/minimal.in /app/requirements/minimal.in
 RUN pip install --upgrade pip && \
-    pip install -r /app/requirements/minimal.in
+    pip install -r /app/requirements/minimal.in && \
+    echo "Verifying Celery installation..." && \
+    pip install celery redis django-celery-results django-celery-beat
 
 # Copy application code
 COPY . .

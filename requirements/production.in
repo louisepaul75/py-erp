@@ -13,6 +13,13 @@ django-storages>=1.14.0,<1.15.0
 django-prometheus>=2.3.0,<2.4.0
 sentry-sdk>=1.40.0,<1.41.0
 
+# Celery for task processing (required by the application)
+# These should already be in base.in, but let's make sure they're included
+celery>=5.3.6,<5.4.0
+redis>=5.0.0,<5.1.0
+django-celery-results>=2.5.0,<2.6.0
+django-celery-beat>=2.5.0,<2.6.0
+
 # PDF Generation - temporarily removed as not in use yet
 # WeasyPrint>=60.2,<60.3
 # reportlab>=4.1.0,<4.2.0 
