@@ -1,0 +1,35 @@
+# Minimal Dockerfile - fallback option if the main one still fails
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=pyerp.settings.production
+
+WORKDIR /app
+
+# Install only essential build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install directly
+COPY requirements/minimal.in /app/requirements/minimal.in
+RUN pip install --upgrade pip && \
+    pip install -r /app/requirements/minimal.in
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/static /app/media /app/logs
+
+# Run as non-root user
+RUN useradd -m appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Run gunicorn
+CMD ["gunicorn", "pyerp.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"] 

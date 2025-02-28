@@ -25,11 +25,18 @@ RUN pip install --upgrade pip \
 # Copy requirements files
 COPY requirements/ /app/requirements/
 
-# Compile requirements and generate wheels
-RUN pip-compile requirements/production.in --output-file=requirements/production.txt --verbose
+# Alternative approach: directly install from the .in file
+RUN pip install --upgrade pip && \
+    echo "Installing base requirements..." && \
+    pip install -r requirements/base.in && \
+    echo "Installing production requirements..." && \
+    pip install -r requirements/production.in
 
-# Now build wheels
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements/production.txt --verbose
+# Build wheels for faster installation in the final image
+RUN echo "Generating requirements.txt from installed packages..." && \
+    pip freeze > requirements/production.txt && \
+    echo "Building wheels..." && \
+    pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements/production.txt
 
 # Final stage
 FROM python:3.13-slim
