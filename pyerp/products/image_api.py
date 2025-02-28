@@ -200,10 +200,12 @@ class ImageAPIClient:
             
             page += 1
             
-            # Stop early if we've found at least one image
-            if product_images:
-                logger.info(f"Found {len(product_images)} images for article {article_number}")
-                break
+            # Continue searching through all pages instead of stopping early
+            # We want to find ALL images for this product across all pages
+        
+        # Log how many images were found total
+        if product_images:
+            logger.info(f"Found {len(product_images)} images for article {article_number}")
         
         # Cache the results for this product
         if self.cache_enabled and product_images:

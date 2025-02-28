@@ -104,6 +104,62 @@
                                 <div class="text-center p-2">
                                     <img src="{{ product_images|get_item:product.sku|get_item:'image_url' }}" class="img-fluid product-thumbnail" alt="{{ product.name }}" style="max-height: 150px;">
                                 </div>
+                                {% elif product.variants.exists %}
+                                <!-- Display variant images when parent product has no images -->
+                                <div class="text-center p-2 product-image-container" style="height: 150px; display: flex; align-items: center; justify-content: center;">
+                                    <div class="variant-images" data-product-id="{{ product.id }}">
+                                        {% comment %}BE variants with Produktfoto and is_front=True (priority 1){% endcomment %}
+                                        {% for variant in product.variants.all %}
+                                            {% if variant.variant_code == "BE" and variant.images.exists %}
+                                                {% for image in variant.images.all %}
+                                                    {% if image.image_type == "Produktfoto" and image.is_front %}
+                                                        <img src="{{ image.image_url }}" alt="{{ product.name }}" 
+                                                             style="max-height: 150px; max-width: 100%; object-fit: contain;"
+                                                             class="variant-image priority-1" data-variant-id="{{ variant.id }}">
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% comment %}Any variants with Produktfoto and is_front=True (priority 2){% endcomment %}
+                                        {% for variant in product.variants.all %}
+                                            {% if variant.images.exists %}
+                                                {% for image in variant.images.all %}
+                                                    {% if image.image_type == "Produktfoto" and image.is_front %}
+                                                        <img src="{{ image.image_url }}" alt="{{ product.name }}" 
+                                                             style="max-height: 150px; max-width: 100%; object-fit: contain; display: none;"
+                                                             class="variant-image priority-2" data-variant-id="{{ variant.id }}">
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% comment %}Any variants with Produktfoto (priority 3){% endcomment %}
+                                        {% for variant in product.variants.all %}
+                                            {% if variant.images.exists %}
+                                                {% for image in variant.images.all %}
+                                                    {% if image.image_type == "Produktfoto" and forloop.first %}
+                                                        <img src="{{ image.image_url }}" alt="{{ product.name }}" 
+                                                             style="max-height: 150px; max-width: 100%; object-fit: contain; display: none;"
+                                                             class="variant-image priority-3" data-variant-id="{{ variant.id }}">
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% comment %}Any variant image (priority 4){% endcomment %}
+                                        {% for variant in product.variants.all %}
+                                            {% if forloop.first and variant.images.exists %}
+                                                <img src="{{ variant.images.first.image_url }}" alt="{{ product.name }}" 
+                                                     style="max-height: 150px; max-width: 100%; object-fit: contain; display: none;"
+                                                     class="variant-image priority-4" data-variant-id="{{ variant.id }}">
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% comment %}Show a placeholder if no images are found (in JavaScript){% endcomment %}
+                                        <i class="fas fa-image fa-5x text-muted placeholder-image" style="display: none;"></i>
+                                    </div>
+                                </div>
                                 {% else %}
                                 <div class="text-center p-2">
                                     <i class="fas fa-image fa-5x text-muted"></i>
@@ -188,4 +244,49 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find all variant image containers
+        const imageContainers = document.querySelectorAll('.variant-images');
+        
+        imageContainers.forEach(container => {
+            // Get all variant images by priority
+            const priority1Images = container.querySelectorAll('.variant-image.priority-1');
+            const priority2Images = container.querySelectorAll('.variant-image.priority-2');
+            const priority3Images = container.querySelectorAll('.variant-image.priority-3');
+            const priority4Images = container.querySelectorAll('.variant-image.priority-4');
+            const placeholder = container.querySelector('.placeholder-image');
+            
+            let imageDisplayed = false;
+            
+            // Show the first priority 1 image if available
+            if (priority1Images.length > 0) {
+                priority1Images[0].style.display = 'block';
+                imageDisplayed = true;
+            }
+            // Otherwise show the first priority 2 image
+            else if (priority2Images.length > 0) {
+                priority2Images[0].style.display = 'block';
+                imageDisplayed = true;
+            }
+            // Otherwise show the first priority 3 image
+            else if (priority3Images.length > 0) {
+                priority3Images[0].style.display = 'block';
+                imageDisplayed = true;
+            }
+            // Otherwise show the first priority 4 image
+            else if (priority4Images.length > 0) {
+                priority4Images[0].style.display = 'block';
+                imageDisplayed = true;
+            }
+            // If no images were found, show the placeholder
+            else if (placeholder) {
+                placeholder.style.display = 'block';
+            }
+        });
+    });
+</script>
 {% endblock %} 

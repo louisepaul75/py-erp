@@ -131,6 +131,15 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
         variants = VariantProduct.objects.filter(parent=product).order_by('variant_code', 'name')
         context['variants'] = variants
         
+        # Add flag to check if there's any Produktfoto with front=True
+        has_front_produktfoto = False
+        if hasattr(product, 'images') and product.images.exists():
+            for image in product.images.all():
+                if image.image_type == 'Produktfoto' and image.is_front:
+                    has_front_produktfoto = True
+                    break
+        context['has_front_produktfoto'] = has_front_produktfoto
+        
         # Get primary images for variants to avoid template filtering
         variant_images = {}
         for variant in variants:
@@ -144,23 +153,37 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
                     # 5. First image
                     
                     # First priority: Produktfoto with front=True
-                    primary_image = variant.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
+                    primary_image = None
+                    for image in variant.images.all():
+                        if image.image_type == 'Produktfoto' and image.is_front:
+                            primary_image = image
+                            break
                     
                     if not primary_image:
                         # Second priority: Any Produktfoto
-                        primary_image = variant.images.filter(image_type__iexact='Produktfoto').first()
+                        for image in variant.images.all():
+                            if image.image_type == 'Produktfoto':
+                                primary_image = image
+                                break
                     
                     if not primary_image:
                         # Third priority: Any front=True image
-                        primary_image = variant.images.filter(is_front=True).first()
+                        for image in variant.images.all():
+                            if image.is_front:
+                                primary_image = image
+                                break
                     
                     if not primary_image:
                         # Fourth priority: Any image marked as primary
-                        primary_image = variant.images.filter(is_primary=True).first()
+                        for image in variant.images.all():
+                            if image.is_primary:
+                                primary_image = image
+                                break
                     
                     if not primary_image:
                         # Last resort: First image
-                        primary_image = variant.images.first()
+                        if variant.images.all():
+                            primary_image = variant.images.all()[0]
                     
                     if primary_image:
                         variant_images[variant.id] = primary_image
@@ -190,6 +213,15 @@ class VariantDetailView(LoginRequiredMixin, DetailView):
         # Add parent product for navigation
         context['parent_product'] = variant.parent
         
+        # Add flag to check if there's any Produktfoto with front=True
+        has_front_produktfoto = False
+        if hasattr(variant, 'images') and variant.images.exists():
+            for image in variant.images.all():
+                if image.image_type == 'Produktfoto' and image.is_front:
+                    has_front_produktfoto = True
+                    break
+        context['has_front_produktfoto'] = has_front_produktfoto
+        
         # Get primary image for variant
         if hasattr(variant, 'images') and variant.images.exists():
             try:
@@ -201,23 +233,37 @@ class VariantDetailView(LoginRequiredMixin, DetailView):
                 # 5. First image
                 
                 # First priority: Produktfoto with front=True
-                primary_image = variant.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
+                primary_image = None
+                for image in variant.images.all():
+                    if image.image_type == 'Produktfoto' and image.is_front:
+                        primary_image = image
+                        break
                 
                 if not primary_image:
                     # Second priority: Any Produktfoto
-                    primary_image = variant.images.filter(image_type__iexact='Produktfoto').first()
+                    for image in variant.images.all():
+                        if image.image_type == 'Produktfoto':
+                            primary_image = image
+                            break
                 
                 if not primary_image:
                     # Third priority: Any front=True image
-                    primary_image = variant.images.filter(is_front=True).first()
+                    for image in variant.images.all():
+                        if image.is_front:
+                            primary_image = image
+                            break
                 
                 if not primary_image:
                     # Fourth priority: Any image marked as primary
-                    primary_image = variant.images.filter(is_primary=True).first()
+                    for image in variant.images.all():
+                        if image.is_primary:
+                            primary_image = image
+                            break
                 
                 if not primary_image:
                     # Last resort: First image
-                    primary_image = variant.images.first()
+                    if variant.images.all():
+                        primary_image = variant.images.all()[0]
                 
                 if primary_image:
                     context['primary_image'] = primary_image
