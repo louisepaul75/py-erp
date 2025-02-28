@@ -64,8 +64,7 @@ urlpatterns = [
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
     # API endpoints
-    # Uncomment these as the app URLs are implemented
-    # path('api/core/', include('pyerp.core.urls')),
+    # Required core modules
     path('api/products/', include('pyerp.products.api_urls')),
     
     # Frontend URLs
@@ -79,18 +78,28 @@ if HAS_SWAGGER:
         path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     ])
 
-# Conditionally include sales URLs
-try:
-    import pyerp.sales.urls
-    urlpatterns.append(path('api/sales/', include('pyerp.sales.urls')))
-    print("Sales URLs included")
-except ImportError:
-    print("WARNING: Sales module could not be imported, skipping URLs")
+# Optional modules - try to include each conditionally
+OPTIONAL_API_MODULES = [
+    ('sales', 'pyerp.sales.urls'),
+    ('inventory', 'pyerp.inventory.urls'),
+    ('production', 'pyerp.production.urls'),
+    ('legacy-sync', 'pyerp.legacy_sync.urls'),
+]
 
-# Commented out URLs for future use
-# path('api/inventory/', include('pyerp.inventory.urls')),
-# path('api/production/', include('pyerp.production.urls')),
-# path('api/legacy-sync/', include('pyerp.legacy_sync.urls')),
+# Add each optional module if it's available
+for url_prefix, module_path in OPTIONAL_API_MODULES:
+    try:
+        # Check if the module can be imported
+        __import__(module_path.split('.', 1)[0])
+        module_urls = __import__(module_path, fromlist=['urlpatterns'])
+        if hasattr(module_urls, 'urlpatterns'):
+            urlpatterns.append(path(f'api/{url_prefix}/', include(module_path)))
+            print(f"Added URL patterns for {module_path}")
+        else:
+            print(f"WARNING: {module_path} exists but does not define urlpatterns")
+    except ImportError as e:
+        print(f"WARNING: Could not import {module_path}: {e}")
+        print(f"URL patterns for api/{url_prefix}/ will not be available")
 
 # Serve static and media files in development
 if settings.DEBUG:
