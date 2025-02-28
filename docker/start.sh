@@ -23,247 +23,96 @@ pip --version
 echo "Listing installed packages:"
 pip list
 
-echo "Testing Django configuration..."
-python -c "import sys; print(sys.path)"
-python -c "import django; print(\"django module found\")"
+# Check for essential packages and install if missing
+for package in drf-yasg django-filter corsheaders pymysql; do
+  echo "Checking for $package..."
+  python -c "import $package" 2>/dev/null || {
+    echo "Installing missing package: $package"
+    pip install $package
+  }
+done
 
-# Test database URL parsing
-echo "Checking database URL..."
-python -c "import dj_database_url; db_url='${DATABASE_URL:-sqlite:///app/db.sqlite3}'; parsed = dj_database_url.parse(db_url); print(f'Database config: {parsed}');" || echo "Database URL parsing failed, but continuing..."
+echo "Creating log directory if it doesn't exist..."
+mkdir -p /app/logs
 
-# Check if redis is available (if not, print warning but continue)
-echo "Checking Redis connection..."
-python -c "
-import redis
+echo "Creating a simple Django debug server..."
+cat > /app/simple_django_server.py << 'EOF'
+"""
+A simple Django development server for debugging.
+This bypasses Gunicorn to make it easier to see errors.
+"""
 import os
+import sys
+import traceback
+from pathlib import Path
+
+# Configure Django settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', os.environ.get('DJANGO_SETTINGS_MODULE', 'pyerp.settings.production'))
+
+# Debug imports
+print("Python path:", sys.path)
+print("Current directory:", os.getcwd())
 
 try:
-    redis_url = os.environ.get('REDIS_URL', 'memory://')
-    # Handle memory:// as a special case - this is not a valid Redis URL but used for local environment
-    if redis_url == 'memory://':
-        print('Using in-memory Redis substitute (for local development)')
-    else:
-        r = redis.from_url(redis_url)
-        r.ping()
-        print('Redis connection successful')
-except Exception as e:
-    print(f'Redis connection failed: {e}')
-    print('This is normal in local development mode - continuing anyway')
-" || echo "Redis check failed, but continuing..."
-
-# Attempt to import the application module with better error handling
-echo "Checking application imports..."
-python -c "
-try:
-    import pyerp
-    print('pyerp module found')
-    import pyerp.wsgi
-    print('wsgi module found')
-    import celery
-    print('celery module found')
+    print("Attempting to import Django...")
+    import django
+    print(f"Django version: {django.get_version()}")
+    
+    print("Setting up Django...")
+    django.setup()
+    
+    from django.core.management import execute_from_command_line
+    print("Django management commands available")
+    
+    # Import critical modules to check for issues
+    print("Checking imports:")
+    
+    print("- Checking settings...")
     from django.conf import settings
-    print(f'DJANGO_SETTINGS_MODULE={settings.SETTINGS_MODULE}')
-    # Check for CORS headers
-    import corsheaders
-    print('corsheaders module found')
-    # Check for Swagger docs
-    try:
-        import drf_yasg
-        print('drf_yasg module found')
-    except ImportError:
-        print('WARNING: drf_yasg module not found, Swagger docs will not work')
-    # Check if sales module exists
-    try:
-        import pyerp.core
-        print('pyerp.core module found')
-        print('NOTE: pyerp.sales module might be configured but not present - application may still work')
-    except ImportError as e:
-        print(f'Error importing pyerp.core: {e}')
-except Exception as e:
-    print(f'Error importing application modules: {e}')
-    import traceback
-    traceback.print_exc()
-"
-
-# Test database connectivity with retries
-echo "Testing database connectivity..."
-MAX_RETRIES=3  # Reduced for local testing
-RETRY_INTERVAL=2
-RETRY_COUNT=0
-
-# Get database engine type
-DB_ENGINE=$(python -c "import dj_database_url; db_url='${DATABASE_URL:-sqlite:///app/db.sqlite3}'; parsed = dj_database_url.parse(db_url); print(parsed['ENGINE'])")
-echo "Database engine: $DB_ENGINE"
-
-# Skip connection test for SQLite
-if [[ $DB_ENGINE == *sqlite* ]]; then
-  echo "SQLite database configured - no connection test needed"
-elif [[ $DB_ENGINE == *postgresql* ]]; then
-  # PostgreSQL connection test
-  echo "PostgreSQL detected - testing connection..."
-  # Try to install psycopg2-binary if not already installed
-  pip install psycopg2-binary || echo "Failed to install psycopg2-binary, continuing anyway"
-  
-  while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    python -c "
-try:
-    import dj_database_url
-    import psycopg2
-    db_url = '${DATABASE_URL}'
-    db_config = dj_database_url.parse(db_url)
-    print(f'Attempting to connect to PostgreSQL: {db_config}')
-        
-    # This will raise an exception if connection fails
-    conn = psycopg2.connect(
-        host=db_config['HOST'], 
-        port=db_config['PORT'],
-        dbname=db_config['NAME'],
-        user=db_config['USER'],
-        password=db_config['PASSWORD']
-    )
-    print('Database connection successful')
-    conn.close()
-    exit(0)
-except Exception as e:
-    print(f'Database connection error: {e}')
-    import traceback
-    traceback.print_exc()
-    exit(1)
-"
+    print(f"  DJANGO_SETTINGS_MODULE={settings.SETTINGS_MODULE}")
+    print(f"  DEBUG={settings.DEBUG}")
+    print(f"  DATABASE ENGINE={settings.DATABASES['default']['ENGINE']}")
     
-    if [ $? -eq 0 ]; then
-      echo "Database connection established!"
-      break
-    else
-      RETRY_COUNT=$((RETRY_COUNT+1))
-      echo "Failed to connect to PostgreSQL. Retry $RETRY_COUNT of $MAX_RETRIES..."
-      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-        echo "Waiting $RETRY_INTERVAL seconds before retry..."
-        sleep $RETRY_INTERVAL
-      else
-        # If we're using local ENV and couldn't connect to PostgreSQL, switch to SQLite
-        if [ "$USE_LOCAL_ENV" = "true" ]; then
-          echo "Couldn't connect to PostgreSQL in local mode, switching to SQLite..."
-          export DATABASE_URL="sqlite:///app/db.sqlite3"
-          break
-        else
-          echo "PostgreSQL connection not available. This is normal when running locally or in CI."
-          echo "For a complete deployment, ensure the database is available and correctly configured."
-          break
-        fi
-      fi
-    fi
-  done
-else
-  # MySQL connection test (for completeness)
-  echo "MySQL detected - testing connection..."
-  while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    python -c "
-try:
-    import dj_database_url
-    import pymysql
-    # Make sure PyMySQL is installed as MySQLdb
-    pymysql.install_as_MySQLdb()
-    import MySQLdb as Database
+    print("- Checking pyerp...")
+    import pyerp
+    print("  pyerp module found")
     
-    db_url = '${DATABASE_URL}'
-    db_config = dj_database_url.parse(db_url)
-    print(f'Attempting to connect to MySQL: {db_config}')
-        
-    # This will raise an exception if connection fails
-    conn = Database.connect(
-        host=db_config['HOST'], 
-        port=int(db_config['PORT']),
-        db=db_config['NAME'],
-        user=db_config['USER'],
-        passwd=db_config['PASSWORD']
-    )
-    print('Database connection successful')
-    conn.close()
-    exit(0)
-except Exception as e:
-    print(f'Database connection error: {e}')
-    import traceback
-    traceback.print_exc()
-    exit(1)
-"
-    
-    if [ $? -eq 0 ]; then
-      echo "Database connection established!"
-      break
-    else
-      RETRY_COUNT=$((RETRY_COUNT+1))
-      echo "Failed to connect to MySQL. Retry $RETRY_COUNT of $MAX_RETRIES..."
-      if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-        echo "Waiting $RETRY_INTERVAL seconds before retry..."
-        sleep $RETRY_INTERVAL
-      else
-        # If we're using local ENV and couldn't connect to MySQL, switch to SQLite
-        if [ "$USE_LOCAL_ENV" = "true" ]; then
-          echo "Couldn't connect to MySQL in local mode, switching to SQLite..."
-          export DATABASE_URL="sqlite:///app/db.sqlite3"
-          break
-        else
-          echo "Database connection not available. This is normal when running locally or in CI."
-          echo "For a complete deployment, ensure the database is available and correctly configured."
-          break
-        fi
-      fi
-    fi
-  done
-fi
-
-# Run migrations for SQLite
-if [[ $DB_ENGINE == *sqlite* ]]; then
-  echo "Creating SQLite database directory if needed..."
-  mkdir -p $(dirname "${DATABASE_URL#sqlite:///}")
-  echo "Running migrations for SQLite..."
-  python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE --noinput || echo "Migrations failed, but continuing..."
-elif [[ $DB_ENGINE == *postgresql* || $DB_ENGINE == *mysql* ]]; then
-  # Database migration check
-  echo "Checking if database is available for migrations..."
-  python -c "
-try:
-    from django.db import connections
-    from django.db.utils import OperationalError
-    conn = connections['default']
-    conn.cursor()
-    print('Database available, will run migrations')
-    exit(0)
-except OperationalError:
-    print('Database not available for migrations')
-    exit(1)
-except Exception as e:
-    print(f'Error checking database: {e}')
-    exit(1)
-"
-
-  if [ $? -eq 0 ]; then
-      echo "Running migrations..."
-      python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE --noinput || echo "Migrations failed, but continuing..."
-  else
-      echo "Skipping migrations as database is not available."
-  fi
-else
-  echo "Unknown database engine: $DB_ENGINE. Skipping migrations."
-fi
-
-echo "Running Django checks..."
-python manage.py check --settings=$DJANGO_SETTINGS_MODULE || echo "Django checks failed, but continuing..."
-
-# Test WSGI application directly before launching gunicorn
-echo "Testing WSGI application directly..."
-python -c "
-try:
+    print("- Checking WSGI application...")
     import pyerp.wsgi
-    print('WSGI application imported successfully')
-    app = pyerp.wsgi.application
-    print('WSGI application created successfully')
+    print("  WSGI application found")
+    
+    print("- Checking INSTALLED_APPS...")
+    for app in settings.INSTALLED_APPS:
+        try:
+            __import__(app)
+            print(f"  ✅ {app} loaded successfully")
+        except ImportError as e:
+            print(f"  ❌ {app} failed to load: {e}")
+            
+    print("- Checking URLs...")
+    import pyerp.urls
+    print("  URLs loaded")
+    
+    print("- Checking database connection...")
+    from django.db import connections
+    try:
+        connection = connections['default']
+        connection.ensure_connection()
+        print("  Database connection successful")
+    except Exception as e:
+        print(f"  Database connection failed: {e}")
+    
+    print("\nAll critical imports successful, ready to run server")
+    print("\nStarting Django development server...\n")
+    
+    # Run a simple Django development server instead of Gunicorn
+    execute_from_command_line(['manage.py', 'runserver', '0.0.0.0:8000'])
+    
 except Exception as e:
-    print(f'Error importing WSGI application: {e}')
-    import traceback
+    print(f"ERROR: {e}")
     traceback.print_exc()
-"
+    sys.exit(1)
+EOF
 
-echo "Starting Gunicorn with detailed error logging..."
-exec gunicorn pyerp.wsgi:application --bind 0.0.0.0:8000 --workers 2 --log-level debug --timeout 120 --capture-output --enable-stdio-inheritance 
+echo "Starting Django in debug mode instead of Gunicorn..."
+exec python /app/simple_django_server.py 

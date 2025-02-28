@@ -97,28 +97,36 @@ LOGIN_REDIRECT_URL = 'home'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-        'USER': os.environ.get('DB_USER', 'admin'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
-    }
-}
 
-# Alternative DATABASE_URL configuration
-# from the env (commented out, uncomment to use)
-# DATABASES = {
-#     'default': dj_database_url.config(
-#         default=os.environ.get(
-#             'DATABASE_URL', 
-#             'mysql://user:password@localhost:3306/pyerp_testing'
-#         ),
-#         conn_max_age=600,
-#     )
-# }
+# First try to use DATABASE_URL if provided
+if 'DATABASE_URL' in os.environ:
+    # Parse database configuration from DATABASE_URL
+    print(f"Using DATABASE_URL: {os.environ.get('DATABASE_URL', '').replace('://', '://****:****@')}")
+    DATABASES = {
+        'default': dj_database_url.config(
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+else:
+    # Fallback to explicit database settings
+    print("DATABASE_URL not provided, using explicit database settings")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+            'USER': os.environ.get('DB_USER', 'admin'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
+            'PORT': os.environ.get('DB_PORT', '3306'),
+        }
+    }
+
+# If SQLite is in use but filename has no path, ensure it's in a writable location
+if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+    db_name = DATABASES['default']['NAME']
+    if not os.path.isabs(db_name):
+        DATABASES['default']['NAME'] = os.path.join(BASE_DIR, db_name)
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
