@@ -1864,3 +1864,185 @@ The following implementation plan outlines the tasks and their priorities for bu
 - Implement a decorator-based approach for function-level permissions
 - Build on Django Rest Framework for API authentication needs
 - Use signals for audit logging to minimize code duplication
+
+### 4.8 Legacy API Integration
+
+#### 4.8.1 Overview
+
+The system currently uses an external Python package (WSZ_api) to interact with the legacy 4D-based ERP system. This package is imported from an external location and has several drawbacks:
+
+- External dependency on code not included in the project repository
+- Hardcoded file paths that are environment-specific
+- Session management issues
+- Limited error handling and logging
+- No test coverage
+
+This section outlines the plan to replace the WSZ_api with a properly implemented internal module.
+
+#### 4.8.2 Current Architecture
+
+The external WSZ_api package provides the following key functionalities:
+
+- **Authentication and session management:** 
+  - Obtains and stores session cookies in a configuration file
+  - Validates and refreshes sessions when needed
+  - Maintains configuration for test and live environments
+
+- **Data retrieval:**
+  - Fetches data from tables via the legacy 4D REST API
+  - Handles pagination and data transformation
+
+- **Data updates:**
+  - Pushes field updates to specific records in the legacy system
+
+The current implementation has these main components:
+- `auth.py`: Handles session management, cookie storage and retrieval
+- `getTable.py`: Fetches data from tables
+- `pushField.py`: Updates individual fields
+- `api_logger.py`: Logs API activity
+
+#### 4.8.3 Session Management Issues
+
+The current implementation stores session data in a configuration file on disk. This approach has several issues:
+
+1. **Session persistence:** Session cookies are stored in a global config file, causing conflicts between different processes/users
+2. **Hardcoded paths:** The config file path is hardcoded
+3. **Security concerns:** Session cookies are stored in plaintext
+4. **Expiration handling:** The implementation manually sets a 1-hour expiration, which may not align with the server's actual session lifetime
+
+#### 4.8.4 New Implementation Requirements
+
+The new implementation must:
+
+1. **Maintain full API compatibility** with the existing implementation to minimize changes to consuming code
+2. **Properly handle sessions** with thread-safety and process isolation
+3. **Support environment configuration** (test/live) through Django settings
+4. **Provide comprehensive error handling**
+5. **Include detailed logging**
+6. **Have comprehensive test coverage**
+7. **Be fully documented**
+
+#### 4.8.5 Implementation Plan
+
+##### Phase 1: Internal WSZ_api Module
+
+1. Create a new internal module structure:
+   ```
+   pyerp/legacy_api/
+   ├── __init__.py
+   ├── auth.py
+   ├── client.py
+   ├── getters.py
+   ├── setters.py
+   ├── utils.py
+   └── config.py
+   ```
+
+2. Implement session management:
+   - Use Django's cache framework for session storage
+   - Support multiple concurrent sessions for different environments
+   - Properly handle session expiration and refresh
+
+3. Implement environment configuration:
+   - Read configuration from Django settings
+   - Support multiple environments (test/live)
+   - Make all paths configurable
+
+4. Implement error handling:
+   - Define custom exception classes for different error types
+   - Properly propagate and log errors
+   - Implement automatic retry for transient errors
+
+##### Phase 2: Replace External Dependencies
+
+1. Create a compatibility layer to allow gradual migration:
+   - Implement the same function signatures as the original WSZ_api
+   - Route calls through the new implementation
+
+2. Update import references in a controlled manner:
+   - Update `pyerp/legacy_sync/api_client.py` to use the new implementation
+   - Test thoroughly
+
+3. Update command scripts that directly import WSZ_api
+
+4. Run full integration tests
+
+##### Phase 3: Enhanced Features
+
+1. Add caching for frequently accessed data
+2. Implement bulk operations for improved performance
+3. Add metrics and monitoring
+4. Add async versions of the API functions
+
+#### 4.8.6 Technical Details
+
+##### Session Management
+
+The new session management approach will:
+
+1. Store session information in Django's cache framework:
+   ```python
+   # Example implementation
+   from django.core.cache import cache
+   
+   def get_session_cookie(mode='live'):
+       cache_key = f"legacy_api_session_{mode}"
+       session_data = cache.get(cache_key)
+       
+       if session_data and is_session_valid(session_data):
+           return session_data['cookie']
+       
+       # Obtain new session
+       new_session = obtain_new_session(mode)
+       cache.set(cache_key, new_session, timeout=3500)  # Set timeout to just under 1 hour
+       return new_session['cookie']
+   ```
+
+2. Handle session expiration gracefully:
+   - Check for session validity before each API call
+   - Automatically refresh expired sessions
+   - Implement exponential backoff for failed authentication attempts
+
+3. Support request-scoped sessions:
+   - Allow for creating temporary sessions for specific operations
+   - Clean up sessions after use
+
+##### API Client Interface
+
+The API client will maintain compatibility with the existing implementation:
+
+```python
+class LegacyAPIClient:
+    def __init__(self, mode='live'):
+        self.mode = mode
+        self._session = None
+    
+    def get_session(self):
+        """Get or create a session for the current mode."""
+        # Implementation details
+        
+    def fetch_table(self, table_name, top=100, skip=0, new_data_only=True, date_created_start=None):
+        """Fetch data from a table in the legacy system."""
+        # Implementation details
+        
+    def push_field(self, table_name, record_id, field_name, field_value):
+        """Push a field value to the legacy system."""
+        # Implementation details
+```
+
+#### 4.8.7 Implementation Phases
+
+- **Phase 1 (Internal Module):**
+  - Create internal module structure
+  - Implement session management
+  - Implement basic data retrieval and update
+
+- **Phase 2 (Compatibility Layer):**
+  - Create compatibility layer
+  - Update import references
+  - Run integration tests
+
+- **Phase 3 (Enhanced Features):**
+  - Add caching
+  - Implement bulk operations
+  - Add metrics and monitoring
