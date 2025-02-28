@@ -31,35 +31,51 @@ RUN echo "Running dependency scanner..." && \
     python -c "import os; os.makedirs('scripts', exist_ok=True)" && \
     python scripts/check_dependencies.py > /app/dependency_scan.log || true
 
-# Compile requirements files and install from the generated txt files
-RUN pip install --upgrade pip && \
-    echo "Compiling base requirements..." && \
-    pip-compile requirements/base.in --output-file requirements/base.txt && \
-    echo "Compiling production requirements..." && \
-    pip-compile requirements/production.in --output-file requirements/production.txt && \
-    echo "Installing base requirements..." && \
-    pip install -r requirements/base.txt && \
-    echo "Installing production requirements..." && \
-    pip install -r requirements/production.txt && \
-    echo "Verifying Celery installation..." && \
-    pip install celery redis django-celery-results django-celery-beat && \
-    echo "Verifying logging packages..." && \
-    pip install python-json-logger structlog && \
-    echo "Verifying django-filter..." && \
-    pip install django-filter && \
-    echo "Installing CORS headers package..." && \
-    pip install "django-cors-headers>=4.3.1,<4.4.0" && \
-    echo "Installing Swagger docs package..." && \
-    pip install "drf-yasg>=1.21.7,<1.22.0" && \
-    echo "Installing JWT authentication..." && \
-    pip install "djangorestframework-simplejwt>=5.3.0,<5.4.0" && \
-    echo "Installing mysql packages..." && \
+# Update pip
+RUN pip install --upgrade pip
+
+# Compile requirements
+RUN echo "Compiling base requirements..." && \
+    pip-compile requirements/base.in --output-file requirements/base.txt
+
+RUN echo "Compiling production requirements..." && \
+    pip-compile requirements/production.in --output-file requirements/production.txt
+
+# Install base requirements
+RUN echo "Installing base requirements..." && \
+    pip install -r requirements/base.txt
+
+# Install production requirements
+RUN echo "Installing production requirements..." && \
+    pip install -r requirements/production.txt
+
+# Install additional packages individually to ensure they're installed properly
+RUN echo "Installing Celery and related packages..." && \
+    pip install celery redis django-celery-results django-celery-beat
+
+RUN echo "Installing logging packages..." && \
+    pip install python-json-logger structlog
+
+RUN echo "Installing django-filter..." && \
+    pip install django-filter
+
+RUN echo "Installing CORS headers package..." && \
+    pip install "django-cors-headers>=4.3.1,<4.4.0"
+
+RUN echo "Installing Swagger docs package..." && \
+    pip install "drf-yasg>=1.21.7,<1.22.0"
+
+RUN echo "Installing JWT authentication..." && \
+    pip install "djangorestframework-simplejwt>=5.3.0,<5.4.0"
+
+RUN echo "Installing mysql packages..." && \
     pip install "mysqlclient>=2.2.0,<2.3.0" "pymysql>=1.1.0,<1.2.0"
 
 # Verify critical packages are installed
 RUN echo "Verifying critical packages..." && \
     pip install "django-redis>=5.4.0,<5.5.0" && \
     pip install "redis>=5.0.0,<5.1.0"
+
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \
     pip freeze > requirements/production.txt && \
