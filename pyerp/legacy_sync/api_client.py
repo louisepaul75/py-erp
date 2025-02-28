@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 # Import from our new direct_api module
 try:
     from pyerp.direct_api.client import DirectAPIClient
-    from pyerp.direct_api.auth import get_session_cookie
+    from pyerp.direct_api.auth import get_session
+    from pyerp.direct_api.exceptions import DirectAPIError, ServerUnavailableError, ResponseError
     logger.info("Successfully imported direct_api modules")
 except ImportError as e:
     logger.error(f"Failed to import direct_api modules: {e}")
@@ -53,6 +54,9 @@ class LegacyAPIClient:
         """
         self.session_cookie = None
         self.direct_client = None
+        self.server_available = True
+        self.last_availability_check = datetime.datetime.now()
+        self.availability_check_interval = datetime.timedelta(minutes=5)  # Check every 5 minutes
         
         try:
             # Try to use DirectAPIClient
@@ -62,12 +66,25 @@ class LegacyAPIClient:
             logger.warning(f"Failed to initialize DirectAPIClient: {e}")
             logger.info("Using WSZ_api for legacy API interactions")
         
-        self.refresh_session()
+        try:
+            self.refresh_session()
+        except (ServerUnavailableError, ResponseError) as e:
+            # Handle initialization errors gracefully
+            logger.error(f"Could not establish initial connection to legacy ERP: {e}")
+            self.server_available = False
+            self.last_availability_check = datetime.datetime.now()
 
     def refresh_session(self) -> None:
         """
         Refresh the session cookie for API authentication.
         """
+        if not self.server_available:
+            # Check if we should try again based on the time interval
+            time_since_last_check = datetime.datetime.now() - self.last_availability_check
+            if time_since_last_check < self.availability_check_interval:
+                logger.warning("Server was previously unavailable, skipping refresh_session")
+                return
+        
         try:
             if self.direct_client:
                 # Use DirectAPIClient session management
@@ -77,6 +94,12 @@ class LegacyAPIClient:
                 self.session_cookie = get_session_cookie(mode='live')
                 
             logger.info("Successfully refreshed session cookie")
+            self.server_available = True
+        except (ServerUnavailableError, ResponseError) as e:
+            logger.error(f"Server is unavailable during session refresh: {e}")
+            self.server_available = False
+            self.last_availability_check = datetime.datetime.now()
+            # Don't raise the exception, just mark the server as unavailable
         except Exception as e:
             logger.error(f"Failed to refresh session cookie: {e}")
             raise
@@ -101,7 +124,18 @@ class LegacyAPIClient:
 
         Returns:
             A pandas DataFrame containing the fetched data.
+            
+        Raises:
+            ServerUnavailableError: If the server is unavailable and cannot be reached
+            Exception: For other errors during data fetching
         """
+        if not self.server_available:
+            # Check if we should try again based on the time interval
+            time_since_last_check = datetime.datetime.now() - self.last_availability_check
+            if time_since_last_check < self.availability_check_interval:
+                logger.warning(f"Server is currently unavailable, skipping fetch_table for {table_name}")
+                return pd.DataFrame()  # Return empty DataFrame instead of raising an exception
+        
         try:
             if self.direct_client:
                 # Use DirectAPIClient
@@ -123,7 +157,13 @@ class LegacyAPIClient:
                 )
                 
             logger.info(f"Successfully fetched {len(df)} records from {table_name}")
+            self.server_available = True
             return df
+        except ServerUnavailableError as e:
+            logger.error(f"Server is unavailable during fetch_table for {table_name}: {e}")
+            self.server_available = False
+            self.last_availability_check = datetime.datetime.now()
+            return pd.DataFrame()  # Return empty DataFrame instead of raising an exception
         except Exception as e:
             logger.error(f"Failed to fetch data from {table_name}: {e}")
             raise
@@ -146,7 +186,18 @@ class LegacyAPIClient:
 
         Returns:
             True if the update was successful, False otherwise.
+            
+        Raises:
+            ServerUnavailableError: If the server is unavailable and cannot be reached
+            Exception: For other errors during data pushing
         """
+        if not self.server_available:
+            # Check if we should try again based on the time interval
+            time_since_last_check = datetime.datetime.now() - self.last_availability_check
+            if time_since_last_check < self.availability_check_interval:
+                logger.warning(f"Server is currently unavailable, skipping push_field to {table_name}")
+                return False  # Return False instead of raising an exception
+        
         try:
             if self.direct_client:
                 # Use DirectAPIClient
@@ -166,7 +217,13 @@ class LegacyAPIClient:
                 )
                 
             logger.info(f"Successfully pushed {field_name}={field_value} to {table_name}/{record_id}")
+            self.server_available = True
             return result
+        except ServerUnavailableError as e:
+            logger.error(f"Server is unavailable during push_field to {table_name}: {e}")
+            self.server_available = False
+            self.last_availability_check = datetime.datetime.now()
+            return False  # Return False instead of raising an exception
         except Exception as e:
             logger.error(f"Failed to push {field_name}={field_value} to {table_name}/{record_id}: {e}")
             raise
@@ -177,40 +234,48 @@ class LegacyAPIClient:
         record_id: Union[int, str]
     ) -> Dict[str, Any]:
         """
-        Fetch a single record by ID.
+        Fetch a single record from the legacy system.
 
         Args:
-            table_name: The name of the table
-            record_id: The ID of the record to fetch
+            table_name: The name of the table to fetch from.
+            record_id: The ID of the record to fetch.
 
         Returns:
-            Dict[str, Any]: The record data as a dictionary
+            A dictionary containing the record data.
+            
+        Raises:
+            ServerUnavailableError: If the server is unavailable and cannot be reached
+            Exception: For other errors during data fetching
         """
+        if not self.server_available:
+            # Check if we should try again based on the time interval
+            time_since_last_check = datetime.datetime.now() - self.last_availability_check
+            if time_since_last_check < self.availability_check_interval:
+                logger.warning(f"Server is currently unavailable, skipping fetch_record for {table_name}/{record_id}")
+                return {}  # Return empty dict instead of raising an exception
+        
         try:
             if self.direct_client:
                 # Use DirectAPIClient
-                return self.direct_client.fetch_record(
+                record = self.direct_client.fetch_record(
                     table_name=table_name,
                     record_id=record_id
                 )
             else:
-                # No direct equivalent in WSZ_api, so we'll fetch the table and filter
-                logger.warning("fetch_record not directly supported in WSZ_api, using workaround")
-                df = self.fetch_table(
-                    table_name=table_name,
-                    top=1,
-                    skip=0,
-                    new_data_only=False,
-                    date_created_start=None
-                )
-                # Find the record by ID (this assumes that the ID field is '__KEY')
-                record = df[df['__KEY'] == record_id]
-                if len(record) == 0:
-                    raise ValueError(f"Record with ID {record_id} not found in {table_name}")
-                return record.iloc[0].to_dict()
+                # Fall back to a workaround using WSZ_api
+                from wsz_api.getRecord import get_record
+                record = get_record(table_name, record_id)
                 
+            logger.info(f"Successfully fetched record {table_name}/{record_id}")
+            self.server_available = True
+            return record
+        except ServerUnavailableError as e:
+            logger.error(f"Server is unavailable during fetch_record for {table_name}/{record_id}: {e}")
+            self.server_available = False
+            self.last_availability_check = datetime.datetime.now()
+            return {}  # Return empty dict instead of raising an exception
         except Exception as e:
-            logger.error(f"Failed to fetch record {record_id} from {table_name}: {e}")
+            logger.error(f"Failed to fetch record {table_name}/{record_id}: {e}")
             raise
 
 

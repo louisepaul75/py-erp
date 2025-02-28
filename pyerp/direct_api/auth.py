@@ -9,6 +9,8 @@ import threading
 import time
 import datetime
 import requests
+import os
+import json
 from typing import Dict, Optional, Any
 from urllib.parse import urljoin
 from django.core.cache import caches
@@ -22,7 +24,6 @@ from pyerp.direct_api.settings import (
     API_MAX_RETRIES,
     API_RETRY_BACKOFF_FACTOR,
     API_SESSION_EXPIRY,
-    API_SESSION_REFRESH_MARGIN,
     API_SESSION_CACHE_NAME,
     API_SESSION_CACHE_KEY_PREFIX,
     API_INFO_ENDPOINT
@@ -30,6 +31,12 @@ from pyerp.direct_api.settings import (
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# File for storing the session cookie globally - single cookie for all environments
+COOKIE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.global_session_cookie')
+
+# Global lock for file operations
+file_lock = threading.RLock()
 
 
 class Session:
@@ -49,7 +56,6 @@ class Session:
         self.environment = environment
         self.cookie = None
         self.created_at = None
-        self.expires_at = None
         
         # Load environment configuration
         try:
@@ -61,20 +67,60 @@ class Session:
         # Check if we have required configuration
         if not self.config.get('base_url'):
             raise ValueError(f"Missing base_url in environment configuration for {environment}")
+    
+    def _load_cookie_from_file(self):
+        """
+        Load a session cookie from file.
+        """
+        with file_lock:
+            if not os.path.exists(COOKIE_FILE):
+                return False
+                
+            try:
+                with open(COOKIE_FILE, 'r') as f:
+                    cookie_data = json.load(f)
+                
+                # Very basic validation - just check if required fields exist
+                if 'name' in cookie_data and 'value' in cookie_data:
+                    self.cookie = cookie_data['value']
+                    self.created_at = datetime.datetime.fromisoformat(cookie_data['created_at']) if 'created_at' in cookie_data else datetime.datetime.now()
+                    logger.info(f"Loaded session cookie from file: {self.cookie[:30]}...")
+                    return True
+                    
+                return False
+            except Exception as e:
+                logger.warning(f"Error loading cookie from file: {e}")
+                return False
+    
+    def _save_cookie_to_file(self):
+        """
+        Save the session cookie to file.
+        """
+        with file_lock:
+            try:
+                cookie_data = {
+                    'name': 'session_cookie',
+                    'value': self.cookie,
+                    'created_at': self.created_at.isoformat() if self.created_at else datetime.datetime.now().isoformat()
+                }
+                
+                with open(COOKIE_FILE, 'w') as f:
+                    json.dump(cookie_data, f)
+                
+                logger.info(f"Saved session cookie to file: {self.cookie[:30]}...")
+                return True
+            except Exception as e:
+                logger.warning(f"Error saving cookie to file: {e}")
+                return False
             
     def is_valid(self) -> bool:
         """
-        Check if the current session is valid and not expired.
+        Check if the current session has a cookie.
         
         Returns:
-            bool: True if the session is valid, False otherwise
+            bool: True if the session has a cookie, False otherwise
         """
-        if not self.cookie or not self.expires_at:
-            return False
-        
-        # Add a margin to ensure we refresh before expiry
-        refresh_time = self.expires_at - datetime.timedelta(seconds=API_SESSION_REFRESH_MARGIN)
-        return datetime.datetime.now() < refresh_time
+        return self.cookie is not None
     
     def refresh(self) -> None:
         """
@@ -102,25 +148,22 @@ class Session:
                     timeout=API_REQUEST_TIMEOUT
                 )
                 
-                # Check if we got a successful response
-                if response.status_code == 200:
-                    # Extract the session cookie
-                    if 'Set-Cookie' in response.headers:
-                        cookie_header = response.headers['Set-Cookie']
-                        # Parse the cookie and store the value
-                        # This is a simplification - in reality you'd want to parse the cookie properly
-                        self.cookie = cookie_header
-                        self.created_at = datetime.datetime.now()
-                        self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
-                        logger.info(f"Successfully obtained session cookie for {self.environment}")
-                        return
-                    else:
-                        raise AuthenticationError("No session cookie returned by the API")
+                # Check if we got a cookie (even with 404 status)
+                if 'Set-Cookie' in response.headers:
+                    cookie_header = response.headers['Set-Cookie']
+                    # Parse the cookie and store the value
+                    self.cookie = cookie_header
+                    self.created_at = datetime.datetime.now()
+                    logger.info(f"Successfully obtained session cookie for {self.environment}")
+                    
+                    # Save the cookie to file for persistence
+                    self._save_cookie_to_file()
+                    return
                 else:
-                    # Handle error responses
-                    error_msg = f"Authentication failed with status {response.status_code}"
+                    # No cookie in response
+                    error_msg = f"No session cookie returned by the API (status {response.status_code})"
                     logger.error(error_msg)
-                    raise ResponseError(response.status_code, error_msg, response.text)
+                    raise AuthenticationError(error_msg)
                     
             except requests.RequestException as e:
                 # Handle connection errors
@@ -158,7 +201,10 @@ class Session:
             AuthenticationError: If authentication fails
         """
         if not self.is_valid():
-            self.refresh()
+            # Try to load from file first
+            if not self._load_cookie_from_file():
+                # If not in file, refresh
+                self.refresh()
         return self.cookie
 
 
@@ -174,6 +220,7 @@ class SessionPool:
         """Initialize the session pool."""
         self.lock = threading.RLock()
         self.cache = caches[API_SESSION_CACHE_NAME]
+        self.sessions = {}
     
     def get_session(self, environment: str = 'live') -> Session:
         """
@@ -185,49 +232,69 @@ class SessionPool:
         Returns:
             Session: A valid session for the specified environment
         """
-        cache_key = f"{API_SESSION_CACHE_KEY_PREFIX}{environment}"
-        
         with self.lock:
-            # Try to get the session from cache
-            session_data = self.cache.get(cache_key)
-            
-            if session_data:
-                # Deserialize the session data
-                session = Session(environment)
-                session.cookie = session_data.get('cookie')
-                session.created_at = session_data.get('created_at')
-                session.expires_at = session_data.get('expires_at')
-                
-                # Check if the session is still valid
-                if session.is_valid():
-                    logger.debug(f"Using cached session for {environment}")
-                    return session
-                else:
-                    logger.debug(f"Cached session for {environment} expired, refreshing")
-            else:
-                logger.debug(f"No cached session for {environment}, creating new one")
+            # Check if we already have a session object in memory
+            if environment in self.sessions:
+                logger.debug(f"Using existing session object for {environment}")
+                return self.sessions[environment]
             
             # Create a new session
             session = Session(environment)
-            session.refresh()
             
-            # Cache the session data
-            session_data = {
-                'cookie': session.cookie,
-                'created_at': session.created_at,
-                'expires_at': session.expires_at,
-            }
-            self.cache.set(cache_key, session_data, API_SESSION_EXPIRY)
+            # Try to get a cookie (will load from file or refresh if needed)
+            session.get_cookie()
+            
+            # Store in memory
+            self.sessions[environment] = session
             
             return session
     
+    def invalidate_session(self, environment: str = 'live'):
+        """
+        Invalidate the session for the specified environment.
+        
+        Args:
+            environment: The environment to invalidate the session for
+        """
+        with self.lock:
+            # Remove from memory
+            if environment in self.sessions:
+                del self.sessions[environment]
+            
+            # Remove from cache
+            cache_key = f"{API_SESSION_CACHE_KEY_PREFIX}{environment}"
+            self.cache.delete(cache_key)
+            
+            # Remove from file
+            if os.path.exists(COOKIE_FILE):
+                try:
+                    os.remove(COOKIE_FILE)
+                    logger.info(f"Removed session cookie file")
+                except Exception as e:
+                    logger.warning(f"Error removing cookie file: {e}")
+            
+            logger.info(f"Invalidated session for {environment}")
+    
     def clear_sessions(self):
         """Clear all sessions from the cache."""
-        # This is primarily for testing purposes
-        for env in API_ENVIRONMENTS.keys():
-            cache_key = f"{API_SESSION_CACHE_KEY_PREFIX}{env}"
-            self.cache.delete(cache_key)
-        logger.debug("Cleared all sessions from cache")
+        with self.lock:
+            # Clear memory
+            self.sessions = {}
+            
+            # Clear cache
+            for env in API_ENVIRONMENTS.keys():
+                cache_key = f"{API_SESSION_CACHE_KEY_PREFIX}{env}"
+                self.cache.delete(cache_key)
+            
+            # Clear file
+            if os.path.exists(COOKIE_FILE):
+                try:
+                    os.remove(COOKIE_FILE)
+                    logger.info(f"Removed session cookie file")
+                except Exception as e:
+                    logger.warning(f"Error removing cookie file: {e}")
+            
+            logger.debug("Cleared all sessions from cache")
 
 
 # Create a global session pool
@@ -246,6 +313,15 @@ def get_session(environment: str = 'live') -> Session:
         Session: A valid session for the specified environment
     """
     return session_pool.get_session(environment)
+
+def invalidate_session(environment: str = 'live'):
+    """
+    Invalidate the session for the specified environment.
+    
+    Args:
+        environment: The environment to invalidate the session for
+    """
+    session_pool.invalidate_session(environment)
 
 def get_session_cookie(environment: str = 'live') -> str:
     """

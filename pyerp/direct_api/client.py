@@ -11,12 +11,14 @@ import json
 import pandas as pd
 from typing import Dict, List, Optional, Any, Union
 from urllib.parse import urljoin
+import socket
+import time
 
 from pyerp.direct_api.exceptions import (
     DirectAPIError, AuthenticationError, ConnectionError, 
-    ResponseError, DataError
+    ResponseError, DataError, ServerUnavailableError
 )
-from pyerp.direct_api.auth import get_session
+from pyerp.direct_api.auth import get_session, invalidate_session
 from pyerp.direct_api.settings import (
     API_ENVIRONMENTS,
     API_REST_ENDPOINT,
@@ -105,7 +107,8 @@ class DirectAPIClient:
             requests.Response: The API response
             
         Raises:
-            ConnectionError: If unable to connect to the API
+            ServerUnavailableError: If the server is unavailable or unreachable
+            ConnectionError: If unable to connect to the API due to other connection issues
             ResponseError: If the API returns an error response
         """
         url = self._build_url(endpoint)
@@ -141,9 +144,10 @@ class DirectAPIClient:
                 # Check for successful response
                 if 200 <= response.status_code < 300:
                     return response
-                elif response.status_code == 401:
-                    # Authentication error - refresh session and retry
-                    logger.warning("Authentication failed, refreshing session")
+                elif response.status_code == 401 or response.status_code == 403 or response.status_code == 404:
+                    # Authentication error - invalidate session, refresh and retry
+                    logger.warning(f"Authentication failed with status {response.status_code}, invalidating session and refreshing")
+                    invalidate_session(self.environment)
                     self._get_session().refresh()
                     cookie = self._get_session().get_cookie()
                     request_headers['Cookie'] = cookie
@@ -155,17 +159,79 @@ class DirectAPIClient:
                     logger.error(error_msg)
                     raise ResponseError(response.status_code, error_msg, response.text)
                     
-            except requests.RequestException as e:
-                # Handle connection errors
+            except requests.exceptions.ConnectTimeout as e:
+                # Specifically handle connection timeouts - likely server unavailable
                 last_error = e
-                logger.warning(f"Connection error during API request: {e}")
-                
-                # Calculate backoff time for retry
-                import time
-                backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
+                logger.warning(f"Connection timeout during API request: {e}")
                 retries += 1
                 
                 if retries <= API_MAX_RETRIES:
+                    backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
+                    logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")
+                    time.sleep(backoff)
+                else:
+                    logger.error(f"Server appears to be unavailable after {retries-1} retries")
+                    raise ServerUnavailableError(
+                        f"Legacy ERP server at {self._get_base_url()} is unavailable (connection timeout)",
+                        inner_exception=last_error
+                    )
+                    
+            except requests.exceptions.ConnectionError as e:
+                # Handle connection refused and similar errors
+                last_error = e
+                logger.warning(f"Connection error during API request: {e}")
+                
+                # Check if this is a connection refused error, which indicates server unavailability
+                if "Connection refused" in str(e) or "Failed to establish a new connection" in str(e):
+                    retries += 1
+                    if retries <= API_MAX_RETRIES:
+                        backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
+                        logger.info(f"Server appears to be down. Retrying in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")
+                        time.sleep(backoff)
+                    else:
+                        logger.error(f"Server is unreachable after {retries-1} retries")
+                        raise ServerUnavailableError(
+                            f"Legacy ERP server at {self._get_base_url()} is unavailable (connection refused)",
+                            inner_exception=last_error
+                        )
+                else:
+                    # Handle other connection errors
+                    retries += 1
+                    if retries <= API_MAX_RETRIES:
+                        backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
+                        logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")
+                        time.sleep(backoff)
+                    else:
+                        logger.error(f"API request failed after {retries-1} retries")
+                        raise ConnectionError(f"Unable to connect to the API after {retries-1} retries") from last_error
+                    
+            except socket.gaierror as e:
+                # Handle DNS resolution errors or invalid hostnames
+                last_error = e
+                logger.warning(f"DNS resolution error: {e}")
+                retries += 1
+                
+                if retries <= API_MAX_RETRIES:
+                    backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
+                    logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")
+                    time.sleep(backoff)
+                else:
+                    logger.error(f"Cannot resolve server hostname after {retries-1} retries")
+                    raise ServerUnavailableError(
+                        f"Cannot resolve legacy ERP server at {self._get_base_url()} (DNS error)",
+                        inner_exception=last_error
+                    )
+            
+            except requests.RequestException as e:
+                # Handle other request exceptions
+                last_error = e
+                logger.warning(f"Request error during API request: {e}")
+                
+                # Calculate backoff time for retry
+                retries += 1
+                
+                if retries <= API_MAX_RETRIES:
+                    backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
                     logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")
                     time.sleep(backoff)
                 else:
@@ -235,56 +301,73 @@ class DirectAPIClient:
             except json.JSONDecodeError as e:
                 raise DataError(f"Invalid JSON response: {e}") from e
             
-            # Check if pagination is enabled and more data is available
-            all_data = data
-            
-            if API_PAGINATION_ENABLED and isinstance(data, list) and len(data) == top:
-                logger.debug(f"Fetched {len(data)} records, pagination may be needed")
+            # Handle 4D API response format
+            if isinstance(data, dict) and '__ENTITIES' in data:
+                # Extract entities from the 4D API response
+                entities = data['__ENTITIES']
+                logger.info(f"Extracted {len(entities)} entities from 4D API response")
                 
-                # Use the fetched data as the starting point
-                result_data = data
-                current_skip = skip + top
+                # Check if pagination is enabled and more data is available
+                total_count = data.get('__COUNT', 0)
+                current_count = len(entities)
                 
-                # Fetch additional pages if available
-                while True:
-                    # Update pagination parameters
-                    params['$skip'] = current_skip
+                if API_PAGINATION_ENABLED and current_count < total_count and current_count == top:
+                    logger.debug(f"Fetched {current_count} of {total_count} records, pagination needed")
                     
-                    # Fetch the next page
-                    try:
-                        page_response = self._make_request('GET', table_name, params=params)
-                        page_data = page_response.json()
+                    # Use the fetched data as the starting point
+                    result_data = entities
+                    current_skip = skip + top
+                    
+                    # Fetch additional pages if available
+                    while current_skip < total_count and len(result_data) < total_count:
+                        # Update pagination parameters
+                        params['$skip'] = current_skip
                         
-                        # Check if we got data
-                        if isinstance(page_data, list) and len(page_data) > 0:
-                            # Add to our result data
-                            result_data.extend(page_data)
-                            logger.debug(f"Fetched additional {len(page_data)} records, total: {len(result_data)}")
+                        # Fetch the next page
+                        try:
+                            page_response = self._make_request('GET', table_name, params=params)
+                            page_data = page_response.json()
                             
-                            # Update for next page
-                            current_skip += len(page_data)
-                            
-                            # Break if we got fewer records than requested (last page)
-                            if len(page_data) < top:
+                            # Check if we got data in the expected format
+                            if isinstance(page_data, dict) and '__ENTITIES' in page_data:
+                                page_entities = page_data['__ENTITIES']
+                                
+                                # Add to our result data
+                                result_data.extend(page_entities)
+                                logger.debug(f"Fetched additional {len(page_entities)} records, total: {len(result_data)}")
+                                
+                                # Update for next page
+                                current_skip += len(page_entities)
+                                
+                                # Break if we got fewer records than requested (last page)
+                                if len(page_entities) < top:
+                                    break
+                            else:
+                                # Unexpected format
+                                logger.warning(f"Unexpected format in pagination response: {type(page_data)}")
                                 break
-                        else:
-                            # No more data
+                                
+                        except Exception as e:
+                            logger.warning(f"Error fetching additional pages: {e}")
                             break
-                            
-                    except Exception as e:
-                        logger.warning(f"Error fetching additional pages: {e}")
-                        break
+                    
+                    # Use the combined data
+                    all_data = result_data
+                else:
+                    all_data = entities
                 
-                # Use the combined data
-                all_data = result_data
-            
-            # Convert to DataFrame
-            if isinstance(all_data, list):
+                # Convert to DataFrame
                 df = pd.DataFrame(all_data)
                 logger.info(f"Successfully fetched {len(df)} records from {table_name}")
                 return df
+            elif isinstance(data, list):
+                # Handle direct list response (less common)
+                df = pd.DataFrame(data)
+                logger.info(f"Successfully fetched {len(df)} records from {table_name}")
+                return df
             else:
-                raise DataError(f"Unexpected data format: {type(all_data)}")
+                # Unexpected format
+                raise DataError(f"Unexpected data format: {type(data)}. Keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
                 
         except (ConnectionError, ResponseError) as e:
             # Re-raise these exceptions

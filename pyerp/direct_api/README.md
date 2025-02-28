@@ -49,45 +49,61 @@ The `exceptions.py` module defines custom exception classes for handling various
 
 The `compatibility.py` module provides backward compatibility with the old `WSZ_api` package, ensuring a smooth transition to the new implementation.
 
-## Usage Examples
+## Session Management
 
-### Basic Usage
+The direct_api module uses a session management approach that:
+
+1. **Does not use credentials**: The module authenticates with the legacy API without sending any credentials.
+
+2. **Caches session cookies**: Session cookies are stored in the Django cache and reused for subsequent requests.
+
+3. **Reuses cookies until failure**: The module will continue to use a cached session cookie until it fails (e.g., 401, 403, or 404 response), at which point it will obtain a new cookie.
+
+4. **Handles 4D API specifics**: The module is designed to work with the 4D REST API, including handling its specific response format and authentication behavior.
+
+### Cookie Handling
+
+The session cookie is obtained by making a request to the `$info` endpoint. Even though this endpoint may return a 404 status code, it still provides a valid session cookie in the `Set-Cookie` header. This cookie is then used for all subsequent API requests.
+
+### Response Format
+
+The 4D API returns data in a specific format:
+
+```json
+{
+  "__DATACLASS": "TableName",
+  "__entityModel": "TableName",
+  "__GlobalStamp": 0,
+  "__COUNT": 1790,
+  "__FIRST": 0,
+  "__ENTITIES": [
+    {
+      "__KEY": "7464FEB39C516942B01E62F44B1ED454",
+      "UID": "7464FEB39C516942B01E62F44B1ED454",
+      "Bezeichnung": "Example",
+      // ... other fields
+    },
+    // ... more entities
+  ]
+}
+```
+
+The module extracts the `__ENTITIES` array from this response and converts it to a pandas DataFrame for easier data manipulation.
+
+## Usage Example
 
 ```python
 from pyerp.direct_api.client import DirectAPIClient
 
-# Create a client for the live environment
+# Create a client instance
 client = DirectAPIClient(environment='live')
 
 # Fetch data from a table
-products_df = client.fetch_table('products', top=100)
+result = client.fetch_table('Artikel_Familie', top=10)
 
-# Fetch a specific record
-product = client.fetch_record('products', 123)
-
-# Update a field
-success = client.push_field('products', 123, 'name', 'New Product Name')
-```
-
-### Using the Compatibility Layer
-
-```python
-from pyerp.direct_api.compatibility import fetch_data_from_api, push_data
-
-# Fetch data (compatibility with old WSZ_api)
-products_df = fetch_data_from_api(
-    table_name='products',
-    top=100,
-    new_data_only=True
-)
-
-# Update data (compatibility with old WSZ_api)
-success = push_data(
-    table='products',
-    column='name',
-    key=123,
-    value='New Product Name'
-)
+# Print the results
+print(f"Retrieved {len(result)} records")
+print(result.head())
 ```
 
 ## Testing

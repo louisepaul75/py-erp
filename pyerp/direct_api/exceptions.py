@@ -21,6 +21,18 @@ class ConnectionError(DirectAPIError):
     pass
 
 
+class ServerUnavailableError(ConnectionError):
+    """Raised when the server is unavailable or unreachable.
+    
+    This is a specific type of connection error that indicates the server
+    is down, not responding, or cannot be reached. This allows for specific
+    handling of server unavailability in the application.
+    """
+    def __init__(self, message="The legacy ERP server is currently unavailable", inner_exception=None):
+        self.inner_exception = inner_exception
+        super().__init__(message)
+
+
 class ResponseError(DirectAPIError):
     """Raised when the API returns an error response."""
     

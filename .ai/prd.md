@@ -1898,151 +1898,50 @@ The external WSZ_api package provides the following key functionalities:
 The current implementation has these main components:
 - `auth.py`: Handles session management, cookie storage and retrieval
 - `getTable.py`: Fetches data from tables
-- `pushField.py`: Updates individual fields
-- `api_logger.py`: Logs API activity
 
-#### 4.8.3 Session Management Issues
+#### 4.8.3 Key Findings on Legacy API Behavior
 
-The current implementation stores session data in a configuration file on disk. This approach has several issues:
+Through extensive development and debugging of our replacement direct API integration, we have gained significant insights into how the legacy 4D API operates:
 
-1. **Session persistence:** Session cookies are stored in a global config file, causing conflicts between different processes/users
-2. **Hardcoded paths:** The config file path is hardcoded
-3. **Security concerns:** Session cookies are stored in plaintext
-4. **Expiration handling:** The implementation manually sets a 1-hour expiration, which may not align with the server's actual session lifetime
+1. **Session Management Complexity**:
+   - The API uses the `WASID4D` cookie as the primary session identifier
+   - A secondary cookie `4DSID_WSZ-DB` is sometimes used in responses
+   - The server enforces a maximum number of concurrent sessions per user/IP
+   - Exceeding session limits results in 402 errors with "Maximum number of sessions reached" message
+   - Attempting to implement explicit logout functionality causes issues with session management
+   - Cookie duplication (multiple `WASID4D` cookies) causes authentication failures
 
-#### 4.8.4 New Implementation Requirements
+2. **Response Format Variations**:
+   - The API can return data in three different formats:
+     - Standard OData format with a `value` array
+     - 4D-specific format with `__ENTITIES` array and `__COUNT` field for pagination
+     - Direct array of records in some cases
+   - Integration code must handle all these response formats
 
-The new implementation must:
+3. **Error Handling Requirements**:
+   - Session errors require automatic retry with fresh authentication
+   - Robust logging is essential for troubleshooting session-related issues
+   - Connection errors should be handled with appropriate backoff strategies
 
-1. **Maintain full API compatibility** with the existing implementation to minimize changes to consuming code
-2. **Properly handle sessions** with thread-safety and process isolation
-3. **Support environment configuration** (test/live) through Django settings
-4. **Provide comprehensive error handling**
-5. **Include detailed logging**
-6. **Have comprehensive test coverage**
-7. **Be fully documented**
+#### 4.8.4 Best Practices for Legacy API Integration
 
-#### 4.8.5 Implementation Plan
+Based on our findings, the following best practices should be followed:
 
-##### Phase 1: Internal WSZ_api Module
+1. **Session Management Strategy**:
+   - Maintain a single persistent session across script executions
+   - Clear all existing cookies before setting the current session cookie
+   - Use exactly one `WASID4D` cookie per request
+   - Validate sessions before use and reestablish when necessary
+   - Do not attempt to explicitly log out; instead, reuse sessions until they expire naturally
 
-1. Create a new internal module structure:
-   ```
-   pyerp/legacy_api/
-   ├── __init__.py
-   ├── auth.py
-   ├── client.py
-   ├── getters.py
-   ├── setters.py
-   ├── utils.py
-   └── config.py
-   ```
+2. **Robust Pagination Implementation**:
+   - Always use pagination for large data sets (using `$top` and `$skip` parameters)
+   - Handle end-of-data detection reliably (fewer records than requested)
+   - Use the `__COUNT` field when available to optimize pagination
 
-2. Implement session management:
-   - Use Django's cache framework for session storage
-   - Support multiple concurrent sessions for different environments
-   - Properly handle session expiration and refresh
+3. **Response Processing**:
+   - Implement defensive code to handle all possible response formats
+   - Verify response structure before attempting to extract data
+   - Log response structure for debugging purposes
 
-3. Implement environment configuration:
-   - Read configuration from Django settings
-   - Support multiple environments (test/live)
-   - Make all paths configurable
-
-4. Implement error handling:
-   - Define custom exception classes for different error types
-   - Properly propagate and log errors
-   - Implement automatic retry for transient errors
-
-##### Phase 2: Replace External Dependencies
-
-1. Create a compatibility layer to allow gradual migration:
-   - Implement the same function signatures as the original WSZ_api
-   - Route calls through the new implementation
-
-2. Update import references in a controlled manner:
-   - Update `pyerp/legacy_sync/api_client.py` to use the new implementation
-   - Test thoroughly
-
-3. Update command scripts that directly import WSZ_api
-
-4. Run full integration tests
-
-##### Phase 3: Enhanced Features
-
-1. Add caching for frequently accessed data
-2. Implement bulk operations for improved performance
-3. Add metrics and monitoring
-4. Add async versions of the API functions
-
-#### 4.8.6 Technical Details
-
-##### Session Management
-
-The new session management approach will:
-
-1. Store session information in Django's cache framework:
-   ```python
-   # Example implementation
-   from django.core.cache import cache
-   
-   def get_session_cookie(mode='live'):
-       cache_key = f"legacy_api_session_{mode}"
-       session_data = cache.get(cache_key)
-       
-       if session_data and is_session_valid(session_data):
-           return session_data['cookie']
-       
-       # Obtain new session
-       new_session = obtain_new_session(mode)
-       cache.set(cache_key, new_session, timeout=3500)  # Set timeout to just under 1 hour
-       return new_session['cookie']
-   ```
-
-2. Handle session expiration gracefully:
-   - Check for session validity before each API call
-   - Automatically refresh expired sessions
-   - Implement exponential backoff for failed authentication attempts
-
-3. Support request-scoped sessions:
-   - Allow for creating temporary sessions for specific operations
-   - Clean up sessions after use
-
-##### API Client Interface
-
-The API client will maintain compatibility with the existing implementation:
-
-```python
-class LegacyAPIClient:
-    def __init__(self, mode='live'):
-        self.mode = mode
-        self._session = None
-    
-    def get_session(self):
-        """Get or create a session for the current mode."""
-        # Implementation details
-        
-    def fetch_table(self, table_name, top=100, skip=0, new_data_only=True, date_created_start=None):
-        """Fetch data from a table in the legacy system."""
-        # Implementation details
-        
-    def push_field(self, table_name, record_id, field_name, field_value):
-        """Push a field value to the legacy system."""
-        # Implementation details
-```
-
-#### 4.8.7 Implementation Phases
-
-- **Phase 1 (Internal Module):**
-  - Create internal module structure
-  - Implement session management
-  - Implement basic data retrieval and update
-
-- **Phase 2 (Compatibility Layer):**
-  - Create compatibility layer
-  - Update import references
-  - Run integration tests
-
-- **Phase 3 (Enhanced Features):**
-  - Add caching
-  - Implement bulk operations
-  - Add metrics and monitoring
+These findings have been documented in detail in [docs/legacy_erp/api/direct_api_integration.md](../docs/legacy_erp/api/direct_api_integration.md) and implemented in our internal `direct_api` module, which now serves as a reference implementation for all legacy system integrations.
