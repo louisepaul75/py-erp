@@ -46,8 +46,11 @@ for package in drf-yasg django-filter corsheaders pymysql rest_framework_simplej
   }
 done
 
-echo "Creating log directory if it doesn't exist..."
+echo "Creating necessary directories if they don't exist..."
 mkdir -p /app/logs
+mkdir -p /app/pyerp/static
+mkdir -p /app/static
+mkdir -p /app/media
 
 echo "Creating a simple Django debug server..."
 cat > /app/simple_django_server.py << 'EOF'
