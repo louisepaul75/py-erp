@@ -11,6 +11,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.views.decorators.http import require_GET
+from django.db.utils import OperationalError
 
 # Set up logging
 logger = logging.getLogger('pyerp.core')
@@ -157,4 +159,15 @@ class SystemSettingsView(APIView):
         
         # This would typically update settings in the database
         # For demonstration, we'll just acknowledge the request
-        return Response({"message": "Settings updated successfully"}) 
+        return Response({"message": "Settings updated successfully"})
+
+
+@require_GET
+def test_db_error(request):
+    """
+    Test view to simulate a database connection error.
+    This is for testing the database connection middleware.
+    """
+    # Intentionally raise a database connection error
+    logger.info("Simulating database connection error for testing")
+    raise OperationalError("This is a simulated database connection error for testing") 

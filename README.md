@@ -307,6 +307,8 @@ pyERP includes a comprehensive product image integration feature:
 - Creates and updates local `ProductImage` records linked to products
 - Supports different image types (Produktfoto, Markt-Messe-Shop, Szene, Illustration)
 - Implements smart article number selection for image matching
+- Advanced product matching logic to handle variant codes and different SKU formats
+- Prioritization of "Produktfoto" images with front=True attribute
 - Provides a synchronization command with configurable parameters
 - Tracks synchronization history with detailed logging
 
@@ -325,7 +327,12 @@ python manage.py sync_product_images --dry-run --limit 5 --page-size 20
 ### Image Management
 
 - Images are stored as `ProductImage` records linked to products
-- Primary images are automatically selected based on type and front flag
+- Primary images are automatically selected based on strict prioritization:
+  1. Produktfoto with front=True
+  2. Any Produktfoto
+  3. Any image with front=True
+  4. Any image marked as primary
+  5. First available image
 - Thumbnail URLs are stored for efficient loading
 - Image metadata is preserved for reference
 

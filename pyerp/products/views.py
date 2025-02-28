@@ -67,7 +67,32 @@ class ProductListView(LoginRequiredMixin, ListView):
         for product in context['products']:
             if hasattr(product, 'images') and product.images.exists():
                 try:
-                    primary_image = product.images.filter(is_primary=True).first()
+                    # Image prioritization logic:
+                    # 1. Produktfoto with front=True
+                    # 2. Any Produktfoto
+                    # 3. Any front=True image
+                    # 4. Any image marked as primary
+                    # 5. First image
+                    
+                    # First priority: Produktfoto with front=True
+                    primary_image = product.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
+                    
+                    if not primary_image:
+                        # Second priority: Any Produktfoto
+                        primary_image = product.images.filter(image_type__iexact='Produktfoto').first()
+                    
+                    if not primary_image:
+                        # Third priority: Any front=True image
+                        primary_image = product.images.filter(is_front=True).first()
+                    
+                    if not primary_image:
+                        # Fourth priority: Any image marked as primary
+                        primary_image = product.images.filter(is_primary=True).first()
+                    
+                    if not primary_image:
+                        # Last resort: First image
+                        primary_image = product.images.first()
+                    
                     if primary_image:
                         primary_images[product.id] = primary_image
                 except Exception as e:
@@ -111,7 +136,32 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
         for variant in variants:
             if hasattr(variant, 'images') and variant.images.exists():
                 try:
-                    primary_image = variant.images.filter(is_primary=True).first() or variant.images.first()
+                    # Image prioritization logic:
+                    # 1. Produktfoto with front=True
+                    # 2. Any Produktfoto
+                    # 3. Any front=True image
+                    # 4. Any image marked as primary
+                    # 5. First image
+                    
+                    # First priority: Produktfoto with front=True
+                    primary_image = variant.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
+                    
+                    if not primary_image:
+                        # Second priority: Any Produktfoto
+                        primary_image = variant.images.filter(image_type__iexact='Produktfoto').first()
+                    
+                    if not primary_image:
+                        # Third priority: Any front=True image
+                        primary_image = variant.images.filter(is_front=True).first()
+                    
+                    if not primary_image:
+                        # Fourth priority: Any image marked as primary
+                        primary_image = variant.images.filter(is_primary=True).first()
+                    
+                    if not primary_image:
+                        # Last resort: First image
+                        primary_image = variant.images.first()
+                    
                     if primary_image:
                         variant_images[variant.id] = primary_image
                 except Exception:
@@ -143,7 +193,32 @@ class VariantDetailView(LoginRequiredMixin, DetailView):
         # Get primary image for variant
         if hasattr(variant, 'images') and variant.images.exists():
             try:
-                primary_image = variant.images.filter(is_primary=True).first() or variant.images.first()
+                # Image prioritization logic:
+                # 1. Produktfoto with front=True
+                # 2. Any Produktfoto
+                # 3. Any front=True image
+                # 4. Any image marked as primary
+                # 5. First image
+                
+                # First priority: Produktfoto with front=True
+                primary_image = variant.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
+                
+                if not primary_image:
+                    # Second priority: Any Produktfoto
+                    primary_image = variant.images.filter(image_type__iexact='Produktfoto').first()
+                
+                if not primary_image:
+                    # Third priority: Any front=True image
+                    primary_image = variant.images.filter(is_front=True).first()
+                
+                if not primary_image:
+                    # Fourth priority: Any image marked as primary
+                    primary_image = variant.images.filter(is_primary=True).first()
+                
+                if not primary_image:
+                    # Last resort: First image
+                    primary_image = variant.images.first()
+                
                 if primary_image:
                     context['primary_image'] = primary_image
             except Exception:
@@ -197,13 +272,34 @@ class ProductAPIView(LoginRequiredMixin, View):
         # Add primary image if available
         if hasattr(product, 'images') and product.images.exists():
             try:
-                primary_image = product.images.filter(is_primary=True).first()
+                # Image prioritization logic:
+                # 1. Produktfoto with front=True
+                # 2. Any Produktfoto
+                # 3. Any front=True image
+                # 4. Any image marked as primary
+                # 5. First image
+                
+                # First priority: Produktfoto with front=True
+                primary_image = product.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
+                
+                if not primary_image:
+                    # Second priority: Any Produktfoto
+                    primary_image = product.images.filter(image_type__iexact='Produktfoto').first()
+                
+                if not primary_image:
+                    # Third priority: Any front=True image
+                    primary_image = product.images.filter(is_front=True).first()
+                
+                if not primary_image:
+                    # Fourth priority: Any image marked as primary
+                    primary_image = product.images.filter(is_primary=True).first()
+                
+                if not primary_image:
+                    # Last resort: First image
+                    primary_image = product.images.first()
+                
                 if primary_image:
                     product_data['image_url'] = primary_image.image_url
-                else:
-                    first_image = product.images.first()
-                    if first_image:
-                        product_data['image_url'] = first_image.image_url
             except:
                 pass
                 

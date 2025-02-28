@@ -28,9 +28,35 @@ def get_primary_image(product):
     {{ product|get_primary_image }}
     """
     if hasattr(product, 'images'):
-        # Safely get the first primary image
+        # Safely try to find the best image based on the priority:
+        # 1. Produktfoto with front=True
+        # 2. Any Produktfoto
+        # 3. Any image with front=True
+        # 4. Any is_primary=True image
+        # 5. First image
         try:
-            return product.images.filter(is_primary=True).first()
+            # First priority: Produktfoto with front=True
+            image = product.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
+            if image:
+                return image
+                
+            # Second priority: Any Produktfoto
+            image = product.images.filter(image_type__iexact='Produktfoto').first()
+            if image:
+                return image
+                
+            # Third priority: Any front=True image
+            image = product.images.filter(is_front=True).first()
+            if image:
+                return image
+                
+            # Fourth priority: Any image marked as primary
+            image = product.images.filter(is_primary=True).first()
+            if image:
+                return image
+                
+            # Last resort: first image
+            return product.images.first()
         except:
             return None
     return None 

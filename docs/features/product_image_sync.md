@@ -80,11 +80,18 @@ python manage.py sync_product_images --skip-pages 5 --limit 3
 The synchronization process matches products in the external API with products in the local database using the following logic:
 
 1. It extracts the article number and variant code from the API response
-2. It searches for a product with the article number as its SKU (ignoring the variant code)
-3. If not found, it tries to find a parent product with that SKU
-4. Once a product is found, the image is created or updated
+2. It attempts to find the product through multiple matching strategies:
+   - First tries to find a product with the exact article number as its SKU (ignoring the variant code)
+   - If not found, it tries to find a parent product with that SKU
+   - If this is a parent product and we have a variant code, it tries to find the specific variant
+   - As a last resort, it tries a prefix match for SKUs with internal suffixes
+3. Once a product is found, the image is created or updated
+4. If no product is found after all attempts, the image is skipped
 
-This approach ensures that images are matched to products even if the SKU formats differ slightly between systems.
+This improved matching algorithm handles various SKU formats and ensures that images are matched to products even when:
+- The SKU formats differ slightly between systems
+- Articles come with suffix codes like "-BE" in the external system
+- The product exists as a variant under a parent
 
 ## Synchronization Process
 

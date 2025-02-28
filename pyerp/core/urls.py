@@ -20,4 +20,7 @@ urlpatterns = [
     
     # System settings
     path('settings/', views.SystemSettingsView.as_view(), name='system_settings'),
+    
+    # Test DB error endpoint (for testing only)
+    path('test-db-error/', views.test_db_error, name='test_db_error'),
 ] 

@@ -7,32 +7,8 @@
 {% block content %}
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar with categories and search form -->
+        <!-- Sidebar with search form -->
         <div class="col-md-3">
-            <!-- Categories card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>{% trans "Categories" %}</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group">
-                        <li class="list-group-item {% if not current_category %}active{% endif %}">
-                            <a href="{% url 'products:product_list' %}" class="{% if not current_category %}text-white{% endif %}">
-                                {% trans "All Products" %}
-                            </a>
-                        </li>
-                        {% for category in categories %}
-                        <li class="list-group-item {% if current_category == category.id|stringformat:'i' %}active{% endif %}">
-                            <a href="{% url 'products:product_list' %}?category={{ category.id }}" 
-                               class="{% if current_category == category.id|stringformat:'i' %}text-white{% endif %}">
-                                {{ category.name }}
-                            </a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-            
             <!-- Advanced search form -->
             <div class="card">
                 <div class="card-header">

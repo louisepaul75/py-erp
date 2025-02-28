@@ -129,13 +129,13 @@ class Command(BaseCommand):
                             full_sku = article_number
                         
                         # Debug info
-                        self.stdout.write(f"  Checking article: {full_sku} (Number: {article_number}, Variant: {variant_code})")
+                        self.stdout.write(f"  Checking article: {article_number} (Variant: {variant_code})")
                             
-                        # Try to find corresponding product
-                        # First try exact match
-                        product = self._find_product(full_sku, article_number, variant_code)
+                        # Try to find corresponding product - pass ONLY the article_number 
+                        # (not the full_sku with -BE suffix)
+                        product = self._find_product(article_number, variant_code)
                         if not product:
-                            self.stdout.write(f"  No product found for {full_sku}")
+                            self.stdout.write(f"  No product found for {article_number}")
                             continue
                             
                         # Set front flag based on article data
@@ -199,12 +199,11 @@ class Command(BaseCommand):
                 sync_log.error_message = str(e)
                 sync_log.save()
                 
-    def _find_product(self, full_sku, article_number, variant_code):
+    def _find_product(self, article_number, variant_code):
         """
         Find a product matching the article number without variant.
         
         Args:
-            full_sku: Combined article number and variant code (e.g. "123456-BE")
             article_number: The base article number (e.g. "123456")
             variant_code: The variant code (e.g. "BE")
         
@@ -213,20 +212,41 @@ class Command(BaseCommand):
         """
         product = None
         
-        # Primary matching: by article number as SKU (without variant)
+        # First try: exact match on article_number
         try:
             product = VariantProduct.objects.get(sku=article_number)
             self.stdout.write(f"    Found match by SKU: {article_number}")
             return product
         except VariantProduct.DoesNotExist:
             self.stdout.write(f"    No match by SKU: {article_number}")
-            
-        # Fallback: Try as a parent product
+        
+        # Second try: match by article_number as parent product
         try:
             product = ParentProduct.objects.get(sku=article_number)
             self.stdout.write(f"    Found match as parent product: {article_number}")
+            
+            # If this is a parent and we have a variant code, try to find the variant
+            if variant_code:
+                try:
+                    variant = VariantProduct.objects.filter(parent=product, variant_code=variant_code).first()
+                    if variant:
+                        self.stdout.write(f"    Found variant with code {variant_code} under parent {article_number}")
+                        return variant
+                except Exception:
+                    pass
+                    
             return product
         except ParentProduct.DoesNotExist:
+            pass
+        
+        # Last attempt: startswith match (for SKUs with internal suffixes)
+        try:
+            products = VariantProduct.objects.filter(sku__startswith=f"{article_number}")
+            if products.exists():
+                product = products.first()
+                self.stdout.write(f"    Found match by prefix: {article_number} -> {product.sku}")
+                return product
+        except Exception:
             pass
         
         # Not found - just log and return None

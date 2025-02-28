@@ -82,11 +82,13 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Implement secure authentication to the image database API. ✅ *Verified*
   - Support for different image types (Produktfoto, Markt-Messe-Shop, Szene, etc.). ✅ *Verified*
   - Prioritize image display based on type and attributes (front=true flag). ✅ *Implemented*
+  - Enhanced product matching logic to handle variant codes and different SKU formats. ✅ *Implemented*
 - **Image Management:**
   - Display product images in the ERP interface with proper prioritization. ✅ *Implemented*
   - Allow users to view all available images for a product. ✅ *Implemented*
   - Enable selection of primary product image for display in various contexts. ✅ *Implemented*
   - Support batch operations for image management across multiple products. *Planned*
+  - Strict image prioritization hierarchy (Produktfoto with front=True > any Produktfoto > images with front=True). ✅ *Implemented*
 - **Caching & Performance:**
   - Implement caching strategy for frequently accessed images to improve performance. ✅ *Implemented*
   - Support for image thumbnails generation and resizing for different UI contexts. ✅ *Implemented*
