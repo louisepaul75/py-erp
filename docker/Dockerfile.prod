@@ -31,12 +31,16 @@ RUN echo "Running dependency scanner..." && \
     python -c "import os; os.makedirs('scripts', exist_ok=True)" && \
     python scripts/check_dependencies.py > /app/dependency_scan.log || true
 
-# Alternative approach: directly install from the .in file
+# Compile requirements files and install from the generated txt files
 RUN pip install --upgrade pip && \
+    echo "Compiling base requirements..." && \
+    pip-compile requirements/base.in --output-file requirements/base.txt && \
+    echo "Compiling production requirements..." && \
+    pip-compile requirements/production.in --output-file requirements/production.txt && \
     echo "Installing base requirements..." && \
-    pip install -r requirements/base.in && \
+    pip install -r requirements/base.txt && \
     echo "Installing production requirements..." && \
-    pip install -r requirements/production.in && \
+    pip install -r requirements/production.txt && \
     echo "Verifying Celery installation..." && \
     pip install celery redis django-celery-results django-celery-beat && \
     echo "Verifying logging packages..." && \
