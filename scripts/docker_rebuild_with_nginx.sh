@@ -14,6 +14,42 @@ NC='\033[0m' # No Color
 WEB_CONTAINER="pyerp-web"  # Your Django container name
 NGINX_CONTAINER="pyerp-nginx"  # Your Nginx container name
 
+# Check if we need to clean up Docker resources first
+if [ "$1" = "--no-prune" ]; then
+    echo -e "${YELLOW}Skipping Docker cleanup${NC}"
+    SKIP_PRUNE=true
+else
+    SKIP_PRUNE=false
+fi
+
+# Check if we're low on disk space
+LOW_SPACE=false
+DOCKER_DIR=$(docker info | grep "Docker Root Dir" | cut -d: -f2 | tr -d '[:space:]')
+if [ -z "$DOCKER_DIR" ]; then
+    DOCKER_DIR="/var/lib/docker"  # Default location
+fi
+
+FREE_SPACE=$(df -m "$DOCKER_DIR" | tail -1 | awk '{print $4}')
+echo -e "${CYAN}Available space in Docker directory: ${FREE_SPACE}MB${NC}"
+
+if [ "$FREE_SPACE" -lt 1000 ]; then
+    echo -e "${YELLOW}Low disk space detected (less than 1GB free).${NC}"
+    LOW_SPACE=true
+fi
+
+# Clean up Docker resources if needed
+if [ "$LOW_SPACE" = true ] && [ "$SKIP_PRUNE" = false ]; then
+    echo -e "${YELLOW}Running Docker cleanup to free up space...${NC}"
+    # Ensure the prune script is executable (works on both Windows and Linux)
+    if [ -f ./scripts/docker-prune.sh ]; then
+        chmod +x ./scripts/docker-prune.sh || true
+        bash ./scripts/docker-prune.sh
+    else
+        echo -e "${RED}Docker prune script not found at ./scripts/docker-prune.sh${NC}"
+        echo -e "${YELLOW}Continuing without cleanup...${NC}"
+    fi
+fi
+
 # Try to find the Docker Compose files
 echo -e "${CYAN}===== Docker Container Management Script with Nginx =====${NC}"
 echo -e "${YELLOW}Searching for Docker Compose files...${NC}"

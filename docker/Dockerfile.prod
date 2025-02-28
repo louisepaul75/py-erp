@@ -10,13 +10,12 @@ WORKDIR /app
 COPY docker/apt-install.sh /usr/local/bin/apt-install.sh
 RUN chmod +x /usr/local/bin/apt-install.sh
 
-# Install build dependencies with all necessary dependencies for WeasyPrint
+# Install only the absolutely necessary build dependencies
 RUN /usr/local/bin/apt-install.sh \
     gcc \
     python3-dev \
     default-libmysqlclient-dev \
     build-essential \
-    git \
     pkg-config
 
 # Update pip
@@ -26,37 +25,32 @@ RUN pip install --upgrade pip
 COPY requirements/ /app/requirements/
 COPY scripts/check_dependencies.py /app/scripts/check_dependencies.py
 
-# Run dependency scanner in non-interactive mode and update requirements if needed
+# Copy project code for dependency scanning
 COPY pyerp/ /app/pyerp/
 RUN echo "Running dependency scanner..." && \
     python -c "import os; os.makedirs('scripts', exist_ok=True)" && \
     python scripts/check_dependencies.py > /app/dependency_scan.log || true
 
-# Install critical and commonly used packages first
-RUN pip install --no-cache-dir django django-filter djangorestframework celery redis
+# Install dependencies in stages to minimize layer size
+# Critical packages first
+RUN pip install --no-cache-dir --no-deps django django-filter djangorestframework celery redis
+# Django packages
+RUN pip install --no-cache-dir --no-deps "django-redis>=5.4.0,<5.5.0" \
+    "redis>=5.0.0,<5.1.0" \
+    "django-cors-headers>=4.3.1,<4.4.0" \
+    "drf-yasg>=1.21.7,<1.22.0" \
+    "djangorestframework-simplejwt>=5.3.0,<5.4.0"
+# Database packages
+RUN pip install --no-cache-dir --no-deps "pymysql>=1.1.0,<1.2.0" "mysqlclient>=2.2.0,<2.3.0"
+# Celery packages
+RUN pip install --no-cache-dir --no-deps django-celery-results django-celery-beat
+# Logging packages
+RUN pip install --no-cache-dir --no-deps python-json-logger structlog
+# Additional base and production packages
+RUN pip install --no-cache-dir --no-deps django-environ Pillow gunicorn sentry-sdk whitenoise
 
-# Install base Django packages (add packages one at a time to avoid dependency issues)
-RUN pip install --no-cache-dir "django-redis>=5.4.0,<5.5.0"
-RUN pip install --no-cache-dir "redis>=5.0.0,<5.1.0"
-RUN pip install --no-cache-dir "django-cors-headers>=4.3.1,<4.4.0"
-RUN pip install --no-cache-dir "drf-yasg>=1.21.7,<1.22.0"
-RUN pip install --no-cache-dir "djangorestframework-simplejwt>=5.3.0,<5.4.0"
-
-# Install MySQL packages separately
-RUN pip install --no-cache-dir "pymysql>=1.1.0,<1.2.0"
-RUN pip install --no-cache-dir "mysqlclient>=2.2.0,<2.3.0"
-
-# Install Celery and related packages
-RUN pip install --no-cache-dir django-celery-results django-celery-beat
-
-# Install logging packages
-RUN pip install --no-cache-dir python-json-logger structlog
-
-# Install additional base packages
-RUN pip install --no-cache-dir django-environ Pillow WeasyPrint
-
-# Install additional production packages
-RUN pip install --no-cache-dir gunicorn sentry-sdk whitenoise
+# Install WeasyPrint separately as it has many dependencies
+RUN pip install --no-cache-dir WeasyPrint
 
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \
@@ -78,7 +72,7 @@ RUN useradd -m appuser
 COPY docker/apt-install.sh /usr/local/bin/apt-install.sh
 RUN chmod +x /usr/local/bin/apt-install.sh
 
-# Install runtime dependencies only
+# Install only essential runtime dependencies
 RUN /usr/local/bin/apt-install.sh \
     default-libmysqlclient-dev
 
