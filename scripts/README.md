@@ -21,6 +21,16 @@ This directory contains scripts for managing Docker containers in the pyERP proj
    ./scripts/docker_rebuild_with_nginx.sh
    ```
 
+### Linux Script Features
+
+The Linux scripts now include:
+
+- **Automatic Docker Compose file detection**: The scripts will search for `docker-compose.yml` in common locations
+- **Interactive mode**: If no Docker Compose file is found, you'll be prompted to enter the path
+- **Nginx detection**: The scripts can determine if Nginx is in a separate compose file
+- **Error handling**: Clear error messages with appropriate exit codes
+- **Network configuration**: Automatic Docker network setup for container communication
+
 ## Windows Usage
 
 1. For PowerShell (recommended):
@@ -61,6 +71,12 @@ If you encounter issues after rebuilding the containers:
    ```bash
    docker network inspect pyerp-network
    ```
+
+4. If you still have the "too many redirects" error:
+   - Clear your browser cache and cookies completely
+   - Try using an incognito/private browser window
+   - Verify the Nginx configuration has `proxy_set_header X-Forwarded-Proto https;`
+   - Check that Django has imported the HTTPS settings correctly
 
 ## Script Descriptions
 

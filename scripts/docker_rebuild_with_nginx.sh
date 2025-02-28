@@ -13,10 +13,67 @@ NC='\033[0m' # No Color
 # Configuration
 WEB_CONTAINER="pyerp-web"  # Your Django container name
 NGINX_CONTAINER="pyerp-nginx"  # Your Nginx container name
-COMPOSE_FILE="docker-compose.yml"  # Your compose file path
-NGINX_COMPOSE_FILE="docker/docker-compose.yml"  # Nginx compose file if separate
 
+# Try to find the Docker Compose files
 echo -e "${CYAN}===== Docker Container Management Script with Nginx =====${NC}"
+echo -e "${YELLOW}Searching for Docker Compose files...${NC}"
+
+# Search for possible Docker Compose files
+POSSIBLE_COMPOSE_FILES=(
+  "docker-compose.yml"
+  "docker-compose.yaml"
+  "docker/docker-compose.yml"
+  "docker/docker-compose.yaml"
+  "compose/docker-compose.yml"
+  "compose/docker-compose.yaml"
+)
+
+COMPOSE_FILE=""
+NGINX_COMPOSE_FILE=""
+
+# Find main Docker Compose file
+for file in "${POSSIBLE_COMPOSE_FILES[@]}"; do
+  if [ -f "$file" ]; then
+    echo -e "  ${GREEN}Found Docker Compose file: $file${NC}"
+    COMPOSE_FILE="$file"
+    break
+  fi
+done
+
+# Check if we found a compose file
+if [ -z "$COMPOSE_FILE" ]; then
+  echo -e "  ${RED}No Docker Compose file found in standard locations${NC}"
+  echo -e "  ${YELLOW}Please specify the path to your Docker Compose file:${NC}"
+  read -p "  Docker Compose file path: " COMPOSE_FILE
+  
+  if [ ! -f "$COMPOSE_FILE" ]; then
+    echo -e "  ${RED}File not found: $COMPOSE_FILE${NC}"
+    exit 1
+  fi
+fi
+
+# Check if Nginx is in a separate compose file or the same one
+grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+if [ $? -eq 0 ]; then
+  echo -e "  ${GREEN}Nginx configuration found in main compose file${NC}"
+  NGINX_COMPOSE_FILE="$COMPOSE_FILE"
+else
+  # Check docker/docker-compose.yml specifically for Nginx
+  if [ -f "docker/docker-compose.yml" ]; then
+    grep -q "nginx" "docker/docker-compose.yml" 2>/dev/null
+    if [ $? -eq 0 ]; then
+      echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.yml${NC}"
+      NGINX_COMPOSE_FILE="docker/docker-compose.yml"
+    fi
+  fi
+  
+  # If still not found, ask user
+  if [ -z "$NGINX_COMPOSE_FILE" ]; then
+    echo -e "  ${YELLOW}Nginx configuration not found. Please specify the path to your Nginx Docker Compose file${NC}"
+    echo -e "  ${YELLOW}(or press Enter to skip if Nginx is run separately):${NC}"
+    read -p "  Nginx compose file path: " NGINX_COMPOSE_FILE
+  fi
+fi
 
 # Step 1: Stop and remove existing containers
 echo -e "\n${GREEN}[1/5] Stopping and removing existing containers...${NC}"
@@ -42,58 +99,56 @@ fi
 
 # Step 3: Build Django container
 echo -e "\n${GREEN}[3/5] Building Django container...${NC}"
-if [ -f "$COMPOSE_FILE" ]; then
-    if docker-compose -f $COMPOSE_FILE build --no-cache; then
+if [ -n "$COMPOSE_FILE" ]; then
+    echo -e "  ${YELLOW}Using compose file: $COMPOSE_FILE${NC}"
+    if docker-compose -f "$COMPOSE_FILE" build --no-cache; then
         echo -e "  ${GREEN}✓ Django container rebuilt successfully${NC}"
     else
         echo -e "  ${RED}✗ Error rebuilding Django container${NC}"
         exit 1
     fi
 else
-    if docker-compose build --no-cache; then
-        echo -e "  ${GREEN}✓ Django container rebuilt successfully${NC}"
-    else
-        echo -e "  ${RED}✗ Error rebuilding Django container${NC}"
-        exit 1
-    fi
+    echo -e "  ${RED}No Docker Compose file specified for Django${NC}"
+    exit 1
 fi
 
 # Step 4: Build Nginx container
 echo -e "\n${GREEN}[4/5] Building Nginx container...${NC}"
 # Check if we have a separate compose file for Nginx
-if [ -f "$NGINX_COMPOSE_FILE" ]; then
-    if docker-compose -f $NGINX_COMPOSE_FILE build --no-cache; then
+if [ -n "$NGINX_COMPOSE_FILE" ] && [ "$NGINX_COMPOSE_FILE" != "$COMPOSE_FILE" ]; then
+    echo -e "  ${YELLOW}Using Nginx compose file: $NGINX_COMPOSE_FILE${NC}"
+    if docker-compose -f "$NGINX_COMPOSE_FILE" build --no-cache; then
         echo -e "  ${GREEN}✓ Nginx container rebuilt successfully from separate compose file${NC}"
     else
         echo -e "  ${RED}✗ Error rebuilding Nginx container${NC}"
         exit 1
     fi
+elif [ -n "$NGINX_COMPOSE_FILE" ]; then
+    echo -e "  ${YELLOW}Nginx is in the same compose file as Django${NC}"
 else
-    echo -e "  ${YELLOW}→ No separate Nginx compose file found, assuming it's included in the main compose file${NC}"
+    echo -e "  ${YELLOW}No Nginx compose file specified, skipping Nginx build${NC}"
 fi
 
 # Step 5: Start containers
 echo -e "\n${GREEN}[5/5] Starting containers...${NC}"
 # Start Django container
-if [ -f "$COMPOSE_FILE" ]; then
-    if docker-compose -f $COMPOSE_FILE up -d; then
+if [ -n "$COMPOSE_FILE" ]; then
+    echo -e "  ${YELLOW}Starting containers using: $COMPOSE_FILE${NC}"
+    if docker-compose -f "$COMPOSE_FILE" up -d; then
         echo -e "  ${GREEN}✓ Django containers started successfully${NC}"
     else
         echo -e "  ${RED}✗ Error starting Django containers${NC}"
         exit 1
     fi
 else
-    if docker-compose up -d; then
-        echo -e "  ${GREEN}✓ Django containers started successfully${NC}"
-    else
-        echo -e "  ${RED}✗ Error starting Django containers${NC}"
-        exit 1
-    fi
+    echo -e "  ${RED}No Docker Compose file specified for Django${NC}"
+    exit 1
 fi
 
 # Start Nginx container if separate
-if [ -f "$NGINX_COMPOSE_FILE" ]; then
-    if docker-compose -f $NGINX_COMPOSE_FILE up -d; then
+if [ -n "$NGINX_COMPOSE_FILE" ] && [ "$NGINX_COMPOSE_FILE" != "$COMPOSE_FILE" ]; then
+    echo -e "  ${YELLOW}Starting Nginx using: $NGINX_COMPOSE_FILE${NC}"
+    if docker-compose -f "$NGINX_COMPOSE_FILE" up -d; then
         echo -e "  ${GREEN}✓ Nginx container started successfully${NC}"
     else
         echo -e "  ${RED}✗ Error starting Nginx container${NC}"
