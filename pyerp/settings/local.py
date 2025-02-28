@@ -9,6 +9,12 @@ import os
 from pathlib import Path
 from .base import *  # noqa
 
+# Import HTTPS settings
+try:
+    from .settings_https import *  # noqa
+except ImportError:
+    pass
+
 # Enable debug mode for local development
 DEBUG = True
 
@@ -33,12 +39,13 @@ if 'DATABASE_URL' in os.environ:
         DATABASES['default'] = dj_database_url.parse(db_url)
 
 # Disable security features for local development
-SECURE_SSL_REDIRECT = False
-SECURE_HSTS_SECONDS = 0
-SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD = False
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+# These settings will be overridden by settings_https.py if it's imported
+# SECURE_SSL_REDIRECT = False
+# SECURE_HSTS_SECONDS = 0
+# SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+# SECURE_HSTS_PRELOAD = False
+# CSRF_COOKIE_SECURE = False
+# SESSION_COOKIE_SECURE = False
 
 # CORS settings - allow all origins in local development
 CORS_ALLOW_ALL_ORIGINS = True

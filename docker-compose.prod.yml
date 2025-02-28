@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  web:
+    image: pyerp-minimal
+    container_name: pyerp-web
+    restart: always
+    environment:
+      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
+      - DB_HOST=192.168.73.64
+      - DB_NAME=pyerp_production
+      - DB_USER=admin
+      - DB_PASSWORD=your_password
+      - DB_PORT=3306
+      - SECURE_SSL_REDIRECT=False
+    networks:
+      - pyerp-network
+
+  nginx:
+    image: nginx:latest
+    container_name: pyerp-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - web
+    networks:
+      - pyerp-network
+
+networks:
+  pyerp-network:
+    driver: bridge 

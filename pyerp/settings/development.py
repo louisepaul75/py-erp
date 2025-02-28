@@ -8,6 +8,12 @@ import os
 import dj_database_url
 from .base import *  # noqa
 
+# Import HTTPS settings
+try:
+    from .settings_https import *  # noqa
+except ImportError:
+    pass
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
