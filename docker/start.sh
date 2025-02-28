@@ -23,7 +23,7 @@ python -c "import django; print(\"django module found\")"
 
 # Test database URL parsing
 echo "Checking database URL..."
-python -c "import dj_database_url; db_url='${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'; parsed = dj_database_url.parse(db_url); print(f'Database config: {parsed}');" || echo "Database URL parsing failed, but continuing..."
+python -c "import dj_database_url; db_url='${DATABASE_URL:-mysql://pyerp:pyerp@db:3306/pyerp}'; parsed = dj_database_url.parse(db_url); print(f'Database config: {parsed}');" || echo "Database URL parsing failed, but continuing..."
 
 # Check if redis is available (if not, print warning but continue)
 echo "Checking Redis connection..."
@@ -57,17 +57,24 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   python -c "
 try:
     import dj_database_url
-    import psycopg2
-    db_url = '${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'
+    # Use MySQL connector instead of psycopg2
+    import MySQLdb as Database
+    db_url = '${DATABASE_URL:-mysql://pyerp:pyerp@db:3306/pyerp}'
     db_config = dj_database_url.parse(db_url)
     print(f'Attempting to connect to database: {db_config}')
+    
+    # Handle SQLite differently
+    if db_config['ENGINE'] == 'django.db.backends.sqlite3':
+        print('SQLite database configured - no connection test needed')
+        exit(0)
+        
     # This will raise an exception if connection fails
-    conn = psycopg2.connect(
+    conn = Database.connect(
         host=db_config['HOST'], 
-        port=db_config['PORT'],
-        dbname=db_config['NAME'],
+        port=int(db_config['PORT']),
+        db=db_config['NAME'],
         user=db_config['USER'],
-        password=db_config['PASSWORD']
+        passwd=db_config['PASSWORD']
     )
     print('Database connection successful')
     conn.close()
@@ -97,25 +104,36 @@ except Exception as e:
 done
 
 # Optionally run migrations, but only if database is available
-if (python -c "
+python -c "
 try:
-    import psycopg2
-    db_url = '${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'
     import dj_database_url
+    db_url = '${DATABASE_URL:-mysql://pyerp:pyerp@db:3306/pyerp}'
     db_config = dj_database_url.parse(db_url)
-    conn = psycopg2.connect(
+    
+    # Skip connection test for SQLite
+    if db_config['ENGINE'] == 'django.db.backends.sqlite3':
+        print('SQLite database configured - running migrations...')
+        exit(0)
+    
+    # Try to connect to MySQL
+    import MySQLdb as Database
+    conn = Database.connect(
         host=db_config['HOST'], 
-        port=db_config['PORT'],
-        dbname=db_config['NAME'],
+        port=int(db_config['PORT']),
+        db=db_config['NAME'],
         user=db_config['USER'],
-        password=db_config['PASSWORD']
+        passwd=db_config['PASSWORD']
     )
     conn.close()
+    print('Database available, will run migrations')
     exit(0)
-except:
+except Exception as e:
+    print(f'Database not available: {e}')
     exit(1)
-"); then
-    echo "Database available, running migrations..."
+"
+
+if [ $? -eq 0 ]; then
+    echo "Running migrations..."
     python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE --noinput || echo "Migrations failed, but continuing..."
 else
     echo "Skipping migrations as database is not available."

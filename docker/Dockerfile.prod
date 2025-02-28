@@ -10,7 +10,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
-    libpq-dev \
     default-libmysqlclient-dev \
     git \
     # Required for other packages
@@ -36,7 +35,9 @@ RUN pip install --upgrade pip && \
     echo "Verifying logging packages..." && \
     pip install python-json-logger structlog && \
     echo "Verifying django-filter..." && \
-    pip install django-filter
+    pip install django-filter && \
+    echo "Verifying MySQL client..." && \
+    pip install mysqlclient
 
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \
@@ -56,7 +57,6 @@ RUN useradd -m appuser
 
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
     default-libmysqlclient-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
