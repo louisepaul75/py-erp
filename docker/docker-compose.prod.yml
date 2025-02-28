@@ -1,130 +1,46 @@
 version: '3.8'
 
 services:
-  db:
-    image: mysql:8.0
-    volumes:
-      - mysql_data_prod:/var/lib/mysql
-    env_file:
-      - ../.env.prod
-    environment:
-      - MYSQL_DATABASE=${DB_NAME:-pyerp_testing}
-      - MYSQL_USER=${DB_USER:-admin}
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  redis:
-    image: redis:7
-    volumes:
-      - redis_data_prod:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  web:
+  pyerp:
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod
-    env_file:
-      - ../.env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_NAME=${DB_NAME:-pyerp_testing}
-      - DB_USER=${DB_USER:-admin}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - static_volume:/app/static
-      - media_volume:/app/media
-      - log_volume:/app/logs
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
-  celery:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.prod
-    command: celery -A pyerp worker -l INFO
-    env_file:
-      - ../.env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_NAME=${DB_NAME:-pyerp_testing}
-      - DB_USER=${DB_USER:-admin}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - log_volume:/app/logs
-    depends_on:
-      - web
-      - redis
-      - db
-    restart: unless-stopped
-
-  celery-beat:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.prod
-    command: celery -A pyerp beat -l INFO
-    env_file:
-      - ../.env.prod
-    environment:
-      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_NAME=${DB_NAME:-pyerp_testing}
-      - DB_USER=${DB_USER:-admin}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - log_volume:/app/logs
-    depends_on:
-      - celery
-      - redis
-      - db
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:latest
+    container_name: pyerp_all_in_one
     ports:
       - "80:80"
       - "443:443"
+      - "8000:8000"
+    env_file:
+      - ../.env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
+      - DB_HOST=localhost
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-pyerp_testing}
+      - DB_USER=${DB_USER:-admin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - REDIS_URL=redis://localhost:6379/0
+      - RUN_CELERY=true
+      - RUN_CELERY_BEAT=true
+      - RUN_NGINX=true
     volumes:
+      - mysql_data_prod:/var/lib/mysql
+      - redis_data_prod:/data
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - log_volume:/app/logs
       - ./nginx/conf.d:/etc/nginx/conf.d
       - ./nginx/ssl:/etc/nginx/ssl
-      - static_volume:/var/www/static
-      - media_volume:/var/www/media
-      - ./certbot/www:/var/www/certbot    # New: For Certbot verification
-      - ./certbot/conf:/etc/letsencrypt   # New: For storing certificates
-    depends_on:
-      - web
+      - ./certbot/www:/var/www/certbot    # For Certbot verification
+      - ./certbot/conf:/etc/letsencrypt   # For storing certificates
     restart: unless-stopped
-
-  # New Certbot service
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    depends_on:
-      - nginx
+    healthcheck:
+      test: curl --fail http://localhost:8000/admin/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   mysql_data_prod:
