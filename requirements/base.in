@@ -16,7 +16,7 @@ python-dotenv>=1.0.0,<1.1.0
 celery>=5.3.6,<5.4.0
 redis>=5.0.0,<5.1.0
 django-celery-results>=2.5.0,<2.6.0
-django-celery-beat>=2.5.0,<2.6.0
+django-celery-beat>=2.7.0,<2.8.0
 
 # API Documentation
 drf-yasg>=1.21.0,<1.22.0
