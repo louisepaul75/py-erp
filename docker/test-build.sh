@@ -1,12 +1,15 @@
 #!/bin/bash
-# Test script to identify Docker build issues
+set -e
 
-# Copy our modified requirements file
-cp requirements/production.in.testing requirements/production.in.test
+# Run dependency scanner first
+echo "Running dependency scanner..."
+cd "$(dirname "$0")/.."
+python scripts/check_dependencies.py
 
-# Try building with modified requirements
-echo "Testing build without PDF libraries..."
-DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile.prod . 2>&1 | tee build-log.txt
+# Build the Docker image
+echo "Building Docker image..."
+cd "$(dirname "$0")"
+docker build -f test-pdf-deps.dockerfile -t pyerp-pdf-test .
 
-# Restore original requirements
-echo "Build test complete. See build-log.txt for details." 
+echo "Build completed successfully!"
+echo "You can run the container with: docker run --rm pyerp-pdf-test" 

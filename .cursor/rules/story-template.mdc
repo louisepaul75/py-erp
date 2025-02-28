@@ -1,0 +1,170 @@
+---
+description: This document provides standardized templates for creating user stories and feature requests in the pyERP system. It ensures that all requirements are captured consistently and comprehensively, making it easier for both development teams and AI tools to understand and implement new features.
+globs: 
+---
+# Story Template for pyERP
+
+## Overview
+This template provides a standardized format for creating user stories and feature requests in the pyERP system (Django-based ERP).
+
+## Story Format
+
+```markdown
+# Story: [Story ID] - [Brief Title]
+
+## Description
+As a [user role]
+I want to [action/feature]
+So that [benefit/value]
+
+## Background
+[Provide relevant context and background information]
+
+## Acceptance Criteria
+1. Given [precondition]
+   When [action]
+   Then [expected result]
+
+2. Given [precondition]
+   When [action]
+   Then [expected result]
+
+## Technical Requirements
+- [ ] [Specific technical requirement]
+- [ ] [Database changes needed]
+- [ ] [API endpoints required]
+- [ ] [UI components needed]
+
+## Test Scenarios
+1. [Test scenario description]
+   - Setup: [test setup]
+   - Steps: [test steps]
+   - Expected: [expected outcome]
+
+## Dependencies
+- [ ] [Dependency 1]
+- [ ] [Dependency 2]
+
+## Estimation
+- Story Points: [number]
+- Time Estimate: [hours/days]
+```
+
+## Example
+
+```markdown
+# Story: PYERP-123 - Legacy API Integration Refactoring
+
+## Description
+As a developer
+I want to refactor the legacy 4D API integration module
+So that it's more maintainable, reliable, and testable
+
+## Background
+The current implementation relies on an external WSZ_api package with several issues:
+- External dependency on code not in the repository
+- Hardcoded file paths that are environment-specific
+- Session management issues
+- Limited error handling and logging
+- No test coverage
+
+## Acceptance Criteria
+1. Given the legacy API integration is being used
+   When I need to connect to the legacy system
+   Then I should be able to do so using the new internal module
+
+2. Given I'm using the new internal module
+   When connecting to the legacy system
+   Then it should properly handle session management with thread-safety
+
+3. Given I'm using the new internal module
+   When performing API operations
+   Then all operations should be properly logged with appropriate error handling
+
+## Technical Requirements
+- [ ] Create new internal module structure
+- [ ] Implement session management using Django's cache framework
+- [ ] Create environment configuration using Django settings
+- [ ] Implement comprehensive error handling and logging
+- [ ] Add full test coverage
+- [ ] Create compatibility layer for existing code
+
+## Test Scenarios
+1. Session Management
+   - Setup: Configure test environment
+   - Steps: Create multiple clients in different threads
+   - Expected: Each client should maintain its own session
+
+2. Error Handling
+   - Setup: Configure test environment with invalid credentials
+   - Steps: Attempt to authenticate with the legacy system
+   - Expected: System should raise appropriate exception and log the error
+
+## Dependencies
+- [ ] Django cache framework
+- [ ] Django settings configuration
+
+## Estimation
+- Story Points: 5
+- Time Estimate: 3 days
+```
+
+## Story Types
+
+### Feature Story
+Use for new functionality or significant enhancements.
+
+### Bug Story
+Use for addressing defects.
+
+```markdown
+# Story: PYERP-124 - Fix Product Image Integration Error
+
+## Description
+As a user
+I want product images to load correctly
+So that I can see the products I'm working with
+
+## Background
+Users have reported that product images fail to load approximately 20% of the time when viewing product details. Error logs indicate timeout issues with the external image database API.
+
+## Acceptance Criteria
+1. Given I am viewing a product detail page
+   When the external image API is slow
+   Then the system should retry the request up to 3 times
+
+2. Given I am viewing a product detail page
+   When the external image API is unavailable
+   Then the system should display a placeholder image and show an error message
+
+## Technical Requirements
+- [ ] Implement retry logic for image API requests
+- [ ] Add proper timeout handling
+- [ ] Implement fallback to placeholder images
+- [ ] Add error logging for failed requests
+
+## Test Scenarios
+1. API Timeout
+   - Setup: Configure mock API with delayed response
+   - Steps: Load product detail page
+   - Expected: System should retry and eventually load image
+
+## Estimation
+- Story Points: 3
+- Time Estimate: 1 day
+```
+
+### Refactoring Story
+Use for code improvement without changing functionality.
+
+### Technical Debt Story
+Use for addressing technical debt issues.
+
+## Story Workflow
+1. Create the story using this template
+2. Review with relevant stakeholders
+3. Prioritize in the backlog
+4. Assign for implementation
+5. Develop and test according to criteria
+6. Review and validate
+7. Close the story

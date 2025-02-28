@@ -1,0 +1,491 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: This document establishes standardized Git workflows and best practices for the Inventory Management System. It ensures consistent version control practices, making it easier to track changes, manage releases, and collaborate effectively across the team.
+globs: 
+---
+# Git Workflow Standards for Maler Zeiterfassung
+
+## Overview
+This document establishes standardized Git workflows and best practices for the Maler Zeiterfassung (Painter Time Tracking System). It ensures consistent version control practices across the team.
+
+## Branch Strategy
+
+### 1. Main Branches
+- `main`: Production-ready code
+- `develop`: Integration branch for features
+- `staging`: Pre-production testing
+
+### 2. Supporting Branches
+- `feature/*`: New features
+- `bugfix/*`: Bug fixes
+- `hotfix/*`: Production fixes
+- `release/*`: Release preparation
+
+## Commit Messages
+
+### 1. Format
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### 2. Types
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation
+- `style`: Formatting
+- `refactor`: Code restructuring
+- `test`: Adding tests
+- `chore`: Maintenance
+
+### 3. Examples
+```
+feat(time-tracking): add break time management
+
+- Add break start/end time inputs
+- Implement break duration calculation
+- Add validation for overlapping breaks
+
+Closes #123
+```
+
+```
+fix(validation): correct overtime calculation
+
+- Fix logic for calculating overtime hours
+- Add validation for maximum daily hours
+- Update error messages
+
+Fixes #456
+```
+
+## Workflow Guidelines
+
+### 1. Feature Development
+```bash
+# Create feature branch
+git checkout -b feature/break-tracking develop
+
+# Make changes and commit
+git add .
+git commit -m "feat(time-tracking): implement break tracking"
+
+# Push to remote
+git push origin feature/break-tracking
+
+# Create pull request to develop
+```
+
+### 2. Bug Fixes
+```bash
+# Create bugfix branch
+git checkout -b bugfix/overtime-calc develop
+
+# Fix and commit
+git add .
+git commit -m "fix(calculation): correct overtime formula"
+
+# Push and create PR
+git push origin bugfix/overtime-calc
+```
+
+### 3. Hotfixes
+```bash
+# Create hotfix branch from main
+git checkout -b hotfix/validation-error main
+
+# Fix and commit
+git add .
+git commit -m "fix(validation): prevent invalid time entries"
+
+# Merge to main and develop
+git checkout main
+git merge hotfix/validation-error
+git checkout develop
+git merge hotfix/validation-error
+```
+
+## Pull Requests
+
+### 1. Template
+```markdown
+## Description
+Brief description of changes
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation update
+
+## Testing
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] Manually tested
+
+## Checklist
+- [ ] Code follows style guide
+- [ ] Documentation updated
+- [ ] Tests passing
+- [ ] No linting errors
+```
+
+### 2. Review Process
+1. Code review by at least one team member
+2. All tests must pass
+3. No linting errors
+4. Documentation updated
+5. Conflicts resolved
+
+## Version Control
+
+### 1. Versioning
+- Follow semantic versioning (MAJOR.MINOR.PATCH)
+- Tag releases in Git
+- Update version in setup.py/package.json
+
+### 2. Release Process
+1. Create release branch
+2. Update version numbers
+3. Update changelog
+4. Create pull request
+5. Merge to main
+6. Tag release
+
+## Best Practices
+
+### 1. General
+- Keep commits atomic
+- Write clear commit messages
+- Pull before pushing
+- Resolve conflicts locally
+- Don't commit directly to main
+
+### 2. Code Review
+- Review for functionality
+- Check code style
+- Verify tests
+- Look for security issues
+- Consider performance
+
+### 3. Branch Management
+- Delete merged branches
+- Keep branches up to date
+- Use meaningful branch names
+- Limit branch lifetime
+
+## Git Configuration
+
+### 1. Global Settings
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+git config --global core.editor "code --wait"
+```
+
+### 2. Project Settings
+```bash
+# Git attributes
+*.py diff=python
+*.md diff=markdown
+
+# Git ignore
+__pycache__/
+*.pyc
+.env
+.venv/
+```
+
+## CI/CD Integration
+
+### 1. GitHub Actions
+```yaml
+name: Test and Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Run tests
+        run: |
+          pip install -r requirements.txt
+          pytest
+```
+
+### 2. Pre-commit Hooks
+```yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/psf/black
+    rev: 21.5b2
+    hooks:
+      - id: black
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 3.9.2
+    hooks:
+      - id: flake8
+```
+
+# Git Rules
+
+- Make the head / title of the commit message brief
+- Include elaborate details in the body of the commit message
+- Always follow the conventional commit message format
+- Add two newlines after the commit message title
+- Unless specified otherwise - use `git add .`
+
+## Branch Naming
+
+- Use descriptive, hyphen-separated names
+
+- Follow the pattern: `type/description`
+
+- Types:
+
+  - `feature/` - New features
+
+  - `bugfix/` - Bug fixes
+
+  - `hotfix/` - Urgent fixes
+
+  - `release/` - Release branches
+
+  - `refactor/` - Code refactoring
+
+  - `test/` - Test additions/modifications
+
+
+
+Examples:
+
+```
+
+feature/add-stock-validation
+
+bugfix/fix-negative-stock
+
+hotfix/security-patch
+
+release/v1.2.0
+
+refactor/optimize-database-queries
+
+test/add-movement-tests
+
+```
+
+
+
+## Commit Messages
+
+- Use clear, descriptive messages
+
+- Follow the conventional commits specification
+
+- Format: `type(scope): description`
+
+- Types:
+
+  - `feat:` - New features
+
+  - `fix:` - Bug fixes
+
+  - `docs:` - Documentation changes
+
+  - `style:` - Code style changes
+
+  - `refactor:` - Code refactoring
+
+  - `test:` - Test changes
+
+  - `chore:` - Maintenance tasks
+
+
+
+Examples:
+
+```
+
+feat(stock): add validation for negative quantities
+
+fix(picklist): prevent duplicate entries
+
+docs(api): update endpoint documentation
+
+style(validation): format error messages
+
+refactor(db): optimize query performance
+
+test(movement): add edge case tests
+
+chore(deps): update dependencies
+
+```
+
+
+
+## Pull Requests
+
+- Create descriptive titles
+
+- Include detailed descriptions
+
+- Reference related issues
+
+- Add appropriate labels
+
+- Request reviews from team members
+
+- Include test results
+
+- Update documentation
+
+
+
+## Code Review
+
+- Review all changes before merging
+
+- Check for:
+
+  - Code quality
+
+  - Test coverage
+
+  - Documentation updates
+
+  - Security concerns
+
+  - Performance impact
+
+- Provide constructive feedback
+
+- Address all comments
+
+
+
+## Protected Branches
+
+- `main` - Production code
+
+- `develop` - Development code
+
+- Require pull request reviews
+
+- Enable branch protection rules
+
+- Enforce status checks
+
+
+
+## Git Hooks
+
+- Use pre-commit hooks for:
+
+  - Code formatting
+
+  - Linting
+
+  - Type checking
+
+  - Test running
+
+- Use pre-push hooks for:
+
+  - Full test suite
+
+  - Build verification
+
+
+
+## Versioning
+
+- Follow semantic versioning
+
+- Format: `MAJOR.MINOR.PATCH`
+
+- Tag all releases
+
+- Update version in:
+
+  - `setup.py`
+
+  - `package.json`
+
+  - Documentation
+
+
+
+## Git Ignore
+
+- Ignore environment-specific files
+
+- Ignore build artifacts
+
+- Ignore system files
+
+- Ignore sensitive data
+
+- Example:
+
+  ```gitignore
+
+  venv/
+
+  *.pyc
+
+  __pycache__/
+
+  .env
+
+  .idea/
+
+  *.log
+
+  ```
+
+
+
+## Workflow
+
+1. Create feature branch
+
+2. Make changes
+
+3. Run tests
+
+4. Commit changes
+
+5. Push to remote
+
+6. Create pull request
+
+7. Review code
+
+8. Merge to develop
+
+9. Delete feature branch 

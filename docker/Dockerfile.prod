@@ -23,6 +23,13 @@ RUN pip install --upgrade pip \
 
 # Copy requirements files
 COPY requirements/ /app/requirements/
+COPY scripts/check_dependencies.py /app/scripts/check_dependencies.py
+
+# Run dependency scanner in non-interactive mode and update requirements if needed
+COPY pyerp/ /app/pyerp/
+RUN echo "Running dependency scanner..." && \
+    python -c "import os; os.makedirs('scripts', exist_ok=True)" && \
+    python scripts/check_dependencies.py > /app/dependency_scan.log || true
 
 # Alternative approach: directly install from the .in file
 RUN pip install --upgrade pip && \
@@ -45,6 +52,10 @@ RUN pip install --upgrade pip && \
     echo "Installing mysql packages..." && \
     pip install "mysqlclient>=2.2.0,<2.3.0" "pymysql>=1.1.0,<1.2.0"
 
+# Verify critical packages are installed
+RUN echo "Verifying critical packages..." && \
+    pip install "django-redis>=5.4.0,<5.5.0" && \
+    pip install "redis>=5.0.0,<5.1.0"
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \
     pip freeze > requirements/production.txt && \

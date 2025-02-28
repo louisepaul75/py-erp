@@ -1,0 +1,386 @@
+---
+description: This document defines the coding style standards for the pyERP system. It ensures consistent code formatting and structure across the entire codebase, making it easier to read, maintain, and work with for both developers and AI tools.
+globs: 
+---
+# Coding Style Guide for pyERP
+
+## Python Code Style
+
+### 1. General Guidelines
+- Follow PEP 8 style guide
+- Use 4 spaces for indentation
+- Maximum line length: 88 characters (Black formatter standard)
+- Use meaningful variable and function names
+- Use type hints for all function parameters and return values
+
+### 2. Naming Conventions
+```python
+# Classes: PascalCase
+class ProductInventory:
+    pass
+
+# Functions and variables: snake_case
+def calculate_stock_value(product_id: int, warehouse_id: int) -> Decimal:
+    stock_quantity = get_product_quantity(product_id, warehouse_id)
+    return stock_quantity * get_product_cost(product_id)
+
+# Constants: UPPER_CASE
+MAX_ORDER_QUANTITY = 1000
+DEFAULT_TAX_RATE = Decimal('0.19')
+```
+
+### 3. File Organization
+```python
+"""
+Module docstring explaining purpose
+"""
+
+# Standard library imports
+from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import List, Optional, Dict
+
+# Third-party imports
+from django.db import models
+from django.contrib.auth.models import User
+from rest_framework import serializers
+
+# Local imports
+from .models import Product, StockMovement
+from .utils import calculate_value
+
+# Constants
+DEFAULT_WAREHOUSE_ID = 1
+STOCK_MOVEMENT_TYPES = ('receipt', 'issue', 'transfer', 'adjustment')
+
+# Classes and functions
+class ProductManager:
+    # Class implementation
+    
+def get_available_stock(product_id: int, warehouse_id: int) -> int:
+    # Function implementation
+```
+
+### 4. Docstring Style (Google Style)
+```python
+def calculate_reorder_point(product_id: int, lead_time_days: int = 14) -> int:
+    """Calculate the reorder point for a product.
+    
+    The reorder point is calculated based on average daily usage
+    and the lead time for replenishment.
+    
+    Args:
+        product_id: ID of the product
+        lead_time_days: Number of days it takes to receive new stock
+        
+    Returns:
+        The calculated reorder point quantity
+        
+    Raises:
+        ProductNotFoundError: If product_id doesn't exist
+        NegativeLeadTimeError: If lead_time_days is negative
+    """
+```
+
+### 5. Imports
+- Group imports in the following order:
+  1. Standard library imports
+  2. Third-party imports
+  3. Local application imports
+- Use absolute imports for clarity
+- Avoid wildcard imports (`from module import *`)
+
+### 6. Comments
+- Use comments sparingly and only when necessary
+- Use comments to explain "why", not "what"
+- Keep comments up-to-date with code changes
+- Use TODO comments for future improvements
+
+## Django Style Guidelines
+
+### 1. Models
+```python
+class Product(models.Model):
+    """Model representing a product in the inventory system."""
+    
+    # Choices as class variables
+    PRODUCT_TYPES = [
+        ('RAW', 'Raw Material'),
+        ('MFG', 'Manufactured'),
+        ('FG', 'Finished Good'),
+    ]
+    
+    # Fields
+    sku = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    product_type = models.CharField(max_length=3, choices=PRODUCT_TYPES, default='FG')
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    cost = models.DecimalField(max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(default=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Metadata
+    class Meta:
+        ordering = ['sku']
+        indexes = [models.Index(fields=['sku']), models.Index(fields=['name'])]
+        verbose_name = 'Product'
+        verbose_name_plural = 'Products'
+    
+    # String representation
+    def __str__(self):
+        return f"{self.sku} - {self.name}"
+    
+    # Custom methods
+    def get_available_stock(self, warehouse_id=None):
+        """Get available stock quantity."""
+        # Method implementation
+```
+
+### 2. Views
+```python
+# Function-based view with type hints
+def product_detail(request: HttpRequest, product_id: int) -> HttpResponse:
+    """Display a product detail page."""
+    product = get_object_or_404(Product, id=product_id)
+    context = {
+        'product': product,
+        'stock_items': product.stockitem_set.filter(quantity__gt=0),
+    }
+    return render(request, 'products/detail.html', context)
+
+# Class-based view
+class ProductListView(ListView):
+    """List view for products."""
+    model = Product
+    template_name = 'products/list.html'
+    context_object_name = 'products'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        """Filter products by category if provided."""
+        queryset = super().get_queryset().filter(is_active=True)
+        category = self.request.GET.get('category')
+        if category:
+            queryset = queryset.filter(category__slug=category)
+        return queryset
+```
+
+### 3. URLs
+```python
+from django.urls import path
+from . import views
+
+app_name = 'products'
+
+urlpatterns = [
+    # Use named URLs
+    path('', views.ProductListView.as_view(), name='list'),
+    path('<int:product_id>/', views.product_detail, name='detail'),
+    path('<int:product_id>/edit/', views.ProductUpdateView.as_view(), name='edit'),
+    path('category/<slug:category_slug>/', views.CategoryProductListView.as_view(), name='category'),
+]
+```
+
+### 4. Forms
+```python
+from django import forms
+from .models import Product
+
+class ProductForm(forms.ModelForm):
+    """Form for creating and editing products."""
+    
+    # Add extra fields or validation
+    confirm_price = forms.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        help_text="Confirm the product price"
+    )
+    
+    class Meta:
+        model = Product
+        fields = ['sku', 'name', 'description', 'category', 'price', 'cost', 'is_active']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def clean(self):
+        """Validate that price and confirm_price match."""
+        cleaned_data = super().clean()
+        price = cleaned_data.get('price')
+        confirm_price = cleaned_data.get('confirm_price')
+        
+        if price and confirm_price and price != confirm_price:
+            raise forms.ValidationError("Price and confirm price must match.")
+        
+        return cleaned_data
+```
+
+### 5. REST API
+```python
+from rest_framework import serializers
+from .models import Product
+
+class ProductSerializer(serializers.ModelSerializer):
+    """Serializer for the Product model."""
+    
+    stock_count = serializers.IntegerField(read_only=True)
+    category_name = serializers.ReadOnlyField(source='category.name')
+    
+    class Meta:
+        model = Product
+        fields = [
+            'id', 'sku', 'name', 'description', 'category', 'category_name',
+            'price', 'cost', 'is_active', 'stock_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+        
+    def validate_sku(self, value):
+        """Ensure SKU is unique and properly formatted."""
+        # Validation implementation
+        return value
+```
+
+## HTML/Template Style
+
+### 1. General Guidelines
+- Use consistent indentation (2 spaces)
+- Keep templates modular with includes and blocks
+- Use meaningful variable and block names
+- Comment complex sections
+
+### 2. Structure
+```html
+{% extends "base.html" %}
+
+{% block title %}Product Detail - {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="product-detail">
+  <h1>{{ product.name }}</h1>
+  
+  {% if product.image %}
+    <img src="{{ product.image.url }}" alt="{{ product.name }}">
+  {% else %}
+    <div class="no-image">No image available</div>
+  {% endif %}
+  
+  <div class="product-info">
+    <p><strong>SKU:</strong> {{ product.sku }}</p>
+    <p><strong>Price:</strong> {{ product.price }}</p>
+    <p><strong>Category:</strong> {{ product.category.name }}</p>
+    
+    {% if product.description %}
+      <div class="description">
+        <h2>Description</h2>
+        <p>{{ product.description|linebreaks }}</p>
+      </div>
+    {% endif %}
+  </div>
+  
+  {% include "products/partials/stock_info.html" with product=product %}
+</div>
+{% endblock %}
+```
+
+## JavaScript/CSS Style
+
+### 1. JavaScript
+- Use modern ES6+ syntax
+- Add appropriate comments
+- Follow consistent naming conventions
+- Use proper error handling
+
+### 2. CSS/SCSS
+- Use consistent naming conventions
+- Organize styles logically
+- Use variables for common values
+- Comment complex selectors
+
+## Testing Style
+
+### 1. Unit Tests
+```python
+import pytest
+from decimal import Decimal
+from django.test import TestCase
+from .models import Product, Category
+
+class TestProductModel(TestCase):
+    """Tests for the Product model."""
+    
+    def setUp(self):
+        """Set up test data."""
+        self.category = Category.objects.create(name='Test Category')
+        self.product = Product.objects.create(
+            sku='TEST001',
+            name='Test Product',
+            description='Test description',
+            category=self.category,
+            price=Decimal('99.99'),
+            cost=Decimal('50.00'),
+            is_active=True
+        )
+    
+    def test_product_creation(self):
+        """Test that a product can be created."""
+        self.assertEqual(self.product.sku, 'TEST001')
+        self.assertEqual(self.product.name, 'Test Product')
+        self.assertEqual(self.product.price, Decimal('99.99'))
+        
+    def test_get_available_stock(self):
+        """Test the get_available_stock method."""
+        # Test implementation
+```
+
+### 2. Integration Tests
+```python
+class TestProductAPI(APITestCase):
+    """Tests for the Product API."""
+    
+    def setUp(self):
+        """Set up test data and authenticate."""
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.client.force_authenticate(user=self.user)
+        
+        self.category = Category.objects.create(name='Test Category')
+        self.product = Product.objects.create(
+            sku='TEST001',
+            name='Test Product',
+            category=self.category,
+            price=Decimal('99.99'),
+            is_active=True
+        )
+    
+    def test_get_product_list(self):
+        """Test retrieving a list of products."""
+        url = reverse('api:product-list')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['sku'], 'TEST001')
+```
+
+## Special Considerations for pyERP
+
+### 1. Legacy API Integration
+- Clearly document any code interacting with the legacy system
+- Use consistent error handling patterns
+- Add detailed logging for troubleshooting
+- Include environment-specific considerations
+
+### 2. Database Queries
+- Optimize for performance where necessary
+- Use select_related and prefetch_related appropriately
+- Document complex queries
+- Add indexes for frequently accessed fields
+
+### 3. Environment Management
+- Use environment variables for configuration
+- Follow the settings pattern (base, development, production)
+- Avoid hardcoded values
+- Document environment requirements 

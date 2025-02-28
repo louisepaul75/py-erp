@@ -1,0 +1,275 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: This document outlines the documentation standards for the Inventory Management System. It provides guidelines for writing clear, consistent, and maintainable documentation across the codebase. These standards ensure that all team members and AI tools can easily understand and work with the code.
+globs: 
+---
+# Documentation Standards for Maler Zeiterfassung
+
+## Overview
+This document outlines documentation standards for the Maler Zeiterfassung (Painter Time Tracking System). These standards ensure clear, consistent, and maintainable documentation across the codebase.
+
+## Code Documentation
+
+### Function Documentation
+```python
+def calculate_work_hours(start_time: datetime, end_time: datetime, breaks: List[Break]) -> float:
+    """
+    Calculate the total work hours for a time period, accounting for breaks.
+    
+    Args:
+        start_time (datetime): The start time of the work period
+        end_time (datetime): The end time of the work period
+        breaks (List[Break]): List of break periods taken
+        
+    Returns:
+        float: Total work hours excluding breaks
+        
+    Raises:
+        ValidationError: If end_time is before start_time or if breaks overlap
+    """
+```
+
+### Class Documentation
+```python
+class TimeEntry:
+    """
+    Represents a time entry in the system.
+    
+    Attributes:
+        painter_id (int): ID of the painter
+        project_id (int): ID of the project
+        start_time (datetime): Start time of work
+        end_time (datetime): End time of work
+        breaks (List[Break]): List of breaks taken
+        
+    Methods:
+        calculate_duration(): Calculate total duration excluding breaks
+        validate(): Validate the time entry data
+    """
+```
+
+## File Header Template
+```python
+"""
+Maler Zeiterfassung - Time Entry Management Module
+
+This module handles the creation, validation, and management of time entries
+in the painting time tracking system.
+
+Created: YYYY-MM-DD
+Last Modified: YYYY-MM-DD
+Author: [Author Name]
+"""
+```
+
+## Documentation Types
+
+### 1. Code Documentation
+- Clear and concise docstrings
+- Type hints for all functions
+- Inline comments for complex logic
+- Examples for non-obvious usage
+
+### 2. API Documentation
+- Endpoint descriptions
+- Request/response formats
+- Authentication requirements
+- Error codes and handling
+
+### 3. User Documentation
+- Setup instructions
+- User guides
+- Feature documentation
+- Troubleshooting guides
+
+## Best Practices
+
+1. Keep documentation up to date
+2. Use clear, consistent terminology
+3. Include examples for complex features
+4. Document assumptions and limitations
+5. Maintain a changelog
+
+## Validation Rules
+- Document all validation rules
+- Include error messages
+- Specify data constraints
+- Document edge cases
+
+## Testing Documentation
+- Document test scenarios
+- Include test data examples
+- Document mocking strategies
+- Explain test coverage requirements
+
+## Maintenance
+- Regular documentation reviews
+- Update on feature changes
+- Remove obsolete documentation
+- Keep examples current
+
+# Documentation Guidelines
+
+
+
+## Description
+
+This document outlines the documentation standards for the Inventory Management System. It provides guidelines for writing clear, consistent, and maintainable documentation across the codebase. These standards ensure that all team members and AI tools can easily understand and work with the code.
+
+
+
+Key aspects covered:
+
+- File and module documentation
+
+- Function and class documentation
+
+- Database model documentation
+
+- API documentation
+
+- Code comments and inline documentation
+
+- Test documentation
+
+
+
+## General Principles
+
+- All code must be documented in English
+
+- Documentation should be clear, concise, and actionable
+
+- Keep documentation up-to-date with code changes
+
+
+
+## File Documentation
+
+- Each file should start with a docstring describing its purpose
+
+- Include any important notes about dependencies or requirements
+
+- List any assumptions or limitations
+
+
+
+## Function Documentation
+
+```python
+
+def function_name(param1: type, param2: type) -> return_type:
+
+    """
+
+    Brief description of function purpose.
+
+
+
+    Args:
+
+        param1: Description of first parameter
+
+        param2: Description of second parameter
+
+
+
+    Returns:
+
+        Description of return value
+
+
+
+    Raises:
+
+        ExceptionType: Description of when/why exception is raised
+
+    """
+
+```
+
+
+
+## Class Documentation
+
+```python
+
+class ClassName:
+
+    """
+
+    Brief description of class purpose.
+
+
+
+    Attributes:
+
+        attr1: Description of first attribute
+
+        attr2: Description of second attribute
+
+    """
+
+```
+
+
+
+## Model Documentation
+
+- Document all database models with field descriptions
+
+- Include relationships between models
+
+- Document any constraints or validations
+
+- Explain JSON structures for complex fields
+
+
+
+## API Documentation
+
+- Document all API endpoints
+
+- Include request/response formats
+
+- List possible error codes and meanings
+
+- Provide example requests and responses
+
+
+
+## Comments
+
+- Use comments to explain complex logic
+
+- Avoid obvious comments that don't add value
+
+- Keep comments up-to-date with code changes
+
+- Use TODO comments for future improvements
+
+
+
+## Validation Documentation
+
+- Document all validation rules
+
+- Explain error messages and their meaning
+
+- Include examples of valid/invalid inputs
+
+
+
+## Testing Documentation
+
+- Document test cases and their purpose
+
+- Explain test data setup and teardown
+
+- Document any test environment requirements
+
+- Include examples of test execution 

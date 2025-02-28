@@ -12,6 +12,12 @@ if ($running) {
     docker rm $CONTAINER_NAME
 }
 
+# Run dependency scanner if it exists
+if (Test-Path "scripts/update_dependencies.py") {
+    Write-Host "Running dependency scanner to ensure all requirements are up-to-date..." -ForegroundColor Cyan
+    python scripts/update_dependencies.py
+}
+
 Write-Host "Rebuilding Docker image..."
 docker build -t $IMAGE_NAME -f docker/Dockerfile.minimal .
 
