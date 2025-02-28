@@ -13,14 +13,54 @@ NC='\033[0m' # No Color
 # Configuration
 WEB_CONTAINER="pyerp-web"  # Your Django container name
 NGINX_CONTAINER="pyerp-nginx"  # Your Nginx container name
+BRANCH="main"  # Default branch to pull from
 
-# Check if we need to clean up Docker resources first
-if [ "$1" = "--no-prune" ]; then
-    echo -e "${YELLOW}Skipping Docker cleanup${NC}"
-    SKIP_PRUNE=true
-else
-    SKIP_PRUNE=false
-fi
+# Function to display help information
+display_help() {
+  echo -e "${CYAN}===== Docker Rebuild with Nginx - Help =====${NC}"
+  echo -e "${YELLOW}Usage: $0 [OPTIONS]${NC}"
+  echo -e "${YELLOW}Options:${NC}"
+  echo -e "  ${YELLOW}--help                Display this help message${NC}"
+  echo -e "  ${YELLOW}--branch=BRANCH       Specify which Git branch to pull from (default: main)${NC}"
+  echo -e "  ${YELLOW}--no-prune            Skip Docker resource cleanup even if space is low${NC}"
+  echo -e "${CYAN}===== Examples =====${NC}"
+  echo -e "  ${YELLOW}$0 --branch=develop   Pull from develop branch and rebuild containers${NC}"
+  echo -e "  ${YELLOW}$0 --no-prune         Skip Docker cleanup${NC}"
+  echo -e "${CYAN}===== Notes =====${NC}"
+  echo -e "  ${YELLOW}This script will:${NC}"
+  echo -e "  ${YELLOW}1. Stop and remove existing containers${NC}"
+  echo -e "  ${YELLOW}2. Pull the latest code from GitHub (using SSH)${NC}"
+  echo -e "  ${YELLOW}3. Build Django and Nginx containers${NC}"
+  echo -e "  ${YELLOW}4. Start all containers${NC}"
+  exit 0
+}
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --help)
+      display_help
+      ;;
+    --no-prune)
+      SKIP_PRUNE=true
+      shift
+      ;;
+    --branch=*)
+      BRANCH="${1#*=}"
+      shift
+      ;;
+    *)
+      echo -e "${YELLOW}Unknown option: $1${NC}"
+      echo -e "${YELLOW}Use --help for available options${NC}"
+      shift
+      ;;
+  esac
+done
+
+# Show configuration
+echo -e "${CYAN}===== Docker Deployment Configuration =====${NC}"
+echo -e "${YELLOW}Branch: $BRANCH${NC}"
+echo -e "${YELLOW}Skip pruning: ${SKIP_PRUNE:-false}${NC}"
 
 # Check if we're low on disk space
 LOW_SPACE=false
@@ -149,12 +189,97 @@ echo -e "  ${GREEN}✓ Containers successfully stopped and removed${NC}"
 
 # Step 2: Pull latest code from GitHub
 echo -e "\n${GREEN}[2/5] Pulling latest code from GitHub...${NC}"
-if git pull; then
-    echo -e "  ${GREEN}✓ Latest code pulled successfully${NC}"
+
+# Function to check and fix SSH setup if needed
+check_ssh_git_connection() {
+    # Get the current repository URL
+    REPO_URL=$(git config --get remote.origin.url)
+    
+    # Only check if it's using SSH format
+    if [[ $REPO_URL == git@* ]]; then
+        echo -e "  ${YELLOW}Using SSH for GitHub: $REPO_URL${NC}"
+        
+        # Try SSH agent - see if we have any keys loaded
+        if ! ssh-add -l &>/dev/null; then
+            echo -e "  ${YELLOW}No SSH keys found in ssh-agent.${NC}"
+            echo -e "  ${YELLOW}Checking for SSH key files...${NC}"
+            
+            # Look for common SSH key files
+            if [ -f ~/.ssh/id_rsa ] || [ -f ~/.ssh/id_ed25519 ]; then
+                echo -e "  ${GREEN}SSH key files found.${NC}"
+                echo -e "  ${YELLOW}Adding SSH key to agent...${NC}"
+                
+                # Start ssh-agent if not running
+                eval "$(ssh-agent -s)" &>/dev/null
+                
+                # Try to add default keys
+                if [ -f ~/.ssh/id_rsa ]; then
+                    ssh-add ~/.ssh/id_rsa &>/dev/null
+                fi
+                
+                if [ -f ~/.ssh/id_ed25519 ]; then
+                    ssh-add ~/.ssh/id_ed25519 &>/dev/null
+                fi
+                
+                # Check if successful
+                if ssh-add -l &>/dev/null; then
+                    echo -e "  ${GREEN}SSH key added to agent.${NC}"
+                else
+                    echo -e "  ${RED}Failed to add SSH key to agent.${NC}"
+                    echo -e "  ${YELLOW}SSH troubleshooting steps:${NC}"
+                    echo -e "  ${YELLOW}1. Ensure your SSH key is correctly set up with GitHub${NC}"
+                    echo -e "  ${YELLOW}2. Run: ssh-keygen -t ed25519 -C \"your_email@example.com\"${NC}"
+                    echo -e "  ${YELLOW}3. Add the key to GitHub: https://github.com/settings/keys${NC}"
+                    echo -e "  ${YELLOW}4. Run: ssh-add ~/.ssh/id_ed25519${NC}"
+                    echo -e "  ${YELLOW}5. Test connection: ssh -T git@github.com${NC}"
+                fi
+            else
+                echo -e "  ${RED}No SSH key files found.${NC}"
+                echo -e "  ${YELLOW}Please generate SSH keys with:${NC}"
+                echo -e "  ${YELLOW}ssh-keygen -t ed25519 -C \"your_email@example.com\"${NC}"
+                echo -e "  ${YELLOW}Then add to GitHub: https://github.com/settings/keys${NC}"
+            fi
+        else
+            echo -e "  ${GREEN}SSH keys found in ssh-agent.${NC}"
+        fi
+        
+        # Try a basic SSH connection test to GitHub
+        echo -e "  ${YELLOW}Testing connection to GitHub...${NC}"
+        if ssh -T git@github.com -o StrictHostKeyChecking=no -o BatchMode=yes 2>&1 | grep -q "success"; then
+            echo -e "  ${GREEN}SSH connection to GitHub successful.${NC}"
+        else
+            echo -e "  ${RED}Cannot connect to GitHub via SSH.${NC}"
+            echo -e "  ${YELLOW}Make sure your SSH key is added to your GitHub account.${NC}"
+        fi
+    else
+        # Using HTTPS or other protocol
+        echo -e "  ${GREEN}Not using SSH URL: $REPO_URL${NC}"
+    fi
+}
+
+# Check SSH setup
+check_ssh_git_connection
+
+# Now try to pull the latest code
+echo -e "  ${YELLOW}Pulling from branch: $BRANCH${NC}"
+if git pull origin $BRANCH; then
+    echo -e "  ${GREEN}✓ Latest code pulled successfully from $BRANCH${NC}"
 else
-    echo -e "  ${RED}✗ Error pulling code${NC}"
-    echo -e "  ${YELLOW}You may need to stash or commit your local changes first${NC}"
-    exit 1
+    echo -e "  ${RED}✗ Error pulling code from $BRANCH${NC}"
+    echo -e "  ${YELLOW}SSH authentication failed. Please check your SSH keys.${NC}"
+    echo -e "  ${YELLOW}You may need to:${NC}"
+    echo -e "  ${YELLOW}1. Add your SSH key to the ssh-agent: ssh-add ~/.ssh/id_rsa${NC}"
+    echo -e "  ${YELLOW}2. Make sure your SSH key is added to your GitHub account${NC}"
+    echo -e "  ${YELLOW}3. Test with: ssh -T git@github.com${NC}"
+    echo -e "  ${YELLOW}4. Stash or commit your local changes first${NC}"
+    
+    # Ask if user wants to continue
+    read -p "  Continue with deployment anyway? (y/n): " continue_anyway
+    if [[ "$continue_anyway" != "y" && "$continue_anyway" != "Y" ]]; then
+        echo -e "  ${RED}Aborting deployment.${NC}"
+        exit 1
+    fi
+    echo -e "  ${YELLOW}Continuing without pulling latest code...${NC}"
 fi
 
 # Step 3: Build Django container
