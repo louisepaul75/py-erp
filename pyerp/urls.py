@@ -62,7 +62,7 @@ urlpatterns = [
     # Uncomment these as the app URLs are implemented
     # path('api/core/', include('pyerp.core.urls')),
     path('api/products/', include('pyerp.products.api_urls')),
-    # path('api/sales/', include('pyerp.sales.urls')),
+    path('api/sales/', include('pyerp.sales.urls')),
     # path('api/inventory/', include('pyerp.inventory.urls')),
     # path('api/production/', include('pyerp.production.urls')),
     # path('api/legacy-sync/', include('pyerp.legacy_sync.urls')),

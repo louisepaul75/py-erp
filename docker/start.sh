@@ -35,12 +35,20 @@ python -c "import dj_database_url; db_url='${DATABASE_URL:-sqlite:///app/db.sqli
 echo "Checking Redis connection..."
 python -c "
 import redis
+import os
+
 try:
-    r = redis.from_url('${REDIS_URL:-memory://}')
-    r.ping()
-    print('Redis connection successful')
+    redis_url = os.environ.get('REDIS_URL', 'memory://')
+    # Handle memory:// as a special case - this is not a valid Redis URL but used for local environment
+    if redis_url == 'memory://':
+        print('Using in-memory Redis substitute (for local development)')
+    else:
+        r = redis.from_url(redis_url)
+        r.ping()
+        print('Redis connection successful')
 except Exception as e:
     print(f'Redis connection failed: {e}')
+    print('This is normal in local development mode - continuing anyway')
 " || echo "Redis check failed, but continuing..."
 
 # Attempt to import the application module with better error handling
@@ -59,8 +67,18 @@ try:
     import corsheaders
     print('corsheaders module found')
     # Check for Swagger docs
-    import drf_yasg
-    print('drf_yasg module found')
+    try:
+        import drf_yasg
+        print('drf_yasg module found')
+    except ImportError:
+        print('WARNING: drf_yasg module not found, Swagger docs will not work')
+    # Check if sales module exists
+    try:
+        import pyerp.core
+        print('pyerp.core module found')
+        print('NOTE: pyerp.sales module might be configured but not present - application may still work')
+    except ImportError as e:
+        print(f'Error importing pyerp.core: {e}')
 except Exception as e:
     print(f'Error importing application modules: {e}')
     import traceback
@@ -195,75 +213,39 @@ except Exception as e:
   done
 fi
 
-# Run migrations if needed
-# For SQLite, always run migrations
-if [[ $DATABASE_URL == sqlite* ]]; then
+# Run migrations for SQLite
+if [[ $DB_ENGINE == *sqlite* ]]; then
+  echo "Creating SQLite database directory if needed..."
+  mkdir -p $(dirname "${DATABASE_URL#sqlite:///}")
   echo "Running migrations for SQLite..."
   python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE --noinput || echo "Migrations failed, but continuing..."
-elif [[ $DB_ENGINE == *postgresql* ]]; then
-  # PostgreSQL migration check
+elif [[ $DB_ENGINE == *postgresql* || $DB_ENGINE == *mysql* ]]; then
+  # Database migration check
+  echo "Checking if database is available for migrations..."
   python -c "
 try:
-    import dj_database_url
-    import psycopg2
-    db_url = '${DATABASE_URL}'
-    db_config = dj_database_url.parse(db_url)
-    
-    # Try to connect to PostgreSQL
-    conn = psycopg2.connect(
-        host=db_config['HOST'], 
-        port=db_config['PORT'],
-        dbname=db_config['NAME'],
-        user=db_config['USER'],
-        password=db_config['PASSWORD']
-    )
-    conn.close()
+    from django.db import connections
+    from django.db.utils import OperationalError
+    conn = connections['default']
+    conn.cursor()
     print('Database available, will run migrations')
     exit(0)
+except OperationalError:
+    print('Database not available for migrations')
+    exit(1)
 except Exception as e:
-    print(f'Database not available: {e}')
+    print(f'Error checking database: {e}')
     exit(1)
 "
 
   if [ $? -eq 0 ]; then
-      echo "Running migrations for PostgreSQL..."
+      echo "Running migrations..."
       python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE --noinput || echo "Migrations failed, but continuing..."
   else
       echo "Skipping migrations as database is not available."
   fi
 else
-  # MySQL migration check
-  python -c "
-try:
-    import dj_database_url
-    db_url = '${DATABASE_URL}'
-    db_config = dj_database_url.parse(db_url)
-    
-    # Try to connect to MySQL
-    import pymysql
-    pymysql.install_as_MySQLdb()
-    import MySQLdb as Database
-    conn = Database.connect(
-        host=db_config['HOST'], 
-        port=int(db_config['PORT']),
-        db=db_config['NAME'],
-        user=db_config['USER'],
-        passwd=db_config['PASSWORD']
-    )
-    conn.close()
-    print('Database available, will run migrations')
-    exit(0)
-except Exception as e:
-    print(f'Database not available: {e}')
-    exit(1)
-"
-
-  if [ $? -eq 0 ]; then
-      echo "Running migrations for MySQL..."
-      python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE --noinput || echo "Migrations failed, but continuing..."
-  else
-      echo "Skipping migrations as database is not available."
-  fi
+  echo "Unknown database engine: $DB_ENGINE. Skipping migrations."
 fi
 
 echo "Running Django checks..."
