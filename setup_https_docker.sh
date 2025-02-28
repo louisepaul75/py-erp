@@ -5,15 +5,18 @@
 # Create SSL directory if it doesn't exist
 mkdir -p ./docker/nginx/ssl
 
-# Generate self-signed certificates
+# Generate self-signed certificates without SAN extension
+# This simpler version will work for testing purposes
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout ./docker/nginx/ssl/server.key \
   -out ./docker/nginx/ssl/server.crt \
-  -subj "/CN=localhost" \
-  -addext "subjectAltName = DNS:localhost,DNS:yourdomain.com,IP:your_server_ip"
+  -subj "/CN=localhost"
 
 echo "SSL certificates generated successfully!"
-echo "Please replace 'yourdomain.com' and 'your_server_ip' in the script with your actual domain and IP"
+
+# Set proper permissions
+chmod 644 ./docker/nginx/ssl/server.crt
+chmod 600 ./docker/nginx/ssl/server.key
 
 # Display how to restart the Docker services
 echo ""
