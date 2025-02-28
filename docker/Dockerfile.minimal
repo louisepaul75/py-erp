@@ -23,7 +23,9 @@ RUN pip install --upgrade pip && \
     echo "Verifying Celery installation..." && \
     pip install celery redis django-celery-results django-celery-beat && \
     echo "Verifying logging packages..." && \
-    pip install python-json-logger structlog
+    pip install python-json-logger structlog && \
+    echo "Verifying django-filter..." && \
+    pip install django-filter
 
 # Copy application code
 COPY . .
@@ -31,8 +33,9 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/static /app/media /app/logs
 
-# Copy environment variables file
+# Copy environment variables file - can be overridden at runtime with -v
 COPY docker/docker.env /app/.env
+COPY docker/docker.local.env /app/.env.local
 
 # Copy startup script
 COPY docker/start.sh /app/start.sh

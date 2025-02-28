@@ -34,7 +34,9 @@ RUN pip install --upgrade pip && \
     echo "Verifying Celery installation..." && \
     pip install celery redis django-celery-results django-celery-beat && \
     echo "Verifying logging packages..." && \
-    pip install python-json-logger structlog
+    pip install python-json-logger structlog && \
+    echo "Verifying django-filter..." && \
+    pip install django-filter
 
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \
@@ -74,6 +76,7 @@ COPY --chown=appuser:appuser . .
 
 # Copy environment variables file
 COPY --chown=appuser:appuser docker/docker.env /app/.env
+COPY --chown=appuser:appuser docker/docker.local.env /app/.env.local
 
 # Copy startup script
 COPY --chown=appuser:appuser docker/start.sh /app/start.sh

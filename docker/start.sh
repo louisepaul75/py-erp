@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Check if we should use local environment (for development without external services)
+if [ "$USE_LOCAL_ENV" = "true" ]; then
+  echo "Using local environment settings..."
+  cp /app/.env.local /app/.env
+fi
+
 echo "Environment variables:"
 env | sort
 
@@ -43,7 +49,7 @@ except Exception as e:
 
 # Test database connectivity with retries
 echo "Testing database connectivity..."
-MAX_RETRIES=30
+MAX_RETRIES=5  # Reduced for local testing
 RETRY_INTERVAL=2
 RETRY_COUNT=0
 
@@ -83,10 +89,37 @@ except Exception as e:
       echo "Waiting $RETRY_INTERVAL seconds before retry..."
       sleep $RETRY_INTERVAL
     else
-      echo "Maximum number of retries reached. Continuing anyway but expect problems..."
+      echo "Database connection not available. This is normal when running locally or in CI."
+      echo "For a complete deployment, ensure the database is available and correctly configured."
+      break
     fi
   fi
 done
+
+# Optionally run migrations, but only if database is available
+if (python -c "
+try:
+    import psycopg2
+    db_url = '${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'
+    import dj_database_url
+    db_config = dj_database_url.parse(db_url)
+    conn = psycopg2.connect(
+        host=db_config['HOST'], 
+        port=db_config['PORT'],
+        dbname=db_config['NAME'],
+        user=db_config['USER'],
+        password=db_config['PASSWORD']
+    )
+    conn.close()
+    exit(0)
+except:
+    exit(1)
+"); then
+    echo "Database available, running migrations..."
+    python manage.py migrate --settings=$DJANGO_SETTINGS_MODULE --noinput || echo "Migrations failed, but continuing..."
+else
+    echo "Skipping migrations as database is not available."
+fi
 
 echo "Running Django checks..."
 python manage.py check --settings=$DJANGO_SETTINGS_MODULE || echo "Django checks failed, but continuing..."
