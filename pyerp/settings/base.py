@@ -38,11 +38,20 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'pyerp.core',
     'pyerp.products',
-    'pyerp.sales',
+    # Make sales optional to prevent crashes
+    # 'pyerp.sales',
     'pyerp.inventory',
     'pyerp.production',
     'pyerp.legacy_sync',
 ]
+
+# Try to import sales module - if it fails, we'll skip it
+try:
+    import pyerp.sales
+    LOCAL_APPS.insert(2, 'pyerp.sales')  # Insert at the same position as before
+    print("Sales module found and added to INSTALLED_APPS")
+except ImportError:
+    print("WARNING: Sales module could not be imported, skipping it in INSTALLED_APPS")
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 

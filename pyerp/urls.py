@@ -11,25 +11,34 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from django.views.generic import RedirectView
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 from rest_framework_simplejwt.views import (TokenObtainPairView,
                                             TokenRefreshView, TokenVerifyView)
 
-# Create the API schema view
-schema_view = get_schema_view(
-    openapi.Info(
-        title="pyERP API",
-        default_version='v1',
-        description="API for pyERP system",
-        terms_of_service="https://www.example.com/terms/",
-        contact=openapi.Contact(email="contact@example.com"),
-        license=openapi.License(name="BSD License"),
-    ),
-    public=True,
-    permission_classes=[permissions.IsAuthenticated],
-)
+# Check if drf_yasg is available
+try:
+    from drf_yasg import openapi
+    from drf_yasg.views import get_schema_view
+    
+    # Create the API schema view
+    schema_view = get_schema_view(
+        openapi.Info(
+            title="pyERP API",
+            default_version='v1',
+            description="API for pyERP system",
+            terms_of_service="https://www.example.com/terms/",
+            contact=openapi.Contact(email="contact@example.com"),
+            license=openapi.License(name="BSD License"),
+        ),
+        public=True,
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    
+    HAS_SWAGGER = True
+    print("Swagger documentation enabled")
+except ImportError:
+    HAS_SWAGGER = False
+    print("WARNING: drf_yasg not available, API documentation will be disabled")
 
 # Main URL patterns
 urlpatterns = [
@@ -54,22 +63,34 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
-    # API documentation
-    path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    
     # API endpoints
     # Uncomment these as the app URLs are implemented
     # path('api/core/', include('pyerp.core.urls')),
     path('api/products/', include('pyerp.products.api_urls')),
-    path('api/sales/', include('pyerp.sales.urls')),
-    # path('api/inventory/', include('pyerp.inventory.urls')),
-    # path('api/production/', include('pyerp.production.urls')),
-    # path('api/legacy-sync/', include('pyerp.legacy_sync.urls')),
     
     # Frontend URLs
     path('products/', include('pyerp.products.urls')),
 ]
+
+# Add Swagger documentation if available
+if HAS_SWAGGER:
+    urlpatterns.extend([
+        path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+        path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    ])
+
+# Conditionally include sales URLs
+try:
+    import pyerp.sales.urls
+    urlpatterns.append(path('api/sales/', include('pyerp.sales.urls')))
+    print("Sales URLs included")
+except ImportError:
+    print("WARNING: Sales module could not be imported, skipping URLs")
+
+# Commented out URLs for future use
+# path('api/inventory/', include('pyerp.inventory.urls')),
+# path('api/production/', include('pyerp.production.urls')),
+# path('api/legacy-sync/', include('pyerp.legacy_sync.urls')),
 
 # Serve static and media files in development
 if settings.DEBUG:

@@ -251,5 +251,19 @@ fi
 echo "Running Django checks..."
 python manage.py check --settings=$DJANGO_SETTINGS_MODULE || echo "Django checks failed, but continuing..."
 
-echo "Starting Gunicorn..."
-exec gunicorn pyerp.wsgi:application --bind 0.0.0.0:8000 --workers 3 --log-level debug 
+# Test WSGI application directly before launching gunicorn
+echo "Testing WSGI application directly..."
+python -c "
+try:
+    import pyerp.wsgi
+    print('WSGI application imported successfully')
+    app = pyerp.wsgi.application
+    print('WSGI application created successfully')
+except Exception as e:
+    print(f'Error importing WSGI application: {e}')
+    import traceback
+    traceback.print_exc()
+"
+
+echo "Starting Gunicorn with detailed error logging..."
+exec gunicorn pyerp.wsgi:application --bind 0.0.0.0:8000 --workers 2 --log-level debug --timeout 120 --capture-output --enable-stdio-inheritance 
