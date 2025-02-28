@@ -42,6 +42,7 @@ LOCAL_APPS = [
     'pyerp.inventory',
     'pyerp.production',
     'pyerp.legacy_sync',
+    'pyerp.direct_api',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
