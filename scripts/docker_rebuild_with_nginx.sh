@@ -199,48 +199,85 @@ check_ssh_git_connection() {
     if [[ $REPO_URL == git@* ]]; then
         echo -e "  ${YELLOW}Using SSH for GitHub: $REPO_URL${NC}"
         
+        # List SSH directory contents for debugging
+        echo -e "  ${YELLOW}Checking SSH directory contents:${NC}"
+        ls -la ~/.ssh/ 2>/dev/null || echo -e "  ${RED}Cannot access ~/.ssh directory${NC}"
+        
         # Try SSH agent - see if we have any keys loaded
+        echo -e "  ${YELLOW}Checking for keys in ssh-agent...${NC}"
         if ! ssh-add -l &>/dev/null; then
-            echo -e "  ${YELLOW}No SSH keys found in ssh-agent.${NC}"
+            echo -e "  ${RED}No SSH keys found in ssh-agent.${NC}"
             echo -e "  ${YELLOW}Checking for SSH key files...${NC}"
             
-            # Look for common SSH key files
-            if [ -f ~/.ssh/id_rsa ] || [ -f ~/.ssh/id_ed25519 ]; then
-                echo -e "  ${GREEN}SSH key files found.${NC}"
-                echo -e "  ${YELLOW}Adding SSH key to agent...${NC}"
+            # Create SSH directory if it doesn't exist
+            if [ ! -d ~/.ssh ]; then
+                echo -e "  ${YELLOW}Creating ~/.ssh directory...${NC}"
+                mkdir -p ~/.ssh
+                chmod 700 ~/.ssh
+            fi
+            
+            # Look for any SSH key files (expanded search)
+            SSH_KEYS=( $(find ~/.ssh -name "id_*" ! -name "*.pub" 2>/dev/null) )
+            
+            if [ ${#SSH_KEYS[@]} -gt 0 ]; then
+                echo -e "  ${GREEN}Found SSH key files:${NC}"
+                for key in "${SSH_KEYS[@]}"; do
+                    echo -e "  ${GREEN}- $key${NC}"
+                done
                 
+                echo -e "  ${YELLOW}Starting ssh-agent and adding keys...${NC}"
                 # Start ssh-agent if not running
-                eval "$(ssh-agent -s)" &>/dev/null
+                eval "$(ssh-agent -s)" || echo -e "  ${RED}Failed to start ssh-agent${NC}"
                 
-                # Try to add default keys
-                if [ -f ~/.ssh/id_rsa ]; then
-                    ssh-add ~/.ssh/id_rsa &>/dev/null
-                fi
-                
-                if [ -f ~/.ssh/id_ed25519 ]; then
-                    ssh-add ~/.ssh/id_ed25519 &>/dev/null
-                fi
+                # Try to add each key found
+                for key in "${SSH_KEYS[@]}"; do
+                    echo -e "  ${YELLOW}Adding key: $key${NC}"
+                    ssh-add "$key" || echo -e "  ${RED}Failed to add key: $key${NC}"
+                done
                 
                 # Check if successful
                 if ssh-add -l &>/dev/null; then
-                    echo -e "  ${GREEN}SSH key added to agent.${NC}"
+                    echo -e "  ${GREEN}SSH key(s) added to agent.${NC}"
                 else
-                    echo -e "  ${RED}Failed to add SSH key to agent.${NC}"
-                    echo -e "  ${YELLOW}SSH troubleshooting steps:${NC}"
-                    echo -e "  ${YELLOW}1. Ensure your SSH key is correctly set up with GitHub${NC}"
-                    echo -e "  ${YELLOW}2. Run: ssh-keygen -t ed25519 -C \"your_email@example.com\"${NC}"
-                    echo -e "  ${YELLOW}3. Add the key to GitHub: https://github.com/settings/keys${NC}"
-                    echo -e "  ${YELLOW}4. Run: ssh-add ~/.ssh/id_ed25519${NC}"
-                    echo -e "  ${YELLOW}5. Test connection: ssh -T git@github.com${NC}"
+                    echo -e "  ${RED}Failed to add SSH keys to agent.${NC}"
                 fi
             else
-                echo -e "  ${RED}No SSH key files found.${NC}"
-                echo -e "  ${YELLOW}Please generate SSH keys with:${NC}"
-                echo -e "  ${YELLOW}ssh-keygen -t ed25519 -C \"your_email@example.com\"${NC}"
-                echo -e "  ${YELLOW}Then add to GitHub: https://github.com/settings/keys${NC}"
+                echo -e "  ${RED}No SSH key files found in ~/.ssh/${NC}"
+                echo -e "  ${YELLOW}Would you like to generate a new SSH key? (y/n)${NC}"
+                read -p "  Generate new SSH key? " generate_key
+                
+                if [[ "$generate_key" == "y" || "$generate_key" == "Y" ]]; then
+                    echo -e "  ${YELLOW}Enter your email address:${NC}"
+                    read -p "  Email: " user_email
+                    
+                    echo -e "  ${YELLOW}Generating new SSH key...${NC}"
+                    ssh-keygen -t ed25519 -C "$user_email" || ssh-keygen -t rsa -b 4096 -C "$user_email"
+                    
+                    echo -e "  ${GREEN}SSH key generated. Adding to ssh-agent...${NC}"
+                    eval "$(ssh-agent -s)"
+                    
+                    # Try to add the newly generated key
+                    if [ -f ~/.ssh/id_ed25519 ]; then
+                        ssh-add ~/.ssh/id_ed25519
+                    elif [ -f ~/.ssh/id_rsa ]; then
+                        ssh-add ~/.ssh/id_rsa
+                    fi
+                    
+                    echo -e "  ${YELLOW}Please add this key to your GitHub account:${NC}"
+                    cat ~/.ssh/id_ed25519.pub 2>/dev/null || cat ~/.ssh/id_rsa.pub 2>/dev/null
+                    echo -e "  ${YELLOW}Visit: https://github.com/settings/keys${NC}"
+                    
+                    echo -e "  ${YELLOW}Press Enter when you've added the key to GitHub...${NC}"
+                    read -p "  " _
+                else
+                    echo -e "  ${YELLOW}Please manually generate an SSH key with:${NC}"
+                    echo -e "  ${YELLOW}ssh-keygen -t ed25519 -C \"your_email@example.com\"${NC}"
+                    echo -e "  ${YELLOW}Then add to GitHub: https://github.com/settings/keys${NC}"
+                fi
             fi
         else
             echo -e "  ${GREEN}SSH keys found in ssh-agent.${NC}"
+            ssh-add -l
         fi
         
         # Try a basic SSH connection test to GitHub
@@ -249,7 +286,15 @@ check_ssh_git_connection() {
             echo -e "  ${GREEN}SSH connection to GitHub successful.${NC}"
         else
             echo -e "  ${RED}Cannot connect to GitHub via SSH.${NC}"
-            echo -e "  ${YELLOW}Make sure your SSH key is added to your GitHub account.${NC}"
+            echo -e "  ${YELLOW}Detailed SSH debugging:${NC}"
+            echo -e "  ${YELLOW}Running: ssh -vT git@github.com${NC}"
+            ssh -vT git@github.com
+            
+            echo -e "\n  ${YELLOW}Linux SSH troubleshooting:${NC}"
+            echo -e "  ${YELLOW}1. Check permissions: chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_*${NC}"
+            echo -e "  ${YELLOW}2. Make sure known_hosts file exists: touch ~/.ssh/known_hosts${NC}"
+            echo -e "  ${YELLOW}3. Add GitHub to known_hosts: ssh-keyscan github.com >> ~/.ssh/known_hosts${NC}"
+            echo -e "  ${YELLOW}4. Restart the SSH agent: eval \$(ssh-agent -s) && ssh-add${NC}"
         fi
     else
         # Using HTTPS or other protocol
