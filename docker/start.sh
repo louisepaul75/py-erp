@@ -1,8 +1,22 @@
 #!/bin/bash
 set -e
 
-# Import PyMySQL as MySQLdb
-python -c "import pymysql; pymysql.install_as_MySQLdb()"
+# Setup MySQL database adapter - try both MySQLdb and PyMySQL
+echo "Setting up MySQL database adapter..."
+if python -c "import MySQLdb" 2>/dev/null; then
+    echo "Native mysqlclient (MySQLdb) found and working"
+else
+    echo "Trying PyMySQL as MySQLdb replacement..."
+    if python -c "import pymysql" 2>/dev/null; then
+        echo "Installing PyMySQL as MySQLdb..."
+        python -c "import pymysql; pymysql.install_as_MySQLdb()" || {
+            echo "WARNING: Failed to set up PyMySQL as MySQLdb"
+        }
+    else
+        echo "WARNING: Neither MySQLdb nor PyMySQL is available"
+        echo "Will continue but MySQL database connections may fail"
+    fi
+fi
 
 # Check if we should use local environment (for development without external services)
 if [ "$USE_LOCAL_ENV" = "true" ]; then
