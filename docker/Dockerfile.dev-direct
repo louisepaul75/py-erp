@@ -27,18 +27,22 @@ RUN apt-get update \
 # Set work directory
 WORKDIR /app
 
-# Install pip-tools
+# Install pip and build tools
 RUN pip install --upgrade pip \
-    && pip install pip-tools
+    && pip install build wheel setuptools
 
 # Copy requirements files
 COPY requirements/ /app/requirements/
 
-# Attempt to compile requirements with verbose output for debugging
-RUN set -x && pip-compile --verbose requirements/development.in --output-file=requirements/development.txt || { echo "Error during pip-compile, checking individual packages..."; exit 1; }
-
-# Install requirements
-RUN pip install -r requirements/development.txt
+# Install dependencies directly from .in files (skipping pip-compile)
+# This direct installation approach avoids potential pip-compile issues
+RUN set -x \
+    && echo "Installing base requirements..." \
+    && pip install -r /app/requirements/base.in \
+    && echo "Installing production requirements..." \
+    && pip install -r /app/requirements/production.in \
+    && echo "Installing development requirements..." \
+    && pip install -r /app/requirements/development.in
 
 # Create directories for static and media files
 RUN mkdir -p /app/static /app/media /app/logs
