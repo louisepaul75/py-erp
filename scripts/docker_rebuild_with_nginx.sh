@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 # Configuration
 WEB_CONTAINER="pyerp-web"  # Your Django container name
 NGINX_CONTAINER="pyerp-nginx"  # Your Nginx container name
-BRANCH="main"  # Default branch to pull from
+BRANCH=""  # Will be auto-detected
 
 # Function to display help information
 display_help() {
@@ -21,7 +21,7 @@ display_help() {
   echo -e "${YELLOW}Usage: $0 [OPTIONS]${NC}"
   echo -e "${YELLOW}Options:${NC}"
   echo -e "  ${YELLOW}--help                Display this help message${NC}"
-  echo -e "  ${YELLOW}--branch=BRANCH       Specify which Git branch to pull from (default: main)${NC}"
+  echo -e "  ${YELLOW}--branch=BRANCH       Specify which Git branch to pull from (auto-detected if not specified)${NC}"
   echo -e "  ${YELLOW}--no-prune            Skip Docker resource cleanup even if space is low${NC}"
   echo -e "${CYAN}===== Examples =====${NC}"
   echo -e "  ${YELLOW}$0 --branch=develop   Pull from develop branch and rebuild containers${NC}"
@@ -57,33 +57,111 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Detect which user is running the script
+SCRIPT_USER=$(whoami)
+echo -e "${CYAN}Script running as user: $SCRIPT_USER${NC}"
+
+# Adjust commands based on whether running as root/sudo
+if [ "$SCRIPT_USER" = "root" ]; then
+  ACTUAL_USER=$(logname 2>/dev/null || echo $SUDO_USER)
+  if [ -z "$ACTUAL_USER" ]; then
+    # Try to find the actual user from environment variables
+    ACTUAL_USER=$SUDO_USER
+  fi
+  
+  if [ -n "$ACTUAL_USER" ]; then
+    ACTUAL_USER_HOME=$(eval echo ~$ACTUAL_USER)
+    echo -e "${YELLOW}Detected actual user: $ACTUAL_USER${NC}"
+    SSH_KEY_PATH="$ACTUAL_USER_HOME/.ssh/id_rsa"
+  else
+    echo -e "${YELLOW}Could not determine actual user, using default paths${NC}"
+    SSH_KEY_PATH="/home/admin-local/.ssh/id_rsa"
+  fi
+else
+  SSH_KEY_PATH="$HOME/.ssh/id_rsa"
+fi
+
+echo -e "${YELLOW}Using SSH key: $SSH_KEY_PATH${NC}"
+
+# Auto-detect default branch if not specified
+if [ -z "$BRANCH" ]; then
+  echo -e "${YELLOW}Auto-detecting default branch...${NC}"
+  # First check local default branch
+  DEFAULT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+  
+  if [ -n "$DEFAULT_BRANCH" ]; then
+    BRANCH="$DEFAULT_BRANCH"
+    echo -e "${GREEN}Using current branch: $BRANCH${NC}"
+  else
+    # Check if main or master exists on remote
+    if GIT_SSH_COMMAND="ssh -i $SSH_KEY_PATH -o IdentitiesOnly=yes" git ls-remote --heads origin main 2>/dev/null | grep -q main; then
+      BRANCH="main"
+      echo -e "${GREEN}Detected 'main' branch on remote${NC}"
+    elif GIT_SSH_COMMAND="ssh -i $SSH_KEY_PATH -o IdentitiesOnly=yes" git ls-remote --heads origin master 2>/dev/null | grep -q master; then
+      BRANCH="master"
+      echo -e "${GREEN}Detected 'master' branch on remote${NC}"
+    else
+      echo -e "${RED}Could not detect default branch. Please specify with --branch=${NC}"
+      exit 1
+    fi
+  fi
+fi
+
 # Show configuration
 echo -e "${CYAN}===== Docker Deployment Configuration =====${NC}"
 echo -e "${YELLOW}Branch: $BRANCH${NC}"
 echo -e "${YELLOW}Skip pruning: ${SKIP_PRUNE:-false}${NC}"
 
-# Check if we're low on disk space
+# Check if we're low on disk space - using sudo if needed
 LOW_SPACE=false
-DOCKER_DIR=$(docker info | grep "Docker Root Dir" | cut -d: -f2 | tr -d '[:space:]')
+if [ "$SCRIPT_USER" = "root" ]; then
+  DOCKER_DIR=$(docker info 2>/dev/null | grep "Docker Root Dir" | cut -d: -f2 | tr -d '[:space:]')
+else
+  DOCKER_DIR=$(sudo docker info 2>/dev/null | grep "Docker Root Dir" | cut -d: -f2 | tr -d '[:space:]')
+fi
+
 if [ -z "$DOCKER_DIR" ]; then
     DOCKER_DIR="/var/lib/docker"  # Default location
 fi
 
-FREE_SPACE=$(df -m "$DOCKER_DIR" | tail -1 | awk '{print $4}')
-echo -e "${CYAN}Available space in Docker directory: ${FREE_SPACE}MB${NC}"
-
-if [ "$FREE_SPACE" -lt 1000 ]; then
-    echo -e "${YELLOW}Low disk space detected (less than 1GB free).${NC}"
-    LOW_SPACE=true
+# We need to handle disk space check with or without sudo
+if [ "$SCRIPT_USER" = "root" ]; then
+  if [ -d "$DOCKER_DIR" ]; then
+    FREE_SPACE=$(df -m "$DOCKER_DIR" | tail -1 | awk '{print $4}')
+    echo -e "${CYAN}Available space in Docker directory: ${FREE_SPACE}MB${NC}"
+    
+    if [ "$FREE_SPACE" -lt 1000 ]; then
+        echo -e "${YELLOW}Low disk space detected (less than 1GB free).${NC}"
+        LOW_SPACE=true
+    fi
+  else
+    echo -e "${YELLOW}Docker directory not found at $DOCKER_DIR, skipping space check${NC}"
+  fi
+else
+  if [ -d "$DOCKER_DIR" ]; then
+    FREE_SPACE=$(sudo df -m "$DOCKER_DIR" 2>/dev/null | tail -1 | awk '{print $4}')
+    echo -e "${CYAN}Available space in Docker directory: ${FREE_SPACE}MB${NC}"
+    
+    if [ "$FREE_SPACE" -lt 1000 ]; then
+        echo -e "${YELLOW}Low disk space detected (less than 1GB free).${NC}"
+        LOW_SPACE=true
+    fi
+  else
+    echo -e "${YELLOW}Docker directory not found at $DOCKER_DIR, skipping space check${NC}"
+  fi
 fi
 
 # Clean up Docker resources if needed
-if [ "$LOW_SPACE" = true ] && [ "$SKIP_PRUNE" = false ]; then
+if [ "$LOW_SPACE" = true ] && [ "$SKIP_PRUNE" != true ]; then
     echo -e "${YELLOW}Running Docker cleanup to free up space...${NC}"
     # Ensure the prune script is executable (works on both Windows and Linux)
     if [ -f ./scripts/docker-prune.sh ]; then
         chmod +x ./scripts/docker-prune.sh || true
-        bash ./scripts/docker-prune.sh
+        if [ "$SCRIPT_USER" = "root" ]; then
+          bash ./scripts/docker-prune.sh
+        else
+          sudo bash ./scripts/docker-prune.sh
+        fi
     else
         echo -e "${RED}Docker prune script not found at ./scripts/docker-prune.sh${NC}"
         echo -e "${YELLOW}Continuing without cleanup...${NC}"
@@ -135,7 +213,12 @@ fi
 # Check if Nginx is in a separate compose file or the same one
 if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
   # In production, Nginx should be part of the docker-compose.prod.yml file
-  grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  if [ "$SCRIPT_USER" = "root" ]; then
+    grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  else
+    sudo grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  fi
+  
   if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}Nginx configuration found in production compose file${NC}"
     NGINX_COMPOSE_FILE="$COMPOSE_FILE"
@@ -143,7 +226,12 @@ if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
     echo -e "  ${YELLOW}Nginx not found in production compose file. Looking for separate Nginx config...${NC}"
     # Continue with the existing Nginx lookup logic
     if [ -f "docker/docker-compose.prod.yml" ]; then
-      grep -q "nginx" "docker/docker-compose.prod.yml" 2>/dev/null
+      if [ "$SCRIPT_USER" = "root" ]; then
+        grep -q "nginx" "docker/docker-compose.prod.yml" 2>/dev/null
+      else
+        sudo grep -q "nginx" "docker/docker-compose.prod.yml" 2>/dev/null
+      fi
+      
       if [ $? -eq 0 ]; then
         echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.prod.yml${NC}"
         NGINX_COMPOSE_FILE="docker/docker-compose.prod.yml"
@@ -152,14 +240,24 @@ if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
   fi
 else
   # For development, continue with regular Nginx check
-  grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  if [ "$SCRIPT_USER" = "root" ]; then
+    grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  else
+    sudo grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
+  fi
+  
   if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}Nginx configuration found in main compose file${NC}"
     NGINX_COMPOSE_FILE="$COMPOSE_FILE"
   else
     # Check docker/docker-compose.yml specifically for Nginx
     if [ -f "docker/docker-compose.yml" ]; then
-      grep -q "nginx" "docker/docker-compose.yml" 2>/dev/null
+      if [ "$SCRIPT_USER" = "root" ]; then
+        grep -q "nginx" "docker/docker-compose.yml" 2>/dev/null
+      else
+        sudo grep -q "nginx" "docker/docker-compose.yml" 2>/dev/null
+      fi
+      
       if [ $? -eq 0 ]; then
         echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.yml${NC}"
         NGINX_COMPOSE_FILE="docker/docker-compose.yml"
@@ -175,15 +273,35 @@ if [ -z "$NGINX_COMPOSE_FILE" ]; then
   read -p "  Nginx compose file path: " NGINX_COMPOSE_FILE
 fi
 
+# Helper function to run docker commands with or without sudo
+docker_cmd() {
+  if [ "$SCRIPT_USER" = "root" ]; then
+    docker "$@"
+  else
+    sudo docker "$@"
+  fi
+}
+
+# Helper function for docker-compose commands
+docker_compose_cmd() {
+  local compose_file="$1"
+  shift
+  if [ "$SCRIPT_USER" = "root" ]; then
+    docker-compose -f "$compose_file" "$@"
+  else
+    sudo docker-compose -f "$compose_file" "$@"
+  fi
+}
+
 # Step 1: Stop and remove existing containers
 echo -e "\n${GREEN}[1/5] Stopping and removing existing containers...${NC}"
 # Stop the containers if they're running
-docker stop $WEB_CONTAINER 2>/dev/null || true
-docker stop $NGINX_CONTAINER 2>/dev/null || true
+docker_cmd stop $WEB_CONTAINER 2>/dev/null || true
+docker_cmd stop $NGINX_CONTAINER 2>/dev/null || true
 
 # Remove the containers
-docker rm $WEB_CONTAINER 2>/dev/null || true
-docker rm $NGINX_CONTAINER 2>/dev/null || true
+docker_cmd rm $WEB_CONTAINER 2>/dev/null || true
+docker_cmd rm $NGINX_CONTAINER 2>/dev/null || true
 
 echo -e "  ${GREEN}✓ Containers successfully stopped and removed${NC}"
 
@@ -199,102 +317,38 @@ check_ssh_git_connection() {
     if [[ $REPO_URL == git@* ]]; then
         echo -e "  ${YELLOW}Using SSH for GitHub: $REPO_URL${NC}"
         
-        # List SSH directory contents for debugging
-        echo -e "  ${YELLOW}Checking SSH directory contents:${NC}"
-        ls -la ~/.ssh/ 2>/dev/null || echo -e "  ${RED}Cannot access ~/.ssh directory${NC}"
+        # Display the key we're using
+        echo -e "  ${YELLOW}Using SSH key: $SSH_KEY_PATH${NC}"
         
-        # Try SSH agent - see if we have any keys loaded
-        echo -e "  ${YELLOW}Checking for keys in ssh-agent...${NC}"
-        if ! ssh-add -l &>/dev/null; then
-            echo -e "  ${RED}No SSH keys found in ssh-agent.${NC}"
-            echo -e "  ${YELLOW}Checking for SSH key files...${NC}"
+        # Check if the key exists
+        if [ -f "$SSH_KEY_PATH" ]; then
+            echo -e "  ${GREEN}SSH key file exists.${NC}"
             
-            # Create SSH directory if it doesn't exist
-            if [ ! -d ~/.ssh ]; then
-                echo -e "  ${YELLOW}Creating ~/.ssh directory...${NC}"
-                mkdir -p ~/.ssh
-                chmod 700 ~/.ssh
+            # Check key permissions
+            KEY_PERMS=$(stat -c "%a" "$SSH_KEY_PATH" 2>/dev/null || stat -f "%Lp" "$SSH_KEY_PATH" 2>/dev/null)
+            if [ "$KEY_PERMS" != "600" ]; then
+                echo -e "  ${YELLOW}Setting correct permissions on SSH key...${NC}"
+                chmod 600 "$SSH_KEY_PATH" || echo -e "  ${RED}Failed to set permissions on SSH key${NC}"
             fi
             
-            # Look for any SSH key files (expanded search)
-            SSH_KEYS=( $(find ~/.ssh -name "id_*" ! -name "*.pub" 2>/dev/null) )
-            
-            if [ ${#SSH_KEYS[@]} -gt 0 ]; then
-                echo -e "  ${GREEN}Found SSH key files:${NC}"
-                for key in "${SSH_KEYS[@]}"; do
-                    echo -e "  ${GREEN}- $key${NC}"
-                done
-                
-                echo -e "  ${YELLOW}Starting ssh-agent and adding keys...${NC}"
-                # Start ssh-agent if not running
-                eval "$(ssh-agent -s)" || echo -e "  ${RED}Failed to start ssh-agent${NC}"
-                
-                # Try to add each key found
-                for key in "${SSH_KEYS[@]}"; do
-                    echo -e "  ${YELLOW}Adding key: $key${NC}"
-                    ssh-add "$key" || echo -e "  ${RED}Failed to add key: $key${NC}"
-                done
-                
-                # Check if successful
-                if ssh-add -l &>/dev/null; then
-                    echo -e "  ${GREEN}SSH key(s) added to agent.${NC}"
-                else
-                    echo -e "  ${RED}Failed to add SSH keys to agent.${NC}"
-                fi
+            # Test SSH connection directly with the key
+            echo -e "  ${YELLOW}Testing connection to GitHub...${NC}"
+            if ssh -i "$SSH_KEY_PATH" -o IdentitiesOnly=yes -T git@github.com -o StrictHostKeyChecking=no -o BatchMode=yes 2>&1 | grep -q "success"; then
+                echo -e "  ${GREEN}SSH connection to GitHub successful.${NC}"
             else
-                echo -e "  ${RED}No SSH key files found in ~/.ssh/${NC}"
-                echo -e "  ${YELLOW}Would you like to generate a new SSH key? (y/n)${NC}"
-                read -p "  Generate new SSH key? " generate_key
+                echo -e "  ${RED}Cannot connect to GitHub via SSH.${NC}"
+                echo -e "  ${YELLOW}Detailed SSH debugging:${NC}"
+                ssh -i "$SSH_KEY_PATH" -vT git@github.com
                 
-                if [[ "$generate_key" == "y" || "$generate_key" == "Y" ]]; then
-                    echo -e "  ${YELLOW}Enter your email address:${NC}"
-                    read -p "  Email: " user_email
-                    
-                    echo -e "  ${YELLOW}Generating new SSH key...${NC}"
-                    ssh-keygen -t ed25519 -C "$user_email" || ssh-keygen -t rsa -b 4096 -C "$user_email"
-                    
-                    echo -e "  ${GREEN}SSH key generated. Adding to ssh-agent...${NC}"
-                    eval "$(ssh-agent -s)"
-                    
-                    # Try to add the newly generated key
-                    if [ -f ~/.ssh/id_ed25519 ]; then
-                        ssh-add ~/.ssh/id_ed25519
-                    elif [ -f ~/.ssh/id_rsa ]; then
-                        ssh-add ~/.ssh/id_rsa
-                    fi
-                    
-                    echo -e "  ${YELLOW}Please add this key to your GitHub account:${NC}"
-                    cat ~/.ssh/id_ed25519.pub 2>/dev/null || cat ~/.ssh/id_rsa.pub 2>/dev/null
-                    echo -e "  ${YELLOW}Visit: https://github.com/settings/keys${NC}"
-                    
-                    echo -e "  ${YELLOW}Press Enter when you've added the key to GitHub...${NC}"
-                    read -p "  " _
-                else
-                    echo -e "  ${YELLOW}Please manually generate an SSH key with:${NC}"
-                    echo -e "  ${YELLOW}ssh-keygen -t ed25519 -C \"your_email@example.com\"${NC}"
-                    echo -e "  ${YELLOW}Then add to GitHub: https://github.com/settings/keys${NC}"
-                fi
+                echo -e "\n  ${YELLOW}SSH troubleshooting:${NC}"
+                echo -e "  ${YELLOW}1. Check permissions: chmod 600 $SSH_KEY_PATH${NC}"
+                echo -e "  ${YELLOW}2. Make sure known_hosts file exists${NC}"
+                echo -e "  ${YELLOW}3. Add GitHub to known_hosts: ssh-keyscan github.com >> ~/.ssh/known_hosts${NC}"
+                echo -e "  ${YELLOW}4. Verify key is added to your GitHub account: https://github.com/settings/keys${NC}"
             fi
         else
-            echo -e "  ${GREEN}SSH keys found in ssh-agent.${NC}"
-            ssh-add -l
-        fi
-        
-        # Try a basic SSH connection test to GitHub
-        echo -e "  ${YELLOW}Testing connection to GitHub...${NC}"
-        if ssh -T git@github.com -o StrictHostKeyChecking=no -o BatchMode=yes 2>&1 | grep -q "success"; then
-            echo -e "  ${GREEN}SSH connection to GitHub successful.${NC}"
-        else
-            echo -e "  ${RED}Cannot connect to GitHub via SSH.${NC}"
-            echo -e "  ${YELLOW}Detailed SSH debugging:${NC}"
-            echo -e "  ${YELLOW}Running: ssh -vT git@github.com${NC}"
-            ssh -vT git@github.com
-            
-            echo -e "\n  ${YELLOW}Linux SSH troubleshooting:${NC}"
-            echo -e "  ${YELLOW}1. Check permissions: chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_*${NC}"
-            echo -e "  ${YELLOW}2. Make sure known_hosts file exists: touch ~/.ssh/known_hosts${NC}"
-            echo -e "  ${YELLOW}3. Add GitHub to known_hosts: ssh-keyscan github.com >> ~/.ssh/known_hosts${NC}"
-            echo -e "  ${YELLOW}4. Restart the SSH agent: eval \$(ssh-agent -s) && ssh-add${NC}"
+            echo -e "  ${RED}SSH key not found at $SSH_KEY_PATH${NC}"
+            echo -e "  ${YELLOW}Please check the path to your SSH key.${NC}"
         fi
     else
         # Using HTTPS or other protocol
@@ -307,16 +361,19 @@ check_ssh_git_connection
 
 # Now try to pull the latest code
 echo -e "  ${YELLOW}Pulling from branch: $BRANCH${NC}"
-if git pull origin $BRANCH; then
+if GIT_SSH_COMMAND="ssh -i $SSH_KEY_PATH -o IdentitiesOnly=yes" git pull origin $BRANCH; then
     echo -e "  ${GREEN}✓ Latest code pulled successfully from $BRANCH${NC}"
 else
     echo -e "  ${RED}✗ Error pulling code from $BRANCH${NC}"
-    echo -e "  ${YELLOW}SSH authentication failed. Please check your SSH keys.${NC}"
-    echo -e "  ${YELLOW}You may need to:${NC}"
-    echo -e "  ${YELLOW}1. Add your SSH key to the ssh-agent: ssh-add ~/.ssh/id_rsa${NC}"
-    echo -e "  ${YELLOW}2. Make sure your SSH key is added to your GitHub account${NC}"
-    echo -e "  ${YELLOW}3. Test with: ssh -T git@github.com${NC}"
-    echo -e "  ${YELLOW}4. Stash or commit your local changes first${NC}"
+    echo -e "  ${YELLOW}SSH authentication may have failed. Here's some debugging info:${NC}"
+    echo -e "  ${YELLOW}1. SSH key being used: $SSH_KEY_PATH${NC}"
+    echo -e "  ${YELLOW}2. Make sure this key is added to your GitHub account${NC}"
+    echo -e "  ${YELLOW}3. Try testing with: ssh -i $SSH_KEY_PATH -T git@github.com${NC}"
+    echo -e "  ${YELLOW}4. Check if you have local changes that need to be stashed/committed${NC}"
+    
+    # Show available branches
+    echo -e "  ${YELLOW}Available remote branches:${NC}"
+    GIT_SSH_COMMAND="ssh -i $SSH_KEY_PATH -o IdentitiesOnly=yes" git ls-remote --heads origin
     
     # Ask if user wants to continue
     read -p "  Continue with deployment anyway? (y/n): " continue_anyway
@@ -342,7 +399,7 @@ if [ -n "$COMPOSE_FILE" ]; then
     
     if [ -n "$PROD_FILE" ]; then
         echo -e "  ${YELLOW}Using production compose file: $PROD_FILE${NC}"
-        if docker-compose -f "$PROD_FILE" build --no-cache; then
+        if docker_compose_cmd "$PROD_FILE" build --no-cache; then
             echo -e "  ${GREEN}✓ Django container rebuilt successfully${NC}"
             # Update COMPOSE_FILE to use production for starting containers
             COMPOSE_FILE="$PROD_FILE"
@@ -353,7 +410,7 @@ if [ -n "$COMPOSE_FILE" ]; then
     else
         echo -e "  ${YELLOW}Using compose file: $COMPOSE_FILE${NC}"
         echo -e "  ${YELLOW}Warning: This may be a development configuration file.${NC}"
-        if docker-compose -f "$COMPOSE_FILE" build --no-cache; then
+        if docker_compose_cmd "$COMPOSE_FILE" build --no-cache; then
             echo -e "  ${GREEN}✓ Django container rebuilt successfully${NC}"
         else
             echo -e "  ${RED}✗ Error rebuilding Django container${NC}"
@@ -370,7 +427,7 @@ echo -e "\n${GREEN}[4/5] Building Nginx container...${NC}"
 # Check if we have a separate compose file for Nginx
 if [ -n "$NGINX_COMPOSE_FILE" ] && [ "$NGINX_COMPOSE_FILE" != "$COMPOSE_FILE" ]; then
     echo -e "  ${YELLOW}Using Nginx compose file: $NGINX_COMPOSE_FILE${NC}"
-    if docker-compose -f "$NGINX_COMPOSE_FILE" build --no-cache; then
+    if docker_compose_cmd "$NGINX_COMPOSE_FILE" build --no-cache; then
         echo -e "  ${GREEN}✓ Nginx container rebuilt successfully from separate compose file${NC}"
     else
         echo -e "  ${RED}✗ Error rebuilding Nginx container${NC}"
@@ -427,7 +484,7 @@ check_for_port_conflicts
 # Start Django container
 if [ -n "$COMPOSE_FILE" ]; then
     echo -e "  ${YELLOW}Starting containers using: $COMPOSE_FILE${NC}"
-    if docker-compose -f "$COMPOSE_FILE" up -d; then
+    if docker_compose_cmd "$COMPOSE_FILE" up -d; then
         echo -e "  ${GREEN}✓ Django containers started successfully${NC}"
     else
         echo -e "  ${RED}✗ Error starting Django containers${NC}"
@@ -441,7 +498,7 @@ fi
 # Start Nginx container if separate
 if [ -n "$NGINX_COMPOSE_FILE" ] && [ "$NGINX_COMPOSE_FILE" != "$COMPOSE_FILE" ]; then
     echo -e "  ${YELLOW}Starting Nginx using: $NGINX_COMPOSE_FILE${NC}"
-    if docker-compose -f "$NGINX_COMPOSE_FILE" up -d; then
+    if docker_compose_cmd "$NGINX_COMPOSE_FILE" up -d; then
         echo -e "  ${GREEN}✓ Nginx container started successfully${NC}"
     else
         echo -e "  ${RED}✗ Error starting Nginx container${NC}"
@@ -451,18 +508,18 @@ fi
 
 # Create Docker network if it doesn't exist
 echo -e "\n${CYAN}Ensuring Docker network exists...${NC}"
-docker network create pyerp-network 2>/dev/null || true
+docker_cmd network create pyerp-network 2>/dev/null || true
 echo -e "  ${GREEN}→ Docker network ready${NC}"
 
 # Connect containers to network if needed
 echo -e "\n${CYAN}Ensuring containers are on the same network...${NC}"
-docker network connect pyerp-network $WEB_CONTAINER 2>/dev/null || true
-docker network connect pyerp-network $NGINX_CONTAINER 2>/dev/null || true
+docker_cmd network connect pyerp-network $WEB_CONTAINER 2>/dev/null || true
+docker_cmd network connect pyerp-network $NGINX_CONTAINER 2>/dev/null || true
 echo -e "  ${GREEN}→ Containers connected to network${NC}"
 
 # Final status check
 echo -e "\n${CYAN}Checking container status...${NC}"
-docker ps
+docker_cmd ps
 
 echo -e "\n${CYAN}===== Process Complete =====${NC}"
 echo -e "${GREEN}The web application should now be accessible via HTTPS${NC}"
