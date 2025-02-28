@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Import PyMySQL as MySQLdb
+python -c "import pymysql; pymysql.install_as_MySQLdb()"
+
 # Check if we should use local environment (for development without external services)
 if [ "$USE_LOCAL_ENV" = "true" ]; then
   echo "Using local environment settings..."
@@ -57,8 +60,11 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   python -c "
 try:
     import dj_database_url
-    # Use MySQL connector instead of psycopg2
+    import pymysql
+    # Make sure PyMySQL is installed as MySQLdb
+    pymysql.install_as_MySQLdb()
     import MySQLdb as Database
+    
     db_url = '${DATABASE_URL:-mysql://pyerp:pyerp@db:3306/pyerp}'
     db_config = dj_database_url.parse(db_url)
     print(f'Attempting to connect to database: {db_config}')
@@ -116,6 +122,8 @@ try:
         exit(0)
     
     # Try to connect to MySQL
+    import pymysql
+    pymysql.install_as_MySQLdb()
     import MySQLdb as Database
     conn = Database.connect(
         host=db_config['HOST'], 

@@ -36,8 +36,8 @@ RUN pip install --upgrade pip && \
     pip install python-json-logger structlog && \
     echo "Verifying django-filter..." && \
     pip install django-filter && \
-    echo "Verifying MySQL client..." && \
-    pip install mysqlclient
+    echo "Installing PyMySQL instead of mysqlclient..." && \
+    pip install "PyMySQL>=1.1.0"
 
 # Build wheels for faster installation in the final image
 RUN echo "Generating requirements.txt from installed packages..." && \
@@ -70,6 +70,9 @@ RUN pip install --no-cache /wheels/*
 # Create necessary directories with proper permissions
 RUN mkdir -p /app/static /app/media /app/logs \
     && chown -R appuser:appuser /app
+
+# Setup for PyMySQL to work with Django
+RUN echo 'import pymysql; pymysql.install_as_MySQLdb()' > /app/pymysql_setup.py
 
 # Copy application code
 COPY --chown=appuser:appuser . .

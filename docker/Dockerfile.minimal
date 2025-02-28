@@ -12,27 +12,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     python3-dev \
     default-libmysqlclient-dev \
+    pkg-config \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install directly with proper error output
 COPY requirements/minimal.in /app/requirements/minimal.in
 
-# Install each major dependency separately to better identify issues
+# Alternative: Use PyMySQL which is pure Python (no compilation needed)
 RUN pip install --upgrade pip && \
-    # Core Django and REST
-    pip install "Django>=5.1.0,<5.2.0" "djangorestframework>=3.14.0,<3.15.0" && \
-    # MySQL client - explicitly installed
-    pip install "mysqlclient>=2.2.0,<2.3.0" && \
-    # Django filter
-    pip install "django-filter>=23.5,<24.0" && \
-    # Server and config
+    # Install pure Python MySQL client as fallback
+    pip install "PyMySQL>=1.1.0" && \
+    # Core packages
+    pip install "Django>=5.1.0,<5.2.0" "djangorestframework>=3.14.0,<3.15.0" "django-filter>=23.5,<24.0" && \
+    # Server and environment
     pip install "gunicorn>=21.2.0,<21.3.0" "whitenoise>=6.6.0,<6.7.0" && \
-    # Environment and database URL
     pip install "python-dotenv>=1.0.0,<1.1.0" "dj-database-url>=2.1.0,<2.2.0" && \
-    # Logging
+    # Logging packages
     pip install "python-json-logger>=2.0.7,<2.1.0" "structlog>=24.1.0,<24.2.0" && \
-    # Celery and Redis
+    # Celery stack
     pip install "celery>=5.3.6,<5.4.0" "redis>=5.0.0,<5.1.0" && \
     pip install "django-celery-results>=2.5.0,<2.6.0" "django-celery-beat>=2.7.0,<2.8.0"
 
@@ -46,8 +44,12 @@ RUN mkdir -p /app/static /app/media /app/logs
 COPY docker/docker.env /app/.env
 COPY docker/docker.local.env /app/.env.local
 
-# Copy startup script
+# Setup for PyMySQL to work with Django
+RUN echo 'import pymysql; pymysql.install_as_MySQLdb()' > /app/pymysql_setup.py
+
+# Copy startup script and modify to include PyMySQL setup
 COPY docker/start.sh /app/start.sh
+RUN sed -i '2i # Load PyMySQL as MySQLdb\npython /app/pymysql_setup.py' /app/start.sh
 
 # Run as non-root user
 RUN useradd -m appuser && \
