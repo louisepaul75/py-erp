@@ -15,10 +15,12 @@ if [ ! -d "/var/lib/mysql/mysql" ]; then
     mysqld --initialize-insecure --user=mysql || echo "MySQL data directory already initialized"
 fi
 
-# Start MySQL service
-echo "Starting MySQL service..."
-service mysql start || mysqld_safe &
-sleep 5  # Give MySQL time to start
+# Start MariaDB service
+echo "Starting MariaDB service..."
+mkdir -p /run/mysqld
+chown mysql:mysql /run/mysqld
+/etc/init.d/mariadb start || mysqld_safe &
+sleep 10  # Give MariaDB more time to start
 
 # Setup MySQL database
 echo "Setting up MySQL database..."
@@ -34,7 +36,9 @@ sleep 2  # Give Redis time to start
 
 # Function to check if MySQL is ready
 mysql_ready() {
-    mysqladmin ping -h localhost -u root > /dev/null 2>&1
+    # Try both socket and TCP connection methods
+    mysqladmin ping -h localhost -u root > /dev/null 2>&1 || \
+    mysql -h localhost -u root -e "SELECT 1;" > /dev/null 2>&1
 }
 
 # Function to check if Redis is ready
