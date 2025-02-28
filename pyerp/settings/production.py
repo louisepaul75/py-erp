@@ -54,15 +54,27 @@ CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
 CORS_ALLOW_ALL_ORIGINS = False
 
 # Cache settings
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+try:
+    import django_redis
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.environ.get('REDIS_URL', 'redis://localhost:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
         }
     }
-}
+    print("Django Redis cache enabled")
+except ImportError:
+    # Fallback to local memory cache if django_redis is not available
+    print("WARNING: django_redis not found, falling back to LocMemCache")
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'pyerp-fallback',
+        }
+    }
 
 # AWS S3 settings for static and media files
 if os.environ.get('USE_S3', 'False').lower() == 'true':

@@ -15,6 +15,7 @@ python-dotenv==1.0.1
 # Background processing
 celery==5.4.0
 redis==5.0.2
+django-redis==5.4.0
 django-celery-results==2.5.1
 django-celery-beat==2.7.0
 kombu==5.4.2

@@ -38,7 +38,7 @@ echo "Listing installed packages:"
 pip list
 
 # Check for essential packages and install if missing
-for package in drf-yasg django-filter corsheaders pymysql rest_framework_simplejwt; do
+for package in drf-yasg django-filter corsheaders pymysql rest_framework_simplejwt django_redis; do
   echo "Checking for $package..."
   python -c "import $package" 2>/dev/null || {
     echo "Installing missing package: $package"
