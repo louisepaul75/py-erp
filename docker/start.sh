@@ -33,7 +33,15 @@ python -c "import dj_database_url; db_url='${DATABASE_URL:-sqlite:///app/db.sqli
 
 # Check if redis is available (if not, print warning but continue)
 echo "Checking Redis connection..."
-python -c "import redis; r = redis.from_url('${REDIS_URL:-memory://}'); try: r.ping(); print('Redis connection successful'); except Exception as e: print(f'Redis connection failed: {e}')" || echo "Redis check failed, but continuing..."
+python -c "
+import redis
+try:
+    r = redis.from_url('${REDIS_URL:-memory://}')
+    r.ping()
+    print('Redis connection successful')
+except Exception as e:
+    print(f'Redis connection failed: {e}')
+" || echo "Redis check failed, but continuing..."
 
 # Attempt to import the application module with better error handling
 echo "Checking application imports..."
@@ -50,6 +58,9 @@ try:
     # Check for CORS headers
     import corsheaders
     print('corsheaders module found')
+    # Check for Swagger docs
+    import drf_yasg
+    print('drf_yasg module found')
 except Exception as e:
     print(f'Error importing application modules: {e}')
     import traceback
@@ -77,30 +88,30 @@ elif [[ $DB_ENGINE == *postgresql* ]]; then
   
   while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     python -c "
-  try:
-      import dj_database_url
-      import psycopg2
-      db_url = '${DATABASE_URL}'
-      db_config = dj_database_url.parse(db_url)
-      print(f'Attempting to connect to PostgreSQL: {db_config}')
-          
-      # This will raise an exception if connection fails
-      conn = psycopg2.connect(
-          host=db_config['HOST'], 
-          port=db_config['PORT'],
-          dbname=db_config['NAME'],
-          user=db_config['USER'],
-          password=db_config['PASSWORD']
-      )
-      print('Database connection successful')
-      conn.close()
-      exit(0)
-  except Exception as e:
-      print(f'Database connection error: {e}')
-      import traceback
-      traceback.print_exc()
-      exit(1)
-  "
+try:
+    import dj_database_url
+    import psycopg2
+    db_url = '${DATABASE_URL}'
+    db_config = dj_database_url.parse(db_url)
+    print(f'Attempting to connect to PostgreSQL: {db_config}')
+        
+    # This will raise an exception if connection fails
+    conn = psycopg2.connect(
+        host=db_config['HOST'], 
+        port=db_config['PORT'],
+        dbname=db_config['NAME'],
+        user=db_config['USER'],
+        password=db_config['PASSWORD']
+    )
+    print('Database connection successful')
+    conn.close()
+    exit(0)
+except Exception as e:
+    print(f'Database connection error: {e}')
+    import traceback
+    traceback.print_exc()
+    exit(1)
+"
     
     if [ $? -eq 0 ]; then
       echo "Database connection established!"
@@ -130,34 +141,34 @@ else
   echo "MySQL detected - testing connection..."
   while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     python -c "
-  try:
-      import dj_database_url
-      import pymysql
-      # Make sure PyMySQL is installed as MySQLdb
-      pymysql.install_as_MySQLdb()
-      import MySQLdb as Database
-      
-      db_url = '${DATABASE_URL}'
-      db_config = dj_database_url.parse(db_url)
-      print(f'Attempting to connect to MySQL: {db_config}')
-          
-      # This will raise an exception if connection fails
-      conn = Database.connect(
-          host=db_config['HOST'], 
-          port=int(db_config['PORT']),
-          db=db_config['NAME'],
-          user=db_config['USER'],
-          passwd=db_config['PASSWORD']
-      )
-      print('Database connection successful')
-      conn.close()
-      exit(0)
-  except Exception as e:
-      print(f'Database connection error: {e}')
-      import traceback
-      traceback.print_exc()
-      exit(1)
-  "
+try:
+    import dj_database_url
+    import pymysql
+    # Make sure PyMySQL is installed as MySQLdb
+    pymysql.install_as_MySQLdb()
+    import MySQLdb as Database
+    
+    db_url = '${DATABASE_URL}'
+    db_config = dj_database_url.parse(db_url)
+    print(f'Attempting to connect to MySQL: {db_config}')
+        
+    # This will raise an exception if connection fails
+    conn = Database.connect(
+        host=db_config['HOST'], 
+        port=int(db_config['PORT']),
+        db=db_config['NAME'],
+        user=db_config['USER'],
+        passwd=db_config['PASSWORD']
+    )
+    print('Database connection successful')
+    conn.close()
+    exit(0)
+except Exception as e:
+    print(f'Database connection error: {e}')
+    import traceback
+    traceback.print_exc()
+    exit(1)
+"
     
     if [ $? -eq 0 ]; then
       echo "Database connection established!"
@@ -192,27 +203,27 @@ if [[ $DATABASE_URL == sqlite* ]]; then
 elif [[ $DB_ENGINE == *postgresql* ]]; then
   # PostgreSQL migration check
   python -c "
-  try:
-      import dj_database_url
-      import psycopg2
-      db_url = '${DATABASE_URL}'
-      db_config = dj_database_url.parse(db_url)
-      
-      # Try to connect to PostgreSQL
-      conn = psycopg2.connect(
-          host=db_config['HOST'], 
-          port=db_config['PORT'],
-          dbname=db_config['NAME'],
-          user=db_config['USER'],
-          password=db_config['PASSWORD']
-      )
-      conn.close()
-      print('Database available, will run migrations')
-      exit(0)
-  except Exception as e:
-      print(f'Database not available: {e}')
-      exit(1)
-  "
+try:
+    import dj_database_url
+    import psycopg2
+    db_url = '${DATABASE_URL}'
+    db_config = dj_database_url.parse(db_url)
+    
+    # Try to connect to PostgreSQL
+    conn = psycopg2.connect(
+        host=db_config['HOST'], 
+        port=db_config['PORT'],
+        dbname=db_config['NAME'],
+        user=db_config['USER'],
+        password=db_config['PASSWORD']
+    )
+    conn.close()
+    print('Database available, will run migrations')
+    exit(0)
+except Exception as e:
+    print(f'Database not available: {e}')
+    exit(1)
+"
 
   if [ $? -eq 0 ]; then
       echo "Running migrations for PostgreSQL..."
@@ -223,29 +234,29 @@ elif [[ $DB_ENGINE == *postgresql* ]]; then
 else
   # MySQL migration check
   python -c "
-  try:
-      import dj_database_url
-      db_url = '${DATABASE_URL}'
-      db_config = dj_database_url.parse(db_url)
-      
-      # Try to connect to MySQL
-      import pymysql
-      pymysql.install_as_MySQLdb()
-      import MySQLdb as Database
-      conn = Database.connect(
-          host=db_config['HOST'], 
-          port=int(db_config['PORT']),
-          db=db_config['NAME'],
-          user=db_config['USER'],
-          passwd=db_config['PASSWORD']
-      )
-      conn.close()
-      print('Database available, will run migrations')
-      exit(0)
-  except Exception as e:
-      print(f'Database not available: {e}')
-      exit(1)
-  "
+try:
+    import dj_database_url
+    db_url = '${DATABASE_URL}'
+    db_config = dj_database_url.parse(db_url)
+    
+    # Try to connect to MySQL
+    import pymysql
+    pymysql.install_as_MySQLdb()
+    import MySQLdb as Database
+    conn = Database.connect(
+        host=db_config['HOST'], 
+        port=int(db_config['PORT']),
+        db=db_config['NAME'],
+        user=db_config['USER'],
+        passwd=db_config['PASSWORD']
+    )
+    conn.close()
+    print('Database available, will run migrations')
+    exit(0)
+except Exception as e:
+    print(f'Database not available: {e}')
+    exit(1)
+"
 
   if [ $? -eq 0 ]; then
       echo "Running migrations for MySQL..."
