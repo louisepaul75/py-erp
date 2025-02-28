@@ -68,8 +68,15 @@ RUN mkdir -p /app/static /app/media /app/logs \
 # Copy application code
 COPY --chown=appuser:appuser . .
 
+# Copy environment variables file
+COPY --chown=appuser:appuser docker/docker.env /app/.env
+
+# Copy startup script
+COPY --chown=appuser:appuser docker/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Use non-root user
 USER appuser
 
-# Run gunicorn
-CMD ["gunicorn", "pyerp.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"] 
+# Run with the startup script instead of directly calling gunicorn
+CMD ["/app/start.sh"] 
