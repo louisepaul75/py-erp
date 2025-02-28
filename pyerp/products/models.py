@@ -7,6 +7,7 @@ with only essential fields required for import.
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 
 class ProductCategory(models.Model):
@@ -129,6 +130,161 @@ class VariantProduct(BaseProduct):
         null=True,
         help_text=_('Original Familie_ field from Artikel_Variante'),
         db_column='Familie_'  # Actual column name in the database
+    )
+    
+    # HIGH PRIORITY - Core product data from legacy system
+    is_verkaufsartikel = models.BooleanField(
+        default=False,
+        help_text=_('Whether this is a sales article (maps to Verkaufsartikel in Artikel_Variante)')
+    )
+    release_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('Release date (maps to Release_Date in Artikel_Variante)')
+    )
+    auslaufdatum = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_('Discontinuation date (maps to Auslaufdatum in Artikel_Variante)')
+    )
+    
+    # HIGH PRIORITY - Pricing structure from legacy system
+    retail_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Retail price (maps to Preise.Coll[Art="Laden"].Preis in Artikel_Variante)')
+    )
+    wholesale_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Wholesale price (maps to Preise.Coll[Art="Handel"].Preis in Artikel_Variante)')
+    )
+    retail_unit = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_('Retail packaging unit (maps to Preise.Coll[Art="Laden"].VE in Artikel_Variante)')
+    )
+    wholesale_unit = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_('Wholesale packaging unit (maps to Preise.Coll[Art="Handel"].VE in Artikel_Variante)')
+    )
+    
+    # Physical attributes
+    color = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text=_('Color of the variant')
+    )
+    size = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text=_('Size of the variant')
+    )
+    material = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=_('Material composition')
+    )
+    weight_grams = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Weight in grams')
+    )
+    length_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Length in millimeters')
+    )
+    width_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Width in millimeters')
+    )
+    height_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_('Height in millimeters')
+    )
+    
+    # Inventory and supply chain
+    min_stock_level = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_('Minimum stock level to maintain')
+    )
+    max_stock_level = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_('Maximum stock level to maintain')
+    )
+    current_stock = models.IntegerField(
+        default=0,
+        help_text=_('Current inventory level')
+    )
+    reorder_point = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_('Point at which to reorder inventory')
+    )
+    lead_time_days = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_('Lead time for replenishment in days')
+    )
+    
+    # Sales and performance data
+    units_sold_year = models.IntegerField(
+        default=0,
+        help_text=_('Units sold in current year')
+    )
+    units_sold_previous_year = models.IntegerField(
+        default=0,
+        help_text=_('Units sold in previous year')
+    )
+    
+    # Status and categorization
+    is_featured = models.BooleanField(
+        default=False,
+        help_text=_('Whether this variant is featured')
+    )
+    is_new = models.BooleanField(
+        default=False,
+        help_text=_('Whether this is a new variant')
+    )
+    is_bestseller = models.BooleanField(
+        default=False,
+        help_text=_('Whether this is a bestselling variant')
+    )
+    
+    # Timestamps and tracking
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        help_text=_('Creation timestamp')
+    )
+    updated_at = models.DateTimeField(
+        default=timezone.now,
+        help_text=_('Last update timestamp')
+    )
+    last_ordered_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text=_('Date when this variant was last ordered')
     )
     
     class Meta:

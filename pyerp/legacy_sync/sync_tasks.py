@@ -12,6 +12,7 @@ import pandas as pd
 from django.db import transaction
 from django.utils import timezone
 from django.apps import apps
+from datetime import datetime
 
 from pyerp.legacy_sync.api_client import api_client
 from pyerp.legacy_sync.models import SyncLog, SyncStatus, EntityMapping, EntityMappingConfig
@@ -37,6 +38,86 @@ def get_model_class(model_path):
     except (ImportError, AttributeError) as e:
         logger.error(f"Error importing model {model_path}: {e}")
         raise
+
+
+def map_variant_product_fields(variant_product, legacy_data):
+    """
+    Map fields from legacy Artikel_Variante data to the VariantProduct model.
+    
+    Args:
+        variant_product: The VariantProduct instance to update
+        legacy_data: Dictionary containing legacy data from Artikel_Variante
+    
+    Returns:
+        The updated VariantProduct instance
+    """
+    # Map high priority core fields
+    variant_product.is_verkaufsartikel = legacy_data.get('Verkaufsartikel', False)
+    
+    # Handle date fields
+    release_date = legacy_data.get('Release_Date')
+    if release_date:
+        # Convert milliseconds timestamp to datetime if needed
+        if isinstance(release_date, (int, float)):
+            variant_product.release_date = datetime.fromtimestamp(release_date / 1000)
+        else:
+            variant_product.release_date = release_date
+    
+    auslaufdatum = legacy_data.get('Auslaufdatum')
+    if auslaufdatum:
+        # Convert milliseconds timestamp to datetime if needed
+        if isinstance(auslaufdatum, (int, float)):
+            variant_product.auslaufdatum = datetime.fromtimestamp(auslaufdatum / 1000)
+        else:
+            variant_product.auslaufdatum = auslaufdatum
+    
+    # Handle pricing fields from the Preise collection
+    preise = legacy_data.get('Preise', {}).get('Coll', [])
+    for preis in preise:
+        art = preis.get('Art')
+        if art == 'Laden':  # Retail price
+            variant_product.retail_price = preis.get('Preis')
+            variant_product.retail_unit = preis.get('VE')
+        elif art == 'Handel':  # Wholesale price
+            variant_product.wholesale_price = preis.get('Preis')
+            variant_product.wholesale_unit = preis.get('VE')
+    
+    # Extract additional data for physical attributes from Properties if available
+    properties = legacy_data.get('Properties', {})
+    if isinstance(properties, dict) and 'results' in properties:
+        props = properties.get('results', [])
+        for prop in props:
+            prop_name = prop.get('name', '').lower()
+            prop_value = prop.get('value')
+            
+            if prop_name == 'farbe' or prop_name == 'color':
+                variant_product.color = prop_value
+            elif prop_name == 'größe' or prop_name == 'size' or prop_name == 'groesse':
+                variant_product.size = prop_value
+            elif prop_name == 'material':
+                variant_product.material = prop_value
+            elif prop_name in ('gewicht', 'weight'):
+                try:
+                    variant_product.weight_grams = float(prop_value)
+                except (ValueError, TypeError):
+                    pass
+            elif prop_name in ('länge', 'length', 'laenge'):
+                try:
+                    variant_product.length_mm = float(prop_value)
+                except (ValueError, TypeError):
+                    pass
+            elif prop_name in ('breite', 'width'):
+                try:
+                    variant_product.width_mm = float(prop_value)
+                except (ValueError, TypeError):
+                    pass
+            elif prop_name in ('höhe', 'height', 'hoehe'):
+                try:
+                    variant_product.height_mm = float(prop_value)
+                except (ValueError, TypeError):
+                    pass
+    
+    return variant_product
 
 
 def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
@@ -99,12 +180,47 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
                         logger.warning(f"Skipping {entity_type} record with no ID")
                         continue
                     
-                    # Transform legacy data to new format
+                    # Transform the legacy data using the mapping configuration
                     new_data = mapping_config.transform_legacy_data(legacy_data)
                     
-                    # Add legacy_id to the new data
+                    # Add the legacy ID to the new data
                     new_data['legacy_id'] = legacy_id
                     
+                    # Apply additional custom mapping for variant products
+                    if entity_type == 'variant_product':
+                        try:
+                            # For creation, create minimal object first, then update
+                            if not EntityMapping.objects.filter(entity_type=entity_type, legacy_id=legacy_id).exists():
+                                entity = model_class.objects.create(**new_data)
+                                map_variant_product_fields(entity, legacy_data)
+                                # Create mapping
+                                EntityMapping.objects.create(
+                                    entity_type=entity_type,
+                                    legacy_id=legacy_id,
+                                    new_id=str(entity.id)
+                                )
+                                stats['created'] += 1
+                                logger.debug(f"Created {entity_type} {legacy_id} -> {entity.id}")
+                                continue  # Skip the regular create/update flow
+                            else:
+                                # For updating, get existing entity and apply custom mapping
+                                mapping = EntityMapping.objects.get(entity_type=entity_type, legacy_id=legacy_id)
+                                entity = model_class.objects.get(id=mapping.new_id)
+                                # Update basic fields
+                                for field, value in new_data.items():
+                                    setattr(entity, field, value)
+                                # Apply custom mapping
+                                map_variant_product_fields(entity, legacy_data)
+                                entity.save()
+                                stats['updated'] += 1
+                                logger.debug(f"Updated {entity_type} {legacy_id} -> {entity.id}")
+                                continue  # Skip the regular create/update flow
+                        except Exception as e:
+                            logger.error(f"Error in custom mapping for {entity_type} {legacy_id}: {e}")
+                            stats['errors'] += 1
+                            continue
+                    
+                    # Regular create/update flow for other entity types
                     # Check if we already have a mapping for this entity
                     try:
                         mapping = EntityMapping.objects.get(
@@ -204,6 +320,23 @@ def sync_orders(new_only: bool = True) -> Dict[str, Any]:
         A dictionary with sync statistics.
     """
     return sync_entity('order', new_only)
+
+
+def sync_variant_products(new_only: bool = True) -> Dict[str, Any]:
+    """
+    Synchronize product variants from the legacy system to the new system.
+    
+    This function uses the custom map_variant_product_fields mapping function to handle
+    complex data transformations for product variants, including pricing, physical attributes,
+    and date fields.
+
+    Args:
+        new_only: If True, only fetch and sync product variants that have been modified since the last sync.
+
+    Returns:
+        A dictionary with sync statistics.
+    """
+    return sync_entity('variant_product', new_only)
 
 
 def sync_inventory(new_only: bool = True) -> Dict[str, Any]:

@@ -340,6 +340,52 @@ For detailed documentation on the product image integration feature, see:
 - [docs/features/product_image_sync.md](docs/features/product_image_sync.md)
 - [pyerp/products/management/commands/README.md](pyerp/products/management/commands/README.md)
 
+## Security and Audit Logging
+
+pyERP includes a comprehensive security system with audit logging capabilities:
+
+### Features
+
+- **Centralized Audit Logging**: Records critical security events in a dedicated `AuditLog` model
+- **Automatic Event Tracking**: Captures authentication events (login, logout, failed attempts)
+- **User Activity Monitoring**: Logs user creation, updates, and permission changes
+- **Contextual Data Recording**: Stores IP addresses, user agent information, and timestamps
+- **Administrative Review**: Searchable and filterable admin interface for security review
+- **Non-repudiation**: Immutable logs that cannot be modified through the interface
+- **Extensible Design**: Easy to add custom event types and specialized logging
+
+### Event Types
+
+The system logs various event types including:
+- Authentication events (login, logout, failed logins)
+- User management activities
+- Permission changes
+- Critical data access and modifications
+- System security events
+
+### Integration
+
+The audit logging system integrates with Django's authentication framework and signals system, providing automatic capture of key security events without requiring explicit logging calls in views.
+
+### Usage
+
+Developers can easily add audit logging to security-sensitive operations:
+
+```python
+from pyerp.core.services import AuditService
+
+# Log data access event
+AuditService.log_data_access(
+    user=request.user,
+    obj=sensitive_record,
+    request=request,
+    action="exported customer data"
+)
+```
+
+For detailed documentation on security features and audit logging, see:
+- [docs/security/audit_logging.md](docs/security/audit_logging.md)
+
 ## Dependency Management
 
 The project uses pip-tools for dependency management. Dependencies are organized into three categories:

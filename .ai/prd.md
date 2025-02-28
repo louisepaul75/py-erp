@@ -581,7 +581,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Basic user authentication with Django's built-in system ✅ *Implemented*
   - Core role definitions with Django permissions ✅ *Partially Implemented*
   - JWT authentication for API access ✅ *Implemented*
-  - Basic audit logging for critical actions
+  - Basic audit logging for critical actions ✅ *Implemented*
 
 - **Phase 2 (Enhanced):**
   - Extended user profile with additional fields
@@ -693,6 +693,25 @@ The user and roles system will be built on Django's authentication framework wit
   - Central AuditLog model for all security events
   - Specialized logging for authentication events
   - Integration with Django logging framework
+
+  **Audit Logging Implementation Details:**
+  - Central `AuditLog` model created in the core app
+  - Comprehensive event tracking for security-related actions:
+    - Authentication events (login, logout, failed logins)
+    - User management (creation, updates, deletion)
+    - Permission changes 
+    - Critical data access and modifications
+  - Automatic capture of contextual data:
+    - User identification (with fallback username if user is deleted)
+    - IP address and user agent information
+    - Timestamp and unique event ID
+    - Related object references via ContentType framework
+  - Integration with Django signals:
+    - Authentication signals (login, logout, login_failed)
+    - User model signals (post_save)
+  - Service layer (`AuditService`) for consistent logging across the application
+  - Admin interface for security review with filtering and search capabilities
+  - Non-modifiable logs to maintain audit integrity
 
 - **Security Considerations:**
   - Password hashing with Django's PBKDF2 algorithm

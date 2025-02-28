@@ -7,7 +7,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from pyerp.legacy_sync.sync_tasks import (
-    sync_products, sync_customers, sync_orders, sync_inventory, sync_entity
+    sync_products, sync_customers, sync_orders, sync_inventory, 
+    sync_variant_products, sync_entity
 )
 from pyerp.legacy_sync.models import EntityMappingConfig
 

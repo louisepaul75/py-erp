@@ -352,77 +352,9 @@
                                         <a href="{% url 'products:variant_detail' variant.id %}">
                                             <div style="width: 80px; height: 80px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                                                 {% if variant.images.exists %}
-                                                    {% comment %}Try to get the best image in priority order{% endcomment %}
-                                                    
-                                                    {% comment %}Priority 1: BE variant front Produktfoto{% endcomment %}
-                                                    {% with image_found=False %}
-                                                        {% comment %}This with statement is just for scoping and doesn't actually work for tracking state{% endcomment %}
-                                                        
-                                                        {% for image in variant.images.all %}
-                                                            {% if variant.variant_code == "BE" and image.image_type == "Produktfoto" and image.is_front %}
-                                                                <img src="{{ image.thumbnail_url|default:image.image_url }}" 
-                                                                     alt="{{ variant.name }}" 
-                                                                     style="max-height: 100%; max-width: 100%; object-fit: contain;"
-                                                                     class="priority-1">
-                                                                {% break %}
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                        
-                                                        {% comment %}Priority 2: Any front Produktfoto{% endcomment %}
-                                                        {% for image in variant.images.all %}
-                                                            {% if image.image_type == "Produktfoto" and image.is_front and not variant.variant_code == "BE" %}
-                                                                <img src="{{ image.thumbnail_url|default:image.image_url }}" 
-                                                                     alt="{{ variant.name }}" 
-                                                                     style="max-height: 100%; max-width: 100%; object-fit: contain;"
-                                                                     class="priority-2">
-                                                                {% break %}
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                        
-                                                        {% comment %}Priority 3: Any Produktfoto{% endcomment %}
-                                                        {% for image in variant.images.all %}
-                                                            {% if image.image_type == "Produktfoto" and not image.is_front %}
-                                                                <img src="{{ image.thumbnail_url|default:image.image_url }}" 
-                                                                     alt="{{ variant.name }}" 
-                                                                     style="max-height: 100%; max-width: 100%; object-fit: contain;"
-                                                                     class="priority-3">
-                                                                {% break %}
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                        
-                                                        {% comment %}Priority 4: First image as fallback{% endcomment %}
-                                                        <img src="{{ variant.images.first.thumbnail_url|default:variant.images.first.image_url }}" 
-                                                             alt="{{ variant.name }}" 
-                                                             style="max-height: 100%; max-width: 100%; object-fit: contain; display: none;"
-                                                             class="priority-4">
-                                                    {% endwith %}
-                                                    
-                                                    {% comment %}JavaScript to ensure only one image is shown, based on priority{% endcomment %}
-                                                    <script>
-                                                    document.addEventListener('DOMContentLoaded', function() {
-                                                        const variantId = "{{ variant.id }}";
-                                                        const imgContainer = document.querySelector('a[href$="' + variantId + '"] div');
-                                                        
-                                                        if (imgContainer) {
-                                                            // Find the highest priority image available
-                                                            const priority1 = imgContainer.querySelector('.priority-1');
-                                                            const priority2 = imgContainer.querySelector('.priority-2');
-                                                            const priority3 = imgContainer.querySelector('.priority-3');
-                                                            const priority4 = imgContainer.querySelector('.priority-4');
-                                                            
-                                                            // Show only the highest priority image
-                                                            if (priority1) {
-                                                                priority1.style.display = 'block';
-                                                            } else if (priority2) {
-                                                                priority2.style.display = 'block';
-                                                            } else if (priority3) {
-                                                                priority3.style.display = 'block';
-                                                            } else if (priority4) {
-                                                                priority4.style.display = 'block';
-                                                            }
-                                                        }
-                                                    });
-                                                    </script>
+                                                    <img src="{{ variant.images.first.thumbnail_url|default:variant.images.first.image_url }}" 
+                                                         alt="{{ variant.name }}" 
+                                                         style="max-height: 100%; max-width: 100%; object-fit: contain;">
                                                 {% else %}
                                                     <i class="fas fa-image text-muted"></i>
                                                 {% endif %}
