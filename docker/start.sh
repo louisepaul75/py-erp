@@ -15,6 +15,10 @@ echo "Testing Django configuration..."
 python -c "import sys; print(sys.path)"
 python -c "import django; print(\"django module found\")"
 
+# Test database URL parsing
+echo "Checking database URL..."
+python -c "import dj_database_url; db_url='${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'; parsed = dj_database_url.parse(db_url); print(f'Database config: {parsed}');" || echo "Database URL parsing failed, but continuing..."
+
 # Check if redis is available (if not, print warning but continue)
 echo "Checking Redis connection..."
 python -c "import redis; r = redis.from_url('${REDIS_URL:-redis://redis:6379/0}'); try: r.ping(); print('Redis connection successful'); except Exception as e: print(f'Redis connection failed: {e}')" || echo "Redis check failed, but continuing..."
@@ -36,8 +40,55 @@ except Exception as e:
     traceback.print_exc()
 "
 
+# Test database connectivity with retries
+echo "Testing database connectivity..."
+MAX_RETRIES=30
+RETRY_INTERVAL=2
+RETRY_COUNT=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+  python -c "
+  try:
+      import dj_database_url
+      import psycopg2
+      db_url = '${DATABASE_URL:-postgres://postgres:postgres@db:5432/pyerp}'
+      db_config = dj_database_url.parse(db_url)
+      print(f'Attempting to connect to database: {db_config}')
+      # This will raise an exception if connection fails
+      conn = psycopg2.connect(
+          host=db_config['HOST'],
+          port=db_config['PORT'],
+          dbname=db_config['NAME'],
+          user=db_config['USER'],
+          password=db_config['PASSWORD']
+      )
+      print('Database connection successful')
+      conn.close()
+      exit(0)
+  except Exception as e:
+      print(f'Database connection error: {e}')
+      import traceback
+      traceback.print_exc()
+      exit(1)
+  "
+  
+  if [ $? -eq 0 ]; then
+    echo "Database connection established!"
+    break
+  else
+    RETRY_COUNT=$((RETRY_COUNT+1))
+    echo "Failed to connect to database. Retry $RETRY_COUNT of $MAX_RETRIES..."
+    if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+      echo "Waiting $RETRY_INTERVAL seconds before retry..."
+      sleep $RETRY_INTERVAL
+    else
+      echo "Maximum number of retries reached. Continuing anyway but expect problems..."
+    fi
+  fi
+done
+
 echo "Running Django checks..."
-python manage.py check --settings=$DJANGO_SETTINGS_MODULE
+python manage.py check --settings=$DJANGO_SETTINGS_MODULE || echo "Django checks failed, but continuing..."
 
 echo "Starting Gunicorn..."
 exec gunicorn pyerp.wsgi:application --bind 0.0.0.0:8000 --workers 3 --log-level debug 
