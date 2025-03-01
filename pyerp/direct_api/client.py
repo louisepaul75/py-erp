@@ -9,6 +9,7 @@ import logging
 import requests
 import json
 import pandas as pd
+import os
 from typing import Dict, List, Optional, Any, Union
 from urllib.parse import urljoin
 import socket
@@ -18,7 +19,7 @@ from pyerp.direct_api.exceptions import (
     DirectAPIError, AuthenticationError, ConnectionError, 
     ResponseError, DataError, ServerUnavailableError
 )
-from pyerp.direct_api.auth import get_session, invalidate_session
+from pyerp.direct_api.auth import get_session, invalidate_session, set_session_limit_reached, is_session_limit_reached
 from pyerp.direct_api.settings import (
     API_ENVIRONMENTS,
     API_REST_ENDPOINT,
@@ -69,6 +70,12 @@ class DirectAPIClient:
     
     def _get_session(self):
         """Get a session for the current environment."""
+        # Check if we've hit the session limit before trying to get a session
+        if is_session_limit_reached():
+            error_msg = "Cannot get session because the session limit has been reached (402 error)"
+            logger.error(error_msg)
+            raise DirectAPIError(error_msg)
+            
         return get_session(self.environment)
     
     def _build_url(self, endpoint: str) -> str:
@@ -111,24 +118,59 @@ class DirectAPIClient:
             ConnectionError: If unable to connect to the API due to other connection issues
             ResponseError: If the API returns an error response
         """
+        # Check global session limit flag first
+        if is_session_limit_reached():
+            error_msg = "Cannot make API request because the session limit has been reached (402 error)"
+            logger.error(error_msg)
+            raise DirectAPIError(error_msg)
+            
         url = self._build_url(endpoint)
         
-        # Get the session cookie
-        cookie = self._get_session().get_cookie()
+        # Cookie file path - directly use the same path as in auth.py
+        cookie_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.global_session_cookie')
+        cookie_value = None
         
-        # Prepare headers
-        request_headers = {
-            'Cookie': cookie,
-            'Accept': 'application/json'
-        }
-        if headers:
-            request_headers.update(headers)
+        # Try to directly read the cookie from file
+        if os.path.exists(cookie_file):
+            try:
+                with open(cookie_file, 'r') as f:
+                    cookie_data = json.load(f)
+                    if 'value' in cookie_data:
+                        cookie_value = cookie_data['value']
+                        logger.debug(f"Loaded cookie value directly from file: {cookie_value[:10]}...")
+            except Exception as e:
+                logger.warning(f"Error reading cookie file directly: {e}")
         
-        # Prepare for retries
+        # Fall back to session method if direct reading failed
+        if not cookie_value:
+            logger.debug("Using session method to get cookie as direct file read failed")
+            cookie_value = self._get_session().get_cookie()
+            
+        # Keep track of whether or not we've already retried with a refreshed session
         retries = 0
         last_error = None
         
+        # Store the original cookie value to detect changes
+        original_cookie_value = cookie_value
+        
+        # Always use WASID4D as the cookie name
+        cookie_name = 'WASID4D'
+        
         while retries <= API_MAX_RETRIES:
+            # Format the cookie for the request
+            cookie_header = f"{cookie_name}={cookie_value}"
+            
+            # Prepare headers
+            request_headers = {
+                'Cookie': cookie_header,
+                'Accept': 'application/json'
+            }
+            if headers:
+                request_headers.update(headers)
+            
+            # Log the cookie being used (truncated for security)
+            logger.debug(f"Using cookie: {cookie_name}={cookie_value[:10]}...")
+            
             try:
                 # Make the request
                 logger.debug(f"{method} request to {url}")
@@ -146,13 +188,37 @@ class DirectAPIClient:
                     return response
                 elif response.status_code == 401 or response.status_code == 403 or response.status_code == 404:
                     # Authentication error - invalidate session, refresh and retry
+                    # But only if we haven't hit the session limit
+                    if is_session_limit_reached():
+                        error_msg = f"Authentication error with status {response.status_code}, but cannot refresh because session limit reached"
+                        logger.error(error_msg)
+                        raise ResponseError(response.status_code, error_msg, response.text)
+                        
                     logger.warning(f"Authentication failed with status {response.status_code}, invalidating session and refreshing")
                     invalidate_session(self.environment)
                     self._get_session().refresh()
-                    cookie = self._get_session().get_cookie()
-                    request_headers['Cookie'] = cookie
+                    
+                    # Get new cookie value and update headers
+                    cookie_value = self._get_session().get_cookie()
+                    cookie_header = f"{cookie_name}={cookie_value}"
+                    request_headers['Cookie'] = cookie_header
+                    
+                    # Log the new cookie being used (truncated for security)
+                    logger.debug(f"Using new cookie after refresh: {cookie_name}={cookie_value[:10]}...")
+                    
                     retries += 1
                     continue
+                elif response.status_code == 402:
+                    # Payment Required / Too Many Sessions error
+                    # Set the global flag to prevent new session creation
+                    set_session_limit_reached(True)
+                    
+                    # Do NOT create a new session - that would make the problem worse
+                    logger.warning(f"Received 402 error (too many sessions) - setting global session limit flag")
+                    
+                    error_msg = f"API request failed with status 402 (too many sessions)"
+                    logger.error(error_msg)
+                    raise ResponseError(response.status_code, error_msg, response.text)
                 else:
                     # Handle other error responses
                     error_msg = f"API request failed with status {response.status_code}"

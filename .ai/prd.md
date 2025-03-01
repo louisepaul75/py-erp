@@ -1945,3 +1945,68 @@ Based on our findings, the following best practices should be followed:
    - Log response structure for debugging purposes
 
 These findings have been documented in detail in [docs/legacy_erp/api/direct_api_integration.md](../docs/legacy_erp/api/direct_api_integration.md) and implemented in our internal `direct_api` module, which now serves as a reference implementation for all legacy system integrations.
+
+### 4.6.4 Legacy ERP Direct API Integration
+
+#### Current Status: ⚠️ *Critical Issues*
+
+- **Direct API Implementation Assessment:**
+  - **Session Management Issues:** ❌ *Not Working*
+    - The current `direct_api` implementation fails to maintain a single session
+    - The implementation is incorrectly creating multiple new sessions when only ONE session should ever exist
+    - Each script execution/API call creates a new session instead of reusing the existing one
+    - This leads to rapid session proliferation and depletion of available server sessions
+    - The 402 error (Too Many Sessions) should never even be encountered if session management worked properly
+    - The system becomes completely clogged with sessions, making it unusable
+  
+  - **Comparison with Working Implementation:**
+    - The original `getTable.py` script works correctly by maintaining exactly one session
+    - The `direct_api` reimplementation (`getTable_direct_api.py`) fundamentally fails to maintain session discipline
+    - The original implementation never hits 402 errors because it properly reuses the same session
+  
+  - **Technical Analysis:**
+    - Despite code appearing to implement session management, it fails to maintain a single persistent session
+    - Each component/call path appears to be creating its own session rather than sharing a global one
+    - Cookie/session handling mechanism is incorrectly implementing the "exactly one session" requirement
+    - Global session objects are not being properly shared/accessed between components
+    - Debug mode confirms that new sessions are created for each operation
+
+- **Impact:**
+  - Direct API module cannot be used in production
+  - Testing on live systems causes server overload with sessions
+  - Risk of session depletion affecting other critical systems
+  - Blocking issue for any functionality depending on direct API access
+
+- **Remediation Plan:**
+  - *High Priority*
+    - Revert to using original `getTable.py` script for immediate needs
+    - Conduct comprehensive review to identify all session creation code paths
+    - Redesign session management to ensure exactly ONE session is maintained globally
+    - Implement proper singleton pattern for session management
+    - Add detailed session tracking logs to identify all session creation points
+  
+  - *Medium Priority*
+    - Refactor authentication module to use true singleton session instance
+    - Verify all API call paths use the same session object
+    - Create automated tests specifically for session reuse verification
+  
+  - *Low Priority*
+    - Update documentation to emphasize the "single session" requirement
+    - Create monitoring tools for session tracking
+    - Add explicit warnings in code where new sessions might be created
+
+- **Lessons Learned:**
+  - Critical importance of true singleton session management when working with legacy APIs
+  - Need for comprehensive testing of session creation/reuse logic
+  - Importance of validating API client behavior with minimal test cases before scaling
+  - Value of preserving working implementations for reference
+
+#### Implementation Dependencies
+
+The following modules depend on proper direct API functionality:
+- Data migration from legacy system
+- Live data synchronization
+- Inventory updates
+- Product data enrichment
+
+Until the direct API issues are resolved, alternative approaches using the original scripts will be maintained.

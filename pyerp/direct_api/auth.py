@@ -38,6 +38,33 @@ COOKIE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.global_
 # Global lock for file operations
 file_lock = threading.RLock()
 
+# Global flag to track if we've hit session limits across the system
+_SESSION_LIMIT_REACHED = False
+_session_limit_lock = threading.RLock()
+
+def set_session_limit_reached(reached=True):
+    """
+    Set the global session limit reached flag.
+    
+    Args:
+        reached: Whether the session limit has been reached
+    """
+    global _SESSION_LIMIT_REACHED
+    with _session_limit_lock:
+        if reached and not _SESSION_LIMIT_REACHED:
+            logger.warning("SESSION LIMIT REACHED: Setting global flag to prevent new session creation")
+        _SESSION_LIMIT_REACHED = reached
+        
+def is_session_limit_reached():
+    """
+    Check if the session limit has been reached.
+    
+    Returns:
+        bool: True if the session limit has been reached
+    """
+    with _session_limit_lock:
+        return _SESSION_LIMIT_REACHED
+
 
 class Session:
     """
@@ -99,7 +126,7 @@ class Session:
         with file_lock:
             try:
                 cookie_data = {
-                    'name': 'session_cookie',
+                    'name': 'WASID4D',  # Always use WASID4D as the cookie name
                     'value': self.cookie,
                     'created_at': self.created_at.isoformat() if self.created_at else datetime.datetime.now().isoformat()
                 }
@@ -107,7 +134,7 @@ class Session:
                 with open(COOKIE_FILE, 'w') as f:
                     json.dump(cookie_data, f)
                 
-                logger.info(f"Saved session cookie to file: {self.cookie[:30]}...")
+                logger.info(f"Saved session cookie to file: {self.cookie[:10]}...")
                 return True
             except Exception as e:
                 logger.warning(f"Error saving cookie to file: {e}")
@@ -131,6 +158,12 @@ class Session:
             ConnectionError: If unable to connect to the API
             ResponseError: If the API returns an error response
         """
+        # Check if we've hit the session limit - if so, don't create a new session
+        if is_session_limit_reached():
+            error_msg = "Cannot create a new session because the session limit has been reached (402 error)"
+            logger.error(error_msg)
+            raise AuthenticationError(error_msg)
+            
         # Build the authentication URL
         base_url = self.config['base_url']
         auth_url = urljoin(base_url, API_INFO_ENDPOINT)
@@ -148,22 +181,102 @@ class Session:
                     timeout=API_REQUEST_TIMEOUT
                 )
                 
+                # Check if we got a 402 error - if so, mark that we've hit the session limit
+                if response.status_code == 402:
+                    set_session_limit_reached(True)
+                    error_msg = f"Too many sessions error (402) during authentication"
+                    logger.error(error_msg)
+                    raise AuthenticationError(error_msg)
+                
                 # Check if we got a cookie (even with 404 status)
                 if 'Set-Cookie' in response.headers:
                     cookie_header = response.headers['Set-Cookie']
-                    # Parse the cookie and store the value
-                    self.cookie = cookie_header
+                    
+                    # Extract just the cookie value by parsing the Set-Cookie header
+                    # Set-Cookie header format is typically: name=value; path=/; domain=.example.com; ...
+                    # We want to extract just the value part
+                    if '=' in cookie_header:
+                        # Check specifically for WASID4D in the Set-Cookie header
+                        if 'WASID4D=' in cookie_header:
+                            # Extract WASID4D value
+                            start_index = cookie_header.find('WASID4D=') + 8  # Length of 'WASID4D='
+                            end_index = cookie_header.find(';', start_index)
+                            if end_index == -1:  # No semicolon found, take the rest of the string
+                                end_index = len(cookie_header)
+                            
+                            cookie_value = cookie_header[start_index:end_index].strip()
+                            logger.info(f"Found WASID4D in Set-Cookie header")
+                            
+                            # Store just the value
+                            self.cookie = cookie_value
+                            logger.info(f"Stored WASID4D cookie value: {cookie_value[:10]}...")
+                            self.created_at = datetime.datetime.now()
+                            
+                            # Save the cookie to file for persistence
+                            self._save_cookie_to_file()
+                            return
+                        
+                        # If no WASID4D found, fall back to general parsing
+                        cookie_parts = cookie_header.split(';')[0].split('=', 1)
+                        if len(cookie_parts) == 2:
+                            cookie_name = cookie_parts[0].strip()
+                            cookie_value = cookie_parts[1].strip()
+                            logger.info(f"Extracted cookie name: {cookie_name}")
+                            
+                            # Store just the value, not the name=value format
+                            self.cookie = cookie_value
+                            logger.info(f"Stored cookie value: {cookie_value[:10]}...")
+                        else:
+                            # Fallback to the full header if parsing fails
+                            logger.warning("Failed to parse cookie header, using full header as fallback")
+                            self.cookie = cookie_header
+                    else:
+                        # Fallback to the full header if format is unexpected
+                        logger.warning("Unexpected cookie format, using full header as fallback")
+                        self.cookie = cookie_header
+                    
                     self.created_at = datetime.datetime.now()
                     logger.info(f"Successfully obtained session cookie for {self.environment}")
                     
                     # Save the cookie to file for persistence
                     self._save_cookie_to_file()
                     return
-                else:
-                    # No cookie in response
-                    error_msg = f"No session cookie returned by the API (status {response.status_code})"
-                    logger.error(error_msg)
-                    raise AuthenticationError(error_msg)
+                    
+                # Also check if cookies were set in the response's cookies attribute
+                elif response.cookies:
+                    # Always prioritize WASID4D cookies
+                    if 'WASID4D' in response.cookies:
+                        # Extract just the value
+                        cookie_value = response.cookies['WASID4D']
+                        logger.info(f"Found WASID4D cookie in response.cookies")
+                        
+                        # Store just the value
+                        self.cookie = cookie_value
+                        logger.info(f"Stored WASID4D cookie value: {cookie_value[:10]}...")
+                        self.created_at = datetime.datetime.now()
+                        
+                        # Save the cookie to file for persistence
+                        self._save_cookie_to_file()
+                        return
+                    # Fall back to 4DSID_WSZ-DB only if WASID4D is not available
+                    elif '4DSID_WSZ-DB' in response.cookies:
+                        # Extract just the value
+                        cookie_value = response.cookies['4DSID_WSZ-DB']
+                        logger.info(f"Found 4DSID_WSZ-DB cookie in response.cookies (will use as WASID4D)")
+                        
+                        # Store just the value
+                        self.cookie = cookie_value
+                        logger.info(f"Stored 4DSID_WSZ-DB cookie value as WASID4D: {cookie_value[:10]}...")
+                        self.created_at = datetime.datetime.now()
+                        
+                        # Save the cookie to file for persistence
+                        self._save_cookie_to_file()
+                        return
+                
+                # No cookie found in response
+                error_msg = f"No session cookie returned by the API (status {response.status_code})"
+                logger.error(error_msg)
+                raise AuthenticationError(error_msg)
                     
             except requests.RequestException as e:
                 # Handle connection errors
@@ -199,129 +312,90 @@ class Session:
             
         Raises:
             AuthenticationError: If authentication fails
+            ConnectionError: If unable to connect to the API
         """
+        # Refresh if we don't have a cookie
         if not self.is_valid():
-            # Try to load from file first
-            if not self._load_cookie_from_file():
-                # If not in file, refresh
-                self.refresh()
+            # Check if we've hit the session limit
+            if is_session_limit_reached():
+                error_msg = "Cannot create a new session because the session limit has been reached (402 error)"
+                logger.error(error_msg)
+                raise AuthenticationError(error_msg)
+                
+            logger.debug("No cookie available, refreshing session")
+            self.refresh()
+        
         return self.cookie
-
-
-class SessionPool:
-    """
-    Pool of API sessions for different environments.
     
-    This class manages a pool of sessions and ensures they are properly cached
-    and thread-safe.
-    """
-    
-    def __init__(self):
-        """Initialize the session pool."""
-        self.lock = threading.RLock()
-        self.cache = caches[API_SESSION_CACHE_NAME]
-        self.sessions = {}
-    
-    def get_session(self, environment: str = 'live') -> Session:
+    def ensure_valid(self) -> None:
         """
-        Get a session for the specified environment, creating a new one if needed.
+        Ensure that the session is valid, refreshing if necessary.
         
-        Args:
-            environment: The environment to use ('live', 'test', etc.)
-            
-        Returns:
-            Session: A valid session for the specified environment
+        Raises:
+            AuthenticationError: If authentication fails
+            ConnectionError: If unable to connect to the API
         """
-        with self.lock:
-            # Check if we already have a session object in memory
-            if environment in self.sessions:
-                logger.debug(f"Using existing session object for {environment}")
-                return self.sessions[environment]
-            
-            # Create a new session
-            session = Session(environment)
-            
-            # Try to get a cookie (will load from file or refresh if needed)
-            session.get_cookie()
-            
-            # Store in memory
-            self.sessions[environment] = session
-            
-            return session
+        # Try to load an existing cookie from file if we don't have one yet
+        if not self.is_valid() and not self._load_cookie_from_file():
+            # Check if we've hit the session limit
+            if is_session_limit_reached():
+                error_msg = "Cannot create a new session because the session limit has been reached (402 error)"
+                logger.error(error_msg)
+                raise AuthenticationError(error_msg)
+                
+            logger.debug("No valid cookie found, refreshing session")
+            self.refresh()
     
-    def invalidate_session(self, environment: str = 'live'):
+    def invalidate(self) -> None:
         """
-        Invalidate the session for the specified environment.
+        Invalidate the current session.
+        """
+        self.cookie = None
+        self.created_at = None
         
-        Args:
-            environment: The environment to invalidate the session for
-        """
-        with self.lock:
-            # Remove from memory
-            if environment in self.sessions:
-                del self.sessions[environment]
-            
-            # Remove from cache
-            cache_key = f"{API_SESSION_CACHE_KEY_PREFIX}{environment}"
-            self.cache.delete(cache_key)
-            
-            # Remove from file
+        # Remove the cookie file if it exists
+        with file_lock:
             if os.path.exists(COOKIE_FILE):
                 try:
                     os.remove(COOKIE_FILE)
-                    logger.info(f"Removed session cookie file")
+                    logger.info(f"Removed session cookie file: {COOKIE_FILE}")
                 except Exception as e:
-                    logger.warning(f"Error removing cookie file: {e}")
-            
-            logger.info(f"Invalidated session for {environment}")
-    
-    def clear_sessions(self):
-        """Clear all sessions from the cache."""
-        with self.lock:
-            # Clear memory
-            self.sessions = {}
-            
-            # Clear cache
-            for env in API_ENVIRONMENTS.keys():
-                cache_key = f"{API_SESSION_CACHE_KEY_PREFIX}{env}"
-                self.cache.delete(cache_key)
-            
-            # Clear file
-            if os.path.exists(COOKIE_FILE):
-                try:
-                    os.remove(COOKIE_FILE)
-                    logger.info(f"Removed session cookie file")
-                except Exception as e:
-                    logger.warning(f"Error removing cookie file: {e}")
-            
-            logger.debug("Cleared all sessions from cache")
+                    logger.warning(f"Failed to remove session cookie file: {e}")
 
 
-# Create a global session pool
-session_pool = SessionPool()
+# Session pool for reusing sessions
+_session_pool = {}
+_session_pool_lock = threading.RLock()
+
 
 def get_session(environment: str = 'live') -> Session:
     """
     Get a session for the specified environment.
     
-    This is a convenience function that uses the global session pool.
-    
     Args:
         environment: The environment to use ('live', 'test', etc.)
         
     Returns:
-        Session: A valid session for the specified environment
+        Session: A session for the specified environment
     """
-    return session_pool.get_session(environment)
+    with _session_pool_lock:
+        if environment not in _session_pool:
+            _session_pool[environment] = Session(environment)
+            
+        return _session_pool[environment]
 
-def invalidate_session(environment: str = 'live'):
+
+def invalidate_session(environment: str = 'live') -> None:
     """
     Invalidate the session for the specified environment.
     
     Args:
-        environment: The environment to invalidate the session for
+        environment: The environment to use ('live', 'test', etc.)
     """
-    session_pool.invalidate_session(environment)
+    with _session_pool_lock:
+        if environment in _session_pool:
+            _session_pool[environment].invalidate()
+            del _session_pool[environment]
 
 def get_session_cookie(environment: str = 'live') -> str:
     """
@@ -335,4 +409,10 @@ def get_session_cookie(environment: str = 'live') -> str:
     Returns:
         str: The session cookie for API requests
     """
+    # Check if we've hit the session limit
+    if is_session_limit_reached():
+        error_msg = "Cannot get session cookie because the session limit has been reached (402 error)"
+        logger.error(error_msg)
+        raise AuthenticationError(error_msg)
+        
     return get_session(environment).get_cookie() 

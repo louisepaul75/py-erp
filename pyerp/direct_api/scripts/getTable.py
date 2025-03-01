@@ -690,14 +690,17 @@ def main():
             
             logger.info(f"Data saved to {output_path}")
         else:
-            # Print to stdout
-            if args.format == 'csv':
-                print(df.to_csv(index=False))
-            elif args.format == 'json':
-                print(df.to_json(orient='records', indent=2))
-            else:
-                # For Excel format, default to CSV when printing to stdout
-                print(df.to_csv(index=False))
+            # Print to stdout as a formatted DataFrame
+            # Set pandas display options for better readability
+            # pd.set_option('display.max_rows', 20)  # Limit rows to avoid huge output
+            # pd.set_option('display.max_columns', None)  # Show all columns
+            # pd.set_option('display.width', None)  # Auto-detect width
+            # pd.set_option('display.expand_frame_repr', False)  # Don't wrap to multiple lines
+            
+            # Print number of records and a sample of the DataFrame
+            print(f"\nFetched {len(df)} records from '{args.table_name}'")
+            print("\nDataFrame Preview:")
+            print(df.tail())
         
         return df
     except Exception as e:
