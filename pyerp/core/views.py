@@ -6,16 +6,21 @@ import logging
 
 from django.conf import settings
 from django.db import connection
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_http_methods
 from django.db.utils import OperationalError
+from django.utils.translation import activate, get_language
+from django.utils import translation
 
 # Set up logging
 logger = logging.getLogger('pyerp.core')
+
+# Language session key constant (compatible with Django 5.1+)
+LANGUAGE_SESSION_KEY = 'django_language'
 
 def health_check(request):
     """

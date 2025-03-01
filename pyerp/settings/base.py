@@ -75,6 +75,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -162,9 +163,38 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'de'  # Set German as the default language
+
+# Define supported languages
+from django.utils.translation import gettext_lazy as _
+LANGUAGES = [
+    ('de', _('German')),
+    ('en', _('English')),
+]
+
+# Set the location of the translation files
+LOCALE_PATHS = [
+    BASE_DIR / 'pyerp' / 'locale',
+]
+
+# Language cookie settings
+LANGUAGE_COOKIE_NAME = 'django_language'
+LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365  # 1 year
+LANGUAGE_COOKIE_PATH = '/'
+LANGUAGE_COOKIE_SECURE = False
+LANGUAGE_COOKIE_HTTPONLY = False
+LANGUAGE_COOKIE_SAMESITE = None
+
+# Language detection settings
 USE_I18N = True
+USE_L10N = True
+
+# Session settings
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 1 week
+SESSION_SAVE_EVERY_REQUEST = True  # Save the session at every request
+
+TIME_ZONE = 'UTC'
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
@@ -175,6 +205,13 @@ STATICFILES_DIRS = [
     BASE_DIR / 'pyerp' / 'static',
 ]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Cache configuration - use dummy cache in development for better debugging
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
 
 # Media files (User Uploads)
 MEDIA_URL = 'media/'

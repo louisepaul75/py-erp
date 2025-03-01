@@ -8,12 +8,15 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from django.views.generic import RedirectView
+from django.views.i18n import JavaScriptCatalog
 from rest_framework import permissions
-from rest_framework_simplejwt.views import (TokenObtainPairView,
-                                            TokenRefreshView, TokenVerifyView)
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView, TokenRefreshView, TokenVerifyView
+)
+from django.conf.urls.i18n import i18n_patterns
+from django.views.i18n import set_language
 
 # Check if drf_yasg is available
 try:
@@ -26,59 +29,68 @@ try:
             title="pyERP API",
             default_version='v1',
             description="API for pyERP system",
-            terms_of_service="https://www.example.com/terms/",
-            contact=openapi.Contact(email="contact@example.com"),
-            license=openapi.License(name="BSD License"),
         ),
-        public=True,
-        permission_classes=[permissions.IsAuthenticated],
+        public=False,
+        permission_classes=(permissions.IsAuthenticated,),
     )
-    
-    HAS_SWAGGER = True
+    has_swagger = True
     print("Swagger documentation enabled")
 except ImportError:
-    HAS_SWAGGER = False
+    has_swagger = False
     print("WARNING: drf_yasg not available, API documentation will be disabled")
 
-# Main URL patterns
-urlpatterns = [
-    # Root URL - redirect to products list
-    path('', RedirectView.as_view(pattern_name='products:product_list'), name='home'),
+# Non-internationalized URLs - will not have language prefix
+non_i18n_urlpatterns = [
+    # Language selection URL - using Django's built-in view
+    path('set-language/', set_language, name='set_language'),
     
-    # Admin site
+    # JavaScript translations
+    path('jsi18n/', JavaScriptCatalog.as_view(), name='javascript-catalog'),
+    
+    # Django admin URLs
     path('admin/', admin.site.urls),
     
-    # Authentication URLs
-    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('accounts/password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
-    path('accounts/password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
-    path('accounts/password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
-    path('accounts/password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
-    path('accounts/reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('accounts/reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
-    
-    # API authentication
+    # API URLs
+    path('api/v1/', include('pyerp.core.api_urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    
-    # API endpoints
-    # Required core modules
-    path('api/products/', include('pyerp.products.api_urls')),
-    
-    # Frontend URLs
+]
+
+# Add API documentation URLs if available
+if has_swagger:
+    non_i18n_urlpatterns += [
+        path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+        path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    ]
+
+# Default/required app URLs to include in internationalized patterns
+i18n_apps = [
+    path('', include('pyerp.core.urls')),
     path('products/', include('pyerp.products.urls')),
 ]
 
-# Add Swagger documentation if available
-if HAS_SWAGGER:
-    urlpatterns.extend([
-        path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-        path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    ])
+# Optional modules to conditionally include in internationalized patterns
+OPTIONAL_FRONTEND_MODULES = [
+    ('sales/', 'pyerp.sales.urls'),
+    ('inventory/', 'pyerp.inventory.urls'),
+    ('production/', 'pyerp.production.urls'),
+]
 
-# Optional modules - try to include each conditionally
+# Add optional frontend modules if available
+for url_prefix, module_path in OPTIONAL_FRONTEND_MODULES:
+    try:
+        # Check if the module can be imported
+        __import__(module_path.split('.', 1)[0])
+        module_urls = __import__(module_path, fromlist=['urlpatterns'])
+        if hasattr(module_urls, 'urlpatterns'):
+            i18n_apps.append(path(url_prefix, include(module_path)))
+            print(f"Added frontend URL patterns for {module_path}")
+    except ImportError as e:
+        print(f"WARNING: Could not import {module_path}: {e}")
+        print(f"Frontend URL patterns for {url_prefix} will not be available")
+
+# Optional API modules
 OPTIONAL_API_MODULES = [
     ('sales', 'pyerp.sales.urls'),
     ('inventory', 'pyerp.inventory.urls'),
@@ -86,20 +98,36 @@ OPTIONAL_API_MODULES = [
     ('legacy-sync', 'pyerp.legacy_sync.urls'),
 ]
 
-# Add each optional module if it's available
+# Add optional API modules if available
 for url_prefix, module_path in OPTIONAL_API_MODULES:
     try:
-        # Check if the module can be imported
         __import__(module_path.split('.', 1)[0])
         module_urls = __import__(module_path, fromlist=['urlpatterns'])
         if hasattr(module_urls, 'urlpatterns'):
-            urlpatterns.append(path(f'api/{url_prefix}/', include(module_path)))
-            print(f"Added URL patterns for {module_path}")
-        else:
-            print(f"WARNING: {module_path} exists but does not define urlpatterns")
+            # Add to API (non-internationalized) paths
+            non_i18n_urlpatterns.append(path(f'api/{url_prefix}/', include(module_path)))
+            print(f"Added API URL patterns for {module_path}")
     except ImportError as e:
         print(f"WARNING: Could not import {module_path}: {e}")
         print(f"URL patterns for api/{url_prefix}/ will not be available")
+
+# Build the internationalized URL patterns
+i18n_urlpatterns = i18n_patterns(
+    # Root URL - redirect to products list
+    path('', RedirectView.as_view(pattern_name='products:product_list'), name='home'),
+    
+    # Django authentication URLs
+    path('accounts/', include('django.contrib.auth.urls')),
+    
+    # Add all app URLs
+    *i18n_apps,
+    
+    # Make language prefix optional
+    prefix_default_language=False,
+)
+
+# Combine all URL patterns
+urlpatterns = non_i18n_urlpatterns + i18n_urlpatterns
 
 # Serve static and media files in development
 if settings.DEBUG:

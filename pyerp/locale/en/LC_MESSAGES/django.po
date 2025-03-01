@@ -1,0 +1,80 @@
+# English translations for pyERP.
+# Copyright (C) 2024 pyERP Team
+# This file is distributed under the same license as the pyERP package.
+msgid ""
+msgstr ""
+"Project-Id-Version: pyERP 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-03-01 10:00+0100\n"
+"PO-Revision-Date: 2024-03-01 10:00+0100\n"
+"Last-Translator: pyERP Team\n"
+"Language-Team: English\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: pyerp/settings/base.py
+msgid "German"
+msgstr "German"
+
+#: pyerp/settings/base.py
+msgid "English"
+msgstr "English"
+
+#: pyerp/templates/base.html
+msgid "Dashboard"
+msgstr "Dashboard"
+
+#: pyerp/templates/base.html
+msgid "Products"
+msgstr "Products"
+
+#: pyerp/templates/base.html
+msgid "Sales"
+msgstr "Sales"
+
+#: pyerp/templates/base.html
+msgid "Inventory"
+msgstr "Inventory"
+
+#: pyerp/templates/base.html
+msgid "Production"
+msgstr "Production"
+
+#: pyerp/templates/base/language_switcher.html
+msgid "Language"
+msgstr "Language"
+
+#: pyerp/templates/base.html
+msgid "Login"
+msgstr "Login"
+
+#: pyerp/templates/base.html
+msgid "Logout"
+msgstr "Logout"
+
+#: pyerp/templates/base.html
+msgid "Profile"
+msgstr "Profile"
+
+#: pyerp/templates/base.html
+msgid "Admin"
+msgstr "Admin"
+
+#: pyerp/templates/products/product_list.html
+msgid "Product List"
+msgstr "Product List"
+
+#: pyerp/templates/products/product_detail.html
+msgid "Product Details"
+msgstr "Product Details"
+
+#: pyerp/templates/products/product_detail.html
+msgid "Edit"
+msgstr "Edit"
+
+#: pyerp/templates/products/product_detail.html
+msgid "Delete"
+msgstr "Delete" 

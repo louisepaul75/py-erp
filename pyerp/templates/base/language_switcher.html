@@ -1,0 +1,69 @@
+{% load i18n %}
+
+{% get_current_language as CURRENT_LANGUAGE %}
+
+<div class="language-switcher">
+    <div class="dropdown">
+        <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-globe"></i> {{ CURRENT_LANGUAGE|upper }}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+            <!-- Direct language links with base path - works with or without i18n prefixes -->
+            {% with timestamp=request.GET._|default:1 %}
+            <li>
+                {% if request.path|slice:":3" == "/en" %}
+                <a href="/de{{ request.path|slice:'3:' }}?_={{ timestamp }}" 
+                   class="dropdown-item {% if CURRENT_LANGUAGE == 'de' %}active{% endif %}">
+                    Deutsch (DE)
+                </a>
+                {% elif request.path|slice:":3" == "/de" %}
+                <a href="/de{{ request.path|slice:'3:' }}" 
+                   class="dropdown-item {% if CURRENT_LANGUAGE == 'de' %}active{% endif %}">
+                    Deutsch (DE)
+                </a>
+                {% else %}
+                <a href="/de{{ request.path }}" 
+                   class="dropdown-item {% if CURRENT_LANGUAGE == 'de' %}active{% endif %}">
+                    Deutsch (DE)
+                </a>
+                {% endif %}
+            </li>
+            <li>
+                {% if request.path|slice:":3" == "/de" %}
+                <a href="/en{{ request.path|slice:'3:' }}?_={{ timestamp }}" 
+                   class="dropdown-item {% if CURRENT_LANGUAGE == 'en' %}active{% endif %}">
+                    English (EN)
+                </a>
+                {% elif request.path|slice:":3" == "/en" %}
+                <a href="/en{{ request.path|slice:'3:' }}" 
+                   class="dropdown-item {% if CURRENT_LANGUAGE == 'en' %}active{% endif %}">
+                    English (EN)
+                </a>
+                {% else %}
+                <a href="/en{{ request.path }}" 
+                   class="dropdown-item {% if CURRENT_LANGUAGE == 'en' %}active{% endif %}">
+                    English (EN)
+                </a>
+                {% endif %}
+            </li>
+            {% endwith %}
+        </ul>
+    </div>
+</div>
+
+<style>
+    /* Remove form margins and padding */
+    .language-form {
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Make dropdown buttons look like links */
+    .language-form .dropdown-item {
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+    }
+</style> 

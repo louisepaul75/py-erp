@@ -1,7 +1,8 @@
 {% load static %}
+{% load i18n %}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,6 +25,28 @@
         .navbar.bg-primary {
             background-color: #d2bc9b !important;
         }
+        
+        /* Language switcher styles */
+        .language-switcher {
+            margin-right: 10px;
+        }
+        
+        .language-switcher .btn-outline-light {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .language-switcher .btn-outline-light:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .language-switcher .dropdown-menu {
+            min-width: 8rem;
+        }
+        
+        .language-switcher .dropdown-item.active {
+            background-color: #d2bc9b;
+            color: white;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -41,39 +64,44 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Dashboard</a>
+                        <a class="nav-link" href="/">{% translate "Dashboard" %}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/products/">Products</a>
+                        <a class="nav-link" href="/products/">{% translate "Products" %}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/sales/">Sales</a>
+                        <a class="nav-link" href="/sales/">{% translate "Sales" %}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/inventory/">Inventory</a>
+                        <a class="nav-link" href="/inventory/">{% translate "Inventory" %}</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/production/">Production</a>
+                        <a class="nav-link" href="/production/">{% translate "Production" %}</a>
                     </li>
                 </ul>
-                <ul class="navbar-nav">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Language Switcher -->
+                    <li class="nav-item me-2">
+                        {% include "base/language_switcher.html" %}
+                    </li>
+                    <!-- User Menu -->
                     {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user"></i> {{ user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/profile/">Profile</a></li>
+                            <li><a class="dropdown-item" href="/profile/">{% translate "Profile" %}</a></li>
                             {% if user.is_staff %}
-                            <li><a class="dropdown-item" href="/admin/">Admin</a></li>
+                            <li><a class="dropdown-item" href="/admin/">{% translate "Admin" %}</a></li>
                             {% endif %}
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/logout/">Logout</a></li>
+                            <li><a class="dropdown-item" href="/logout/">{% translate "Logout" %}</a></li>
                         </ul>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="/login/">Login</a>
+                        <a class="nav-link" href="/login/">{% translate "Login" %}</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -93,6 +121,51 @@
             {% endfor %}
         </div>
         {% endif %}
+        
+        <!-- Debug language information - remove in production -->
+        <div class="small p-3 mb-3 border border-warning rounded bg-light">
+            <h5 class="mb-2">Language Debug Information:</h5>
+            <div><strong>LANGUAGE_CODE:</strong> {{ LANGUAGE_CODE }}</div>
+            {% get_current_language as CURRENT_LANGUAGE %}
+            <div><strong>get_current_language():</strong> {{ CURRENT_LANGUAGE }}</div>
+            <div><strong>URL Path:</strong> {{ request.path }}</div>
+            <div><strong>URL Language Prefix:</strong> 
+                {% if request.path|slice:":3" == "/en" %}
+                    <span class="text-success">/en</span> (English) 
+                {% elif request.path|slice:":3" == "/de" %}
+                    <span class="text-success">/de</span> (German)
+                {% else %}
+                    <span class="text-warning">No language prefix detected</span>
+                {% endif %}
+            </div>
+            <div><strong>Cookie (django_language):</strong> {{ request.COOKIES.django_language|default:"Not set" }}</div>
+            <div><strong>Session (django_language):</strong> {{ request.session.django_language|default:"Not set" }}</div>
+            
+            {% if LANGUAGE_CODE != CURRENT_LANGUAGE %}
+            <div class="mt-2 text-danger">
+                <strong>Warning:</strong> LANGUAGE_CODE ({{ LANGUAGE_CODE }}) and CURRENT_LANGUAGE ({{ CURRENT_LANGUAGE }}) are different!
+            </div>
+            {% endif %}
+            
+            <!-- Direct language links for troubleshooting -->
+            <div class="mt-3">
+                <strong>Test Language Links:</strong>
+                {% with timestamp=request.GET._|default:1 %}
+                <a href="/de{% if request.path|slice:":3" == "/en" or request.path|slice:":3" == "/de" %}{{ request.path|slice:'3:' }}{% else %}{{ request.path }}{% endif %}?_={{ timestamp }}" class="badge text-bg-primary ms-2">Switch to DE</a>
+                <a href="/en{% if request.path|slice:":3" == "/en" or request.path|slice:":3" == "/de" %}{{ request.path|slice:'3:' }}{% else %}{{ request.path }}{% endif %}?_={{ timestamp }}" class="badge text-bg-primary ms-2">Switch to EN</a>
+                {% endwith %}
+            </div>
+            
+            <!-- Debug URL actions -->
+            <div class="mt-3">
+                <strong>Debug Actions:</strong>
+                <a href="/set-language/?language=de&next=/" class="badge text-bg-secondary ms-2">Set Cookie to DE</a>
+                <a href="/set-language/?language=en&next=/" class="badge text-bg-secondary ms-2">Set Cookie to EN</a>
+                <a href="/products/" class="badge text-bg-secondary ms-2">No Prefix URL</a>
+                <a href="/en/products/" class="badge text-bg-secondary ms-2">EN Prefix URL</a>
+                <a href="/de/products/" class="badge text-bg-secondary ms-2">DE Prefix URL</a>
+            </div>
+        </div>
         
         {% block content %}{% endblock %}
     </main>
@@ -117,8 +190,40 @@
     <!-- jQuery (if needed) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
+    <!-- Django i18n JavaScript Catalog -->
+    <script src="{% url 'javascript-catalog' %}"></script>
+    
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
+    
+    <!-- Language Switcher Script -->
+    <script>
+        // Force browser to fetch a fresh page when changing languages
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get all language switcher links
+            var languageLinks = document.querySelectorAll('.language-switcher .dropdown-item');
+            
+            // Add click event listener to each link
+            languageLinks.forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    // Prevent the default link behavior
+                    e.preventDefault();
+                    
+                    // Add a timestamp to the URL to force a fresh page load
+                    var url = this.href;
+                    var timestamp = new Date().getTime();
+                    var separator = url.indexOf('?') !== -1 ? '&' : '?';
+                    var newUrl = url + separator + '_=' + timestamp;
+                    
+                    // Log language switch attempt
+                    console.log('Language switch: redirecting to ' + newUrl);
+                    
+                    // Navigate to the URL
+                    window.location.href = newUrl;
+                });
+            });
+        });
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

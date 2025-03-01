@@ -4,23 +4,30 @@ URL Configuration for the Core app.
 
 from django.urls import path
 
-from . import views
+from pyerp.core.views import (
+    health_check, 
+    UserProfileView, 
+    DashboardSummaryView, 
+    SystemSettingsView, 
+    test_db_error
+)
 
 app_name = 'core'
 
+# Core URLs for web interface
 urlpatterns = [
     # Health check endpoint
-    path('health/', views.health_check, name='health_check'),
+    path('health/', health_check, name='health_check'),
     
     # User profile endpoints
-    path('users/profile/', views.UserProfileView.as_view(), name='user_profile'),
+    path('profile/', UserProfileView.as_view(), name='user_profile'),
     
-    # Dashboard data endpoints
-    path('dashboard/summary/', views.DashboardSummaryView.as_view(), name='dashboard_summary'),
+    # Dashboard
+    path('', DashboardSummaryView.as_view(), name='dashboard'),
     
     # System settings
-    path('settings/', views.SystemSettingsView.as_view(), name='system_settings'),
+    path('settings/', SystemSettingsView.as_view(), name='system_settings'),
     
-    # Test DB error endpoint (for testing only)
-    path('test-db-error/', views.test_db_error, name='test_db_error'),
+    # Test endpoint for simulating database errors (for testing middleware)
+    path('test-db-error/', test_db_error, name='test_db_error'),
 ] 
