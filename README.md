@@ -2,7 +2,9 @@
 
 A modern Django-based ERP system designed to replace a legacy 4D-based ERP, focusing on manufacturing operations with both B2B and B2C sales channels.
 
-[![Test and Lint](https://github.com/your-organization/pyERP/actions/workflows/test.yml/badge.svg)](https://github.com/your-organization/pyERP/actions/workflows/test.yml)
+[![Lint](https://github.com/your-organization/pyERP/actions/workflows/deploy.yml/badge.svg?job=lint)](https://github.com/your-organization/pyERP/actions/workflows/deploy.yml)
+[![Tests](https://github.com/your-organization/pyERP/actions/workflows/deploy.yml/badge.svg?job=tests)](https://github.com/your-organization/pyERP/actions/workflows/deploy.yml)
+[![Build](https://github.com/your-organization/pyERP/actions/workflows/deploy.yml/badge.svg?job=build)](https://github.com/your-organization/pyERP/actions/workflows/deploy.yml)
 [![codecov](https://codecov.io/gh/your-organization/pyERP/branch/main/graph/badge.svg)](https://codecov.io/gh/your-organization/pyERP)
 
 ## Project Overview
@@ -191,19 +193,30 @@ Our CI pipeline ensures that:
 
 ## Continuous Integration
 
-The project uses GitHub Actions for continuous integration with the following workflows:
+The project uses GitHub Actions for continuous integration with the following workflow jobs:
 
-- **Test and Lint**: Runs on every push and pull request to validate code quality and test coverage
+- **Lint**: Runs code quality checks including:
+  - Flake8 for Python syntax and style validation
+  - MyPy for static type checking
+  
+- **Tests**: Runs the test suite with pytest to validate functionality
+  - Runs unit and integration tests
   - Uploads test coverage results to Codecov
-  - Enforces minimum code coverage thresholds
-- **Deploy Application**: Deploys to appropriate environments based on branch/tag:
+  - Enforces minimum code coverage thresholds (80%)
+
+- **Build**: Builds the Docker image for deployment
+  - Creates a containerized version of the application
+  - Pushes to GitHub Container Registry with appropriate tags
+  
+- **Deploy**: Deploys to appropriate environments based on branch/tag:
   - `develop` branch → Development environment
   - `release/*` branches → Staging environment
   - Tags (`v*`) → Production environment
-  - Requires successful test runs before deployment
-- **Dependency Security Scan**: Runs weekly to check for security vulnerabilities
-- **Update Dependencies**: Runs weekly to update dependencies and create pull requests with updates
-- **Build Docker Image**: Builds and publishes Docker images on merges to main/develop and tags
+  - Requires successful tests before deployment
+
+- **Additional Workflows**:
+  - **Dependency Security Scan**: Runs weekly to check for security vulnerabilities
+  - **Update Dependencies**: Runs weekly to update dependencies and create pull requests with updates
 
 Branch protection rules ensure:
 - Pull request reviews are required for merges to `main` and `develop`
