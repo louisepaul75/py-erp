@@ -163,6 +163,45 @@ Key achievements:
 
 This implementation serves as a model for testing other client classes and API integrations throughout the codebase.
 
+## Progress Updates
+
+### March 2024 Update: Product Validators Testing Improvements
+
+#### Achievements
+
+We have successfully improved test coverage for the `products/validators.py` module:
+
+- **Coverage Increase**: Increased test coverage of `pyerp/products/validators.py` from 9% to 59%
+- **New Test Cases**: Added comprehensive test cases for the `validate_product_model` function, covering:
+  - Validation of valid product models
+  - Detection of invalid SKUs
+  - Validation of parent-variant relationships
+  - Validation of price relationships (list price vs cost price)
+  - Setting base_sku from variant SKUs
+
+#### Technical Challenges Overcome
+
+We encountered and solved several challenging testing issues:
+
+1. **Circular Import Challenges**: The Product class was imported under `TYPE_CHECKING`, making standard mocking approaches ineffective
+2. **Gettext Patching Issues**: We had to develop a specialized approach for patching Django's translation functions
+3. **Validator Function Patching**: Created a robust approach to replace the validator function during tests while preserving its original behavior
+
+#### Implementation Approach
+
+The solution involved:
+
+1. Creating a custom `setup_method` and `teardown_method` in the test class
+2. Storing and later restoring the original function
+3. Explicitly importing required dependencies in the patched function
+4. Creating comprehensive test cases for all code paths
+
+#### Next Steps
+
+- Apply similar techniques to increase coverage of other validator functions
+- Address remaining uncovered code in the products module
+- Document the approach for other team members to use in similar testing scenarios
+
 ## Conclusion
 
 By following this structured approach to test coverage improvement, we'll systematically reduce risk, improve code quality, and build a more maintainable codebase. The phased implementation ensures we prioritize the most critical components first while making steady progress toward our overall coverage goals. 
