@@ -10,8 +10,7 @@ on:
   workflow_call:
 
 jobs:
-  # Individual test jobs are defined in deploy.yml workflow
-  # This workflow runs the same tests but as a standalone workflow
+  # Linting job - checks code quality
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +39,8 @@ jobs:
       run: |
         mypy .
 
-  tests:
+  # 1. General Django framework functionality tests
+  django-framework-tests:
     runs-on: ubuntu-latest
     needs: [lint]
     
@@ -53,7 +53,6 @@ jobs:
           POSTGRES_DB: pyerp_test
         ports:
           - 5432:5432
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -75,29 +74,202 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
     
-    - name: Test with pytest
+    - name: Run Django framework tests
       env:
         DJANGO_SETTINGS_MODULE: pyerp.settings.testing
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
       run: |
-        pytest --cov=. --cov-report=xml
+        pytest tests/unit/test_core_validators.py --cov=pyerp.core --cov-report=xml:coverage-framework.xml
         
-    - name: Upload coverage to Codecov
+    - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:
-        token: d21bebd3-0087-4c7c-bb78-c9dcaa8e83b5
-        file: ./coverage.xml
-        fail_ci_if_error: false
-        flags: unittests
-        name: pyERP-coverage
-        verbose: true
-        
-    - name: Check coverage thresholds
+        file: ./coverage-framework.xml
+        flags: django-framework
+        name: django-framework-coverage
+
+  # 2. Database-related operations tests
+  database-tests:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pyerp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
       run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+    
+    - name: Run database operation tests
+      env:
+        DJANGO_SETTINGS_MODULE: pyerp.settings.testing
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
+      run: |
+        pytest tests/unit/test_import_validation.py tests/unit/patched_test_import_validation.py --cov=pyerp.core.db --cov-report=xml:coverage-db.xml
+        
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage-db.xml
+        flags: database-operations
+        name: database-operations-coverage
+
+  # 3. UI tests
+  ui-tests:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pyerp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+    
+    - name: Run UI tests
+      env:
+        DJANGO_SETTINGS_MODULE: pyerp.settings.testing
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
+      run: |
+        pytest tests/unit/test_core_views.py tests/unit/test_core_views_extended.py --cov=pyerp --cov-report=xml:coverage-ui.xml
+        
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage-ui.xml
+        flags: ui-tests
+        name: ui-coverage
+
+  # 4. Business modules tests (products, production)
+  business-module-tests:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pyerp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+    
+    - name: Run product module tests
+      env:
+        DJANGO_SETTINGS_MODULE: pyerp.settings.testing
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
+      run: |
+        pytest tests/unit/test_product_*.py --cov=pyerp.products --cov-report=xml:coverage-products.xml
+        
+    - name: Run production module tests
+      env:
+        DJANGO_SETTINGS_MODULE: pyerp.settings.testing
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
+      run: |
+        pytest tests/unit/test_validators.py tests/unit/test_validators_extended.py --cov=pyerp.production --cov-report=xml:coverage-production.xml
+        
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage-products.xml,./coverage-production.xml
+        flags: business-modules
+        name: business-modules-coverage
+
+  # Combined coverage check job
+  coverage-check:
+    runs-on: ubuntu-latest
+    needs: [django-framework-tests, database-tests, ui-tests, business-module-tests]
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install coverage
+    
+    - name: Download coverage reports
+      uses: actions/download-artifact@v2
+      with:
+        path: coverage-reports
+        
+    - name: Combine coverage and check thresholds
+      run: |
+        coverage combine coverage-reports/coverage-*.xml
         coverage report --fail-under=80 || echo "::warning::Coverage is below 80%"
         
-    - name: Check branch-specific requirements
-      run: |
         if [[ $GITHUB_REF == refs/heads/main || $GITHUB_REF =~ refs/heads/release/.* ]]; then
           echo "Running additional checks for main and release branches"
           # Add stricter checks for main and release branches
