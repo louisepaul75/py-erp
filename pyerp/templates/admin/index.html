@@ -1,0 +1,21 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block sidebar %}
+{{ block.super }}
+<div class="module" style="margin-top: 20px;">
+  <h2>{% trans "System Monitoring" %}</h2>
+  <ul>
+    <li>
+      <a href="{% url 'admin:system_status_dashboard' %}">
+        {% trans "System Status Dashboard" %}
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin:monitoring_healthcheckresult_changelist' %}">
+        {% trans "Health Check Results" %}
+      </a>
+    </li>
+  </ul>
+</div>
+{% endblock %} 

@@ -248,6 +248,12 @@
         </div>
       {% endfor %}
     </div>
+    
+    <div class="status-history">
+      <h2 class="history-title">{% trans "Recent Health Check History" %}</h2>
+      
+      <!-- Add charts or history tables here if needed -->
+    </div>
   </div>
 {% endblock %}
 
@@ -255,88 +261,88 @@
   {{ block.super }}
   <script>
     function refreshHealthChecks() {
-      // Show spinner
-      document.getElementById('refresh-spinner').style.display = 'inline-block';
+      // Show spinner and disable button
       document.getElementById('refresh-icon').style.display = 'none';
+      document.getElementById('refresh-spinner').style.display = 'inline-block';
       document.getElementById('refresh-button').disabled = true;
       
       // Hide any previous messages
       document.getElementById('status-update-message').style.display = 'none';
       
-      // Make AJAX request
-      fetch('{{ refresh_url }}')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          return response.json();
-        })
+      // Make AJAX request to refresh health checks
+      fetch('{% url "admin:refresh_health_checks" %}')
+        .then(response => response.json())
         .then(data => {
           if (data.success) {
+            // Update the UI with new data
             updateStatusCards(data.results);
             
             // Show success message
-            const messageElem = document.getElementById('status-update-message');
-            messageElem.className = 'status-message success';
-            messageElem.textContent = "{% trans 'Status updated successfully.' %}";
-            messageElem.style.display = 'block';
-            
-            // Hide message after 3 seconds
-            setTimeout(() => {
-              messageElem.style.display = 'none';
-            }, 3000);
+            const messageEl = document.getElementById('status-update-message');
+            messageEl.textContent = '{% trans "Status updated successfully." %}';
+            messageEl.className = 'status-message success';
+            messageEl.style.display = 'block';
           } else {
-            throw new Error(data.error || 'Unknown error');
+            // Show error message
+            const messageEl = document.getElementById('status-update-message');
+            messageEl.textContent = '{% trans "Failed to update status:" %} ' + data.error;
+            messageEl.className = 'status-message error';
+            messageEl.style.display = 'block';
           }
         })
         .catch(error => {
-          console.error('Error refreshing health checks:', error);
-          
           // Show error message
-          const messageElem = document.getElementById('status-update-message');
-          messageElem.className = 'status-message error';
-          messageElem.textContent = "{% trans 'Error refreshing status: ' %}" + error.message;
-          messageElem.style.display = 'block';
+          const messageEl = document.getElementById('status-update-message');
+          messageEl.textContent = '{% trans "Failed to update status:" %} ' + error.message;
+          messageEl.className = 'status-message error';
+          messageEl.style.display = 'block';
         })
         .finally(() => {
-          // Hide spinner
-          document.getElementById('refresh-spinner').style.display = 'none';
+          // Hide spinner and enable button
           document.getElementById('refresh-icon').style.display = 'inline-block';
+          document.getElementById('refresh-spinner').style.display = 'none';
           document.getElementById('refresh-button').disabled = false;
+          
+          // Hide message after 5 seconds
+          setTimeout(() => {
+            document.getElementById('status-update-message').style.display = 'none';
+          }, 5000);
         });
     }
     
     function updateStatusCards(results) {
+      // Update each component card with new data
       for (const [component, result] of Object.entries(results)) {
-        const card = document.getElementById(`card-${component}`);
-        if (!card) continue;
-        
-        // Update card class
-        card.className = `status-card ${result.status}`;
-        
-        // Update status indicator
-        const indicator = card.querySelector('.status-indicator');
-        if (indicator) {
-          indicator.className = `status-indicator ${result.status}`;
-        }
-        
-        // Update details
-        const details = document.getElementById(`details-${component}`);
-        if (details) {
-          details.textContent = result.details;
-        }
-        
-        // Update response time
-        const responseTime = document.getElementById(`response-time-${component}`);
-        if (responseTime) {
-          responseTime.textContent = `{% trans "Response Time" %}: ${result.response_time.toFixed(2)} ms`;
-        }
-        
-        // Update timestamp
-        const timestamp = document.getElementById(`timestamp-${component}`);
-        if (timestamp) {
-          const date = new Date(result.timestamp);
-          timestamp.textContent = date.toISOString().replace('T', ' ').substring(0, 19);
+        const card = document.getElementById('card-' + component);
+        if (card) {
+          // Update card status class
+          card.className = 'status-card ' + result.status;
+          
+          // Update status indicator
+          const indicator = card.querySelector('.status-indicator');
+          if (indicator) {
+            indicator.className = 'status-indicator ' + result.status;
+          }
+          
+          // Update details
+          const details = document.getElementById('details-' + component);
+          if (details) {
+            details.textContent = result.details;
+          }
+          
+          // Update response time
+          const responseTime = document.getElementById('response-time-' + component);
+          if (responseTime) {
+            responseTime.textContent = '{% trans "Response Time" %}: ' + 
+              (result.response_time ? result.response_time.toFixed(2) + ' ms' : '-');
+          }
+          
+          // Update timestamp
+          const timestamp = document.getElementById('timestamp-' + component);
+          if (timestamp) {
+            const date = new Date(result.timestamp);
+            timestamp.textContent = date.toLocaleString();
+          }
         }
       }
     }
