@@ -150,9 +150,9 @@
             <!-- Direct language links for troubleshooting -->
             <div class="mt-3">
                 <strong>Test Language Links:</strong>
-                {% with timestamp=request.GET._|default:1 %}
-                <a href="/de{% if request.path|slice:":3" == "/en" or request.path|slice:":3" == "/de" %}{{ request.path|slice:'3:' }}{% else %}{{ request.path }}{% endif %}?_={{ timestamp }}" class="badge text-bg-primary ms-2">Switch to DE</a>
-                <a href="/en{% if request.path|slice:":3" == "/en" or request.path|slice:":3" == "/de" %}{{ request.path|slice:'3:' }}{% else %}{{ request.path }}{% endif %}?_={{ timestamp }}" class="badge text-bg-primary ms-2">Switch to EN</a>
+                {% with timestamp=request.GET.ts|default:1 %}
+                <a href="/de{% if request.path|slice:":3" == "/en" or request.path|slice:":3" == "/de" %}{{ request.path|slice:'3:' }}{% else %}{{ request.path }}{% endif %}?ts={{ timestamp }}" class="badge text-bg-primary ms-2">Switch to DE</a>
+                <a href="/en{% if request.path|slice:":3" == "/en" or request.path|slice:":3" == "/de" %}{{ request.path|slice:'3:' }}{% else %}{{ request.path }}{% endif %}?ts={{ timestamp }}" class="badge text-bg-primary ms-2">Switch to EN</a>
                 {% endwith %}
             </div>
             
@@ -213,7 +213,7 @@
                     var url = this.href;
                     var timestamp = new Date().getTime();
                     var separator = url.indexOf('?') !== -1 ? '&' : '?';
-                    var newUrl = url + separator + '_=' + timestamp;
+                    var newUrl = url + separator + 'ts=' + timestamp;
                     
                     // Log language switch attempt
                     console.log('Language switch: redirecting to ' + newUrl);

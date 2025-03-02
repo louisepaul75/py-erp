@@ -9,10 +9,10 @@
         </button>
         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
             <!-- Direct language links with base path - works with or without i18n prefixes -->
-            {% with timestamp=request.GET._|default:1 %}
+            {% with timestamp=request.GET.ts|default:1 %}
             <li>
                 {% if request.path|slice:":3" == "/en" %}
-                <a href="/de{{ request.path|slice:'3:' }}?_={{ timestamp }}" 
+                <a href="/de{{ request.path|slice:'3:' }}?ts={{ timestamp }}" 
                    class="dropdown-item {% if CURRENT_LANGUAGE == 'de' %}active{% endif %}">
                     Deutsch (DE)
                 </a>
@@ -30,7 +30,7 @@
             </li>
             <li>
                 {% if request.path|slice:":3" == "/de" %}
-                <a href="/en{{ request.path|slice:'3:' }}?_={{ timestamp }}" 
+                <a href="/en{{ request.path|slice:'3:' }}?ts={{ timestamp }}" 
                    class="dropdown-item {% if CURRENT_LANGUAGE == 'en' %}active{% endif %}">
                     English (EN)
                 </a>

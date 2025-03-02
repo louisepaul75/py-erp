@@ -33,24 +33,37 @@ class ProductListView(LoginRequiredMixin, ListView):
         # Get form data
         form = ProductSearchForm(self.request.GET)
         if form.is_valid():
-            # Filter by category if provided
-            category = form.cleaned_data.get('category')
-            if category:
-                queryset = queryset.filter(category=category)
-            
             # Filter by search query if provided
             search_query = form.cleaned_data.get('q')
             if search_query:
                 queryset = queryset.filter(name__icontains=search_query)
             
+            # Note: ParentProduct doesn't have category or price fields
+            # These filters are commented out until the model is updated or the filtering logic is adjusted
+            
+            # Filter by category if provided
+            # category = form.cleaned_data.get('category')
+            # if category:
+            #     queryset = queryset.filter(category=category)
+            
             # Filter by price range if provided
-            min_price = form.cleaned_data.get('min_price')
-            if min_price:
-                queryset = queryset.filter(price__gte=min_price)
+            # min_price = form.cleaned_data.get('min_price')
+            # if min_price:
+            #     queryset = queryset.filter(price__gte=min_price)
                 
-            max_price = form.cleaned_data.get('max_price')
-            if max_price:
-                queryset = queryset.filter(price__lte=max_price)
+            # max_price = form.cleaned_data.get('max_price')
+            # if max_price:
+            #     queryset = queryset.filter(price__lte=max_price)
+            
+            # Handle in_stock filter - this needs to be implemented differently
+            # since ParentProduct doesn't have a direct stock field
+            in_stock = form.cleaned_data.get('in_stock')
+            if in_stock:
+                # Instead of directly filtering on in_stock (which doesn't exist),
+                # we could filter based on variants that have stock
+                # This is a placeholder - implement according to your business logic
+                # queryset = queryset.filter(variants__current_stock__gt=0).distinct()
+                pass  # Remove this line when implementing the actual filter
         
         return queryset
     
