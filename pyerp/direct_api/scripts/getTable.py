@@ -413,7 +413,6 @@ class SimpleAPIClient:
         
         # Prepare the request URL and parameters
         url = f"{self.base_url}/rest/{table_name}"
-        params = {}
         
         # Handle pagination
         if all_records:
@@ -422,24 +421,47 @@ class SimpleAPIClient:
             return self._fetch_all_records(url, filter_query, new_data_only, date_created_start)
         else:
             # Fetch only the specified number of records
-            params['$top'] = top
-            params['$skip'] = skip
+            params = {'$top': top, '$skip': skip}
             
+            # Handle filter query with the correct syntax (quoted filter expression)
             if filter_query:
-                params['$filter'] = filter_query
+                # Format the filter query as a URL parameter with quotes
+                params['$filter'] = f'"{filter_query}"'
+                logger.info(f"Using filter query: {filter_query}")
                 
             # Handle date filtering
             if new_data_only and date_created_start:
+                date_filter = f"CREATIONDATE ge '{date_created_start}'"
                 if filter_query:
-                    params['$filter'] += f" and CREATIONDATE ge '{date_created_start}'"
+                    # Combine with existing filter using AND
+                    params['$filter'] = f'"{filter_query} AND {date_filter}"'
                 else:
-                    params['$filter'] = f"CREATIONDATE ge '{date_created_start}'"
+                    # Just use the date filter
+                    params['$filter'] = f'"{date_filter}"'
+                logger.info(f"Using date filter: {date_filter}")
                     
             logger.info(f"Fetching up to {top} records from {table_name} (skip: {skip})")
             logger.info(f"Full request URL: {url} with params: {params}")
             
-            # Make the request
-            response = self.session.get(url, params=params)
+            # Make the request with error handling for filter failures
+            try:
+                # Try with filter
+                response = self.session.get(url, params=params)
+                
+                # Check for filter-related errors
+                if response.status_code != 200 and '$filter' in params:
+                    logger.warning(f"Request failed with status code {response.status_code}. This might be a filter error.")
+                    logger.warning(f"Response text: {response.text[:200]}...")
+                    logger.warning("Attempting to retry without filter...")
+                    
+                    # Remove the filter and try again
+                    params_without_filter = params.copy()
+                    params_without_filter.pop('$filter', None)
+                    logger.info(f"Retrying request without filter: {url} with params: {params_without_filter}")
+                    response = self.session.get(url, params=params_without_filter)
+            except Exception as e:
+                logger.error(f"API request failed: {str(e)}")
+                raise
             
             # Check for successful response
             if response.status_code != 200:
@@ -488,22 +510,29 @@ class SimpleAPIClient:
         # Initial parameters
         params = {'$top': 1000, '$skip': 0}
         
-        # Add filter if specified
+        # Handle filter query with the correct syntax (quoted filter expression)
         if filter_query:
-            params['$filter'] = filter_query
+            # Format the filter query as a URL parameter with quotes
+            params['$filter'] = f'"{filter_query}"'
+            logger.info(f"Using filter query: {filter_query}")
         
         # Handle date filtering
         if new_data_only and date_created_start:
+            date_filter = f"CREATIONDATE ge '{date_created_start}'"
             if filter_query:
-                params['$filter'] += f" and CREATIONDATE ge '{date_created_start}'"
+                # Combine with existing filter using AND
+                params['$filter'] = f'"{filter_query} AND {date_filter}"'
             else:
-                params['$filter'] = f"CREATIONDATE ge '{date_created_start}'"
+                # Just use the date filter
+                params['$filter'] = f'"{date_filter}"'
+            logger.info(f"Using date filter: {date_filter}")
         
         # Fetch data using pagination
         all_data = []
         total_fetched = 0
         retry_count = 0
         max_retries = 3
+        filter_error_detected = False
         
         while True:
             # Ensure we have exactly one cookie with the current session ID for each request
@@ -516,10 +545,30 @@ class SimpleAPIClient:
             if retry_count > 0:
                 logger.info(f"Reset to single session cookie for retry attempt {retry_count}")
             
-            # Make the request
+            # Make the request with error handling for filter failures
             logger.info(f"Making paginated request: {url} with params: {params}")
             try:
-                response = self.session.get(url, params=params)
+                # If we've detected a filter error previously, don't use the filter
+                current_params = params.copy()
+                if filter_error_detected and '$filter' in current_params:
+                    logger.info("Filter error previously detected, removing filter for this request")
+                    current_params.pop('$filter', None)
+                
+                response = self.session.get(url, params=current_params)
+                
+                # Check for filter-related errors
+                if response.status_code != 200 and '$filter' in current_params and not filter_error_detected:
+                    logger.warning(f"Request failed with status code {response.status_code}. This might be a filter error.")
+                    logger.warning(f"Response text: {response.text[:200]}...")
+                    logger.warning("Attempting to retry without filter...")
+                    
+                    # Remove the filter and try again
+                    current_params.pop('$filter', None)
+                    logger.info(f"Retrying request without filter: {url} with params: {current_params}")
+                    response = self.session.get(url, params=current_params)
+                    
+                    # Mark that we've detected a filter error
+                    filter_error_detected = True
                 
                 # Check for successful response
                 if response.status_code != 200:
@@ -568,11 +617,11 @@ class SimpleAPIClient:
                     logger.info(f"Fetched {len(records)} records (total: {total_fetched})")
                     
                     # Check if we've received fewer records than requested
-                    if len(records) < params['$top']:
+                    if len(records) < current_params.get('$top', 1000):
                         break
                     
                     # Update skip for next page
-                    params['$skip'] += params['$top']
+                    params['$skip'] += params.get('$top', 1000)
                 elif '__ENTITIES' in data and isinstance(data['__ENTITIES'], list):
                     # 4D specific format
                     records = data['__ENTITIES']
@@ -586,7 +635,7 @@ class SimpleAPIClient:
                         break
                     
                     # Update skip for next page
-                    params['$skip'] += params['$top']
+                    params['$skip'] += params.get('$top', 1000)
                 elif isinstance(data, list):
                     # Direct list response
                     all_data.extend(data)

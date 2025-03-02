@@ -115,6 +115,82 @@ The WSZ_api package provides three main functionalities:
    - Add metrics collection for API performance
    - Create monitoring dashboards
 
+### Phase 3: Enhanced Filtering Capabilities
+
+1. **OData-Compatible Filtering**
+   - Implement support for OData-style filter expressions
+   - Support for equality, text search, numeric comparison, boolean, and date filters
+   - Support for combined filters with AND/OR operators
+   ```python
+   # Example filter expressions
+   filter_query = "Artikel_Nr = '115413'"  # Equality filter
+   filter_query = "Bezeichnung LIKE '%Test%'"  # Text search
+   filter_query = "Preis > 10"  # Numeric comparison
+   filter_query = "aktiv = true"  # Boolean filter
+   filter_query = "CREATIONDATE >= '2023-01-01'"  # Date filter
+   filter_query = "Preis > 5 AND aktiv = true"  # Combined filter
+   filter_query = "Artikel_Nr = '115413' OR Artikel_Nr = '115414'"  # OR filter
+   ```
+
+2. **Graceful Error Handling for Filters**
+   - Implement automatic retry without filters when filter-related errors occur
+   - Add logging for filter-related issues
+   ```python
+   try:
+       # Try with filter
+       response = self.session.get(url, params=params)
+       
+       # Check for filter-related errors
+       if response.status_code != 200 and '$filter' in params:
+           logger.warning(f"Request failed with status code {response.status_code}. This might be a filter error.")
+           logger.warning("Attempting to retry without filter...")
+           
+           # Remove the filter and try again
+           params_without_filter = params.copy()
+           params_without_filter.pop('$filter', None)
+           response = self.session.get(url, params=params_without_filter)
+   ```
+
+3. **Table Discovery**
+   - Add functionality to list available tables in the legacy system
+   - Implement methods to explore table structure and available fields
+   ```python
+   def list_available_tables(client):
+       """List available tables in the legacy ERP system."""
+       try:
+           # Make a request to the $catalog endpoint
+           url = f"{client.base_url}/rest/$catalog"
+           response = client.session.get(url)
+           
+           if response.status_code == 200:
+               data = response.json()
+               # Extract table names from the response
+               tables = []
+               if isinstance(data, dict) and 'dataClasses' in data:
+                   for table in data['dataClasses']:
+                       if 'name' in table:
+                           tables.append(table['name'])
+               return tables
+           else:
+               logger.error(f"Failed to retrieve tables: {response.status_code}")
+               return []
+       except Exception as e:
+           logger.error(f"Error listing tables: {e}")
+           return []
+   ```
+
+## Additional Notes
+
+Based on testing with the legacy API, we've discovered that:
+
+1. Not all tables support all filter types
+2. Some tables may have different field names than expected
+3. The API may return different response formats depending on the table
+4. Filter syntax must be properly quoted in the URL parameters
+5. The API has inconsistent error handling for invalid filters
+
+These findings should be incorporated into the implementation to ensure robust handling of all edge cases.
+
 ## Implementation Tasks
 
 ### Phase 1 Tasks

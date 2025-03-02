@@ -13,9 +13,8 @@ RUN apt-get update \
         netcat-traditional \
         wget \
         curl \
-        # MySQL dependencies - ensure these are installed
-        default-libmysqlclient-dev \
-        pkg-config \
+        # Redis
+        redis-server \
         # WeasyPrint dependencies
         libcairo2 \
         libpango-1.0-0 \
@@ -24,6 +23,7 @@ RUN apt-get update \
         shared-mime-info \
         # Additional tools
         git \
+        supervisor \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -38,7 +38,7 @@ COPY requirements/ /app/requirements/
 
 # Install development dependencies directly
 RUN echo "Installing critical packages..." && \
-    pip install --no-cache-dir django django-filter djangorestframework celery redis
+    pip install --no-cache-dir django django-filter djangorestframework celery redis python-dotenv dj-database-url django-debug-toolbar whitenoise
 
 # Install development-specific packages
 RUN echo "Installing development packages..." && \
@@ -51,15 +51,8 @@ RUN pip install --no-cache-dir "django-cors-headers>=4.3.1,<4.4.0"
 RUN pip install --no-cache-dir "drf-yasg>=1.21.7,<1.22.0"
 RUN pip install --no-cache-dir "djangorestframework-simplejwt>=5.3.0,<5.4.0"
 
-# Install MySQL packages with explicit dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Try installing MySQL packages separately
-RUN pip install --no-cache-dir "pymysql>=1.1.0,<1.2.0" 
-RUN pip install --no-cache-dir "mysqlclient>=2.2.0,<2.3.0" 
+# Install PostgreSQL packages
+RUN pip install --no-cache-dir "psycopg2>=2.9.9,<3.0.0"
 
 # Install Celery and related packages
 RUN pip install --no-cache-dir django-celery-results django-celery-beat
@@ -71,7 +64,7 @@ RUN pip install --no-cache-dir python-json-logger structlog
 RUN pip install --no-cache-dir django-environ Pillow WeasyPrint
 
 # Create directories for static and media files
-RUN mkdir -p /app/static /app/media /app/logs
+RUN mkdir -p /app/static /app/media /app/logs /app/data
 
 # Copy entrypoint script
 COPY ./docker/entrypoint.sh /usr/local/bin/

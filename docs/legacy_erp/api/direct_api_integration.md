@@ -117,6 +117,107 @@ Error responses typically include descriptive text that can be used to identify 
 }
 ```
 
+## Filtering Capabilities
+
+The API supports OData-style filtering through the `$filter` parameter. Our testing has revealed the following filter types and behaviors:
+
+### Supported Filter Types
+
+1. **Equality Filters**
+   ```
+   $filter="Artikel_Nr = '115413'"
+   ```
+   Exact match for a specific value. String values must be enclosed in single quotes.
+
+2. **Text Search with LIKE**
+   ```
+   $filter="Bezeichnung LIKE '%Test%'"
+   ```
+   Case-insensitive text search using the LIKE operator with wildcards.
+
+3. **Numeric Comparisons**
+   ```
+   $filter="Preis > 10"
+   ```
+   Supports standard comparison operators: `>`, `<`, `>=`, `<=`, `=`, `<>`.
+
+4. **Boolean Filters**
+   ```
+   $filter="aktiv = true"
+   ```
+   Boolean values should be specified as `true` or `false` (lowercase).
+
+5. **Date Filters**
+   ```
+   $filter="CREATIONDATE >= '2023-01-01'"
+   ```
+   Dates should be formatted as 'YYYY-MM-DD' and enclosed in single quotes.
+
+6. **Combined Filters with AND**
+   ```
+   $filter="Preis > 5 AND aktiv = true"
+   ```
+   Multiple conditions can be combined with the AND operator.
+
+7. **Combined Filters with OR**
+   ```
+   $filter="Artikel_Nr = '115413' OR Artikel_Nr = '115414'"
+   ```
+   Multiple conditions can be combined with the OR operator.
+
+### Important Notes on Filtering
+
+1. **Filter Quoting**
+   - The entire filter expression must be enclosed in double quotes in the URL parameter
+   - String values within the filter must be enclosed in single quotes
+   - Example: `$filter="Artikel_Nr = '115413'"`
+
+2. **Table-Specific Support**
+   - Not all tables support all filter types
+   - Some tables may have different field names than expected
+   - Testing is recommended to determine which filters work with specific tables
+
+3. **Error Handling**
+   - The API may return errors for invalid filters rather than empty results
+   - Implementing a fallback mechanism to retry without filters is recommended
+   - Example approach:
+     ```python
+     try:
+         # Try with filter
+         response = session.get(url, params=params)
+         
+         # Check for filter-related errors
+         if response.status_code != 200 and '$filter' in params:
+             # Remove the filter and try again
+             params_without_filter = params.copy()
+             params_without_filter.pop('$filter', None)
+             response = session.get(url, params=params_without_filter)
+     ```
+
+4. **Field Names**
+   - Field names in filters are case-sensitive
+   - Common fields include:
+     - `Artikel_Nr` - Article/product number
+     - `Bezeichnung` - Description/name
+     - `Preis` - Price
+     - `aktiv` - Active status (boolean)
+     - `CREATIONDATE` - Creation date
+
+5. **Performance Considerations**
+   - Filters are processed on the server side and can improve performance by reducing data transfer
+   - Complex filters may increase server processing time
+   - Combining filters with pagination is recommended for large datasets
+
+### Testing Filter Support
+
+To test which filters are supported by a specific table, you can use the `test_filter.py` script:
+
+```bash
+python pyerp/direct_api/scripts/test_filter.py --env live --table Kunden --verbose
+```
+
+This script tests various filter types and reports which ones work with the specified table.
+
 ## Best Practices for Integration
 
 Based on our experience with the API, we recommend the following best practices:

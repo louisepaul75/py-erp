@@ -129,12 +129,12 @@ else:
     print("DATABASE_URL not provided, using explicit database settings")
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-            'USER': os.environ.get('DB_USER', 'admin'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
-            'PORT': os.environ.get('DB_PORT', '3306'),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
         }
     }
 

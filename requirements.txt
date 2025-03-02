@@ -7,7 +7,7 @@ django-cors-headers==4.3.1
 # Database
 psycopg2-binary==2.9.9
 dj-database-url==2.1.0
-mysqlclient==2.2.7
+# mysqlclient==2.2.7  # Removed as we're switching to PostgreSQL
 
 # Environment variables
 python-dotenv==1.0.1

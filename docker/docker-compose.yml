@@ -1,111 +1,41 @@
 version: '3.8'
 
 services:
-  db:
-    image: mysql:8.0
-    volumes:
-      - mysql_data:/var/lib/mysql
-    env_file:
-      - ../.env.prod
-    environment:
-      - MYSQL_DATABASE=pyerp_testing
-      - MYSQL_USER=admin
-      - MYSQL_PASSWORD=${DB_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  web:
+  pyerp:
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
-    command: python manage.py runserver 0.0.0.0:8000
-    volumes:
-      - ..:/app
     ports:
       - "8000:8000"
+      - "6379:6379"  # Redis port
+    volumes:
+      - pyerp_data:/app/data
+      - ..:/app
     env_file:
       - ../.env.prod
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.settings.development
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_NAME=pyerp_testing
-      - DB_USER=admin
-      - DB_PASSWORD=password
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://localhost:6379/0
       - DJANGO_DEBUG=True
       - SECRET_KEY=development_secret_key
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - PYTHONPATH=/app
+      # PostgreSQL connection settings
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-pyerp}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
     restart: unless-stopped
-
-  celery:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dev
-    command: celery -A pyerp worker -l INFO
-    volumes:
-      - ..:/app
-    environment:
-      - DJANGO_SETTINGS_MODULE=pyerp.settings.development
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_NAME=pyerp_testing
-      - DB_USER=admin
-      - DB_PASSWORD=password
-      - REDIS_URL=redis://redis:6379/0
-      - DJANGO_DEBUG=True
-      - SECRET_KEY=development_secret_key
-    depends_on:
-      - web
-      - redis
-      - db
-    restart: unless-stopped
-
-  celery-beat:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.dev
-    command: celery -A pyerp beat -l INFO
-    volumes:
-      - ..:/app
-    environment:
-      - DJANGO_SETTINGS_MODULE=pyerp.settings.development
-      - DB_HOST=db
-      - DB_PORT=3306
-      - DB_NAME=pyerp_testing
-      - DB_USER=admin
-      - DB_PASSWORD=password
-      - REDIS_URL=redis://redis:6379/0
-      - DJANGO_DEBUG=True
-      - SECRET_KEY=development_secret_key
-    depends_on:
-      - celery
-      - redis
-      - db
-    restart: unless-stopped
+    entrypoint: []
+    command: >
+      bash -c "
+        redis-server --daemonize yes &&
+        cd /app &&
+        python -m pip install python-dotenv dj-database-url django-debug-toolbar whitenoise &&
+        echo 'Starting Django development server...' &&
+        PYTHONPATH=/app python -m django runserver 0.0.0.0:8000
+      "
 
 volumes:
-  mysql_data:
-  redis_data: 
+  pyerp_data: 

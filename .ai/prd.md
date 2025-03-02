@@ -2052,3 +2052,38 @@ The following modules depend on proper direct API functionality:
 - Product data enrichment
 
 Until the direct API issues are resolved, alternative approaches using the original scripts will be maintained.
+
+### 4.1.2 Legacy API Integration and Filtering
+
+- **Legacy ERP API Connection:**
+  - Establish reliable connections to the legacy 4D-based ERP system via REST API. ✅ *Implemented*
+  - Implement robust session management to prevent session duplication and server overload. ✅ *Implemented*
+  - Support for multiple environments (test, live) with configurable endpoints. ✅ *Implemented*
+  - Secure credential management for API authentication. ✅ *Implemented*
+
+- **Data Retrieval and Filtering:**
+  - Support for OData-compatible filtering syntax for querying legacy data. ✅ *Implemented*
+  - Implement filter types including:
+    - Equality filters (e.g., `Artikel_Nr = '115413'`) ✅ *Verified*
+    - Text search with LIKE operator (e.g., `Bezeichnung LIKE '%Test%'`) ✅ *Verified*
+    - Numeric comparisons (e.g., `Preis > 10`) ✅ *Verified*
+    - Boolean filters (e.g., `aktiv = true`) ✅ *Verified*
+    - Date filters (e.g., `CREATIONDATE >= '2023-01-01'`) ✅ *Verified*
+    - Combined filters with AND/OR operators ✅ *Verified*
+  - Graceful fallback when filters are not supported by specific tables. ✅ *Implemented*
+  - Automatic retry without filters when filter-related errors occur. ✅ *Implemented*
+
+- **Pagination and Performance:**
+  - Support for paginated data retrieval to handle large datasets efficiently. ✅ *Implemented*
+  - Configurable page size and skip parameters. ✅ *Implemented*
+  - Option to fetch all records with automatic pagination handling. ✅ *Implemented*
+
+- **Error Handling and Logging:**
+  - Comprehensive error handling for connection, authentication, and data retrieval issues. ✅ *Implemented*
+  - Detailed logging of API interactions for troubleshooting. ✅ *Implemented*
+  - Specific handling for filter-related errors with appropriate fallback strategies. ✅ *Implemented*
+
+- **Table Discovery:**
+  - Ability to list available tables in the legacy system. ✅ *Implemented*
+  - Support for exploring table structure and available fields. *Planned*
+  - Documentation of common tables and their filtering capabilities. *In Progress*
