@@ -7,9 +7,9 @@ services:
       dockerfile: docker/Dockerfile.prod
     container_name: pyerp_all_in_one
     ports:
-      - "8080:80"
-      - "8443:443"
-      - "8051:8050"
+      - "80:80"
+      - "443:443"
+      - "8050:8050"
     env_file:
       - ../.env.prod
     environment:
