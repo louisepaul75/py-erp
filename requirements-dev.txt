@@ -17,7 +17,7 @@ mkdocs-material==9.5.12
 
 # Code quality
 bandit==1.7.7      # Security linting
-safety==2.3.5      # Dependency vulnerabilities
+safety==3.3.1      # Dependency vulnerabilities
 django-stubs==4.2.7  # Type stubs for Django
 djangorestframework-stubs==3.14.5  # Type stubs for DRF
 
