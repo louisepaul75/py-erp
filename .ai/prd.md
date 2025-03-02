@@ -2087,3 +2087,107 @@ Until the direct API issues are resolved, alternative approaches using the origi
   - Ability to list available tables in the legacy system. ✅ *Implemented*
   - Support for exploring table structure and available fields. *Planned*
   - Documentation of common tables and their filtering capabilities. *In Progress*
+
+### 4.9 External API Access
+
+#### 4.9.1 Overview
+
+The pyERP system will provide a comprehensive REST API to allow external applications to securely access and manipulate data. This API will enable third-party integrations, custom client applications, and automation tools to interact with the ERP system programmatically.
+
+#### 4.9.2 Key Requirements
+
+- **Authentication and Security:**
+  - OAuth2/JWT token-based authentication for all API endpoints
+  - Granular permission control with scoped API tokens
+  - Rate limiting to prevent abuse
+  - Comprehensive audit logging of all API access
+
+- **API Design and Documentation:**
+  - RESTful API design following industry best practices
+  - OpenAPI/Swagger documentation for all endpoints
+  - Versioned API to ensure backward compatibility
+  - Consistent error handling and response formats
+
+- **Data Access:**
+  - Read access to core business entities (products, orders, inventory, etc.)
+  - Write operations with proper validation and business rule enforcement
+  - Bulk operations for efficient data transfer
+  - Filtering, sorting, and pagination for all list endpoints
+
+- **Performance and Reliability:**
+  - Optimized query performance for API endpoints
+  - Caching strategies for frequently accessed data
+  - Graceful error handling with informative messages
+  - Monitoring and alerting for API performance issues
+
+#### 4.9.3 Implementation Approach
+
+The external API will be built on top of Django REST Framework, leveraging its serialization, authentication, and viewset capabilities. The API will be organized into logical resource groups corresponding to the main business domains:
+
+1. **Products API:**
+   - Product catalog access
+   - Product variants and attributes
+   - Product images and media
+   - Bill of Materials (BOM) data
+
+2. **Sales API:**
+   - Customer information
+   - Quote and order management
+   - Invoice and payment data
+   - Sales reporting
+
+3. **Inventory API:**
+   - Stock levels and availability
+   - Warehouse and location data
+   - Stock movements and transfers
+   - Inventory adjustments
+
+4. **Production API:**
+   - Manufacturing orders
+   - Production schedules
+   - Resource allocation
+   - Production reporting
+
+#### 4.9.4 API Management
+
+The API will include management features to ensure security, reliability, and usability:
+
+- **Developer Portal:**
+  - Self-service API key generation
+  - Interactive API documentation
+  - Usage statistics and monitoring
+  - Sample code and integration guides
+
+- **Administration:**
+  - API key management and revocation
+  - Usage quotas and rate limits
+  - Access control and permissions
+  - Audit logging and security monitoring
+
+#### 4.9.5 Integration Scenarios
+
+The API will support various integration scenarios, including:
+
+1. **E-commerce Integration:**
+   - Product catalog synchronization
+   - Order creation and fulfillment
+   - Inventory availability checks
+   - Customer data synchronization
+
+2. **Mobile Applications:**
+   - Field sales applications
+   - Warehouse management apps
+   - Executive dashboards
+   - Customer self-service portals
+
+3. **Business Intelligence:**
+   - Data extraction for reporting
+   - Real-time dashboards
+   - Historical data analysis
+   - KPI monitoring
+
+4. **Automation and Workflow:**
+   - Automated order processing
+   - Integration with external systems
+   - Scheduled data synchronization
+   - Event-driven processes
