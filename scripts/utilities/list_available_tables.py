@@ -42,7 +42,7 @@ try:
                 else:
                     print(f"✗ Table {table} returned no data")
             except Exception as e:
-                print(f"✗ Table {table} check failed: {str(e).split('\\n')[0]}")
+                print(f"✗ Table {table} check failed: {str(e).split('\n')[0]}")
         
         # Also try to get a sample from Artikel_Variante to see table references
         try:

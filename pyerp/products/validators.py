@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 import logging
 from typing import Any, Dict, Tuple, Optional, TYPE_CHECKING
 
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 
 from pyerp.core.validators import (
     ImportValidator, ValidationResult, RegexValidator, SkuValidator,
