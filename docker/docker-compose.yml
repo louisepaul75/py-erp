@@ -6,7 +6,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.dev
     ports:
-      - "8000:8000"
+      - "8050:8050"
       - "6379:6379"  # Redis port
     volumes:
       - pyerp_data:/app/data
@@ -34,7 +34,7 @@ services:
         cd /app &&
         python -m pip install python-dotenv dj-database-url django-debug-toolbar whitenoise &&
         echo 'Starting Django development server...' &&
-        PYTHONPATH=/app python -m django runserver 0.0.0.0:8000
+        PYTHONPATH=/app python -m django runserver 0.0.0.0:8050
       "
 
 volumes:

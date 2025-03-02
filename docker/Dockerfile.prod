@@ -87,7 +87,7 @@ RUN mkdir -p /app/static /app/media /app/logs /var/www/static /var/www/media
 # Configure Nginx
 RUN rm /etc/nginx/sites-enabled/default || true
 COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/conf.d/
-RUN sed -i 's/proxy_pass http:\/\/pyerp-web:8000;/proxy_pass http:\/\/localhost:8000;/g' /etc/nginx/conf.d/pyerp.conf
+RUN sed -i 's/proxy_pass http:\/\/pyerp-web:8000;/proxy_pass http:\/\/localhost:8050;/g' /etc/nginx/conf.d/pyerp.conf
 RUN mkdir -p /etc/nginx/ssl
 COPY docker/nginx/ssl/server.crt /etc/nginx/ssl/
 COPY docker/nginx/ssl/server.key /etc/nginx/ssl/
@@ -100,7 +100,7 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Expose ports
-EXPOSE 80 443 8000 6379 3306
+EXPOSE 80 443 8050 6379 3306
 
 # Run with the startup script
 CMD ["/entrypoint.sh"]
