@@ -29,9 +29,9 @@ class ProductImportValidator(ImportValidator):
     Validates and transforms product data from legacy 4D system during import.
     """
     
-    def __init_translate(self, strict: bool = False, transform_data: bool = True,
+    def __init__(self, strict: bool = False, transform_data: bool = True,
                  default_category: Optional['ProductCategory'] = None):
-        super().__init_translate(strict, transform_data)
+        super().__init__(strict, transform_data)
         # Default category to use when none is specified
         self.default_category = default_category
     
@@ -50,11 +50,11 @@ class ProductImportValidator(ImportValidator):
         
         # Check if product has minimal required fields
         if not row_data.get('sku') and not row_data.get('alteNummer'):
-            result.add_error('sku', translate("Product must have an SKU (either 'sku' or 'alteNummer' field)"))
+            result.add_error('sku', _("Product must have an SKU (either 'sku' or 'alteNummer' field)"))
         
         # Check if product has a name
         if not row_data.get('name') and not row_data.get('Bezeichnung'):
-            result.add_error('name', translate("Product must have a name (either 'name' or 'Bezeichnung' field)"))
+            result.add_error('name', _("Product must have a name (either 'name' or 'Bezeichnung' field)"))
     
     def _post_validate_row(self, row_data: Dict[str, Any], result: ValidationResult, 
                           row_index: Optional[int] = None) -> None:
@@ -69,12 +69,12 @@ class ProductImportValidator(ImportValidator):
         # Check if product with this SKU exists (if not in transform mode)
         if not self.transform_data and 'sku' in row_data:
             if Product.objects.filter(sku=row_data['sku']).exists():
-                result.add_warning('sku', translate("Product with this SKU already exists"))
+                result.add_warning('sku', _("Product with this SKU already exists"))
         
         # If parent and variant code are both set, validate the combination
         if 'is_parent' in row_data and 'variant_code' in row_data:
             if row_data['is_parent'] and row_data['variant_code']:
-                result.add_error('is_parent', translate("Parent products should not have variant codes"))
+                result.add_error('is_parent', _("Parent products should not have variant codes"))
     
     def validate_sku(self, value: Any, row_data: Dict[str, Any], 
                     row_index: Optional[int] = None) -> Tuple[str, ValidationResult]:
@@ -97,7 +97,7 @@ class ProductImportValidator(ImportValidator):
         
         # Check if SKU is provided
         if not value:
-            result.add_error('sku', translate("SKU is required"))
+            result.add_error('sku', _("SKU is required"))
             return value, result
         
         # Validate SKU format
@@ -119,7 +119,7 @@ class ProductImportValidator(ImportValidator):
                 row_data['variant_code'] = variant_code
                 row_data['is_parent'] = False
             except ValueError:
-                result.add_warning('sku', translate("Could not parse variant information from SKU"))
+                result.add_warning('sku', _("Could not parse variant information from SKU"))
         elif 'base_sku' not in row_data:
             # If no variant, use the full SKU as base_sku
             row_data['base_sku'] = value
@@ -148,7 +148,7 @@ class ProductImportValidator(ImportValidator):
             value = row_data['Bezeichnung']
         
         # Check if name is provided
-        required_validator = RequiredValidator(translate("Product name is required"))
+        required_validator = RequiredValidator(_("Product name is required"))
         required_result = required_validator(value, field_name='name')
         result.merge(required_result)
         
@@ -185,7 +185,7 @@ class ProductImportValidator(ImportValidator):
                             value = Decimal(str(price_item.get('Preis', 0)))
                             break
                         except (InvalidOperation, TypeError):
-                            result.add_warning('list_price', translate("Could not parse list price from Preise data"))
+                            result.add_warning('list_price', _("Could not parse list price from Preise data"))
         
         # Default to 0 if not found
         if value is None:
@@ -196,7 +196,7 @@ class ProductImportValidator(ImportValidator):
             try:
                 value = Decimal(str(value))
             except (InvalidOperation, TypeError):
-                result.add_error('list_price', translate("List price must be a valid decimal number"))
+                result.add_error('list_price', _("List price must be a valid decimal number"))
                 return Decimal('0.00'), result
         
         # Validate decimal format
@@ -236,7 +236,7 @@ class ProductImportValidator(ImportValidator):
                             value = Decimal(str(price_item.get('Preis', 0)))
                             break
                         except (InvalidOperation, TypeError):
-                            result.add_warning('wholesale_price', translate("Could not parse wholesale price from Preise data"))
+                            result.add_warning('wholesale_price', _("Could not parse wholesale price from Preise data"))
         
         # Default to 0 if not found
         if value is None:
@@ -247,7 +247,7 @@ class ProductImportValidator(ImportValidator):
             try:
                 value = Decimal(str(value))
             except (InvalidOperation, TypeError):
-                result.add_error('wholesale_price', translate("Wholesale price must be a valid decimal number"))
+                result.add_error('wholesale_price', _("Wholesale price must be a valid decimal number"))
                 return Decimal('0.00'), result
         
         # Validate decimal format
@@ -287,7 +287,7 @@ class ProductImportValidator(ImportValidator):
                             value = Decimal(str(price_item.get('Preis', 0)))
                             break
                         except (InvalidOperation, TypeError):
-                            result.add_warning('cost_price', translate("Could not parse cost price from Preise data"))
+                            result.add_warning('cost_price', _("Could not parse cost price from Preise data"))
         
         # Default to 0 if not found
         if value is None:
@@ -298,7 +298,7 @@ class ProductImportValidator(ImportValidator):
             try:
                 value = Decimal(str(value))
             except (InvalidOperation, TypeError):
-                result.add_error('cost_price', translate("Cost price must be a valid decimal number"))
+                result.add_error('cost_price', _("Cost price must be a valid decimal number"))
                 return Decimal('0.00'), result
         
         # Validate decimal format
@@ -341,7 +341,7 @@ class ProductImportValidator(ImportValidator):
             if self.default_category:
                 return self.default_category, result
             else:
-                result.add_warning('category', translate("No category specified and no default category available"))
+                result.add_warning('category', _("No category specified and no default category available"))
                 return None, result
         
         # If category is a string, try to find the category by code
@@ -350,7 +350,7 @@ class ProductImportValidator(ImportValidator):
                 category = ProductCategory.objects.get(code=value)
                 return category, result
             except ProductCategory.DoesNotExist:
-                result.add_warning('category', translate("Category with code '%(code)s' does not exist") % {'code': value})
+                result.add_warning('category', _("Category with code '%(code)s' does not exist") % {'code': value})
                 
                 # Use default category as fallback
                 if self.default_category:
@@ -382,7 +382,7 @@ def validate_product_model(product):
     # Check parent-variant relationship
     if product.is_parent and product.variant_code:
         errors.setdefault('is_parent', []).append(
-            translate("Parent products should not have variant codes")
+            _("Parent products should not have variant codes")
         )
     
     # Ensure base_sku is set
@@ -396,7 +396,7 @@ def validate_product_model(product):
     # Check prices
     if product.list_price < product.cost_price:
         errors.setdefault('list_price', []).append(
-            translate("List price should not be less than cost price")
+            _("List price should not be less than cost price")
         )
     
     # Raise ValidationError if there are any errors
