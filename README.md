@@ -438,4 +438,37 @@ Some dependencies like `psycopg2-binary` require system-level libraries. See [De
 
 ## Contributors
 
-[Your Team Information] 
+[Your Team Information]
+
+## Type Checking with Mypy
+
+This project uses [mypy](https://mypy.readthedocs.io/) for static type checking. To ensure proper type checking:
+
+1. Install the required type stubs:
+   ```bash
+   pip install -r requirements-types.txt
+   ```
+   
+   Or run the provided script:
+   ```bash
+   ./install_type_stubs.sh
+   ```
+
+2. Run mypy with the provided configuration:
+   ```bash
+   ./run_mypy.sh
+   ```
+   
+   Or manually:
+   ```bash
+   mypy --config-file mypy.ini .
+   ```
+
+### Handling Missing Type Stubs
+
+For third-party libraries without type stubs, we use the following approaches:
+- Install type stubs when available (e.g., `pandas-stubs`, `types-polib`)
+- Configure mypy to ignore missing imports for specific modules in `mypy.ini`
+- Add inline `# type: ignore` comments for specific import statements when necessary
+
+For the `wsz_api` module, which is a custom module without type stubs, we've configured mypy to ignore missing imports. 

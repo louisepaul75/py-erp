@@ -39,10 +39,7 @@ LOCAL_APPS = [
     'pyerp.core',
     'pyerp.products',
     # Make optional apps conditional to prevent crashes
-    # 'pyerp.sales',
-    # 'pyerp.inventory',
-    # 'pyerp.production',
-    # 'pyerp.legacy_sync',
+    'pyerp.monitoring',  # Always include the monitoring app
 ]
 
 # Basic required apps that must exist
@@ -53,7 +50,7 @@ OPTIONAL_APPS = [
     'pyerp.sales',
     'pyerp.inventory', 
     'pyerp.production',
-    'pyerp.legacy_sync'
+    'pyerp.legacy_sync',
 ]
 
 # Initialize LOCAL_APPS with required apps
@@ -67,6 +64,10 @@ for app in OPTIONAL_APPS:
         print(f"{app} module found and added to INSTALLED_APPS")
     except ImportError:
         print(f"WARNING: {app} module could not be imported, skipping it in INSTALLED_APPS")
+
+# Make sure monitoring app is always included
+if 'pyerp.monitoring' not in LOCAL_APPS:
+    LOCAL_APPS.append('pyerp.monitoring')
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 

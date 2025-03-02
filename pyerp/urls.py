@@ -55,6 +55,9 @@ non_i18n_urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    
+    # Add monitoring API URL
+    path('monitoring/', include('pyerp.monitoring.urls', namespace='monitoring')),
 ]
 
 # Add API documentation URLs if available

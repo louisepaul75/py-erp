@@ -1,0 +1,20 @@
+# Type stubs for mypy
+types-polib
+pandas-stubs
+types-stdlib-list
+types-redis
+types-requests
+types-PyYAML
+types-python-dateutil
+types-pytz
+types-jmespath
+
+# Django-related type stubs
+django-stubs
+djangorestframework-stubs
+types-django-filter
+types-django-cors-headers
+
+# Other type stubs
+celery-types
+types-boto3 

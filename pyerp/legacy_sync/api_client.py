@@ -48,7 +48,7 @@ class LegacyAPIClient:
     Client for interacting with the legacy 4D-based ERP system.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the API client.
         """
@@ -148,12 +148,17 @@ class LegacyAPIClient:
                 )
             else:
                 # Fall back to WSZ_api
+                # Convert date_created_start to datetime if it's a string
+                date_created_param = date_created_start
+                if isinstance(date_created_start, str):
+                    date_created_param = datetime.datetime.fromisoformat(date_created_start)
+                
                 df = fetch_data_from_api(
                     table_name=table_name,
                     top=top,
                     skip=skip,
                     new_data_only=new_data_only,
-                    date_created_start=date_created_start
+                    date_created_start=date_created_param
                 )
                 
             logger.info(f"Successfully fetched {len(df)} records from {table_name}")

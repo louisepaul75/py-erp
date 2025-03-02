@@ -20,7 +20,7 @@ except ImportError as e:
     print(f"Error importing WSZ_api modules: {e}")
     sys.exit(1)
 
-def main():
+def main() -> None:
     try:
         # Parse command-line arguments
         parser = argparse.ArgumentParser(description='Query the legacy API')

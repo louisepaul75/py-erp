@@ -1,0 +1,24 @@
+"""
+Django app configuration for the monitoring app.
+"""
+
+from django.apps import AppConfig
+from django.utils.translation import gettext_lazy as _
+
+
+class MonitoringAppConfig(AppConfig):
+    """Configuration for the monitoring app."""
+    
+    name = 'pyerp.monitoring'
+    verbose_name = _('System Monitoring')
+    
+    def ready(self):
+        """
+        Initialize app when Django starts.
+        This is where we can register signal handlers or perform other initialization.
+        """
+        # Import signal handlers to register them
+        try:
+            import pyerp.monitoring.signals  # noqa
+        except ImportError:
+            pass 
