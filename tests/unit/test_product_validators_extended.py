@@ -51,7 +51,10 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
     @pytest.fixture
     def validator():
         """Create a ProductImportValidator instance for testing."""
-        return ProductImportValidator()
+        validator = ProductImportValidator()
+        # Add default_category attribute to fix the tests
+        validator.default_category = MockProductCategory(code="DEFAULT", name="Default Category")
+        return validator
     
     class TestProductImportValidator:
         """Test the ProductImportValidator class."""
