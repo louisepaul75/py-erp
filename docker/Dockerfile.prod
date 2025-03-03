@@ -15,9 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gnupg2 \
     procps \
-    # MySQL dependencies
-    default-mysql-server \
-    default-libmysqlclient-dev \
+    # PostgreSQL client for connecting to external DB
+    libpq-dev \
+    postgresql-client \
     # Nginx
     nginx \
     # Redis
@@ -63,8 +63,7 @@ RUN pip install --no-cache-dir "django>=4.2.0,<5.0.0" \
     "django-cors-headers>=4.3.1,<4.4.0" \
     "drf-yasg>=1.21.7,<1.22.0" \
     "djangorestframework-simplejwt>=5.3.1,<5.4.0" \
-    "pymysql>=1.1.0,<1.2.0" \
-    "mysqlclient>=2.2.1,<2.3.0" \
+    "psycopg2>=2.9.9,<3.0.0" \
     "django-celery-results>=2.5.1,<2.6.0" \
     "django-celery-beat>=2.5.0,<2.6.0" \
     "python-json-logger>=2.0.7,<2.1.0" \
@@ -82,7 +81,7 @@ RUN pip install --no-cache-dir "WeasyPrint>=60.2,<61.0"
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p /app/static /app/media /app/logs /var/www/static /var/www/media
+RUN mkdir -p /app/static /app/media /app/logs /app/data
 
 # Configure Nginx
 RUN rm /etc/nginx/sites-enabled/default || true
@@ -99,7 +98,7 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Expose ports
-EXPOSE 80 443 8050 6379 3306
+EXPOSE 80 8050 6379
 
 # Run with the startup script
 CMD ["/entrypoint.sh"]

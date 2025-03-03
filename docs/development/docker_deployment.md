@@ -27,40 +27,51 @@ docker/
 ## Development Mode
 
 ### Components
-- PostgreSQL 15 (Database)
+- External PostgreSQL Database (not containerized)
 - Redis 7 (Cache & Message Broker)
 - Django Development Server
+- Celery (Async Task Worker)
+- Celery Beat (Task Scheduler)
 
 ### Features
 - Live code reloading
 - Debug mode enabled
-- Exposed ports for direct database/Redis access
+- Single container deployment
 - Console email backend
 - Django debug toolbar
 - Development-specific settings
+- Connection to external PostgreSQL database
 
 ### Configuration
 - Uses `docker-compose.yml`
 - Environment variables in `docker.env.dev`
-- Mounts local code directory for live updates
+- Single volume for application data
 - Development-specific Django settings
+- External database connection parameters
 
 ### Usage
 ```bash
+# Set external database connection environment variables
+export DB_HOST=your_postgres_host
+export DB_PORT=5432
+export DB_NAME=pyerp_dev
+export DB_USER=postgres
+export DB_PASSWORD=your_password
+
 # Start development environment
 docker compose up
 
 # Run migrations
-docker compose exec web python manage.py migrate
+docker compose exec pyerp python manage.py migrate
 
 # Create superuser
-docker compose exec web python manage.py createsuperuser
+docker compose exec pyerp python manage.py createsuperuser
 ```
 
 ## Production Mode
 
 ### Components
-- PostgreSQL 15 (Database)
+- External PostgreSQL Database (not containerized)
 - Redis 7 (Cache & Message Broker)
 - Django with Gunicorn (Application Server)
 - Nginx (Web Server)
@@ -70,11 +81,12 @@ docker compose exec web python manage.py createsuperuser
 ### Features
 - Optimized for performance
 - SSL/TLS encryption
-- Health checks for all services
-- Proper service isolation
+- Health checks for services
+- Single container deployment
 - Production-grade security settings
 - Automated SSL certificate management
 - Background task processing
+- Connection to external PostgreSQL database
 
 ### Configuration
 - Uses `docker-compose.prod.yml`
@@ -82,58 +94,72 @@ docker compose exec web python manage.py createsuperuser
 - Nginx for reverse proxy and static files
 - Celery for background tasks
 - SSL certificates via Certbot
+- External database connection parameters
 
 ### Usage
 ```bash
+# Set external database connection environment variables
+export DB_HOST=your_postgres_host
+export DB_PORT=5432
+export DB_NAME=pyerp
+export DB_USER=pyerp
+export DB_PASSWORD=your_password
+
 # Start production environment
-docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker/docker-compose.prod.yml up -d
 
 # Initialize database
-docker compose -f docker-compose.prod.yml exec web python manage.py migrate
-docker compose -f docker-compose.prod.yml exec web python manage.py collectstatic --no-input
-docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+docker compose -f docker/docker-compose.prod.yml exec pyerp python manage.py migrate
+docker compose -f docker/docker-compose.prod.yml exec pyerp python manage.py collectstatic --no-input
+docker compose -f docker/docker-compose.prod.yml exec pyerp python manage.py createsuperuser
 ```
 
 ## Environment Variables
 
 ### Development (`docker.env.dev`)
 - DEBUG=True
-- Development database credentials
+- External database connection parameters
 - Local email backend
 - Development-specific settings
-- Exposed service ports
+- Redis configuration
 
 ### Production (`docker.env.prod`)
 - DEBUG=False
-- Production database credentials
+- External database connection parameters
 - SMTP email configuration
 - SSL/TLS settings
 - Security headers
 - Production-specific settings
+- Redis configuration
 
 ## Volumes
 
 ### Development
-- `postgres_data_dev`: PostgreSQL data
-- `redis_data_dev`: Redis data
-- `static_volume_dev`: Static files
-- `media_volume_dev`: Media files
+- `pyerp_data`: Application data
 
 ### Production
-- `postgres_data_prod`: PostgreSQL data
-- `redis_data_prod`: Redis data
-- `static_volume`: Static files
-- `media_volume`: Media files
-- `log_volume`: Application logs
+- `pyerp_data`: Application data
 - `certbot/conf`: SSL certificates
 - `certbot/www`: SSL verification
+
+## Database Configuration
+
+The pyERP system is configured to use an external PostgreSQL database. You must provide the following environment variables:
+
+- `DB_HOST`: Hostname or IP address of your PostgreSQL server
+- `DB_PORT`: Port number (default: 5432)
+- `DB_NAME`: Database name
+- `DB_USER`: Database username
+- `DB_PASSWORD`: Database password
+
+These can be set in your environment or in the respective `.env` files.
 
 ## Security Considerations
 
 ### Development
 - Debug mode enabled
 - Exposed service ports
-- Default credentials acceptable
+- External database connection
 - No SSL required
 
 ### Production
@@ -145,52 +171,36 @@ docker compose -f docker-compose.prod.yml exec web python manage.py createsuperu
 - Regular security updates
 - Proper user permissions
 - Secure environment variables
+- External database connection with proper security
 
 ## Maintenance
 
 ### Development
 ```bash
 # View logs
-docker compose logs -f [service]
+docker compose logs -f
 
 # Rebuild containers
 docker compose build
 docker compose up -d
-
-# Database operations
-docker compose exec db pg_dump -U postgres pyerp_dev > backup_dev.sql
-docker compose exec -T db psql -U postgres pyerp_dev < backup_dev.sql
 ```
 
 ### Production
 ```bash
 # View logs
-docker compose -f docker-compose.prod.yml logs -f [service]
+docker compose -f docker/docker-compose.prod.yml logs -f
 
 # Rebuild containers
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
-
-# Database operations
-docker compose -f docker-compose.prod.yml exec db pg_dump -U pyerp pyerp > backup_prod.sql
-docker compose -f docker-compose.prod.yml exec -T db psql -U pyerp pyerp < backup_prod.sql
+docker compose -f docker/docker-compose.prod.yml build
+docker compose -f docker/docker-compose.prod.yml up -d
 
 # SSL certificate renewal
-docker compose -f docker-compose.prod.yml run --rm certbot renew
+docker compose -f docker/docker-compose.prod.yml run --rm certbot renew
 ```
 
 ## Health Monitoring
 
-Both environments include health checks for critical services:
-
-### Database
-```yaml
-healthcheck:
-  test: ["CMD-SHELL", "pg_isready -U postgres"]
-  interval: 10s
-  timeout: 5s
-  retries: 5
-```
+The environment includes health checks for critical services:
 
 ### Redis
 ```yaml
@@ -217,5 +227,5 @@ Monitor service health with:
 docker compose ps
 
 # Production
-docker compose -f docker-compose.prod.yml ps
+docker compose -f docker/docker-compose.prod.yml ps
 ``` 

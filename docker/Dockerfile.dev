@@ -9,7 +9,6 @@ RUN apt-get update \
         gcc \
         python3-dev \
         libpq-dev \
-        postgresql-client \
         netcat-traditional \
         wget \
         curl \
@@ -66,6 +65,9 @@ RUN pip install --no-cache-dir django-environ Pillow WeasyPrint
 # Create directories for static and media files
 RUN mkdir -p /app/static /app/media /app/logs /app/data
 
+# Copy supervisord configuration
+COPY ./docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
 # Copy entrypoint script
 COPY ./docker/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
@@ -74,4 +76,4 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
 
 # Default command
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8050"] 
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"] 
