@@ -3,6 +3,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from .models import ParentProduct, VariantProduct, ProductCategory
+from .models_new import Product  # Import the Product class from models_new.py
 
 
 class ProductCategoryForm(forms.ModelForm):
@@ -14,6 +15,52 @@ class ProductCategoryForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
         }
+
+
+class ProductForm(forms.ModelForm):
+    """Form for creating and editing products."""
+    
+    class Meta:
+        model = Product
+        fields = [
+            # Basic information
+            'sku', 'name', 'name_en', 'list_price', 'cost_price', 
+            'is_active', 'stock_quantity', 'is_parent', 'variant_code'
+        ]
+        
+    def clean_sku(self):
+        """Validate that the SKU is unique."""
+        sku = self.cleaned_data.get('sku')
+        instance = getattr(self, 'instance', None)
+        
+        if instance and instance.pk:
+            # If this is an existing product, exclude it from the uniqueness check
+            if Product.objects.filter(sku=sku).exclude(pk=instance.pk).exists():
+                raise forms.ValidationError(_('A product with this SKU already exists.'))
+        else:
+            # If this is a new product
+            if Product.objects.filter(sku=sku).exists():
+                raise forms.ValidationError(_('A product with this SKU already exists.'))
+        
+        return sku
+        
+    def clean(self):
+        """Validate the form data."""
+        cleaned_data = super().clean()
+        is_parent = cleaned_data.get('is_parent')
+        variant_code = cleaned_data.get('variant_code')
+        list_price = cleaned_data.get('list_price')
+        cost_price = cleaned_data.get('cost_price')
+        
+        # Parent products should not have variant codes
+        if is_parent and variant_code:
+            self.add_error('variant_code', _('Parent products should not have variant codes.'))
+            
+        # List price should be greater than cost price
+        if list_price and cost_price and list_price < cost_price:
+            self.add_error('list_price', _('List price must be greater than or equal to cost price.'))
+            
+        return cleaned_data
 
 
 class ParentProductForm(forms.ModelForm):
@@ -50,9 +97,7 @@ class VariantProductForm(forms.ModelForm):
         model = VariantProduct
         fields = [
             # Basic information
-            'sku', 'base_sku', 'variant_code', 'name', 'parent', 'is_active',
-            # Legacy info
-            'legacy_sku',
+            'sku', 'name', 'parent', 'variant_code', 'is_active',
         ]
         
     def clean_sku(self):
@@ -121,11 +166,10 @@ class ProductSearchForm(forms.Form):
     def clean(self):
         """Validate the form data."""
         cleaned_data = super().clean()
-        
         min_price = cleaned_data.get('min_price')
         max_price = cleaned_data.get('max_price')
         
         if min_price and max_price and min_price > max_price:
-            self.add_error('min_price', _('Minimum price must be less than maximum price.'))
-        
+            self.add_error('min_price', _('Minimum price cannot be greater than maximum price.'))
+            
         return cleaned_data 

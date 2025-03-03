@@ -11,7 +11,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.development')
 django.setup()
 
 # Import Django models
-from pyerp.products.models import Product, ParentProduct, VariantProduct, ProductCategory
+from pyerp.products.models import ParentProduct, VariantProduct, ProductCategory
+from pyerp.products.models_new import Product  # Import Product from models_new.py
 from django.db.models import Count
 
 
@@ -48,188 +49,177 @@ def check_data_migration():
     new_parent_count = ParentProduct.objects.count()
     new_variant_count = VariantProduct.objects.count()
     
-    print(f"New models - Parent products: {new_parent_count}")
-    print(f"New models - Variant products: {new_variant_count}")
+    print(f"New model - Parent products: {new_parent_count}")
+    print(f"New model - Variant products: {new_variant_count}")
     
-    # Check migration progress
+    # Calculate migration progress
     if old_parent_count > 0:
         parent_progress = (new_parent_count / old_parent_count) * 100
-        print(f"Parent product migration progress: {parent_progress:.2f}%")
+        print(f"Parent product migration progress: {parent_progress:.1f}%")
     else:
-        print("No parent products in old model")
+        print("No parent products to migrate")
     
     if old_variant_count > 0:
         variant_progress = (new_variant_count / old_variant_count) * 100
-        print(f"Variant product migration progress: {variant_progress:.2f}%")
+        print(f"Variant product migration progress: {variant_progress:.1f}%")
     else:
-        print("No variant products in old model")
+        print("No variant products to migrate")
 
 
 def check_relationships():
     """Check the relationships between parent and variant products."""
     print("\n=== RELATIONSHIP CHECK ===")
     
-    # Check variants per parent
-    parents_with_variants = ParentProduct.objects.annotate(variant_count=Count('variants'))
-    total_parents = parents_with_variants.count()
-    parents_with_no_variants = parents_with_variants.filter(variant_count=0).count()
+    # Check variants with no parent
+    orphan_variants = VariantProduct.objects.filter(parent__isnull=True).count()
+    print(f"Orphan variants (no parent): {orphan_variants}")
     
-    print(f"Total parent products: {total_parents}")
-    print(f"Parents with no variants: {parents_with_no_variants}")
-    print(f"Parents with variants: {total_parents - parents_with_no_variants}")
+    # Check parents with no variants
+    childless_parents = ParentProduct.objects.annotate(
+        variant_count=Count('variants')
+    ).filter(variant_count=0).count()
+    print(f"Childless parents (no variants): {childless_parents}")
     
-    # Check distribution of variants
+    # Check average variants per parent
+    total_parents = ParentProduct.objects.count()
+    total_variants = VariantProduct.objects.count()
     if total_parents > 0:
-        avg_variants = VariantProduct.objects.count() / total_parents
-        print(f"Average variants per parent: {avg_variants:.2f}")
-    
-    # Check top 5 parents by variant count
-    top_parents = parents_with_variants.order_by('-variant_count')[:5]
-    print("\nTop 5 parents by variant count:")
-    for parent in top_parents:
-        print(f"  - {parent.sku}: {parent.name} ({parent.variant_count} variants)")
+        avg_variants = total_variants / total_parents
+        print(f"Average variants per parent: {avg_variants:.1f}")
+    else:
+        print("No parent products found")
 
 
 def check_sample_data():
-    """Check sample data from the new models."""
-    print("\n=== SAMPLE DATA ===")
+    """Check sample data from both models."""
+    print("\n=== SAMPLE DATA CHECK ===")
     
-    # Check a sample parent product
-    try:
-        sample_parent = ParentProduct.objects.first()
-        if sample_parent:
-            print(f"Sample parent product: {sample_parent.sku} - {sample_parent.name}")
-            print(f"  Base SKU: {sample_parent.base_sku}")
-            print(f"  Legacy ID: {sample_parent.legacy_id}")
-            print(f"  Category: {sample_parent.category.name if sample_parent.category else 'None'}")
-            
-            # Check variants of this parent
-            variants = sample_parent.variants.all()
-            print(f"  Variants ({variants.count()}):")
-            for variant in variants[:5]:  # Show first 5 variants
-                print(f"    - {variant.sku}: {variant.name} (Variant code: {variant.variant_code})")
-    except Exception as e:
-        print(f"Error checking sample parent: {str(e)}")
+    # Get a sample parent product from the old model
+    old_parent = Product.objects.filter(is_parent=True).first()
+    if old_parent:
+        print("\nSample parent product from old model:")
+        print(f"  - SKU: {old_parent.sku}")
+        print(f"  - Name: {old_parent.name}")
+        print(f"  - Base SKU: {old_parent.base_sku}")
+        
+        # Try to find the corresponding parent in the new model
+        try:
+            new_parent = ParentProduct.objects.get(sku=old_parent.sku)
+            print("\nCorresponding parent in new model:")
+            print(f"  - SKU: {new_parent.sku}")
+            print(f"  - Name: {new_parent.name}")
+            print(f"  - Base SKU: {new_parent.base_sku}")
+        except ParentProduct.DoesNotExist:
+            print("\nNo corresponding parent found in new model")
+    else:
+        print("No parent products found in old model")
     
-    # Check a sample variant product
-    try:
-        sample_variant = VariantProduct.objects.first()
-        if sample_variant:
-            print(f"\nSample variant product: {sample_variant.sku} - {sample_variant.name}")
-            print(f"  Parent: {sample_variant.parent.sku} - {sample_variant.parent.name}")
-            print(f"  Base SKU: {sample_variant.base_sku}")
-            print(f"  Variant code: {sample_variant.variant_code}")
-            print(f"  Legacy SKU: {sample_variant.legacy_sku}")
-            print(f"  Legacy ID: {sample_variant.legacy_id}")
-    except Exception as e:
-        print(f"Error checking sample variant: {str(e)}")
+    # Get a sample variant product from the old model
+    old_variant = Product.objects.filter(is_parent=False).first()
+    if old_variant:
+        print("\nSample variant product from old model:")
+        print(f"  - SKU: {old_variant.sku}")
+        print(f"  - Name: {old_variant.name}")
+        print(f"  - Parent SKU: {old_variant.parent.sku if old_variant.parent else 'None'}")
+        
+        # Try to find the corresponding variant in the new model
+        try:
+            new_variant = VariantProduct.objects.get(sku=old_variant.sku)
+            print("\nCorresponding variant in new model:")
+            print(f"  - SKU: {new_variant.sku}")
+            print(f"  - Name: {new_variant.name}")
+            print(f"  - Parent SKU: {new_variant.parent.sku if new_variant.parent else 'None'}")
+        except VariantProduct.DoesNotExist:
+            print("\nNo corresponding variant found in new model")
+    else:
+        print("No variant products found in old model")
 
 
 def check_sku_mapping():
-    """
-    Check if the SKU and legacy_id fields are correctly mapped in parent products.
-    """
-    print("\n=== Checking SKU Mapping ===")
+    """Check SKU mapping between old and new models."""
+    print("\n=== SKU MAPPING CHECK ===")
     
-    try:
-        # Import models
-        from pyerp.products.models import ParentProduct
-        
-        # Get all parent products
-        parents = ParentProduct.objects.all()
-        total_parents = parents.count()
-        
-        print(f"Total parent products: {total_parents}")
-        
-        # Check for potential mapping issues
-        potential_issues = 0
-        for parent in parents[:10]:  # Check first 10 for display
-            print(f"Parent ID: {parent.id}, SKU: {parent.sku}, Legacy ID: {parent.legacy_id}")
-            
-            # Check if SKU looks like a legacy ID (typically shorter numeric value)
-            if parent.sku and parent.sku.isdigit() and len(parent.sku) <= 4:
-                potential_issues += 1
-                print(f"  WARNING: SKU '{parent.sku}' looks like it might be a legacy ID")
-            
-            # Check if legacy_id looks like a SKU (typically longer numeric value)
-            if parent.legacy_id and parent.legacy_id.isdigit() and len(parent.legacy_id) >= 5:
-                potential_issues += 1
-                print(f"  WARNING: Legacy ID '{parent.legacy_id}' looks like it might be a SKU")
-        
-        # Count total potential issues
-        total_potential_issues = 0
-        for parent in parents:
-            if parent.sku and parent.sku.isdigit() and len(parent.sku) <= 4:
-                total_potential_issues += 1
-            if parent.legacy_id and parent.legacy_id.isdigit() and len(parent.legacy_id) >= 5:
-                total_potential_issues += 1
-        
-        print(f"Total potential SKU mapping issues: {total_potential_issues}")
-        
-        if total_potential_issues > 0:
-            print("RECOMMENDATION: Run 'python manage.py fix_parent_sku_mapping' to fix these issues")
-        else:
-            print("SKU mapping appears to be correct")
-            
-    except Exception as e:
-        print(f"Error checking SKU mapping: {str(e)}")
+    # Get all SKUs from the old model
+    old_skus = set(Product.objects.values_list('sku', flat=True))
+    print(f"Total SKUs in old model: {len(old_skus)}")
+    
+    # Get all SKUs from the new models
+    parent_skus = set(ParentProduct.objects.values_list('sku', flat=True))
+    variant_skus = set(VariantProduct.objects.values_list('sku', flat=True))
+    new_skus = parent_skus.union(variant_skus)
+    print(f"Total SKUs in new models: {len(new_skus)}")
+    
+    # Check for missing SKUs
+    missing_skus = old_skus - new_skus
+    print(f"SKUs in old model but missing from new models: {len(missing_skus)}")
+    if missing_skus and len(missing_skus) < 10:
+        print("Missing SKUs:")
+        for sku in missing_skus:
+            print(f"  - {sku}")
+    
+    # Check for extra SKUs
+    extra_skus = new_skus - old_skus
+    print(f"SKUs in new models but not in old model: {len(extra_skus)}")
+    if extra_skus and len(extra_skus) < 10:
+        print("Extra SKUs:")
+        for sku in extra_skus:
+            print(f"  - {sku}")
+    
+    # Calculate coverage
+    if old_skus:
+        coverage = (len(old_skus) - len(missing_skus)) / len(old_skus) * 100
+        print(f"SKU migration coverage: {coverage:.1f}%")
+    else:
+        print("No SKUs in old model")
 
 
 def check_variant_parent_relationships():
-    """
-    Check the relationships between variant products and their parent products.
-    """
-    print("\n=== Checking Variant-Parent Relationships ===")
+    """Check if variant-parent relationships are preserved."""
+    print("\n=== VARIANT-PARENT RELATIONSHIP CHECK ===")
     
-    try:
-        # Import models
-        from pyerp.products.models import VariantProduct, ParentProduct
+    # Get variants with parents from the old model
+    old_variants = Product.objects.filter(
+        is_parent=False, 
+        parent__isnull=False
+    )[:100]  # Limit to 100 for performance
+    
+    total_checked = 0
+    correctly_mapped = 0
+    
+    for old_variant in old_variants:
+        total_checked += 1
+        old_parent = old_variant.parent
         
-        # Get all variants
-        variants = VariantProduct.objects.all()
-        total_variants = variants.count()
-        
-        # Count variants with and without parents
-        variants_with_parent = VariantProduct.objects.filter(parent__isnull=False).count()
-        variants_without_parent = VariantProduct.objects.filter(parent__isnull=True).count()
-        
-        print(f"Total variants: {total_variants}")
-        print(f"Variants with parent: {variants_with_parent} ({variants_with_parent/total_variants*100:.2f}%)")
-        print(f"Variants without parent: {variants_without_parent} ({variants_without_parent/total_variants*100:.2f}%)")
-        
-        # Check a sample of variants without parents
-        if variants_without_parent > 0:
-            print("\nSample of variants without parents:")
-            orphan_variants = VariantProduct.objects.filter(parent__isnull=True)[:5]
-            for variant in orphan_variants:
-                print(f"Variant ID: {variant.id}, SKU: {variant.sku}")
-                
-                # Try to extract potential parent SKU
-                import re
-                match = re.match(r'^(\d+)[-_]', variant.sku)
-                potential_parent_sku = match.group(1) if match else None
-                
-                if potential_parent_sku:
-                    # Check if a parent with this SKU exists
-                    parent_exists = ParentProduct.objects.filter(sku=potential_parent_sku).exists()
-                    print(f"  Potential parent SKU: {potential_parent_sku}, Exists: {parent_exists}")
+        try:
+            new_variant = VariantProduct.objects.get(sku=old_variant.sku)
+            new_parent = new_variant.parent
             
-            print(f"\nRECOMMENDATION: Run 'python manage.py fix_variant_parent_relationships' to fix these relationships")
-        else:
-            print("All variants have parent products assigned")
-            
-    except Exception as e:
-        print(f"Error checking variant-parent relationships: {str(e)}")
+            if new_parent and new_parent.sku == old_parent.sku:
+                correctly_mapped += 1
+            else:
+                print(f"Mismatched parent for variant {old_variant.sku}:")
+                print(f"  - Old parent: {old_parent.sku}")
+                print(f"  - New parent: {new_parent.sku if new_parent else 'None'}")
+        except VariantProduct.DoesNotExist:
+            print(f"Variant {old_variant.sku} not found in new model")
+    
+    if total_checked > 0:
+        accuracy = (correctly_mapped / total_checked) * 100
+        print(f"Checked {total_checked} variant-parent relationships")
+        print(f"Correctly mapped: {correctly_mapped} ({accuracy:.1f}%)")
+    else:
+        print("No variant-parent relationships to check")
 
 
 if __name__ == "__main__":
-    print("Testing product model split...")
+    print("=== PRODUCT MODEL MIGRATION TEST ===")
+    print("This script checks the migration from the old Product model to the new ParentProduct/VariantProduct models.")
     
     check_model_structure()
     check_data_migration()
     check_relationships()
+    check_sample_data()
     check_sku_mapping()
     check_variant_parent_relationships()
-    check_sample_data()
     
     print("\nTest completed.") 

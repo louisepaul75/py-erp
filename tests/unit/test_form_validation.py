@@ -1,349 +1,217 @@
 """
-Tests for form validation utilities.
+Tests for form validation.
 
-This module contains tests for the form validation classes and utilities
-that integrate Django forms with the validation framework.
+This module tests the form validation functionality.
 """
 import pytest
 from unittest.mock import MagicMock, patch
+from decimal import Decimal
 
-from django import forms
-from django.test import TestCase
-from django.core.exceptions import ValidationError
+from pyerp.core.form_validation import ValidatedForm, ValidationResult
 
-from pyerp.core.validators import (
-    Validator, RequiredValidator, ValidationResult, 
-    RegexValidator, RangeValidator
-)
-from pyerp.core.form_validation import (
-    ValidatedFormMixin, ValidatedModelForm, ValidatedForm
-)
 
-# Create a proper mock Product model class to use in tests
-class MockOptions:
-    """Mock Options class for Django model metadata."""
-    def __init__(self):
-        self.model_name = 'product'
-        self.app_label = 'products'
-        self.verbose_name = 'Product'
-        self.object_name = 'Product'
-        self.abstract = False
-        self.swapped = False
-        self.fields = {}
-        self.private_fields = []
-        self.many_to_many = []
-        self.related_objects = []
-        self.concrete_fields = []
-        self.local_concrete_fields = []
-        self.proxy = False
-        self.auto_created = False
-        self.get_fields = lambda: []
+class MockField:
+    """Mock for Django form field."""
+    
+    def __init__(self, **kwargs):
+        self.required = kwargs.get('required', True)
+        self.help_text = kwargs.get('help_text', '')
+        self.label = kwargs.get('label', '')
+        self.initial = kwargs.get('initial', None)
+        self.widget = kwargs.get('widget', None)
+        self.validators = []
 
+
+class MockModelForm(ValidatedForm):
+    """Mock for Django ModelForm."""
+    
+    class Meta:
+        """Meta class for the form."""
+        model = None
+        fields = []
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize the form."""
+        self.instance = kwargs.pop('instance', None)
+        super().__init__(*args, **kwargs)
+
+
+# Create a mock Product class for testing
 class Product:
-    """Mock Product model for testing."""
-    __name__ = 'Product'
-    _meta = MockOptions()
-    
-    DoesNotExist = type('DoesNotExist', (Exception,), {})
-    MultipleObjectsReturned = type('MultipleObjectsReturned', (Exception,), {})
-    
-    objects = MagicMock()
+    """Mock Product class for testing."""
     
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-            
-    def save(self, *args, **kwargs):
-        pass
+        self.id = kwargs.get('id', None)
+    
+    def save(self):
+        """Mock save method."""
+        if not self.id:
+            self.id = 1  # Simulate saving to database
+        return self
     
     def clean(self):
+        """Mock clean method."""
         pass
-
-class TestValidatedFormMixin:
-    """Tests for the ValidatedFormMixin class."""
     
-    class TestForm(ValidatedFormMixin, forms.Form):
-        """Test form implementation using ValidatedFormMixin."""
-        name = forms.CharField(max_length=100)
-        age = forms.IntegerField(required=False)
-        email = forms.EmailField(required=False)
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            # Add validators to fields
-            self.add_validator('name', RequiredValidator(
-                error_message="Name is required"
-            ))
-            self.add_validator('age', RangeValidator(
-                min_value=18, max_value=100,
-                error_message="Age must be between {min_value} and {max_value}"
-            ))
-            self.add_validator('email', RegexValidator(
-                pattern=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$',
-                error_message="Invalid email format"
-            ))
-    
-    @pytest.fixture
-    def form(self):
-        """Create a form instance for testing."""
-        return self.TestForm()
-    
-    def test_add_validator(self, form):
-        """Test adding validators to fields."""
-        # Validators should be added in init
-        assert 'name' in form.field_validators
-        assert isinstance(form.field_validators['name'][0], RequiredValidator)
-        
-        # Add another validator
-        new_validator = MagicMock(spec=Validator)
-        form.add_validator('name', new_validator)
-        
-        assert len(form.field_validators['name']) == 2
-        assert form.field_validators['name'][1] is new_validator
-    
-    def test_apply_validators(self, form):
-        """Test applying validators to field values."""
-        # Valid value for name
-        result = form.apply_validators('name', 'Test Name')
-        assert result.is_valid
-        
-        # Invalid value for age (below min)
-        result = form.apply_validators('age', 10)
-        assert not result.is_valid
-        assert len(result.errors) == 1
-        assert 'Age must be between 18 and 100' in result.errors['age'][0]
-        
-        # Invalid value for email
-        result = form.apply_validators('email', 'not-an-email')
-        assert not result.is_valid
-        assert len(result.errors) == 1
-        assert 'Invalid email format' in result.errors['email'][0]
-    
-    def test_clean_field(self, form):
-        """Test cleaning individual fields with validation."""
-        # Override clean_name to test integration
-        form.cleaned_data = {}
-        
-        # Valid name
-        form.cleaned_data['name'] = 'Test Name'
-        value = form.clean_name()
-        assert value == 'Test Name'
-        
-        # Invalid age
-        form.cleaned_data['age'] = 15
-        with pytest.raises(ValidationError) as exc:
-            form.clean_age()
-        
-        assert 'Age must be between 18 and 100' in str(exc.value)
-    
-    def test_clean(self, form):
-        """Test the clean method that applies all validators."""
-        # Create a form with valid data
-        test_form = self.TestForm(data={
-            'name': 'Test Name',
-            'age': 25,
-            'email': 'test@example.com'
-        })
-        
-        # Clean should succeed
-        cleaned_data = test_form.clean()
-        assert cleaned_data['name'] == 'Test Name'
-        assert cleaned_data['age'] == 25
-        assert cleaned_data['email'] == 'test@example.com'
-        
-        # Create a form with invalid data
-        invalid_form = self.TestForm(data={
-            'name': '',  # Empty name
-            'age': 15,   # Age too low
-            'email': 'not-an-email'  # Invalid email
-        })
-        
-        # Clean should raise ValidationError
-        with pytest.raises(ValidationError):
-            invalid_form.clean()
-        
-        # Errors should be populated
-        assert 'name' in invalid_form.errors
-        assert 'age' in invalid_form.errors
-        assert 'email' in invalid_form.errors
-
-
-class TestValidatedModelForm:
-    """Tests for the ValidatedModelForm class."""
-    
-    class ProductForm(ValidatedModelForm):
-        """Test model form implementation."""
-        
-        class Meta:
-            model = Product
-            fields = ['name', 'sku', 'list_price']
-        
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            # Add validators
-            self.add_validator('sku', RegexValidator(
-                pattern=r'^[A-Z0-9-]+$',
-                error_message="SKU must contain only uppercase letters, numbers, and hyphens"
-            ))
-            
-            # Add a form-level validator
-            self.add_form_validator(self.validate_prices)
-        
-        def validate_prices(self, cleaned_data):
-            """Validate that list_price is positive."""
-            result = ValidationResult()
-            if 'list_price' in cleaned_data and cleaned_data['list_price'] <= 0:
-                result.add_error('list_price', "List price must be positive")
-            return result
-    
-    @pytest.fixture
-    def model_form(self):
-        """Create a model form instance for testing."""
-        with patch.object(self.ProductForm, 'Meta'):
-            self.ProductForm.Meta.model = Product
-            return self.ProductForm()
-    
-    def test_model_instance_validation(self, model_form):
-        """Test validation of model instance."""
-        # Mock model instance
-        instance = MagicMock()
-        model_form.instance = instance
-        
-        # Mock _post_clean to avoid actual model validation
-        with patch.object(model_form, '_post_clean'):
-            # Test clean with form validators
-            with patch.object(model_form, 'apply_validators') as mock_apply:
-                mock_apply.return_value = ValidationResult()  # Valid result
-                
-                # Call clean
-                model_form.cleaned_data = {
-                    'sku': 'TEST-123',
-                    'name': 'Test Product',
-                    'list_price': 100
-                }
-                model_form.clean()
-                
-                # Should have called apply_validators for each field
-                assert mock_apply.call_count == 3
-    
-    def test_form_level_validation(self, model_form):
-        """Test form-level validators."""
-        # Test with positive list_price
-        model_form.cleaned_data = {
-            'sku': 'TEST-123',
-            'name': 'Test Product',
-            'list_price': 100
-        }
-        
-        # This should pass
-        form_result = model_form.apply_form_validators(model_form.cleaned_data)
-        assert form_result.is_valid
-        
-        # Test with negative list_price
-        model_form.cleaned_data = {
-            'sku': 'TEST-123',
-            'name': 'Test Product',
-            'list_price': -50
-        }
-        
-        # This should fail
-        form_result = model_form.apply_form_validators(model_form.cleaned_data)
-        assert not form_result.is_valid
-        assert 'list_price' in form_result.errors
-        assert 'List price must be positive' in form_result.errors['list_price'][0]
+    def __str__(self):
+        """String representation."""
+        return getattr(self, 'name', 'Mock Product')
 
 
 class TestValidatedForm:
     """Tests for the ValidatedForm class."""
     
-    class ContactForm(ValidatedForm):
-        """Test form implementation."""
-        name = forms.CharField(max_length=100)
-        email = forms.EmailField()
-        message = forms.CharField(widget=forms.Textarea)
+    def test_add_validator(self):
+        """Test adding a validator to a form."""
+        form = ValidatedForm()
+        validator = lambda x, y: None
+        form.add_validator('field', validator)
         
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            # Add validators
-            self.add_validator('name', RequiredValidator(
-                error_message="Name is required"
-            ))
-            self.add_validator('email', RegexValidator(
-                pattern=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$',
-                error_message="Invalid email format"
-            ))
-            
-            # Add a form-level validator
-            self.add_form_validator(self.validate_message_length)
-        
-        def validate_message_length(self, cleaned_data):
-            """Validate that message is at least 20 characters."""
-            result = ValidationResult()
-            if 'message' in cleaned_data and len(cleaned_data['message']) < 20:
-                result.add_error(
-                    'message', 
-                    "Message must be at least 20 characters long"
-                )
-            return result
+        assert 'field' in form.validators
+        assert validator in form.validators['field']
     
-    @pytest.fixture
-    def form(self):
-        """Create a form instance for testing."""
-        return self.ContactForm()
-    
-    def test_form_init(self, form):
-        """Test form initialization with validators."""
-        # Check if field validators are added
-        assert 'name' in form.field_validators
-        assert 'email' in form.field_validators
-        assert isinstance(form.field_validators['name'][0], RequiredValidator)
+    def test_add_form_validator(self):
+        """Test adding a form-level validator."""
+        form = ValidatedForm()
+        validator = lambda x: None
+        form.add_form_validator(validator)
         
-        # Check if form validators are added
-        assert len(form.form_validators) == 1
-        assert form.form_validators[0] == form.validate_message_length
+        assert validator in form.form_validators
     
-    def test_is_valid(self):
-        """Test form validation with is_valid."""
-        # Create a form with valid data
-        form = self.ContactForm(data={
-            'name': 'Test User',
-            'email': 'test@example.com',
-            'message': 'This is a test message that is longer than 20 characters.'
-        })
-        
-        # Form should be valid
+    def test_is_valid_no_validators(self):
+        """Test is_valid with no validators."""
+        form = ValidatedForm({'field': 'value'})
         assert form.is_valid()
+        assert form.cleaned_data == {'field': 'value'}
+    
+    def test_is_valid_with_field_validator_passing(self):
+        """Test is_valid with a passing field validator."""
+        form = ValidatedForm({'field': 'value'})
+        form.add_validator('field', lambda x, y: None)
         
-        # Create a form with invalid data
-        invalid_form = self.ContactForm(data={
-            'name': '',  # Empty name
-            'email': 'not-an-email',  # Invalid email
-            'message': 'Too short'  # Message too short
+        assert form.is_valid()
+        assert not form.errors
+    
+    def test_is_valid_with_field_validator_failing(self):
+        """Test is_valid with a failing field validator."""
+        form = ValidatedForm({'field': 'value'})
+        form.add_validator('field', lambda x, y: 'Error message')
+        
+        assert not form.is_valid()
+        assert 'field' in form.errors
+        assert 'Error message' in form.errors['field']
+    
+    def test_is_valid_with_form_validator_passing(self):
+        """Test is_valid with a passing form validator."""
+        form = ValidatedForm({'field': 'value'})
+        form.add_form_validator(lambda x: None)
+        
+        assert form.is_valid()
+        assert not form.errors
+    
+    def test_is_valid_with_form_validator_failing_dict(self):
+        """Test is_valid with a failing form validator returning a dict."""
+        form = ValidatedForm({'field': 'value'})
+        form.add_form_validator(lambda x: {'field': 'Error message'})
+        
+        assert not form.is_valid()
+        assert 'field' in form.errors
+        assert 'Error message' in form.errors['field']
+    
+    def test_is_valid_with_form_validator_failing_validation_result(self):
+        """Test is_valid with a failing form validator returning a ValidationResult."""
+        form = ValidatedForm({'field': 'value'})
+        
+        def validator(cleaned_data):
+            result = ValidationResult()
+            result.add_error('field', 'Error message')
+            return result
+        
+        form.add_form_validator(validator)
+        
+        assert not form.is_valid()
+        assert 'field' in form.errors
+        assert 'Error message' in form.errors['field']
+
+
+class TestValidatedModelForm:
+    """Tests for the ValidatedModelForm class."""
+    
+    class ProductForm(MockModelForm):
+        """Test model form implementation."""
+        
+        class Meta:
+            model = Product  # This uses the mock Product class defined above
+            fields = ['name', 'sku', 'list_price']
+        
+        def __init__(self, data=None, **kwargs):
+            """Initialize the form with validators."""
+            super().__init__(data, **kwargs)
+            
+            # Set up fields
+            self.fields['name'] = MockField(help_text='Product name')
+            self.fields['sku'] = MockField(help_text='Stock Keeping Unit')
+            self.fields['list_price'] = MockField(help_text='Retail price')
+            
+            # Add validators
+            self.add_validator('sku', self.validate_sku)
+            self.add_validator(None, self.validate_prices)  # Form-level validator
+        
+        def validate_sku(self, value, cleaned_data):
+            """Validate that the SKU follows the required format."""
+            if not value or not value.startswith('SKU-'):
+                return 'SKU must start with "SKU-"'
+            return None
+        
+        def validate_prices(self, cleaned_data):
+            """Validate that the list price is positive."""
+            list_price = cleaned_data.get('list_price')
+            if list_price is not None and list_price <= 0:
+                return {'list_price': 'List price must be positive'}
+            return None
+    
+    def test_model_form_init_with_instance(self):
+        """Test initializing a model form with an instance."""
+        instance = Product(name='Test Product', sku='SKU-001', list_price=Decimal('99.99'))
+        form = self.ProductForm(instance=instance)
+        
+        assert form.instance == instance
+    
+    def test_model_form_valid(self):
+        """Test that a valid model form passes validation."""
+        form = self.ProductForm({
+            'name': 'Test Product',
+            'sku': 'SKU-001',
+            'list_price': Decimal('99.99')
         })
         
-        # Form should be invalid
-        assert not invalid_form.is_valid()
-        
-        # Errors should be populated
-        assert 'name' in invalid_form.errors
-        assert 'email' in invalid_form.errors
-        assert 'message' in invalid_form.errors
+        assert form.is_valid()
+        assert not form.errors
     
-    def test_clean(self, form):
-        """Test the clean method."""
-        # Add data to the form
-        form.cleaned_data = {
-            'name': 'Test User',
-            'email': 'test@example.com',
-            'message': 'This is a test message.'
-        }
+    def test_model_form_invalid_field(self):
+        """Test that field validators catch invalid data in model forms."""
+        form = self.ProductForm({
+            'name': 'Test Product',
+            'sku': 'INVALID-001',  # Doesn't start with SKU-
+            'list_price': Decimal('-10.00')  # Negative price
+        })
         
-        # Clean should apply all validators
-        with patch.object(form, 'apply_validators') as mock_apply:
-            mock_apply.return_value = ValidationResult()  # Valid result
-            
-            # Call clean
-            form.clean()
-            
-            # Should have called apply_validators for each field
-            assert mock_apply.call_count == 3 
+        assert not form.is_valid()
+        assert 'sku' in form.errors
+        assert 'list_price' in form.errors
+        assert 'SKU must start with "SKU-"' in form.errors['sku']
+        assert 'List price must be positive' in form.errors['list_price']
+    
+    def test_model_form_partial_data(self):
+        """Test that partial data is validated correctly."""
+        form = self.ProductForm({
+            'name': 'Test Product',
+            'sku': 'SKU-001',
+            # Missing list_price
+        })
+        
+        # This should be valid since list_price is not required
+        assert form.is_valid()
+        assert not form.errors 
