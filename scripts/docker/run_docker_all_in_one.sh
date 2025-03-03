@@ -9,7 +9,7 @@ cd "$SCRIPT_DIR"
 # Check if .env.prod exists
 if [ ! -f ".env.prod" ]; then
     echo "Creating .env.prod file from example..."
-    cp docker/docker.env.example .env.prod
+    cp docker/docker.env.prod.example .env.prod
     echo "Please edit .env.prod with your production settings and run this script again."
     exit 1
 fi

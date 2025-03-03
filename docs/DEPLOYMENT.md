@@ -153,7 +153,7 @@ Since you'll be managing multiple Docker containers in production, Portainer is 
 2. **Configure Environment Variables**:
    ```powershell
    # Create development environment file
-   copy .env.example .env.dev
+   copy .env.dev.example .env.dev
    
    # Edit the file with appropriate values for development
    notepad .env.dev
@@ -238,7 +238,7 @@ Since you'll be managing multiple Docker containers in production, Portainer is 
 3. **Configure Production Environment Variables**:
    ```powershell
    # Create production environment file
-   copy .env.example .env.prod
+   copy .env.prod.example .env.prod
    
    # Edit the file with appropriate values for production
    notepad .env.prod

@@ -6,11 +6,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Check if .env.prod exists
-if [ ! -f ".env.prod" ]; then
-    echo "Creating .env.prod file from example..."
-    cp docker/docker.env.example .env.prod
-    echo "Please edit .env.prod with your production settings and run this script again."
+# Check if .env.dev exists
+if [ ! -f ".env.dev" ]; then
+    echo "Creating .env.dev file from example..."
+    cp docker/docker.env.dev.example .env.dev
+    echo "Please edit .env.dev with your development settings and run this script again."
     exit 1
 fi
 

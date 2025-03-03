@@ -61,15 +61,14 @@ For detailed contribution guidelines, including branch naming conventions, commi
 
 ### Environment Configuration
 
-Environment configuration files are located in the `pyerp/config/env/` directory:
+Environment configuration files are located in the `config/env/` directory:
 
-- `.env` - Development environment variables
-- `.env.production` - Production environment variables
-- `.env.example` - Example development configuration template
-- `.env.production.example` - Example production configuration template
-- `.env.prod.example` - Alternative production configuration template
+- `.env` or `.env.dev` - Development environment variables
+- `.env.prod` - Production environment variables
+- `.env.dev.example` - Example development configuration template
+- `.env.prod.example` - Example production configuration template
 
-For compatibility, copies of these files with warning headers exist in the project root. Always make changes to the original files in `pyerp/config/env/`.
+For compatibility, symlinks to these files exist in the project root. Always make changes to the original files in `config/env/`.
 
 #### Database Configuration
 
@@ -114,6 +113,12 @@ cp .env.example .env
 ```
 
 5. Start the development environment with Docker Compose:
+
+```bash
+./scripts/docker/run_docker_dev.sh
+```
+
+Or manually:
 
 ```bash
 docker-compose up -d
@@ -242,8 +247,11 @@ See detailed deployment instructions in `docs/deployment.md`
 ```
 pyERP/
 ├── .github/                  # GitHub Actions workflows for CI/CD
+├── config/                   # Configuration files
+│   └── env/                  # Environment configuration files
 ├── docker/                   # Docker configurations
 ├── docs/                     # Documentation
+├── logs/                     # Log files
 ├── pyerp/                    # Main Django project
 │   ├── config/               # Django settings
 │   ├── core/                 # Core functionality
@@ -258,11 +266,17 @@ pyERP/
 │   ├── sales/                # Sales management app
 │   ├── inventory/            # Inventory management app
 │   ├── production/           # Production management app
+│   ├── scripts/              # Python scripts for various tasks
 │   └── users/                # User management app
+├── scripts/                  # Utility scripts
+│   ├── docker/               # Docker-related scripts
+│   ├── tools/                # Development tools
+│   ├── db_migrations/        # Database migration scripts
+│   └── utilities/            # Utility scripts
 ├── static/                   # Static files
 ├── media/                    # User-uploaded media
 ├── tests/                    # Top-level tests
-├── .env.example              # Example environment variables
+│   └── coverage/             # Test coverage reports
 ├── manage.py                 # Django management script
 └── requirements/             # Python dependencies
 ```
@@ -451,17 +465,17 @@ This project uses [mypy](https://mypy.readthedocs.io/) for static type checking.
    
    Or run the provided script:
    ```bash
-   ./install_type_stubs.sh
+   ./scripts/tools/install_type_stubs.sh
    ```
 
 2. Run mypy with the provided configuration:
    ```bash
-   ./run_mypy.sh
+   ./scripts/tools/run_mypy.sh
    ```
    
    Or manually:
    ```bash
-   mypy --config-file mypy.ini .
+   mypy --config-file scripts/tools/mypy.ini .
    ```
 
 ### Handling Missing Type Stubs

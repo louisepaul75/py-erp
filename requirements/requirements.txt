@@ -1,0 +1,77 @@
+# Core Django
+Django==5.1.6
+djangorestframework==3.14.0
+django-filter==23.5
+django-cors-headers==4.3.1
+
+# Database
+psycopg2-binary==2.9.9
+dj-database-url==2.1.0
+# mysqlclient==2.2.7  # Removed as we're switching to PostgreSQL
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Background processing
+celery==5.4.0
+redis==5.0.2
+django-redis==5.4.0
+django-celery-results==2.5.1
+django-celery-beat==2.7.0
+kombu==5.4.2
+billiard==4.2.1
+amqp==5.3.1
+vine==5.1.0
+click-didyoumean==0.3.1
+click-plugins==1.1.1
+click-repl==0.3.0
+python-crontab==3.2.0
+django-timezone-field==7.1
+
+# API Documentation
+drf-yasg==1.21.9
+inflection==0.5.1
+uritemplate==4.1.1
+pyyaml==6.0.2
+
+# Authentication
+django-allauth==0.61.1
+djangorestframework-simplejwt==5.3.1
+
+# AWS integration (for file storage, etc.)
+boto3==1.33.13
+django-storages==1.14.2
+
+# PDF Generation
+WeasyPrint==60.2
+reportlab==4.1.0
+
+# Utilities
+Pillow==10.2.0  # Image processing
+python-dateutil==2.9.0.post0
+pytz==2025.1
+requests==2.31.0
+pydantic==2.6.3
+
+# Testing
+pytest==7.4.4
+pytest-django==4.7.0
+factory-boy==3.3.0
+pytest-cov==4.1.0
+coverage==7.4.3
+
+# Code quality
+black==24.3.0
+flake8==7.0.0
+mypy==1.8.0
+isort==5.13.2
+pre-commit==3.6.2
+pip-tools==7.4.1
+
+# Logging
+structlog==24.1.0
+python-json-logger==3.2.1
+
+# Production
+gunicorn==21.2.0
+whitenoise==6.9.0  # Static file serving 

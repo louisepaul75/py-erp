@@ -8,8 +8,12 @@ import sys
 import django
 import pandas as pd
 
+# Add the project root to the Python path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+
 # Set up Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings')
 django.setup()
 
 # Now we can import Django models
@@ -17,7 +21,7 @@ from django.db import transaction
 from pyerp.products.models import ParentProduct
 
 # Add the WSZ_api path to the Python path
-WSZ_API_PATH = r'C:\Users\Joan-Admin\PycharmProjects\WSZ_api'
+WSZ_API_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'wsz_api')
 if WSZ_API_PATH not in sys.path:
     sys.path.append(WSZ_API_PATH)
 
