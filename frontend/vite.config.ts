@@ -1,10 +1,16 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { fileURLToPath, URL } from 'node:url';
+import { liveDesigner } from '@pinegrow/vite-plugin';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    liveDesigner({
+      // Customize plugin options as needed
+    }),
+    vue()
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -15,14 +21,14 @@ export default defineConfig({
     outDir: '../static/vue',
     // Generate manifest.json in the output directory
     manifest: true,
+    // Clean output directory before build
+    emptyOutDir: true,
     rollupOptions: {
       // Specify entry points
       input: {
         main: fileURLToPath(new URL('./src/main.ts', import.meta.url))
       },
       output: {
-        // Clean directory on build
-        clean: true,
         // Configure output filenames
         entryFileNames: 'js/[name].[hash].js',
         chunkFileNames: 'js/[name].[hash].js',

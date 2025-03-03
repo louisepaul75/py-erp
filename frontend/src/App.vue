@@ -1,11 +1,15 @@
 <template>
   <div class="vue-app-container">
     <header>
-      <h1>Vue.js 3.5 Integration with pyERP</h1>
+      <h1>pyERP</h1>
+      <nav>
+        <router-link to="/">Home</router-link> |
+        <router-link to="/products">Products</router-link> |
+        <router-link to="/products/categories">Categories</router-link>
+      </nav>
     </header>
     <main>
-      <p>Vue.js is successfully integrated with the Django application!</p>
-      <HelloWorld />
+      <router-view />
     </main>
     <footer>
       <p>© {{ currentYear }} pyERP</p>
@@ -14,14 +18,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import HelloWorld from './components/HelloWorld.vue';
+import { computed } from 'vue';
 
 // Compute the current year for the footer
 const currentYear = computed(() => new Date().getFullYear());
-
-// Component state
-const message = ref('Hello from Vue.js 3.5!');
 </script>
 
 <style scoped>
@@ -29,18 +29,48 @@ const message = ref('Hello from Vue.js 3.5!');
   font-family: 'Avenir', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+header {
+  padding: 20px 0;
+  border-bottom: 1px solid #eaeaea;
 }
 
 h1 {
   color: #d2bc9b;
+  margin-bottom: 15px;
+}
+
+nav {
+  padding: 10px 0;
+}
+
+nav a {
+  color: #2c3e50;
+  text-decoration: none;
+  margin: 0 10px;
+  font-weight: bold;
+}
+
+nav a.router-link-active {
+  color: #d2bc9b;
+}
+
+main {
+  padding: 20px 0;
+  min-height: 70vh;
 }
 
 footer {
   margin-top: 40px;
+  padding: 20px 0;
   font-size: 0.8em;
   color: #666;
+  border-top: 1px solid #eaeaea;
+  text-align: center;
 }
 </style> 
