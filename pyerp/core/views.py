@@ -15,6 +15,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 from django.db.utils import OperationalError
 from django.utils.translation import activate, get_language
 from django.utils import translation
+from django.shortcuts import render
 
 # Set up logging
 logger = logging.getLogger('pyerp.core')
@@ -175,4 +176,18 @@ def test_db_error(request):
     """
     # Intentionally raise a database connection error
     logger.info("Simulating database connection error for testing")
-    raise OperationalError("This is a simulated database connection error for testing") 
+    raise OperationalError("This is a simulated database connection error for testing")
+
+
+def csrf_failure(request, reason=""):
+    """
+    Custom view for CSRF failures that provides more detailed error information.
+    """
+    context = {
+        'reason': reason,
+        'cookies_enabled': request.COOKIES,
+        'csrf_cookie': request.META.get('CSRF_COOKIE', None),
+        'http_referer': request.META.get('HTTP_REFERER', None),
+        'http_host': request.META.get('HTTP_HOST', None),
+    }
+    return render(request, 'csrf_failure.html', context) 

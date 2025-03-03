@@ -44,8 +44,8 @@ if 'DATABASE_URL' in os.environ:
 # SECURE_HSTS_SECONDS = 0
 # SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 # SECURE_HSTS_PRELOAD = False
-# CSRF_COOKIE_SECURE = False
-# SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
 
 # CORS settings - allow all origins in local development
 CORS_ALLOW_ALL_ORIGINS = True

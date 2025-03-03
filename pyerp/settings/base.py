@@ -387,6 +387,18 @@ IMAGE_API = {
     'CACHE_TIMEOUT': int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600)),  # 1 hour
 }
 
+# Custom CSRF failure view
+CSRF_FAILURE_VIEW = 'pyerp.core.views.csrf_failure'
+
+# CSRF Trusted Origins - important for Docker environments
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+if not any(CSRF_TRUSTED_ORIGINS):
+    # Default trusted origins if not specified in environment
+    CSRF_TRUSTED_ORIGINS = [
+        'http://localhost:8050',
+        'http://127.0.0.1:8050',
+    ]
+
 # Update loggers for image API
 LOGGING['loggers']['pyerp.products.image_api'] = {
     'handlers': ['console', 'data_sync_file'],
