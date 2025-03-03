@@ -28,6 +28,17 @@ const routes: Array<RouteRecordRaw> = [
     path: '/products/categories',
     name: 'CategoryList',
     component: () => import('../views/products/CategoryList.vue')
+  },
+  {
+    path: '/sales',
+    name: 'SalesList',
+    component: () => import('../views/sales/SalesList.vue')
+  },
+  {
+    path: '/sales/:id',
+    name: 'SalesOrderDetail',
+    component: () => import('../views/sales/SalesOrderDetail.vue'),
+    props: true
   }
 ];
 

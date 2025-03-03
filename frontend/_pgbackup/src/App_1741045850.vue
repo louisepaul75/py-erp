@@ -1,21 +1,15 @@
 <template>
     <div class="vue-app-container">
         <header>
-            <div class="header-container">
-                <div class="logo-container">
-                    <router-link to="/" class="logo-link">
-                        <img src="@/assets/wsz_logo_long.png" alt="Wilhelm-Schweizer Logo" class="nav-logo">
-                    </router-link>
-                </div>
-                <div class="nav-container">
-                    <nav>
-                        <router-link to="/">Home</router-link>                 |
-                        <router-link to="/products">Products</router-link>                 |
-                        <router-link to="/products/categories">Categories</router-link>                 |
-                        <router-link to="/sales">Sales</router-link>
-                    </nav>
-                </div>
-            </div>
+            <nav>
+                <router-link to="/">
+                    <img src="@/assets/wsz_logo_long.png" alt="Wilhelm-Schweizer Logo" class="nav-logo">
+                    Home
+                </router-link>                                 |
+                <router-link to="/products">Products</router-link>                                 |
+                <router-link to="/products/categories">Categories</router-link>                                 |
+                <router-link to="/sales">Sales</router-link>
+            </nav>
         </header>
         <main>
             <router-view/>
@@ -46,37 +40,12 @@ const currentYear = computed(() => new Date().getFullYear());
 header {
   padding: 20px 0;
   border-bottom: 1px solid #eaeaea;
-  width: 100%;
-}
-
-.header-container {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  width: 100%;
-}
-
-.logo-container {
-  grid-column: 1;
-  justify-self: start;
-}
-
-.nav-container {
-  grid-column: 2;
-  display: flex;
-  justify-content: center;
-}
-
-.logo-link {
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
 }
 
 nav {
   padding: 10px 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
 }
 

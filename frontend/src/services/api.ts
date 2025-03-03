@@ -53,4 +53,37 @@ export const productApi = {
   }
 };
 
+// Sales API endpoints
+export const salesApi = {
+  // Get all sales orders with optional filters
+  getSalesOrders: async (params = {}) => {
+    return api.get('/sales/orders/', { params });
+  },
+  
+  // Get sales order details by ID
+  getSalesOrder: async (id: number) => {
+    return api.get(`/sales/orders/${id}/`);
+  },
+  
+  // Create a new sales order
+  createSalesOrder: async (data: any) => {
+    return api.post('/sales/orders/', data);
+  },
+  
+  // Update an existing sales order
+  updateSalesOrder: async (id: number, data: any) => {
+    return api.put(`/sales/orders/${id}/`, data);
+  },
+  
+  // Delete a sales order
+  deleteSalesOrder: async (id: number) => {
+    return api.delete(`/sales/orders/${id}/`);
+  },
+  
+  // Get all customers
+  getCustomers: async (params = {}) => {
+    return api.get('/sales/customers/', { params });
+  }
+};
+
 export default api; 
