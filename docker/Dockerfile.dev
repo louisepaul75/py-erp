@@ -9,6 +9,7 @@ RUN apt-get update \
         gcc \
         python3-dev \
         libpq-dev \
+        postgresql-client \
         netcat-traditional \
         wget \
         curl \
@@ -64,6 +65,9 @@ RUN pip install --no-cache-dir django-environ Pillow WeasyPrint
 
 # Create directories for static and media files
 RUN mkdir -p /app/static /app/media /app/logs /app/data
+
+# Copy the application code
+COPY . /app/
 
 # Copy supervisord configuration
 COPY ./docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
