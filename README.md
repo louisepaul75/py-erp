@@ -56,7 +56,7 @@ For detailed contribution guidelines, including branch naming conventions, commi
 ### Prerequisites
 
 - Python 3.13.2
-- MySQL 8.0+ (previously PostgreSQL)
+- PostgreSQL 15.0+
 - Docker and Docker Compose (for development environment)
 
 ### Environment Configuration
@@ -72,15 +72,15 @@ For compatibility, symlinks to these files exist in the project root. Always mak
 
 #### Database Configuration
 
-The project has been migrated from SQLite to MySQL for development to ensure consistency with the production environment. For detailed MySQL setup instructions, see [docs/development/mysql_setup.md](docs/development/mysql_setup.md).
+The project uses PostgreSQL for all environments (development, staging, and production) to ensure consistency. For detailed PostgreSQL setup instructions, see [docs/development/postgres_setup.md](docs/development/postgres_setup.md).
 
 Key database environment variables:
 ```
 DB_NAME=pyerp_testing
-DB_USER=admin
+DB_USER=postgres
 DB_PASSWORD=
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=5432
 ```
 
 ### Development Setup

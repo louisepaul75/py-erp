@@ -6,55 +6,89 @@ This directory contains configuration files for Docker deployment of the pyERP a
 
 ### Security Warning
 
-**IMPORTANT**: The actual environment files (`docker.env` and `docker.local.env`) contain sensitive information 
+**IMPORTANT**: The environment files (`docker.env.dev` and `docker.env.prod`) contain sensitive information 
 and should never be committed to version control. These files are included in `.gitignore` to help prevent 
 accidental commits.
 
 ### Available Files
 
-- `docker.env.example`: Template for production environment settings
-- `docker.local.env.example`: Template for local development environment settings
-- `docker.env`: Your actual production environment settings (not tracked in Git)
-- `docker.local.env`: Your actual local environment settings (not tracked in Git)
+- `docker.env.dev.example`: Template for development environment settings
+- `docker.env.prod.example`: Template for production environment settings
+- `docker.env.dev`: Your actual development environment settings (not tracked in Git)
+- `docker.env.prod`: Your actual production environment settings (not tracked in Git)
 
 ## Setup Instructions
 
 1. Copy the example files to create your actual configuration:
    ```bash
-   cp docker.env.example docker.env
-   cp docker.local.env.example docker.local.env
+   # For development
+   cp docker.env.dev.example docker.env.dev
+   
+   # For production
+   cp docker.env.prod.example docker.env.prod
    ```
 
-2. Edit `docker.env` and `docker.local.env` to include your actual database credentials and other sensitive information.
-
-3. Use these environment files when building/running your Docker containers:
-   - For production: The container automatically uses `docker.env`
-   - For local development: Run with `-e USE_LOCAL_ENV=true` to use `docker.local.env`
+2. Edit the environment files with appropriate settings:
+   - Development: Edit `docker.env.dev` with development settings
+   - Production: Edit `docker.env.prod` with production settings
 
 ## Database Configuration
 
-The Docker containers use PyMySQL (pure Python MySQL client) to connect to your database.
-You can configure it in the following ways:
+The Docker containers use PostgreSQL for both development and production environments:
 
-1. **Production MySQL**: Modify `docker.env` with your actual MySQL credentials
+1. **Development Database**: 
+   - Default credentials in `docker.env.dev`
+   - Database exposed on port 5432 for local development tools
 
-2. **Local Development**: 
-   - Default: Uses SQLite for easy standalone testing
-   - Optional: Uncomment and configure the MySQL section in `docker.local.env` to use your MySQL server instead
+2. **Production Database**:
+   - Secure credentials required in `docker.env.prod`
+   - Database not exposed externally
+   - Regular backups recommended
 
-## Example Docker Run Commands
+## Example Docker Commands
 
-**Production mode with MySQL:**
+**Development mode:**
 ```bash
-docker run -p 8000:8000 pyerp:latest
+# Start all services
+docker compose up
+
+# Start in background
+docker compose up -d
+
+# View logs
+docker compose logs -f
 ```
 
-**Local development mode with SQLite:**
+**Production mode:**
 ```bash
-docker run -p 8000:8000 -e USE_LOCAL_ENV=true pyerp:latest
+# Start all services
+docker compose -f docker-compose.prod.yml up -d
+
+# View logs
+docker compose -f docker-compose.prod.yml logs -f
+
+# Execute commands
+docker compose -f docker-compose.prod.yml exec web python manage.py migrate
 ```
 
-**Local development mode with custom environment file:**
-```bash
-docker run -p 8000:8000 -v /path/to/your/custom.env:/app/.env pyerp:latest
-``` 
+## Directory Structure
+
+```
+docker/
+├── Dockerfile.dev           # Development Dockerfile
+├── Dockerfile.prod          # Production Dockerfile
+├── docker-compose.yml      # Development compose file
+├── docker-compose.prod.yml # Production compose file
+├── docker.env.dev          # Development environment variables
+├── docker.env.prod         # Production environment variables
+├── nginx/                  # Nginx configuration for production
+│   ├── conf.d/            # Nginx site configurations
+│   └── ssl/               # SSL certificates
+└── certbot/               # SSL certificate automation
+    ├── conf/              # Certbot configuration
+    └── www/               # Certbot webroot
+```
+
+For detailed deployment instructions, see:
+- [Development Docker Setup](../docs/development/docker_deployment.md#development-mode)
+- [Production Docker Setup](../docs/development/docker_deployment.md#production-mode) 

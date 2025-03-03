@@ -1,40 +1,53 @@
 version: '3.8'
 
 services:
-  pyerp:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=${DB_NAME:-pyerp}
+      - POSTGRES_USER=${DB_USER:-pyerp}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod
-    container_name: pyerp_all_in_one
+    container_name: pyerp_web
     ports:
-      - "80:80"
-      - "443:443"
       - "8050:8050"
     env_file:
-      - ../.env.prod
+      - docker/docker.env.prod
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.settings.production
-      - DB_HOST=localhost
-      - DB_PORT=3306
-      - DB_NAME=${DB_NAME:-pyerp_testing}
-      - DB_USER=${DB_USER:-admin}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
-      - REDIS_URL=redis://localhost:6379/0
-      - RUN_CELERY=true
-      - RUN_CELERY_BEAT=true
-      - RUN_NGINX=true
+      - REDIS_URL=redis://redis:6379/0
+      - DB_HOST=db
+      - DB_PORT=5432
     volumes:
-      - mysql_data_prod:/var/lib/mysql
-      - redis_data_prod:/data
       - static_volume:/app/static
       - media_volume:/app/media
       - log_volume:/app/logs
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./certbot/www:/var/www/certbot    # For Certbot verification
-      - ./certbot/conf:/etc/letsencrypt   # For storing certificates
-    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: curl --fail http://localhost:8050/admin/ || exit 1
       interval: 30s
@@ -42,8 +55,59 @@ services:
       retries: 3
       start_period: 40s
 
+  nginx:
+    image: nginx:1.25
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    depends_on:
+      - web
+
+  celery:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    command: celery -A pyerp worker -l info
+    env_file:
+      - docker/docker.env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
+      - REDIS_URL=redis://redis:6379/0
+      - DB_HOST=db
+      - DB_PORT=5432
+    volumes:
+      - log_volume:/app/logs
+    depends_on:
+      - redis
+      - db
+
+  celery-beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.prod
+    command: celery -A pyerp beat -l info
+    env_file:
+      - docker/docker.env.prod
+    environment:
+      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
+      - REDIS_URL=redis://redis:6379/0
+      - DB_HOST=db
+      - DB_PORT=5432
+    volumes:
+      - log_volume:/app/logs
+    depends_on:
+      - redis
+      - db
+
 volumes:
-  mysql_data_prod:
+  postgres_data_prod:
   redis_data_prod:
   static_volume:
   media_volume:
