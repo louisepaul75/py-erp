@@ -24,12 +24,14 @@ services:
       # External PostgreSQL connection details - actual credentials are in docker.env.dev
       - DB_HOST=192.168.73.65
       - DB_PORT=5432
-      - DB_NAME=pyerp_dev
+      - DB_NAME=pyerp_testing
       - DB_USER=postgres
     command: >
       bash -c "
         cd /app &&
         service redis-server start &&
+        export PGPASSWORD=$DB_PASSWORD &&
+        psql -h $DB_HOST -U $DB_USER -p $DB_PORT -tc \"SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'\" | grep -q 1 || psql -h $DB_HOST -U $DB_USER -p $DB_PORT -c \"CREATE DATABASE $DB_NAME\" &&
         python manage.py migrate &&
         python manage.py runserver 0.0.0.0:8050
       "
