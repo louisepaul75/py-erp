@@ -11,7 +11,7 @@ from django.urls import reverse
 from django.contrib import messages
 
 from pyerp.monitoring.models import HealthCheckResult
-from pyerp.monitoring.services import run_all_health_checks
+from pyerp.monitoring.services import run_all_health_checks, validate_database
 
 
 class HealthCheckResultAdmin(admin.ModelAdmin):
@@ -51,6 +51,7 @@ class HealthCheckResultAdmin(admin.ModelAdmin):
         custom_urls = [
             path('dashboard/', self.admin_site.admin_view(self.dashboard_view), name='system_status_dashboard'),
             path('refresh/', self.admin_site.admin_view(self.refresh_health_checks), name='refresh_health_checks'),
+            path('validate-database/', self.admin_site.admin_view(self.validate_database), name='validate_database'),
         ]
         return custom_urls + urls
     
@@ -61,6 +62,7 @@ class HealthCheckResultAdmin(admin.ModelAdmin):
             HealthCheckResult.COMPONENT_DATABASE,
             HealthCheckResult.COMPONENT_LEGACY_ERP,
             HealthCheckResult.COMPONENT_PICTURES_API,
+            HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
         ]
         
         latest_results = {}
@@ -83,6 +85,7 @@ class HealthCheckResultAdmin(admin.ModelAdmin):
             'latest_results': latest_results,
             'history_data': history_data,
             'refresh_url': reverse('admin:refresh_health_checks'),
+            'validate_db_url': reverse('admin:validate_database'),
             **self.admin_site.each_context(request),
         }
         
@@ -105,7 +108,21 @@ class HealthCheckResultAdmin(admin.ModelAdmin):
                 'success': False,
                 'error': str(e)
             }, status=500)
+    
+    def validate_database(self, request):
+        """Run comprehensive database validation and return the results as JSON."""
+        try:
+            results = validate_database()
+            return JsonResponse({
+                'success': True,
+                'results': results
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
 
 
-# Register the admin class
+# Register the admin class with a better name to avoid duplicates in the admin sidebar
 admin.site.register(HealthCheckResult, HealthCheckResultAdmin) 

@@ -8,6 +8,10 @@ legacy ERP API integration, and the pictures API.
 
 import time
 import logging
+import subprocess
+import sys
+import json
+from pathlib import Path
 from django.db import connections, OperationalError
 from django.conf import settings
 
@@ -182,6 +186,94 @@ def check_pictures_api_connection():
     
     return {
         'component': HealthCheckResult.COMPONENT_PICTURES_API,
+        'status': status,
+        'details': details,
+        'response_time': response_time,
+        'timestamp': result.timestamp
+    }
+
+
+def validate_database():
+    """
+    Run the comprehensive database validation script and return the results.
+    
+    Returns:
+        dict: Validation result with status, details, and response time
+    """
+    start_time = time.time()
+    status = HealthCheckResult.STATUS_SUCCESS
+    details = "Database validation completed successfully. No issues found."
+    
+    try:
+        # Get the path to the validation script
+        script_path = Path(settings.BASE_DIR) / 'scripts' / 'db_validation.py'
+        
+        if not script_path.exists():
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"Database validation script not found at {script_path}"
+            logger.error(details)
+        else:
+            # Run the validation script with the --verbose flag
+            cmd = [sys.executable, str(script_path), '--verbose', '--json']
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            
+            # Check if the script ran successfully
+            if result.returncode != 0:
+                status = HealthCheckResult.STATUS_ERROR
+                details = f"Database validation failed with exit code {result.returncode}.\n\n"
+                details += f"Error: {result.stderr}\n\n"
+                details += f"Output: {result.stdout}"
+                logger.error(f"Database validation failed: {result.stderr}")
+            else:
+                # Try to parse the JSON output
+                try:
+                    # Extract just the JSON part from the output
+                    json_start = result.stdout.find('{')
+                    if json_start >= 0:
+                        json_output = result.stdout[json_start:]
+                        validation_results = json.loads(json_output)
+                        
+                        # Check for issues
+                        issues_found = validation_results.get('issues_found', 0)
+                        warnings_found = validation_results.get('warnings_found', 0)
+                        
+                        if issues_found > 0:
+                            status = HealthCheckResult.STATUS_ERROR
+                            details = f"Database validation found {issues_found} issues.\n\n"
+                            details += validation_results.get('summary', '')
+                        elif warnings_found > 0:
+                            status = HealthCheckResult.STATUS_WARNING
+                            details = f"Database validation found {warnings_found} warnings.\n\n"
+                            details += validation_results.get('summary', '')
+                        else:
+                            details = "Database validation completed successfully. No issues found.\n\n"
+                            details += validation_results.get('summary', '')
+                    else:
+                        details = f"Database validation completed, but output format is not recognized:\n\n{result.stdout}"
+                except json.JSONDecodeError:
+                    # If JSON parsing fails, use the raw output
+                    if 'Issues found: 0' in result.stdout:
+                        details = f"Database validation completed successfully. Raw output:\n\n{result.stdout}"
+                    else:
+                        status = HealthCheckResult.STATUS_WARNING
+                        details = f"Database validation completed with possible issues. Raw output:\n\n{result.stdout}"
+    except Exception as e:
+        status = HealthCheckResult.STATUS_ERROR
+        details = f"Error running database validation: {str(e)}"
+        logger.error(f"Database validation failed with unexpected error: {str(e)}")
+    
+    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+    
+    # Create and return the health check result
+    result = HealthCheckResult.objects.create(
+        component=HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
+        status=status,
+        details=details,
+        response_time=response_time
+    )
+    
+    return {
+        'component': HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
         'status': status,
         'details': details,
         'response_time': response_time,

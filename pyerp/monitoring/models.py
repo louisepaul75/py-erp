@@ -25,11 +25,13 @@ class HealthCheckResult(models.Model):
     COMPONENT_DATABASE = 'database'
     COMPONENT_LEGACY_ERP = 'legacy_erp'
     COMPONENT_PICTURES_API = 'pictures_api'
+    COMPONENT_DATABASE_VALIDATION = 'database_validation'
     
     COMPONENT_CHOICES = [
         (COMPONENT_DATABASE, _('Database')),
         (COMPONENT_LEGACY_ERP, _('Legacy ERP')),
         (COMPONENT_PICTURES_API, _('Pictures API')),
+        (COMPONENT_DATABASE_VALIDATION, _('Database Validation')),
     ]
     
     component = models.CharField(

@@ -10,7 +10,7 @@ class MonitoringAppConfig(AppConfig):
     """Configuration for the monitoring app."""
     
     name = 'pyerp.monitoring'
-    verbose_name = _('System Monitoring')
+    verbose_name = _('Monitoring')
     
     def ready(self):
         """
