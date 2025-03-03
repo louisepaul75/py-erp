@@ -1,6 +1,4 @@
-Below is a sample **Product Requirements Document (PRD)** in Markdown format, reflecting the insights from our detailed Django ERP research. You can adapt it as needed for your internal documentation and review cycles.
 
----
 
 # Product Requirements Document (PRD)
 
