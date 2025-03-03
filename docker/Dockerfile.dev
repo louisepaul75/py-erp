@@ -15,6 +15,9 @@ RUN apt-get update \
         curl \
         # Redis
         redis-server \
+        # Node.js and npm for Vue.js
+        nodejs \
+        npm \
         # WeasyPrint dependencies
         libcairo2 \
         libpango-1.0-0 \
@@ -26,6 +29,11 @@ RUN apt-get update \
         supervisor \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Update Node.js to latest LTS version
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest
 
 # Set work directory
 WORKDIR /app

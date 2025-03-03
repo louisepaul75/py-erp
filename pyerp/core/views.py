@@ -3,6 +3,8 @@ Views for the Core app.
 """
 
 import logging
+import json
+import os
 
 from django.conf import settings
 from django.db import connection
@@ -16,6 +18,7 @@ from django.db.utils import OperationalError
 from django.utils.translation import activate, get_language
 from django.utils import translation
 from django.shortcuts import render
+from django.views.generic import TemplateView
 
 # Set up logging
 logger = logging.getLogger('pyerp.core')
@@ -190,4 +193,25 @@ def csrf_failure(request, reason=""):
         'http_referer': request.META.get('HTTP_REFERER', None),
         'http_host': request.META.get('HTTP_HOST', None),
     }
-    return render(request, 'csrf_failure.html', context) 
+    return render(request, 'csrf_failure.html', context)
+
+
+class VueAppView(TemplateView):
+    """View for rendering the Vue.js application."""
+    template_name = 'base/vue_base.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # In production mode, parse the Vue.js manifest to get correct asset paths
+        if not settings.DEBUG:
+            manifest_path = os.path.join(settings.STATIC_ROOT, 'vue', 'manifest.json')
+            if os.path.exists(manifest_path):
+                with open(manifest_path, 'r') as f:
+                    try:
+                        manifest = json.load(f)
+                        context['vue_manifest'] = manifest
+                    except json.JSONDecodeError:
+                        pass
+        
+        return context 

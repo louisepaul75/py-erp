@@ -485,4 +485,53 @@ For third-party libraries without type stubs, we use the following approaches:
 - Configure mypy to ignore missing imports for specific modules in `mypy.ini`
 - Add inline `# type: ignore` comments for specific import statements when necessary
 
-For the `wsz_api` module, which is a custom module without type stubs, we've configured mypy to ignore missing imports. 
+For the `wsz_api` module, which is a custom module without type stubs, we've configured mypy to ignore missing imports.
+
+## Vue.js Integration
+
+The project now includes a Vue.js 3.5 frontend integration. The Vue.js application is located in the `frontend/` directory and is integrated with Django.
+
+### Setup
+
+1. Install Node.js dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+2. Run the Vue.js development server:
+
+```bash
+cd frontend
+npm run dev
+```
+
+3. Access the Vue.js application at `/vue/` in your Django application.
+
+### Development
+
+The Vue.js application is set up with the following features:
+
+- Vue.js 3.5 with Composition API
+- TypeScript for type safety
+- Vite for fast development and builds
+- ESLint and Prettier for code quality
+- Hot Module Replacement for rapid development
+
+The development workflow allows for:
+
+- Real-time updates using the Vite dev server
+- Integration with Django templates
+- API calls to Django endpoints
+
+### Building for Production
+
+To build the Vue.js application for production:
+
+```bash
+cd frontend
+npm run build
+```
+
+This will generate optimized assets in the `static/vue/` directory, which Django will serve in production mode. 

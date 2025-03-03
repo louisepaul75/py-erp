@@ -17,6 +17,7 @@ from rest_framework_simplejwt.views import (
 )
 from django.conf.urls.i18n import i18n_patterns
 from django.views.i18n import set_language
+from pyerp.core.views import VueAppView
 
 # Check if drf_yasg is available
 try:
@@ -131,6 +132,11 @@ i18n_urlpatterns = i18n_patterns(
 
 # Combine all URL patterns
 urlpatterns = non_i18n_urlpatterns + i18n_urlpatterns
+
+# Vue.js application route
+urlpatterns += [
+    path('vue/', VueAppView.as_view(), name='vue_app'),
+]
 
 # Serve static and media files in development
 if settings.DEBUG:

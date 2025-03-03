@@ -12,6 +12,7 @@ services:
     ports:
       - "8050:8050"
       - "6379:6379"
+      - "3000:3000"  # Vue.js development server
     volumes:
       - ..:/app  # Mount local code directory to /app for hot reloading
       - pyerp_data:/app/data

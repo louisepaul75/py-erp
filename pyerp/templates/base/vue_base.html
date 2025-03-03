@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Vue.js Integration - {{ block.super }}{% endblock %}
+
+{% block content %}
+  <!-- Vue.js mount point -->
+  <div id="vue-app"></div>
+
+  {% comment %}
+  In production, include the built Vue.js bundle
+  In development, the Vite dev server would be used (see development notes below)
+  {% endcomment %}
+  {% if not debug %}
+    <!-- Production mode - load built assets -->
+    {% if vue_manifest %}
+      <script type="module" src="{% static vue_manifest.main.file %}"></script>
+      {% for css in vue_manifest.main.css %}
+        <link rel="stylesheet" href="{% static css %}">
+      {% endfor %}
+    {% endif %}
+  {% else %}
+    <!-- Development mode - connect to Vite dev server -->
+    <script type="module">
+      // During development, this connects to the Vite dev server for HMR
+      import { createApp } from 'http://localhost:3000/@vite/client';
+      import RefreshRuntime from 'http://localhost:3000/@react-refresh'
+      
+      // Load main entry from Vite dev server
+      import('http://localhost:3000/src/main.ts');
+    </script>
+  {% endif %}
+{% endblock %} 
