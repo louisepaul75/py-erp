@@ -13,6 +13,7 @@ services:
       - "8050:8050"
       - "6379:6379"
     volumes:
+      - ..:/app  # Mount local code directory to /app for hot reloading
       - pyerp_data:/app/data
     env_file:
       - docker.env.dev

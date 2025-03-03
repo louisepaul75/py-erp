@@ -8,6 +8,8 @@ from django.http import JsonResponse, HttpResponse
 from django.db.utils import OperationalError, InterfaceError, DatabaseError
 from django.conf import settings
 from rest_framework import status
+from django.utils.deprecation import MiddlewareMixin
+from django.shortcuts import redirect
 
 # Set up logging
 logger = logging.getLogger('pyerp.core')
@@ -32,6 +34,7 @@ class DatabaseConnectionMiddleware:
             '/admin/login/',
             '/login/',
             '/static/',
+            '/monitoring/health-check/public/',
         ]
         
         # Check if current path should be excluded from DB connection requirement
@@ -48,44 +51,91 @@ class DatabaseConnectionMiddleware:
             # Log the database error
             logger.error(f"Database connection error: {str(e)}")
             
-            # For API requests, return a JSON response
-            if request.path.startswith('/api/') and not path_is_db_optional:
-                return JsonResponse({
-                    'error': 'Database connection error',
-                    'message': 'The system is currently unable to connect to the database. Please try again later.',
-                    'status': 'service_unavailable'
-                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-            
-            # For non-API requests or excluded paths, return a HTML response or try to proceed
+            # If the path is in the exempt list, return a basic response
             if path_is_db_optional:
-                # For paths that should work without DB, let them continue
-                # The view will handle any further DB errors
-                return self.get_response(request)
+                if request.path.startswith('/health/') or request.path.startswith('/api/health/') or request.path.startswith('/monitoring/health-check/'):
+                    return JsonResponse({
+                        'status': 'db_error',
+                        'message': 'Database connection is unavailable',
+                        'error': str(e)
+                    }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                elif request.path.startswith('/static/'):
+                    # For static files, just return a 404
+                    return HttpResponse('Static file not found', status=404)
+                else:
+                    # For login pages, show a basic error page
+                    return HttpResponse(
+                        '<html><body><h1>Database Error</h1><p>The database is '
+                        'currently unavailable. Please try again later.</p></body></html>',
+                        content_type='text/html'
+                    )
             else:
-                # Show a user-friendly error page for HTML requests
-                error_message = """
-                <html>
-                    <head>
-                        <title>Temporary Service Interruption</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
-                            h1 { color: #333; }
-                            .error-container { background-color: #f8f9fa; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
-                            .error-message { color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 5px; margin-top: 20px; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="error-container">
-                            <h1>Temporary Service Interruption</h1>
-                            <p>We're currently experiencing technical difficulties connecting to our database.</p>
-                            <p>Our team has been notified and is working to resolve this issue as quickly as possible.</p>
-                            <p>Please try again later. We apologize for any inconvenience.</p>
-                            
-                            <div class="error-message">
-                                Error: Unable to connect to database
-                            </div>
-                        </div>
-                    </body>
-                </html>
-                """
-                return HttpResponse(error_message, status=status.HTTP_503_SERVICE_UNAVAILABLE, content_type='text/html') 
+                # For all other paths, return a more specific error
+                if request.headers.get('accept') == 'application/json' or request.path.startswith('/api/'):
+                    return JsonResponse({
+                        'error': 'database_error',
+                        'message': 'Database connection is unavailable',
+                        'detail': str(e)
+                    }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                else:
+                    # HTML response for web pages
+                    return HttpResponse(
+                        '<html><body><h1>Database Error</h1><p>The database is '
+                        'currently unavailable. Please try again later.</p></body></html>',
+                        content_type='text/html',
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE
+                    )
+
+
+class AuthExemptMiddleware(MiddlewareMixin):
+    """
+    Middleware to exempt specific paths from authentication requirements.
+    
+    This middleware runs before Django's AuthenticationMiddleware and marks
+    certain requests to bypass the authentication check.
+    """
+    
+    def process_request(self, request):
+        # Define paths that should be exempt from authentication
+        auth_exempt_paths = [
+            '/health/',
+            '/api/health/',
+            '/monitoring/health-check/public/',
+        ]
+        
+        # Check if current path should be exempt from authentication
+        if any(request.path.startswith(path) for path in auth_exempt_paths):
+            # Mark this request as exempt from authentication checks
+            setattr(request, '_auth_exempt', True)
+            
+            # Create a dummy user to bypass authentication checks
+            class AnonymousUser:
+                is_authenticated = True
+                is_active = True
+                is_superuser = True
+                def has_perm(self, *args, **kwargs): return True
+                def has_perms(self, *args, **kwargs): return True
+                def has_module_perms(self, *args, **kwargs): return True
+                def is_anonymous(self): return False
+            
+            # Set the anonymous user on the request
+            request.user = AnonymousUser()
+        
+        # Always return None to continue processing
+        return None
+    
+    def process_response(self, request, response):
+        # If this is a redirect to login for an exempt path, instead return the original response
+        is_exempt = getattr(request, '_auth_exempt', False)
+        
+        if is_exempt and response.status_code == 302 and response.get('Location', '').startswith(settings.LOGIN_URL):
+            # This is a login redirect for an exempt path, cancel it
+            logger.debug(f"Canceled authentication redirect for exempt path: {request.path}")
+            
+            # Instead of redirecting, pass through to the view
+            if hasattr(request, '_auth_exempt_response'):
+                return request._auth_exempt_response
+            else:
+                return JsonResponse({'status': 'bypassed_auth', 'message': 'Auth bypassed for health check'})
+        
+        return response 
