@@ -2,10 +2,10 @@ name: Build Docker Image
 
 on:
   push:
-    branches: [ main, master, develop, 'release/**', 'feature/**', 'bugfix/**', 'hotfix/**' ]
+    branches: [ prod, dev, 'release/**', 'feature/**', 'bugfix/**', 'hotfix/**' ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main, master, develop, 'release/**' ]
+    branches: [ prod, dev, 'release/**' ]
   workflow_dispatch:  # Allow manual triggering
 
 # Add permissions needed for GitHub Container Registry

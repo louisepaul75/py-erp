@@ -33,8 +33,8 @@ The development strategy includes building a one-way synchronization with the le
 This project follows a modified GitFlow workflow:
 
 ### Main Branches
-- **`main`**: Production-ready code, always stable and deployable
-- **`develop`**: Integration branch for completed features
+- **`prod`**: Production-ready code, always stable and deployable
+- **`dev`**: Integration branch for active development
 
 ### Supporting Branches
 - **`feature/*`**: For new features (e.g., `feature/product-bom-creation`)

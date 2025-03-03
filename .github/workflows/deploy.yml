@@ -3,8 +3,8 @@ name: Deploy Application
 on:
   push:
     branches:
-      - main
-      - develop
+      - prod
+      - dev
       - 'release/**'
     tags:
       - 'v*'
@@ -96,9 +96,9 @@ jobs:
         
     - name: Check branch-specific requirements
       run: |
-        if [[ $GITHUB_REF == refs/heads/main || $GITHUB_REF =~ refs/heads/release/.* ]]; then
-          echo "Running additional checks for main and release branches"
-          # Add stricter checks for main and release branches
+        if [[ $GITHUB_REF == refs/heads/prod || $GITHUB_REF =~ refs/heads/release/.* ]]; then
+          echo "Running additional checks for prod and release branches"
+          # Add stricter checks for prod and release branches
           coverage report --fail-under=80 || exit 1
         fi
 
@@ -114,10 +114,10 @@ jobs:
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF == refs/heads/main ]]; then
+          elif [[ $GITHUB_REF == refs/heads/prod ]]; then
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "should_deploy=false" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
+          elif [[ $GITHUB_REF == refs/heads/dev ]]; then
             echo "environment=development" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [[ $GITHUB_REF =~ refs/heads/release/.* ]]; then

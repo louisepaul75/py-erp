@@ -22,8 +22,8 @@ We follow a modified GitFlow workflow with the following branches:
 
 ### Main Branches
 
-- **`main`**: Production-ready code, always stable and deployable
-- **`develop`**: Integration branch for active development
+- **`prod`**: Production-ready code, always stable and deployable
+- **`dev`**: Integration branch for active development
 
 ### Supporting Branches
 
@@ -36,69 +36,69 @@ We follow a modified GitFlow workflow with the following branches:
 
 ### For New Features
 
-1. Create a new feature branch from `develop`:
+1. Create a new feature branch from `dev`:
    ```bash
-   git checkout develop
+   git checkout dev
    git pull
    git checkout -b feature/your-feature-name
    ```
 
 2. Develop your feature, making regular commits.
 
-3. Keep your feature branch updated with `develop`:
+3. Keep your feature branch updated with `dev`:
    ```bash
-   git checkout develop
+   git checkout dev
    git pull
    git checkout feature/your-feature-name
-   git merge develop
+   git merge dev
    ```
 
-4. When your feature is complete, push your branch and create a pull request to `develop`.
+4. When your feature is complete, push your branch and create a pull request to `dev`.
 
 ### For Bug Fixes
 
-1. Create a new bugfix branch from `develop`:
+1. Create a new bugfix branch from `dev`:
    ```bash
-   git checkout develop
+   git checkout dev
    git pull
    git checkout -b bugfix/bug-description
    ```
 
 2. Fix the bug and commit your changes.
 
-3. Push your branch and create a pull request to `develop`.
+3. Push your branch and create a pull request to `dev`.
 
 ### For Hotfixes
 
-1. Create a hotfix branch from `main`:
+1. Create a hotfix branch from `prod`:
    ```bash
-   git checkout main
+   git checkout prod
    git pull
    git checkout -b hotfix/critical-bug-description
    ```
 
 2. Fix the critical bug and commit your changes.
 
-3. Push your branch and create a pull request to `main`.
+3. Push your branch and create a pull request to `prod`.
    
-4. After merging to `main`, ensure the fix is also merged to `develop`.
+4. After merging to `prod`, ensure the fix is also merged to `dev`.
 
 ### For Releases
 
-1. Create a release branch from `develop`:
+1. Create a release branch from `dev`:
    ```bash
-   git checkout develop
+   git checkout dev
    git pull
    git checkout -b release/x.y.z
    ```
 
 2. Make any final version updates and fixes on this branch.
 
-3. When ready, create pull requests to both `main` and `develop`.
+3. When ready, create pull requests to both `prod` and `dev`.
 
-4. After merging to `main`, tag the release:
+4. After merging to `prod`, tag the release:
    ```bash
-   git checkout main
+   git checkout prod
    git pull
    git tag -a vx.y.z -m "Version x.y.z"
    git push origin vx.y.z

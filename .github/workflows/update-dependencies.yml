@@ -38,4 +38,4 @@ jobs:
           - Automated dependency updates via pip-tools
           - Please review carefully and test before merging
         branch: dependency-updates
-        base: main  # Change to your default branch if different 
+        base: prod  # Target the production branch for dependency updates 
