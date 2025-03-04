@@ -22,6 +22,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '0.0.0.0',
+    '192.168.73.65',  # Added staging dev VM IP address
 ]
 
 # Database configuration using SQLite for development simplicity
@@ -67,7 +68,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8050',
     'http://0.0.0.0:3000',
     'http://0.0.0.0:3001',
-    'http://0.0.0.0:8050'
+    'http://0.0.0.0:8050',
+    'http://192.168.73.65:8050',  # Added staging dev VM URL
 ]
 
 CORS_ALLOW_METHODS = [
