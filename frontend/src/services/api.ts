@@ -1,13 +1,19 @@
 import axios from 'axios';
 
+// Get API base URL from localStorage, environment variable, or use default
+const storedApiUrl = localStorage.getItem('apiUrl');
+const apiBaseUrl = storedApiUrl || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api';
+console.log('Using API base URL:', apiBaseUrl);
+
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
   withCredentials: true, // Important for CSRF token handling
+  timeout: 10000, // 10 second timeout
 });
 
 // Add request interceptor to include CSRF token

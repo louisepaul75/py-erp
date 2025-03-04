@@ -2,8 +2,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import ParentProduct, VariantProduct, ProductCategory
-from .models_new import Product  # Import the Product class from models_new.py
+from .models import ParentProduct, VariantProduct, ProductCategory, Product
 
 
 class ProductCategoryForm(forms.ModelForm):

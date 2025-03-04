@@ -25,6 +25,14 @@
         </div>
         <h1>{{ variant.name }}</h1>
         <p class="sku">SKU: {{ variant.sku }}</p>
+        <div class="variant-badges">
+          <div v-if="variant.category" class="category-badge">
+            {{ variant.category.name }}
+          </div>
+          <div class="stock-badge" :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }">
+            {{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}
+          </div>
+        </div>
       </div>
       
       <div class="variant-layout">
@@ -52,59 +60,35 @@
         
         <!-- Variant info -->
         <div class="variant-info">
+          <!-- Description -->
           <div class="info-section">
             <h3>Description</h3>
             <p v-if="variant.description">{{ variant.description }}</p>
-            <p v-else-if="variant.parent && variant.parent.description">{{ variant.parent.description }}</p>
             <p v-else>No description available.</p>
           </div>
           
-          <div class="info-section">
-            <h3>Pricing</h3>
-            <table class="pricing-table">
-              <tr v-if="variant.retail_price !== undefined">
-                <td>Retail Price:</td>
-                <td>{{ formatPrice(variant.retail_price) }}</td>
-              </tr>
-              <tr v-if="variant.wholesale_price !== undefined">
-                <td>Wholesale Price:</td>
-                <td>{{ formatPrice(variant.wholesale_price) }}</td>
-              </tr>
-              <tr v-if="variant.recommended_price !== undefined">
-                <td>Recommended Price:</td>
-                <td>{{ formatPrice(variant.recommended_price) }}</td>
-              </tr>
-              <tr v-if="variant.purchase_price !== undefined">
-                <td>Purchase Price:</td>
-                <td>{{ formatPrice(variant.purchase_price) }}</td>
-              </tr>
-            </table>
+          <!-- Attributes -->
+          <div v-if="variant.attributes && variant.attributes.length > 0" class="info-section">
+            <h3>Attributes</h3>
+            <div class="attributes-list">
+              <div v-for="(attr, index) in variant.attributes" :key="index" class="attribute-item">
+                <span class="attribute-name">{{ attr.name }}:</span>
+                <span class="attribute-value">{{ attr.value }}</span>
+              </div>
+            </div>
           </div>
           
-          <div class="info-section">
-            <h3>Inventory</h3>
-            <table class="inventory-table">
-              <tr v-if="variant.current_stock !== undefined">
-                <td>Current Stock:</td>
-                <td>{{ variant.current_stock }}</td>
-              </tr>
-              <tr v-if="variant.min_stock !== undefined">
-                <td>Minimum Stock:</td>
-                <td>{{ variant.min_stock }}</td>
-              </tr>
-              <tr v-if="variant.max_stock !== undefined">
-                <td>Maximum Stock:</td>
-                <td>{{ variant.max_stock }}</td>
-              </tr>
-            </table>
-          </div>
-          
+          <!-- Details -->
           <div class="info-section">
             <h3>Details</h3>
             <table class="details-table">
               <tr v-if="variant.category">
                 <td>Category:</td>
                 <td>{{ variant.category.name }}</td>
+              </tr>
+              <tr v-if="variant.in_stock !== undefined">
+                <td>Stock Status:</td>
+                <td>{{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}</td>
               </tr>
               <tr v-if="variant.is_active !== undefined">
                 <td>Status:</td>
@@ -122,14 +106,89 @@
           </div>
         </div>
       </div>
+      
+      <!-- Related variants section -->
+      <div v-if="relatedVariants.length > 0" class="related-variants-section">
+        <h2>Other Variants of {{ variant.parent?.name }}</h2>
+        
+        <div class="variants-grid">
+          <div 
+            v-for="relatedVariant in relatedVariants" 
+            :key="relatedVariant.id" 
+            class="variant-card"
+            @click="viewVariantDetails(relatedVariant.id)"
+          >
+            <div class="variant-image">
+              <img 
+                :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : '/static/images/no-image.png'" 
+                :alt="relatedVariant.name"
+              />
+            </div>
+            <div class="variant-info">
+              <h3>{{ relatedVariant.name }}</h3>
+              <p class="variant-sku">SKU: {{ relatedVariant.sku }}</p>
+              <div class="variant-attributes" v-if="relatedVariant.attributes && relatedVariant.attributes.length">
+                <span 
+                  v-for="(attr, index) in relatedVariant.attributes" 
+                  :key="index" 
+                  class="attribute-badge"
+                >
+                  {{ attr.name }}: {{ attr.value }}
+                </span>
+              </div>
+              <div class="variant-stock" :class="{ 'in-stock': relatedVariant.in_stock, 'out-of-stock': !relatedVariant.in_stock }">
+                {{ relatedVariant.in_stock ? 'In Stock' : 'Out of Stock' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { productApi } from '@/services/api';
+
+// Define types
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface ProductImage {
+  id: number;
+  url: string;
+  thumbnail_url: string;
+}
+
+interface Attribute {
+  name: string;
+  value: string;
+}
+
+interface ParentProduct {
+  id: number;
+  name: string;
+}
+
+interface Variant {
+  id: number;
+  name: string;
+  sku: string;
+  description?: string;
+  primary_image?: ProductImage;
+  images?: ProductImage[];
+  category?: Category;
+  attributes?: Attribute[];
+  parent?: ParentProduct;
+  in_stock?: boolean;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 // Router and route
 const router = useRouter();
@@ -141,10 +200,16 @@ const props = defineProps<{
 }>();
 
 // State
-const variant = ref({});
+const variant = ref<Variant>({} as Variant);
 const loading = ref(true);
 const error = ref('');
-const selectedImage = ref(null);
+const selectedImage = ref<ProductImage | null>(null);
+const relatedVariants = ref<Variant[]>([]);
+
+// Computed
+const isCurrentVariant = (id: number) => {
+  return variant.value.id === id;
+};
 
 // Load variant details
 const loadVariant = async () => {
@@ -166,11 +231,31 @@ const loadVariant = async () => {
     if (variant.value.images && variant.value.images.length > 0) {
       selectedImage.value = variant.value.primary_image || variant.value.images[0];
     }
+    
+    // Load related variants if this is part of a parent product
+    if (variant.value.parent && variant.value.parent.id) {
+      await loadRelatedVariants(variant.value.parent.id);
+    }
   } catch (err) {
     console.error('Error loading variant details:', err);
     error.value = 'Failed to load variant details. Please try again.';
   } finally {
     loading.value = false;
+  }
+};
+
+// Load related variants
+const loadRelatedVariants = async (parentId: number) => {
+  try {
+    const response = await productApi.getProduct(parentId);
+    if (response.data.variants) {
+      // Filter out the current variant
+      relatedVariants.value = response.data.variants.filter(
+        (v: Variant) => v.id !== variant.value.id
+      );
+    }
+  } catch (err) {
+    console.error('Error loading related variants:', err);
   }
 };
 
@@ -181,15 +266,18 @@ const formatDate = (dateString: string) => {
   return date.toLocaleDateString();
 };
 
-// Format price
-const formatPrice = (price: number) => {
-  if (price === undefined || price === null) return '';
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(price);
-};
-
 // Navigate back
 const goBack = () => {
-  router.back();
+  if (variant.value.parent) {
+    router.push({ name: 'ProductDetail', params: { id: variant.value.parent.id } });
+  } else {
+    router.back();
+  }
+};
+
+// View variant details
+const viewVariantDetails = (id: number) => {
+  router.push({ name: 'VariantDetail', params: { id } });
 };
 
 // Initialize component
@@ -214,6 +302,7 @@ onMounted(() => {
 
 .variant-header {
   margin-bottom: 30px;
+  position: relative;
 }
 
 .back-button {
@@ -233,10 +322,11 @@ onMounted(() => {
 
 .parent-link {
   margin-bottom: 10px;
+  font-size: 14px;
 }
 
 .parent-link a {
-  color: #6c757d;
+  color: #d2bc9b;
   text-decoration: none;
 }
 
@@ -257,12 +347,46 @@ h1 {
 .sku {
   color: #6c757d;
   font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.variant-badges {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.category-badge {
+  display: inline-block;
+  background-color: #d2bc9b;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.stock-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.in-stock {
+  background-color: #28a745;
+  color: white;
+}
+
+.out-of-stock {
+  background-color: #dc3545;
+  color: white;
 }
 
 .variant-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 30px;
+  margin-bottom: 40px;
 }
 
 @media (max-width: 768px) {
@@ -282,11 +406,14 @@ h1 {
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .main-image img {
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -304,6 +431,10 @@ h1 {
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .thumbnail.active {
@@ -311,49 +442,148 @@ h1 {
 }
 
 .thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .variant-info {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 20px;
 }
 
 .info-section {
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.info-section:last-child {
-  border-bottom: none;
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
 }
 
 .info-section h3 {
-  margin: 0 0 15px;
+  margin-top: 0;
+  margin-bottom: 15px;
   color: #2c3e50;
   font-size: 18px;
 }
 
-.pricing-table,
-.inventory-table,
+.attributes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.attribute-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.attribute-name {
+  font-weight: 600;
+}
+
 .details-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.pricing-table td,
-.inventory-table td,
 .details-table td {
   padding: 8px 0;
+  border-bottom: 1px solid #eaeaea;
 }
 
-.pricing-table td:first-child,
-.inventory-table td:first-child,
 .details-table td:first-child {
-  font-weight: 500;
-  width: 150px;
+  font-weight: 600;
+  width: 40%;
+}
+
+/* Related variants section */
+.related-variants-section {
+  margin-top: 40px;
+}
+
+.related-variants-section h2 {
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+.variants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.variant-card {
+  border: 1px solid #eaeaea;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  background-color: white;
+}
+
+.variant-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.variant-image {
+  height: 180px;
+  background-color: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.variant-image img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.variant-info {
+  padding: 15px;
+}
+
+.variant-info h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #333;
+}
+
+.variant-sku {
+  color: #6c757d;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.variant-attributes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.attribute-badge {
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.variant-stock {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 0;
+}
+
+.in-stock {
+  color: #28a745;
+}
+
+.out-of-stock {
+  color: #dc3545;
 }
 </style> 

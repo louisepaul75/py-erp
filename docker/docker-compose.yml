@@ -32,8 +32,8 @@ services:
       bash -c "
         cd /app &&
         service redis-server start &&
-        # Skip all migrations
-        python manage.py runserver 0.0.0.0:8050
+        cd /app/frontend && npm run dev &
+        cd /app && python manage.py runserver 0.0.0.0:8050
       "
 
 volumes:
