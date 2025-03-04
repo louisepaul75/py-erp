@@ -23,12 +23,15 @@
                 </div>
             </div>
         </footer>
+        <!-- Debug Panel -->
+        <DebugPanel />
     </div>
 </template>
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from './store/auth';
 import Navbar from './components/layout/Navbar.vue';
+import DebugPanel from './components/debug/DebugPanel.vue';
 
 // Initialize auth store
 const authStore = useAuthStore();
