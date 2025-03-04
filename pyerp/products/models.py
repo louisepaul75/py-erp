@@ -295,8 +295,8 @@ class VariantProduct(BaseProduct):
         max_length=50,
         blank=True,
         null=True,
-        help_text=_('Original Familie_ field from Artikel_Variante'),
-        db_column='Familie_'  # Actual column name in the database
+        db_column='familie_',  # Using lowercase to match database column
+        help_text=_('Original Familie_ field from Artikel_Variante')
     )
     
     # HIGH PRIORITY - Core product data from legacy system

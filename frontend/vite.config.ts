@@ -91,6 +91,11 @@ export default defineConfig(({ mode }) => {
           target: apiBaseUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/sales/, '/api/sales')
+        },
+        '/token': {
+          target: apiBaseUrl,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/token/, '/api/token')
         }
       }
     }

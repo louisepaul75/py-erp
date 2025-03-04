@@ -13,8 +13,16 @@ from django.urls import reverse_lazy
 from django.db.models import Value
 from django.db.models.functions import Cast
 from django.db.models.fields import BooleanField
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
-from pyerp.products.models import ParentProduct, VariantProduct, ProductCategory
+from pyerp.products.models import (
+    ParentProduct,
+    VariantProduct,
+    ProductCategory,
+    ProductImage
+)
 from pyerp.products.forms import ProductSearchForm
 
 
@@ -317,8 +325,9 @@ def save_product_images(request, pk):
 # API Views
 # ---------
 
-class ProductAPIView(LoginRequiredMixin, View):
+class ProductAPIView(APIView):
     """Base class for API views"""
+    permission_classes = [IsAuthenticated]
     
     def get_product_data(self, product):
         """Convert a product model to a dictionary for JSON response"""
@@ -451,7 +460,7 @@ class ProductListAPIView(ProductAPIView):
         products_data = [self.get_product_data(product) for product in products]
         
         # Return JSON response with pagination info
-        return JsonResponse({
+        return Response({
             'count': total_count,
             'results': products_data,
             'page': page,
@@ -471,7 +480,7 @@ class ProductDetailAPIView(ProductAPIView):
         elif slug:
             product = get_object_or_404(ParentProduct, slug=slug)
         else:
-            return JsonResponse({'error': 'Product not found'}, status=404)
+            return Response({'error': 'Product not found'}, status=404)
             
         # Get basic product data
         product_data = self.get_product_data(product)
@@ -495,10 +504,52 @@ class ProductDetailAPIView(ProductAPIView):
                 })
         
         # Return JSON response
-        return JsonResponse(product_data)
+        return Response(product_data)
 
 
-class CategoryListAPIView(LoginRequiredMixin, View):
+class VariantDetailAPIView(ProductAPIView):
+    """API view for variant details"""
+    
+    def get(self, request, pk):
+        """Handle GET request for variant detail"""
+        # Get the variant
+        variant = get_object_or_404(VariantProduct, pk=pk)
+        
+        # Get basic variant data
+        variant_data = self.get_product_data(variant)
+        
+        # Add parent product info
+        if variant.parent:
+            variant_data['parent'] = {
+                'id': variant.parent.id,
+                'name': variant.parent.name,
+            }
+        
+        # Add all images
+        if hasattr(variant, 'images') and variant.images.exists():
+            variant_data['images'] = []
+            for image in variant.images.all():
+                variant_data['images'].append({
+                    'id': image.id,
+                    'url': image.image_url,
+                    'thumbnail_url': image.thumbnail_url if hasattr(image, 'thumbnail_url') else image.image_url,
+                    'is_primary': image.is_primary,
+                })
+        
+        # Add attributes
+        if hasattr(variant, 'attributes') and variant.attributes.exists():
+            variant_data['attributes'] = []
+            for attr in variant.attributes.all():
+                variant_data['attributes'].append({
+                    'name': attr.name,
+                    'value': attr.value,
+                })
+        
+        # Return JSON response
+        return Response(variant_data)
+
+
+class CategoryListAPIView(ProductAPIView):
     """API view for listing categories"""
     
     def get(self, request):
@@ -516,7 +567,7 @@ class CategoryListAPIView(LoginRequiredMixin, View):
             categories_data.append(category_data)
         
         # Return JSON response
-        return JsonResponse({
+        return Response({
             'count': len(categories_data),
             'results': categories_data
         }) 

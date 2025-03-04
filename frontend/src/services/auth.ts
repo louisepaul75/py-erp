@@ -35,7 +35,7 @@ const authService = {
   login: async (credentials: LoginCredentials): Promise<User> => {
     try {
       // Get JWT tokens
-      const tokenResponse = await api.post<TokenResponse>('/api/token/', credentials);
+      const tokenResponse = await api.post<TokenResponse>('/token/', credentials);
       
       // Store tokens in localStorage
       localStorage.setItem('access_token', tokenResponse.data.access);
@@ -45,7 +45,7 @@ const authService = {
       api.defaults.headers.common['Authorization'] = `Bearer ${tokenResponse.data.access}`;
       
       // Get user profile
-      const userResponse = await api.get<User>('/api/v1/profile/');
+      const userResponse = await api.get<User>('/v1/profile/');
       return userResponse.data;
     } catch (error) {
       console.error('Login failed:', error);
@@ -81,7 +81,7 @@ const authService = {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       // Get user profile
-      const response = await api.get<User>('/api/v1/profile/');
+      const response = await api.get<User>('/v1/profile/');
       return response.data;
     } catch (error) {
       console.error('Failed to get current user:', error);
@@ -97,7 +97,7 @@ const authService = {
         return null;
       }
       
-      const response = await api.post<{ access: string }>('/api/token/refresh/', {
+      const response = await api.post<{ access: string }>('/token/refresh/', {
         refresh: refreshToken
       });
       
@@ -116,7 +116,7 @@ const authService = {
   
   // Update the user's profile
   updateProfile: async (userData: Partial<User>): Promise<User> => {
-    const response = await api.patch<User>('/api/v1/profile/', userData);
+    const response = await api.patch<User>('/v1/profile/', userData);
     return response.data;
   },
   

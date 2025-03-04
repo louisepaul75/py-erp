@@ -32,6 +32,8 @@ services:
       bash -c "
         cd /app &&
         service redis-server start &&
+        mkdir -p staticfiles &&
+        python manage.py collectstatic --noinput &&
         cd /app/frontend && npm run dev &
         cd /app && python manage.py runserver 0.0.0.0:8050
       "

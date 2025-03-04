@@ -11,9 +11,9 @@ const determineBaseUrl = () => {
                      window.location.hostname === '127.0.0.1' ||
                      window.location.hostname === '0.0.0.0';
 
-  // If we're running locally, use localhost
+  // If we're running locally, use relative URLs (let the Vite proxy handle it)
   if (isLocalhost) {
-    return 'http://localhost:8050';
+    return '';  // Empty string means use relative URLs
   }
 
   // Otherwise use the configured network URL or fallback to window.location.origin
@@ -21,12 +21,15 @@ const determineBaseUrl = () => {
 };
 
 const baseUrl = determineBaseUrl();
-// Don't add /api to the base URL since the Vite proxy already handles this
-const apiBaseUrl = baseUrl.endsWith('/api') ? baseUrl.slice(0, -4) : baseUrl;
+// Don't add /api to the base URL since the Vite proxy handles that
+const apiBaseUrl = baseUrl;
 
 // Log the API base URL being used
 console.log('API Base URL:', apiBaseUrl);
 console.log('Running on hostname:', window.location.hostname);
+console.log('Is localhost:', window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1' ||
+                          window.location.hostname === '0.0.0.0');
 
 // Create axios instance with default config
 const api = axios.create({
@@ -107,22 +110,22 @@ api.interceptors.response.use(
 export const productApi = {
   // Get all products with optional filters
   getProducts: async (params = {}) => {
-    return api.get('/api/products/', { params });
+    return api.get('/products/', { params });
   },
   
   // Get product details by ID
   getProduct: async (id: number) => {
-    return api.get(`/api/products/${id}/`);
+    return api.get(`/products/${id}/`);
   },
   
   // Get product variant details
   getVariant: async (id: number) => {
-    return api.get(`/api/products/variant/${id}/`);
+    return api.get(`/products/variant/${id}/`);
   },
   
   // Get all product categories
   getCategories: async () => {
-    return api.get('/api/products/categories/');
+    return api.get('/products/categories/');
   }
 };
 

@@ -57,6 +57,9 @@ urlpatterns = [
     
     # Add monitoring API URL
     path('monitoring/', include('pyerp.monitoring.urls', namespace='monitoring')),
+    
+    # Add products API URLs directly
+    path('api/products/', include('pyerp.products.api_urls')),
 ]
 
 # Add API documentation URLs if available
@@ -66,9 +69,8 @@ if has_swagger:
         path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     ]
 
-# Optional API modules
+# Optional API modules (excluding products since we added it directly)
 OPTIONAL_API_MODULES = [
-    ('products', 'pyerp.products.api_urls'),
     ('sales', 'pyerp.sales.urls'),
     ('inventory', 'pyerp.inventory.urls'),
     ('production', 'pyerp.production.urls'),
