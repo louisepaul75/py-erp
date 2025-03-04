@@ -1,8 +1,7 @@
 {% extends "admin/index.html" %}
 {% load i18n %}
 
-{# Remove the duplicate System Monitoring section - this is now handled in the admin.py file #}
-{# {% block sidebar %}
+{% block sidebar %}
 {{ block.super }}
 <div class="module" style="margin-top: 20px;">
   <h2>{% trans "System Monitoring" %}</h2>
@@ -19,4 +18,4 @@
     </li>
   </ul>
 </div>
-{% endblock %} #} 
+{% endblock %} 

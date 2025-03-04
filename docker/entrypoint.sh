@@ -20,5 +20,11 @@ echo >&2 "PostgreSQL is up - continuing..."
 mkdir -p /app/media /app/static /app/data
 chmod -R 755 /app/media /app/static /app/data
 
+# Initialize Vue.js application
+if [ -d "/app/frontend" ]; then
+    echo "Initializing Vue.js application..."
+    /bin/bash /app/docker/vue-entrypoint.sh echo "Vue.js initialization complete"
+fi
+
 # Execute command passed to entrypoint
 exec "$@"

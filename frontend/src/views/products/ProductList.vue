@@ -281,46 +281,40 @@ const loadProducts = async () => {
     console.log('API response:', response);
     
     if (response && response.data) {
-      if (response.data.results) {
-        // Process the products to ensure all required fields are present
-        const processedProducts = response.data.results.map((product: any) => {
-          return {
-            id: product.id,
-            name: product.name || 'Unnamed Product',
-            sku: product.sku || 'No SKU',
-            description: product.description || '',
-            list_price: product.list_price,
-            stock_quantity: product.stock_quantity || 0,
-            variants_count: product.variants_count || 0,
-            primary_image: product.primary_image || null,
-            category: product.category || null,
-            is_active: product.is_active !== false, // Default to true if not specified
-          };
-        });
-        
-        products.value = processedProducts;
-        totalProducts.value = response.data.count || 0;
-        
-        // Log the products received
-        console.log(`Loaded ${products.value.length} products out of ${totalProducts.value} total`);
-        
-        // Check if products have the expected fields
-        if (products.value.length > 0) {
-          const firstProduct = products.value[0];
-          console.log('Sample product data:', firstProduct);
-          
-          // Check for missing fields
-          const expectedFields = ['id', 'name', 'sku', 'primary_image', 'category', 'variants_count'];
-          const missingFields = expectedFields.filter(field => !(field in firstProduct));
-          
-          if (missingFields.length > 0) {
-            console.warn(`Product data is missing expected fields: ${missingFields.join(', ')}`);
-          }
-        }
+      if (Array.isArray(response.data)) {
+        // Handle case where response is a direct array
+        products.value = response.data.map((product: Product) => ({
+          id: product.id,
+          name: product.name || 'Unnamed Product',
+          sku: product.sku || 'No SKU',
+          description: product.description,
+          variants_count: product.variants_count,
+          primary_image: product.primary_image,
+          category: product.category,
+          is_active: product.is_active,
+          created_at: product.created_at,
+          updated_at: product.updated_at
+        }));
+        totalProducts.value = response.data.length;
+      } else if (response.data.results) {
+        // Handle paginated response
+        products.value = response.data.results.map((product: Product) => ({
+          id: product.id,
+          name: product.name || 'Unnamed Product',
+          sku: product.sku || 'No SKU',
+          description: product.description,
+          variants_count: product.variants_count,
+          primary_image: product.primary_image,
+          category: product.category,
+          is_active: product.is_active,
+          created_at: product.created_at,
+          updated_at: product.updated_at
+        }));
+        totalProducts.value = response.data.count || response.data.results.length;
       } else {
         // Handle case where results property is missing
-        console.error('API response missing results property:', response.data);
-        error.value = 'Invalid API response format: missing results property';
+        console.error('API response has invalid format:', response.data);
+        error.value = 'Invalid API response format';
         products.value = [];
         totalProducts.value = 0;
       }
@@ -333,10 +327,8 @@ const loadProducts = async () => {
     }
   } catch (err: any) {
     console.error('Error loading products:', err);
-    // More detailed error message
     error.value = `Failed to load products: ${err.message || 'Unknown error'}`;
     
-    // If there's a response with error details, show them
     if (err.response && err.response.data) {
       console.error('API error details:', err.response.data);
       if (err.response.data.detail) {
@@ -344,24 +336,8 @@ const loadProducts = async () => {
       }
     }
     
-    // Clear products on error
     products.value = [];
     totalProducts.value = 0;
-    
-    // Show option to use mock data
-    error.value += '\n\nWould you like to use sample data instead?';
-    
-    // Add button to use mock data
-    setTimeout(() => {
-      const errorDiv = document.querySelector('.error');
-      if (errorDiv) {
-        const mockButton = document.createElement('button');
-        mockButton.textContent = 'Use Sample Data';
-        mockButton.className = 'mock-button';
-        mockButton.onclick = useMockData;
-        errorDiv.appendChild(mockButton);
-      }
-    }, 0);
   } finally {
     loading.value = false;
   }
@@ -542,7 +518,7 @@ const handleImageError = (event: Event) => {
 </script>
 <style scoped>
 .product-list {
-  padding: 20px 0;
+  padding: 20px;
 }
 
 h1 {
@@ -591,8 +567,6 @@ h1 {
 
 .error {
   color: #dc3545;
-  padding: 30px;
-  text-align: center;
 }
 
 .error-actions {
@@ -602,7 +576,7 @@ h1 {
   margin-top: 15px;
 }
 
-.retry-button, .test-button, .mock-button {
+.retry-button, .test-button {
   padding: 8px 15px;
   background-color: #d2bc9b;
   color: white;
@@ -612,17 +586,8 @@ h1 {
   transition: background-color 0.3s;
 }
 
-.retry-button:hover, .test-button:hover, .mock-button:hover {
+.retry-button:hover, .test-button:hover {
   background-color: #c0a989;
-}
-
-.mock-button {
-  margin-top: 15px;
-  background-color: #28a745;
-}
-
-.mock-button:hover {
-  background-color: #218838;
 }
 
 .product-grid {
@@ -638,7 +603,6 @@ h1 {
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   cursor: pointer;
-  position: relative;
   background-color: white;
 }
 
@@ -679,18 +643,18 @@ h1 {
   margin-bottom: 10px;
 }
 
-.category {
-  color: #6c757d;
-  font-size: 12px;
-  margin-top: 5px;
-}
-
 .variants-badge {
   display: inline-block;
   background-color: #d2bc9b;
   color: white;
   padding: 3px 8px;
   border-radius: 12px;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.category {
+  color: #6c757d;
   font-size: 12px;
   margin-top: 5px;
 }
@@ -721,20 +685,6 @@ h1 {
   background-color: #e9ecef;
   color: #6c757d;
   cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-  }
-  
-  .filter-options {
-    flex-wrap: wrap;
-  }
-  
-  .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  }
 }
 
 .api-debug {
@@ -788,5 +738,19 @@ h1 {
 
 .debug-toggle:hover {
   background-color: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+  
+  .filter-options {
+    flex-wrap: wrap;
+  }
+  
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
 }
 </style> 
