@@ -445,7 +445,6 @@ class VariantProduct(BaseProduct):
         verbose_name = _('Variant Product')
         verbose_name_plural = _('Variant Products')
         ordering = ['parent__name', 'variant_code']
-        unique_together = [['parent', 'variant_code']]
     
     def __str__(self):
         return f"{self.name} ({self.sku})"
