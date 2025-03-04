@@ -107,22 +107,22 @@ api.interceptors.response.use(
 export const productApi = {
   // Get all products with optional filters
   getProducts: async (params = {}) => {
-    return api.get('/products/', { params });
+    return api.get('/api/products/', { params });
   },
   
   // Get product details by ID
   getProduct: async (id: number) => {
-    return api.get(`/products/${id}/`);
+    return api.get(`/api/products/${id}/`);
   },
   
   // Get product variant details
   getVariant: async (id: number) => {
-    return api.get(`/products/variant/${id}/`);
+    return api.get(`/api/products/variant/${id}/`);
   },
   
   // Get all product categories
   getCategories: async () => {
-    return api.get('/products/categories/');
+    return api.get('/api/products/categories/');
   }
 };
 

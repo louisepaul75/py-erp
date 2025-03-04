@@ -87,6 +87,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { productApi } from '@/services/api';
+import { useAuthStore } from '@/store/auth';
 
 // Define types
 interface Category {
@@ -117,6 +118,7 @@ interface Product {
 
 // Router
 const router = useRouter();
+const authStore = useAuthStore();
 
 // State
 const products = ref<Product[]>([]);
@@ -264,6 +266,13 @@ const loadProducts = async () => {
   error.value = '';
   
   try {
+    // Check if user is authenticated
+    if (!authStore.isAuthenticated) {
+      error.value = 'Please log in to view products';
+      router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } });
+      return;
+    }
+    
     // Create params object with only defined values
     const params: Record<string, any> = {
       page: currentPage.value,
@@ -283,33 +292,11 @@ const loadProducts = async () => {
     if (response && response.data) {
       if (Array.isArray(response.data)) {
         // Handle case where response is a direct array
-        products.value = response.data.map((product: Product) => ({
-          id: product.id,
-          name: product.name || 'Unnamed Product',
-          sku: product.sku || 'No SKU',
-          description: product.description,
-          variants_count: product.variants_count,
-          primary_image: product.primary_image,
-          category: product.category,
-          is_active: product.is_active,
-          created_at: product.created_at,
-          updated_at: product.updated_at
-        }));
+        products.value = response.data;
         totalProducts.value = response.data.length;
       } else if (response.data.results) {
         // Handle paginated response
-        products.value = response.data.results.map((product: Product) => ({
-          id: product.id,
-          name: product.name || 'Unnamed Product',
-          sku: product.sku || 'No SKU',
-          description: product.description,
-          variants_count: product.variants_count,
-          primary_image: product.primary_image,
-          category: product.category,
-          is_active: product.is_active,
-          created_at: product.created_at,
-          updated_at: product.updated_at
-        }));
+        products.value = response.data.results;
         totalProducts.value = response.data.count || response.data.results.length;
       } else {
         // Handle case where results property is missing
@@ -329,9 +316,19 @@ const loadProducts = async () => {
     console.error('Error loading products:', err);
     error.value = `Failed to load products: ${err.message || 'Unknown error'}`;
     
-    if (err.response && err.response.data) {
-      console.error('API error details:', err.response.data);
-      if (err.response.data.detail) {
+    if (err.response) {
+      console.error('API error details:', err.response);
+      
+      // Handle authentication errors
+      if (err.response.status === 401) {
+        error.value = 'Please log in to view products';
+        router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } });
+        return;
+      }
+      
+      error.value += ` (Status: ${err.response.status})`;
+      
+      if (err.response.data && err.response.data.detail) {
         error.value += ` - ${err.response.data.detail}`;
       }
     }
@@ -449,7 +446,7 @@ const updateApiUrl = () => {
 };
 
 // Initialize component
-onMounted(() => {
+onMounted(async () => {
   console.log('ProductList component mounted');
   
   // Check for stored API URL
@@ -457,6 +454,11 @@ onMounted(() => {
   if (storedApiUrl) {
     apiUrl.value = storedApiUrl;
     console.log('Using stored API URL:', apiUrl.value);
+  }
+  
+  // Initialize auth store if needed
+  if (!authStore.isAuthenticated && !authStore.isLoading) {
+    await authStore.init();
   }
   
   // Load products from API
