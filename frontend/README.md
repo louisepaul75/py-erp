@@ -1,13 +1,13 @@
-# pyERP Vue.js Frontend
+# pyERP Frontend
 
-This directory contains the Vue.js 3.5 frontend for the pyERP application.
+This directory contains the Vue.js frontend for the pyERP system. It's built with Vue 3, TypeScript, and Vite for a modern, type-safe, and fast development experience.
 
 ## Setup
 
 ### Prerequisites
 
-- Node.js (v16+)
-- npm (v8+)
+- Node.js 20.x or later
+- npm 10.x or later
 
 ### Installation
 
@@ -16,102 +16,138 @@ This directory contains the Vue.js 3.5 frontend for the pyERP application.
 npm install
 ```
 
-## Development
+### Development
 
 ```bash
-# Start the development server with hot-reload
+# Start the development server
 npm run dev
 ```
 
-The development server runs on http://localhost:3000.
+The development server will run on port 3000 by default. It's configured to work with the Django backend running on port 8050.
 
-When running in development mode, use the Django URL `/vue/` which will connect to the Vite dev server automatically.
-
-## Building for Production
+### Production Build
 
 ```bash
 # Build for production
 npm run build
 ```
 
-This will build the Vue.js application and output the files to `../static/vue/`.
+The production build will be output to the `dist` directory, which can be served by the Django backend.
 
-## Project Structure
+## Architecture
 
-```
-frontend/
-├── src/                   # Source files
-│   ├── assets/            # Static assets
-│   ├── components/        # Vue components
-│   ├── views/             # Vue views (pages)
-│   ├── store/             # Pinia store modules
-│   ├── router/            # Vue Router configuration
-│   ├── services/          # API and authentication services
-│   ├── utils/             # Utility functions
-│   ├── App.vue            # Root Vue component
-│   └── main.ts            # Vue application entry point
-├── public/                # Public static assets
-├── package.json           # Project dependencies and scripts
-├── vite.config.ts         # Vite configuration
-├── tsconfig.json          # TypeScript configuration
-└── .eslintrc.cjs          # ESLint configuration
-```
+The frontend is organized into the following structure:
+
+- `src/` - Source code
+  - `assets/` - Static assets (images, fonts, etc.)
+  - `components/` - Reusable Vue components
+  - `router/` - Vue Router configuration
+  - `services/` - API and other services
+  - `store/` - Pinia stores for state management
+  - `utils/` - Utility functions
+  - `views/` - Page components
 
 ## Integration with Django
 
-The Vue.js application integrates with Django in two modes:
+The frontend is integrated with the Django backend in two ways:
 
-1. **Development Mode**: The Django template loads the application from the Vite development server
-2. **Production Mode**: The built assets are served from Django's static files
+1. **Development Mode**: In development, the Vue.js dev server runs on port 3000, and the Django template loads the application from this server.
 
-The integration is managed through the `vue_base.html` template and the `VueAppView` view.
+2. **Production Mode**: In production, the Vue.js application is built and served as static files by the Django server.
 
-## Authentication
+### Development Mode Integration
 
-The application implements a comprehensive JWT-based authentication system that integrates with Django's authentication backend:
+The Django template (`pyerp/templates/base/vue_base.html`) includes the following code to load the Vue.js application from the development server:
 
-### Features
+```html
+{% if not debug %}
+    <!-- Production mode - load built assets -->
+    {% if vue_manifest %}
+        <script type="module" src="{% static vue_manifest.main.file %}"></script>
+        {% for css in vue_manifest.main.css %}
+            <link rel="stylesheet" href="{% static css %}">
+        {% endfor %}
+    {% endif %}
+{% else %}
+    <!-- Development mode - connect to Vite dev server -->
+    <script type="module">
+        // During development, this connects to the Vite dev server for HMR
+        import { createApp } from 'http://localhost:3000/@vite/client';
+        
+        // Load main entry from Vite dev server
+        import('http://localhost:3000/src/main.ts');
+    </script>
+{% endif %}
+```
 
-- JWT token-based authentication with automatic token refresh
-- Login and logout functionality with form validation
-- User profile management
-- Password change functionality
-- Protected routes with navigation guards
-- Role-based access control (admin vs. regular users)
-- Centralized authentication state with Pinia
+## Common Issues and Troubleshooting
 
-### Key Components
+### Blank Page on localhost:8050 or localhost:3000
 
-- **Authentication Service**: Handles communication with Django authentication endpoints
-- **API Service**: Manages API requests with authentication tokens
-- **Pinia Store**: Centralizes authentication state management
-- **Router Guards**: Protects routes based on authentication status
-- **Authentication Components**: Provides UI for login, logout, and profile management
+If you see a blank page when accessing the application, check the following:
 
-For detailed documentation, see [Authentication Implementation](../docs/vue_auth_implementation.md).
+1. **Mount Point Mismatch**: Ensure that the mount point in `main.ts` matches the element ID in the HTML template:
+   - Django template (`vue_base.html`) has `<div id="vue-app"></div>` as the mount point
+   - Vue.js frontend (`index.html`) has `<div id="vue-app"></div>` as the mount point
+   - Vue.js application (`main.ts`) should mount to the correct element: `app.mount('#vue-app')`
 
-If you encounter authentication issues, refer to the [Authentication Troubleshooting Guide](../docs/frontend_auth_troubleshooting.md).
+2. **Static Directory Missing**: Ensure that the static directory exists:
+   ```bash
+   mkdir -p pyerp/static
+   ```
 
-## Adding New Components
+3. **Debug Flag Not Passed**: Make sure the debug flag is correctly passed to the template context:
+   ```python
+   def get_context_data(self, **kwargs):
+       context = super().get_context_data(**kwargs)
+       context['debug'] = settings.DEBUG
+       # ... rest of the method
+   ```
 
-To create a new component:
+4. **Template Inheritance**: Ensure that the base.html template extends the vue_base.html template:
+   ```html
+   {% extends "base/vue_base.html" %}
+   ```
 
-1. Create a `.vue` file in the `src/components` directory
-2. Import and use the component in your view or other components
+5. **Browser Console Errors**: Check the browser console for JavaScript errors that might prevent the application from loading.
 
-Example:
+### Authentication Issues
 
-```vue
-<!-- src/components/MyComponent.vue -->
-<template>
-  <div>
-    <h2>{{ title }}</h2>
-  </div>
-</template>
+If you're experiencing authentication issues, check the following:
 
-<script setup lang="ts">
-import { ref } from 'vue';
+1. **Token Endpoints**: Ensure that the token endpoints in `auth.ts` match the proxy configuration in `vite.config.ts`.
 
-const title = ref('My Component');
-</script>
-``` 
+2. **CORS Configuration**: Verify that the CORS settings in Django allow requests from the Vue.js development server.
+
+3. **JWT Configuration**: Check that the JWT signing key is properly configured in the Django settings.
+
+## Development Guidelines
+
+### Code Style
+
+- Follow the Vue.js Style Guide (Priority A and B rules)
+- Use TypeScript for all new code
+- Use Composition API with `<script setup>` syntax
+- Use Pinia for state management
+- Use Vue Router for navigation
+
+### Component Structure
+
+- Use single-file components (SFCs)
+- Keep components small and focused
+- Use props and events for component communication
+- Use slots for component composition
+
+### Testing
+
+- Write unit tests for complex components and services
+- Use Vue Test Utils for component testing
+- Use Jest for unit testing
+
+## Resources
+
+- [Vue.js Documentation](https://vuejs.org/)
+- [TypeScript Documentation](https://www.typescriptlang.org/)
+- [Vite Documentation](https://vitejs.dev/)
+- [Pinia Documentation](https://pinia.vuejs.org/)
+- [Vue Router Documentation](https://router.vuejs.org/) 

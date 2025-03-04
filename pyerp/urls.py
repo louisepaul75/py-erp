@@ -9,13 +9,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
 from django.views.i18n import JavaScriptCatalog
 from rest_framework import permissions
 from rest_framework_simplejwt.views import (
     TokenObtainPairView, TokenRefreshView, TokenVerifyView
 )
-from django.conf.urls.i18n import i18n_patterns
 from django.views.i18n import set_language
 from pyerp.core.views import VueAppView
 
@@ -40,8 +38,8 @@ except ImportError:
     has_swagger = False
     print("WARNING: drf_yasg not available, API documentation will be disabled")
 
-# Non-internationalized URLs - will not have language prefix
-non_i18n_urlpatterns = [
+# Define URL patterns
+urlpatterns = [
     # Language selection URL - using Django's built-in view
     path('set-language/', set_language, name='set_language'),
     
@@ -63,36 +61,10 @@ non_i18n_urlpatterns = [
 
 # Add API documentation URLs if available
 if has_swagger:
-    non_i18n_urlpatterns += [
+    urlpatterns += [
         path('api/docs/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
         path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     ]
-
-# Default/required app URLs to include in internationalized patterns
-i18n_apps = [
-    path('', include('pyerp.core.urls')),
-    path('products/', include('pyerp.products.urls')),
-]
-
-# Optional modules to conditionally include in internationalized patterns
-OPTIONAL_FRONTEND_MODULES = [
-    ('sales/', 'pyerp.sales.urls'),
-    ('inventory/', 'pyerp.inventory.urls'),
-    ('production/', 'pyerp.production.urls'),
-]
-
-# Add optional frontend modules if available
-for url_prefix, module_path in OPTIONAL_FRONTEND_MODULES:
-    try:
-        # Check if the module can be imported
-        __import__(module_path.split('.', 1)[0])
-        module_urls = __import__(module_path, fromlist=['urlpatterns'])
-        if hasattr(module_urls, 'urlpatterns'):
-            i18n_apps.append(path(url_prefix, include(module_path)))
-            print(f"Added frontend URL patterns for {module_path}")
-    except ImportError as e:
-        print(f"WARNING: Could not import {module_path}: {e}")
-        print(f"Frontend URL patterns for {url_prefix} will not be available")
 
 # Optional API modules
 OPTIONAL_API_MODULES = [
@@ -109,34 +81,17 @@ for url_prefix, module_path in OPTIONAL_API_MODULES:
         __import__(module_path.split('.', 1)[0])
         module_urls = __import__(module_path, fromlist=['urlpatterns'])
         if hasattr(module_urls, 'urlpatterns'):
-            # Add to API (non-internationalized) paths
-            non_i18n_urlpatterns.append(path(f'api/{url_prefix}/', include(module_path)))
+            # Add to API paths
+            urlpatterns.append(path(f'api/{url_prefix}/', include(module_path)))
             print(f"Added API URL patterns for {module_path}")
     except ImportError as e:
         print(f"WARNING: Could not import {module_path}: {e}")
         print(f"URL patterns for api/{url_prefix}/ will not be available")
 
-# Build the internationalized URL patterns
-i18n_urlpatterns = i18n_patterns(
-    # Root URL - redirect to products list
-    path('', RedirectView.as_view(pattern_name='products:product_list'), name='home'),
-    
-    # Django authentication URLs
-    path('accounts/', include('django.contrib.auth.urls')),
-    
-    # Add all app URLs
-    *i18n_apps,
-    
-    # Make language prefix optional
-    prefix_default_language=False,
-)
-
-# Combine all URL patterns
-urlpatterns = non_i18n_urlpatterns + i18n_urlpatterns
-
-# Vue.js application route
+# Vue.js application route - now as the root URL
 urlpatterns += [
-    path('vue/', VueAppView.as_view(), name='vue_app'),
+    # Make Vue app the default view for the root URL
+    path('', VueAppView.as_view(), name='vue_app'),
 ]
 
 # Serve static and media files in development

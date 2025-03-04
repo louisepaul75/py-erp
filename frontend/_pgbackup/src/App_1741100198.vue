@@ -11,14 +11,14 @@
             </router-view>
         </main>
         <!-- Footer -->
-        <footer class="footer mt-auto py-3 bg-light border-top">
+        <footer class="footer mt-auto py-3 bg-light">
             <div class="container">
                 <div class="row">
                     <div class="col-md-6">
-                        <p class="mb-0 text-muted">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
+                        <p class="mb-0">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <p class="mb-0 text-muted">Version {{ appVersion }}</p>
+                        <p class="mb-0">Version {{ appVersion }}</p>
                     </div>
                 </div>
             </div>
@@ -46,23 +46,13 @@ onMounted(async () => {
 </script>
 <style>
 /* Global styles */
-:root {
-    --primary-color: #d2bc9b;
-    --primary-hover: #c0aa89;
-    --text-color: #343a40;
-    --light-bg: #f8f9fa;
-    --border-color: #e9ecef;
-}
-
 html, body {
     height: 100%;
-    color: var(--text-color);
 }
 
 body {
     display: flex;
     flex-direction: column;
-    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .app-container {
@@ -77,25 +67,6 @@ main {
 
 .footer {
     flex-shrink: 0;
-}
-
-/* Override Bootstrap primary color */
-.btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover, .btn-primary:focus {
-    background-color: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.text-primary {
-    color: var(--primary-color) !important;
-}
-
-.bg-primary {
-    background-color: var(--primary-color) !important;
 }
 
 /* Transition animations */

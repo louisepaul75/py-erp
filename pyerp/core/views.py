@@ -197,11 +197,14 @@ def csrf_failure(request, reason=""):
 
 
 class VueAppView(TemplateView):
-    """View for rendering the Vue.js application."""
+    """View for rendering the Vue.js application as the main frontend."""
     template_name = 'base/vue_base.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Explicitly pass debug flag to template
+        context['debug'] = settings.DEBUG
         
         # In production mode, parse the Vue.js manifest to get correct asset paths
         if not settings.DEBUG:

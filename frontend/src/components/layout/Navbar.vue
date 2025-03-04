@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
     <div class="container">
       <router-link class="navbar-brand" to="/">
         <img src="@/assets/wsz_logo.png" alt="pyERP Logo" height="30" class="me-2">
@@ -97,14 +97,31 @@ const authStore = useAuthStore();
 
 <style scoped>
 .navbar {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .nav-link {
   padding: 0.5rem 1rem;
+  color: #495057;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.router-link-active {
+  color: #d2bc9b;
+}
+
+.navbar-brand {
+  font-weight: 600;
+  color: #343a40;
 }
 
 .dropdown-item {
   padding: 0.5rem 1rem;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: #d2bc9b;
 }
 </style> 
