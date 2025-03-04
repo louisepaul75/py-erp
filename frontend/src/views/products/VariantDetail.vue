@@ -35,11 +35,42 @@
                 <!-- Variant images -->
                 <div class="variant-images">
                     <div class="main-image">
-                        <img :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png')" :alt="variant.name"/>
+                        <div v-if="!selectedImage && !variant.primary_image" class="no-image-placeholder">
+                            <span>No Image Available</span>
+                        </div>
+                        <img 
+                            v-else
+                            :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`)" 
+                            :alt="variant.name"
+                            @load="imageLoaded = true"
+                            @error="handleImageError"
+                            :class="{ 'loading': !imageLoaded }"
+                        />
+                        <div v-if="!imageLoaded" class="image-loading">
+                            <span>Loading...</span>
+                        </div>
                     </div>
+                    
                     <div v-if="variant.images && variant.images.length > 1" class="image-thumbnails">
-                        <div v-for="image in variant.images" :key="image.id" class="thumbnail" :class="{ active: selectedImage && selectedImage.id === image.id }" @click="selectedImage = image">
-                            <img :src="image.thumbnail_url" :alt="variant.name"/>
+                        <div 
+                            v-for="image in variant.images" 
+                            :key="image.id" 
+                            class="thumbnail"
+                            :class="{ 
+                                active: selectedImage && selectedImage.id === image.id,
+                                'loading': !thumbnailsLoaded[image.id]
+                            }"
+                            @click="selectImage(image)"
+                        >
+                            <img 
+                                :src="image.thumbnail_url || image.url" 
+                                :alt="variant.name"
+                                @load="handleThumbnailLoad(image.id)"
+                                @error="() => handleThumbnailError(image.id)"
+                            />
+                            <div v-if="!thumbnailsLoaded[image.id]" class="thumbnail-loading">
+                                <span>Loading...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -93,7 +124,7 @@
                 <div class="variants-grid">
                     <div v-for="relatedVariant in relatedVariants" :key="relatedVariant.id" class="variant-card" @click="viewVariantDetails(relatedVariant.id)">
                         <div class="variant-image">
-                            <img :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : '/static/images/no-image.png'" :alt="relatedVariant.name"/>
+                            <img :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`" :alt="relatedVariant.name"/>
                         </div>
                         <div class="variant-info">
                             <h3>{{ relatedVariant.name }}</h3>
@@ -169,6 +200,8 @@ const loading = ref(true);
 const error = ref('');
 const selectedImage = ref<ProductImage | null>(null);
 const relatedVariants = ref<Variant[]>([]);
+const imageLoaded = ref(false);
+const thumbnailsLoaded = ref<Record<number, boolean>>({});
 
 // Computed
 const isCurrentVariant = (id: number) => {
@@ -242,6 +275,30 @@ const goBack = () => {
 // View variant details
 const viewVariantDetails = (id: number) => {
   router.push({ name: 'VariantDetail', params: { id } });
+};
+
+// Add these new methods
+const handleImageError = () => {
+    imageLoaded.value = true;
+    // Set fallback image
+    const img = event?.target as HTMLImageElement;
+    if (img) {
+        img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    }
+};
+
+const selectImage = (image: ProductImage) => {
+    selectedImage.value = image;
+    imageLoaded.value = false; // Reset loading state for main image
+};
+
+const handleThumbnailLoad = (imageId: number) => {
+    thumbnailsLoaded.value[imageId] = true;
+};
+
+const handleThumbnailError = (imageId: number) => {
+    thumbnailsLoaded.value[imageId] = true;
+    // Could add error state handling here if needed
 };
 
 // Initialize component
@@ -364,6 +421,7 @@ h1 {
 }
 
 .main-image {
+  position: relative;
   height: 400px;
   background-color: #f8f9fa;
   border-radius: 8px;
@@ -378,36 +436,70 @@ h1 {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  transition: opacity 0.3s ease;
+}
+
+.main-image img.loading {
+  opacity: 0;
+}
+
+.image-loading,
+.thumbnail-loading,
+.no-image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f9fa;
+  color: #666;
+  font-size: 14px;
+}
+
+.no-image-placeholder {
+  background-color: #eee;
+  color: #666;
+  font-size: 16px;
 }
 
 .image-thumbnails {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 10px;
+  margin-top: 15px;
 }
 
 .thumbnail {
-  width: 80px;
-  height: 80px;
+  position: relative;
+  aspect-ratio: 1;
   border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
   background-color: #f8f9fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 0.3s ease;
+}
+
+.thumbnail.loading img {
+  opacity: 0;
 }
 
 .thumbnail.active {
   border-color: #d2bc9b;
 }
 
-.thumbnail img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+.thumbnail:hover {
+  border-color: #e6d5c1;
 }
 
 .variant-info {

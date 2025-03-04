@@ -331,78 +331,99 @@ class ProductAPIView(APIView):
     
     def get_product_data(self, product):
         """Convert a product model to a dictionary for JSON response"""
-        product_data = {
-            'id': product.id,
-            'name': product.name,
-            'sku': product.sku,
-            'description': getattr(product, 'description', ''),
-            'list_price': float(product.list_price) if product.list_price else None,
-            'stock_quantity': product.stock_quantity,
-        }
-        
-        # Add category if available
-        if hasattr(product, 'category') and product.category:
-            try:
-                product_data['category'] = {
-                    'id': product.category.id,
-                    'name': product.category.name,
-                    'code': getattr(product.category, 'code', '')
-                }
-            except Exception as e:
-                # Log the error but don't fail the request
-                print(f"Error getting category for product {product.id}: {str(e)}")
-        
-        # Add variants count for parent products
-        if isinstance(product, ParentProduct):
-            try:
-                from pyerp.products.models import VariantProduct
-                variants_count = VariantProduct.objects.filter(parent=product).count()
-                product_data['variants_count'] = variants_count
-            except Exception as e:
-                # Log the error but don't fail the request
-                print(f"Error getting variants count for product {product.id}: {str(e)}")
-                product_data['variants_count'] = 0
-        
-        # Add primary image if available
-        if hasattr(product, 'images') and product.images.exists():
-            try:
-                # Image prioritization logic:
-                # 1. Produktfoto with front=True
-                # 2. Any Produktfoto
-                # 3. Any front=True image
-                # 4. Any image marked as primary
-                # 5. First image
-                
-                # First priority: Produktfoto with front=True
-                primary_image = product.images.filter(image_type__iexact='Produktfoto', is_front=True).first()
-                
-                if not primary_image:
-                    # Second priority: Any Produktfoto
-                    primary_image = product.images.filter(image_type__iexact='Produktfoto').first()
-                
-                if not primary_image:
-                    # Third priority: Any front=True image
-                    primary_image = product.images.filter(is_front=True).first()
-                
-                if not primary_image:
-                    # Fourth priority: Any image marked as primary
-                    primary_image = product.images.filter(is_primary=True).first()
-                
-                if not primary_image:
-                    # Last resort: First image
-                    primary_image = product.images.first()
-                
-                if primary_image:
-                    product_data['primary_image'] = {
-                        'id': primary_image.id,
-                        'url': primary_image.image_url,
-                        'thumbnail_url': getattr(primary_image, 'thumbnail_url', primary_image.image_url)
+        try:
+            product_data = {
+                'id': product.id,
+                'name': product.name,
+                'sku': product.sku,
+                'description': getattr(product, 'description', ''),
+                'list_price': float(product.list_price) if product.list_price else None,
+                'stock_quantity': product.stock_quantity,
+            }
+            
+            # Initialize images as empty to avoid undefined
+            product_data['images'] = []
+            product_data['primary_image'] = None
+            
+            # Add category if available
+            if hasattr(product, 'category') and product.category:
+                try:
+                    product_data['category'] = {
+                        'id': product.category.id,
+                        'name': product.category.name,
+                        'code': getattr(product.category, 'code', '')
                     }
-            except Exception as e:
-                # Log the error but don't fail the request
-                print(f"Error getting primary image for product {product.id}: {str(e)}")
-                
-        return product_data
+                except Exception as e:
+                    print(f"Error getting category for product {product.id}: {str(e)}")
+                    product_data['category'] = None
+            
+            # Add variants count for parent products
+            if isinstance(product, ParentProduct):
+                try:
+                    variants_count = VariantProduct.objects.filter(parent=product).count()
+                    product_data['variants_count'] = variants_count
+                except Exception as e:
+                    print(f"Error getting variants count for product {product.id}: {str(e)}")
+                    product_data['variants_count'] = 0
+            
+            # Add images if available
+            if hasattr(product, 'images'):
+                try:
+                    # Get all images in a single query to optimize
+                    images = list(product.images.all().select_related())
+                    
+                    # Find primary image using priority order
+                    primary_image = None
+                    for priority in ['Produktfoto_front', 'Produktfoto', 'front', 'primary', 'any']:
+                        if primary_image:
+                            break
+                            
+                        for img in images:
+                            if (priority == 'Produktfoto_front' and img.image_type == 'Produktfoto' and img.is_front) or \
+                               (priority == 'Produktfoto' and img.image_type == 'Produktfoto') or \
+                               (priority == 'front' and img.is_front) or \
+                               (priority == 'primary' and img.is_primary) or \
+                               priority == 'any':
+                                primary_image = img
+                                break
+                    
+                    # Add primary image if found
+                    if primary_image:
+                        product_data['primary_image'] = {
+                            'id': primary_image.id,
+                            'url': primary_image.image_url,
+                            'thumbnail_url': getattr(primary_image, 'thumbnail_url', primary_image.image_url),
+                            'is_primary': primary_image.is_primary,
+                            'is_front': primary_image.is_front,
+                            'image_type': primary_image.image_type
+                        }
+                    
+                    # Add all valid images
+                    for image in images:
+                        if hasattr(image, 'image_url') and image.image_url:
+                            product_data['images'].append({
+                                'id': image.id,
+                                'url': image.image_url,
+                                'thumbnail_url': getattr(image, 'thumbnail_url', image.image_url),
+                                'is_primary': image.is_primary,
+                                'is_front': image.is_front,
+                                'image_type': image.image_type
+                            })
+                except Exception as e:
+                    print(f"Error processing images for product {product.id}: {str(e)}")
+            
+            return product_data
+            
+        except Exception as e:
+            print(f"Error in get_product_data for product {getattr(product, 'id', 'unknown')}: {str(e)}")
+            # Return minimal product data on error
+            return {
+                'id': getattr(product, 'id', None),
+                'name': getattr(product, 'name', 'Unknown Product'),
+                'sku': getattr(product, 'sku', ''),
+                'images': [],
+                'primary_image': None
+            }
 
 
 class ProductListAPIView(ProductAPIView):
@@ -492,16 +513,6 @@ class ProductDetailAPIView(ProductAPIView):
             variant_data = self.get_product_data(variant)
             variants_data.append(variant_data)
         product_data['variants'] = variants_data
-        
-        # Add all images
-        if hasattr(product, 'images') and product.images.exists():
-            product_data['images'] = []
-            for image in product.images.all():
-                product_data['images'].append({
-                    'id': image.id,
-                    'url': image.image_url,
-                    'is_primary': image.is_primary,
-                })
         
         # Return JSON response
         return Response(product_data)

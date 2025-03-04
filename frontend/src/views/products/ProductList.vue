@@ -514,7 +514,7 @@ const handleImageError = (event: Event) => {
   console.error('Image load failed');
   // Set the source to the fallback image
   if (event.target instanceof HTMLImageElement) {
-    event.target.src = '/static/images/no-image.png';
+    event.target.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
   }
 };
 </script>

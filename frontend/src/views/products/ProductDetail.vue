@@ -25,11 +25,11 @@
                 <!-- Product images -->
                 <div class="product-images">
                     <div class="main-image">
-                        <img :src="selectedImage ? selectedImage.url : (product.primary_image ? product.primary_image.url : '/static/images/no-image.png')" :alt="product.name"/>
+                        <img :src="getMainImage" :alt="product.name" @error="handleImageError"/>
                     </div>
                     <div v-if="product.images && product.images.length > 1" class="image-thumbnails">
                         <div v-for="image in product.images" :key="image.id" class="thumbnail" :class="{ active: selectedImage && selectedImage.id === image.id }" @click="selectedImage = image">
-                            <img :src="image.thumbnail_url" :alt="product.name"/>
+                            <img :src="getValidImageUrl({ url: image.thumbnail_url || image.url })" :alt="product.name" @error="handleImageError"/>
                         </div>
                     </div>
                 </div>
@@ -69,7 +69,7 @@
                 <div class="variants-grid">
                     <div v-for="variant in product.variants" :key="variant.id" class="variant-card" @click="viewVariantDetails(variant.id)">
                         <div class="variant-image">
-                            <img :src="variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png'" :alt="variant.name"/>
+                            <img :src="getVariantImage(variant)" :alt="variant.name" @error="handleImageError"/>
                         </div>
                         <div class="variant-info">
                             <h3>{{ variant.name }}</h3>
@@ -91,7 +91,7 @@
     </div>
 </template>
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { productApi } from '@/services/api';
 
@@ -105,6 +105,9 @@ interface ProductImage {
   id: number;
   url: string;
   thumbnail_url: string;
+  is_primary?: boolean;
+  is_front?: boolean;
+  image_type?: string;
 }
 
 interface Attribute {
@@ -117,6 +120,7 @@ interface Variant {
   name: string;
   sku: string;
   primary_image?: ProductImage;
+  images?: ProductImage[];
   attributes?: Attribute[];
   in_stock?: boolean;
 }
@@ -150,32 +154,191 @@ const loading = ref(true);
 const error = ref('');
 const selectedImage = ref<ProductImage | null>(null);
 
+// Add a new function to validate image URLs
+const getValidImageUrl = (imageObj?: { url?: string }) => {
+    // If no image object or URL, return placeholder
+    if (!imageObj?.url) {
+        console.log('No image URL provided, using placeholder');
+        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    }
+
+    // Check if URL is valid
+    try {
+        new URL(imageObj.url);
+        return imageObj.url;
+    } catch (e) {
+        console.log('Invalid image URL:', imageObj.url);
+        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    }
+};
+
+// Add an error handler for image loading
+const handleImageError = (event: Event) => {
+    const img = event.target as HTMLImageElement;
+    console.log('Image failed to load:', img.src);
+    img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+};
+
+// Update the getMainImage computed property
+const getMainImage = computed(() => {
+    // First try to get BE variant's image
+    if (product.value.variants) {
+        const beVariant = product.value.variants.find(v => 
+            v.attributes?.some(attr => 
+                attr.name.toLowerCase() === 'type' && 
+                attr.value.toLowerCase() === 'be'
+            ) ||
+            v.sku?.toLowerCase().includes('be')
+        );
+        
+        console.log('Found BE variant:', beVariant); // Debug log
+        
+        if (beVariant && beVariant.images && beVariant.images.length > 0) {
+            // Try to find the best image from the BE variant
+            const beImage = beVariant.images.find(img => 
+                img.image_type === 'Produktfoto' && img.is_front
+            ) || beVariant.images.find(img => 
+                img.image_type === 'Produktfoto'
+            ) || beVariant.images.find(img => 
+                img.is_front
+            ) || beVariant.images.find(img => 
+                img.is_primary
+            ) || beVariant.images[0];
+            
+            if (beImage) {
+                console.log('Using BE variant image:', beImage.url); // Debug log
+                return getValidImageUrl({ url: beImage.url });
+            }
+        } else if (beVariant?.primary_image) {
+            console.log('Using BE variant primary image:', beVariant.primary_image.url); // Debug log
+            return getValidImageUrl(beVariant.primary_image);
+        }
+    }
+    
+    // If selected image exists, use it
+    if (selectedImage.value) {
+        console.log('Using selected image:', selectedImage.value.url); // Debug log
+        return getValidImageUrl(selectedImage.value);
+    }
+    
+    // If product has images, use the best one
+    if (product.value.images && product.value.images.length > 0) {
+        const bestImage = product.value.images.find(img => 
+            img.image_type === 'Produktfoto' && img.is_front
+        ) || product.value.images.find(img => 
+            img.image_type === 'Produktfoto'
+        ) || product.value.images.find(img => 
+            img.is_front
+        ) || product.value.images.find(img => 
+            img.is_primary
+        ) || product.value.images[0];
+        
+        if (bestImage) {
+            console.log('Using best product image:', bestImage.url); // Debug log
+            return getValidImageUrl({ url: bestImage.url });
+        }
+    }
+    
+    // If product has primary image, use it
+    if (product.value.primary_image) {
+        console.log('Using product primary image:', product.value.primary_image.url); // Debug log
+        return getValidImageUrl(product.value.primary_image);
+    }
+    
+    // Fallback to no-image
+    console.log('No image found, using placeholder'); // Debug log
+    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+});
+
+// Update the getVariantImage function
+const getVariantImage = (variant: Variant) => {
+    if (variant.images && variant.images.length > 0) {
+        const bestImage = variant.images.find(img => 
+            img.image_type === 'Produktfoto' && img.is_front
+        ) || variant.images.find(img => 
+            img.image_type === 'Produktfoto'
+        ) || variant.images.find(img => 
+            img.is_front
+        ) || variant.images.find(img => 
+            img.is_primary
+        ) || variant.images[0];
+        
+        if (bestImage) {
+            return getValidImageUrl({ url: bestImage.url });
+        }
+    }
+    
+    if (variant.primary_image?.url) {
+        return getValidImageUrl(variant.primary_image);
+    }
+    
+    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+};
+
 // Load product details
 const loadProduct = async () => {
-  loading.value = true;
-  error.value = '';
-  
-  try {
-    // Get product ID from props or route params
-    const productId = props.id || route.params.id;
+    loading.value = true;
+    error.value = '';
     
-    if (!productId) {
-      throw new Error('Product ID is required');
+    try {
+        // Get product ID from props or route params
+        const productId = props.id || route.params.id;
+        
+        if (!productId) {
+            throw new Error('Product ID is required');
+        }
+        
+        const response = await productApi.getProduct(Number(productId));
+        console.log('=== DEBUG API RESPONSE ===');
+        console.log('Full response:', JSON.stringify(response.data, null, 2));
+        console.log('Product images:', response.data.images);
+        console.log('Primary image:', response.data.primary_image);
+        if (response.data.variants) {
+            response.data.variants.forEach((variant: Variant) => {
+                console.log(`Variant ${variant.sku}:`, {
+                    attributes: variant.attributes,
+                    primary_image: variant.primary_image,
+                    name: variant.name
+                });
+            });
+        }
+        console.log('=== END DEBUG ===');
+        
+        product.value = response.data;
+        
+        // First try to set BE variant image as default
+        if (product.value.variants) {
+            const beVariant = product.value.variants.find(v => 
+                v.attributes?.some(attr => 
+                    attr.name.toLowerCase() === 'type' && 
+                    attr.value.toLowerCase() === 'be'
+                ) ||
+                v.sku?.toLowerCase().includes('be')
+            );
+            
+            if (beVariant) {
+                console.log('=== DEBUG BE VARIANT ===');
+                console.log('Found BE variant:', beVariant.sku);
+                console.log('BE variant primary image:', beVariant.primary_image);
+                console.log('BE variant attributes:', beVariant.attributes);
+                console.log('=== END DEBUG ===');
+                
+                if (beVariant.primary_image) {
+                    selectedImage.value = beVariant.primary_image;
+                }
+            }
+        }
+        
+        // If no BE variant image, fall back to product images
+        if (!selectedImage.value && product.value.images && product.value.images.length > 0) {
+            selectedImage.value = product.value.primary_image || product.value.images[0];
+        }
+    } catch (err) {
+        console.error('Error loading product details:', err);
+        error.value = 'Failed to load product details. Please try again.';
+    } finally {
+        loading.value = false;
     }
-    
-    const response = await productApi.getProduct(Number(productId));
-    product.value = response.data;
-    
-    // Set default selected image
-    if (product.value.images && product.value.images.length > 0) {
-      selectedImage.value = product.value.primary_image || product.value.images[0];
-    }
-  } catch (err) {
-    console.error('Error loading product details:', err);
-    error.value = 'Failed to load product details. Please try again.';
-  } finally {
-    loading.value = false;
-  }
 };
 
 // Format date
