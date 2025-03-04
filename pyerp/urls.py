@@ -96,6 +96,7 @@ for url_prefix, module_path in OPTIONAL_FRONTEND_MODULES:
 
 # Optional API modules
 OPTIONAL_API_MODULES = [
+    ('products', 'pyerp.products.api_urls'),
     ('sales', 'pyerp.sales.urls'),
     ('inventory', 'pyerp.inventory.urls'),
     ('production', 'pyerp.production.urls'),

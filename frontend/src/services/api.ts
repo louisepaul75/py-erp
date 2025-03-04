@@ -16,15 +16,70 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
-// Add request interceptor to include CSRF token
+// Add request interceptor to include CSRF token and auth token
 api.interceptors.request.use((config) => {
   // Get CSRF token from cookie
   const csrfToken = getCookie('csrftoken');
   if (csrfToken) {
     config.headers['X-CSRFToken'] = csrfToken;
   }
+  
+  // Add JWT token if available
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   return config;
 });
+
+// Add response interceptor to handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If error is 401 Unauthorized and we haven't already tried to refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Try to refresh the token
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          // Create a new instance to avoid interceptors loop
+          const refreshResponse = await axios.post(
+            `${apiBaseUrl}/api/token/refresh/`,
+            { refresh: refreshToken },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+          
+          const newAccessToken = refreshResponse.data.access;
+          
+          // Update stored token
+          localStorage.setItem('access_token', newAccessToken);
+          
+          // Update the original request and retry
+          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+          return axios(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        
+        // Clear tokens and redirect to login if refresh fails
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        
+        // Redirect to login page if we're in a browser context
+        if (typeof window !== 'undefined') {
+          window.location.href = '/vue/login';
+        }
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 // Helper function to get cookies
 function getCookie(name: string): string | null {

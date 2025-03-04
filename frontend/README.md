@@ -46,6 +46,7 @@ frontend/
 │   ├── views/             # Vue views (pages)
 │   ├── store/             # Pinia store modules
 │   ├── router/            # Vue Router configuration
+│   ├── services/          # API and authentication services
 │   ├── utils/             # Utility functions
 │   ├── App.vue            # Root Vue component
 │   └── main.ts            # Vue application entry point
@@ -64,6 +65,30 @@ The Vue.js application integrates with Django in two modes:
 2. **Production Mode**: The built assets are served from Django's static files
 
 The integration is managed through the `vue_base.html` template and the `VueAppView` view.
+
+## Authentication
+
+The application implements a comprehensive JWT-based authentication system that integrates with Django's authentication backend:
+
+### Features
+
+- JWT token-based authentication with automatic token refresh
+- Login and logout functionality with form validation
+- User profile management
+- Password change functionality
+- Protected routes with navigation guards
+- Role-based access control (admin vs. regular users)
+- Centralized authentication state with Pinia
+
+### Key Components
+
+- **Authentication Service**: Handles communication with Django authentication endpoints
+- **API Service**: Manages API requests with authentication tokens
+- **Pinia Store**: Centralizes authentication state management
+- **Router Guards**: Protects routes based on authentication status
+- **Authentication Components**: Provides UI for login, logout, and profile management
+
+For detailed documentation, see [Authentication Implementation](../docs/vue_auth_implementation.md).
 
 ## Adding New Components
 

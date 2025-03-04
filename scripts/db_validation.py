@@ -218,25 +218,24 @@ class DatabaseValidator:
         try:
             with connection.cursor() as cursor:
                 # Get columns with NOT NULL constraint
-                if connection.vendor == 'postgresql':
-                    cursor.execute("""
-                        SELECT column_name
-                        FROM information_schema.columns
-                        WHERE table_name = %s AND is_nullable = 'NO'
-                        AND column_default IS NULL
-                    """, [table_name])
-                    not_null_columns = [col[0] for col in cursor.fetchall()]
+                cursor.execute("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = %s AND is_nullable = 'NO'
+                    AND column_default IS NULL
+                """, [table_name])
+                not_null_columns = [col[0] for col in cursor.fetchall()]
+                
+                # Check for NULL values in these columns
+                for column in not_null_columns:
+                    cursor.execute(f"""
+                        SELECT COUNT(*) FROM {table_name}
+                        WHERE {column} IS NULL
+                    """)
+                    null_count = cursor.fetchone()[0]
                     
-                    # Check for NULL values in these columns
-                    for column in not_null_columns:
-                        cursor.execute(f"""
-                            SELECT COUNT(*) FROM {table_name}
-                            WHERE {column} IS NULL
-                        """)
-                        null_count = cursor.fetchone()[0]
-                        
-                        if null_count > 0:
-                            self.log(f"Found {null_count} NULL values in NOT NULL column: {table_name}.{column}", 'error')
+                    if null_count > 0:
+                        self.log(f"Found {null_count} NULL values in NOT NULL column: {table_name}.{column}", 'error')
         except Exception as e:
             self.log(f"Error checking NULL constraints for '{table_name}': {str(e)}", 'error')
     

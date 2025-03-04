@@ -2,10 +2,10 @@
 
 A modern Django-based ERP system designed to replace a legacy 4D-based ERP, focusing on manufacturing operations with both B2B and B2C sales channels.
 
-[![Lint](https://github.com/your-organization/pyERP/actions/workflows/docker-build.yml/badge.svg?job=lint)](https://github.com/your-organization/pyERP/actions/workflows/docker-build.yml)
-[![Tests](https://github.com/your-organization/pyERP/actions/workflows/docker-build.yml/badge.svg?job=tests)](https://github.com/your-organization/pyERP/actions/workflows/docker-build.yml)
-[![Build](https://github.com/your-organization/pyERP/actions/workflows/docker-build.yml/badge.svg?job=build)](https://github.com/your-organization/pyERP/actions/workflows/docker-build.yml)
-[![codecov](https://codecov.io/gh/your-organization/pyERP/branch/main/graph/badge.svg)](https://codecov.io/gh/your-organization/pyERP)
+[![Lint](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=lint)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
+[![Tests](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=tests)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
+[![Build](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=build)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
+[![codecov](https://codecov.io/gh/Wilhelm-Schweizer/pyERP/branch/main/graph/badge.svg)](https://codecov.io/gh/Wilhelm-Schweizer/pyERP)
 
 ## Project Overview
 
@@ -173,6 +173,8 @@ python manage.py sync_customers --full
 
 - Project documentation is available in the `docs/` directory
 - API documentation can be accessed at `/api/docs/` when the server is running
+- Vue.js frontend documentation:
+  - [Authentication Implementation](docs/vue_auth_implementation.md)
 
 ## Testing
 
@@ -518,12 +520,29 @@ The Vue.js application is set up with the following features:
 - Vite for fast development and builds
 - ESLint and Prettier for code quality
 - Hot Module Replacement for rapid development
+- JWT-based authentication with automatic token refresh
+- Protected routes with navigation guards
+- Centralized state management with Pinia
 
 The development workflow allows for:
 
 - Real-time updates using the Vite dev server
 - Integration with Django templates
 - API calls to Django endpoints
+- Secure authentication with the Django backend
+
+### Authentication
+
+The Vue.js frontend implements a comprehensive authentication system that integrates with Django's authentication backend:
+
+- **JWT-based Authentication**: Secure token-based authentication
+- **User Management**: Login, logout, profile management, and password changes
+- **Protected Routes**: Navigation guards for authenticated routes
+- **Role-based Access**: Different access levels for admin and regular users
+- **Automatic Token Refresh**: Seamless user experience with token refresh
+- **Centralized State**: Authentication state managed with Pinia
+
+For detailed documentation, see [Authentication Implementation](docs/vue_auth_implementation.md).
 
 ### Building for Production
 

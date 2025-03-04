@@ -85,22 +85,21 @@ WSGI_APPLICATION = 'pyerp.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-        'USER': os.environ.get('DB_USER', 'admin'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
-# Alternative DATABASE_URL configuration
-# from the env (commented out, uncomment to use)
+# Alternative DATABASE_URL configuration (commented out)
 # DATABASES = {
 #     'default': dj_database_url.config(
 #         default=os.environ.get(
 #             'DATABASE_URL', 
-#             'mysql://user:password@localhost:3306/pyerp_testing'
+#             'postgresql://postgres:password@localhost:5432/pyerp_testing'
 #         ),
 #         conn_max_age=600,
 #     )

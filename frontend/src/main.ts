@@ -1,4 +1,5 @@
 import { createApp, App as VueApp } from 'vue';
+import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
 
@@ -11,6 +12,10 @@ declare global {
 
 // Create and mount the Vue application
 const app = createApp(App);
+
+// Use Pinia for state management
+const pinia = createPinia();
+app.use(pinia);
 
 // Use the router
 app.use(router);

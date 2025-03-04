@@ -1,116 +1,86 @@
 <template>
-    <div class="vue-app-container">
-        <header>
-            <div class="header-container">
-                <div class="logo-container">
-                    <router-link to="/" class="logo-link">
-                        <img src="@/assets/wsz_logo_long.png" alt="Wilhelm-Schweizer Logo" class="nav-logo">
-                    </router-link>
-                </div>
-                <div class="nav-container">
-                    <nav>
-                        <router-link to="/">Home</router-link>                 |
-                        <router-link to="/products">Products</router-link>                 |
-                        <router-link to="/products/categories">Categories</router-link>                 |
-                        <router-link to="/sales">Sales</router-link>
-                    </nav>
+    <div class="app-container">
+        <!-- Navigation -->
+        <Navbar />
+        
+        <!-- Main Content -->
+        <main class="container py-4">
+            <router-view v-slot="{ Component }">
+                <transition name="fade" mode="out-in">
+                    <component :is="Component" />
+                </transition>
+            </router-view>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="footer mt-auto py-3 bg-light">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-0">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <p class="mb-0">Version {{ appVersion }}</p>
+                    </div>
                 </div>
             </div>
-        </header>
-        <main>
-            <router-view/>
-        </main>
-        <footer>
-            <p>&copy; {{ currentYear }} Wilhelm-Schweizer |&nbsp;pyERP</p>
-            <p></p>
         </footer>
     </div>
 </template>
+
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useAuthStore } from './store/auth';
+import Navbar from './components/layout/Navbar.vue';
 
-// Compute the current year for the footer
-const currentYear = computed(() => new Date().getFullYear());
+// Initialize auth store
+const authStore = useAuthStore();
+
+// Get current year for copyright
+const currentYear = new Date().getFullYear();
+
+// App version
+const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+
+// Initialize auth state when app is mounted
+onMounted(async () => {
+    await authStore.init();
+});
 </script>
-<style scoped>
-.vue-app-container {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
+
+<style>
+/* Global styles */
+html, body {
+    height: 100%;
 }
 
-header {
-  padding: 20px 0;
-  border-bottom: 1px solid #eaeaea;
-  width: 100%;
+body {
+    display: flex;
+    flex-direction: column;
 }
 
-.header-container {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  width: 100%;
-}
-
-.logo-container {
-  grid-column: 1;
-  justify-self: start;
-}
-
-.nav-container {
-  grid-column: 2;
-  display: flex;
-  justify-content: center;
-}
-
-.logo-link {
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
-}
-
-nav {
-  padding: 10px 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-nav a {
-  color: #2c3e50;
-  text-decoration: none;
-  margin: 0 10px;
-  font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  vertical-align: middle;
-}
-
-.nav-logo {
-  height: 2.7em;
-  margin-right: 5px;
-  vertical-align: middle;
-}
-
-nav a.router-link-active {
-  color: #d2bc9b;
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 main {
-  padding: 20px 0;
-  min-height: 70vh;
+    flex: 1 0 auto;
 }
 
-footer {
-  margin-top: 40px;
-  padding: 20px 0;
-  font-size: 0.8em;
-  color: #666;
-  border-top: 1px solid #eaeaea;
-  text-align: center;
+.footer {
+    flex-shrink: 0;
+}
+
+/* Transition animations */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style> 

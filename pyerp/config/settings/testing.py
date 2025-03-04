@@ -20,15 +20,15 @@ MIDDLEWARE = [middleware for middleware in MIDDLEWARE if 'debug_toolbar' not in 
 
 ALLOWED_HOSTS = ['*']
 
-# Use MySQL database for testing
+# Use PostgreSQL database for testing
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-        'USER': os.environ.get('DB_USER', 'admin'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '192.168.73.64'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -37,7 +37,7 @@ DATABASES = {
 #     'default': dj_database_url.config(
 #         default=os.environ.get(
 #             'DATABASE_URL', 
-#             'mysql://user:password@localhost:3306/pyerp_testing'
+#             'postgresql://postgres:password@localhost:5432/pyerp_testing'
 #         ),
 #         conn_max_age=600,
 #     )
