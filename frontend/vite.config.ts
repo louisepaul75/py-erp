@@ -58,6 +58,21 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8050',
         changeOrigin: true
+      },
+      '/v1': {
+        target: 'http://localhost:8050',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/v1/, '/api/v1')
+      },
+      '/products': {
+        target: 'http://localhost:8050',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/products/, '/api/products')
+      },
+      '/sales': {
+        target: 'http://localhost:8050',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/sales/, '/api/sales')
       }
     }
   }

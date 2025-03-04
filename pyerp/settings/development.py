@@ -7,6 +7,7 @@ These settings extend the base settings with development-specific configurations
 import os
 import dj_database_url
 from .base import *  # noqa
+from datetime import timedelta
 
 # Import HTTPS settings
 try:
@@ -56,6 +57,77 @@ DATABASES = {
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:8050',
+    'http://127.0.0.1:8050',
+    'http://0.0.0.0:3000',
+    'http://0.0.0.0:3001',
+    'http://0.0.0.0:8050'
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# Logging configuration for development
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django.security.authentication': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'rest_framework_simplejwt': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+# JWT settings for development
+SIMPLE_JWT.update({
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),  # Longer lifetime for development
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'AUTH_COOKIE_SECURE': False,  # Allow non-HTTPS in development
+})
 
 # DEBUG TOOLBAR SETTINGS
 INSTALLED_APPS += ['debug_toolbar']  # noqa

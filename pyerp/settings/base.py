@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from .jwt import SIMPLE_JWT  # Import JWT settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -28,6 +29,7 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
+    'rest_framework_simplejwt',  # Add JWT app
     'django_filters',
     'corsheaders',
     'drf_yasg',

@@ -42,6 +42,8 @@ const authService = {
 };
 ```
 
+**Important Note**: When using the Vite development server with proxy configuration, ensure that the token endpoints in `auth.ts` are correctly configured to match the proxy settings in `vite.config.ts`. If the proxy is configured to add the `/api` prefix, the token endpoints should be `/token/` and `/token/refresh/` rather than `/api/token/` and `/api/token/refresh/` to avoid path duplication.
+
 ### API Service (`api.ts`)
 
 The API service handles authentication tokens in requests and implements automatic token refresh:
@@ -150,6 +152,32 @@ The authentication system includes the following components:
 4. **Protected Routes**: Routes are protected with navigation guards to prevent unauthorized access.
 
 5. **Role-Based Access**: The system implements role-based access control for admin-only routes.
+
+6. **JWT Signing Key**: The JWT signing key must be properly configured in the Django settings. The `SIMPLE_JWT` configuration in `jwt.py` should have a valid `SIGNING_KEY` set, or it will default to Django's `SECRET_KEY`.
+
+## Troubleshooting
+
+### Common Authentication Issues
+
+1. **401 Unauthorized Errors**:
+   - Verify that the user credentials are correct
+   - Check that the user exists in the Django database
+   - Ensure the JWT token is being properly included in the Authorization header
+
+2. **404 Not Found for Token Endpoints**:
+   - Check the API endpoint configuration in `auth.ts` and `api.ts`
+   - Verify that the token endpoints match the proxy configuration in `vite.config.ts`
+   - Look for path duplication issues (e.g., `/api/api/token/` instead of `/api/token/`)
+
+3. **500 Internal Server Error for Token Endpoints**:
+   - Check the Django logs for detailed error messages
+   - Verify that the JWT signing key is properly configured in the Django settings
+   - Ensure that the `SIMPLE_JWT` configuration has a valid `SIGNING_KEY` set
+
+4. **Token Refresh Issues**:
+   - Verify that both the access token and refresh token are stored in localStorage
+   - Check that the refresh token endpoint is correctly configured
+   - Ensure the refresh token has not expired
 
 ## Future Enhancements
 

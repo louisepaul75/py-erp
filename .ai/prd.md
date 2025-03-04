@@ -36,6 +36,9 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
    - Django's built-in RBAC (Role-Based Access Control)  
    - Token-based external integrations (OAuth2/JWT)  
    - Auditing & logging for critical records  
+   - JWT authentication between Vue.js frontend and Django backend ✅ *Implemented*
+   - Proper configuration of JWT token signing keys ✅ *Implemented*
+   - Correct API endpoint routing for authentication requests ✅ *Implemented*
 
 **Out-of-Scope**  
 1. Advanced accounting features or full finance module (handled by external system or future phase).  

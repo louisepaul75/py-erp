@@ -1,95 +1,87 @@
 import axios from 'axios';
 
-// Get API base URL from localStorage, environment variable, or use default
-const storedApiUrl = localStorage.getItem('apiUrl');
-const apiBaseUrl = storedApiUrl || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api';
-console.log('Using API base URL:', apiBaseUrl);
+// Get the base URL from environment variable or localStorage, or use default
+const baseUrl = localStorage.getItem('api_base_url') || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050';
+// Don't add /api to the base URL since the Vite proxy already handles this
+const apiBaseUrl = baseUrl;
+
+// Log the API base URL being used
+console.log('API Base URL:', apiBaseUrl);
 
 // Create axios instance with default config
 const api = axios.create({
   baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
   },
-  withCredentials: true, // Important for CSRF token handling
-  timeout: 10000, // 10 second timeout
+  withCredentials: true, // Required for cookies/CORS
 });
 
-// Add request interceptor to include CSRF token and auth token
-api.interceptors.request.use((config) => {
-  // Get CSRF token from cookie
-  const csrfToken = getCookie('csrftoken');
-  if (csrfToken) {
-    config.headers['X-CSRFToken'] = csrfToken;
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    // Add CSRF token if available
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+      config.headers['X-CSRFToken'] = csrfToken;
+    }
+    
+    // Add JWT token if available
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  
-  // Add JWT token if available
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  return config;
-});
+);
 
-// Add response interceptor to handle token refresh
+// Response interceptor to handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
-    // If error is 401 Unauthorized and we haven't already tried to refresh
+    // If error is 401 and we haven't tried refreshing token yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
       try {
         // Try to refresh the token
         const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-          // Create a new instance to avoid interceptors loop
-          const refreshResponse = await axios.post(
-            `${apiBaseUrl}/api/token/refresh/`,
-            { refresh: refreshToken },
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-          
-          const newAccessToken = refreshResponse.data.access;
-          
-          // Update stored token
-          localStorage.setItem('access_token', newAccessToken);
-          
-          // Update the original request and retry
-          originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-          return axios(originalRequest);
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
         }
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
         
-        // Clear tokens and redirect to login if refresh fails
+        const response = await api.post('/token/refresh/', {
+          refresh: refreshToken
+        });
+        
+        const newAccessToken = response.data.access;
+        
+        // Store the new token
+        localStorage.setItem('access_token', newAccessToken);
+        
+        // Update the Authorization header
+        originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+        api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+        
+        // Retry the original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // If refresh fails, clear tokens and reject
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        
-        // Redirect to login page if we're in a browser context
-        if (typeof window !== 'undefined') {
-          window.location.href = '/vue/login';
-        }
+        return Promise.reject(refreshError);
       }
     }
     
     return Promise.reject(error);
   }
 );
-
-// Helper function to get cookies
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-}
 
 // Product API endpoints
 export const productApi = {

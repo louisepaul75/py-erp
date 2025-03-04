@@ -1,82 +1,118 @@
 <template>
-    <div class="product-list">
-        <h1>Products</h1>
-        <!-- Search and filter form -->
-        <div class="filters">
-            <div class="search-box">
-                <input type="text" v-model="searchQuery" placeholder="Search products..." @input="debounceSearch"/>
-            </div>
-            <div class="filter-options">
-                <select v-model="selectedCategory" @change="loadProducts">
-                    <option value="">All Categories</option>
-                    <option v-for="category in categories" :key="category.id" :value="category.id">
-                        {{ category.name }}
-</option>
-                </select>
-                <label>
-                    <input type="checkbox" v-model="inStock" @change="loadProducts"/>
-                    In Stock Only
-                </label>
-            </div>
-        </div>
-        <!-- Loading indicator -->
-        <div v-if="loading" class="loading">
-            <p>Loading products...</p>
-        </div>
-        <!-- Error message -->
-        <div v-else-if="error" class="error">
-            <p>{{ error }}</p>
-            <div class="error-actions">
-                <button @click="loadProducts" class="retry-button">
-                    Retry
-</button>
-                <button @click="testApiConnection" class="test-button">
-                    Test API
-</button>
-            </div>
-            <div class="api-debug" v-if="showApiDebug">
-                <h4>Debug API Connection</h4>
-                <div class="api-url-input">
-                    <label for="apiUrl">API URL:</label>
-                    <input type="text" id="apiUrl" v-model="apiUrl" placeholder="http://localhost:8050"/>
-                    <button @click="updateApiUrl" class="update-button">Update</button>
-                </div>
-            </div>
-            <button @click="showApiDebug = !showApiDebug" class="debug-toggle">
-                {{ showApiDebug ? 'Hide Debug Options' : 'Show Debug Options' }}
-</button>
-        </div>
-        <!-- Product grid -->
-        <div v-else class="product-grid">
-            <div v-for="product in products" :key="product.id" class="product-card" @click="viewProductDetails(product.id)">
-                <div class="product-image">
-                    <img :src="product.primary_image ? product.primary_image.url : '/static/images/no-image.png'" :alt="product.name"/>
-                </div>
-                <div class="product-info">
-                    <h3>{{ product.name }}</h3>
-                    <p class="sku">SKU: {{ product.sku }}</p>
-                    <p v-if="product.variants_count" class="variants-badge">
-            {{ product.variants_count }} variants </p>
-                    <p v-if="product.category" class="category">
-            {{ product.category.name }} </p>
-                </div>
-            </div>
-        </div>
-        <!-- Pagination -->
-        <div v-if="products.length > 0" class="pagination">
-            <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
-                Previous
-</button><span>Page {{ currentPage }} of {{ totalPages }}</span>
-            <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
-                Next
-</button>
-        </div>
-        <!-- No results message -->
-        <div v-if="products.length === 0 && !loading" class="no-results">
-            <p>No products found matching your criteria.</p>
-        </div>
+  <div class="product-list">
+    <h1>Products</h1>
+    
+    <!-- Search and filter form -->
+    <div class="filters">
+      <div class="search-box">
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Search products..." 
+          @input="debounceSearch"
+        />
+      </div>
+      
+      <div class="filter-options">
+        <select v-model="selectedCategory" @change="loadProducts">
+          <option value="">All Categories</option>
+          <option v-for="category in categories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+        
+        <label>
+          <input type="checkbox" v-model="inStock" @change="loadProducts" />
+          In Stock Only
+        </label>
+      </div>
     </div>
+    
+    <!-- Loading indicator -->
+    <div v-if="loading" class="loading">
+      <p>Loading products...</p>
+    </div>
+    
+    <!-- Error message -->
+    <div v-else-if="error" class="error">
+      <p>{{ error }}</p>
+      <div class="error-actions">
+        <button @click="loadProducts" class="retry-button">
+          Retry
+        </button>
+        <button @click="testApiConnection" class="test-button">
+          Test API
+        </button>
+      </div>
+      <div class="api-debug" v-if="showApiDebug">
+        <h4>Debug API Connection</h4>
+        <div class="api-url-input">
+          <label for="apiUrl">API URL:</label>
+          <input 
+            type="text" 
+            id="apiUrl" 
+            v-model="apiUrl" 
+            placeholder="http://localhost:8050/api"
+          />
+          <button @click="updateApiUrl" class="update-button">Update</button>
+        </div>
+      </div>
+      <button @click="showApiDebug = !showApiDebug" class="debug-toggle">
+        {{ showApiDebug ? 'Hide Debug Options' : 'Show Debug Options' }}
+      </button>
+    </div>
+    
+    <!-- Product grid -->
+    <div v-else class="product-grid">
+      <div 
+        v-for="product in products" 
+        :key="product.id" 
+        class="product-card"
+        @click="viewProductDetails(product.id)"
+      >
+        <div class="product-image">
+          <img 
+            :src="product.primary_image ? product.primary_image.url : '/static/images/no-image.png'" 
+            :alt="product.name"
+          />
+        </div>
+        <div class="product-info">
+          <h3>{{ product.name }}</h3>
+          <p class="sku">SKU: {{ product.sku }}</p>
+          <p v-if="product.variants_count" class="variants-badge">
+            {{ product.variants_count }} variants
+          </p>
+          <p v-if="product.category" class="category">
+            {{ product.category.name }}
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pagination -->
+    <div v-if="products.length > 0" class="pagination">
+      <button 
+        :disabled="currentPage === 1" 
+        @click="changePage(currentPage - 1)"
+      >
+        Previous
+      </button>
+      <span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button 
+        :disabled="currentPage === totalPages" 
+        @click="changePage(currentPage + 1)"
+      >
+        Next
+      </button>
+    </div>
+    
+    <!-- No results message -->
+    <div v-if="products.length === 0 && !loading" class="no-results">
+      <p>No products found matching your criteria.</p>
+    </div>
+  </div>
 </template>
+
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -124,7 +160,7 @@ const pageSize = ref(12);
 
 // Debug state
 const showApiDebug = ref(false);
-const apiUrl = ref(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050');
+const apiUrl = ref(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api');
 
 // Computed
 const totalPages = computed(() => Math.ceil(totalProducts.value / pageSize.value));
@@ -442,7 +478,7 @@ const checkServerStatus = async (): Promise<boolean> => {
     console.log('Checking server status...');
     
     // Try to fetch the API status
-    let response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/status`, {
+    let response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api'}/status`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -453,7 +489,7 @@ const checkServerStatus = async (): Promise<boolean> => {
     // If status endpoint doesn't exist, try the products endpoint
     if (response.status === 404) {
       console.log('Status endpoint not found, trying products endpoint...');
-      response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/products/`, {
+      response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api'}/products/`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -477,6 +513,7 @@ const checkServerStatus = async (): Promise<boolean> => {
   }
 };
 </script>
+
 <style scoped>
 .product-list {
   padding: 20px 0;

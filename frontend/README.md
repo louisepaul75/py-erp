@@ -90,6 +90,8 @@ The application implements a comprehensive JWT-based authentication system that 
 
 For detailed documentation, see [Authentication Implementation](../docs/vue_auth_implementation.md).
 
+If you encounter authentication issues, refer to the [Authentication Troubleshooting Guide](../docs/frontend_auth_troubleshooting.md).
+
 ## Adding New Components
 
 To create a new component:

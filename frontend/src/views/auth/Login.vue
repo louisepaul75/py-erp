@@ -64,10 +64,10 @@ const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 
-// Initialize credentials
+// Initialize credentials with the superuser we created
 const credentials = ref<LoginCredentials>({
-  username: '',
-  password: ''
+  username: 'arau.j',
+  password: 'password'
 });
 
 // Handle login form submission

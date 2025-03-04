@@ -1,95 +1,128 @@
 <template>
-    <div class="product-detail">
-        <!-- Loading indicator -->
-        <div v-if="loading" class="loading">
-            <p>Loading product details...</p>
-        </div>
-        <!-- Error message -->
-        <div v-else-if="error" class="error">
-            <p>{{ error }}</p>
-            <button @click="goBack" class="back-button">Go Back</button>
-        </div>
-        <!-- Product details -->
-        <div v-else class="product-content">
-            <div class="product-header">
-                <button @click="goBack" class="back-button">
-                    &larr; Back to Products
-</button>
-                <h1>{{ product.name }}</h1>
-                <p class="sku">SKU: {{ product.sku }}</p>
-                <div v-if="product.category" class="category-badge">
-                    {{ product.category.name }}
-</div>
-            </div>
-            <div class="product-layout">
-                <!-- Product images -->
-                <div class="product-images">
-                    <div class="main-image">
-                        <img :src="selectedImage ? selectedImage.url : (product.primary_image ? product.primary_image.url : '/static/images/no-image.png')" :alt="product.name"/>
-                    </div>
-                    <div v-if="product.images && product.images.length > 1" class="image-thumbnails">
-                        <div v-for="image in product.images" :key="image.id" class="thumbnail" :class="{ active: selectedImage && selectedImage.id === image.id }" @click="selectedImage = image">
-                            <img :src="image.thumbnail_url" :alt="product.name"/>
-                        </div>
-                    </div>
-                </div>
-                <!-- Product info -->
-                <div class="product-info">
-                    <div class="info-section">
-                        <h3>Description</h3>
-                        <p v-if="product.description">{{ product.description }}</p>
-                        <p v-else>No description available.</p>
-                    </div>
-                    <div class="info-section">
-                        <h3>Details</h3>
-                        <table class="details-table">
-                            <tr v-if="product.category">
-                                <td>Category:</td>
-                                <td>{{ product.category.name }}</td>
-                            </tr>
-                            <tr v-if="product.is_active !== undefined">
-                                <td>Status:</td>
-                                <td>{{ product.is_active ? 'Active' : 'Inactive' }}</td>
-                            </tr>
-                            <tr v-if="product.created_at">
-                                <td>Created:</td>
-                                <td>{{ formatDate(product.created_at) }}</td>
-                            </tr>
-                            <tr v-if="product.updated_at">
-                                <td>Last Updated:</td>
-                                <td>{{ formatDate(product.updated_at) }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <!-- Variants section -->
-            <div v-if="product.variants && product.variants.length > 0" class="variants-section">
-                <h2>Product Variants ({{ product.variants.length }})</h2>
-                <div class="variants-grid">
-                    <div v-for="variant in product.variants" :key="variant.id" class="variant-card" @click="viewVariantDetails(variant.id)">
-                        <div class="variant-image">
-                            <img :src="variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png'" :alt="variant.name"/>
-                        </div>
-                        <div class="variant-info">
-                            <h3>{{ variant.name }}</h3>
-                            <p class="variant-sku">SKU: {{ variant.sku }}</p>
-                            <div class="variant-attributes" v-if="variant.attributes && variant.attributes.length"><span v-for="(attr, index) in variant.attributes" :key="index" class="attribute-badge">
-                  {{ attr.name }}: {{ attr.value }} </span>
-                            </div>
-                            <div class="variant-stock" :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }">
-                                {{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}
-</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div v-else class="no-variants">
-                <p>This product has no variants.</p>
-            </div>
-        </div>
+  <div class="product-detail">
+    <!-- Loading indicator -->
+    <div v-if="loading" class="loading">
+      <p>Loading product details...</p>
     </div>
+    
+    <!-- Error message -->
+    <div v-else-if="error" class="error">
+      <p>{{ error }}</p>
+      <button @click="goBack" class="back-button">Go Back</button>
+    </div>
+    
+    <!-- Product details -->
+    <div v-else class="product-content">
+      <div class="product-header">
+        <button @click="goBack" class="back-button">
+          &larr; Back to Products
+        </button>
+        <h1>{{ product.name }}</h1>
+        <p class="sku">SKU: {{ product.sku }}</p>
+        <div v-if="product.category" class="category-badge">
+          {{ product.category.name }}
+        </div>
+      </div>
+      
+      <div class="product-layout">
+        <!-- Product images -->
+        <div class="product-images">
+          <div class="main-image">
+            <img 
+              :src="selectedImage ? selectedImage.url : (product.primary_image ? product.primary_image.url : '/static/images/no-image.png')" 
+              :alt="product.name"
+            />
+          </div>
+          
+          <div v-if="product.images && product.images.length > 1" class="image-thumbnails">
+            <div 
+              v-for="image in product.images" 
+              :key="image.id" 
+              class="thumbnail"
+              :class="{ active: selectedImage && selectedImage.id === image.id }"
+              @click="selectedImage = image"
+            >
+              <img :src="image.thumbnail_url" :alt="product.name" />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Product info -->
+        <div class="product-info">
+          <div class="info-section">
+            <h3>Description</h3>
+            <p v-if="product.description">{{ product.description }}</p>
+            <p v-else>No description available.</p>
+          </div>
+          
+          <div class="info-section">
+            <h3>Details</h3>
+            <table class="details-table">
+              <tr v-if="product.category">
+                <td>Category:</td>
+                <td>{{ product.category.name }}</td>
+              </tr>
+              <tr v-if="product.is_active !== undefined">
+                <td>Status:</td>
+                <td>{{ product.is_active ? 'Active' : 'Inactive' }}</td>
+              </tr>
+              <tr v-if="product.created_at">
+                <td>Created:</td>
+                <td>{{ formatDate(product.created_at) }}</td>
+              </tr>
+              <tr v-if="product.updated_at">
+                <td>Last Updated:</td>
+                <td>{{ formatDate(product.updated_at) }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Variants section -->
+      <div v-if="product.variants && product.variants.length > 0" class="variants-section">
+        <h2>Product Variants ({{ product.variants.length }})</h2>
+        
+        <div class="variants-grid">
+          <div 
+            v-for="variant in product.variants" 
+            :key="variant.id" 
+            class="variant-card"
+            @click="viewVariantDetails(variant.id)"
+          >
+            <div class="variant-image">
+              <img 
+                :src="variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png'" 
+                :alt="variant.name"
+              />
+            </div>
+            <div class="variant-info">
+              <h3>{{ variant.name }}</h3>
+              <p class="variant-sku">SKU: {{ variant.sku }}</p>
+              <div class="variant-attributes" v-if="variant.attributes && variant.attributes.length">
+                <span 
+                  v-for="(attr, index) in variant.attributes" 
+                  :key="index" 
+                  class="attribute-badge"
+                >
+                  {{ attr.name }}: {{ attr.value }}
+                </span>
+              </div>
+              <div class="variant-stock" :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }">
+                {{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div v-else class="no-variants">
+        <p>This product has no variants.</p>
+      </div>
+    </div>
+  </div>
 </template>
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
@@ -200,6 +233,7 @@ onMounted(() => {
   loadProduct();
 });
 </script>
+
 <style scoped>
 .product-detail {
   padding: 20px 0;
