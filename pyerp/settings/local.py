@@ -21,22 +21,17 @@ DEBUG = True
 # Allow all hosts for local development
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
 
-# Use SQLite database for local development
+# Database configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
-
-# Check for DATABASE_URL and use that if provided
-if 'DATABASE_URL' in os.environ:
-    import dj_database_url
-    db_url = os.environ.get('DATABASE_URL')
-    # Only use it if it's sqlite:// to avoid importing MySQL
-    if db_url.startswith('sqlite://'):
-        print(f"Using DATABASE_URL with SQLite: {db_url}")
-        DATABASES['default'] = dj_database_url.parse(db_url)
 
 # Disable security features for local development
 # These settings will be overridden by settings_https.py if it's imported
@@ -63,7 +58,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Celery settings for local development
 CELERY_TASK_ALWAYS_EAGER = True  # Run tasks synchronously
 CELERY_BROKER_URL = 'memory://'
-CELERY_RESULT_BACKEND = 'db+sqlite:///celery-results.sqlite'
+CELERY_RESULT_BACKEND = 'django-db'
 
 # Static files for local development
 STATIC_URL = '/static/'

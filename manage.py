@@ -9,10 +9,13 @@ import dotenv
 
 def main():
     """Run administrative tasks."""
-    # Load environment variables from .env file (if it exists)
-    env_file = Path('.') / '.env'
+    # Load environment variables from config/env/.env file
+    env_file = Path('.') / 'config' / 'env' / '.env'
     if env_file.exists():
+        print(f"Loading environment from {env_file}")
         dotenv.load_dotenv(str(env_file))
+    else:
+        print(f"Warning: Environment file not found at {env_file}")
 
     # Set the default Django settings module if not defined
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.development')

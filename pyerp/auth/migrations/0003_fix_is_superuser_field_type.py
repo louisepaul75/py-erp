@@ -1,47 +1,16 @@
-from django.db import migrations
+from django.db import migrations, models
 
 def convert_to_boolean(apps, schema_editor):
-    if schema_editor.connection.vendor == 'postgresql':
-        # First, create a temporary column with the correct type
-        schema_editor.execute(
-            """
-            ALTER TABLE auth_user 
-            ADD COLUMN is_superuser_new boolean DEFAULT false;
-            
-            UPDATE auth_user 
-            SET is_superuser_new = CASE 
-                WHEN is_superuser = 1 THEN true 
-                ELSE false 
-            END;
-            
-            ALTER TABLE auth_user 
-            DROP COLUMN is_superuser;
-            
-            ALTER TABLE auth_user 
-            RENAME COLUMN is_superuser_new TO is_superuser;
-            """
-        )
+    User = apps.get_model('auth', 'User')
+    for user in User.objects.all():
+        user.is_superuser = bool(user.is_superuser)
+        user.save()
 
 def convert_to_smallint(apps, schema_editor):
-    if schema_editor.connection.vendor == 'postgresql':
-        schema_editor.execute(
-            """
-            ALTER TABLE auth_user 
-            ADD COLUMN is_superuser_new smallint DEFAULT 0;
-            
-            UPDATE auth_user 
-            SET is_superuser_new = CASE 
-                WHEN is_superuser = true THEN 1 
-                ELSE 0 
-            END;
-            
-            ALTER TABLE auth_user 
-            DROP COLUMN is_superuser;
-            
-            ALTER TABLE auth_user 
-            RENAME COLUMN is_superuser_new TO is_superuser;
-            """
-        )
+    User = apps.get_model('auth', 'User')
+    for user in User.objects.all():
+        user.is_superuser = 1 if user.is_superuser else 0
+        user.save()
 
 class Migration(migrations.Migration):
     dependencies = [
@@ -49,6 +18,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterField(
+            model_name='user',
+            name='is_superuser',
+            field=models.BooleanField(default=False),
+        ),
         migrations.RunPython(
             convert_to_boolean,
             convert_to_smallint

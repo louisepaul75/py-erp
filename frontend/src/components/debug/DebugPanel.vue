@@ -2,7 +2,7 @@
 <template>
   <div class="debug-panel" v-if="isDev">
     <div class="debug-header" @click="toggleExpanded">
-      <div class="debug-badge">DEV MODE</div>
+      <div class="debug-badge">DEV MODE (Port: {{ currentPort }})</div>
       <div class="debug-chevron" :class="{ 'expanded': isExpanded }">▼</div>
     </div>
     <div class="debug-content" v-if="isExpanded">
@@ -12,6 +12,7 @@
           <p>App Version: {{ appVersion }}</p>
           <p>Vue Version: {{ vueVersion }}</p>
           <p>Node Env: {{ nodeEnv }}</p>
+          <p>Dev Server: {{ isDevServer ? 'Yes' : 'No' }}</p>
         </div>
         <div class="debug-section">
           <h4>Performance</h4>
@@ -24,29 +25,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { version as vueVersion } from 'vue';
 
 const isExpanded = ref(false);
-const isDev = import.meta.env.DEV;
-const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
-const nodeEnv = import.meta.env.MODE;
 const pageLoadTime = ref(0);
 const memoryUsage = ref('');
+
+// Get current port
+const currentPort = computed(() => typeof window !== 'undefined' ? window.location.port : '');
+const isDevServer = computed(() => currentPort.value === '3000');
+
+// More comprehensive development environment detection
+const isDevelopment = computed(() => {
+  const devServer = isDevServer.value;
+  const devMode = import.meta.env.DEV || import.meta.env.MODE === 'development';
+  console.log('Development detection:', {
+    devServer,
+    devMode,
+    port: currentPort.value,
+    env: import.meta.env
+  });
+  return devServer || devMode;
+});
+
+// Make isDev reactive using computed
+const isDev = isDevelopment;
+
+const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+const nodeEnv = import.meta.env.MODE;
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value;
 };
 
 onMounted(() => {
+  console.log('Debug Panel mounted. Development mode:', isDev.value);
+  
   // Calculate page load time
-  if (window.performance) {
+  if (typeof window !== 'undefined' && window.performance) {
     const perfData = window.performance.timing;
     pageLoadTime.value = perfData.loadEventEnd - perfData.navigationStart;
   }
 
   // Get memory usage if available
-  if (window.performance && (performance as any).memory) {
+  if (typeof window !== 'undefined' && window.performance && (performance as any).memory) {
     const memory = (performance as any).memory;
     memoryUsage.value = `${Math.round(memory.usedJSHeapSize / 1048576)}MB / ${Math.round(memory.jsHeapSizeLimit / 1048576)}MB`;
   } else {

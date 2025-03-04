@@ -5,6 +5,7 @@ These settings extend the development settings with test-specific configurations
 """
 
 from .development import *  # noqa
+import os
 
 # Remove debug toolbar from installed apps
 if 'debug_toolbar' in INSTALLED_APPS:
@@ -19,13 +20,17 @@ DEBUG_TOOLBAR_CONFIG = {
     'IS_RUNNING_TESTS': True,
 }
 
-# Use in-memory SQLite for faster tests
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': ':memory:',
-#     }
-# }
+# Database configuration for tests
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+    }
+}
 
 # Disable password hashing for faster tests
 PASSWORD_HASHERS = [
