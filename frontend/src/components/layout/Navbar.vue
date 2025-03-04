@@ -2,8 +2,7 @@
   <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
     <div class="container">
       <router-link class="navbar-brand" to="/">
-        <img src="@/assets/wsz_logo.png" alt="pyERP Logo" height="30" class="me-2">
-        pyERP
+        <img src="@/assets/wsz_logo_long.png" alt="WSZ Logo" height="40">
       </router-link>
       
       <button 
@@ -16,7 +15,7 @@
       </button>
       
       <div class="collapse navbar-collapse" id="navbarContent">
-        <ul class="navbar-nav me-auto">
+        <ul class="navbar-nav mx-auto">
           <li class="nav-item">
             <router-link class="nav-link" to="/">Dashboard</router-link>
           </li>
