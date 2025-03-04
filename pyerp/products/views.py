@@ -10,6 +10,9 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy
+from django.db.models import Value
+from django.db.models.functions import Cast
+from django.db.models.fields import BooleanField
 
 from pyerp.products.models import ParentProduct, VariantProduct, ProductCategory
 from pyerp.products.forms import ProductSearchForm
@@ -328,6 +331,29 @@ class ProductAPIView(LoginRequiredMixin, View):
             'stock_quantity': product.stock_quantity,
         }
         
+        # Add category if available
+        if hasattr(product, 'category') and product.category:
+            try:
+                product_data['category'] = {
+                    'id': product.category.id,
+                    'name': product.category.name,
+                    'code': getattr(product.category, 'code', '')
+                }
+            except Exception as e:
+                # Log the error but don't fail the request
+                print(f"Error getting category for product {product.id}: {str(e)}")
+        
+        # Add variants count for parent products
+        if isinstance(product, ParentProduct):
+            try:
+                from pyerp.products.models import VariantProduct
+                variants_count = VariantProduct.objects.filter(parent=product).count()
+                product_data['variants_count'] = variants_count
+            except Exception as e:
+                # Log the error but don't fail the request
+                print(f"Error getting variants count for product {product.id}: {str(e)}")
+                product_data['variants_count'] = 0
+        
         # Add primary image if available
         if hasattr(product, 'images') and product.images.exists():
             try:
@@ -358,9 +384,14 @@ class ProductAPIView(LoginRequiredMixin, View):
                     primary_image = product.images.first()
                 
                 if primary_image:
-                    product_data['image_url'] = primary_image.image_url
-            except:
-                pass
+                    product_data['primary_image'] = {
+                        'id': primary_image.id,
+                        'url': primary_image.image_url,
+                        'thumbnail_url': getattr(primary_image, 'thumbnail_url', primary_image.image_url)
+                    }
+            except Exception as e:
+                # Log the error but don't fail the request
+                print(f"Error getting primary image for product {product.id}: {str(e)}")
                 
         return product_data
 
@@ -376,19 +407,56 @@ class ProductListAPIView(ProductAPIView):
         # Apply filters from query parameters
         category_id = request.GET.get('category')
         if category_id:
-            products = products.filter(category_id=category_id)
+            try:
+                # Convert to integer and validate
+                category_id = int(category_id)
+                # First verify the category exists
+                category = ProductCategory.objects.get(id=category_id)
+                # Then filter products by the validated category
+                products = products.filter(category=category)
+            except (ValueError, TypeError):
+                print(f"Invalid category_id format: {category_id}")
+            except ProductCategory.DoesNotExist:
+                print(f"Category with id {category_id} does not exist")
             
         search_query = request.GET.get('q')
         if search_query:
             products = products.filter(name__icontains=search_query)
             
+        # Handle in_stock filter
+        in_stock = request.GET.get('in_stock')
+        if in_stock and in_stock.lower() in ('true', '1', 'yes'):
+            # Filter for products with stock > 0, handling NULL values
+            products = products.exclude(stock_quantity__isnull=True).filter(stock_quantity__gt=0)
+            
+        # Handle pagination
+        try:
+            page = int(request.GET.get('page', 1))
+            page_size = int(request.GET.get('page_size', 12))
+        except (ValueError, TypeError):
+            page = 1
+            page_size = 12
+        
+        # Calculate start and end indices
+        start_index = (page - 1) * page_size
+        end_index = start_index + page_size
+        
+        # Get total count before slicing
+        total_count = products.count()
+        
+        # Slice the queryset for pagination
+        products = products[start_index:end_index]
+            
         # Convert products to JSON-serializable format
         products_data = [self.get_product_data(product) for product in products]
         
-        # Return JSON response
+        # Return JSON response with pagination info
         return JsonResponse({
-            'count': len(products_data),
-            'results': products_data
+            'count': total_count,
+            'results': products_data,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': (total_count + page_size - 1) // page_size
         })
 
 

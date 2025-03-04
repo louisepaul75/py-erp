@@ -50,15 +50,21 @@
         <div v-else class="product-grid">
             <div v-for="product in products" :key="product.id" class="product-card" @click="viewProductDetails(product.id)">
                 <div class="product-image">
-                    <img :src="product.primary_image ? product.primary_image.url : '/static/images/no-image.png'" :alt="product.name"/>
+                    <img 
+                        :src="product.primary_image && product.primary_image.url ? product.primary_image.url : '/static/images/no-image.png'" 
+                        :alt="product.name"
+                        @error="handleImageError"
+                    />
                 </div>
                 <div class="product-info">
                     <h3>{{ product.name }}</h3>
                     <p class="sku">SKU: {{ product.sku }}</p>
                     <p v-if="product.variants_count" class="variants-badge">
-            {{ product.variants_count }} variants </p>
+                        {{ product.variants_count }} variants 
+                    </p>
                     <p v-if="product.category" class="category">
-            {{ product.category.name }} </p>
+                        {{ product.category.name }} 
+                    </p>
                 </div>
             </div>
         </div>
@@ -99,6 +105,8 @@ interface Product {
   name: string;
   sku: string;
   description?: string;
+  list_price?: number;
+  stock_quantity?: number;
   variants_count?: number;
   primary_image?: ProductImage;
   category?: Category;
@@ -259,15 +267,13 @@ const loadProducts = async () => {
     // Create params object with only defined values
     const params: Record<string, any> = {
       page: currentPage.value,
+      page_size: pageSize.value
     };
     
     // Only add parameters that have values
     if (searchQuery.value) params.q = searchQuery.value;
     if (selectedCategory.value) params.category = selectedCategory.value;
     if (inStock.value) params.in_stock = inStock.value;
-    
-    // Always include is_parent parameter
-    params.is_parent = true;
     
     console.log('API request params:', params);
     
@@ -276,8 +282,41 @@ const loadProducts = async () => {
     
     if (response && response.data) {
       if (response.data.results) {
-        products.value = response.data.results;
+        // Process the products to ensure all required fields are present
+        const processedProducts = response.data.results.map((product: any) => {
+          return {
+            id: product.id,
+            name: product.name || 'Unnamed Product',
+            sku: product.sku || 'No SKU',
+            description: product.description || '',
+            list_price: product.list_price,
+            stock_quantity: product.stock_quantity || 0,
+            variants_count: product.variants_count || 0,
+            primary_image: product.primary_image || null,
+            category: product.category || null,
+            is_active: product.is_active !== false, // Default to true if not specified
+          };
+        });
+        
+        products.value = processedProducts;
         totalProducts.value = response.data.count || 0;
+        
+        // Log the products received
+        console.log(`Loaded ${products.value.length} products out of ${totalProducts.value} total`);
+        
+        // Check if products have the expected fields
+        if (products.value.length > 0) {
+          const firstProduct = products.value[0];
+          console.log('Sample product data:', firstProduct);
+          
+          // Check for missing fields
+          const expectedFields = ['id', 'name', 'sku', 'primary_image', 'category', 'variants_count'];
+          const missingFields = expectedFields.filter(field => !(field in firstProduct));
+          
+          if (missingFields.length > 0) {
+            console.warn(`Product data is missing expected fields: ${missingFields.join(', ')}`);
+          }
+        }
       } else {
         // Handle case where results property is missing
         console.error('API response missing results property:', response.data);
@@ -308,6 +347,21 @@ const loadProducts = async () => {
     // Clear products on error
     products.value = [];
     totalProducts.value = 0;
+    
+    // Show option to use mock data
+    error.value += '\n\nWould you like to use sample data instead?';
+    
+    // Add button to use mock data
+    setTimeout(() => {
+      const errorDiv = document.querySelector('.error');
+      if (errorDiv) {
+        const mockButton = document.createElement('button');
+        mockButton.textContent = 'Use Sample Data';
+        mockButton.className = 'mock-button';
+        mockButton.onclick = useMockData;
+        errorDiv.appendChild(mockButton);
+      }
+    }, 0);
   } finally {
     loading.value = false;
   }
@@ -429,10 +483,10 @@ onMounted(() => {
     console.log('Using stored API URL:', apiUrl.value);
   }
   
-  // Use mock data by default since the API is not working
-  useMockData();
+  // Load products from API
+  loadProducts();
   
-  // Still load categories for the filter
+  // Load categories for the filter
   loadCategories();
 });
 
@@ -474,6 +528,15 @@ const checkServerStatus = async (): Promise<boolean> => {
   } catch (err) {
     console.error('Server status check failed:', err);
     return false;
+  }
+};
+
+// Handle image error
+const handleImageError = (event: Event) => {
+  console.error('Image load failed');
+  // Set the source to the fallback image
+  if (event.target instanceof HTMLImageElement) {
+    event.target.src = '/static/images/no-image.png';
   }
 };
 </script>

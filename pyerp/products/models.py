@@ -186,7 +186,8 @@ class BaseProduct(models.Model):
     # Status flags
     is_active = models.BooleanField(
         default=True,
-        help_text=_('Whether the product is active')
+        help_text=_('Whether the product is active'),
+        db_column='is_active',  # Explicit column name
     )
     is_discontinued = models.BooleanField(
         default=False,
