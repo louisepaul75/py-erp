@@ -9,9 +9,18 @@ export default defineConfig(({ mode }) => {
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '');
   
+  // Determine if we're running in a local development environment
+  const isLocalDev = process.env.NODE_ENV === 'development' && 
+                    (!process.env.VITE_API_HOST || process.env.VITE_API_HOST === 'localhost');
+  
   // Get API URL from environment variables or use default
-  const apiUrl = env.VITE_API_BASE_URL || 'http://localhost:8050/api';
-  const apiBaseUrl = apiUrl.replace('/api', '');
+  const apiUrl = isLocalDev ? 'http://localhost:8050' : (env.VITE_API_NETWORK_URL || env.VITE_API_BASE_URL);
+  const apiBaseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
+  
+  console.log('Mode:', mode);
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('API Base URL:', apiBaseUrl);
+  console.log('Is Local Development:', isLocalDev);
   
   return {
     plugins: [

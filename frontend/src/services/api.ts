@@ -1,12 +1,32 @@
 import axios from 'axios';
 
-// Get the base URL from environment variable or localStorage, or use default
-const baseUrl = localStorage.getItem('api_base_url') || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050';
+// Determine the appropriate base URL based on the environment
+const determineBaseUrl = () => {
+  // First check localStorage for any manually set URL
+  const storedUrl = localStorage.getItem('api_base_url');
+  if (storedUrl) return storedUrl;
+
+  // Then check if we're running locally
+  const isLocalhost = window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1' ||
+                     window.location.hostname === '0.0.0.0';
+
+  // If we're running locally, use localhost
+  if (isLocalhost) {
+    return 'http://localhost:8050';
+  }
+
+  // Otherwise use the configured network URL or fallback to window.location.origin
+  return import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
+};
+
+const baseUrl = determineBaseUrl();
 // Don't add /api to the base URL since the Vite proxy already handles this
-const apiBaseUrl = baseUrl;
+const apiBaseUrl = baseUrl.endsWith('/api') ? baseUrl.slice(0, -4) : baseUrl;
 
 // Log the API base URL being used
 console.log('API Base URL:', apiBaseUrl);
+console.log('Running on hostname:', window.location.hostname);
 
 // Create axios instance with default config
 const api = axios.create({
