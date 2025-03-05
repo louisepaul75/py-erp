@@ -10,7 +10,8 @@ docker rm pyerp-prod || true
 
 # Rebuild the Docker image
 echo "Rebuilding Docker image..."
-docker build -t pyerp-prod-image -f docker/Dockerfile.prod .
+docker build -t pyerp-prod-image -f docker/Dockerfile.prod \
+  --build-arg DJANGO_SETTINGS_MODULE=pyerp.config.settings.production .
 
 # Start a new container
 echo "Starting new pyerp-prod container..."

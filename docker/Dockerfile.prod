@@ -52,6 +52,10 @@ COPY . /app/
 # Create directories for static, media, logs, and data files
 RUN mkdir -p /app/static /app/media /app/logs /app/data
 
+# Set Django settings module for collectstatic
+ARG DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
+ENV DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}
+
 # Collect static files
 RUN python manage.py collectstatic --noinput
 
@@ -70,8 +74,7 @@ EXPOSE 80
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    DJANGO_SETTINGS_MODULE=pyerp.settings.production
+    PYTHONDONTWRITEBYTECODE=1
 
 # Set up entrypoint
 COPY docker/entrypoint.prod.sh /entrypoint.sh
