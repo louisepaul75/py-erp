@@ -65,6 +65,9 @@ npx vite build\n\
 # Copy the rest of the frontend code
 COPY frontend/ /app/frontend/
 
+# Ensure the custom build script has execute permissions
+RUN chmod +x /app/frontend/custom-build.sh
+
 # Build Vue frontend using our custom script
 RUN ./custom-build.sh
 RUN mkdir -p /app/staticfiles/vue
