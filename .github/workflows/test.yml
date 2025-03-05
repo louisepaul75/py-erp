@@ -21,15 +21,15 @@ jobs:
       with:
         python-version: '3.10'
         cache: 'pip'
+        architecture: 'x64'  # Explicitly specify architecture
     
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install flake8==7.0.0 mypy==1.5.1
-        if [ -f requirements/requirements.dev.txt ]; then pip install -r requirements/requirements.dev.txt; fi
-        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-        if [ -f requirements/requirements.prod.txt ]; then pip install -r requirements/requirements.prod.txt; fi
-
+        python -m pip install flake8==7.0.0 mypy==1.5.1
+        if [ -f requirements/requirements.dev.txt ]; then python -m pip install -r requirements/requirements.dev.txt; fi
+        if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt; fi
+        if [ -f requirements/requirements.prod.txt ]; then python -m pip install -r requirements/requirements.prod.txt; fi
 
     - name: Lint with flake8
       run: |
@@ -37,9 +37,10 @@ jobs:
         python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings
         python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
     - name: Check types with mypy
       run: |
-        mypy .
+        python -m mypy .
 
   # 1. General Django framework functionality tests
   django-framework-tests:
