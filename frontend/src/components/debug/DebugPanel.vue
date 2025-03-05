@@ -13,6 +13,7 @@
           <p>Vue Version: {{ vueVersion }}</p>
           <p>Node Env: {{ nodeEnv }}</p>
           <p>Dev Server: {{ isDevServer ? 'Yes' : 'No' }}</p>
+          <p>Docker: {{ isDocker ? 'Yes' : 'No' }}</p>
         </div>
         <div class="debug-section">
           <h4>Performance</h4>
@@ -36,6 +37,16 @@ const memoryUsage = ref('');
 const currentPort = computed(() => typeof window !== 'undefined' ? window.location.port : '');
 const isDevServer = computed(() => currentPort.value === '3000');
 
+// Check if running in Docker
+const isDocker = computed(() => {
+  // Check for common Docker environment indicators
+  return typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' || 
+    window.location.hostname.includes('docker') ||
+    window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/) // IP address format
+  );
+});
+
 // More comprehensive development environment detection
 const isDevelopment = computed(() => {
   const devServer = isDevServer.value;
@@ -44,7 +55,8 @@ const isDevelopment = computed(() => {
     devServer,
     devMode,
     port: currentPort.value,
-    env: import.meta.env
+    env: import.meta.env,
+    docker: isDocker.value
   });
   return devServer || devMode;
 });
@@ -57,6 +69,13 @@ const nodeEnv = import.meta.env.MODE;
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value;
+  
+  // Dispatch custom event for the footer to listen to
+  window.dispatchEvent(new CustomEvent('debug-panel-toggle', {
+    detail: {
+      expanded: isExpanded.value
+    }
+  }));
 };
 
 onMounted(() => {
@@ -81,14 +100,20 @@ onMounted(() => {
 <style scoped>
 .debug-panel {
   position: fixed;
-  bottom: 0;
+  bottom: 60px; /* Move up by 60px to be clearly visible above the footer */
   left: 0;
   right: 0;
   background: #ff9800;
   color: white;
-  z-index: 9999;
+  z-index: 10000; /* Lower z-index than footer to ensure it's below */
   font-family: monospace;
   box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+  /* Force hardware acceleration to fix stacking issues in some environments */
+  transform: translateZ(0);
+  will-change: transform;
+  border-radius: 4px 4px 0 0; /* Add rounded corners at the top */
+  margin: 0 10px; /* Add some margin on the sides */
+  max-width: calc(100% - 20px); /* Ensure it respects the margins */
 }
 
 .debug-header {
@@ -119,6 +144,8 @@ onMounted(() => {
   color: #333;
   padding: 16px;
   border-top: 1px solid #e0e0e0;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .debug-info {
