@@ -81,10 +81,11 @@ jobs:
       run: |
         pytest tests/unit/test_core_validators.py --cov=pyerp.core --cov-report=xml:coverage-framework.xml
         
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+    - name: Upload results to Codecov
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage-framework.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: Wilhelm-Schweizer/pyERP
         flags: django-framework
         name: django-framework-coverage
 
@@ -130,10 +131,11 @@ jobs:
       run: |
         pytest tests/unit/test_import_validation.py tests/unit/patched_test_import_validation.py --cov=pyerp.core.db --cov-report=xml:coverage-db.xml
         
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+    - name: Upload results to Codecov
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage-db.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: Wilhelm-Schweizer/pyERP
         flags: database-operations
         name: database-operations-coverage
 
@@ -179,10 +181,11 @@ jobs:
       run: |
         pytest tests/unit/test_core_views.py tests/unit/test_core_views_extended.py --cov=pyerp --cov-report=xml:coverage-ui.xml
         
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+    - name: Upload results to Codecov
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage-ui.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: Wilhelm-Schweizer/pyERP
         flags: ui-tests
         name: ui-coverage
 
@@ -235,9 +238,11 @@ jobs:
       run: |
         pytest tests/unit/test_validators.py tests/unit/test_validators_extended.py --cov=pyerp.production --cov-report=xml:coverage-production.xml
         
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
+    - name: Upload results to Codecov
+      uses: codecov/codecov-action@v5
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: Wilhelm-Schweizer/pyERP
         files: ./coverage-products.xml,./coverage-production.xml
         flags: business-modules
         name: business-modules-coverage

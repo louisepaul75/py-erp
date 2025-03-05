@@ -8,6 +8,7 @@
 
 ## How We Will Work Together
 
+**Critical Rule**: Never create new .env files, always use the existing in config directory
 **Critical Rule**: First Ensure a .ai/prd.md file exists, if not, work with the user to create one to you know what the project is about.
 **Critical Rule**: When I Say "Commit!", you will update story progress in detail, use 'git add .' from the root of the project, commit the changes, and push to the remote repository.
 

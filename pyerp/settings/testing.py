@@ -6,6 +6,7 @@ focused on test performance and isolation.
 """
 
 import os
+import sys
 import dj_database_url
 from .base import *  # noqa
 
@@ -14,28 +15,50 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
-# Use PostgreSQL database for testing
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
+# Database configuration for tests
+# Try to use PostgreSQL first, fall back to SQLite if connection fails
+import socket
+import psycopg2
+
+# Define PostgreSQL connection parameters
+PG_PARAMS = {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+    'USER': os.environ.get('DB_USER', 'postgres'),
+    'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+    'HOST': os.environ.get('DB_HOST', '192.168.73.65'),  # Remote PostgreSQL server
+    'PORT': os.environ.get('DB_PORT', '5432'),
+    'TEST': {
+        'NAME': 'test_pyerp_testing',  # Use a dedicated test database
+    },
 }
 
-# Alternative DATABASE_URL configuration (commented out)
-# DATABASES = {
-#     'default': dj_database_url.config(
-#         default=os.environ.get(
-#             'DATABASE_URL', 
-#             'postgresql://postgres:password@localhost:5432/pyerp_testing'
-#         ),
-#         conn_max_age=600,
-#     )
-# }
+# Define SQLite connection parameters as fallback
+SQLITE_PARAMS = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
+}
+
+# Try to connect to PostgreSQL, use SQLite if it fails
+try:
+    # Force more verbose output during tests
+    sys.stderr.write(f"Attempting to connect to PostgreSQL at {PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n")
+    
+    conn = psycopg2.connect(
+        dbname=PG_PARAMS['NAME'],
+        user=PG_PARAMS['USER'],
+        password=PG_PARAMS['PASSWORD'],
+        host=PG_PARAMS['HOST'],
+        port=PG_PARAMS['PORT'],
+        connect_timeout=5  # Slightly longer timeout
+    )
+    conn.close()
+    DATABASES = {'default': PG_PARAMS}
+    sys.stderr.write(f"SUCCESS: Using PostgreSQL database at {PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n")
+except (psycopg2.OperationalError, socket.error) as e:
+    sys.stderr.write(f"ERROR: Could not connect to PostgreSQL: {str(e)}\n")
+    sys.stderr.write("FALLBACK: Using SQLite for testing\n")
+    DATABASES = {'default': SQLITE_PARAMS}
 
 # Use the fastest possible password hasher
 PASSWORD_HASHERS = [
@@ -60,12 +83,21 @@ LOGGING = {
         'null': {
             'class': 'logging.NullHandler',
         },
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'WARNING',
+        },
     },
     'loggers': {
         '': {
-            'handlers': ['null'],
+            'handlers': ['console'],
             'propagate': False,
-            'level': 'CRITICAL',
+            'level': 'WARNING',
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
         },
     },
 }

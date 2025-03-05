@@ -738,6 +738,7 @@ class ImageSyncLog(models.Model):
     """
     Track image synchronization history and results
     """
+    id = models.BigAutoField(primary_key=True, auto_created=True)
     started_at = models.DateTimeField(
         auto_now_add=True,
         help_text=_('When the sync process started')

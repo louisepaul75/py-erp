@@ -6,6 +6,19 @@ These settings extend the development settings with test-specific configurations
 
 from .development import *  # noqa
 import os
+import sys
+import socket
+import psycopg2
+from pathlib import Path
+from .base import *
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+# Get the project root directory
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# Load environment variables from .env file
+env_path = PROJECT_ROOT / 'config' / 'env' / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # Remove debug toolbar from installed apps
 if 'debug_toolbar' in INSTALLED_APPS:
@@ -20,17 +33,46 @@ DEBUG_TOOLBAR_CONFIG = {
     'IS_RUNNING_TESTS': True,
 }
 
-# Database configuration for tests
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
+# Define PostgreSQL connection parameters
+PG_PARAMS = {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+    'USER': os.environ.get('DB_USER', 'postgres'),
+    'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+    'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
+    'PORT': os.environ.get('DB_PORT', '5432'),
+    'TEST': {
+        'NAME': 'test_pyerp_testing',
+    },
 }
+
+# Define SQLite connection parameters as fallback
+SQLITE_PARAMS = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': 'file:memorydb_default?mode=memory&cache=shared',
+    'TEST': {
+        'NAME': 'file:memorydb_default?mode=memory&cache=shared',
+    },
+}
+
+# Try to connect to PostgreSQL, fall back to SQLite if connection fails
+try:
+    print("Attempting to connect to PostgreSQL at {}:{}".format(PG_PARAMS['HOST'], PG_PARAMS['PORT']))
+    conn = psycopg2.connect(
+        dbname=PG_PARAMS['NAME'],
+        user=PG_PARAMS['USER'],
+        password=PG_PARAMS['PASSWORD'],
+        host=PG_PARAMS['HOST'],
+        port=PG_PARAMS['PORT'],
+        connect_timeout=5
+    )
+    conn.close()
+    print("SUCCESS: Connected to PostgreSQL")
+    DATABASES = {'default': PG_PARAMS}
+except Exception as e:
+    print("ERROR: Could not connect to PostgreSQL:", str(e))
+    print("\nFALLBACK: Using SQLite for testing")
+    DATABASES = {'default': SQLITE_PARAMS}
 
 # Disable password hashing for faster tests
 PASSWORD_HASHERS = [
@@ -40,17 +82,17 @@ PASSWORD_HASHERS = [
 # Disable logging during tests
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'handlers': {
-        'null': {
-            'class': 'logging.NullHandler',
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
         },
     },
     'loggers': {
-        '': {
-            'handlers': ['null'],
-            'level': 'CRITICAL',
-            'propagate': False,
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
         },
     },
 } 
