@@ -49,6 +49,14 @@ RUN pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 # Copy project code for dependency scanning
 COPY . /app/
 
+# Build Vue frontend
+WORKDIR /app/frontend
+RUN npm install
+RUN npm run build
+
+# Move back to app directory
+WORKDIR /app
+
 # Create directories and setup static files
 RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
     && chmod +x /app/scripts/ensure_static_dirs.sh \

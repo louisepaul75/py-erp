@@ -24,6 +24,7 @@ docker run -d \
   pyerp-dev-image \
   /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
 
-# Follow the logs
-echo "Following container logs..."
-docker logs -f pyerp-dev 
+# Follow the logs for just 10 seconds to see startup
+echo "Showing initial container logs (10 seconds)..."
+timeout 10 docker logs -f pyerp-dev || true
+echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again." 
