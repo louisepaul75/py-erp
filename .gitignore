@@ -100,3 +100,4 @@ docs/_build/
 
 # Backup files
 backups/ 
+pyerp/direct_api/.global_session_cookie
