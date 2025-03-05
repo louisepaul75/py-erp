@@ -385,10 +385,24 @@ IMAGE_API = {
     'BASE_URL': os.environ.get('IMAGE_API_URL', 'http://webapp.zinnfiguren.de/api/'),
     'USERNAME': os.environ.get('IMAGE_API_USERNAME', ''),
     'PASSWORD': os.environ.get('IMAGE_API_PASSWORD', ''),
-    'TIMEOUT': int(os.environ.get('IMAGE_API_TIMEOUT', 30)),
+    'TIMEOUT': 30,  # Default value
     'CACHE_ENABLED': os.environ.get('IMAGE_API_CACHE_ENABLED', 'True').lower() == 'true',
-    'CACHE_TIMEOUT': int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600)),  # 1 hour
+    'CACHE_TIMEOUT': 3600,  # Default to 1 hour
 }
+
+# Try to get IMAGE_API_TIMEOUT from environment
+try:
+    IMAGE_API['TIMEOUT'] = int(os.environ.get('IMAGE_API_TIMEOUT', 30))
+except ValueError:
+    # Keep default if conversion fails
+    pass
+
+# Try to get IMAGE_API_CACHE_TIMEOUT from environment
+try:
+    IMAGE_API['CACHE_TIMEOUT'] = int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600))
+except ValueError:
+    # Keep default if conversion fails
+    pass
 
 # Custom CSRF failure view
 CSRF_FAILURE_VIEW = 'pyerp.core.views.csrf_failure'
