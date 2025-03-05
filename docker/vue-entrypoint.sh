@@ -11,5 +11,7 @@ if [ ! -d "node_modules" ] || [ ! -f "node_modules/.package-json-hash" ] || [ "$
     md5sum package.json | cut -d' ' -f1 > node_modules/.package-json-hash
 fi
 
-# Execute the command passed to the script
-exec "$@" 
+# If a command was passed, execute it, otherwise just return
+if [ $# -gt 0 ]; then
+    exec "$@"
+fi 

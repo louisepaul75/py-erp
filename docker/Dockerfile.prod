@@ -121,4 +121,5 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 80 8050 6379
 
 # Run with the startup script
-CMD ["/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD []
