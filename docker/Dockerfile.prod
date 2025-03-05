@@ -70,8 +70,11 @@ RUN chmod +x /app/frontend/custom-build.sh
 
 # Build Vue frontend using our custom script
 RUN ./custom-build.sh
+
+# Fix: Ensure index.html is copied to the Vue static directory
 RUN mkdir -p /app/staticfiles/vue
 RUN cp -r dist/* /app/staticfiles/vue/ || echo "Failed to copy dist files"
+RUN cp /app/frontend/index.html /app/staticfiles/vue/index.html || echo "Failed to copy index.html"
 
 # Copy the rest of the project code
 WORKDIR /app

@@ -73,7 +73,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         // Specify entry points
         input: {
-          main: fileURLToPath(new URL('./src/main.ts', import.meta.url))
+          main: fileURLToPath(new URL('./index.html', import.meta.url))
         },
         output: {
           // Configure output filenames
