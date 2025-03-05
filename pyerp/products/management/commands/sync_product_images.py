@@ -12,6 +12,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
+from tabulate import tabulate
 
 from pyerp.products.models import VariantProduct, ParentProduct, ProductImage, ImageSyncLog
 from pyerp.products.image_api import ImageAPIClient
@@ -117,10 +118,31 @@ class Command(BaseCommand):
                 
                 # Process each image
                 for image_data in results['results']:
+                    # Debug: Print raw image data
+                    self.stdout.write("\nRaw image data:")
+                    self.stdout.write(str(image_data))
+                    
                     # Parse the image data
                     parsed_image = client.parse_image(image_data)
                     if not parsed_image:
                         continue
+                    
+                    # Print article numbers for debugging
+                    articles = parsed_image.get('articles', [])
+                    if articles:
+                        self.stdout.write("\nFound articles in image:")
+                        article_table = []
+                        for article in articles:
+                            article_table.append([
+                                article.get('article_number', 'N/A'),
+                                article.get('variant_code', 'N/A'),
+                                article.get('front', False)
+                            ])
+                        self.stdout.write(tabulate(
+                            article_table,
+                            headers=['Article Number', 'Variant Code', 'Is Front'],
+                            tablefmt='grid'
+                        ))
                     
                     # Get associated articles
                     for article in parsed_image.get('articles', []):
@@ -168,6 +190,25 @@ class Command(BaseCommand):
                         else:
                             self.stdout.write(f"  Would {'create' if not hasattr(product, 'images') or not product.images.filter(external_id=parsed_image['external_id']).exists() else 'update'} image for {product.sku}: {parsed_image['image_type']}")
                             products_affected.add(product.id)
+                
+                # Print table of results for this page
+                table_data = []
+                for image in images_to_create + images_to_update:
+                    table_data.append([
+                        image.product.sku,
+                        image.image_type,
+                        'Yes' if image.is_front else 'No',
+                        'Create' if image in images_to_create else 'Update'
+                    ])
+                
+                if table_data:
+                    self.stdout.write("\nResults for this page:")
+                    self.stdout.write(tabulate(
+                        table_data,
+                        headers=['SKU', 'Image Type', 'Is Front', 'Action'],
+                        tablefmt='grid'
+                    ))
+                    self.stdout.write("\n")
                 
                 # Bulk create/update in transaction
                 if not dry_run and (images_to_create or images_to_update):

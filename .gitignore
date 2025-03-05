@@ -83,7 +83,6 @@ yarn-error.log
 .env.production.local
 
 # Project specific
-logs/
 static/
 staticfiles/
 media/

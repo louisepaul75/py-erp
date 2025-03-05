@@ -2,9 +2,19 @@
 import os
 import sys
 import django
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Add the project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_root)
+
+# Load environment variables from .env file
+env_path = Path(project_root) / 'config' / 'env' / '.env'
+load_dotenv(env_path)
 
 # Set up Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.development')
 django.setup()
 
 # Import the necessary models and the ImageAPIClient
@@ -34,49 +44,9 @@ def sync_product_images_for_sku(sku, search_all_pages=True):
     # Initialize the API client
     client = ImageAPIClient()
     
-    # If we want to search all pages, we need to call the API directly
-    if search_all_pages:
-        print(f"Searching ALL API pages for images (this may take a while)...")
-        
-        # Get total pages info
-        first_page = client._make_request("all-files-and-articles/", params={"page": 1, "page_size": 1})
-        if not first_page:
-            print("Failed to connect to API")
-            return
-            
-        total_records = first_page.get('count', 0)
-        page_size = 100
-        total_pages = (total_records + page_size - 1) // page_size
-        
-        print(f"Found {total_records} total images across {total_pages} pages")
-        images = []
-        
-        # Process ALL pages - no limit
-        for page in range(1, total_pages + 1):
-            print(f"Processing page {page}/{total_pages}")
-            
-            # Get images for this page
-            data = client._make_request("all-files-and-articles/", params={"page": page, "page_size": page_size})
-            if not data:
-                print(f"Failed to fetch page {page}")
-                continue
-            
-            # Process each image
-            for image_data in data.get('results', []):
-                # Check if this might be related to our SKU
-                articles = image_data.get('articles', [])
-                
-                # Check each article number
-                for article in articles:
-                    article_number = article.get('number')
-                    if article_number == sku:
-                        images.append(image_data)
-                        print(f"Found matching image on page {page} - Type: {image_data.get('type', 'Unknown')}")
-                        break
-    else:
-        # Use the existing method (which stops after finding images on the first page)
-        print(f"Fetching images from API (first match only)...")
-        images = client.search_product_images(sku)
+    # Get images from API
+    print(f"Searching for images in API...")
+    images = client.search_product_images(sku)
     
     if not images:
         print(f"No images found in API for SKU {sku}")
@@ -140,7 +110,7 @@ def sync_product_images_for_sku(sku, search_all_pages=True):
                 image.image_url = parsed_image['image_url']
                 image.thumbnail_url = parsed_image.get('thumbnail_url')
                 image.image_type = parsed_image['image_type']
-                image.is_front = parsed_image.get('is_front', False)
+                image.is_front = 1 if parsed_image.get('is_front', False) else 0
                 image.priority = client.get_image_priority(parsed_image)
                 
                 # Auto-generate alt text if not set
@@ -154,33 +124,26 @@ def sync_product_images_for_sku(sku, search_all_pages=True):
                 if parsed_image['image_type'] == 'Produktfoto' and parsed_image.get('is_front', False):
                     # Remove primary flag from all other images
                     print("Found front Produktfoto! Setting as primary.")
-                    ProductImage.objects.filter(product=product).update(is_primary=False)
-                    image.is_primary = True
+                    ProductImage.objects.filter(product=product).update(is_primary=0)
+                    image.is_primary = 1
+                else:
+                    image.is_primary = 0
                 
                 # Save the image
                 image.save()
                 
-                print(f"{'Created' if created else 'Updated'} image: {image.id} ({image.image_type})")
+                if created:
+                    print(f"Created new image: {image.id}")
+                else:
+                    print(f"Updated image: {image.id}")
+                    
         except Exception as e:
-            print(f"Error processing image: {str(e)}")
-    
-    # Report summary
-    final_count = ProductImage.objects.filter(product=product).count()
-    print(f"\nSync completed. Product now has {final_count} images.")
-    
-    # List all images
-    print("\nFinal images for this product:")
-    for img in ProductImage.objects.filter(product=product).order_by('priority'):
-        print(f"- Type: {img.image_type}, Front: {img.is_front}, Primary: {img.is_primary}")
+            print(f"Error processing image: {e}")
 
-if __name__ == "__main__":
-    sku = "816941"
-    if len(sys.argv) > 1:
-        sku = sys.argv[1]
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: python sync_specific_product.py <sku>")
+        sys.exit(1)
     
-    # Default to searching all pages
-    search_all_pages = True
-    if len(sys.argv) > 2:
-        search_all_pages = sys.argv[2].lower() == 'true'
-    
-    sync_product_images_for_sku(sku, search_all_pages=search_all_pages) 
+    sku = sys.argv[1]
+    sync_product_images_for_sku(sku) 

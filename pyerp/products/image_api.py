@@ -305,10 +305,17 @@ class ImageAPIClient:
         result['thumbnail_url'] = thumbnail_url
         
         # Set front flag and add article info
+        result['articles'] = []
         for article in image_data.get('articles', []):
-            result['articles'] = image_data.get('articles', [])
-            result['is_front'] = any(a.get('front', False) for a in image_data.get('articles', []))
-            break
+            result['articles'].append({
+                'article_number': article.get('number', ''),
+                'variant_code': article.get('variant', ''),
+                'front': article.get('front', False),
+                'stock': article.get('stock')
+            })
+            
+        # Set is_front flag based on any article being marked as front
+        result['is_front'] = any(a.get('front', False) for a in image_data.get('articles', []))
         
         return result
     
