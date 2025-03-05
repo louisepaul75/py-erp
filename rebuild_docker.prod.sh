@@ -10,7 +10,7 @@ docker rm pyerp
 
 # Rebuild the Docker image
 echo "Rebuilding Docker image..."
-docker build -t docker-pyerp .
+docker build -t docker-pyerp -f docker/Dockerfile.prod .
 
 # Start a new container
 echo "Starting new pyerp container..."
