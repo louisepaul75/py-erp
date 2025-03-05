@@ -15,37 +15,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Build backend Docker image
+      - name: Build pyERP Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./docker/Dockerfile.prod
           push: false
-          tags: pyerp-backend:latest
+          tags: pyerp:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/pyerp-backend.tar
+          outputs: type=docker,dest=/tmp/pyerp.tar
       
-      - name: Upload backend Docker image as artifact
+      - name: Upload pyERP Docker image as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pyerp-backend
-          path: /tmp/pyerp-backend.tar
-          retention-days: 1
-      
-      - name: Build frontend Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: false
-          tags: pyerp-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/pyerp-frontend.tar
-      
-      - name: Upload frontend Docker image as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: pyerp-frontend
-          path: /tmp/pyerp-frontend.tar
+          name: pyerp
+          path: /tmp/pyerp.tar
           retention-days: 1
