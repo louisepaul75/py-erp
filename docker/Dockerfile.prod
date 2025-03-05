@@ -83,7 +83,7 @@ RUN npm run build:skip-typescript
 WORKDIR /app
 
 # Create necessary directories
-RUN mkdir -p /app/static /app/media /app/logs /app/data
+RUN mkdir -p /app/static /app/media /app/logs /app/data /app/pyerp/static /var/www/static /var/www/media
 
 # Configure Nginx
 RUN rm /etc/nginx/sites-enabled/default || true

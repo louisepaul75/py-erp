@@ -26,9 +26,13 @@ until pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}"
 done
 echo >&2 "PostgreSQL is up - continuing..."
 
-# Create media and static directories with proper permissions
-mkdir -p /app/media /app/static /app/data
-chmod -R 755 /app/media /app/static /app/data
+# Create and ensure all required directories exist with proper permissions
+mkdir -p /app/media /app/static /app/data /app/pyerp/static /var/www/static /var/www/media
+chmod -R 755 /app/media /app/static /app/data /app/pyerp/static /var/www/static /var/www/media
+
+# Create symbolic links for Nginx to access static and media files
+ln -sf /app/staticfiles/* /var/www/static/ 2>/dev/null || true
+ln -sf /app/media/* /var/www/media/ 2>/dev/null || true
 
 # Initialize Vue.js application
 if [ -d "/app/frontend" ]; then
@@ -45,6 +49,8 @@ if [[ "$PYERP_ENV" == "prod" ]]; then
     
     # Apply migrations
     echo "Applying database migrations..."
+    # First make migrations to ensure all models are up to date
+    python manage.py makemigrations --noinput
     python manage.py migrate --noinput
     echo "Migrations applied"
     
@@ -69,6 +75,10 @@ else:
     print('Superuser already exists')
 "
 fi
+
+# Update Nginx configuration to point to the correct directories
+sed -i 's|alias /var/www/static/;|alias /app/staticfiles/;|g' /etc/nginx/conf.d/pyerp.conf
+sed -i 's|alias /var/www/media/;|alias /app/media/;|g' /etc/nginx/conf.d/pyerp.conf
 
 # Start supervisord to manage all services
 echo "Starting supervisord..."
