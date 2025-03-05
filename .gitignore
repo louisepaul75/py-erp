@@ -103,3 +103,4 @@ backups/
 
 
 dump.rdb
+pyerp/direct_api/.global_session_cookie
