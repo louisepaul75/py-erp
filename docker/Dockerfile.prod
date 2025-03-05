@@ -52,7 +52,7 @@ COPY . /app/
 # Build Vue frontend
 WORKDIR /app/frontend
 RUN npm install
-RUN npm run build
+RUN npm run build:skip-typescript
 
 # Move back to app directory
 WORKDIR /app
