@@ -50,9 +50,10 @@ RUN pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 COPY . /app/
 
 # Create directories for static, media, logs, and data files
-RUN mkdir -p /app/staticfiles /app/static /app/media /app/logs /app/data \
-    && chown -R root:root /app/staticfiles /app/static /app/media /app/logs /app/data \
-    && chmod -R 755 /app/staticfiles /app/static /app/media /app/logs /app/data
+RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
+    && cp -r /app/static/* /app/pyerp/static/ \
+    && chown -R root:root /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
+    && chmod -R 755 /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data
 
 # Set Django settings module for collectstatic
 ARG DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
