@@ -26,4 +26,5 @@ docker run -d \
 # Follow the logs for just 10 seconds to see startup
 echo "Showing initial container logs (10 seconds)..."
 timeout 10 docker logs -f pyerp-prod || true
+
 echo -e "\nContainer is running in the background. Use 'docker logs pyerp-prod' to view logs again." 
