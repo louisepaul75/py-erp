@@ -1,303 +1,86 @@
-name: Deploy Application
+name: Deploy
 
 on:
-  push:
-    branches:
-      - prod
-      - dev
-      - 'release/**'
-    tags:
-      - 'v*'
-  pull_request:
-    types: [closed]
-    branches:
-      - prod
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types:
+      - completed
+  workflow_dispatch:
 
 jobs:
-  check_pr_merge:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'prod' && github.event.pull_request.head.ref == 'dev'
-    steps:
-      - name: Set deployment flag
-        run: echo "DEPLOY_PROD=true" >> $GITHUB_ENV
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        cache: 'pip'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-    
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    
-    - name: Check types with mypy
-      run: |
-        mypy .
-
-  tests:
-    needs: [lint]
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:13
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pyerp_test
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        cache: 'pip'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-    
-    - name: Test with pytest
-      env:
-        DJANGO_SETTINGS_MODULE: pyerp.settings.testing
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
-      run: |
-        pytest --cov=. --cov-report=xml
-        
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        token: d21bebd3-0087-4c7c-bb78-c9dcaa8e83b5
-        file: ./coverage.xml
-        fail_ci_if_error: false
-        flags: unittests
-        name: pyERP-coverage
-        verbose: true
-        
-    - name: Check coverage thresholds
-      run: |
-        coverage report --fail-under=80 || echo "::warning::Coverage is below 80%"
-        
-    - name: Check branch-specific requirements
-      run: |
-        if [[ $GITHUB_REF == refs/heads/prod || $GITHUB_REF =~ refs/heads/release/.* ]]; then
-          echo "Running additional checks for prod and release branches"
-          # Add stricter checks for prod and release branches
-          coverage report --fail-under=80 || exit 1
-        fi
-
-  determine_environment:
-    runs-on: ubuntu-latest
-    needs: [tests]
-    outputs:
-      environment: ${{ steps.set-env.outputs.environment }}
-      should_deploy: ${{ steps.set-env.outputs.should_deploy }}
-    steps:
-      - name: Determine environment
-        id: set-env
-        run: |
-          if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF == refs/heads/prod ]]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF == refs/heads/dev ]]; then
-            echo "environment=development" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF =~ refs/heads/release/.* ]]; then
-            echo "environment=staging" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" && "${{ github.event.pull_request.base.ref }}" == "prod" && "${{ github.event.pull_request.head.ref }}" == "dev" ]]; then
-            echo "environment=production" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          else
-            echo "environment=unknown" >> $GITHUB_OUTPUT
-            echo "should_deploy=false" >> $GITHUB_OUTPUT
-          fi
-
-  build:
-    runs-on: ubuntu-latest
-    needs: [determine_environment]
-    if: needs.determine_environment.outputs.should_deploy == 'true'
-    env:
-      ENVIRONMENT: ${{ needs.determine_environment.outputs.environment }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha,format=short
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          file: docker/Dockerfile.prod
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            ENVIRONMENT=${{ env.ENVIRONMENT }}
-
   deploy:
     runs-on: ubuntu-latest
-    needs: [build, determine_environment]
-    if: needs.determine_environment.outputs.should_deploy == 'true'
-    environment: ${{ needs.determine_environment.outputs.environment }}
-    env:
-      ENVIRONMENT: ${{ needs.determine_environment.outputs.environment }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up SSH
-        if: env.ENVIRONMENT == 'production'
-        uses: webfactory/ssh-agent@v0.7.0
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-
-      - name: Deploy to Production Server
-        if: env.ENVIRONMENT == 'production'
-        env:
-          DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.PROD_DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Download workflow artifacts
+        uses: dawidd6/action-download-artifact@v2
+        if: github.event_name == 'workflow_run'
+        with:
+          workflow: CI
+          run_id: ${{ github.event.workflow_run.id }}
+          path: /tmp
+      
+      - name: Build Docker images if workflow_dispatch
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          # Ensure SSH connection works and host key is verified
-          mkdir -p ~/.ssh
-          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
-          
-          # Copy necessary files to the server
-          scp -r docker/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
-          scp -r config/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
-          
-          # Connect to server and deploy
-          ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
-            cd $DEPLOY_PATH
+          docker buildx build --file ./docker/Dockerfile.prod --tag pyerp-backend:latest .
+          docker buildx build --tag pyerp-frontend:latest ./frontend
+      
+      - name: Load Docker images from artifacts
+        if: github.event_name == 'workflow_run'
+        run: |
+          docker load --input /tmp/pyerp-backend/pyerp-backend.tar
+          docker load --input /tmp/pyerp-frontend/pyerp-frontend.tar
+      
+      - name: Tag and push Docker images
+        run: |
+          docker tag pyerp-backend:latest ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-backend:latest
+          docker tag pyerp-frontend:latest ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-frontend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-backend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-frontend:latest
+      
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/pyerp
+            # Ensure Datadog environment variables are set in .env file
+            echo "DD_API_KEY=${{ secrets.DD_API_KEY }}" >> .env
+            echo "DD_SITE=${{ secrets.DD_SITE || 'datadoghq.com' }}" >> .env
+            echo "DD_ENV=production" >> .env
+            echo "DD_SERVICE=pyerp" >> .env
+            echo "DD_VERSION=1.0.0" >> .env
             
-            # Pull the latest image
-            docker pull ghcr.io/${{ github.repository }}:$(echo ${{ github.ref }} | sed -e "s/refs\/heads\///g" | sed -e "s/\//-/g")
+            # Copy the datadog.yaml file if it doesn't exist
+            if [ ! -f docker/datadog.yaml ]; then
+              mkdir -p docker
+              cp /tmp/datadog.yaml docker/datadog.yaml 2>/dev/null || echo "Datadog config template not found, will use default"
+            fi
             
-            # Stop and remove existing containers
-            docker-compose -f docker/docker-compose.prod.yml down || true
-            
-            # Start the new containers
+            # Pull latest images and restart services with Datadog agent
+            docker-compose -f docker/docker-compose.prod.yml pull
+            docker-compose -f docker/docker-compose.prod.yml down
             docker-compose -f docker/docker-compose.prod.yml up -d
             
-            # Run migrations
-            docker-compose -f docker/docker-compose.prod.yml exec -T pyerp python manage.py migrate --noinput
+            # Verify Datadog agent is running
+            sleep 10
+            docker ps | grep datadog-agent || echo "Warning: Datadog agent may not be running"
             
-            # Collect static files
-            docker-compose -f docker/docker-compose.prod.yml exec -T pyerp python manage.py collectstatic --noinput
-            
-            # Check if deployment was successful
-            docker-compose -f docker/docker-compose.prod.yml ps
-          EOF
-
-      - name: Deploy to Development/Staging Server
-        if: env.ENVIRONMENT == 'development' || env.ENVIRONMENT == 'staging'
-        env:
-          DEPLOY_HOST: ${{ secrets.DEV_DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEV_DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
-        run: |
-          # Set up SSH for dev/staging
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEV_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
-          
-          # Copy necessary files to the server
-          scp -r docker/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
-          scp -r config/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
-          
-          # Connect to server and deploy
-          ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
-            cd $DEPLOY_PATH
-            
-            # Pull the latest image
-            docker pull ghcr.io/${{ github.repository }}:$(echo ${{ github.ref }} | sed -e "s/refs\/heads\///g" | sed -e "s/\//-/g")
-            
-            # Stop and remove existing containers
-            docker-compose -f docker/docker-compose.yml down || true
-            
-            # Start the new containers
-            docker-compose -f docker/docker-compose.yml up -d
-            
-            # Run migrations
-            docker-compose -f docker/docker-compose.yml exec -T pyerp python manage.py migrate --noinput
-            
-            # Collect static files
-            docker-compose -f docker/docker-compose.yml exec -T pyerp python manage.py collectstatic --noinput
-            
-            # Check if deployment was successful
-            docker-compose -f docker/docker-compose.yml ps
-          EOF
-
-  notify:
-    runs-on: ubuntu-latest
-    needs: [deploy, determine_environment]
-    if: always() && needs.determine_environment.outputs.should_deploy == 'true'
-    steps:
-      - name: Notify success
-        if: needs.deploy.result == 'success'
-        run: |
-          echo "Deployment to ${{ needs.determine_environment.outputs.environment }} succeeded"
-          # Add notification mechanism (Slack, email, etc.)
-          # Example for Slack:
-          # curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ Deployment to ${{ needs.determine_environment.outputs.environment }} succeeded"}' ${{ secrets.SLACK_WEBHOOK_URL }}
-      
-      - name: Notify failure
-        if: needs.deploy.result == 'failure'
-        run: |
-          echo "Deployment to ${{ needs.determine_environment.outputs.environment }} failed"
-          # Add notification mechanism (Slack, email, etc.)
-          # Example for Slack:
-          # curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ Deployment to ${{ needs.determine_environment.outputs.environment }} failed"}' ${{ secrets.SLACK_WEBHOOK_URL }} 
+            # Clean up old images
+            docker system prune -af
