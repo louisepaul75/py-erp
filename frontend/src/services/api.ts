@@ -6,14 +6,20 @@ const determineBaseUrl = () => {
   const storedUrl = localStorage.getItem('api_base_url');
   if (storedUrl) return storedUrl;
 
+  // Check if we're running on the specific IP
+  const isSpecificIP = window.location.hostname === '192.168.73.65';
+  if (isSpecificIP) {
+    return 'http://192.168.73.65:8050';
+  }
+
   // Then check if we're running locally
   const isLocalhost = window.location.hostname === 'localhost' || 
                      window.location.hostname === '127.0.0.1' ||
                      window.location.hostname === '0.0.0.0';
 
-  // If we're running locally, use relative URLs (let the Vite proxy handle it)
+  // If we're running locally, use localhost URL
   if (isLocalhost) {
-    return '';  // Empty string means use relative URLs
+    return 'http://localhost:8050';
   }
 
   // Otherwise use the configured network URL or fallback to window.location.origin
@@ -27,6 +33,7 @@ const apiBaseUrl = baseUrl;
 // Log the API base URL being used
 console.log('API Base URL:', apiBaseUrl);
 console.log('Running on hostname:', window.location.hostname);
+console.log('Is specific IP:', window.location.hostname === '192.168.73.65');
 console.log('Is localhost:', window.location.hostname === 'localhost' || 
                           window.location.hostname === '127.0.0.1' ||
                           window.location.hostname === '0.0.0.0');

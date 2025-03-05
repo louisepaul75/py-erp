@@ -23,7 +23,7 @@ services:
       - REDIS_URL=redis://localhost:6379/0
       - DJANGO_DEBUG=True
       - PYTHONPATH=/app
-      # External PostgreSQL connection details - actual credentials are in .env.dev
+      # Use the correct PostgreSQL server IP
       - DB_HOST=192.168.73.65
       - DB_PORT=5432
       - DB_NAME=pyerp_testing
@@ -33,6 +33,17 @@ services:
         cd /app &&
         service redis-server start &&
         mkdir -p staticfiles &&
+        mkdir -p static/images &&
+        mkdir -p staticfiles/images &&
+        # Copy frontend assets to static directories
+        if [ -d /app/frontend/src/assets ]; then
+          cp -r /app/frontend/src/assets/* /app/static/images/ || true
+          cp -r /app/frontend/src/assets/* /app/staticfiles/images/ || true
+        fi &&
+        # Run the static assets copy script if it exists
+        if [ -f /app/scripts/copy_static_assets.js ]; then
+          node /app/scripts/copy_static_assets.js || true
+        fi &&
         python manage.py collectstatic --noinput &&
         cd /app/frontend && npm run dev &
         cd /app && python manage.py runserver 0.0.0.0:8050
