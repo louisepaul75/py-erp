@@ -303,7 +303,8 @@ const loadProducts = async () => {
       q: searchQuery.value,
       category: selectedCategory.value,
       in_stock: inStock.value,
-      is_active: isActive.value
+      is_active: isActive.value,
+      include_variants: true
     };
     
     console.log('API request params:', params);
@@ -533,8 +534,9 @@ const checkServerStatus = async (): Promise<boolean> => {
 
 // Add the getProductImage function
 const getProductImage = (product: Product) => {
-    // First try to get BE variant's image
-    if (product.variants) {
+    // First try to get images from variants if they exist
+    if (product.variants && product.variants.length > 0) {
+        // Try to find BE variant first
         const beVariant = product.variants.find(v => 
             v.attributes?.some(attr => 
                 attr.name.toLowerCase() === 'type' && 
@@ -543,23 +545,51 @@ const getProductImage = (product: Product) => {
             v.sku?.toLowerCase().includes('be')
         );
         
-        if (beVariant && beVariant.images && beVariant.images.length > 0) {
-            // Try to find the best image from the BE variant
-            const beImage = beVariant.images.find(img => 
-                img.image_type === 'Produktfoto' && img.is_front
-            ) || beVariant.images.find(img => 
-                img.image_type === 'Produktfoto'
-            ) || beVariant.images.find(img => 
-                img.is_front
-            ) || beVariant.images.find(img => 
-                img.is_primary
-            ) || beVariant.images[0];
-            
-            if (beImage) {
-                return getValidImageUrl({ url: beImage.url });
+        if (beVariant) {
+            // If BE variant has images, use the best one
+            if (beVariant.images && beVariant.images.length > 0) {
+                const bestImage = beVariant.images.find(img => 
+                    img.image_type === 'Produktfoto' && img.is_front
+                ) || beVariant.images.find(img => 
+                    img.image_type === 'Produktfoto'
+                ) || beVariant.images.find(img => 
+                    img.is_front
+                ) || beVariant.images.find(img => 
+                    img.is_primary
+                ) || beVariant.images[0];
+                
+                if (bestImage) {
+                    return getValidImageUrl({ url: bestImage.url });
+                }
             }
-        } else if (beVariant?.primary_image) {
-            return getValidImageUrl(beVariant.primary_image);
+            
+            // If BE variant has primary_image, use it
+            if (beVariant.primary_image) {
+                return getValidImageUrl(beVariant.primary_image);
+            }
+        }
+        
+        // If no BE variant or BE variant has no images, try other variants
+        for (const variant of product.variants) {
+            if (variant.images && variant.images.length > 0) {
+                const bestImage = variant.images.find(img => 
+                    img.image_type === 'Produktfoto' && img.is_front
+                ) || variant.images.find(img => 
+                    img.image_type === 'Produktfoto'
+                ) || variant.images.find(img => 
+                    img.is_front
+                ) || variant.images.find(img => 
+                    img.is_primary
+                ) || variant.images[0];
+                
+                if (bestImage) {
+                    return getValidImageUrl({ url: bestImage.url });
+                }
+            }
+            
+            if (variant.primary_image) {
+                return getValidImageUrl(variant.primary_image);
+            }
         }
     }
     

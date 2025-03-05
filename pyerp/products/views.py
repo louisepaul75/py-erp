@@ -490,7 +490,22 @@ class ProductListAPIView(ProductAPIView):
         products = products[start_index:end_index]
             
         # Convert products to JSON-serializable format
-        products_data = [self.get_product_data(product) for product in products]
+        products_data = []
+        for product in products:
+            product_data = self.get_product_data(product)
+            
+            # Add variants data for each product
+            # Check if include_variants parameter is provided and true
+            include_variants = request.GET.get('include_variants', '').lower() in ('true', '1', 'yes')
+            if include_variants:
+                variants = VariantProduct.objects.filter(parent=product)
+                variants_data = []
+                for variant in variants:
+                    variant_data = self.get_product_data(variant)
+                    variants_data.append(variant_data)
+                product_data['variants'] = variants_data
+            
+            products_data.append(product_data)
         
         # Return JSON response with pagination info
         return Response({
