@@ -51,6 +51,9 @@ COPY frontend/package*.json /app/frontend/
 WORKDIR /app/frontend
 RUN npm install
 
+# Update TypeScript and vue-tsc to compatible versions
+RUN npm install typescript@~5.0.4 vue-tsc@^1.6.5 --save-dev
+
 # Copy the rest of the frontend code
 COPY frontend/ /app/frontend/
 
