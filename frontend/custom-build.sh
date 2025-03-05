@@ -8,6 +8,16 @@ npx tsc --noEmit || echo "TypeScript check completed with warnings"
 echo "Building with Vite..."
 npx vite build
 
+# Ensure the built index.html has the correct paths
+echo "Updating index.html paths..."
+if [ -f "dist/index.html" ]; then
+  # Replace TypeScript source references with built JavaScript files
+  sed -i 's|src="/src/main.ts"|src="/js/main.js"|g' dist/index.html
+  echo "Updated index.html to use built JavaScript files"
+else
+  echo "Warning: dist/index.html not found"
+fi
+
 # Ensure the output directory exists
 echo "Ensuring output directory exists..."
 mkdir -p /app/staticfiles/vue
