@@ -105,6 +105,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { productApi } from '@/services/api';
+import { getValidImageUrl, handleImageError, getNoImageUrl } from '@/utils/assetUtils';
 
 // Define types
 interface Category {
@@ -195,31 +196,6 @@ const variantThumbnails = computed(() => {
     
     return thumbnails;
 });
-
-// Add a new function to validate image URLs
-const getValidImageUrl = (imageObj?: { url?: string }) => {
-    // If no image object or URL, return placeholder
-    if (!imageObj?.url) {
-        console.log('No image URL provided, using placeholder');
-        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-    }
-
-    // Check if URL is valid
-    try {
-        new URL(imageObj.url);
-        return imageObj.url;
-    } catch (e) {
-        console.log('Invalid image URL:', imageObj.url);
-        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-    }
-};
-
-// Add an error handler for image loading
-const handleImageError = (event: Event) => {
-    const img = event.target as HTMLImageElement;
-    console.log('Image failed to load:', img.src);
-    img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-};
 
 // Update the getMainImage computed property
 const getMainImage = computed(() => {
@@ -319,7 +295,7 @@ const getMainImage = computed(() => {
     
     // Fallback to no-image if no variant images are available
     console.log('No variant images found, using placeholder');
-    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    return getNoImageUrl();
 });
 
 // Update the getVariantImage function
@@ -365,7 +341,7 @@ const getVariantImage = (variant: Variant) => {
         return getValidImageUrl(variant.primary_image);
     }
     
-    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    return getNoImageUrl();
 };
 
 // Load product details

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Determine the appropriate base URL based on the environment
-const determineBaseUrl = () => {
+export const determineBaseUrl = () => {
   // First check localStorage for any manually set URL
   const storedUrl = localStorage.getItem('api_base_url');
   if (storedUrl) return storedUrl;
@@ -117,22 +117,22 @@ api.interceptors.response.use(
 export const productApi = {
   // Get all products with optional filters
   getProducts: async (params = {}) => {
-    return api.get('/products/', { params });
+    return api.get('/api/products/', { params });
   },
   
   // Get product details by ID
   getProduct: async (id: number) => {
-    return api.get(`/products/${id}/`);
+    return api.get(`/api/products/${id}/`);
   },
   
   // Get product variant details
   getVariant: async (id: number) => {
-    return api.get(`/products/variant/${id}/`);
+    return api.get(`/api/products/variant/${id}/`);
   },
   
   // Get all product categories
   getCategories: async () => {
-    return api.get('/products/categories/');
+    return api.get('/api/products/categories/');
   }
 };
 
@@ -140,32 +140,32 @@ export const productApi = {
 export const salesApi = {
   // Get all sales orders with optional filters
   getSalesOrders: async (params = {}) => {
-    return api.get('/sales/orders/', { params });
+    return api.get('/api/sales/orders/', { params });
   },
   
   // Get sales order details by ID
   getSalesOrder: async (id: number) => {
-    return api.get(`/sales/orders/${id}/`);
+    return api.get(`/api/sales/orders/${id}/`);
   },
   
   // Create a new sales order
   createSalesOrder: async (data: any) => {
-    return api.post('/sales/orders/', data);
+    return api.post('/api/sales/orders/', data);
   },
   
   // Update an existing sales order
   updateSalesOrder: async (id: number, data: any) => {
-    return api.put(`/sales/orders/${id}/`, data);
+    return api.put(`/api/sales/orders/${id}/`, data);
   },
   
   // Delete a sales order
   deleteSalesOrder: async (id: number) => {
-    return api.delete(`/sales/orders/${id}/`);
+    return api.delete(`/api/sales/orders/${id}/`);
   },
   
   // Get all customers
   getCustomers: async (params = {}) => {
-    return api.get('/sales/customers/', { params });
+    return api.get('/api/sales/customers/', { params });
   }
 };
 

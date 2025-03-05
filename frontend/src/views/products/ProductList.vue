@@ -92,6 +92,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { productApi } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
+import { getValidImageUrl, handleImageError, getNoImageUrl } from '@/utils/assetUtils';
 
 // Define types
 interface Category {
@@ -532,7 +533,7 @@ const checkServerStatus = async (): Promise<boolean> => {
   }
 };
 
-// Add the getProductImage function
+// Update the getProductImage function to use getNoImageUrl
 const getProductImage = (product: Product) => {
     // First try to get images from variants if they exist
     if (product.variants && product.variants.length > 0) {
@@ -616,27 +617,7 @@ const getProductImage = (product: Product) => {
     }
     
     // Fallback to no-image
-    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-};
-
-// Add the getValidImageUrl function
-const getValidImageUrl = (imageObj?: { url?: string }) => {
-    if (!imageObj?.url) {
-        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-    }
-
-    try {
-        new URL(imageObj.url);
-        return imageObj.url;
-    } catch (e) {
-        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-    }
-};
-
-// Add the handleImageError function
-const handleImageError = (event: Event) => {
-    const img = event.target as HTMLImageElement;
-    img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    return getNoImageUrl();
 };
 </script>
 <style scoped>

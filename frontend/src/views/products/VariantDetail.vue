@@ -40,7 +40,7 @@
                         </div>
                         <img 
                             v-else
-                            :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`)" 
+                            :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : getNoImageUrl())" 
                             :alt="variant.name"
                             @load="imageLoaded = true"
                             @error="handleImageError"
@@ -124,7 +124,7 @@
                 <div class="variants-grid">
                     <div v-for="relatedVariant in relatedVariants" :key="relatedVariant.id" class="variant-card" @click="viewVariantDetails(relatedVariant.id)">
                         <div class="variant-image">
-                            <img :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`" :alt="relatedVariant.name"/>
+                            <img :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : getNoImageUrl()" :alt="relatedVariant.name"/>
                         </div>
                         <div class="variant-info">
                             <h3>{{ relatedVariant.name }}</h3>
@@ -146,6 +146,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { productApi } from '@/services/api';
+import { getValidImageUrl, handleImageError, getNoImageUrl } from '@/utils/assetUtils';
 
 // Define types
 interface Category {
@@ -278,15 +279,6 @@ const viewVariantDetails = (id: number) => {
 };
 
 // Add these new methods
-const handleImageError = () => {
-    imageLoaded.value = true;
-    // Set fallback image
-    const img = event?.target as HTMLImageElement;
-    if (img) {
-        img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-    }
-};
-
 const selectImage = (image: ProductImage) => {
     selectedImage.value = image;
     imageLoaded.value = false; // Reset loading state for main image

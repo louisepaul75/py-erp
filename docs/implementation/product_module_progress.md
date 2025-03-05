@@ -79,6 +79,19 @@ The product module includes Vue.js components for the frontend:
 
 - `ProductList.vue`: List view with filtering and pagination
 - `ProductDetail.vue`: Detail view with images and variant selection
+- `VariantDetail.vue`: Variant detail view with related variants
+
+### Asset Handling
+
+The frontend now includes centralized utilities for handling static assets:
+
+- `assetUtils.ts`: Utility functions for static asset URL management
+  - `getStaticAssetUrl()`: Retrieves correct URLs for static assets
+  - `getNoImageUrl()`: Provides the no-image placeholder URL
+  - `getValidImageUrl()`: Validates image URLs and provides fallbacks
+  - `handleImageError()`: Manages image loading errors
+
+These utilities ensure consistent image handling across all product views and provide robust fallback mechanisms for missing images. The system automatically determines the appropriate base URL based on the deployment environment (localhost, specific IP, production).
 
 ## Management Commands
 

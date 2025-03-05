@@ -47,6 +47,49 @@ The frontend is organized into the following structure:
   - `utils/` - Utility functions
   - `views/` - Page components
 
+## Asset Handling
+
+The frontend includes utilities for handling static assets, particularly images, in a consistent way across different deployment environments.
+
+### Asset Utilities
+
+Located in `src/utils/assetUtils.ts`, these utilities provide:
+
+- **`getStaticAssetUrl(path)`**: Constructs the correct URL for static assets based on the current environment
+- **`getNoImageUrl()`**: Returns the URL to the no-image placeholder
+- **`getValidImageUrl(imageObj)`**: Validates image URLs and provides fallbacks
+- **`handleImageError(event)`**: Event handler for image loading errors
+
+### Usage
+
+```vue
+<script setup lang="ts">
+import { getValidImageUrl, handleImageError, getNoImageUrl } from '@/utils/assetUtils';
+
+// In your component logic
+const getProductImage = (product) => {
+  if (product.primary_image) {
+    return getValidImageUrl(product.primary_image);
+  }
+  return getNoImageUrl();
+};
+</script>
+
+<template>
+  <!-- In your template -->
+  <img :src="getProductImage(product)" @error="handleImageError" />
+</template>
+```
+
+### Environment Detection
+
+The asset utilities work in conjunction with the API service to determine the correct base URL based on the deployment environment:
+
+- Checks localStorage for any manually set URL
+- Detects if running on specific IP addresses
+- Detects if running on localhost
+- Falls back to environment variables or window.location.origin
+
 ## Integration with Django
 
 The frontend is integrated with the Django backend in two ways:
