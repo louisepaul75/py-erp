@@ -44,13 +44,16 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 
 # Update pip and install gunicorn
 RUN pip install --upgrade pip
-RUN pip install gunicorn
 
 WORKDIR /app
 
 # Copy requirements files
 COPY requirements/ /app/requirements/
 COPY scripts/check_dependencies.py /app/scripts/check_dependencies.py
+
+# Install Python dependencies from requirements files
+RUN pip install --no-cache-dir -r requirements/requirements.txt
+RUN pip install --no-cache-dir gunicorn
 
 # Copy project code for dependency scanning
 COPY pyerp/ /app/pyerp/
@@ -59,27 +62,6 @@ RUN mkdir -p /app/scripts
 
 # Skip dependency scanner for now as it has an error
 RUN echo "Skipping dependency scanner..." > /app/dependency_scan.log
-
-# Install Python dependencies - note that we're fixing Django to 4.2.x which is compatible with
-# both django-celery-beat and our other dependencies
-RUN pip install --no-cache-dir "django>=4.2.0,<5.0.0" \
-    "django-filter>=23.5.0,<24.0.0" \
-    "djangorestframework>=3.14.0,<3.15.0" \
-    "celery>=5.3.6,<5.4.0" \
-    "redis>=5.0.1,<5.1.0" \
-    "django-redis>=5.4.0,<5.5.0" \
-    "django-cors-headers>=4.3.1,<4.4.0" \
-    "drf-yasg>=1.21.7,<1.22.0" \
-    "djangorestframework-simplejwt>=5.3.1,<5.4.0" \
-    "psycopg2>=2.9.9,<3.0.0" \
-    "django-celery-results>=2.5.1,<2.6.0" \
-    "django-celery-beat>=2.5.0,<2.6.0" \
-    "python-json-logger>=2.0.7,<2.1.0" \
-    "structlog>=23.2.0,<24.0.0" \
-    "django-environ>=0.11.2,<0.12.0" \
-    "Pillow>=10.1.0,<10.2.0" \
-    "whitenoise>=6.6.0,<6.7.0" \
-    "sentry-sdk>=1.39.1,<1.40.0"
 
 # Install WeasyPrint separately to avoid dependency issues
 RUN pip install --no-cache-dir "cffi>=1.15.0" "cairocffi>=1.5.1" "cssselect2>=0.7.0" "html5lib>=1.1"
