@@ -78,6 +78,8 @@ RUN python manage.py collectstatic --noinput --clear
 
 # Configure Nginx
 RUN mkdir -p /etc/nginx/ssl
+COPY docker/nginx/ssl/server.crt /etc/nginx/ssl/
+COPY docker/nginx/ssl/server.key /etc/nginx/ssl/
 COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/sites-available/default
 RUN ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log \
