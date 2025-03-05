@@ -16,11 +16,12 @@ services:
     volumes:
       - ..:/app  # Mount local code directory to /app for hot reloading
       - pyerp_data:/app/data
+      - ./supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
     env_file:
       - ../config/env/.env.dev
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.settings.development
-      - REDIS_URL=redis://localhost:6379/0
+      - REDIS_URL=redis://127.0.0.1:6379/0
       - DJANGO_DEBUG=True
       - PYTHONPATH=/app
       # Use the correct PostgreSQL server IP
@@ -31,7 +32,12 @@ services:
     command: >
       bash -c "
         cd /app &&
-        service redis-server start &&
+        # Ensure Redis data directory exists and has correct permissions
+        mkdir -p /var/lib/redis &&
+        chown redis:redis /var/lib/redis &&
+        chmod 750 /var/lib/redis &&
+        # Start Redis with proper configuration
+        redis-server --daemonize no &
         mkdir -p staticfiles &&
         mkdir -p static/images &&
         mkdir -p staticfiles/images &&
@@ -45,8 +51,10 @@ services:
           node /app/scripts/copy_static_assets.js || true
         fi &&
         python manage.py collectstatic --noinput &&
-        cd /app/frontend && npm run dev &
-        cd /app && python manage.py runserver 0.0.0.0:8050
+        # Copy supervisord.conf to the correct location if it doesn't exist
+        cp -f /app/docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf &&
+        # Start supervisord to manage all services
+        /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "
 
 volumes:

@@ -90,8 +90,6 @@ env/
 ENV/
 
 # pip-tools
-requirements/*.txt
-!requirements.txt
 pip-wheel-metadata/
 
 # Python installers

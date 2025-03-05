@@ -1,85 +1,61 @@
 FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
 # Install system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gcc \
-        python3-dev \
-        libpq-dev \
-        postgresql-client \
-        netcat-traditional \
-        wget \
+        build-essential \
         curl \
-        # Redis
-        redis-server \
-        # Additional tools
         git \
+        libpq-dev \
+        netcat-traditional \
         supervisor \
+        nginx \
+        libffi-dev \
+        libjpeg-dev \
+        libxml2-dev \
+        libxslt-dev \
+        zlib1g-dev \
+        libcairo2-dev \
+        libpango1.0-dev \
+        libgdk-pixbuf2.0-dev \
+        shared-mime-info \
+        libssl-dev \
+        postgresql-client \
+        redis-server \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js and npm
+# Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get update \
     && apt-get install -y nodejs \
-    && npm install -g npm@latest \
-    && mkdir -p /app/frontend/node_modules \
-    && chown -R root:root /app/frontend/node_modules
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set work directory
+# Set working directory
 WORKDIR /app
 
-# Update pip
+# Upgrade pip
 RUN pip install --upgrade pip
 
 # Copy requirements files
 COPY requirements/ /app/requirements/
 
-# Install development dependencies directly
-RUN echo "Installing critical packages..." && \
-    pip install --no-cache-dir django django-filter djangorestframework celery redis python-dotenv dj-database-url django-debug-toolbar whitenoise
+# Install development dependencies
+RUN pip install --no-cache-dir -r /app/requirements/requirements.dev.txt
 
-# Install development-specific packages
-RUN echo "Installing development packages..." && \
-    pip install --no-cache-dir black flake8 ipython pytest pytest-django pytest-cov
-
-# Install Django packages
-RUN pip install --no-cache-dir "django-redis>=5.4.0,<5.5.0"
-RUN pip install --no-cache-dir "redis>=5.0.0,<5.1.0"
-RUN pip install --no-cache-dir "django-cors-headers>=4.3.1,<4.4.0"
-RUN pip install --no-cache-dir "drf-yasg>=1.21.7,<1.22.0"
-RUN pip install --no-cache-dir "djangorestframework-simplejwt>=5.3.0,<5.4.0"
-
-# Install PostgreSQL packages
-RUN pip install --no-cache-dir "psycopg2>=2.9.9,<3.0.0"
-
-# Install Celery and related packages
-RUN pip install --no-cache-dir django-celery-results django-celery-beat
-
-# Install logging packages
-RUN pip install --no-cache-dir python-json-logger structlog
-
-# Install additional base packages
-RUN pip install --no-cache-dir django-environ Pillow WeasyPrint
-
-# Create directories for static and media files
+# Create directories for static, media, logs, and data files
 RUN mkdir -p /app/static /app/media /app/logs /app/data
 
-# Copy the application code
-COPY . /app/
+# Expose ports for Django and Redis
+EXPOSE 8000 6379
 
-# Copy supervisord configuration
-COPY ./docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_SETTINGS_MODULE=pyerp.settings.development
 
-# Copy entrypoint script
-COPY ./docker/entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# Set up entrypoint
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Run entrypoint script
-ENTRYPOINT ["entrypoint.sh"]
-
-# Default command
-CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"] 
+ENTRYPOINT ["/entrypoint.sh"] 

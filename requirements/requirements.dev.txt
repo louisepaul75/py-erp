@@ -1,0 +1,29 @@
+# Production dependencies
+-r requirements.prod.txt
+
+# Debugging
+django-debug-toolbar==4.3.0
+django-extensions==3.2.3
+ipython==8.22.2
+
+# Testing
+pytest==8.0.2
+pytest-django==4.8.0
+pytest-cov==4.1.0
+factory-boy==3.3.0
+
+# Code quality
+black==24.2.0
+flake8==7.0.0
+isort==5.13.2
+
+# Documentation
+sphinx==7.3.7
+sphinx-rtd-theme==2.0.0
+
+# Development tools
+django-browser-reload==1.12.1
+watchdog==4.0.0
+
+# Additional dependencies
+pandas==2.2.0 

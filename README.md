@@ -56,7 +56,7 @@ For detailed contribution guidelines, including branch naming conventions, commi
 
 ### Prerequisites
 
-- Python 3.13.2
+- Python 3.12
 - PostgreSQL 15.0+
 - Docker and Docker Compose (for development environment)
 

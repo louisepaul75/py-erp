@@ -2,13 +2,13 @@
 
 ## Summary of Recent Updates
 
-As of February 27, 2025, we've updated several dependencies to ensure compatibility with Python 3.13.2 and to resolve various issues:
+As of February 27, 2025, we've updated several dependencies to ensure compatibility with Python 3.12 and to resolve various issues:
 
 ### Major Framework Updates
 
 - **Django**: Upgraded from 4.2.11 to 5.1.6
   - This is a major version upgrade that includes new features and backward-incompatible changes
-  - Python 3.10+ is now required (we're using Python 3.13.2)
+  - Python 3.10+ is now required (we're using Python 3.12)
   - Updated RemovedInDjango60Warning in pytest settings
   - Successfully passed all system checks and tests
 
@@ -63,7 +63,7 @@ See the [Environment Variables](dependency_management.md#environment-variables) 
 
 ## Next Steps
 
-1. Continue monitoring for compatibility issues with Python 3.13.2
+1. Continue monitoring for compatibility issues with Python 3.12
 2. Consider implementing a more robust solution for PostgreSQL dependencies
 3. Update the CI/CD pipeline to verify environment variable formatting
 4. Document any additional issues encountered during development 

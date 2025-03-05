@@ -77,8 +77,10 @@ else:
 fi
 
 # Update Nginx configuration to point to the correct directories
-sed -i 's|alias /var/www/static/;|alias /app/staticfiles/;|g' /etc/nginx/conf.d/pyerp.conf
-sed -i 's|alias /var/www/media/;|alias /app/media/;|g' /etc/nginx/conf.d/pyerp.conf
+if [ -f "/etc/nginx/conf.d/pyerp.conf" ]; then
+    sed -i 's|alias /var/www/static/;|alias /app/staticfiles/;|g' /etc/nginx/conf.d/pyerp.conf
+    sed -i 's|alias /var/www/media/;|alias /app/media/;|g' /etc/nginx/conf.d/pyerp.conf
+fi
 
 # Start supervisord to manage all services
 echo "Starting supervisord..."
