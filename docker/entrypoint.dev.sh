@@ -32,17 +32,17 @@ mkdir -p /app/media /app/static /app/data /app/pyerp/static
 # Initialize Vue.js application
 if [ -d "/app/frontend" ]; then
     echo "Initializing Vue.js application..."
-    /bin/bash /app/docker/vue-entrypoint.sh
+    cd /app/frontend && npm install
     echo "Vue.js initialization complete"
 fi
 
 # Apply migrations for development
 echo "Applying database migrations..."
 # First make migrations to ensure all models are up to date
+cd /app
 python manage.py makemigrations --noinput
 python manage.py migrate --noinput
 echo "Migrations applied"
 
-# Start development server
-echo "Starting Django development server..."
-python manage.py runserver 0.0.0.0:8050 
+# Execute the command passed to docker run
+exec "$@" 

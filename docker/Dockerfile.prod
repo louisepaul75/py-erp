@@ -56,9 +56,11 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data
 RUN python manage.py collectstatic --noinput
 
 # Configure Nginx
-COPY docker/nginx.conf /etc/nginx/sites-available/default
+RUN mkdir -p /etc/nginx/ssl
+COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/sites-available/default
 RUN ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+    && mkdir -p /var/log/supervisor
 
 # Copy supervisord configuration
 COPY docker/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf

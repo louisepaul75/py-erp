@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.prod
-    container_name: pyerp
+    container_name: pyerp-prod
     restart: always
     ports:
       - "8050:8050"

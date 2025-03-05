@@ -9,14 +9,13 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
+    container_name: pyerp-dev
     ports:
       - "8050:8050"
-      - "6379:6379"
       - "3000:3000"  # Vue.js development server
     volumes:
       - ..:/app  # Mount local code directory to /app for hot reloading
       - pyerp_data:/app/data
-      - ./supervisord.conf:/etc/supervisor/conf.d/supervisord.conf
     env_file:
       - ../config/env/.env.dev
     environment:
@@ -36,8 +35,7 @@ services:
         mkdir -p /var/lib/redis &&
         chown redis:redis /var/lib/redis &&
         chmod 750 /var/lib/redis &&
-        # Start Redis with proper configuration
-        redis-server --daemonize no &
+        # Create and setup static directories
         mkdir -p staticfiles &&
         mkdir -p static/images &&
         mkdir -p staticfiles/images &&
@@ -51,9 +49,7 @@ services:
           node /app/scripts/copy_static_assets.js || true
         fi &&
         python manage.py collectstatic --noinput &&
-        # Copy supervisord.conf to the correct location if it doesn't exist
-        cp -f /app/docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf &&
-        # Start supervisord to manage all services
+        # Start supervisord
         /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "
 

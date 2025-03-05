@@ -2,6 +2,7 @@
 set -e
 
 # Script to deploy the pyERP application to staging environment
+# Note: Container will be named pyerp-prod as per naming convention
 
 echo "Setting up staging deployment for pyERP..."
 

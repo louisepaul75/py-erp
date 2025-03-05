@@ -10,18 +10,19 @@ docker rm pyerp-dev || true
 
 # Rebuild the Docker image
 echo "Rebuilding Docker image for development..."
-docker build -t docker-pyerp-dev -f docker/Dockerfile.dev .
+docker build -t pyerp-dev-image -f docker/Dockerfile.dev .
 
 # Start a new container
 echo "Starting new pyerp-dev container..."
 docker run -d \
   --name pyerp-dev \
   --env-file config/env/.env.dev \
-  -p 8051:8050 \
+  -p 8050:8050 \
+  -p 3000:3000 \
+  -p 6379:6379 \
   -v $(pwd):/app \
-  --entrypoint /bin/bash \
-  docker-pyerp-dev \
-  -c "/app/docker/entrypoint.dev.sh"
+  pyerp-dev-image \
+  /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
 
 # Follow the logs
 echo "Following container logs..."
