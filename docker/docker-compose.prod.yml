@@ -37,6 +37,14 @@ services:
       start_period: 40s
     depends_on:
       - datadog-agent
+    command: >
+      bash -c "
+        cd /app &&
+        # Run the static directories setup script
+        bash /app/docker/ensure_static_dirs.sh &&
+        # Start supervisord
+        /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
+      "
 
   datadog-agent:
     image: datadog/agent:latest

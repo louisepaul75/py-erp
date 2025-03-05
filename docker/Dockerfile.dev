@@ -63,6 +63,10 @@ ENV PYTHONUNBUFFERED=1 \
 # Copy supervisord configuration
 COPY docker/supervisord.dev.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Copy static directories setup script
+COPY docker/ensure_static_dirs.sh /app/docker/ensure_static_dirs.sh
+RUN chmod +x /app/docker/ensure_static_dirs.sh
+
 # Set up entrypoint
 COPY docker/entrypoint.dev.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

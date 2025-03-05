@@ -35,20 +35,8 @@ services:
         mkdir -p /var/lib/redis &&
         chown redis:redis /var/lib/redis &&
         chmod 750 /var/lib/redis &&
-        # Create and setup static directories
-        mkdir -p staticfiles &&
-        mkdir -p static/images &&
-        mkdir -p staticfiles/images &&
-        # Copy frontend assets to static directories
-        if [ -d /app/frontend/src/assets ]; then
-          cp -r /app/frontend/src/assets/* /app/static/images/ || true
-          cp -r /app/frontend/src/assets/* /app/staticfiles/images/ || true
-        fi &&
-        # Run the static assets copy script if it exists
-        if [ -f /app/scripts/copy_static_assets.js ]; then
-          node /app/scripts/copy_static_assets.js || true
-        fi &&
-        python manage.py collectstatic --noinput &&
+        # Run the static directories setup script
+        bash /app/docker/ensure_static_dirs.sh &&
         # Start supervisord
         /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "

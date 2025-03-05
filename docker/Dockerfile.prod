@@ -105,6 +105,10 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
 # Copy supervisord configuration
 COPY docker/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Copy static directories setup script
+COPY docker/ensure_static_dirs.sh /app/docker/ensure_static_dirs.sh
+RUN chmod +x /app/docker/ensure_static_dirs.sh
+
 # Expose port for Nginx
 EXPOSE 80 443
 

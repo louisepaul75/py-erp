@@ -3,6 +3,14 @@
 # Script to ensure static directories exist and are properly populated
 # This script is meant to be run before starting the application
 
+# Get the script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+# Get the project root directory (parent of script directory)
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
+
+# Change to project root directory
+cd "$PROJECT_ROOT"
+
 # Create static directories if they don't exist
 mkdir -p static/images
 mkdir -p staticfiles/images
@@ -31,7 +39,7 @@ fi
 # Run collectstatic to ensure all static files are collected
 if command -v python &> /dev/null; then
   echo "Running collectstatic..."
-  python manage.py collectstatic --noinput
+  python "$PROJECT_ROOT/manage.py" collectstatic --noinput
   echo "Collectstatic completed."
 fi
 
