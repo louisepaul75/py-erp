@@ -67,15 +67,14 @@ The Docker-based development environment provides a consistent setup with hot-re
    ```
 
 2. Configure environment variables:
-   - Copy `docker/docker.env.dev.example` to `docker/docker.env.dev`
+   - Use the environment files in `config/env/` directory
+   - For development, use `config/env/.env.dev`
+   - For production, use `config/env/.env.prod`
    - Update the variables as needed, especially the external database connection details
    - Set the following environment variables for your external PostgreSQL database:
      ```bash
      export DB_HOST=your_postgres_host
      export DB_PORT=5432
-     export DB_NAME=pyerp_dev
-     export DB_USER=postgres
-     export DB_PASSWORD=your_password
      ```
 
 3. Start the development environment:
@@ -173,15 +172,67 @@ The production environment is optimized for performance, security, and reliabili
 - Git installed
 - External PostgreSQL database server
 
-### Services
-- External PostgreSQL Database (not containerized)
-- Redis 7 (Cache & Message Broker)
-- Django with Gunicorn (Application Server)
-- Nginx (Web Server)
-- Celery (Async Task Worker)
-- Celery Beat (Task Scheduler)
+### Deployment Options
 
-### Setup and Running
+#### Option 1: Automated CI/CD Pipeline (Recommended)
+
+The pyERP system includes a CI/CD pipeline that automatically deploys to production when the `dev` branch is merged into the `prod` branch.
+
+1. **Set Up the Deployment Server**:
+
+   Use the provided server setup script to prepare your production server:
+
+   ```bash
+   # Copy the setup script to your server
+   scp scripts/setup_deployment_server.sh user@your-server-ip:/tmp/
+
+   # Copy your environment file to the server
+   scp config/env/.env user@your-server-ip:/tmp/
+
+   # SSH into your server
+   ssh user@your-server-ip
+
+   # Run the setup script
+   cd /tmp
+   chmod +x setup_deployment_server.sh
+   sudo ./setup_deployment_server.sh pyerp /opt/pyerp /tmp/.env
+   ```
+
+   The script will:
+   - Create a dedicated user for the application
+   - Install Docker and Docker Compose
+   - Create necessary directories
+   - Set up GitHub Container Registry authentication
+   - Create a production environment file with values from your source environment
+
+2. **Configure GitHub Repository Secrets**:
+
+   Add the following secrets to your GitHub repository:
+
+   - `PROD_SSH_PRIVATE_KEY`: SSH private key for connecting to your production server
+   - `PROD_DEPLOY_HOST`: Hostname or IP address of your production server
+   - `PROD_DEPLOY_USER`: Username created by the setup script (default: `pyerp`)
+   - `PROD_DEPLOY_PATH`: Path where the application is deployed (default: `/opt/pyerp`)
+
+3. **Deploy to Production**:
+
+   To deploy to production, simply merge your `dev` branch into the `prod` branch:
+
+   ```bash
+   git checkout prod
+   git merge dev
+   git push origin prod
+   ```
+
+   The CI/CD pipeline will automatically:
+   - Run linting and tests
+   - Build the Docker image
+   - Push the image to GitHub Container Registry
+   - Deploy to your production server
+
+#### Option 2: Manual Deployment
+
+If you prefer to deploy manually, follow these steps:
 
 1. Prepare the Linux server:
    ```bash
@@ -203,7 +254,8 @@ The production environment is optimized for performance, security, and reliabili
    ```
 
 3. Configure environment variables:
-   - Copy `docker/docker.env.prod.example` to `docker/docker.env.prod`
+   - Use the environment files in `config/env/` directory
+   - For production, use `config/env/.env.prod`
    - Update all variables with production values:
      - Generate a strong SECRET_KEY
      - Configure external database connection details
@@ -244,6 +296,75 @@ The production environment is optimized for performance, security, and reliabili
 - Health checks for services
 - Automatic database migrations
 - Certbot for SSL certificate automation
+- CI/CD pipeline for automated deployments
+
+### Required Environment Variables
+
+The deployment requires the following environment variables to be defined in your `.env` file:
+
+- **GitHub Credentials** (required for CI/CD and container registry):
+  - `GITHUB_USERNAME`: GitHub username for accessing the container registry
+  - `GITHUB_TOKEN`: GitHub personal access token with `read:packages` scope
+
+- **Database Configuration**:
+  - `DB_HOST`: Hostname or IP address of your PostgreSQL server
+  - `DB_PORT`: Port number (default: 5432)
+  - `DB_NAME`: Database name
+  - `DB_USER`: Database username
+  - `DB_PASSWORD`: Database password
+
+- **Django Settings**:
+  - `SECRET_KEY`: Django secret key
+  - `ALLOWED_HOSTS`: Comma-separated list of allowed hosts
+  - `DEBUG`: Set to False for production
+
+- **Email Settings**:
+  - `EMAIL_HOST`: SMTP server hostname
+  - `EMAIL_PORT`: SMTP port
+  - `EMAIL_HOST_USER`: SMTP username
+  - `EMAIL_HOST_PASSWORD`: SMTP password
+  - `EMAIL_USE_TLS`: Whether to use TLS
+  - `DEFAULT_FROM_EMAIL`: Default sender email
+
+- **Optional Settings**:
+  - `DD_API_KEY`: Datadog API key (if using Datadog)
+  - `DD_SITE`: Datadog site (default: datadoghq.com)
+  - Legacy ERP connection settings (if applicable)
+
+### Monitoring and Maintenance
+
+#### Viewing Logs
+```bash
+# View all container logs
+docker compose -f docker/docker-compose.prod.yml logs -f
+
+# View logs for a specific service
+docker compose -f docker/docker-compose.prod.yml logs -f pyerp
+```
+
+#### Restarting Services
+```bash
+# Restart all services
+docker compose -f docker/docker-compose.prod.yml restart
+
+# Restart a specific service
+docker compose -f docker/docker-compose.prod.yml restart pyerp
+```
+
+#### Updating the Application
+When using the CI/CD pipeline, updates are automatically deployed when changes are merged to the `prod` branch.
+
+For manual updates:
+```bash
+# Pull the latest code
+git pull origin prod
+
+# Rebuild and restart containers
+docker compose -f docker/docker-compose.prod.yml up -d --build
+
+# Run migrations
+docker compose -f docker/docker-compose.prod.yml exec pyerp python manage.py migrate
+```
 
 ## Environment Configuration
 

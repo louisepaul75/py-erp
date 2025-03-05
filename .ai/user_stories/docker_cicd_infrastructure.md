@@ -84,6 +84,58 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
 - Dependencies are efficiently managed
 - Failed builds provide clear error messages
 
+#### US-C103: Automated Deployment Server Setup
+**As a** DevOps Engineer  
+**I want to** automate the setup of deployment servers  
+**So that** production environments are consistent and easy to provision
+
+**Acceptance Criteria:**
+- Script successfully sets up a new server for deployment
+- Docker and Docker Compose are installed automatically
+- GitHub Container Registry authentication is configured
+- Application user and directory structure are created
+- Environment variables are properly configured
+- Deployment can be triggered via CI/CD pipeline
+
+**Implementation Notes:**
+- The setup script (`setup_deployment_server.sh`) handles:
+  - Creating a dedicated application user
+  - Installing Docker and Docker Compose
+  - Setting up GitHub Container Registry authentication
+  - Creating necessary directories with proper permissions
+  - Generating a production environment file with smart variable handling
+  - Copying the source environment file for reference
+- Environment variable handling prioritizes:
+  1. Values from the source `.env` file
+  2. Sensible defaults or generated values
+  3. Server-specific values (hostname, IP addresses)
+- Security considerations include:
+  - Proper file permissions for sensitive files
+  - Secure random value generation for passwords and keys
+  - Isolation of application user permissions
+
+#### US-C104: Branch-Based Deployment Pipeline
+**As a** Developer  
+**I want to** deploy to production by merging branches  
+**So that** the deployment process is simple and follows Git workflow
+
+**Acceptance Criteria:**
+- Merging `dev` into `prod` triggers production deployment
+- CI/CD pipeline runs tests before deployment
+- Deployment uses the latest Docker image from GitHub Container Registry
+- SSH-based deployment to the production server
+- Health checks confirm successful deployment
+
+**Implementation Notes:**
+- GitHub Actions workflow is triggered on push to `prod` branch
+- Workflow uses repository secrets for SSH authentication
+- Deployment steps include:
+  1. Pulling the latest Docker image
+  2. Updating Docker Compose configuration
+  3. Restarting services
+  4. Running database migrations
+  5. Verifying application health
+
 ## Technical Tasks
 
 ### Docker Tasks
@@ -98,5 +150,9 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
 - [x] Configure GitHub Container Registry integration
 - [x] Add proper permissions to GitHub workflows 
 - [x] Implement intelligent tagging strategy
+- [x] Create automated server setup script
+- [x] Implement smart environment variable handling
+- [x] Configure branch-based deployment pipeline
+- [x] Add health checks for deployment verification
 - [ ] Add vulnerability scanning for container images
 - [ ] Configure deployment pipeline for different environments 

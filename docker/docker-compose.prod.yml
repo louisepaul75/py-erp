@@ -10,7 +10,7 @@ services:
       - "8050:8050"
       - "80:80"
     env_file:
-      - docker/docker.env.prod
+      - ../config/env/.env.prod
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.settings.production
       - REDIS_URL=redis://localhost:6379/0
@@ -28,6 +28,37 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    # Add labels for Datadog autodiscovery
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "python", "service": "pyerp"}]'
+      com.datadoghq.ad.check_names: '["http_check"]'
+      com.datadoghq.ad.init_configs: '[{}]'
+      com.datadoghq.ad.instances: '[{"name": "pyerp", "url": "http://localhost:8050/admin/", "timeout": 1}]'
+
+  # Add Datadog agent service
+  datadog:
+    image: datadog/agent:latest
+    container_name: datadog-agent
+    environment:
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=${DD_SITE:-datadoghq.com}
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_PROCESS_AGENT_ENABLED=true
+      - DD_DOCKER_LABELS_AS_TAGS={"com.docker.compose.service":"service_name"}
+      - DD_TAGS=env:production,service:pyerp
+      - DD_APM_ENABLED=true
+      - DD_APM_NON_LOCAL_TRAFFIC=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /opt/datadog-agent/run:/opt/datadog-agent/run:rw
+      - ./datadog.yaml:/etc/datadog-agent/datadog.yaml:ro
+    restart: unless-stopped
+    depends_on:
+      - pyerp
 
 volumes:
   pyerp_data:

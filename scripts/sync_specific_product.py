@@ -99,6 +99,7 @@ def sync_product_images_for_sku(sku, search_all_pages=True):
                     print(f"Updating existing image: {image.id}")
                     created = False
                 except ProductImage.DoesNotExist:
+                    # Let Django handle ID generation
                     image = ProductImage(
                         product=product, 
                         external_id=parsed_image['external_id']
@@ -110,7 +111,7 @@ def sync_product_images_for_sku(sku, search_all_pages=True):
                 image.image_url = parsed_image['image_url']
                 image.thumbnail_url = parsed_image.get('thumbnail_url')
                 image.image_type = parsed_image['image_type']
-                image.is_front = 1 if parsed_image.get('is_front', False) else 0
+                image.is_front = parsed_image.get('is_front', False)
                 image.priority = client.get_image_priority(parsed_image)
                 
                 # Auto-generate alt text if not set
@@ -124,10 +125,10 @@ def sync_product_images_for_sku(sku, search_all_pages=True):
                 if parsed_image['image_type'] == 'Produktfoto' and parsed_image.get('is_front', False):
                     # Remove primary flag from all other images
                     print("Found front Produktfoto! Setting as primary.")
-                    ProductImage.objects.filter(product=product).update(is_primary=0)
-                    image.is_primary = 1
+                    ProductImage.objects.filter(product=product).update(is_primary=False)
+                    image.is_primary = True
                 else:
-                    image.is_primary = 0
+                    image.is_primary = False
                 
                 # Save the image
                 image.save()

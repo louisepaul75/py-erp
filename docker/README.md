@@ -1,94 +1,94 @@
-# Docker Configuration
+# Docker Setup for pyERP
 
-This directory contains configuration files for Docker deployment of the pyERP application.
+This directory contains Docker configuration files for the pyERP system.
 
 ## Environment Files
 
-### Security Warning
+**IMPORTANT UPDATE**: We are consolidating environment files. The Docker-specific environment files (`docker.env.dev` and `docker.env.prod`) are being migrated to the central environment files in `config/env/`. Please refer to the [Environment Consolidation Plan](../docs/ENV_CONSOLIDATION.md) for details.
 
-**IMPORTANT**: The environment files (`docker.env.dev` and `docker.env.prod`) contain sensitive information 
-and should never be committed to version control. These files are included in `.gitignore` to help prevent 
-accidental commits.
+**IMPORTANT**: The environment files contain sensitive information and should not be committed to version control.
 
-### Available Files
-
+### Environment Files (Legacy - Being Phased Out)
 - `docker.env.dev.example`: Template for development environment settings
 - `docker.env.prod.example`: Template for production environment settings
 - `docker.env.dev`: Your actual development environment settings (not tracked in Git)
 - `docker.env.prod`: Your actual production environment settings (not tracked in Git)
 
+### New Environment Files (Consolidated)
+- `config/env/.env.dev`: Development environment settings
+- `config/env/.env.prod`: Production environment settings
+
 ## Setup Instructions
 
-1. Copy the example files to create your actual configuration:
-   ```bash
-   # For development
-   cp docker.env.dev.example docker.env.dev
-   
-   # For production
-   cp docker.env.prod.example docker.env.prod
-   ```
+### Initial Setup
 
-2. Edit the environment files with appropriate settings:
-   - Development: Edit `docker.env.dev` with development settings
-   - Production: Edit `docker.env.prod` with production settings
+```bash
+# Copy example environment files (Legacy - use config/env files instead)
+cp docker.env.dev.example docker.env.dev
+cp docker.env.prod.example docker.env.prod
+```
+
+### Configuration
+
+- Development: Edit `config/env/.env.dev` with development settings
+- Production: Edit `config/env/.env.prod` with production settings
 
 ## Database Configuration
 
-The Docker containers use PostgreSQL for both development and production environments:
+### Development
 
-1. **Development Database**: 
-   - Default credentials in `docker.env.dev`
-   - Database exposed on port 5432 for local development tools
+- Default credentials in `config/env/.env.dev`
+- Uses PostgreSQL database
 
-2. **Production Database**:
-   - Secure credentials required in `docker.env.prod`
-   - Database not exposed externally
-   - Regular backups recommended
+### Production
 
-## Example Docker Commands
+- Secure credentials required in `config/env/.env.prod`
+- Uses PostgreSQL database
 
-**Development mode:**
+## Running Docker Containers
+
+### Development
+
 ```bash
-# Start all services
-docker compose up
-
-# Start in background
-docker compose up -d
-
-# View logs
-docker compose logs -f
+docker-compose up
 ```
 
-**Production mode:**
+### Production
+
 ```bash
-# Start all services
-docker compose -f docker-compose.prod.yml up -d
-
-# View logs
-docker compose -f docker-compose.prod.yml logs -f
-
-# Execute commands
-docker compose -f docker-compose.prod.yml exec web python manage.py migrate
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
-## Directory Structure
+## Docker Files
 
 ```
 docker/
-├── Dockerfile.dev           # Development Dockerfile
-├── Dockerfile.prod          # Production Dockerfile
-├── docker-compose.yml      # Development compose file
-├── docker-compose.prod.yml # Production compose file
-├── docker.env.dev          # Development environment variables
-├── docker.env.prod         # Production environment variables
-├── nginx/                  # Nginx configuration for production
-│   ├── conf.d/            # Nginx site configurations
-│   └── ssl/               # SSL certificates
-└── certbot/               # SSL certificate automation
-    ├── conf/              # Certbot configuration
-    └── www/               # Certbot webroot
+├── Dockerfile.dev         # Development Dockerfile
+├── Dockerfile.prod        # Production Dockerfile
+├── docker-compose.yml     # Development Docker Compose
+├── docker-compose.prod.yml # Production Docker Compose
+├── entrypoint.sh          # Container entrypoint script
+├── start.sh               # Application startup script
+├── supervisord.conf       # Supervisor configuration
+├── nginx/                 # Nginx configuration
+│   └── conf.d/            # Nginx site configuration
+│       └── pyerp.conf     # pyERP Nginx configuration
+├── docker.env.dev          # Development environment variables (legacy)
+├── docker.env.prod         # Production environment variables (legacy)
+└── README.md              # This file
 ```
 
-For detailed deployment instructions, see:
-- [Development Docker Setup](../docs/development/docker_deployment.md#development-mode)
-- [Production Docker Setup](../docs/development/docker_deployment.md#production-mode) 
+## Troubleshooting
+
+If you encounter issues with Docker:
+
+1. Check container logs:
+   ```bash
+   docker-compose logs
+   ```
+
+2. Verify environment variables are set correctly.
+
+3. Ensure PostgreSQL is accessible from the container.
+
+4. Check for port conflicts on the host machine. 

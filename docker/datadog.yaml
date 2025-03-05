@@ -1,0 +1,63 @@
+## Datadog Agent configuration file
+
+# API key
+api_key: ${DD_API_KEY}
+
+# Site (datadoghq.com or datadoghq.eu)
+site: ${DD_SITE}
+
+# Logging level
+log_level: info
+
+# Hostname
+hostname: pyerp-production
+
+# Tags
+tags:
+  - env:production
+  - service:pyerp
+  - application:pyerp
+
+# APM configuration
+apm_config:
+  enabled: true
+  apm_non_local_traffic: true
+
+# Logs configuration
+logs_enabled: true
+logs_config:
+  container_collect_all: true
+
+# Process monitoring
+process_config:
+  enabled: true
+  process_collection:
+    enabled: true
+
+# Infrastructure monitoring
+infrastructure_config:
+  enabled: true
+
+# Integrations
+integrations:
+  # Python integration
+  python:
+    init_config:
+    instances:
+      - name: pyerp
+        service: pyerp
+        
+  # Redis integration
+  redis:
+    init_config:
+    instances:
+      - host: localhost
+        port: 6379
+        service: redis-pyerp
+        
+  # Nginx integration
+  nginx:
+    init_config:
+    instances:
+      - nginx_status_url: http://localhost/nginx_status
+        service: nginx-pyerp 

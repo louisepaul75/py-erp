@@ -54,9 +54,10 @@ This will synchronize all product images from the external API.
 
 - `--dry-run`: Simulate the sync process without making changes to the database
 - `--limit [N]`: Limit the number of API pages to process
-- `--page-size [N]`: Number of API results to fetch per page (default: 100)
+- `--page-size [N]`: Number of API results to fetch per page (default: 500)
 - `--force`: Force update all images even if they have been recently synced
 - `--skip-pages [N]`: Skip this many pages before starting to process
+- `--batch-size [N]`: Number of records to process in each database batch (default: 1000)
 
 ### Examples
 
@@ -108,6 +109,27 @@ The synchronization process follows these steps:
 5. Track the number of images added, updated, and products affected
 6. Update the sync log with the results
 
+### Individual Record Processing
+
+The sync process uses individual record creation and updates rather than bulk operations to ensure proper ID generation:
+
+1. For new images:
+   - Each image is saved individually using `image.save()` 
+   - This allows Django's ORM to handle ID generation correctly
+   - Error handling is implemented to catch and log any issues with individual records
+
+2. For existing images:
+   - Each image is retrieved from the database and updated individually
+   - Changes are saved with `image.save()` rather than bulk updates
+   - This approach ensures proper database sequence usage
+
+3. Primary flag updates:
+   - After processing individual images, primary flags are updated
+   - First, all primary flags are reset for affected products
+   - Then, primary flags are set for front Produktfotos
+
+This approach ensures database integrity and proper ID sequence usage, preventing potential ID conflicts that could occur with bulk operations.
+
 ## Logging
 
 The synchronization process logs detailed information to help with troubleshooting:
@@ -142,4 +164,6 @@ call_command('sync_product_images', limit=1, page_size=10)
 - Check the sync logs after each run to verify the results
 - Schedule regular synchronization to keep images up to date
 - Consider using smaller page sizes (10-20) for more frequent updates
-- Use larger page sizes (100-200) for initial synchronization or full refreshes 
+- Use larger page sizes (100-500) for initial synchronization or full refreshes
+- Monitor database performance during large sync operations
+- Review error logs for any issues with individual image processing 

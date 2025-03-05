@@ -5,6 +5,7 @@ A modern Django-based ERP system designed to replace a legacy 4D-based ERP, focu
 [![Lint](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=lint)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
 [![Tests](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=tests)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
 [![Build](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=build)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
+[![Deploy](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/deploy.yml/badge.svg)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/deploy.yml)
 [![codecov](https://codecov.io/gh/Wilhelm-Schweizer/pyERP/branch/main/graph/badge.svg)](https://codecov.io/gh/Wilhelm-Schweizer/pyERP)
 
 ## Project Overview
@@ -240,15 +241,52 @@ CI/CD workflows can be found in the `.github/workflows` directory.
 
 ## Deployment
 
-For production deployment:
+The project uses a CI/CD pipeline to automate testing, building, and deployment processes.
 
-1. Set up a production-ready database (PostgreSQL)
-2. Configure environment variables
-3. Use Gunicorn as WSGI server
-4. Set up Nginx as reverse proxy
-5. Configure static files serving
+### Environments
 
-See detailed deployment instructions in `docs/deployment.md`
+- **Development**: Automatically deployed from the `dev` branch
+- **Staging**: Deployed from `release/*` branches
+- **Production**: Deployed when:
+  - A version tag (`v*`) is pushed
+  - The `dev` branch is merged into the `prod` branch
+
+### Deployment Process
+
+The CI/CD pipeline follows these steps:
+1. Run linting and tests
+2. Build Docker image
+3. Push image to GitHub Container Registry
+4. Deploy to the appropriate environment
+
+### Server Setup
+
+The project includes an automated server setup script that prepares a server for deployment:
+
+```bash
+# Basic usage (uses default values)
+sudo ./scripts/setup_deployment_server.sh
+
+# Custom configuration
+sudo ./scripts/setup_deployment_server.sh <app_user> <app_path> <env_file>
+```
+
+The script requires GitHub credentials in the specified environment file:
+
+```
+# GitHub credentials for container registry (required)
+GITHUB_USERNAME=your-github-username
+GITHUB_TOKEN=your-github-personal-access-token
+```
+
+The script intelligently uses all available environment variables from your source .env file, with sensible defaults for any missing values. It automatically:
+
+- Uses existing configuration values when available
+- Generates secure random values for sensitive fields
+- Detects server hostname and IP addresses
+- Includes any custom environment variables
+
+See the [CI/CD documentation](.github/README.md) for more details on the deployment process and server setup.
 
 ## Project Structure
 

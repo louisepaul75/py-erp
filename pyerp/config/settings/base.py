@@ -306,9 +306,10 @@ IMAGE_API = {
     'BASE_URL': os.environ.get('IMAGE_API_URL', 'http://webapp.zinnfiguren.de/api/'),
     'USERNAME': os.environ.get('IMAGE_API_USERNAME', ''),
     'PASSWORD': os.environ.get('IMAGE_API_PASSWORD', ''),
-    'TIMEOUT': int(os.environ.get('IMAGE_API_TIMEOUT', 30)),
+    'TIMEOUT': int(os.environ.get('IMAGE_API_TIMEOUT', 60)),  # Increased default timeout
     'CACHE_ENABLED': os.environ.get('IMAGE_API_CACHE_ENABLED', 'True').lower() == 'true',
     'CACHE_TIMEOUT': int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600)),  # 1 hour
+    'VERIFY_SSL': os.environ.get('IMAGE_API_VERIFY_SSL', 'False').lower() == 'true',  # Default to not verifying SSL
 }
 
 # Update loggers for image API

@@ -14,7 +14,10 @@ from django.conf import settings
 from django.core.cache import cache
 import json
 import hashlib
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from pyerp.products.models import ParentProduct
+import urllib3
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +37,33 @@ class ImageAPIClient:
         self.base_url = settings.IMAGE_API.get('BASE_URL', 'http://webapp.zinnfiguren.de/api/')
         self.username = settings.IMAGE_API.get('USERNAME')
         self.password = settings.IMAGE_API.get('PASSWORD')
-        self.timeout = settings.IMAGE_API.get('TIMEOUT', 30)
+        self.timeout = settings.IMAGE_API.get('TIMEOUT', 60)  # Increased default timeout
         self.cache_enabled = settings.IMAGE_API.get('CACHE_ENABLED', True)
         self.cache_timeout = settings.IMAGE_API.get('CACHE_TIMEOUT', 3600)  # 1 hour
+        self.verify_ssl = settings.IMAGE_API.get('VERIFY_SSL', False)  # Default to not verifying SSL
         
         # Ensure the base URL ends with a slash
         if not self.base_url.endswith('/'):
             self.base_url += '/'
-
+            
+        # Set up retry strategy
+        retry_strategy = Retry(
+            total=3,  # number of retries
+            backoff_factor=0.5,  # wait 0.5s * (2 ** (retry - 1)) between retries
+            status_forcelist=[500, 502, 503, 504]  # HTTP status codes to retry on
+        )
+        
+        # Create a session with the retry strategy
+        self.session = requests.Session()
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        self.session.auth = HTTPBasicAuth(self.username, self.password)
+        
+        # Disable SSL verification warnings if verify_ssl is False
+        if not self.verify_ssl:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
     def get_appropriate_article_number(self, product):
         """
         Determine the appropriate article number to use for image search
@@ -112,11 +134,11 @@ class ImageAPIClient:
         
         try:
             logger.debug(f"Making request to {url} with params {params}")
-            response = requests.get(
+            response = self.session.get(
                 url,
                 params=params,
-                auth=HTTPBasicAuth(self.username, self.password),
-                timeout=self.timeout
+                timeout=self.timeout,
+                verify=self.verify_ssl  # Use the SSL verification setting
             )
             
             if response.status_code == 200:
@@ -132,6 +154,11 @@ class ImageAPIClient:
                 logger.error(f"Response: {response.text}")
                 return None
                 
+        except requests.exceptions.SSLError as e:
+            logger.error(f"SSL Error: {e}")
+            if self.verify_ssl:
+                logger.warning("Consider setting VERIFY_SSL=False in settings if the certificate is self-signed")
+            return None
         except requests.exceptions.RequestException as e:
             logger.error(f"API connection error: {e}")
             return None

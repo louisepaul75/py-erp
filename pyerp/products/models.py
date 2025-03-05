@@ -677,6 +677,8 @@ class ProductImage(models.Model):
         'VariantProduct', 
         on_delete=models.CASCADE, 
         related_name='images',
+        null=True,
+        blank=True,
         help_text=_('Product this image belongs to')
     )
     external_id = models.CharField(
@@ -728,7 +730,13 @@ class ProductImage(models.Model):
         verbose_name = _('Product Image')
         verbose_name_plural = _('Product Images')
         ordering = ['priority', 'id']
-        unique_together = [('product', 'external_id')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['product', 'external_id'],
+                name='unique_product_image',
+                condition=models.Q(product__isnull=False)
+            )
+        ]
     
     def __str__(self):
         return f"Image for {self.product.sku} ({self.image_type})"

@@ -34,12 +34,8 @@ media
 !.env.example
 !.env.*.example
 temp_env*
-
-# Docker environment files
-docker/docker.env.dev
-docker/docker.env.prod
-!docker/docker.env.dev.example
-!docker/docker.env.prod.example
+# Except for config/env files which are our source of truth
+!config/env/.env.*
 
 # Docker
 .docker/data/
@@ -102,4 +98,7 @@ pip-wheel-metadata/
 python-*.exe
 
 # Documentation build
-docs/_build/ 
+docs/_build/
+
+# Backup files
+backups/ 

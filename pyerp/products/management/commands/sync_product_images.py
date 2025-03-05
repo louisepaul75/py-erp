@@ -43,7 +43,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--force',
             action='store_true',
-            help='Force update all images even if they have been recently synced',
+            help='Force update all images by first deleting all existing images',
         )
         parser.add_argument(
             '--skip-pages',
@@ -73,11 +73,32 @@ class Command(BaseCommand):
                 status='in_progress',
                 started_at=timezone.now()
             )
+            
+            # If force option is used, delete all existing images
+            if force:
+                self.stdout.write("Force option used - deleting all existing product images...")
+                try:
+                    with transaction.atomic():
+                        deleted_count = ProductImage.objects.all().delete()[0]
+                        self.stdout.write(self.style.SUCCESS(f"Deleted {deleted_count} existing product images"))
+                        if sync_log:
+                            sync_log.images_deleted = deleted_count
+                            sync_log.save()
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"Error deleting existing images: {str(e)}"))
+                    if sync_log:
+                        sync_log.status = 'failed'
+                        sync_log.error_message = f"Error deleting existing images: {str(e)}"
+                        sync_log.completed_at = timezone.now()
+                        sync_log.save()
+                    return
         
         try:
             # Initialize counter variables
             images_added = 0
             images_updated = 0
+            orphaned_images_added = 0
+            orphaned_images_updated = 0
             products_affected = set()  # Use a set to count unique products
             
             # Initialize API client
@@ -86,12 +107,42 @@ class Command(BaseCommand):
             # Store client as instance variable for use in helper methods
             self.client = client
             
-            # Get API metadata to know total pages
-            first_page = client._make_request("all-files-and-articles/", params={"page": 1, "page_size": 1})
-            if not first_page:
-                self.stdout.write(self.style.ERROR("Failed to connect to API"))
-                return
-                
+            # Get API metadata to know total pages (with retries)
+            max_retries = 3
+            retry_delay = 5  # seconds
+            
+            for attempt in range(max_retries):
+                try:
+                    first_page = client._make_request("all-files-and-articles/", params={"page": 1, "page_size": 1})
+                    if first_page:
+                        break
+                    else:
+                        if attempt < max_retries - 1:
+                            self.stdout.write(self.style.WARNING(f"Failed to connect to API, retrying in {retry_delay} seconds..."))
+                            time.sleep(retry_delay)
+                            retry_delay *= 2  # Exponential backoff
+                        else:
+                            self.stdout.write(self.style.ERROR("Failed to connect to API after multiple attempts"))
+                            if not dry_run and sync_log:
+                                sync_log.status = 'failed'
+                                sync_log.error_message = "Failed to connect to API after multiple attempts"
+                                sync_log.completed_at = timezone.now()
+                                sync_log.save()
+                            return
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        self.stdout.write(self.style.WARNING(f"Error connecting to API: {str(e)}, retrying in {retry_delay} seconds..."))
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        self.stdout.write(self.style.ERROR(f"Error connecting to API after multiple attempts: {str(e)}"))
+                        if not dry_run and sync_log:
+                            sync_log.status = 'failed'
+                            sync_log.error_message = f"Error connecting to API: {str(e)}"
+                            sync_log.completed_at = timezone.now()
+                            sync_log.save()
+                        return
+            
             total_records = first_page.get('count', 0)
             total_pages = (total_records + page_size - 1) // page_size
             
@@ -144,6 +195,9 @@ class Command(BaseCommand):
                             tablefmt='grid'
                         ))
                     
+                    # Flag to track if this image was associated with any product
+                    image_associated_with_product = False
+                    
                     # Get associated articles
                     for article in parsed_image.get('articles', []):
                         article_number = article.get('article_number', '')
@@ -153,6 +207,8 @@ class Command(BaseCommand):
                         product = self._find_product(article_number, variant_code)
                         if not product:
                             continue
+                        
+                        image_associated_with_product = True
                         
                         if not dry_run:
                             # Check if image exists
@@ -189,13 +245,45 @@ class Command(BaseCommand):
                             products_affected.add(product.id)
                         else:
                             self.stdout.write(f"  Would {'create' if not hasattr(product, 'images') or not product.images.filter(external_id=parsed_image['external_id']).exists() else 'update'} image for {product.sku}: {parsed_image['image_type']}")
-                            products_affected.add(product.id)
+                    
+                    # If the image wasn't associated with any product, save it without a product reference
+                    if not image_associated_with_product and not dry_run:
+                        # Check if this image already exists without a product
+                        existing_image = ProductImage.objects.filter(
+                            product__isnull=True,
+                            external_id=parsed_image['external_id']
+                        ).first()
+                        
+                        if existing_image:
+                            # Update existing image
+                            existing_image.image_url = parsed_image['image_url']
+                            existing_image.thumbnail_url = parsed_image.get('thumbnail_url')
+                            existing_image.image_type = parsed_image['image_type']
+                            existing_image.is_front = parsed_image.get('is_front', False)
+                            images_to_update.append(existing_image)
+                            orphaned_images_updated += 1
+                            self.stdout.write(f"  Updating orphaned image: {parsed_image['external_id']} ({parsed_image['image_type']})")
+                        else:
+                            # Create new image without product
+                            new_image = ProductImage(
+                                product=None,
+                                external_id=parsed_image['external_id'],
+                                image_url=parsed_image['image_url'],
+                                thumbnail_url=parsed_image.get('thumbnail_url'),
+                                image_type=parsed_image['image_type'],
+                                is_front=parsed_image.get('is_front', False)
+                            )
+                            images_to_create.append(new_image)
+                            orphaned_images_added += 1
+                            self.stdout.write(f"  Creating orphaned image: {parsed_image['external_id']} ({parsed_image['image_type']})")
+                    elif not image_associated_with_product and dry_run:
+                        self.stdout.write(f"  Would create orphaned image: {parsed_image['external_id']} ({parsed_image['image_type']})")
                 
                 # Print table of results for this page
                 table_data = []
                 for image in images_to_create + images_to_update:
                     table_data.append([
-                        image.product.sku,
+                        image.product.sku if image.product else 'Orphaned',
                         image.image_type,
                         'Yes' if image.is_front else 'No',
                         'Create' if image in images_to_create else 'Update'
@@ -210,49 +298,73 @@ class Command(BaseCommand):
                     ))
                     self.stdout.write("\n")
                 
-                # Bulk create/update in transaction
+                # Create/update images individually instead of bulk operations
                 if not dry_run and (images_to_create or images_to_update):
                     with transaction.atomic():
-                        # Bulk create new images
+                        # Create new images individually
                         if images_to_create:
-                            ProductImage.objects.bulk_create(
-                                images_to_create,
-                                batch_size=batch_size
-                            )
+                            for image in images_to_create:
+                                try:
+                                    # Save each image individually to let Django handle ID generation
+                                    image.save()
+                                except Exception as e:
+                                    product_info = f"product {image.product.sku}" if image.product else "orphaned image"
+                                    self.stdout.write(self.style.ERROR(f"Error creating image for {product_info}: {str(e)}"))
+                                    # Log the error but continue with the next image
+                                    logger.exception(f"Error creating product image for {product_info}")
+                                    continue
                         
-                        # Bulk update existing images
+                        # Update existing images individually
                         if images_to_update:
-                            ProductImage.objects.bulk_update(
-                                images_to_update,
-                                ['image_url', 'thumbnail_url', 'image_type', 'is_front'],
-                                batch_size=batch_size
-                            )
+                            for image in images_to_update:
+                                try:
+                                    # Get the existing image from the database
+                                    existing_image = ProductImage.objects.get(id=image.id)
+                                    # Update fields
+                                    existing_image.image_url = image.image_url
+                                    existing_image.thumbnail_url = image.thumbnail_url
+                                    existing_image.image_type = image.image_type
+                                    existing_image.is_front = image.is_front
+                                    existing_image.save()
+                                except Exception as e:
+                                    product_info = f"product {image.product.sku}" if image.product else "orphaned image"
+                                    self.stdout.write(self.style.ERROR(f"Error updating image {image.id} for {product_info}: {str(e)}"))
+                                    # Log the error but continue
+                                    logger.exception(f"Error updating product image {image.id}")
+                                    continue
                         
                         # Update primary flags for Produktfoto front images
                         if products_in_batch:
-                            # First, reset all primary flags
-                            ProductImage.objects.filter(
-                                product_id__in=products_in_batch
-                            ).update(is_primary=False)
-                            
-                            # Then set primary for front Produktfotos
-                            ProductImage.objects.filter(
-                                product_id__in=products_in_batch,
-                                image_type='Produktfoto',
-                                is_front=True
-                            ).update(is_primary=True)
+                            try:
+                                # First, reset all primary flags
+                                ProductImage.objects.filter(
+                                    product_id__in=products_in_batch
+                                ).update(is_primary=False)
+                                
+                                # Then set primary for front Produktfotos
+                                ProductImage.objects.filter(
+                                    product_id__in=products_in_batch,
+                                    image_type='Produktfoto',
+                                    is_front=True
+                                ).update(is_primary=True)
+                            except Exception as e:
+                                self.stdout.write(self.style.ERROR(f"Error updating primary flags: {str(e)}"))
+                                # Log the error but continue
+                                logger.exception("Error updating primary flags for product images")
+                                continue
             
             # Complete the sync log
             self.stdout.write(self.style.SUCCESS(
                 f"Sync completed: {images_added} added, {images_updated} updated, "
+                f"{orphaned_images_added} orphaned images added, {orphaned_images_updated} orphaned images updated, "
                 f"{len(products_affected)} products affected"
             ))
             
             if not dry_run and sync_log:
                 sync_log.status = 'completed'
                 sync_log.completed_at = timezone.now()
-                sync_log.images_added = images_added
-                sync_log.images_updated = images_updated
+                sync_log.images_added = images_added + orphaned_images_added
+                sync_log.images_updated = images_updated + orphaned_images_updated
                 sync_log.products_affected = len(products_affected)
                 sync_log.save()
             

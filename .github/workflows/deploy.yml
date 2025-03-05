@@ -8,8 +8,19 @@ on:
       - 'release/**'
     tags:
       - 'v*'
+  pull_request:
+    types: [closed]
+    branches:
+      - prod
 
 jobs:
+  check_pr_merge:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'prod' && github.event.pull_request.head.ref == 'dev'
+    steps:
+      - name: Set deployment flag
+        run: echo "DEPLOY_PROD=true" >> $GITHUB_ENV
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -104,6 +115,7 @@ jobs:
 
   determine_environment:
     runs-on: ubuntu-latest
+    needs: [tests]
     outputs:
       environment: ${{ steps.set-env.outputs.environment }}
       should_deploy: ${{ steps.set-env.outputs.should_deploy }}
@@ -116,12 +128,15 @@ jobs:
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [[ $GITHUB_REF == refs/heads/prod ]]; then
             echo "environment=production" >> $GITHUB_OUTPUT
-            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [[ $GITHUB_REF == refs/heads/dev ]]; then
             echo "environment=development" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           elif [[ $GITHUB_REF =~ refs/heads/release/.* ]]; then
             echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.pull_request.merged }}" == "true" && "${{ github.event.pull_request.base.ref }}" == "prod" && "${{ github.event.pull_request.head.ref }}" == "dev" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           else
             echo "environment=unknown" >> $GITHUB_OUTPUT
@@ -130,7 +145,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: [tests, determine_environment]
+    needs: [determine_environment]
     if: needs.determine_environment.outputs.should_deploy == 'true'
     env:
       ENVIRONMENT: ${{ needs.determine_environment.outputs.environment }}
@@ -164,7 +179,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: docker/production/Dockerfile
+          file: docker/Dockerfile.prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -182,49 +197,89 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up environment-specific deployment
-        run: |
-          echo "Deploying to $ENVIRONMENT environment"
-          # Here you would typically:
-          # 1. Connect to your servers (via SSH or deployment service)
-          # 2. Pull the latest Docker image
-          # 3. Update/restart containers
-          # 4. Run necessary migrations
-          # 5. Perform smoke tests
-          
-          # Example for development (placeholder):
-          if [[ "$ENVIRONMENT" == "development" ]]; then
-            echo "Running development deployment process"
-            # Development-specific deployment steps
-          
-          # Example for staging (placeholder):
-          elif [[ "$ENVIRONMENT" == "staging" ]]; then
-            echo "Running staging deployment process"
-            # Staging-specific deployment steps
-          
-          # Example for production (placeholder):
-          elif [[ "$ENVIRONMENT" == "production" ]]; then
-            echo "Running production deployment process"
-            # Production-specific deployment steps
-          fi
-
-      - name: Run migrations
-        if: env.ENVIRONMENT != 'production'
-        run: |
-          echo "Running database migrations for $ENVIRONMENT environment"
-          # Automated migrations for non-production environments
-          
-      - name: Prepare migration script for production
+      - name: Set up SSH
         if: env.ENVIRONMENT == 'production'
-        run: |
-          echo "Preparing migration script for manual review"
-          # For production, you might want to generate a migration script
-          # but apply it manually after review
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
 
-      - name: Post-deployment verification
+      - name: Deploy to Production Server
+        if: env.ENVIRONMENT == 'production'
+        env:
+          DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.PROD_DEPLOY_PATH }}
         run: |
-          echo "Verifying deployment in $ENVIRONMENT environment"
-          # Add verification steps (health checks, smoke tests, etc.)
+          # Ensure SSH connection works and host key is verified
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          
+          # Copy necessary files to the server
+          scp -r docker/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+          scp -r config/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+          
+          # Connect to server and deploy
+          ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+            cd $DEPLOY_PATH
+            
+            # Pull the latest image
+            docker pull ghcr.io/${{ github.repository }}:$(echo ${{ github.ref }} | sed -e "s/refs\/heads\///g" | sed -e "s/\//-/g")
+            
+            # Stop and remove existing containers
+            docker-compose -f docker/docker-compose.prod.yml down || true
+            
+            # Start the new containers
+            docker-compose -f docker/docker-compose.prod.yml up -d
+            
+            # Run migrations
+            docker-compose -f docker/docker-compose.prod.yml exec -T pyerp python manage.py migrate --noinput
+            
+            # Collect static files
+            docker-compose -f docker/docker-compose.prod.yml exec -T pyerp python manage.py collectstatic --noinput
+            
+            # Check if deployment was successful
+            docker-compose -f docker/docker-compose.prod.yml ps
+          EOF
+
+      - name: Deploy to Development/Staging Server
+        if: env.ENVIRONMENT == 'development' || env.ENVIRONMENT == 'staging'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEV_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEV_DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEV_DEPLOY_PATH }}
+        run: |
+          # Set up SSH for dev/staging
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEV_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          
+          # Copy necessary files to the server
+          scp -r docker/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+          scp -r config/ $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+          
+          # Connect to server and deploy
+          ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+            cd $DEPLOY_PATH
+            
+            # Pull the latest image
+            docker pull ghcr.io/${{ github.repository }}:$(echo ${{ github.ref }} | sed -e "s/refs\/heads\///g" | sed -e "s/\//-/g")
+            
+            # Stop and remove existing containers
+            docker-compose -f docker/docker-compose.yml down || true
+            
+            # Start the new containers
+            docker-compose -f docker/docker-compose.yml up -d
+            
+            # Run migrations
+            docker-compose -f docker/docker-compose.yml exec -T pyerp python manage.py migrate --noinput
+            
+            # Collect static files
+            docker-compose -f docker/docker-compose.yml exec -T pyerp python manage.py collectstatic --noinput
+            
+            # Check if deployment was successful
+            docker-compose -f docker/docker-compose.yml ps
+          EOF
 
   notify:
     runs-on: ubuntu-latest
@@ -236,9 +291,13 @@ jobs:
         run: |
           echo "Deployment to ${{ needs.determine_environment.outputs.environment }} succeeded"
           # Add notification mechanism (Slack, email, etc.)
+          # Example for Slack:
+          # curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ Deployment to ${{ needs.determine_environment.outputs.environment }} succeeded"}' ${{ secrets.SLACK_WEBHOOK_URL }}
       
       - name: Notify failure
         if: needs.deploy.result == 'failure'
         run: |
           echo "Deployment to ${{ needs.determine_environment.outputs.environment }} failed"
-          # Add notification mechanism (Slack, email, etc.) 
+          # Add notification mechanism (Slack, email, etc.)
+          # Example for Slack:
+          # curl -X POST -H 'Content-type: application/json' --data '{"text":"❌ Deployment to ${{ needs.determine_environment.outputs.environment }} failed"}' ${{ secrets.SLACK_WEBHOOK_URL }} 

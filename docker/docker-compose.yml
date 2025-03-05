@@ -1,5 +1,5 @@
 # WARNING: NEVER ADD CREDENTIALS DIRECTLY TO THIS FILE
-# All sensitive information should be stored in the docker.env.dev file or environment variables
+# All sensitive information should be stored in the environment files in config/env directory
 # This file should be safe to commit to version control
 
 version: '3.8'
@@ -17,13 +17,13 @@ services:
       - ..:/app  # Mount local code directory to /app for hot reloading
       - pyerp_data:/app/data
     env_file:
-      - docker.env.dev
+      - ../config/env/.env.dev
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.settings.development
       - REDIS_URL=redis://localhost:6379/0
       - DJANGO_DEBUG=True
       - PYTHONPATH=/app
-      # External PostgreSQL connection details - actual credentials are in docker.env.dev
+      # External PostgreSQL connection details - actual credentials are in .env.dev
       - DB_HOST=192.168.73.65
       - DB_PORT=5432
       - DB_NAME=pyerp_testing

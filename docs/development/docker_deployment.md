@@ -87,16 +87,59 @@ docker compose exec pyerp python manage.py createsuperuser
 - Automated SSL certificate management
 - Background task processing
 - Connection to external PostgreSQL database
+- CI/CD pipeline for automated deployments
 
-### Configuration
-- Uses `docker-compose.prod.yml`
-- Environment variables in `docker.env.prod`
-- Nginx for reverse proxy and static files
-- Celery for background tasks
-- SSL certificates via Certbot
-- External database connection parameters
+### Deployment Options
 
-### Usage
+#### Option 1: Automated CI/CD Pipeline (Recommended)
+
+The pyERP system includes a CI/CD pipeline that automatically deploys to production when the `dev` branch is merged into the `prod` branch.
+
+1. **Set Up the Deployment Server**:
+
+   ```bash
+   # Copy the setup script to your server
+   scp scripts/setup_deployment_server.sh user@your-server-ip:/tmp/
+
+   # Copy your environment file to the server
+   scp config/env/.env user@your-server-ip:/tmp/
+
+   # SSH into your server
+   ssh user@your-server-ip
+
+   # Run the setup script
+   cd /tmp
+   chmod +x setup_deployment_server.sh
+   sudo ./setup_deployment_server.sh pyerp /opt/pyerp /tmp/.env
+   ```
+
+2. **Configure GitHub Repository Secrets**:
+
+   Add the following secrets to your GitHub repository:
+
+   - `PROD_SSH_PRIVATE_KEY`: SSH private key for connecting to your production server
+   - `PROD_DEPLOY_HOST`: Hostname or IP address of your production server
+   - `PROD_DEPLOY_USER`: Username created by the setup script (default: `pyerp`)
+   - `PROD_DEPLOY_PATH`: Path where the application is deployed (default: `/opt/pyerp`)
+
+3. **Deploy to Production**:
+
+   To deploy to production, simply merge your `dev` branch into the `prod` branch:
+
+   ```bash
+   git checkout prod
+   git merge dev
+   git push origin prod
+   ```
+
+   The CI/CD pipeline will automatically:
+   - Run linting and tests
+   - Build the Docker image
+   - Push the image to GitHub Container Registry
+   - Deploy to your production server
+
+#### Option 2: Manual Deployment
+
 ```bash
 # Set external database connection environment variables
 export DB_HOST=your_postgres_host
@@ -131,6 +174,37 @@ docker compose -f docker/docker-compose.prod.yml exec pyerp python manage.py cre
 - Security headers
 - Production-specific settings
 - Redis configuration
+- GitHub credentials for container registry:
+  - `GITHUB_USERNAME`: GitHub username
+  - `GITHUB_TOKEN`: GitHub personal access token with `read:packages` scope
+
+## Automated Server Setup
+
+The project includes a script (`scripts/setup_deployment_server.sh`) to automate the setup of deployment servers.
+
+### What the Script Does
+
+1. Creates a dedicated user for the application
+2. Installs Docker and Docker Compose
+3. Creates necessary directories for the application
+4. Sets up GitHub Container Registry authentication
+5. Creates a production environment file with values from the source environment
+6. Copies the source environment file for reference
+
+### Required Environment Variables
+
+The script requires the following environment variables to be defined in the specified `.env` file:
+
+- `GITHUB_USERNAME`: GitHub username for accessing the container registry
+- `GITHUB_TOKEN`: GitHub personal access token with `read:packages` scope
+
+Other environment variables will be used if present, with sensible defaults provided for missing values:
+
+- Database configuration (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`)
+- Email settings (`EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, etc.)
+- Datadog configuration (`DD_API_KEY`, `DD_SITE`)
+- Legacy ERP connection settings (if applicable)
+- Any other custom environment variables
 
 ## Volumes
 

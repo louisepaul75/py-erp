@@ -200,6 +200,10 @@ IMAGE_API = {
 - ✅ Updated save_product_images function to use consistent image retrieval logic
 - ✅ Added detailed logging for image retrieval process to aid troubleshooting
 - ✅ Implemented custom template filter for accessing dictionary items by key
+- ✅ Modified sync process to use individual record processing instead of bulk operations
+- ✅ Added comprehensive error handling for individual image creation and updates
+- ✅ Ensured proper database sequence usage for reliable ID generation
+- ✅ Optimized batch processing for primary flag updates
 
 ### Parent-Variant Product Handling
 - ✅ **Smart Article Number Selection**: Implemented `get_appropriate_article_number` method that intelligently determines which article number to use based on product type:
@@ -241,6 +245,22 @@ IMAGE_API = {
    - Not all images are associated with products (empty articles array)
    - Product SKU must match article number for successful association
    - Parent-variant relationships require special handling for consistent imagery
+
+### Database Improvements
+- ✅ **Individual Record Processing**:
+  - Replaced bulk operations with individual record creation and updates
+  - Each image is saved individually using `image.save()` to ensure proper ID generation
+  - Added error handling for individual records to prevent sync failures
+  
+- ✅ **Sequence Management**:
+  - Ensured proper usage of the `products_productimage_id_seq` sequence
+  - Fixed potential ID conflicts that could occur with bulk operations
+  - Improved compatibility with PostgreSQL's sequence management
+  
+- ✅ **Performance Optimizations**:
+  - Maintained transaction handling for database consistency
+  - Optimized page size defaults for better performance
+  - Added batch processing for primary flag updates
 
 ### Next Steps
 1. Complete the admin interface for image management
