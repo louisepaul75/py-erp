@@ -39,10 +39,10 @@ export default defineConfig(({ mode }) => {
   } else if (isLocalDev) {
     apiUrl = 'http://localhost:8050';
   } else {
-    apiUrl = env.VITE_API_NETWORK_URL || env.VITE_API_BASE_URL;
+    apiUrl = env.VITE_API_NETWORK_URL || env.VITE_API_BASE_URL || 'http://localhost:8050';
   }
   
-  const apiBaseUrl = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
+  const apiBaseUrl = apiUrl && apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
   
   console.log('Mode:', mode);
   console.log('Environment:', process.env.NODE_ENV);
