@@ -53,7 +53,11 @@ COPY . /app/
 WORKDIR /app/frontend
 RUN npm install
 RUN npm run build:skip-typescript
-RUN mkdir -p /app/staticfiles/vue && cp -r dist/* /app/staticfiles/vue/
+RUN ls -la
+RUN pwd
+RUN mkdir -p /app/staticfiles/vue
+RUN find . -name "dist" -type d
+RUN cp -r dist/* /app/staticfiles/vue/ || echo "Failed to copy dist files"
 
 # Move back to app directory
 WORKDIR /app
