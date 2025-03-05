@@ -65,7 +65,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       // Output directory for production build
-      outDir: '../static/vue',
+      outDir: 'dist',
       // Generate manifest.json in the output directory
       manifest: true,
       // Clean output directory before build
