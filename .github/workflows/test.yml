@@ -22,54 +22,24 @@ jobs:
         python-version: '3.10'
         cache: 'pip'
         architecture: 'x64'  # Explicitly specify architecture
-        
-    - name: Install general dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
-    
-    - name: Install linting tools
-      run: |
-        echo "Installing flake8 and mypy..."
         python -m pip install flake8==7.0.0 mypy==1.5.1
-        echo "Verifying installations..."
-        python -m pip list | grep flake8
-        python -m pip list | grep mypy
-        echo "Checking flake8 location..."
-        which python
-        python -c "import sys; print(sys.executable)"
-        python -c "import flake8; print('flake8 is installed at:', flake8.__file__)"
-
-    - name: Install project dependencies
-      run: |
+        python -m pip list
         if [ -f requirements/requirements.dev.txt ]; then python -m pip install -r requirements/requirements.dev.txt; fi
         if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt; fi
         if [ -f requirements/requirements.prod.txt ]; then python -m pip install -r requirements/requirements.prod.txt; fi
 
-    - name: Debug environment
-      run: |
-        echo "PATH: $PATH"
-        echo "PYTHONPATH: $PYTHONPATH"
-        echo "Python location: $(which python)"
-        python -c "import sys; print('Python executable:', sys.executable)"
-        python -c "import site; print('Site packages:', site.getsitepackages())"
-
     - name: Lint with flake8
       run: |
-        echo "Starting flake8 linting..."
         # stop the build if there are Python syntax errors or undefined names
-        python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv,*/.venv/*,.git,__pycache__,*/site-packages/*,*/.mypy_cache/*,*/.pytest_cache/*,*/dist-packages/* || { echo "Flake8 syntax check failed"; exit 1; }
-        
-        echo "Running flake8 warnings check..."
+        python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings
-        python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=venv,*/.venv/*,.git,__pycache__,*/site-packages/*,*/.mypy_cache/*,*/.pytest_cache/*,*/dist-packages/*
-        
-        echo "Flake8 checks completed successfully"
-
+        python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Check types with mypy
       run: |
-        echo "Starting mypy type checking..."
         python -m mypy .
-        echo "Mypy checks completed"
 
   # 1. General Django framework functionality tests
   django-framework-tests:
