@@ -115,7 +115,7 @@ jobs:
           outputs: type=docker,dest=/tmp/pyerp-backend.tar
       
       - name: Upload backend Docker image as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pyerp-backend
           path: /tmp/pyerp-backend.tar
@@ -132,7 +132,7 @@ jobs:
           outputs: type=docker,dest=/tmp/pyerp-frontend.tar
       
       - name: Upload frontend Docker image as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pyerp-frontend
           path: /tmp/pyerp-frontend.tar
