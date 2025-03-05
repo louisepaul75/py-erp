@@ -10,7 +10,8 @@ export const determineBaseUrl = () => {
   const isSpecificIP = window.location.hostname === '192.168.73.65';
   if (isSpecificIP) {
     // Use HTTPS instead of HTTP to avoid Mixed Content errors
-    return 'https://192.168.73.65/api';
+    // Remove the /api suffix to prevent double prefixing
+    return 'https://192.168.73.65';
   }
 
   // Then check if we're running locally
