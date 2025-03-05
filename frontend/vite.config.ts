@@ -35,7 +35,8 @@ export default defineConfig(({ mode }) => {
   // Get API URL based on the detected IP
   let apiUrl;
   if (isSpecificIP) {
-    apiUrl = 'http://192.168.73.65:8050';
+    // Use HTTPS instead of HTTP to avoid Mixed Content errors
+    apiUrl = 'https://192.168.73.65/api';
   } else if (isLocalDev) {
     apiUrl = 'http://localhost:8050';
   } else {
