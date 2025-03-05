@@ -8,9 +8,9 @@ docker stop pyerp-dev || true
 echo "Removing existing pyerp-dev container..."
 docker rm pyerp-dev || true
 
-# Rebuild the Docker image
-echo "Rebuilding Docker image for development..."
-docker build -t pyerp-dev-image -f docker/Dockerfile.dev .
+# Rebuild the Docker image without using cache
+echo "Rebuilding Docker image for development (no cache)..."
+docker build --no-cache -t pyerp-dev-image -f docker/Dockerfile.dev .
 
 # Start a new container
 echo "Starting new pyerp-dev container..."
@@ -22,9 +22,9 @@ docker run -d \
   -p 6379:6379 \
   -v $(pwd):/app \
   pyerp-dev-image \
-  /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
+  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
 # Follow the logs for just 10 seconds to see startup
 echo "Showing initial container logs (10 seconds)..."
 timeout 10 docker logs -f pyerp-dev || true
-echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again." 
+echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again."
