@@ -17,6 +17,10 @@
                     <input type="checkbox" v-model="inStock" @change="loadProducts"/>
                     In Stock Only
                 </label>
+                <label>
+                    <input type="checkbox" v-model="isActive" @change="loadProducts"/>
+                    Active Only
+                </label>
             </div>
         </div>
         <!-- Loading indicator -->
@@ -51,7 +55,7 @@
             <div v-for="product in products" :key="product.id" class="product-card" @click="viewProductDetails(product.id)">
                 <div class="product-image">
                     <img 
-                        :src="product.primary_image && product.primary_image.url ? product.primary_image.url : '/static/images/no-image.png'" 
+                        :src="getProductImage(product)" 
                         :alt="product.name"
                         @error="handleImageError"
                     />
@@ -99,6 +103,24 @@ interface ProductImage {
   id: number;
   url: string;
   thumbnail_url: string;
+  is_primary?: boolean;
+  is_front?: boolean;
+  image_type?: string;
+}
+
+interface Attribute {
+  name: string;
+  value: string;
+}
+
+interface Variant {
+  id: number;
+  name: string;
+  sku: string;
+  primary_image?: ProductImage;
+  images?: ProductImage[];
+  attributes?: Attribute[];
+  in_stock?: boolean;
 }
 
 interface Product {
@@ -106,11 +128,11 @@ interface Product {
   name: string;
   sku: string;
   description?: string;
-  list_price?: number;
-  stock_quantity?: number;
-  variants_count?: number;
   primary_image?: ProductImage;
+  images?: ProductImage[];
   category?: Category;
+  variants?: Variant[];
+  variants_count?: number;
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;
@@ -128,6 +150,7 @@ const error = ref('');
 const searchQuery = ref('');
 const selectedCategory = ref('');
 const inStock = ref(false);
+const isActive = ref(true);
 const currentPage = ref(1);
 const totalProducts = ref(0);
 const pageSize = ref(12);
@@ -276,13 +299,12 @@ const loadProducts = async () => {
     // Create params object with only defined values
     const params: Record<string, any> = {
       page: currentPage.value,
-      page_size: pageSize.value
+      page_size: pageSize.value,
+      q: searchQuery.value,
+      category: selectedCategory.value,
+      in_stock: inStock.value,
+      is_active: isActive.value
     };
-    
-    // Only add parameters that have values
-    if (searchQuery.value) params.q = searchQuery.value;
-    if (selectedCategory.value) params.category = selectedCategory.value;
-    if (inStock.value) params.in_stock = inStock.value;
     
     console.log('API request params:', params);
     
@@ -509,13 +531,82 @@ const checkServerStatus = async (): Promise<boolean> => {
   }
 };
 
-// Handle image error
+// Add the getProductImage function
+const getProductImage = (product: Product) => {
+    // First try to get BE variant's image
+    if (product.variants) {
+        const beVariant = product.variants.find(v => 
+            v.attributes?.some(attr => 
+                attr.name.toLowerCase() === 'type' && 
+                attr.value.toLowerCase() === 'be'
+            ) ||
+            v.sku?.toLowerCase().includes('be')
+        );
+        
+        if (beVariant && beVariant.images && beVariant.images.length > 0) {
+            // Try to find the best image from the BE variant
+            const beImage = beVariant.images.find(img => 
+                img.image_type === 'Produktfoto' && img.is_front
+            ) || beVariant.images.find(img => 
+                img.image_type === 'Produktfoto'
+            ) || beVariant.images.find(img => 
+                img.is_front
+            ) || beVariant.images.find(img => 
+                img.is_primary
+            ) || beVariant.images[0];
+            
+            if (beImage) {
+                return getValidImageUrl({ url: beImage.url });
+            }
+        } else if (beVariant?.primary_image) {
+            return getValidImageUrl(beVariant.primary_image);
+        }
+    }
+    
+    // If product has images, use the best one
+    if (product.images && product.images.length > 0) {
+        const bestImage = product.images.find(img => 
+            img.image_type === 'Produktfoto' && img.is_front
+        ) || product.images.find(img => 
+            img.image_type === 'Produktfoto'
+        ) || product.images.find(img => 
+            img.is_front
+        ) || product.images.find(img => 
+            img.is_primary
+        ) || product.images[0];
+        
+        if (bestImage) {
+            return getValidImageUrl({ url: bestImage.url });
+        }
+    }
+    
+    // If product has primary image, use it
+    if (product.primary_image) {
+        return getValidImageUrl(product.primary_image);
+    }
+    
+    // Fallback to no-image
+    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+};
+
+// Add the getValidImageUrl function
+const getValidImageUrl = (imageObj?: { url?: string }) => {
+    if (!imageObj?.url) {
+        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    }
+
+    try {
+        new URL(imageObj.url);
+        return imageObj.url;
+    } catch (e) {
+        return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
+    }
+};
+
+// Add the handleImageError function
 const handleImageError = (event: Event) => {
-  console.error('Image load failed');
-  // Set the source to the fallback image
-  if (event.target instanceof HTMLImageElement) {
-    event.target.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
-  }
+    const img = event.target as HTMLImageElement;
+    img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
 };
 </script>
 <style scoped>

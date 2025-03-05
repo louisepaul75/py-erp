@@ -6,88 +6,144 @@ This Django app provides product management functionality for the pyERP system.
 
 - Product catalog management
 - Product categorization
-- Product image management
-- Import products from legacy 4D system
+- Product image management via external API integration
+- Parent-variant product hierarchy management
+- Import products from legacy 4D system (Artikel_Familie and Artikel_Variante)
 - Advanced product search and filtering
 
 ## Models
 
-### Product
+### BaseProduct (Abstract)
 
-The main model for storing product information, including:
+Abstract base class with common product fields:
 
-- Basic information (name, SKU, slug, category, manufacturer)
-- Descriptions (short description, full description, features, keywords)
-- Physical attributes (weight, dimensions)
-- Pricing (cost, list price, sale price)
-- Inventory (stock quantity, min/max stock levels, reorder point)
-- Sales statistics (units sold, revenue, last sold date)
-- Flags (active, featured, on sale)
-- SEO metadata (meta keywords, meta description)
+- Basic identification (SKU, legacy IDs)
+- Multilingual names and descriptions
+- Physical attributes (dimensions, weight)
+- Pricing (list price, wholesale price, gross price, cost price)
+- Inventory tracking (stock quantity, backorder quantity)
+- Sales statistics (units sold, revenue)
+- Status flags (active, discontinued)
 - Timestamps (created, updated)
+
+### ParentProduct
+
+Model for parent products (product families):
+
+- All fields from BaseProduct
+- Base SKU for variants
+- Placeholder flag
+
+### VariantProduct
+
+Model for variant products:
+
+- All fields from BaseProduct
+- Reference to parent product
+- Variant code
+- Legacy SKU
+- Base SKU
+- Additional physical attributes (color, size, material)
+- Additional pricing fields with packaging units
+
+### Product (Legacy)
+
+Legacy model maintained for backward compatibility during migration.
 
 ### ProductCategory
 
 Model for organizing products into categories:
 
 - Name
-- Slug (for URL-friendly representation)
+- Code
 - Description
-- Active status
+- Parent reference (for hierarchical categories)
 
 ### ProductImage
 
-Model for storing product images:
+Model for caching product images from external API:
 
-- Image file
-- Alt text (for accessibility)
-- Primary flag (to indicate the main product image)
-- Timestamps (created, updated)
+- Reference to product
+- External ID
+- Image URL and thumbnail URL
+- Image type
+- Primary and front flags
+- Display priority
+- Metadata
+
+### ImageSyncLog
+
+Model for tracking image synchronization operations:
+
+- Start and completion timestamps
+- Status
+- Statistics (images added, updated, deleted)
+- Products affected
+- Error messages
 
 ## Views
 
-- `ProductListView`: Displays a list of products with filtering and pagination
-- `ProductDetailView`: Displays detailed information about a specific product
-- `CategoryListView`: Displays a list of product categories
+- Product list views with filtering and pagination
+- Product detail views with images and variant selection
+- API views for frontend integration
 
 ## Management Commands
 
-### import_products
+### import_artikel_familie.py
 
-Imports products from the legacy 4D system:
+Imports parent products from the legacy 4D system (Artikel_Familie table):
 
 ```
-python manage.py import_products [--limit N] [--update] [--dry-run]
+python manage.py import_artikel_familie [--limit N] [--dry-run]
 ```
 
-Options:
-- `--limit N`: Limit the import to N products
-- `--update`: Update existing products
-- `--dry-run`: Perform a dry run without saving to the database
+### import_artikel_variante.py
 
-## Templates
+Imports variant products from the legacy 4D system (Artikel_Variante table):
 
-- `product_list.html`: Template for displaying the product list
-- `product_detail.html`: Template for displaying product details
-- `category_list.html`: Template for displaying the category list
+```
+python manage.py import_artikel_variante [--limit N] [--dry-run]
+```
 
-## Forms
+### link_variants_to_existing_parents.py
 
-- `ProductForm`: Form for creating and editing products
-- `ProductCategoryForm`: Form for creating and editing product categories
-- `ProductImageForm`: Form for uploading product images
-- `ProductSearchForm`: Form for searching and filtering products
+Establishes parent-child relationships between variants and parent products:
 
-## URLs
+```
+python manage.py link_variants_to_existing_parents [--dry-run]
+```
 
-- `/products/`: Product list view
-- `/products/categories/`: Category list view
-- `/products/<id>/`: Product detail view (by ID)
-- `/products/<slug>/`: Product detail view (by slug)
+### sync_product_images.py
 
-## Admin Interface
+Synchronizes product images with the external image API:
 
-The app provides a comprehensive admin interface for managing products, categories, and images.
+```
+python manage.py sync_product_images [--limit N] [--force]
+```
+
+### Additional Commands
+
+- `fix_variant_parent_relationships.py`: Fixes incorrect parent-child relationships
+- `fix_missing_variants.py`: Handles orphaned variant products
+- `create_placeholder_parents.py`: Creates parent products for variants without parents
+- `wipe_and_reload_parents.py`: Wipes and reloads all parent products (development use only)
+- `wipe_and_reload_variants.py`: Wipes and reloads all variant products (development use only)
+
+## API Integration
+
+The products app integrates with an external image database through the image_api.py module. 
+Key features:
+
+- Secure API connection to external Django application
+- Cached image data for performance
+- Intelligent image prioritization
+- Parent-variant aware image selection
+- Fallback logic for maximum image coverage
+
+## Frontend Integration
+
+- Product list component (`ProductList.vue`) with filtering and pagination
+- Product detail component (`ProductDetail.vue`) with images and variant selection
 
 ## Installation
 
@@ -97,8 +153,13 @@ The app provides a comprehensive admin interface for managing products, categori
    ```python
    path('products/', include('products.urls', namespace='products')),
    ```
+4. Include the API URLs in your project's api_urls.py:
+   ```python
+   path('products/', include('products.api_urls', namespace='api_products')),
+   ```
 
 ## Dependencies
 
 - Pillow: Required for image handling
-- Django: 4.2 or higher 
+- Django: 4.2 or higher
+- Requests: Required for API integration 

@@ -22,14 +22,25 @@
 </div>
             </div>
             <div class="product-layout">
-                <!-- Product images -->
+                <!-- Product images (from variants) -->
                 <div class="product-images">
                     <div class="main-image">
                         <img :src="getMainImage" :alt="product.name" @error="handleImageError"/>
                     </div>
-                    <div v-if="product.images && product.images.length > 1" class="image-thumbnails">
-                        <div v-for="image in product.images" :key="image.id" class="thumbnail" :class="{ active: selectedImage && selectedImage.id === image.id }" @click="selectedImage = image">
-                            <img :src="getValidImageUrl({ url: image.thumbnail_url || image.url })" :alt="product.name" @error="handleImageError"/>
+                    <!-- Display thumbnails from variant images -->
+                    <div v-if="variantThumbnails.length > 1" class="image-thumbnails">
+                        <div 
+                            v-for="image in variantThumbnails" 
+                            :key="image.id" 
+                            class="thumbnail" 
+                            :class="{ active: selectedImage && selectedImage.id === image.id }" 
+                            @click="selectedImage = image"
+                        >
+                            <img 
+                                :src="getValidImageUrl({ url: image.thumbnail_url || image.url })" 
+                                :alt="product.name" 
+                                @error="handleImageError"
+                            />
                         </div>
                     </div>
                 </div>
@@ -131,7 +142,6 @@ interface Product {
   sku: string;
   description?: string;
   primary_image?: ProductImage;
-  images?: ProductImage[];
   category?: Category;
   variants?: Variant[];
   is_active?: boolean;
@@ -153,6 +163,38 @@ const product = ref<Product>({} as Product);
 const loading = ref(true);
 const error = ref('');
 const selectedImage = ref<ProductImage | null>(null);
+
+// Computed property to collect all available images from variants
+const variantThumbnails = computed(() => {
+    const thumbnails: ProductImage[] = [];
+    
+    if (product.value.variants && product.value.variants.length > 0) {
+        // First try to get images from BE variant
+        const beVariant = product.value.variants.find(v => 
+            v.attributes?.some(attr => 
+                attr.name.toLowerCase() === 'type' && 
+                attr.value.toLowerCase() === 'be'
+            ) ||
+            v.sku?.toLowerCase().includes('be')
+        );
+        
+        if (beVariant && beVariant.images && beVariant.images.length > 0) {
+            // Add all images from BE variant
+            thumbnails.push(...beVariant.images);
+        }
+        
+        // If no BE variant images, collect images from all variants
+        if (thumbnails.length === 0) {
+            for (const variant of product.value.variants) {
+                if (variant.images && variant.images.length > 0) {
+                    thumbnails.push(...variant.images);
+                }
+            }
+        }
+    }
+    
+    return thumbnails;
+});
 
 // Add a new function to validate image URLs
 const getValidImageUrl = (imageObj?: { url?: string }) => {
@@ -181,8 +223,10 @@ const handleImageError = (event: Event) => {
 
 // Update the getMainImage computed property
 const getMainImage = computed(() => {
-    // First try to get BE variant's image
-    if (product.value.variants) {
+    // Parent products don't have their own images, so we must use variant images
+    if (product.value.variants && product.value.variants.length > 0) {
+        // First try to get BE variant's image with preference for Produktfoto and front=True
+        // Find BE variant by checking attributes or SKU
         const beVariant = product.value.variants.find(v => 
             v.attributes?.some(attr => 
                 attr.name.toLowerCase() === 'type' && 
@@ -191,77 +235,126 @@ const getMainImage = computed(() => {
             v.sku?.toLowerCase().includes('be')
         );
         
-        console.log('Found BE variant:', beVariant); // Debug log
+        console.log('Found BE variant:', beVariant);
         
         if (beVariant && beVariant.images && beVariant.images.length > 0) {
-            // Try to find the best image from the BE variant
+            // Try to find the best image from the BE variant with priority:
+            // 1. Produktfoto with front=True (exact match for requirements)
             const beImage = beVariant.images.find(img => 
-                img.image_type === 'Produktfoto' && img.is_front
-            ) || beVariant.images.find(img => 
-                img.image_type === 'Produktfoto'
-            ) || beVariant.images.find(img => 
-                img.is_front
-            ) || beVariant.images.find(img => 
-                img.is_primary
-            ) || beVariant.images[0];
+                img.image_type?.toLowerCase() === 'produktfoto' && img.is_front === true
+            );
             
             if (beImage) {
-                console.log('Using BE variant image:', beImage.url); // Debug log
+                console.log('Using BE variant Produktfoto with front=True:', beImage.url);
                 return getValidImageUrl({ url: beImage.url });
             }
-        } else if (beVariant?.primary_image) {
-            console.log('Using BE variant primary image:', beVariant.primary_image.url); // Debug log
+            
+            // 2. Any Produktfoto from BE variant
+            const beProductfoto = beVariant.images.find(img => 
+                img.image_type?.toLowerCase() === 'produktfoto'
+            );
+            
+            if (beProductfoto) {
+                console.log('Using BE variant Produktfoto:', beProductfoto.url);
+                return getValidImageUrl({ url: beProductfoto.url });
+            }
+            
+            // 3. Any front=True image from BE variant
+            const beFrontImage = beVariant.images.find(img => img.is_front === true);
+            
+            if (beFrontImage) {
+                console.log('Using BE variant front image:', beFrontImage.url);
+                return getValidImageUrl({ url: beFrontImage.url });
+            }
+            
+            // 4. Primary image from BE variant
+            const bePrimaryImage = beVariant.images.find(img => img.is_primary === true);
+            
+            if (bePrimaryImage) {
+                console.log('Using BE variant primary image:', bePrimaryImage.url);
+                return getValidImageUrl({ url: bePrimaryImage.url });
+            }
+            
+            // 5. First image from BE variant
+            console.log('Using first BE variant image:', beVariant.images[0].url);
+            return getValidImageUrl({ url: beVariant.images[0].url });
+        } 
+        
+        // If BE variant has a primary_image property
+        if (beVariant?.primary_image) {
+            console.log('Using BE variant primary image:', beVariant.primary_image.url);
             return getValidImageUrl(beVariant.primary_image);
+        }
+        
+        // If no BE variant or BE variant has no images, use the first variant with images
+        for (const variant of product.value.variants) {
+            if (variant.images && variant.images.length > 0) {
+                // Try to find the best image with the same priority logic
+                const bestImage = variant.images.find(img => 
+                    img.image_type?.toLowerCase() === 'produktfoto' && img.is_front === true
+                ) || variant.images.find(img => 
+                    img.image_type?.toLowerCase() === 'produktfoto'
+                ) || variant.images.find(img => 
+                    img.is_front === true
+                ) || variant.images.find(img => 
+                    img.is_primary === true
+                ) || variant.images[0];
+                
+                console.log('Using image from variant:', variant.sku);
+                return getValidImageUrl({ url: bestImage.url });
+            }
+            
+            if (variant.primary_image) {
+                console.log('Using primary image from variant:', variant.sku);
+                return getValidImageUrl(variant.primary_image);
+            }
         }
     }
     
-    // If selected image exists, use it
+    // If selected image exists, use it (this would be from a variant)
     if (selectedImage.value) {
-        console.log('Using selected image:', selectedImage.value.url); // Debug log
+        console.log('Using selected image:', selectedImage.value.url);
         return getValidImageUrl(selectedImage.value);
     }
     
-    // If product has images, use the best one
-    if (product.value.images && product.value.images.length > 0) {
-        const bestImage = product.value.images.find(img => 
-            img.image_type === 'Produktfoto' && img.is_front
-        ) || product.value.images.find(img => 
-            img.image_type === 'Produktfoto'
-        ) || product.value.images.find(img => 
-            img.is_front
-        ) || product.value.images.find(img => 
-            img.is_primary
-        ) || product.value.images[0];
-        
-        if (bestImage) {
-            console.log('Using best product image:', bestImage.url); // Debug log
-            return getValidImageUrl({ url: bestImage.url });
-        }
-    }
-    
-    // If product has primary image, use it
-    if (product.value.primary_image) {
-        console.log('Using product primary image:', product.value.primary_image.url); // Debug log
-        return getValidImageUrl(product.value.primary_image);
-    }
-    
-    // Fallback to no-image
-    console.log('No image found, using placeholder'); // Debug log
+    // Fallback to no-image if no variant images are available
+    console.log('No variant images found, using placeholder');
     return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/static/images/no-image.png`;
 });
 
 // Update the getVariantImage function
 const getVariantImage = (variant: Variant) => {
     if (variant.images && variant.images.length > 0) {
-        const bestImage = variant.images.find(img => 
+        // 1. First priority: Produktfoto with front=True
+        let bestImage = variant.images.find(img => 
             img.image_type === 'Produktfoto' && img.is_front
-        ) || variant.images.find(img => 
-            img.image_type === 'Produktfoto'
-        ) || variant.images.find(img => 
-            img.is_front
-        ) || variant.images.find(img => 
-            img.is_primary
-        ) || variant.images[0];
+        );
+        
+        // 2. Second priority: Any Produktfoto
+        if (!bestImage) {
+            bestImage = variant.images.find(img => 
+                img.image_type === 'Produktfoto'
+            );
+        }
+        
+        // 3. Third priority: Any front=True image
+        if (!bestImage) {
+            bestImage = variant.images.find(img => 
+                img.is_front
+            );
+        }
+        
+        // 4. Fourth priority: Any image marked as primary
+        if (!bestImage) {
+            bestImage = variant.images.find(img => 
+                img.is_primary
+            );
+        }
+        
+        // 5. Last resort: First image
+        if (!bestImage) {
+            bestImage = variant.images[0];
+        }
         
         if (bestImage) {
             return getValidImageUrl({ url: bestImage.url });
@@ -291,13 +384,14 @@ const loadProduct = async () => {
         const response = await productApi.getProduct(Number(productId));
         console.log('=== DEBUG API RESPONSE ===');
         console.log('Full response:', JSON.stringify(response.data, null, 2));
-        console.log('Product images:', response.data.images);
-        console.log('Primary image:', response.data.primary_image);
+        
+        // Log variant information
         if (response.data.variants) {
             response.data.variants.forEach((variant: Variant) => {
                 console.log(`Variant ${variant.sku}:`, {
                     attributes: variant.attributes,
                     primary_image: variant.primary_image,
+                    images: variant.images,
                     name: variant.name
                 });
             });
@@ -306,8 +400,9 @@ const loadProduct = async () => {
         
         product.value = response.data;
         
-        // First try to set BE variant image as default
-        if (product.value.variants) {
+        // Parent products don't have their own images, so we must use variant images
+        if (product.value.variants && product.value.variants.length > 0) {
+            // First try to set BE variant image as default with preference for Produktfoto and front=True
             const beVariant = product.value.variants.find(v => 
                 v.attributes?.some(attr => 
                     attr.name.toLowerCase() === 'type' && 
@@ -319,19 +414,90 @@ const loadProduct = async () => {
             if (beVariant) {
                 console.log('=== DEBUG BE VARIANT ===');
                 console.log('Found BE variant:', beVariant.sku);
+                console.log('BE variant images:', beVariant.images);
                 console.log('BE variant primary image:', beVariant.primary_image);
                 console.log('BE variant attributes:', beVariant.attributes);
                 console.log('=== END DEBUG ===');
                 
-                if (beVariant.primary_image) {
+                // Try to find the best image from the BE variant with priority
+                if (beVariant.images && beVariant.images.length > 0) {
+                    // 1. Produktfoto with front=True
+                    const beImage = beVariant.images.find(img => 
+                        img.image_type?.toLowerCase() === 'produktfoto' && img.is_front === true
+                    );
+                    
+                    if (beImage) {
+                        console.log('Setting selected image to BE variant Produktfoto with front=True');
+                        selectedImage.value = beImage;
+                    } else {
+                        // 2. Any Produktfoto
+                        const beProductfoto = beVariant.images.find(img => 
+                            img.image_type?.toLowerCase() === 'produktfoto'
+                        );
+                        
+                        if (beProductfoto) {
+                            console.log('Setting selected image to BE variant Produktfoto');
+                            selectedImage.value = beProductfoto;
+                        } else {
+                            // 3. Any front=True image
+                            const beFrontImage = beVariant.images.find(img => img.is_front === true);
+                            
+                            if (beFrontImage) {
+                                console.log('Setting selected image to BE variant front image');
+                                selectedImage.value = beFrontImage;
+                            } else {
+                                // 4. Primary image
+                                const bePrimaryImage = beVariant.images.find(img => img.is_primary === true);
+                                
+                                if (bePrimaryImage) {
+                                    console.log('Setting selected image to BE variant primary image');
+                                    selectedImage.value = bePrimaryImage;
+                                } else {
+                                    // 5. First image
+                                    console.log('Setting selected image to first BE variant image');
+                                    selectedImage.value = beVariant.images[0];
+                                }
+                            }
+                        }
+                    }
+                } else if (beVariant.primary_image) {
+                    console.log('Setting selected image to BE variant primary image');
                     selectedImage.value = beVariant.primary_image;
+                }
+            }
+            
+            // If no BE variant image was found, try to find an image from any variant
+            if (!selectedImage.value) {
+                for (const variant of product.value.variants) {
+                    if (variant.images && variant.images.length > 0) {
+                        // Use the same priority logic
+                        const bestImage = variant.images.find(img => 
+                            img.image_type?.toLowerCase() === 'produktfoto' && img.is_front === true
+                        ) || variant.images.find(img => 
+                            img.image_type?.toLowerCase() === 'produktfoto'
+                        ) || variant.images.find(img => 
+                            img.is_front === true
+                        ) || variant.images.find(img => 
+                            img.is_primary === true
+                        ) || variant.images[0];
+                        
+                        console.log('Setting selected image from variant:', variant.sku);
+                        selectedImage.value = bestImage;
+                        break;
+                    }
+                    
+                    if (variant.primary_image) {
+                        console.log('Setting selected image to primary image from variant:', variant.sku);
+                        selectedImage.value = variant.primary_image;
+                        break;
+                    }
                 }
             }
         }
         
-        // If no BE variant image, fall back to product images
-        if (!selectedImage.value && product.value.images && product.value.images.length > 0) {
-            selectedImage.value = product.value.primary_image || product.value.images[0];
+        // If no variant image was found, selectedImage will remain null
+        if (!selectedImage.value) {
+            console.log('No variant images found for this product');
         }
     } catch (err) {
         console.error('Error loading product details:', err);

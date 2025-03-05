@@ -39,7 +39,8 @@ class ProductListView(LoginRequiredMixin, ListView):
         """
         Filter products based on category and search query.
         """
-        queryset = ParentProduct.objects.filter(is_active=True)
+        # Start with all products
+        queryset = ParentProduct.objects.all()
         
         # Get form data
         form = ProductSearchForm(self.request.GET)
@@ -48,6 +49,11 @@ class ProductListView(LoginRequiredMixin, ListView):
             search_query = form.cleaned_data.get('q')
             if search_query:
                 queryset = queryset.filter(name__icontains=search_query)
+            
+            # Filter by is_active if provided
+            is_active = form.cleaned_data.get('is_active')
+            if is_active is not None:  # Check if the field was included in the form
+                queryset = queryset.filter(is_active=is_active)
             
             # Note: ParentProduct doesn't have category or price fields
             # These filters are commented out until the model is updated or the filtering logic is adjusted
@@ -431,8 +437,8 @@ class ProductListAPIView(ProductAPIView):
     
     def get(self, request):
         """Handle GET request for product listing"""
-        # Start with all active products
-        products = ParentProduct.objects.filter(is_active=True)
+        # Start with all products
+        products = ParentProduct.objects.all()
         
         # Apply filters from query parameters
         category_id = request.GET.get('category')
@@ -458,6 +464,12 @@ class ProductListAPIView(ProductAPIView):
         if in_stock and in_stock.lower() in ('true', '1', 'yes'):
             # Filter for products with stock > 0, handling NULL values
             products = products.exclude(stock_quantity__isnull=True).filter(stock_quantity__gt=0)
+            
+        # Handle is_active filter
+        is_active = request.GET.get('is_active')
+        if is_active is not None:  # Check if parameter was provided
+            is_active_bool = is_active.lower() in ('true', '1', 'yes')
+            products = products.filter(is_active=is_active_bool)
             
         # Handle pagination
         try:

@@ -161,6 +161,13 @@ class ProductSearchForm(forms.Form):
         required=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
+
+    is_active = forms.BooleanField(
+        label=_('Active Only'),
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
     
     def clean(self):
         """Validate the form data."""

@@ -174,7 +174,13 @@ python manage.py sync_customers --full
 - Project documentation is available in the `docs/` directory
 - API documentation can be accessed at `/api/docs/` when the server is running
 - Vue.js frontend documentation:
-  - [Authentication Implementation](docs/vue_auth_implementation.md)
+  - README files in the `frontend/` directory
+  - Component documentation in the `frontend/src/components/` directory
+
+### Module Documentation
+
+- [Product Module Implementation Progress](docs/implementation/product_module_progress.md) - Details of the product module implementation including parent-variant models and image integration
+- [Product Model Split](docs/product_model_split.md) - Documentation of the migration from a single Product model to separate ParentProduct and VariantProduct models
 
 ## Testing
 
@@ -343,44 +349,37 @@ For detailed documentation on the validation framework, see [Validation Framewor
 
 pyERP includes a comprehensive product image integration feature:
 
-### Features
+- **API Integration**: ✅ Implemented
+  - Connects to an external image database API to retrieve product images
+  - Supports authentication and pagination
+  - Includes caching for performance optimization
+  - Robust error handling and fallback logic
 
-- Connects to an external image database API to retrieve product images
-- Creates and updates local `ProductImage` records linked to products
-- Supports different image types (Produktfoto, Markt-Messe-Shop, Szene, Illustration)
-- Implements smart article number selection for image matching
-- Advanced product matching logic to handle variant codes and different SKU formats
-- Prioritization of "Produktfoto" images with front=True attribute
-- Provides a synchronization command with configurable parameters
-- Tracks synchronization history with detailed logging
+- **Image Prioritization**: ✅ Implemented
+  - Smart prioritization of images based on type and "front" flag
+  - Format preference system (PNG > JPEG > original format)
+  - Resolution-appropriate image selection
+  - Parent-variant aware image selection
 
-### Synchronization Command
+- **Synchronization**: ✅ Implemented
+  - Management command for initial and incremental sync
+  - Detailed logging of sync operations
+  - Status tracking with ImageSyncLog model
 
-The system includes a management command for synchronizing images:
+- **Parent-Variant Aware**: ✅ Implemented
+  - Smart article number selection based on product hierarchy
+  - Variant products use parent's images for consistency
+  - Comprehensive fallback strategy for maximum image coverage
 
-```bash
-# Basic usage
-python manage.py sync_product_images
-
-# With options
-python manage.py sync_product_images --dry-run --limit 5 --page-size 20
-```
-
-### Image Management
-
-- Images are stored as `ProductImage` records linked to products
-- Primary images are automatically selected based on strict prioritization:
-  1. Produktfoto with front=True
-  2. Any Produktfoto
-  3. Any image with front=True
-  4. Any image marked as primary
-  5. First available image
-- Thumbnail URLs are stored for efficient loading
-- Image metadata is preserved for reference
+- **Frontend Integration**: ✅ Partially Implemented
+  - Product list and detail views display appropriate images
+  - Responsive image galleries
+  - Thumbnail support
 
 For detailed documentation on the product image integration feature, see:
-- [docs/features/product_image_sync.md](docs/features/product_image_sync.md)
-- [pyerp/products/management/commands/README.md](pyerp/products/management/commands/README.md)
+- [Product Module Implementation Progress](docs/implementation/product_module_progress.md)
+- [Product Image Integration Story](docs/images_api/product_image_integration_story.md)
+- [Product Model Split](docs/product_model_split.md)
 
 ## Security and Audit Logging
 
