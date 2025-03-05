@@ -9,9 +9,27 @@ import os
 import sys
 import dj_database_url
 from .base import *  # noqa
+from pathlib import Path
+
+# Load environment variables using centralized loader
+from pyerp.utils.env_loader import load_environment_variables
+load_environment_variables(verbose=True)
+
+# Print environment variables for debugging
+print(f"DB_NAME: {os.environ.get('DB_NAME', 'not set')}")
+print(f"DB_USER: {os.environ.get('DB_USER', 'not set')}")
+print(f"DB_PASSWORD: {os.environ.get('DB_PASSWORD', 'not set')}")
+print(f"DB_HOST: {os.environ.get('DB_HOST', 'not set')}")
+print(f"DB_PORT: {os.environ.get('DB_PORT', 'not set')}")
 
 # Configure for test environment
-DEBUG = False
+DEBUG = True
+
+# Remove debug toolbar for tests
+if 'debug_toolbar' in INSTALLED_APPS:
+    INSTALLED_APPS.remove('debug_toolbar')
+
+MIDDLEWARE = [middleware for middleware in MIDDLEWARE if 'debug_toolbar' not in middleware]
 
 ALLOWED_HOSTS = ['*']
 
@@ -26,10 +44,10 @@ PG_PARAMS = {
     'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
     'USER': os.environ.get('DB_USER', 'postgres'),
     'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-    'HOST': os.environ.get('DB_HOST', '192.168.73.65'),  # Remote PostgreSQL server
+    'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
     'PORT': os.environ.get('DB_PORT', '5432'),
     'TEST': {
-        'NAME': 'test_pyerp_testing',  # Use a dedicated test database
+        'NAME': 'test_pyerp_testing',
     },
 }
 

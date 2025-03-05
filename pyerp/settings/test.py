@@ -11,14 +11,10 @@ import socket
 import psycopg2
 from pathlib import Path
 from .base import *
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-# Get the project root directory
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-# Load environment variables from .env file
-env_path = PROJECT_ROOT / 'config' / 'env' / '.env'
-load_dotenv(dotenv_path=env_path)
+# Load environment variables using centralized loader
+from pyerp.utils.env_loader import load_environment_variables
+load_environment_variables(verbose=True)
 
 # Remove debug toolbar from installed apps
 if 'debug_toolbar' in INSTALLED_APPS:

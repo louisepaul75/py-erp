@@ -4,6 +4,16 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Set the PYERP_ENV environment variable based on DJANGO_SETTINGS_MODULE
+if [[ "${DJANGO_SETTINGS_MODULE:-}" == *"production"* ]]; then
+    export PYERP_ENV="prod"
+elif [[ "${DJANGO_SETTINGS_MODULE:-}" == *"test"* ]]; then
+    export PYERP_ENV="test"
+else
+    export PYERP_ENV="dev"
+fi
+echo "PYERP_ENV set to: $PYERP_ENV"
+
 # Create log directories
 mkdir -p /app/logs
 

@@ -793,4 +793,41 @@ class ImageSyncLog(models.Model):
         ordering = ['-started_at']
     
     def __str__(self):
-        return f"Image Sync {self.started_at.strftime('%Y-%m-%d %H:%M')} - {self.status}" 
+        return f"Image Sync {self.started_at.strftime('%Y-%m-%d %H:%M')} - {self.status}"
+
+
+class UnifiedProduct(models.Model):
+    """
+    New unified Product model that will replace the ParentProduct and VariantProduct models.
+    """
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(_("Name"), max_length=255)
+    sku = models.CharField(_("SKU"), max_length=100, unique=True)
+    description = models.TextField(_("Description"), blank=True)
+    price = models.DecimalField(_("Price"), max_digits=10, decimal_places=2, default=0)
+    is_active = models.BooleanField(_("Active"), default=True)
+    created_at = models.DateTimeField(_("Created At"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("Updated At"), auto_now=True)
+    
+    # Fields to handle the parent-variant relationship
+    is_variant = models.BooleanField(_("Is Variant"), default=False)
+    is_parent = models.BooleanField(_("Is Parent"), default=False)
+    base_sku = models.CharField(_("Base SKU"), max_length=100, blank=True)
+    parent = models.ForeignKey(
+        'self', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='variants'
+    )
+    
+    class Meta:
+        verbose_name = _("Unified Product")
+        verbose_name_plural = _("Unified Products")
+        
+    def __str__(self):
+        return self.name
+
+# For backward compatibility with tests that import from models_new
+# This is in addition to the existing Product model class defined above
+Product = UnifiedProduct 

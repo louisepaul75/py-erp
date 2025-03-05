@@ -35,7 +35,7 @@ const authService = {
   login: async (credentials: LoginCredentials): Promise<User> => {
     try {
       // Get JWT tokens
-      const tokenResponse = await api.post<TokenResponse>('/token/', credentials);
+      const tokenResponse = await api.post<TokenResponse>('/api/token/', credentials);
       
       // Store tokens in localStorage
       localStorage.setItem('access_token', tokenResponse.data.access);
@@ -97,7 +97,7 @@ const authService = {
         return null;
       }
       
-      const response = await api.post<{ access: string }>('/token/refresh/', {
+      const response = await api.post<{ access: string }>('/api/token/refresh/', {
         refresh: refreshToken
       });
       

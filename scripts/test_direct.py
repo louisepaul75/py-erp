@@ -2,32 +2,24 @@
 import os
 import requests
 from pathlib import Path
-import dotenv
+import sys
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# Load environment variables from config/env/.env file
-env_file = Path('.') / 'config' / 'env' / '.env'
-if env_file.exists():
-    print(f"Loading environment from {env_file}")
-    # Load environment variables directly from the file
-    with open(env_file) as f:
-        env_vars = {}
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#'):
-                key, value = line.split('=', 1)
-                env_vars[key] = value
+# Add project root to path for imports
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
 
-    # Get credentials from parsed environment variables
-    api_url = env_vars.get('IMAGE_API_URL', 'https://webapp.zinnfiguren.de/api/')
-    api_username = env_vars.get('IMAGE_API_USERNAME')
-    api_password = env_vars.get('IMAGE_API_PASSWORD')
-else:
-    print(f"Warning: Environment file not found at {env_file}")
-    api_url = 'https://webapp.zinnfiguren.de/api/'
-    api_username = None
-    api_password = None
+# Import the centralized environment loader
+from pyerp.utils.env_loader import load_environment_variables
+
+# Load environment variables
+load_environment_variables(verbose=True)
+
+# Get credentials from environment variables
+api_url = os.environ.get('IMAGE_API_URL', 'https://webapp.zinnfiguren.de/api/')
+api_username = os.environ.get('IMAGE_API_USERNAME')
+api_password = os.environ.get('IMAGE_API_PASSWORD')
 
 print(f"\nAPI Configuration:")
 print(f"URL: {api_url}")

@@ -2,12 +2,10 @@ import os
 from pathlib import Path
 
 from celery import Celery
-from dotenv import load_dotenv
 
-# Load environment variables from .env file (if it exists)
-env_file = Path('../') / '.env'
-if env_file.exists():
-    load_dotenv(str(env_file))
+# Load environment variables using centralized loader
+from pyerp.utils.env_loader import load_environment_variables
+load_environment_variables()
 
 # Set default Django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.development')

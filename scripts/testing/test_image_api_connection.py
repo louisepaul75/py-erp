@@ -15,8 +15,15 @@ import argparse
 import requests
 import json
 from requests.auth import HTTPBasicAuth
-from dotenv import load_dotenv
 import logging
+from pathlib import Path
+
+# Add project root to path for imports
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import the centralized environment loader
+from pyerp.utils.env_loader import load_environment_variables
 
 # Set up logging
 logging.basicConfig(
@@ -26,9 +33,9 @@ logging.basicConfig(
 logger = logging.getLogger('image_api_test')
 
 def setup_environment():
-    """Load environment variables from .env file"""
-    # Try to load from .env file
-    load_dotenv()
+    """Load environment variables using centralized loader"""
+    # Load environment variables
+    load_environment_variables()
     
     # Check if required variables are set
     required_vars = ['IMAGE_API_URL', 'IMAGE_API_USERNAME', 'IMAGE_API_PASSWORD']

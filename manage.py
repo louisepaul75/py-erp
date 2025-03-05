@@ -4,18 +4,14 @@ import os
 import sys
 from pathlib import Path
 
-import dotenv
-
+# Make sure pyerp module is in path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 def main():
     """Run administrative tasks."""
-    # Load environment variables from config/env/.env file
-    env_file = Path('.') / 'config' / 'env' / '.env'
-    if env_file.exists():
-        print(f"Loading environment from {env_file}")
-        dotenv.load_dotenv(str(env_file))
-    else:
-        print(f"Warning: Environment file not found at {env_file}")
+    # Import and use the centralized environment loader
+    from pyerp.utils.env_loader import load_environment_variables
+    load_environment_variables(verbose=True)
 
     # Set the default Django settings module if not defined
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.development')

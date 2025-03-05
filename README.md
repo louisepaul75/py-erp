@@ -62,14 +62,26 @@ For detailed contribution guidelines, including branch naming conventions, commi
 
 ### Environment Configuration
 
-Environment configuration files are located in the `config/env/` directory:
+The project uses environment files to manage configuration variables across different environments:
 
-- `.env` or `.env.dev` - Development environment variables
-- `.env.prod` - Production environment variables
-- `.env.dev.example` - Example development configuration template
-- `.env.prod.example` - Example production configuration template
+- Development: `config/env/.env.dev`
+- Production: `config/env/.env.prod` 
+- Testing: `config/env/.env.test` (if needed)
 
-For compatibility, symlinks to these files exist in the project root. Always make changes to the original files in `config/env/`.
+To set up your environment, use the setup script:
+
+```bash
+# For development
+python scripts/setup_env.py dev
+
+# For production
+python scripts/setup_env.py prod
+
+# For testing
+python scripts/setup_env.py test
+```
+
+For more details, see [Environment Configuration](docs/environment_configuration.md).
 
 #### Database Configuration
 

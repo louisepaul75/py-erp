@@ -2,7 +2,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from .models import ParentProduct, VariantProduct, ProductCategory, Product
+from .models import ParentProduct, VariantProduct, ProductCategory, Product, UnifiedProduct
 
 
 class ProductCategoryForm(forms.ModelForm):
@@ -20,11 +20,11 @@ class ProductForm(forms.ModelForm):
     """Form for creating and editing products."""
     
     class Meta:
-        model = Product
+        model = UnifiedProduct
         fields = [
             # Basic information
-            'sku', 'name', 'name_en', 'list_price', 'cost_price', 
-            'is_active', 'stock_quantity', 'is_parent', 'variant_code'
+            'sku', 'name', 'description', 'price', 
+            'is_active', 'is_parent', 'is_variant'
         ]
         
     def clean_sku(self):
@@ -34,11 +34,11 @@ class ProductForm(forms.ModelForm):
         
         if instance and instance.pk:
             # If this is an existing product, exclude it from the uniqueness check
-            if Product.objects.filter(sku=sku).exclude(pk=instance.pk).exists():
+            if UnifiedProduct.objects.filter(sku=sku).exclude(pk=instance.pk).exists():
                 raise forms.ValidationError(_('A product with this SKU already exists.'))
         else:
             # If this is a new product
-            if Product.objects.filter(sku=sku).exists():
+            if UnifiedProduct.objects.filter(sku=sku).exists():
                 raise forms.ValidationError(_('A product with this SKU already exists.'))
         
         return sku
@@ -47,17 +47,12 @@ class ProductForm(forms.ModelForm):
         """Validate the form data."""
         cleaned_data = super().clean()
         is_parent = cleaned_data.get('is_parent')
-        variant_code = cleaned_data.get('variant_code')
-        list_price = cleaned_data.get('list_price')
-        cost_price = cleaned_data.get('cost_price')
+        is_variant = cleaned_data.get('is_variant')
         
-        # Parent products should not have variant codes
-        if is_parent and variant_code:
-            self.add_error('variant_code', _('Parent products should not have variant codes.'))
-            
-        # List price should be greater than cost price
-        if list_price and cost_price and list_price < cost_price:
-            self.add_error('list_price', _('List price must be greater than or equal to cost price.'))
+        # A product cannot be both a parent and a variant
+        if is_parent and is_variant:
+            self.add_error('is_parent', _('A product cannot be both a parent and a variant.'))
+            self.add_error('is_variant', _('A product cannot be both a parent and a variant.'))
             
         return cleaned_data
 
