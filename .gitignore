@@ -111,3 +111,8 @@ _pgexport/
 .history/  # If using VSCode with History plugin
 *pinegrow_[0-9]*.json  # Pinegrow files with timestamps
 *_[0-9]*.vue           # Backup Vue files with timestamps
+
+# Logs
+logs/
+logs/*
+django-err.log*
