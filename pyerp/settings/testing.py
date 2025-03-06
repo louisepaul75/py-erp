@@ -18,6 +18,10 @@ from .base import *  # noqa
 
 load_environment_variables(verbose=True)
 
+# Disable ddtrace during testing
+os.environ["DD_TRACE_ENABLED"] = "false"
+os.environ["DD_PROFILING_ENABLED"] = "false"
+
 # Print environment variables for debugging
 print(f"DB_NAME: {os.environ.get('DB_NAME', 'not set')}")
 print(f"DB_USER: {os.environ.get('DB_USER', 'not set')}")

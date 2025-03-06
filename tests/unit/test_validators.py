@@ -7,7 +7,7 @@ This module contains tests for the validation classes and utilities.
 from decimal import Decimal
 
 import pytest
-from core.validators import (
+from pyerp.core.validators import (
     DecimalValidator,
     LengthValidator,
     RangeValidator,
