@@ -35,10 +35,6 @@
           <li class="nav-item">
             <router-link class="nav-link" to="/production">Production</router-link>
           </li>
-
-          <li class="nav-item">
-            <router-link class="nav-link" to="/Health">System Health</router-link>
-          </li>
         </ul>
 
         <!-- Authentication Links -->

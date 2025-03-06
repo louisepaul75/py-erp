@@ -285,7 +285,7 @@ class CategoryListView(LoginRequiredMixin, ListView):
 
 @login_required
 @require_POST
-def save_product_images(_, pk):
+def save_product_images(_, _pk):
     """
     Save product images from external API.
     """

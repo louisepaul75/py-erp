@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(pre_save, sender=VariantProduct)
-def variant_product_pre_save(sender, instance, **kwargs):
+def variant_product_pre_save(_sender, instance, **_kwargs):
     """
     Handle pre-save operations for VariantProduct model.
 

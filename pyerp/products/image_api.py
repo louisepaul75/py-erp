@@ -487,51 +487,65 @@ class ImageAPIClient:
             return result
 
         # Fetch images for products that aren't cached yet
-        logger.info(f"Preloading images for {len(uncached_articles)} products")
+        logger.info("Preloading images for %d products", len(uncached_articles))
 
         # Process in batches to avoid excessive API calls
-        page = 1
-        page_size = 100
-        total_pages = None
+        article_number = self.get_appropriate_article_number(product)
+        logger.info(
+            "Searching for images with primary article number: %s",
+            article_number,
+        )
+        images = self.search_product_images(article_number)
 
-        while total_pages is None or page <= total_pages:
-            data = self.get_all_images(page=page, page_size=page_size)
+        if images:
+            logger.info("Found %d images using primary article number", len(images))
+            return images
 
-            if not data:
-                break
+        # Try with product SKU if different from article number
+        if article_number != product.sku:
+            logger.info(
+                "No images found with primary article number, trying product SKU: %s",
+                product.sku,
+            )
+            images = self.search_product_images(product.sku)
 
-            # Calculate total pages on first response
-            if total_pages is None:
-                count = data.get("count", 0)
-                total_pages = (count + page_size - 1) // page_size
+            if images:
+                logger.info("Found %d images using product SKU", len(images))
+                return images
 
-            # Process each image and check if it matches any of our products
-            for item in data.get("results", []):
-                articles = item.get("articles", [])
+        # If still no images and it's a variant with a base_sku different from what we've tried
+        if (
+            not product.is_parent
+            and product.base_sku
+            and product.base_sku != article_number
+            and product.base_sku != product.sku
+        ):
+            logger.info("Trying base SKU: %s", product.base_sku)
+            images = self.search_product_images(product.base_sku)
 
-                # Check if this image is associated with any of our uncached products
-                for article in articles:
-                    article_number = article.get("number")
-                    if article_number in uncached_articles:
-                        product_cache_key = f"product_images_{article_number}"
-                        product_images = cache.get(product_cache_key) or []
-                        product_images.append(item)
+            if images:
+                logger.info("Found %d images using base SKU", len(images))
+                return images
 
-                        # Cache the updated list
-                        cache.set(product_cache_key, product_images, self.cache_timeout)
+        # If still no images and it has a parent that we haven't tried yet
+        if (
+            product.parent
+            and product.parent.sku != article_number
+            and product.parent.sku != product.sku
+        ):
+            logger.info("Trying parent SKU: %s", product.parent.sku)
+            images = self.search_product_images(product.parent.sku)
 
-                        # If this is the first image for this product, add it to the result
-                        if article_number not in result:
-                            result[article_number] = self.parse_image(item)
+            if images:
+                logger.info("Found %d images using parent SKU", len(images))
+                return images
 
-            # Move to the next page
-            page += 1
-
-            # Stop if we've found images for all products
-            if all(article in result for article in uncached_articles):
-                break
-
-        return result
+        # If we've tried everything and found nothing
+        logger.warning(
+            "No images found for product %s after trying all fallback options",
+            product.sku,
+        )
+        return []
 
     def get_product_images(self, product):
         """

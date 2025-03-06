@@ -1,244 +1,157 @@
-import pandas as pd
+from contextlib import suppress
+from typing import Any
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from pyerp.products.models import ParentProduct, ProductCategory
-from wsz_api.getTable import fetch_data_from_api
 
 
 class Command(BaseCommand):
+    """Command to import Artikel_Familie records as parent products."""
+
     help = "Import Artikel_Familie records as parent products"
 
     def add_arguments(self, parser):
         parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Show what would be done without making changes",
+        )
+        parser.add_argument(
             "--limit",
             type=int,
-            help="Limit the number of records to import",
+            help="Maximum number of records to process",
         )
         parser.add_argument(
             "--skip-existing",
             action="store_true",
-            help="Skip existing products instead of updating them",
-        )
-        parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Perform a dry run without saving to the database",
+            help="Skip records that already exist",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
+        """Import Artikel_Familie records as parent products.
+
+        Args:
+            *args: Variable length argument list
+            **options: Arbitrary keyword arguments:
+                - dry_run: Run without making changes
+                - limit: Max records to process
+                - skip_existing: Skip existing records
+
+        Returns:
+            None
+        """
         limit = options.get("limit")
         skip_existing = options.get("skip_existing", False)
         dry_run = options.get("dry_run", False)
 
-        created, updated, skipped = self.import_artikel_familie(
+        self.import_artikel_familie(
             limit=limit,
             skip_existing=skip_existing,
             dry_run=dry_run,
         )
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Import completed: {created} created, {updated} updated, {skipped} skipped",
-            ),
-        )
-
-    def import_artikel_familie(self, limit=None, skip_existing=False, dry_run=False):
-        """
-        Import Artikel_Familie records as parent products.
+    def import_artikel_familie(
+        self,
+        *,
+        limit: int | None = None,
+        skip_existing: bool = False,
+        dry_run: bool = False,
+    ) -> None:
+        """Import Artikel_Familie records as parent products.
 
         Args:
-            limit (int, optional): Limit the number of records to import. Defaults to None (no limit).  # noqa: E501
-            skip_existing (bool, optional): Skip existing products instead of updating them. Defaults to False.  # noqa: E501
-            dry_run (bool, optional): If True, don't save changes to the database. Defaults to False.  # noqa: E501
+            limit: Maximum number of records to process
+            skip_existing: Skip records that already exist
+            dry_run: Run without making changes
 
         Returns:
-            tuple: (created_count, updated_count, skipped_count)
+            None
         """
-        self.stdout.write("Fetching Artikel_Familie data...")
         try:
-            df = fetch_data_from_api("Artikel_Familie", top=10000, new_data_only=False)
+            from wsz_api.getTable import fetch_data_from_api
+        except ImportError as e:
+            self.stderr.write(f"Failed to import WSZ_api: {e}")
+            return
 
-            if df is None or len(df) == 0:
-                self.stdout.write(
-                    self.style.ERROR("No data returned from Artikel_Familie table"),
-                )
-                return (0, 0, 0)
+        # Get data from API
+        df = fetch_data_from_api("Artikel_Familie", limit=limit)
+        if df is None or df.empty:
+            self.stderr.write("No data received from API")
+            return
 
-            # Limit records if specified
-            if limit is not None and limit > 0:
-                df = df.head(limit)
+        record_count = len(df)
+        self.stdout.write(f"Retrieved {record_count} records")
 
-            self.stdout.write(f"Processing {len(df)} Artikel_Familie records...")
+        # Process records
+        created = 0
+        skipped = 0
+        errors = 0
 
-            # Track counts
-            created = 0
-            updated = 0
-            skipped = 0
-            errors = 0
+        with transaction.atomic():
+            for _, row in df.iterrows():
+                try:
+                    # Get required fields
+                    nummer = row.get("Nummer", "").strip()
+                    if not nummer:
+                        self.stderr.write(f"Skipping row {row.name}: No Nummer")
+                        skipped += 1
+                        continue
 
-            # Use a transaction to ensure all-or-nothing
-            if not dry_run:
-                transaction.set_autocommit(False)
-
-            try:
-                for index, row in df.iterrows():
+                    # Get optional fields with defaults
+                    name = row.get("Name", "").strip()
                     try:
-                        familie_id = row["__KEY"]
-                        product_name = (
-                            row["Bezeichnung"]
-                            if pd.notna(row["Bezeichnung"])
-                            else "Unnamed Product Family"
-                        )
-                        nummer = int(row["Nummer"]) if pd.notna(row["Nummer"]) else None
-                        is_active = (
-                            bool(row["aktiv"]) if pd.notna(row["aktiv"]) else True
-                        )
-
-                        # Generate a product SKU based on the nummer field
-                        sku = (
-                            f"{nummer}"
-                            if nummer is not None
-                            else f"FAMILIE-{familie_id[:8]}"
-                        )
-
-                        # Get additional attributes if available
-                        description = None
-                        if pd.notna(row.get("Beschreibung")):
-                            try:
-                                if (
-                                    isinstance(row["Beschreibung"], dict)
-                                    and "DE" in row["Beschreibung"]
-                                ):
-                                    description = row["Beschreibung"]["DE"]
-                                elif isinstance(row["Beschreibung"], str):
-                                    description = row["Beschreibung"]
-                            except:
-                                description = str(row["Beschreibung"])
-
-                        # Get physical attributes if available
-                        weight = (
-                            int(row["Gewicht"])
-                            if pd.notna(row.get("Gewicht"))
-                            else None
-                        )
-                        width = (
-                            float(row["Masse_Breite"])
-                            if pd.notna(row.get("Masse_Breite"))
-                            else None
-                        )
-                        height = (
-                            float(row["Masse_Hoehe"])
-                            if pd.notna(row.get("Masse_Hoehe"))
-                            else None
-                        )
-                        depth = (
-                            float(row["Masse_Tiefe"])
-                            if pd.notna(row.get("Masse_Tiefe"))
-                            else None
-                        )
-
-                        # Format dimensions if available
-                        dimensions = None
-                        if (
-                            width is not None
-                            and height is not None
-                            and depth is not None
-                        ):
-                            dimensions = f"{width}x{height}x{depth}"
-
-                        # Get category if available
-                        category = None
-                        if pd.notna(row.get("Gruppe")):
-                            try:
-                                category = ProductCategory.objects.get(
-                                    code=row["Gruppe"],
-                                )
-                            except ProductCategory.DoesNotExist:
-                                pass
-
-                        # Check if product exists
-                        try:
-                            parent_product = ParentProduct.objects.get(
-                                legacy_id=familie_id,
-                            )
-                            exists = True
-                        except ParentProduct.DoesNotExist:
-                            try:
-                                parent_product = ParentProduct.objects.get(sku=sku)
-                                exists = True
-                            except ParentProduct.DoesNotExist:
-                                parent_product = ParentProduct(legacy_id=familie_id)
-                                exists = False
-
-                        # Skip if requested and product exists
-                        if exists and skip_existing:
-                            skipped += 1
-                            self.stdout.write(
-                                f"Skipping existing product: {sku} - {product_name}",
-                            )
-                            continue
-
-                        # Update product fields
-                        parent_product.sku = sku
-                        parent_product.base_sku = sku
-                        parent_product.name = product_name
-                        parent_product.description = description
-                        parent_product.is_active = is_active
-                        parent_product.weight = weight
-                        parent_product.dimensions = dimensions
-                        parent_product.category = category
-
-                        # Save the product if not a dry run
-                        if not dry_run:
-                            parent_product.save()
-
-                        # Update counts
-                        if exists:
-                            updated += 1
-                            self.stdout.write(
-                                f"Updated parent product: {sku} - {product_name}",
-                            )
+                        if isinstance(row["Beschreibung"], str):
+                            description = row["Beschreibung"]
                         else:
-                            created += 1
-                            self.stdout.write(
-                                f"Created parent product: {sku} - {product_name}",
+                            description = str(row["Beschreibung"])
+                    except (KeyError, TypeError, ValueError):
+                        description = str(row.get("Beschreibung", ""))
+
+                    category_code = row.get("Gruppe", "").strip()
+
+                    # Find category if provided
+                    category = None
+                    if category_code:
+                        with suppress(ProductCategory.DoesNotExist):
+                            category = ProductCategory.objects.get(
+                                code=category_code,
                             )
 
-                    except Exception as e:
-                        errors += 1
-                        self.stdout.write(
-                            self.style.ERROR(f"Error processing record {index}: {e!s}"),
+                    # Create or update parent product
+                    if not dry_run:
+                        defaults = {
+                            "name": name,
+                            "description": description,
+                            "category": category,
+                        }
+                        result = ParentProduct.objects.update_or_create(
+                            sku=nummer,
+                            defaults=defaults,
                         )
+                        parent, is_created = result
+                        if is_created:
+                            created += 1
+                        else:
+                            skipped += 1
+                    else:
+                        self.stdout.write(f"Would create parent: {nummer} - {name}")
 
-                # Commit the transaction if not a dry run
-                if not dry_run:
-                    transaction.commit()
-                    self.stdout.write(
-                        self.style.SUCCESS("Committed changes to database"),
-                    )
-                else:
-                    self.stdout.write(
-                        self.style.WARNING(
-                            "DRY RUN - No changes were saved to the database",
-                        ),
-                    )
+                except Exception as e:
+                    err_msg = f"Error processing row {row.name}: {e}"
+                    self.stderr.write(err_msg)
+                    errors += 1
 
-                # Return counts
-                return (created, updated, skipped)
+        # Print summary
+        summary = (
+            f"\nProcessed {record_count} records: "
+            f"Created {created}, "
+            f"Skipped {skipped}, "
+            f"Errors {errors}"
+        )
+        self.stdout.write(self.style.SUCCESS(summary))
 
-            except Exception as e:
-                if not dry_run:
-                    transaction.rollback()
-                self.stdout.write(
-                    self.style.ERROR(f"Error during import, rolling back: {e!s}"),
-                )
-                return (0, 0, 0)
-
-            finally:
-                if not dry_run:
-                    transaction.set_autocommit(True)
-
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error fetching data: {e!s}"))
-            return (0, 0, 0)
+        if dry_run:
+            dry_run_msg = "This was a dry run - no changes made."
+            self.stdout.write(self.style.WARNING(dry_run_msg))

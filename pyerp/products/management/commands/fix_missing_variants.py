@@ -3,14 +3,13 @@ Management command to fix missing variants by creating placeholder parent produc
 """
 
 import logging
-import re
+from typing import Any
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from pyerp.products.models import (
     ParentProduct,
-    Product,
     ProductCategory,
     VariantProduct,
 )
@@ -18,114 +17,131 @@ from pyerp.products.models import (
 # Configure logging
 logger = logging.getLogger(__name__)
 
+# Constants
+SKU_PREFIX_LENGTH = 3
+MAX_DISPLAY_VARIANTS = 20
+
 
 class Command(BaseCommand):
-    help = "Fix missing variants by creating placeholder parent products"
+    """Command to fix missing variant relationships."""
+
+    help = "Fix missing variant relationships"
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="Perform a dry run without saving to the database",
+            help="Show what would be done without making changes",
         )
         parser.add_argument(
             "--limit",
             type=int,
-            default=None,
-            help="Limit the number of variants to process",
-        )
-        parser.add_argument(
-            "--sku-pattern",
-            type=str,
-            default=None,
-            help="Process only variants matching this SKU pattern (regex)",
-        )
-        parser.add_argument(
-            "--create-parents",
-            action="store_true",
-            help="Create placeholder parent products for missing variants",
-        )
-        parser.add_argument(
-            "--group-by-prefix",
-            action="store_true",
-            help="Group variants by SKU prefix when creating placeholder parents",
+            help="Maximum number of variants to process",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
+        """Fix missing variant relationships.
+
+        Args:
+            *args: Variable length argument list
+            **options: Arbitrary keyword arguments:
+                - dry_run: Run without making changes
+                - limit: Max variants to process
+
+        Returns:
+            None
+        """
         dry_run = options["dry_run"]
         limit = options["limit"]
-        sku_pattern = options["sku_pattern"]
-        create_parents = options["create_parents"]
-        group_by_prefix = options["group_by_prefix"]
 
-        self.stdout.write(self.style.NOTICE("Starting missing variants analysis..."))
-
-        # Get all variants from the old model that haven't been migrated
-        migrated_variants = set(
-            VariantProduct.objects.values_list("legacy_id", flat=True),
-        )
-        old_variants = Product.objects.filter(is_parent=False)
-
-        if sku_pattern:
-            pattern = re.compile(sku_pattern)
-            old_variants = old_variants.filter(sku__regex=sku_pattern)
-
-        missing_variants = old_variants.exclude(legacy_id__in=migrated_variants)
+        # Get variants without parents
+        missing_variants = VariantProduct.objects.filter(parent__isnull=True)
 
         if limit:
             missing_variants = missing_variants[:limit]
 
-        total_missing = missing_variants.count()
-        self.stdout.write(self.style.SUCCESS(f"Found {total_missing} missing variants"))
+        if not missing_variants:
+            self.stdout.write(self.style.SUCCESS("No variants without parents found."))
+            return
 
-        # Group variants by SKU prefix
+        # Group variants by prefix
         prefix_groups = {}
         for variant in missing_variants:
-            prefix = variant.sku[:3] if len(variant.sku) >= 3 else variant.sku
+            prefix = variant.sku[:SKU_PREFIX_LENGTH] if len(variant.sku) >= SKU_PREFIX_LENGTH else variant.sku
             if prefix not in prefix_groups:
                 prefix_groups[prefix] = []
             prefix_groups[prefix].append(variant)
 
-        # Print summary of prefix groups
-        self.stdout.write(self.style.NOTICE("\nVariants grouped by prefix:"))
-        for prefix, variants in sorted(prefix_groups.items()):
-            self.stdout.write(f"  {prefix}xxx: {len(variants)} variants")
+        # Display sample of variants
+        for variant in missing_variants[:MAX_DISPLAY_VARIANTS]:
+            variant_info = f"  {variant.sku}"
+            if variant.base_sku:
+                variant_info += f" (base_sku: {variant.base_sku})"
+            self.stdout.write(variant_info)
 
-        # Create placeholder parents if requested
-        if create_parents and not dry_run:
-            self.create_placeholder_parents(prefix_groups, group_by_prefix)
-        elif create_parents and dry_run:
-            self.stdout.write(
-                self.style.WARNING("\nDRY RUN - Would create placeholder parents:"),
-            )
-            self.simulate_parent_creation(prefix_groups, group_by_prefix)
+        if len(missing_variants) > MAX_DISPLAY_VARIANTS:
+            remaining = len(missing_variants) - MAX_DISPLAY_VARIANTS
+            self.stdout.write(f"  ... and {remaining} more")
 
-        # Print detailed list of missing variants
-        self.stdout.write(self.style.NOTICE("\nDetailed list of missing variants:"))
-        for i, variant in enumerate(
-            missing_variants[:20],
-        ):  # Show first 20 for brevity
-            self.stdout.write(f"  {i + 1}. {variant.sku} - {variant.name}")
+        # Print prefix groups
+        self.stdout.write("\nGrouped by prefix:")
+        for prefix, variants in prefix_groups.items():
+            group_count = len(variants)
+            self.stdout.write(f"  {prefix}: {group_count} variants")
 
-        if len(missing_variants) > 20:
-            self.stdout.write(f"  ... and {len(missing_variants) - 20} more")
+        # Ask for confirmation
+        if not dry_run:
+            confirm = input("\nDo you want to proceed? (y/n): ")
+            if confirm.lower() != "y":
+                self.stdout.write("Operation cancelled.")
+                return
+
+        # Process variants
+        created_parents = 0
+        migrated_variants = 0
+
+        with transaction.atomic():
+            for prefix, variants in prefix_groups.items():
+                try:
+                    # Create parent product
+                    parent_sku = f"{prefix}-P"
+                    first_variant = variants[0]
+                    name_prefix = "Parent Product for"
+                    parent_name = f"{name_prefix} {first_variant.name}"
+
+                    if not dry_run:
+                        desc = "Automatically created parent product"
+                        parent = ParentProduct.objects.create(
+                            sku=parent_sku,
+                            name=parent_name,
+                            description=desc,
+                        )
+                        created_parents += 1
+
+                        # Create variants
+                        for variant in variants:
+                            has_prefix = len(variant.sku) >= 3
+                            variant_code = variant.sku[3:] if has_prefix else ""
+
+                            # Create variant product
+                            variant.parent = parent
+                            variant.variant_code = variant_code
+                            variant.save()
+                            migrated_variants += 1
+                except Exception as e:
+                    err_msg = f"Error processing prefix {prefix}: {e}"
+                    self.stdout.write(self.style.ERROR(err_msg))
 
         # Print summary
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"\nAnalysis completed: {total_missing} missing variants identified",
-            ),
+        summary = (
+            f"\nCreated {created_parents} parents, "
+            f"Migrated {migrated_variants} variants"
         )
-        if dry_run and create_parents:
-            self.stdout.write(
-                self.style.WARNING(
-                    "This was a dry run. No changes were made to the database.",
-                ),
-            )
-        elif create_parents:
-            self.stdout.write(
-                self.style.SUCCESS("Placeholder parents created successfully."),
-            )
+        self.stdout.write(self.style.SUCCESS(summary))
+
+        if dry_run:
+            dry_run_msg = "This was a dry run - no changes made."
+            self.stdout.write(self.style.WARNING(dry_run_msg))
 
     def create_placeholder_parents(self, prefix_groups, group_by_prefix):
         """Create placeholder parent products for missing variants."""
@@ -195,7 +211,7 @@ class Command(BaseCommand):
                         if created:
                             migrated_variants += 1
             else:
-                for prefix, variants in prefix_groups.items():
+                for _prefix, variants in prefix_groups.items():
                     for variant in variants:
                         parent_sku = f"{variant.sku}-P"
                         parent_name = f"{variant.name} (Parent)"

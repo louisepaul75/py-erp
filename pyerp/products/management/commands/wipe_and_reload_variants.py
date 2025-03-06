@@ -4,17 +4,22 @@ Management command to wipe all variant products and reload them from Artikel_Var
 
 import logging
 import sys
+from typing import Any, Dict, List, Optional
 from decimal import Decimal
 
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from wsz_api.getTable import fetch_data_from_api
 
 from pyerp.products.models import (
     ParentProduct,
     ProductCategory,
     VariantProduct,
 )
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Add the WSZ_api path to the Python path
 WSZ_API_PATH = r"C:\Users\Joan-Admin\PycharmProjects\WSZ_api"
@@ -23,10 +28,6 @@ if WSZ_API_PATH not in sys.path:
 
 # Now import from wsz_api
 from wsz_api.getTable import fetch_data_from_api
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
 
 class Command(BaseCommand):
     help = "Wipe all variant products and reload them from Artikel_Variante"
@@ -65,7 +66,8 @@ class Command(BaseCommand):
             help="Print detailed information for each record",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Dict[str, Any]) -> None:
+        """Handle command execution."""
         dry_run = options["dry_run"]
         limit = options["limit"]
         preserve_existing = options["preserve_existing"]
@@ -284,8 +286,8 @@ class Command(BaseCommand):
                                         description = row["Beschreibung"]["DE"]
                                     elif isinstance(row["Beschreibung"], str):
                                         description = row["Beschreibung"]
-                                except:
-                                    description = str(row["Beschreibung"])
+                                except (KeyError, TypeError, ValueError) as e:
+                                    description = str(row.get("Beschreibung", ""))
 
                             # Extract pricing information
                             list_price = Decimal("0.00")

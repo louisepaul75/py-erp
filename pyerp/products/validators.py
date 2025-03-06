@@ -36,6 +36,7 @@ class ProductImportValidator(ImportValidator):
 
     def __init_translate(
         self,
+        *,  # Make all arguments keyword-only
         strict: bool = False,
         transform_data: bool = True,
         default_category: Optional["ProductCategory"] = None,

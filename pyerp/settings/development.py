@@ -1,7 +1,7 @@
 """
 Development settings for pyERP project.
 
-These settings extend the base settings with development-specific configurations.  # noqa: E501
+These settings extend the base settings with development-specific configurations.
 """
 
 import os
@@ -10,6 +10,7 @@ from datetime import timedelta
 import dj_database_url  # noqa: F401
 
 from .base import *  # noqa
+from .base import SIMPLE_JWT
 
 # Import HTTPS settings
 try:
@@ -21,7 +22,10 @@ except ImportError:
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
 
 # Get ALLOWED_HOSTS from environment variable
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = os.environ.get(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1",
+).split(",")
 
 # Database configuration
 DATABASES = {
@@ -32,7 +36,7 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
         "PORT": os.environ.get("DB_PORT", "5432"),
-    },
+    }
 }
 
 # CORS settings

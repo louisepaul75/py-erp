@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -19,7 +21,18 @@ class Command(BaseCommand):
             help="Skip confirmation prompt",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
+        """Create placeholder parent products for variants without parents.
+
+        Args:
+            *args: Variable length argument list
+            **options: Arbitrary keyword arguments:
+                - dry_run: Run without making changes
+                - force: Create even if parent exists
+
+        Returns:
+            None
+        """
         dry_run = options["dry_run"]
         force = options["force"]
 
@@ -28,160 +41,94 @@ class Command(BaseCommand):
         )
 
         # Get variants without parents
-        variants_without_parent = VariantProduct.objects.filter(parent__isnull=True)
-        total_orphans = variants_without_parent.count()
+        variants = VariantProduct.objects.filter(parent__isnull=True)
 
-        self.stdout.write(f"Found {total_orphans} variants without parent products.")
-
-        if total_orphans == 0:
-            self.stdout.write(
-                self.style.SUCCESS("No orphaned variants found. Nothing to do."),
-            )
+        if not variants.exists():
+            self.stdout.write(self.style.SUCCESS("No variants without parents found."))
             return
 
-        # Ask for confirmation if not forced
-        if not force and not dry_run:
-            self.stdout.write(
-                "\nThis command will create placeholder parent products for orphaned variants.",
-            )
-            self.stdout.write(
-                "These placeholder parents will use data from their variants with a 'PLACEHOLDER' prefix.",
-            )
+        variant_count = variants.count()
+        self.stdout.write(f"Found {variant_count} variants without parents.")
 
-            confirm = input("Do you want to proceed? (y/n): ")
-            if confirm.lower() != "y":
-                self.stdout.write(self.style.WARNING("Operation cancelled."))
-                return
+        # Group variants by base SKU
+        sku_groups = {}
+        for variant in variants:
+            base_sku = variant.base_sku or variant.sku
+            if base_sku not in sku_groups:
+                sku_groups[base_sku] = []
+            sku_groups[base_sku].append(variant)
 
-        # Create parents and update relationships
-        if dry_run:
-            self.stdout.write(
-                self.style.WARNING("\n[DRY RUN] No actual changes will be made\n"),
-            )
+        group_count = len(sku_groups)
+        self.stdout.write(f"Grouped into {group_count} potential parent products.")
 
-        # Track results
-        created_parents = 0
-        updated_relationships = 0
-        errors = 0
-        error_details = []
+        # Process each group
+        created_count = 0
+        skipped_count = 0
+        error_count = 0
 
-        # Use transaction to ensure atomicity - only for dry run
-        if dry_run:
-            with transaction.atomic():
-                sid = transaction.savepoint()
+        with transaction.atomic():
+            for base_sku, group_variants in sku_groups.items():
+                try:
+                    # Check if parent already exists
+                    existing_parent = ParentProduct.objects.filter(
+                        base_sku=base_sku
+                    ).first()
 
-                for variant in variants_without_parent:
-                    try:
-                        parent = ParentProduct(
-                            sku=f"PLACEHOLDER-{variant.sku}",
-                            name=(
-                                f"PLACEHOLDER - {variant.name}"
-                                if variant.name
-                                else f"PLACEHOLDER Parent for {variant.sku}"
-                            ),
-                            is_active=variant.is_active,
-                            legacy_id=variant.legacy_familie,
-                            is_placeholder=True,
-                            base_sku=(
-                                variant.base_sku
-                                if hasattr(variant, "base_sku") and variant.base_sku
-                                else variant.sku
-                            ),
+                    if existing_parent and not force:
+                        skip_msg = f"Parent already exists for {base_sku} - skipping"
+                        self.stdout.write(skip_msg)
+                        skipped_count += 1
+                        continue
+
+                    # Create parent product
+                    first_variant = group_variants[0]
+                    name_prefix = "Parent Product for"
+                    parent_name = f"{name_prefix} {first_variant.name}"
+                    parent_sku = f"{base_sku}-P"
+
+                    if not dry_run:
+                        desc = "Automatically created placeholder parent product"
+                        parent = ParentProduct.objects.create(
+                            sku=parent_sku,
+                            base_sku=base_sku,
+                            name=parent_name,
+                            description=desc,
                         )
 
-                        if not dry_run:
-                            parent.save()
-                        created_parents += 1
-
-                        # Update variant to link to this parent
-                        if not dry_run:
+                        # Link variants to parent
+                        for variant in group_variants:
                             variant.parent = parent
                             variant.save()
-                        updated_relationships += 1
 
-                        self.stdout.write(
-                            f"{'[DRY RUN] ' if dry_run else ''}Created placeholder parent {parent.sku} for variant {variant.sku}",
-                        )
-                    except Exception as e:
-                        errors += 1
-                        error_details.append(
-                            f"Error processing variant {variant.sku}: {e!s}",
-                        )
-                        self.stdout.write(
-                            self.style.ERROR(
-                                f"Error processing variant {variant.sku}: {e!s}",
-                            ),
-                        )
+                        created_count += 1
+                    else:
+                        variant_count = len(group_variants)
+                        msg_parts = [
+                            f"Would create parent {parent_sku}",
+                            f"for {variant_count} variants",
+                        ]
+                        msg = " ".join(msg_parts)
+                        self.stdout.write(msg)
 
-                # If dry run, rollback all changes
-                if dry_run:
-                    transaction.savepoint_rollback(sid)
-                    self.stdout.write(
-                        self.style.WARNING(
-                            "\n[DRY RUN] All changes have been rolled back\n",
-                        ),
-                    )
-        else:
-            for variant in variants_without_parent:
-                try:
-                    parent = ParentProduct(
-                        sku=f"PLACEHOLDER-{variant.sku}",
-                        name=(
-                            f"PLACEHOLDER - {variant.name}"
-                            if variant.name
-                            else f"PLACEHOLDER Parent for {variant.sku}"
-                        ),
-                        is_active=variant.is_active,
-                        legacy_id=variant.legacy_familie,
-                        is_placeholder=True,
-                        base_sku=(
-                            variant.base_sku
-                            if hasattr(variant, "base_sku") and variant.base_sku
-                            else variant.sku
-                        ),
-                    )
-
-                    parent.save()
-                    created_parents += 1
-
-                    # Update variant to link to this parent
-                    variant.parent = parent
-                    variant.save()
-                    updated_relationships += 1
-
-                    self.stdout.write(
-                        f"Created placeholder parent {parent.sku} for variant {variant.sku}",
-                    )
                 except Exception as e:
-                    errors += 1
-                    error_details.append(
-                        f"Error processing variant {variant.sku}: {e!s}",
-                    )
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f"Error processing variant {variant.sku}: {e!s}",
-                        ),
-                    )
+                    error_msg = f"Error processing {base_sku}: {e!s}"
+                    self.stdout.write(self.style.ERROR(error_msg))
+                    error_count += 1
 
-        # Summary
-        self.stdout.write(self.style.SUCCESS("\n=== OPERATION SUMMARY ==="))
-        self.stdout.write(f"Total orphaned variants: {total_orphans}")
-        self.stdout.write(
-            f"Placeholder parents {'would be' if dry_run else ''} created: {created_parents}",
-        )
-        self.stdout.write(
-            f"Variant relationships {'would be' if dry_run else ''} updated: {updated_relationships}",
-        )
-        self.stdout.write(f"Errors encountered: {errors}")
+        # Print summary
+        summary_parts = [
+            "\nCreated",
+            str(created_count),
+            "parents,",
+            f"Skipped {skipped_count},",
+            f"Errors {error_count}",
+        ]
+        summary = " ".join(summary_parts)
+        self.stdout.write(self.style.SUCCESS(summary))
 
-        if errors > 0:
-            self.stdout.write(self.style.ERROR("\n=== ERROR DETAILS ==="))
-            for error in error_details:
-                self.stdout.write(self.style.ERROR(error))
-
-        if total_orphans > 0:
-            success_rate = (updated_relationships / total_orphans) * 100
-            self.stdout.write(f"Success rate: {success_rate:.2f}%")
+        if dry_run:
+            dry_run_msg = "This was a dry run - no changes made."
+            self.stdout.write(self.style.WARNING(dry_run_msg))
 
         # Next steps
         self.stdout.write(self.style.SUCCESS("\n=== NEXT STEPS ==="))

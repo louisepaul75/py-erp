@@ -7,6 +7,7 @@ records in the local database, linking them to the appropriate products.
 
 import logging
 import time
+from typing import Any, Optional
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -62,7 +63,7 @@ class Command(BaseCommand):
             help="Number of records to process in each database batch",
         )
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: dict[str, Any]) -> None:
         dry_run = options["dry_run"]
         limit = options["limit"]
         page_size = options["page_size"]
@@ -218,21 +219,20 @@ class Command(BaseCommand):
                     articles = parsed_image.get("articles", [])
                     if articles:
                         self.stdout.write("\nFound articles in image:")
-                        article_table = []
-                        for article in articles:
-                            article_table.append(
-                                [
-                                    article.get("article_number", "N/A"),
-                                    article.get("variant_code", "N/A"),
-                                    article.get("front", False),
-                                ],
-                            )
+                        # Create table for display
+                        article_table = [
+                            [
+                                article.get("article_number", "N/A"),
+                                article.get("variant_code", "N/A"),
+                                article.get("front", False),
+                            ]
+                            for article in articles
+                        ]
                         self.stdout.write(
                             tabulate(
                                 article_table,
-                                headers=["Article Number", "Variant Code", "Is Front"],
-                                tablefmt="grid",
-                            ),
+                                headers=["Article", "Variant", "Front"],
+                            )
                         )
 
                     # Flag to track if this image was associated with any product
@@ -331,17 +331,16 @@ class Command(BaseCommand):
                             f"  Would create orphaned image: {parsed_image['external_id']} ({parsed_image['image_type']})",
                         )
 
-                # Print table of results for this page
-                table_data = []
-                for image in images_to_create + images_to_update:
-                    table_data.append(
-                        [
-                            image.product.sku if image.product else "Orphaned",
-                            image.image_type,
-                            "Yes" if image.is_front else "No",
-                            "Create" if image in images_to_create else "Update",
-                        ],
-                    )
+                # Create table for display
+                table_data = [
+                    [
+                        image.product.sku if image.product else "Orphaned",
+                        image.image_type,
+                        "Yes" if image.is_front else "No",
+                        "Create" if image in images_to_create else "Update",
+                    ]
+                    for image in images_to_create + images_to_update
+                ]
 
                 if table_data:
                     self.stdout.write("\nResults for this page:")
@@ -456,7 +455,7 @@ class Command(BaseCommand):
                 sync_log.error_message = str(e)
                 sync_log.save()
 
-    def _find_product(self, article_number, variant_code):
+    def _find_product(self, article_number: str, variant_code: str) -> Optional[UnifiedProduct]:
         """Find matching product for the given article number and variant code."""
         if not article_number:
             return None

@@ -81,8 +81,8 @@ COPY . /app/
 
 # Create directories and setup static files
 RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
-    && chmod +x /app/scripts/ensure_static_dirs.sh \
-    && /app/scripts/ensure_static_dirs.sh \
+    && chmod +x /app/docker/ensure_static_dirs.sh \
+    && /app/docker/ensure_static_dirs.sh \
     && chown -R root:root /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
     && chmod -R 755 /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data
 

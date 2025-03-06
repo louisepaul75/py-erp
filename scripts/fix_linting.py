@@ -22,12 +22,27 @@ import sys
 
 
 def find_python_files(directory: str = "pyerp") -> list[str]:
-    """Find all Python files in the given directory."""
+    """Find all Python files in the given directory.
+    
+    Args:
+        directory: Directory to search for Python files
+        
+    Returns:
+        List of paths to Python files found in the directory
+    """
     return glob.glob(f"{directory}/**/*.py", recursive=True)
 
 
-def run_ruff_check(files: list[str], verbose: bool = False) -> None:
-    """Run Ruff check on the specified files."""
+def run_ruff_check(files: list[str], *, enable_verbose: bool = False) -> None:
+    """Run Ruff check on the specified files.
+    
+    Args:
+        files: List of Python files to check
+        enable_verbose: Whether to enable verbose output
+        
+    Returns:
+        None
+    """
     if not files:
         print("No Python files found to check.")
         return
@@ -36,7 +51,7 @@ def run_ruff_check(files: list[str], verbose: bool = False) -> None:
 
     # Build the command
     cmd = ["ruff", "check"]
-    if verbose:
+    if enable_verbose:
         cmd.append("--verbose")
     cmd.extend(files)
 
@@ -58,8 +73,16 @@ def run_ruff_check(files: list[str], verbose: bool = False) -> None:
         print(f"Error running Ruff check: {e}")
 
 
-def run_ruff_fix(files: list[str], verbose: bool = False) -> None:
-    """Run Ruff fix on the specified files."""
+def run_ruff_fix(files: list[str], *, enable_verbose: bool = False) -> None:
+    """Run Ruff fix on the specified files.
+    
+    Args:
+        files: List of Python files to fix
+        enable_verbose: Whether to enable verbose output
+        
+    Returns:
+        None
+    """
     if not files:
         print("No Python files found to fix.")
         return
@@ -68,7 +91,7 @@ def run_ruff_fix(files: list[str], verbose: bool = False) -> None:
 
     # Build the command
     cmd = ["ruff", "check", "--fix"]
-    if verbose:
+    if enable_verbose:
         cmd.append("--verbose")
     cmd.extend(files)
 
@@ -90,8 +113,16 @@ def run_ruff_fix(files: list[str], verbose: bool = False) -> None:
         print(f"Error running Ruff fix: {e}")
 
 
-def run_ruff_format(files: list[str], verbose: bool = False) -> None:
-    """Run Ruff format on the specified files."""
+def run_ruff_format(files: list[str], *, enable_verbose: bool = False) -> None:
+    """Run Ruff format on the specified files.
+    
+    Args:
+        files: List of Python files to format
+        enable_verbose: Whether to enable verbose output
+        
+    Returns:
+        None
+    """
     if not files:
         print("No Python files found to format.")
         return
@@ -100,7 +131,7 @@ def run_ruff_format(files: list[str], verbose: bool = False) -> None:
 
     # Build the command
     cmd = ["ruff", "format"]
-    if verbose:
+    if enable_verbose:
         cmd.append("--verbose")
     cmd.extend(files)
 
@@ -123,7 +154,12 @@ def run_ruff_format(files: list[str], verbose: bool = False) -> None:
 
 
 def ensure_ruff_installed() -> bool:
-    """Ensure Ruff is installed, and install it if not."""
+    """Ensure Ruff is installed, and install it if not.
+    
+    Returns:
+        bool: True if Ruff is installed or was successfully installed,
+            False if installation failed
+    """
     try:
         subprocess.run(
             ["ruff", "--version"],
@@ -146,7 +182,14 @@ def ensure_ruff_installed() -> bool:
 
 
 def main() -> None:
-    """Main function to process all Python files."""
+    """Main function to process all Python files.
+    
+    This function handles command line arguments and orchestrates the linting
+    process:
+    1. Ensures Ruff is installed
+    2. Finds Python files to process
+    3. Runs Ruff check, fix, and format operations based on arguments
+    """
     parser = argparse.ArgumentParser(description="Fix linting issues")
     parser.add_argument(
         "--directory",
@@ -195,14 +238,14 @@ def main() -> None:
 
     # Run Ruff
     if args.check_only:
-        run_ruff_check(python_files, args.verbose)
+        run_ruff_check(python_files, enable_verbose=args.verbose)
     else:
-        run_ruff_fix(python_files, args.verbose)
-        run_ruff_format(python_files, args.verbose)
+        run_ruff_fix(python_files, enable_verbose=args.verbose)
+        run_ruff_format(python_files, enable_verbose=args.verbose)
 
         # Run a final check to see if any issues remain
         print("\nChecking for remaining issues...")
-        run_ruff_check(python_files, args.verbose)
+        run_ruff_check(python_files, enable_verbose=args.verbose)
 
     print("Linting process completed!")
 

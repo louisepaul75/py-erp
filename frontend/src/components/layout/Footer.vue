@@ -5,7 +5,10 @@
         <div class="col-md-6">
           <p class="mb-0 text-muted">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
         </div>
-        <div class="col-md-6 text-md-end">
+        <div class="col-md-6 text-md-end d-flex justify-content-end align-items-center">
+          <router-link to="/Health" class="health-status me-3" :title="healthStatusText">
+            <span class="status-dot" :class="healthStatusClass"></span>
+          </router-link>
           <p class="mb-0 text-muted">Version {{ appVersion }}</p>
         </div>
       </div>
@@ -15,6 +18,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
+import axios from 'axios';
 
 // Get current year for copyright
 const currentYear = computed(() => new Date().getFullYear());
@@ -36,6 +40,30 @@ const isDev = computed(() => {
 // Track debug panel expanded state
 const isDebugPanelExpanded = ref(false);
 
+// Health status
+const healthStatus = ref('unknown');
+const healthStatusText = computed(() => {
+  switch (healthStatus.value) {
+    case 'success':
+      return 'All systems operational';
+    case 'warning':
+      return 'Some systems experiencing issues';
+    case 'error':
+      return 'Critical systems are down';
+    default:
+      return 'System status unknown';
+  }
+});
+
+const healthStatusClass = computed(() => {
+  return {
+    'success': healthStatus.value === 'success',
+    'warning': healthStatus.value === 'warning',
+    'error': healthStatus.value === 'error',
+    'unknown': healthStatus.value === 'unknown'
+  };
+});
+
 // Define a custom event type
 interface DebugPanelToggleEvent extends CustomEvent {
   detail: {
@@ -51,12 +79,46 @@ const handleDebugPanelToggle = (event: Event) => {
   }
 };
 
+// Check health status
+const checkHealthStatus = async () => {
+  try {
+    const [basicHealth, detailedHealth] = await Promise.all([
+      axios.get('/api/health/'),
+      axios.get('/api/monitoring/health-checks/')
+    ]);
+
+    if (basicHealth.data.status === 'unhealthy' || !detailedHealth.data.success) {
+      healthStatus.value = 'error';
+      return;
+    }
+
+    const statuses = detailedHealth.data.results.map((result: any) => result.status);
+    
+    if (statuses.includes('error')) {
+      healthStatus.value = 'error';
+    } else if (statuses.includes('warning')) {
+      healthStatus.value = 'warning';
+    } else if (statuses.every((status: string) => status === 'success')) {
+      healthStatus.value = 'success';
+    } else {
+      healthStatus.value = 'unknown';
+    }
+  } catch (error) {
+    healthStatus.value = 'error';
+  }
+};
+
+let healthCheckInterval: number;
+
 onMounted(() => {
   window.addEventListener('debug-panel-toggle', handleDebugPanelToggle);
+  checkHealthStatus();
+  healthCheckInterval = window.setInterval(checkHealthStatus, 60000); // Check every minute
 });
 
 onUnmounted(() => {
   window.removeEventListener('debug-panel-toggle', handleDebugPanelToggle);
+  clearInterval(healthCheckInterval);
 });
 </script>
 
@@ -77,5 +139,33 @@ onUnmounted(() => {
 /* Remove margin when debug panel is expanded */
 .footer.with-expanded-debug {
   margin-bottom: 0;
+}
+
+.health-status {
+  text-decoration: none;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.status-dot.success {
+  background-color: #28a745;
+}
+
+.status-dot.warning {
+  background-color: #ffc107;
+}
+
+.status-dot.error {
+  background-color: #dc3545;
+}
+
+.status-dot.unknown {
+  background-color: #6c757d;
 }
 </style>

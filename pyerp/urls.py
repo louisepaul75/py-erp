@@ -44,7 +44,11 @@ except ImportError:
 urlpatterns = [
     path("set-language/", set_language, name="set_language"),
     # JavaScript translations
-    path("jsi18n/", JavaScriptCatalog.as_view(), name="javascript-catalog"),
+    path(
+        "jsi18n/",
+        JavaScriptCatalog.as_view(),
+        name="javascript-catalog",
+    ),
     # Django admin URLs
     path("admin/", admin.site.urls),
     # API URLs
@@ -65,7 +69,15 @@ urlpatterns = [
         name="token_verify",
     ),
     # Add monitoring API URL
-    path("monitoring/", include("pyerp.monitoring.urls", namespace="monitoring")),
+    path(
+        "monitoring/",
+        include("pyerp.monitoring.urls", namespace="monitoring"),
+    ),
+    path(
+        "api/monitoring/",
+        include("pyerp.monitoring.urls", namespace="api_monitoring"),
+    ),
+    path("api/", include("pyerp.core.api_urls")),
     # Add products API URLs directly
     path("api/products/", include("pyerp.products.api_urls")),
 ]

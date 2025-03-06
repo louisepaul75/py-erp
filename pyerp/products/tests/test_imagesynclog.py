@@ -17,11 +17,11 @@ class ImageSyncLogTest(TestCase):
 
         log = ImageSyncLog()
         log.save()
-        self.assertIsNotNone(log.id)
-        self.assertGreater(log.id, 0)
+        assert log.id is not None
+        assert log.id > 0
 
         # Create another log to ensure IDs are incrementing
         log2 = ImageSyncLog()
         log2.save()
-        self.assertIsNotNone(log2.id)
-        self.assertGreater(log2.id, log.id)
+        assert log2.id is not None
+        assert log2.id > log.id

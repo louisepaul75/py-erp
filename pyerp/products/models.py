@@ -862,4 +862,4 @@ class UnifiedProduct(models.Model):
 
 # For backward compatibility with tests that import from models_new
 # This is in addition to the existing Product model class defined above
-Product = UnifiedProduct
+# Product = UnifiedProduct  # Removed redundant definition
