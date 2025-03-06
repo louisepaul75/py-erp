@@ -96,7 +96,7 @@ const checkHealthStatus = async () => {
   try {
     // First try the basic health check
     const basicHealth = await axios.get('/api/health/', {
-      timeout: 15000, // 15 second timeout
+      timeout: 60000, // Increased from 15000 to 60000 ms (60 seconds)
     });
 
     // Set version from health check response
@@ -110,7 +110,7 @@ const checkHealthStatus = async () => {
     // Then try the detailed health check
     try {
       const detailedHealth = await axios.get<DetailedHealthResponse>('/api/monitoring/health-checks/', {
-        timeout: 30000, // Increased from 15000 to 30000 ms
+        timeout: 60000, // Increased from 30000 to 60000 ms (60 seconds)
       });
 
       if (!detailedHealth.data.success) {

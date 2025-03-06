@@ -179,9 +179,8 @@ export default {
     },
     filteredHealthResults() {
       if (!this.healthResults) return {};
-      return Object.fromEntries(
-        Object.entries(this.healthResults).filter(([key]) => key !== 'database')
-      );
+      // Return all health results including database
+      return this.healthResults;
     }
   },
   mounted() {
@@ -228,7 +227,7 @@ export default {
         // Try to get basic health check
         try {
           const basicHealthResponse = await api.get('/api/health/', {
-            timeout: 30000 // Increased from 15000 to 30000 ms
+            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
           });
           this.systemInfo = {
             environment: basicHealthResponse.data?.environment || 'development',
@@ -249,7 +248,7 @@ export default {
         // Try to get detailed health checks
         try {
           const response = await api.get('/api/monitoring/health-checks/', {
-            timeout: 30000 // Increased from 15000 to 30000 ms
+            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
           });
 
           if (response.data && response.data.success) {
@@ -365,7 +364,7 @@ export default {
     async fetchDatabaseStats() {
       try {
         const response = await api.get('/api/monitoring/db-stats/', {
-          timeout: 10000 // 10 second timeout
+          timeout: 30000 // Increased from 10000 to 30000 ms (30 seconds)
         });
         if (response.data.success && response.data.stats) {
           // Store previous transaction count for animation
