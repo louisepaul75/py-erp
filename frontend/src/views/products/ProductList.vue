@@ -21,6 +21,12 @@
                     <input type="checkbox" v-model="isActive" @change="loadProducts"/>
                     Active Only
                 </label>
+                <button @click="openArtikelManagement" class="artikel-button">
+                    Artikel Management
+                </button>
+                <button @click="navigateToArtikelManagement" class="artikel-button-alt">
+                    Artikel (New Tab)
+                </button>
             </div>
         </div>
         <!-- Loading indicator -->
@@ -52,15 +58,15 @@
         </div>
         <!-- Product grid -->
         <div v-else class="product-grid">
-            <div v-for="product in products" :key="product.id" class="product-card" @click="viewProductDetails(product.id)">
-                <div class="product-image">
+            <div v-for="product in products" :key="product.id" class="product-card">
+                <div class="product-image" @click="viewProductDetails(product.id)">
                     <img 
                         :src="getProductImage(product)" 
                         :alt="product.name"
                         @error="handleImageError"
                     />
                 </div>
-                <div class="product-info">
+                <div class="product-info" @click="viewProductDetails(product.id)">
                     <h3>{{ product.name }}</h3>
                     <p class="sku">SKU: {{ product.sku }}</p>
                     <p v-if="product.variants_count" class="variants-badge">
@@ -69,6 +75,14 @@
                     <p v-if="product.category" class="category">
                         {{ product.category.name }} 
                     </p>
+                </div>
+                <div class="product-actions">
+                    <button @click="openArtikelManagementForProduct(product)" class="artikel-action-button">
+                        Artikel
+                    </button>
+                    <button @click="navigateToArtikelManagementWithProduct(product)" class="artikel-action-button-alt">
+                        Artikel (New Tab)
+                    </button>
                 </div>
             </div>
         </div>
@@ -85,6 +99,16 @@
         <div v-if="products.length === 0 && !loading" class="no-results">
             <p>No products found matching your criteria.</p>
         </div>
+
+        <!-- ArtikelManagement Modal -->
+        <div v-if="showArtikelManagement" class="artikel-modal-overlay" @click.self="closeArtikelManagement">
+            <div class="artikel-modal">
+                <ArtikelManagement 
+                    :product="selectedProductForArtikel" 
+                    @close="closeArtikelManagement"
+                />
+            </div>
+        </div>
     </div>
 </template>
 <script setup lang="ts">
@@ -93,6 +117,7 @@ import { useRouter } from 'vue-router';
 import { productApi } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import { getValidImageUrl, handleImageError, getNoImageUrl } from '@/utils/assetUtils';
+import ArtikelManagement from './ArtikelManagement.vue';
 
 // Define types
 interface Category {
@@ -155,6 +180,10 @@ const isActive = ref(true);
 const currentPage = ref(1);
 const totalProducts = ref(0);
 const pageSize = ref(12);
+
+// ArtikelManagement state
+const showArtikelManagement = ref(false);
+const selectedProductForArtikel = ref<Product | null>(null);
 
 // Debug state
 const showApiDebug = ref(false);
@@ -619,6 +648,34 @@ const getProductImage = (product: Product) => {
     // Fallback to no-image
     return getNoImageUrl();
 };
+
+// ArtikelManagement functions
+const openArtikelManagement = () => {
+  selectedProductForArtikel.value = null;
+  showArtikelManagement.value = true;
+};
+
+const openArtikelManagementForProduct = (product: Product) => {
+  selectedProductForArtikel.value = product;
+  showArtikelManagement.value = true;
+};
+
+const closeArtikelManagement = () => {
+  showArtikelManagement.value = false;
+  selectedProductForArtikel.value = null;
+};
+
+// Navigate to standalone ArtikelManagement page
+const navigateToArtikelManagement = () => {
+  router.push({ name: 'ArtikelManagement' });
+};
+
+const navigateToArtikelManagementWithProduct = (product: Product) => {
+  router.push({ 
+    name: 'ArtikelManagementWithProduct', 
+    params: { id: product.id.toString() } 
+  });
+};
 </script>
 <style scoped>
 .product-list {
@@ -856,5 +913,98 @@ h1 {
   .product-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
+}
+
+.artikel-button {
+  padding: 8px 15px;
+  background-color: #d2bc9b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-left: 10px;
+}
+
+.artikel-button:hover {
+  background-color: #c0a989;
+}
+
+.artikel-button-alt {
+  padding: 8px 15px;
+  background-color: white;
+  color: #d2bc9b;
+  border: 1px solid #d2bc9b;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 10px;
+}
+
+.artikel-button-alt:hover {
+  background-color: #f8f9fa;
+  color: #c0a989;
+  border-color: #c0a989;
+}
+
+.product-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 15px 15px;
+  gap: 5px;
+}
+
+.artikel-action-button {
+  padding: 5px 10px;
+  background-color: #d2bc9b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.artikel-action-button:hover {
+  background-color: #c0a989;
+}
+
+.artikel-action-button-alt {
+  padding: 5px 10px;
+  background-color: white;
+  color: #d2bc9b;
+  border: 1px solid #d2bc9b;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.artikel-action-button-alt:hover {
+  background-color: #f8f9fa;
+  color: #c0a989;
+  border-color: #c0a989;
+}
+
+.artikel-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.artikel-modal {
+  width: 95%;
+  height: 95%;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 </style> 

@@ -56,6 +56,19 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/products/CategoryList.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/artikel-management',
+    name: 'ArtikelManagement',
+    component: () => import('../views/products/ArtikelManagement.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/artikel-management/:id',
+    name: 'ArtikelManagementWithProduct',
+    component: () => import('../views/products/ArtikelManagement.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
   
   // Sales routes
   {
