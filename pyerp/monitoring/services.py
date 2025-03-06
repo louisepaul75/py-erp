@@ -285,6 +285,150 @@ def validate_database():
     }
 
 
+def get_database_statistics():
+    """
+    Get detailed statistics about database performance and usage.
+    
+    Returns:
+        dict: Detailed database statistics including connections, transactions, and performance metrics
+    """
+    stats = {
+        "connections": {
+            "active": 0,
+            "idle": 0,
+            "total": 0
+        },
+        "transactions": {
+            "committed": 0,
+            "rolled_back": 0,
+            "active": 0
+        },
+        "performance": {
+            "slow_queries": 0,
+            "cache_hit_ratio": 0,
+            "avg_query_time": 0
+        },
+        "disk": {
+            "size_mb": 0,
+            "index_size_mb": 0
+        },
+        "queries": {
+            "select_count": 0,
+            "insert_count": 0,
+            "update_count": 0,
+            "delete_count": 0
+        },
+        "timestamp": timezone.now()
+    }
+    
+    try:
+        with connections["default"].cursor() as cursor:
+            if connections["default"].vendor == "postgresql":
+                # Get connection statistics
+                cursor.execute("""
+                    SELECT state, count(*) 
+                    FROM pg_stat_activity 
+                    GROUP BY state
+                """)
+                for state, count in cursor.fetchall():
+                    if state == 'active':
+                        stats["connections"]["active"] = count
+                    elif state == 'idle':
+                        stats["connections"]["idle"] = count
+                    
+                stats["connections"]["total"] = stats["connections"]["active"] + stats["connections"]["idle"]
+                
+                # Get transaction statistics
+                cursor.execute("""
+                    SELECT 
+                        sum(xact_commit) as committed, 
+                        sum(xact_rollback) as rolled_back
+                    FROM pg_stat_database
+                """)
+                result = cursor.fetchone()
+                if result:
+                    stats["transactions"]["committed"] = result[0] or 0
+                    stats["transactions"]["rolled_back"] = result[1] or 0
+                
+                # Get active transactions
+                cursor.execute("""
+                    SELECT count(*) 
+                    FROM pg_stat_activity 
+                    WHERE state = 'active' AND xact_start IS NOT NULL
+                """)
+                stats["transactions"]["active"] = cursor.fetchone()[0] or 0
+                
+                # Get slow queries count (queries taking more than 1 second)
+                cursor.execute("""
+                    SELECT count(*) 
+                    FROM pg_stat_activity 
+                    WHERE state = 'active' AND query_start IS NOT NULL 
+                    AND NOW() - query_start > interval '1 second'
+                """)
+                stats["performance"]["slow_queries"] = cursor.fetchone()[0] or 0
+                
+                # Get cache hit ratio
+                cursor.execute("""
+                    SELECT 
+                        sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read) + 0.001) * 100 as hit_ratio
+                    FROM pg_statio_user_tables
+                """)
+                stats["performance"]["cache_hit_ratio"] = round(cursor.fetchone()[0] or 0, 2)
+                
+                # Get database and index size
+                cursor.execute("""
+                    SELECT 
+                        pg_database_size(current_database()) / (1024*1024) as db_size_mb, 
+                        (SELECT sum(pg_relation_size(indexrelid)) / (1024*1024) 
+                         FROM pg_index) as index_size_mb
+                """)
+                result = cursor.fetchone()
+                if result:
+                    stats["disk"]["size_mb"] = round(result[0] or 0, 2)
+                    stats["disk"]["index_size_mb"] = round(result[1] or 0, 2)
+                
+                # Get query counts by type (since database start)
+                cursor.execute("""
+                    SELECT 
+                        sum(n_tup_ins) as inserts, 
+                        sum(n_tup_upd) as updates, 
+                        sum(n_tup_del) as deletes, 
+                        sum(n_live_tup + n_dead_tup) as total_rows
+                    FROM pg_stat_user_tables
+                """)
+                result = cursor.fetchone()
+                if result:
+                    stats["queries"]["insert_count"] = result[0] or 0
+                    stats["queries"]["update_count"] = result[1] or 0
+                    stats["queries"]["delete_count"] = result[2] or 0
+                    
+                # Get select query count (approximation)
+                cursor.execute("""
+                    SELECT sum(seq_scan + idx_scan) as selects
+                    FROM pg_stat_user_tables
+                """)
+                stats["queries"]["select_count"] = cursor.fetchone()[0] or 0
+                
+                # Calculate average query time
+                cursor.execute("""
+                    SELECT extract(epoch from avg(now() - query_start)) as avg_time
+                    FROM pg_stat_activity 
+                    WHERE state = 'active' AND query_start IS NOT NULL
+                """)
+                avg_time = cursor.fetchone()[0]
+                stats["performance"]["avg_query_time"] = round(avg_time * 1000 if avg_time else 0, 2)  # in ms
+                
+            else:
+                # For non-PostgreSQL databases, provide limited stats
+                stats["connections"]["total"] = 1
+                stats["connections"]["active"] = 1
+    
+    except Exception as e:
+        logger.error(f"Error fetching database statistics: {e!s}")
+    
+    return stats
+
+
 def run_all_health_checks(as_array=True):
     """
     Run all available health checks.
@@ -297,16 +441,20 @@ def run_all_health_checks(as_array=True):
     """
     # Run all health checks
     results = {
-        "database": check_database_connection(),
-        "legacy_erp": check_legacy_erp_connection(),
-        "pictures_api": check_pictures_api_connection(),
+        HealthCheckResult.COMPONENT_DATABASE: check_database_connection(),
+        HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection(),
+        HealthCheckResult.COMPONENT_PICTURES_API: check_pictures_api_connection(),
     }
-    
-    # Optionally add database validation if needed
-    # results["database_validation"] = validate_database()
     
     # Return in the requested format
     if as_array:
-        return list(results.values())
-    else:
-        return results
+        # Convert to array format with component included in each result
+        return [
+            {
+                "component": component,
+                **result
+            } 
+            for component, result in results.items()
+        ]
+    
+    return results

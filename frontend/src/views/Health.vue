@@ -43,12 +43,38 @@
             width="600" 
             height="100">
           </canvas>
+          
+          <!-- Database Statistics Display -->
+          <div class="db-stats">
+            <div class="stat-box transactions">
+              <h4>Transactions</h4>
+              <div class="stat-numbers">
+                <div>Active: {{ dbStats?.transactions?.active || 0 }}</div>
+                <div>Total: {{ getTotalTransactions().toLocaleString() }}</div>
+              </div>
+            </div>
+            <div class="stat-box queries">
+              <h4>Queries</h4>
+              <div class="stat-numbers">
+                <div>Total: {{ getTotalQueries().toLocaleString() }}</div>
+                <div>Avg Time: {{ formatNumber(dbStats?.performance?.avg_query_time) }} ms</div>
+              </div>
+            </div>
+            <div class="stat-box disk">
+              <h4>Database Size</h4>
+              <div class="stat-numbers">
+                <div>{{ formatNumber(dbStats?.disk?.size_mb) }} MB</div>
+                <div>Hit Ratio: {{ formatNumber(dbStats?.performance?.cache_hit_ratio) }}%</div>
+              </div>
+            </div>
+          </div>
+          
           <div class="canvas-legend">
             <div class="legend-item">
-              <span>Speed: Database response time</span>
+              <span>Speed: Average query time ({{ formatNumber(dbStats?.performance?.avg_query_time) }} ms)</span>
             </div>
             <div class="legend-item">
-              <span>Squares: Overall system health</span>
+              <span>Blocks: System health + Transaction volume</span>
             </div>
           </div>
         </div>
@@ -57,21 +83,24 @@
       <!-- Connection Status Section -->
       <div class="connection-section">
         <h2>Connection Status</h2>
-        <div class="status-cards">
+        <div v-if="Object.keys(healthResults || {}).length === 0" class="no-status">
+          No connection status data available
+        </div>
+        <div v-else class="status-cards">
           <div v-for="(result, component) in healthResults" :key="component"
-               :class="['status-card', result ? result.status : 'unknown']">
+               :class="['status-card', result && result.status ? result.status : 'unknown']">
             <div class="status-card-header">
               <div class="component-name">
                 {{ getComponentDisplayName(component) }}
               </div>
-              <span :class="['status-indicator', result ? result.status : 'unknown']"></span>
+              <span :class="['status-indicator', result && result.status ? result.status : 'unknown']"></span>
             </div>
             <div class="status-details">
-              {{ result ? result.details : 'No health check data available' }}
+              {{ result && result.details ? result.details : 'No health check data available' }}
             </div>
             <div class="status-meta">
-              <div v-if="result && result.response_time">
-                Response Time: {{ result.response_time.toFixed(2) }} ms
+              <div v-if="result && result.response_time !== undefined">
+                Response Time: {{ (Number(result.response_time) || 0).toFixed(2) }} ms
               </div>
               <div v-if="result && result.timestamp">
                 {{ formatTimestamp(result.timestamp) }}
@@ -117,20 +146,44 @@ export default {
       messageType: 'success',
       healthResults: {},
       systemInfo: {
-        environment: '',
-        version: ''
+        environment: 'development',
+        version: 'unknown'
       },
       lastUpdated: null,
       // Animation properties
       animationFrameId: null,
       squares: [],
       canvas: null,
-      ctx: null
+      ctx: null,
+      // Database statistics
+      dbStats: {
+        transactions: {
+          committed: 0,
+          rolled_back: 0,
+          active: 0
+        },
+        queries: {
+          select_count: 0,
+          insert_count: 0,
+          update_count: 0,
+          delete_count: 0
+        },
+        performance: {
+          avg_query_time: 0,
+          cache_hit_ratio: 0
+        },
+        disk: {
+          size_mb: 0
+        }
+      },
+      // For animation updates
+      lastTransactionCount: 0,
+      dbStatsInterval: null
     };
   },
   computed: {
     overallStatus() {
-      const statuses = Object.values(this.healthResults).map(result => result?.status || 'unknown');
+      const statuses = Object.values(this.healthResults || {}).map(result => result?.status || 'unknown');
 
       if (statuses.includes('error')) {
         return 'error';
@@ -158,10 +211,19 @@ export default {
     }, 5 * 60 * 1000);
     
     // Initialize canvas animation
-    this.setupCanvas();
+    this.$nextTick(() => {
+      this.setupCanvas();
+    });
+    
+    // Set up database statistics polling
+    this.fetchDatabaseStats();
+    this.dbStatsInterval = setInterval(() => {
+      this.fetchDatabaseStats();
+    }, 10000); // Poll every 10 seconds
   },
   beforeUnmount() {
     clearInterval(this.autoRefreshInterval);
+    clearInterval(this.dbStatsInterval);
     // Cancel the animation frame when component is unmounted
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -186,8 +248,8 @@ export default {
         try {
           const basicHealthResponse = await api.get('/api/health/');
           this.systemInfo = {
-            environment: basicHealthResponse.data.environment,
-            version: basicHealthResponse.data.version
+            environment: basicHealthResponse.data?.environment || 'development',
+            version: basicHealthResponse.data?.version || 'unknown'
           };
         } catch (error) {
           console.error('Basic health check error:', error);
@@ -201,78 +263,156 @@ export default {
         try {
           const response = await api.get('/api/monitoring/health-checks/');
 
-          if (response.data.success) {
-            this.healthResults = {};
+          if (response.data && response.data.success) {
+            // Create a new object to avoid reference issues
+            const newHealthResults = {};
 
-            // Process the results - handling both array and object formats
-            if (Array.isArray(response.data.results)) {
-              // Handle array format
-              response.data.results.forEach(result => {
+            // Process the results - always expect an array format
+            const results = response.data.results;
+            if (Array.isArray(results)) {
+              results.forEach(result => {
                 if (result && result.component) {
-                  this.healthResults[result.component] = result;
+                  // Store by component key
+                  newHealthResults[result.component] = {
+                    status: result.status,
+                    details: result.details,
+                    response_time: result.response_time,
+                    timestamp: result.timestamp
+                  };
                 }
               });
-            } else if (typeof response.data.results === 'object') {
-              // Handle object format
-              Object.entries(response.data.results).forEach(([key, value]) => {
-                if (value) {
-                  this.healthResults[key] = value;
+
+              // Replace healthResults with the new object
+              this.healthResults = newHealthResults;
+              this.lastUpdated = new Date();
+              this.message = 'Status updated successfully';
+              this.messageType = 'success';
+
+              // Hide success message after 3 seconds
+              setTimeout(() => {
+                if (this.messageType === 'success') {
+                  this.message = '';
                 }
-              });
+              }, 3000);
+            } else {
+              throw new Error('Invalid response format: results must be an array');
             }
-
-            this.lastUpdated = new Date();
-            this.message = 'Status updated successfully';
-            this.messageType = 'success';
-
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-              if (this.messageType === 'success') {
-                this.message = '';
-              }
-            }, 3000);
           } else {
-            throw new Error(response.data.error || 'Unknown error');
+            throw new Error(response.data?.error || 'Unknown error');
           }
         } catch (error) {
           console.error('Health checks error:', error);
           
-          // If we can't connect to the backend, use mock data for testing
+          // Show error in UI
+          this.message = `Failed to update status: ${error.message}`;
+          this.messageType = 'error';
+          
+          // Set mock data for testing UI
           this.healthResults = {
             'database': {
-              component: 'database',
               status: 'error',
-              details: 'Database connection failed. The PostgreSQL server might be unreachable.',
+              details: 'Database connection failed',
               response_time: 0,
               timestamp: new Date()
             },
             'legacy_erp': {
-              component: 'legacy_erp',
               status: 'warning',
-              details: 'Cannot verify Legacy ERP status - Backend API unavailable due to database connection issues',
+              details: 'Cannot verify Legacy ERP status',
               response_time: 0,
               timestamp: new Date()
             },
             'pictures_api': {
-              component: 'pictures_api',
               status: 'warning',
-              details: 'Cannot verify Pictures API status - Backend API unavailable due to database connection issues',
+              details: 'Cannot verify Pictures API status',
               response_time: 0,
               timestamp: new Date()
             }
           };
-          
-          this.lastUpdated = new Date();
-          this.message = 'Failed to connect to backend API. Showing estimated status.';
-          this.messageType = 'error';
         }
       } catch (error) {
         console.error('Unexpected error in health check:', error);
-        this.message = 'Failed to update status: ' + (error.message || 'Unknown error');
+        this.message = 'Failed to update status: ' + (error?.message || 'Unknown error');
         this.messageType = 'error';
       } finally {
         this.loading = false;
       }
+    },
+    async fetchDatabaseStats() {
+      try {
+        const response = await api.get('/api/monitoring/db-stats/');
+        if (response.data.success && response.data.stats) {
+          // Store previous transaction count for animation
+          this.lastTransactionCount = this.getTotalTransactions();
+          
+          // Create a new stats object with default values
+          const newStats = {
+            transactions: {
+              committed: 0,
+              rolled_back: 0,
+              active: 0
+            },
+            queries: {
+              select_count: 0,
+              insert_count: 0,
+              update_count: 0,
+              delete_count: 0
+            },
+            performance: {
+              avg_query_time: 0,
+              cache_hit_ratio: 0
+            },
+            disk: {
+              size_mb: 0
+            }
+          };
+          
+          const stats = response.data.stats;
+          
+          // Safely update nested properties with type conversion
+          if (stats.transactions) {
+            newStats.transactions.committed = Number(stats.transactions.committed) || 0;
+            newStats.transactions.rolled_back = Number(stats.transactions.rolled_back) || 0;
+            newStats.transactions.active = Number(stats.transactions.active) || 0;
+          }
+          
+          if (stats.queries) {
+            newStats.queries.select_count = Number(stats.queries.select_count) || 0;
+            newStats.queries.insert_count = Number(stats.queries.insert_count) || 0;
+            newStats.queries.update_count = Number(stats.queries.update_count) || 0;
+            newStats.queries.delete_count = Number(stats.queries.delete_count) || 0;
+          }
+          
+          if (stats.performance) {
+            newStats.performance.avg_query_time = Number(stats.performance.avg_query_time) || 0;
+            newStats.performance.cache_hit_ratio = Number(stats.performance.cache_hit_ratio) || 0;
+          }
+          
+          if (stats.disk) {
+            newStats.disk.size_mb = Number(stats.disk.size_mb) || 0;
+          }
+          
+          // Update the component state with the new stats
+          this.dbStats = newStats;
+          
+          // Update animation if transaction count changed
+          if (this.getTotalTransactions() !== this.lastTransactionCount) {
+            this.updateAnimation();
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching database statistics:', error);
+      }
+    },
+    getTotalTransactions() {
+      return (this.dbStats?.transactions?.committed || 0) + 
+             (this.dbStats?.transactions?.rolled_back || 0) + 
+             (this.dbStats?.transactions?.active || 0);
+    },
+    getTotalQueries() {
+      return (this.dbStats?.queries?.select_count || 0) + 
+             (this.dbStats?.queries?.insert_count || 0) + 
+             (this.dbStats?.queries?.update_count || 0) + 
+             (this.dbStats?.queries?.delete_count || 0);
     },
     getComponentDisplayName(component) {
       const displayNames = {
@@ -285,93 +425,149 @@ export default {
       return displayNames[component] || component;
     },
     formatTimestamp(timestamp) {
+      if (!timestamp) return 'Unknown';
+      
       if (typeof timestamp === 'string') {
         timestamp = new Date(timestamp);
       }
 
       return timestamp.toLocaleString();
     },
+    formatNumber(value, decimals = 2) {
+      // Convert to number if it's not already
+      const num = Number(value);
+      // Check if it's a valid number
+      if (isNaN(num)) return '0';
+      // Format with specified decimal places
+      return num.toFixed(decimals);
+    },
     
-    // Canvas animation methods
+    // Animation methods
     setupCanvas() {
-      this.canvas = this.$refs.dbCanvas;
-      if (!this.canvas) return;
-      
-      this.ctx = this.canvas.getContext('2d');
-      this.initializeSquares();
-      this.animate();
+      try {
+        this.canvas = this.$refs.dbCanvas;
+        if (!this.canvas) {
+          console.warn('Canvas element not found');
+          return;
+        }
+        
+        this.ctx = this.canvas.getContext('2d');
+        if (!this.ctx) {
+          console.warn('Could not get canvas context');
+          return;
+        }
+        
+        this.initializeSquares();
+        this.animate();
+      } catch (error) {
+        console.error('Error setting up canvas:', error);
+      }
     },
     
     initializeSquares() {
-      // Clear existing squares
-      this.squares = [];
-      
-      // Number of squares based on status: success=10, warning=7, error=3, unknown=5
-      let numSquares = 5; // default for unknown
-      if (this.overallStatus === 'success') {
-        numSquares = 10;
-      } else if (this.overallStatus === 'warning') {
-        numSquares = 7;
-      } else if (this.overallStatus === 'error') {
-        numSquares = 3;
-      }
-      
-      // Get colors based on status
-      const colors = this.getStatusColors(this.overallStatus);
-      
-      // Create squares in a line formation
-      const spacing = this.canvas.width / numSquares;
-      const yPosition = this.canvas.height / 2 - 10; // Center vertically
-      
-      for (let i = 0; i < numSquares; i++) {
-        // Distribute squares evenly across the canvas width
-        const xPosition = i * spacing;
+      try {
+        // Clear existing squares
+        this.squares = [];
         
-        this.squares.push({
-          x: xPosition,
-          y: yPosition,
-          size: 20,
-          color: colors[i % colors.length]
-        });
+        if (!this.canvas || !this.ctx) return;
+        
+        // Number of squares based on status: success=10, warning=7, error=3, unknown=5
+        let numSquares = 5; // default for unknown
+        if (this.overallStatus === 'success') {
+          numSquares = 10;
+        } else if (this.overallStatus === 'warning') {
+          numSquares = 7;
+        } else if (this.overallStatus === 'error') {
+          numSquares = 3;
+        }
+        
+        // Add more squares based on transaction count (max additional 10)
+        const transactionCount = this.getTotalTransactions();
+        if (transactionCount > 0) {
+          // Add 1 square for every 100 transactions, up to 10 more squares
+          numSquares += Math.min(10, Math.floor(transactionCount / 100));
+        }
+        
+        // Get colors based on status
+        const colors = this.getStatusColors(this.overallStatus);
+        
+        // Create squares in a line formation
+        const spacing = this.canvas.width / numSquares;
+        const yPosition = this.canvas.height / 2 - 10; // Center vertically
+        
+        for (let i = 0; i < numSquares; i++) {
+          // Distribute squares evenly across the canvas width
+          const xPosition = i * spacing;
+          
+          this.squares.push({
+            x: xPosition,
+            y: yPosition,
+            size: 20,
+            color: colors[i % colors.length]
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing squares:', error);
       }
     },
     
     updateAnimation() {
-      // Only recreate squares if the overall status has changed
-      this.initializeSquares();
+      // Only recreate squares if the overall status has changed or transaction count changed significantly
+      if (this.canvas && this.ctx) {
+        this.initializeSquares();
+      }
     },
     
     animate() {
-      // Clear the canvas
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      
-      // Calculate speed factor based on DB response time
-      // Faster response = faster animation
-      let speedFactor = 2;
-      if (this.dbResponseTime > 0) {
-        // Scale to make animation visible: 
-        // - slower at high response times (> 500ms)
-        // - faster at low response times (< 50ms)
-        speedFactor = Math.max(1, Math.min(5, 200 / this.dbResponseTime));
-      }
-      
-      // Update and draw squares
-      this.squares.forEach(square => {
-        // Move square from left to right
-        square.x += speedFactor;
-        
-        // Wrap around when reaching right edge
-        if (square.x > this.canvas.width) {
-          square.x = -square.size;
+      try {
+        if (!this.canvas || !this.ctx || !this.squares || this.squares.length === 0) {
+          // Request next frame even if we can't animate now
+          this.animationFrameId = requestAnimationFrame(this.animate);
+          return;
         }
         
-        // Draw square
-        this.ctx.fillStyle = square.color;
-        this.ctx.fillRect(square.x, square.y, square.size, square.size);
-      });
-      
-      // Continue animation loop
-      this.animationFrameId = requestAnimationFrame(this.animate);
+        // Clear the canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Calculate speed factor using detailed stats
+        let speedFactor = 2; // Default speed
+        
+        // Use avg_query_time if available (faster queries = faster animation)
+        if (this.dbStats?.performance?.avg_query_time > 0) {
+          // Scale: 1-10ms = fastest, >300ms = slowest
+          speedFactor = Math.max(1, Math.min(5, 100 / (this.dbStats.performance.avg_query_time + 10)));
+        } else if (this.dbResponseTime > 0) {
+          // Fallback to basic response time if detailed stats not available
+          speedFactor = Math.max(1, Math.min(5, 200 / this.dbResponseTime));
+        }
+        
+        // Add boost based on active transactions
+        if (this.dbStats?.transactions?.active > 0) {
+          speedFactor += Math.min(2, this.dbStats.transactions.active / 5);
+        }
+        
+        // Update and draw squares
+        this.squares.forEach(square => {
+          // Move square from left to right
+          square.x += speedFactor;
+          
+          // Wrap around when reaching right edge
+          if (square.x > this.canvas.width) {
+            square.x = -square.size;
+          }
+          
+          // Draw square
+          this.ctx.fillStyle = square.color;
+          this.ctx.fillRect(square.x, square.y, square.size, square.size);
+        });
+        
+        // Continue animation loop
+        this.animationFrameId = requestAnimationFrame(this.animate);
+      } catch (error) {
+        console.error('Error in animation loop:', error);
+        // Ensure we continue the animation loop even if there's an error
+        this.animationFrameId = requestAnimationFrame(this.animate);
+      }
     },
     
     getStatusColors(status) {
@@ -559,6 +755,51 @@ export default {
   margin-bottom: 10px;
 }
 
+/* Database Stats Display */
+.db-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.stat-box {
+  flex: 1;
+  min-width: 150px;
+  background-color: #fff;
+  padding: 12px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stat-box h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #666;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.stat-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  color: #333;
+}
+
+.stat-box.transactions {
+  border-left: 3px solid #4e73df;
+}
+
+.stat-box.queries {
+  border-left: 3px solid #1cc88a;
+}
+
+.stat-box.disk {
+  border-left: 3px solid #f6c23e;
+}
+
 .canvas-legend {
   display: flex;
   justify-content: space-between;
@@ -684,6 +925,17 @@ export default {
   border-bottom: none;
 }
 
+.no-status {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  margin-bottom: 20px;
+  border: 1px dashed #dee2e6;
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
@@ -704,6 +956,14 @@ export default {
   
   .canvas-legend {
     flex-direction: column;
+  }
+  
+  .db-stats {
+    flex-direction: column;
+  }
+  
+  .stat-box {
+    min-width: 100%;
   }
 }
 </style>

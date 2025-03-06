@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 
-from pyerp.monitoring.services import run_all_health_checks
+from pyerp.monitoring.services import get_database_statistics, run_all_health_checks
 
 
 # Apply decorators to exempt this view from authentication and CSRF protection
@@ -35,6 +35,48 @@ def run_health_checks(request):
                 ),
                 "server_time": datetime.now().isoformat(),
                 "hot_reload_test": "SUCCESS",
+            },
+        )
+
+        # Store the response in case the middleware needs to bypass authentication
+        if hasattr(request, "_auth_exempt"):
+            request._auth_exempt_response = response
+
+        return response
+    except Exception as e:
+        error_response = JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+            },
+            status=500,
+        )
+
+        # Store the error response in case the middleware needs to bypass authentication
+        if hasattr(request, "_auth_exempt"):
+            request._auth_exempt_response = error_response
+
+        return error_response
+
+
+@require_GET
+@csrf_exempt
+def get_db_statistics(request):
+    """
+    Get detailed database statistics and return them as JSON.
+    This endpoint provides detailed metrics about database performance and usage.
+    This view is intentionally not protected by authentication to allow external monitoring.
+    """
+    try:
+        stats = get_database_statistics()
+        response = JsonResponse(
+            {
+                "success": True,
+                "stats": stats,
+                "authenticated": (
+                    request.user.is_authenticated if hasattr(request, "user") else False
+                ),
+                "server_time": datetime.now().isoformat(),
             },
         )
 
