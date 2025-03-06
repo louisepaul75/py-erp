@@ -1,8 +1,9 @@
 """
-A simple test module with basic tests that should pass with minimal dependencies.
-This is useful for verifying that the testing infrastructure is working properly.
+A simple test module with basic tests that should pass with minimal
+    dependencies.
+This is useful for verifying that the testing infrastructure is working
+    properly.
 """
-import pytest
 
 
 def test_simple_addition():
@@ -17,11 +18,11 @@ def test_simple_string():
 
 class TestSimpleClass:
     """A simple test class to verify class-based tests work."""
-    
+
     def test_simple_subtraction(self):
         """Test a simple subtraction."""
         assert 5 - 3 == 2
-    
+
     def test_simple_multiplication(self):
         """Test a simple multiplication."""
-        assert 2 * 3 == 6 
+        assert 2 * 3 == 6

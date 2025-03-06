@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from pyerp.utils.env_loader import load_environment_variables
 import os
 import requests
 from pathlib import Path
@@ -11,7 +12,6 @@ project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import the centralized environment loader
-from pyerp.utils.env_loader import load_environment_variables
 
 # Load environment variables
 load_environment_variables(verbose=True)
@@ -21,7 +21,7 @@ api_url = os.environ.get('IMAGE_API_URL', 'https://webapp.zinnfiguren.de/api/')
 api_username = os.environ.get('IMAGE_API_USERNAME')
 api_password = os.environ.get('IMAGE_API_PASSWORD')
 
-print(f"\nAPI Configuration:")
+print(f"\nAPI Configuration:")  # noqa: F541
 print(f"URL: {api_url}")
 print(f"Username: {api_username}")
 print(f"Password: {'*' * len(api_password) if api_password else 'Not set'}")
@@ -52,15 +52,15 @@ try:
     print(f"\nAPI Response Status: {response.status_code}")
     if response.status_code == 200:
         data = response.json()
-        print(f"Successfully retrieved data")
+        print(f"Successfully retrieved data")  # noqa: F541
         print(f"Response data: {data}")
     else:
         print(f"Error response: {response.text}")
 except requests.exceptions.Timeout:
-    print("Request timed out after 60 seconds. The server might be slow or unresponsive.")
+    print("Request timed out after 60 seconds. The server might be slow or unresponsive.")  # noqa: E501
 except requests.exceptions.ConnectionError:
-    print("Failed to connect to the server. Please check your internet connection and the API URL.")
+    print("Failed to connect to the server. Please check your internet connection and the API URL.")  # noqa: E501
 except requests.exceptions.RequestException as e:
     print(f"An error occurred: {str(e)}")
 finally:
-    session.close() 
+    session.close()

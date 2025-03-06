@@ -1,27 +1,27 @@
 #!/usr/bin/env python
+from pyerp.products.image_api import ImageAPIClient
 import os
 import sys
 import django
-from django.conf import settings
+from django.conf import settings  # noqa: F401
 
 # Set up Django environment
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.local')
 django.setup()
 
-from pyerp.products.image_api import ImageAPIClient
 
 def main():
     # Create an instance of the ImageAPIClient
     client = ImageAPIClient()
-    
+
     # Test getting all images (first page)
     print("\nFetching first page of all images...")
     images = client.get_all_images(page=1, page_size=5)
-    
+
     if images:
         print(f"Successfully retrieved {len(images)} images")
-        
+
         # Display details of the first image
         if len(images) > 0:
             first_image = client.parse_image(images[0])
@@ -37,7 +37,7 @@ def main():
     test_sku = "910669"  # Example SKU from the codebase
     print(f"\nSearching for images for product SKU: {test_sku}")
     product_images = client.search_product_images(test_sku)
-    
+
     if product_images:
         print(f"Found {len(product_images)} images for product {test_sku}")
         for idx, image in enumerate(product_images, 1):
@@ -50,5 +50,6 @@ def main():
     else:
         print(f"No images found for product {test_sku}")
 
+
 if __name__ == "__main__":
-    main() 
+    main()
