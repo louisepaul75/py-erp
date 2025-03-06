@@ -603,3 +603,4 @@ npm run build
 ```
 
 This will generate optimized assets in the `static/vue/` directory, which Django will serve in production mode.
+# Test change
