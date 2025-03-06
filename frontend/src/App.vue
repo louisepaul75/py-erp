@@ -11,9 +11,9 @@
             </router-view>
         </main>
         <!-- Debug Panel - Place before footer in DOM order -->
-        <DebugPanel />
+        <DebugPanel/>
         <!-- Footer - Must be last to appear at the bottom -->
-        <Footer />
+        <Footer/>
     </div>
 </template>
 <script setup lang="ts">

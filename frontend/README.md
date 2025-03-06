@@ -6,8 +6,20 @@ This directory contains the Vue.js frontend for the pyERP system. It's built wit
 
 ### Prerequisites
 
-- Node.js 20.x or later
+- Node.js 20.x (recommended) - Node.js 23.x has compatibility issues with some dependencies
+  - Specifically, the `@builder.io/sdk-vue` package depends on `isolated-vm`, which fails to compile with Node.js 23.x due to C++20 compatibility issues
 - npm 10.x or later
+
+We recommend using [nvm (Node Version Manager)](https://github.com/nvm-sh/nvm) to manage your Node.js versions:
+
+```bash
+# Install nvm (if not already installed)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Install and use Node.js 20.x
+nvm install 20
+nvm use 20
+```
 
 ### Installation
 
