@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Script to fix the migration state by marking pending migrations as applied.
 """
@@ -21,23 +20,21 @@ def fix_migration_state():
     setup_django()
     print("Starting migration state fix process...")
 
-    # List of migrations to mark as applied
+ # List of migrations to mark as applied
     migrations_to_apply = [
-        ('products', '0013_create_variantproduct_table'),  # noqa: E128
-        ('products', '0014_create_productimage_table'),
-        ('products', '0015_merge_20250303_0050'),
-        ('products', '0016_fix_variant_table'),
+                           ('products', '0013_create_variantproduct_table'),  # noqa: E128
+                           ('products', '0014_create_productimage_table'),
+                           ('products', '0015_merge_20250303_0050'),
+                           ('products', '0016_fix_variant_table'),
     ]
 
-    # Mark migrations as applied
+ # Mark migrations as applied
     with connection.cursor() as cursor:
-        # Get the next ID value
         cursor.execute("SELECT MAX(id) FROM django_migrations")
         max_id = cursor.fetchone()[0] or 0
         next_id = max_id + 1
 
         for app, migration in migrations_to_apply:
-            # Check if migration is already applied
             cursor.execute(
                 "SELECT EXISTS(SELECT 1 FROM django_migrations WHERE app = %s AND name = %s)",  # noqa: E501
                 [app, migration]
@@ -47,7 +44,6 @@ def fix_migration_state():
             if exists:
                 print(f"Migration {app}.{migration} is already applied.")
             else:
-                # Insert the migration record with an ID
                 cursor.execute(
                     "INSERT INTO django_migrations (id, app, name, applied) VALUES (%s, %s, %s, NOW())",  # noqa: E501
                     [next_id, app, migration]
@@ -66,5 +62,4 @@ def main():
     return 0 if success else 1
 
 if __name__ == "__main__":
-  # noqa: F841
     sys.exit(main())

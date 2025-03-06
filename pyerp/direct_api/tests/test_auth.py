@@ -17,7 +17,7 @@ from pyerp.direct_api.auth import (
     Session, SessionPool, get_session, get_session_cookie  # noqa: E128
 )
 from pyerp.direct_api.exceptions import (  # noqa: F401
-    AuthenticationError, ConnectionError, ResponseError, SessionError
+    AuthenticationError, ConnectionError, ResponseError, SessionError  # noqa: E501
 )
 from pyerp.direct_api.settings import API_SESSION_EXPIRY, API_SESSION_REFRESH_MARGIN  # noqa: E501
 
@@ -32,14 +32,13 @@ class TestSession(TestCase):
 
     def test_init(self):
         """Test initialization with default and custom parameters."""
-        # Test with default parameters
         session = Session()
         self.assertEqual(session.environment, 'live')
         self.assertIsNone(session.cookie)
         self.assertIsNone(session.created_at)
         self.assertIsNone(session.expires_at)
 
-        # Test with custom parameters
+ # Test with custom parameters
         session = Session(environment='test')
         self.assertEqual(session.environment, 'test')
         self.assertIsNone(session.cookie)
@@ -96,16 +95,15 @@ class TestSession(TestCase):
     @patch('pyerp.direct_api.auth.requests.get')
     def test_refresh_success(self, mock_get):
         """Test refresh with successful response."""
-        # Mock the response with a cookie
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {'Set-Cookie': 'session=test-cookie'}
         mock_get.return_value = mock_response
 
-        # Call refresh
+ # Call refresh
         self.session.refresh()
 
-        # Verify the result
+ # Verify the result
         self.assertEqual(self.session.cookie, 'session=test-cookie')
         self.assertIsNotNone(self.session.created_at)
         self.assertIsNotNone(self.session.expires_at)
@@ -114,7 +112,7 @@ class TestSession(TestCase):
             datetime.timedelta(seconds=API_SESSION_EXPIRY)
         )
 
-        # Verify the call
+ # Verify the call
         mock_get.assert_called_once_with(
             'http://localhost:8080/$info',  # noqa: E128
             timeout=30  # noqa: F841
@@ -123,61 +121,54 @@ class TestSession(TestCase):
     @patch('pyerp.direct_api.auth.requests.get')
     def test_refresh_no_cookie(self, mock_get):
         """Test refresh with successful response but no cookie."""
-        # Mock the response with no cookie
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.headers = {}
         mock_get.return_value = mock_response
 
-        # Call refresh and expect an exception
+ # Call refresh and expect an exception
         with self.assertRaises(AuthenticationError):
             self.session.refresh()
 
     @patch('pyerp.direct_api.auth.requests.get')
     def test_refresh_error_response(self, mock_get):
         """Test refresh with error response."""
-        # Mock the response with an error
         mock_response = MagicMock()
         mock_response.status_code = 401
         mock_response.text = 'Unauthorized'
-  # noqa: F841
         mock_get.return_value = mock_response
 
-        # Call refresh and expect an exception
+ # Call refresh and expect an exception
         with self.assertRaises(ResponseError):
             self.session.refresh()
 
-        # Verify the call
+ # Verify the call
         mock_get.assert_called_once_with(
             'http://localhost:8080/$info',  # noqa: E128
             timeout=30  # noqa: F841
-  # noqa: F841
         )
 
     @patch('pyerp.direct_api.auth.requests.get')
     @patch('pyerp.direct_api.auth.time.sleep')
     def test_refresh_connection_error_retry(self, mock_sleep, mock_get):
         """Test refresh with connection error that succeeds on retry."""
-        # Mock the first request to fail, second to succeed
         mock_get.side_effect = [
-            requests.RequestException("Connection error"),  # noqa: E128
-            MagicMock(
-                status_code=200,  # noqa: F841
-  # noqa: F841
-                headers={'Set-Cookie': 'session=test-cookie'}  # noqa: F841
-  # noqa: F841
-            )
+                                requests.RequestException("Connection error"),  # noqa: E128
+                                MagicMock(
+                                    status_code=200,  # noqa: F841
+                                headers={'Set-Cookie': 'session=test-cookie'}  # noqa: F841
+                                )
         ]
 
-        # Call refresh
+ # Call refresh
         self.session.refresh()
 
-        # Verify the result
+ # Verify the result
         self.assertEqual(self.session.cookie, 'session=test-cookie')
         self.assertIsNotNone(self.session.created_at)
         self.assertIsNotNone(self.session.expires_at)
 
-        # Verify the calls
+ # Verify the calls
         self.assertEqual(mock_get.call_count, 2)
         mock_sleep.assert_called_once()
 
@@ -185,41 +176,37 @@ class TestSession(TestCase):
     @patch('pyerp.direct_api.auth.time.sleep')
     def test_refresh_connection_error_max_retries(self, mock_sleep, mock_get):
         """Test refresh with connection error that fails even after retries."""
-        # Mock all requests to fail
         mock_get.side_effect = requests.RequestException("Connection error")
-  # noqa: F841
 
-        # Call refresh and expect an exception
+ # Call refresh and expect an exception
         with self.assertRaises(ConnectionError):
             self.session.refresh()
 
-        # Verify multiple calls were made (1 initial + retries)
+ # Verify multiple calls were made (1 initial + retries)
         self.assertTrue(mock_get.call_count > 1)
         self.assertEqual(mock_sleep.call_count, mock_get.call_count - 1)
 
     @patch('pyerp.direct_api.auth.Session.refresh')
     def test_get_cookie_valid(self, mock_refresh):
         """Test get_cookie with valid session."""
-        # Set up a valid session
         self.session.cookie = 'test-cookie'
         self.session.created_at = datetime.datetime.now()
         self.session.expires_at = self.session.created_at + \
             datetime.timedelta(seconds=API_SESSION_EXPIRY)
 
-        # Call get_cookie
+ # Call get_cookie
         cookie = self.session.get_cookie()
 
-        # Verify the result and that refresh wasn't called
+ # Verify the result and that refresh wasn't called
         self.assertEqual(cookie, 'test-cookie')
         mock_refresh.assert_not_called()
 
     @patch('pyerp.direct_api.auth.Session.refresh')
     def test_get_cookie_invalid(self, mock_refresh):
         """Test get_cookie with invalid session."""
-        # Call get_cookie on a new session
         cookie = self.session.get_cookie()  # noqa: F841
 
-        # Verify refresh was called
+ # Verify refresh was called
         mock_refresh.assert_called_once()
 
 
@@ -234,7 +221,6 @@ class TestSessionPool(TestCase):
     @patch('pyerp.direct_api.auth.Session')
     def test_get_session_new(self, mock_session_class):
         """Test get_session with no cached session."""
-        # Set up mock session
         mock_session = MagicMock()
         mock_session.cookie = 'test-cookie'
         mock_session.created_at = datetime.datetime.now()
@@ -242,25 +228,24 @@ class TestSessionPool(TestCase):
             datetime.timedelta(seconds=API_SESSION_EXPIRY)
         mock_session_class.return_value = mock_session
 
-        # Call get_session
+ # Call get_session
         session = self.pool.get_session('test')  # noqa: F841
 
-        # Verify a new session was created and refreshed
+ # Verify a new session was created and refreshed
         mock_session_class.assert_called_once_with('test')
         mock_session.refresh.assert_called_once()
 
-        # Clear any sessions from cache
+ # Clear any sessions from cache
         self.pool.clear_sessions()
 
     @patch('pyerp.direct_api.auth.Session')
     def test_get_session_cached_valid(self, mock_session_class):
         """Test get_session with valid cached session."""
-        # Set up mock session
         mock_session = MagicMock()
         mock_session.is_valid.return_value = True
         mock_session_class.return_value = mock_session
 
-        # Create a session in cache
+ # Create a session in cache
         now = datetime.datetime.now()
         self.pool.cache.set(
             'legacy_api_session_test',  # noqa: E128
@@ -272,25 +257,24 @@ class TestSessionPool(TestCase):
             API_SESSION_EXPIRY
         )
 
-        # Call get_session
+ # Call get_session
         session = self.pool.get_session('test')  # noqa: F841
 
-        # Verify a session was created from cache and not refreshed
+ # Verify a session was created from cache and not refreshed
         mock_session_class.assert_called_once_with('test')
         mock_session.refresh.assert_not_called()
 
-        # Clear any sessions from cache
+ # Clear any sessions from cache
         self.pool.clear_sessions()
 
     @patch('pyerp.direct_api.auth.Session')
     def test_get_session_cached_invalid(self, mock_session_class):
         """Test get_session with invalid cached session."""
-        # Set up mock session
         mock_session = MagicMock()
         mock_session.is_valid.return_value = False
         mock_session_class.return_value = mock_session
 
-        # Create an expired session in cache
+ # Create an expired session in cache
         now = datetime.datetime.now()
         self.pool.cache.set(
             'legacy_api_session_test',  # noqa: E128
@@ -302,21 +286,20 @@ class TestSessionPool(TestCase):
             API_SESSION_EXPIRY
         )
 
-        # Call get_session
+ # Call get_session
         session = self.pool.get_session('test')  # noqa: F841
 
-        # Verify a session was created from cache but then refreshed
-        # Session is called twice because cache miss creates a new session
+ # Verify a session was created from cache but then refreshed
+ # Session is called twice because cache miss creates a new session
         self.assertEqual(mock_session_class.call_count, 2)
         self.assertEqual(mock_session_class.call_args_list[0], call('test'))
         mock_session.refresh.assert_called_once()
 
-        # Clear any sessions from cache
+ # Clear any sessions from cache
         self.pool.clear_sessions()
 
     def test_clear_sessions(self):
         """Test clear_sessions method."""
-        # Create sessions in cache
         now = datetime.datetime.now()
         for env in ['live', 'test']:
             self.pool.cache.set(
@@ -325,15 +308,15 @@ class TestSessionPool(TestCase):
                     'cookie': f'{env}-cookie',  # noqa: E128
                     'created_at': now,
                     'expires_at': now + datetime.timedelta(seconds=API_SESSION_EXPIRY)  # noqa: E501
-  # noqa: E501, F841
+                    # noqa: E501, F841
                 },
                 API_SESSION_EXPIRY
             )
 
-        # Call clear_sessions
+ # Call clear_sessions
         self.pool.clear_sessions()
 
-        # Verify sessions were cleared
+ # Verify sessions were cleared
         for env in ['live', 'test']:
             self.assertIsNone(self.pool.cache.get(f'legacy_api_session_{env}'))
 
@@ -344,31 +327,28 @@ class TestGlobalFunctions(TestCase):
     @patch('pyerp.direct_api.auth.session_pool.get_session')
     def test_get_session(self, mock_get_session):
         """Test get_session global function."""
-        # Set up mock
         mock_session = MagicMock()
         mock_get_session.return_value = mock_session
 
-        # Call get_session
+ # Call get_session
         session = get_session('test')
 
-        # Verify the pool's get_session was called and the result passed
-        # through
+ # Verify the pool's get_session was called and the result passed
+ # through
         mock_get_session.assert_called_once_with('test')
         self.assertEqual(session, mock_session)
 
     @patch('pyerp.direct_api.auth.get_session')
     def test_get_session_cookie(self, mock_get_session):
         """Test get_session_cookie global function."""
-        # Set up mock
         mock_session = MagicMock()
         mock_session.get_cookie.return_value = 'test-cookie'
         mock_get_session.return_value = mock_session
-  # noqa: F841
 
-        # Call get_session_cookie
+ # Call get_session_cookie
         cookie = get_session_cookie('test')
 
-        # Verify get_session was called and the cookie was retrieved
+ # Verify get_session was called and the cookie was retrieved
         mock_get_session.assert_called_once_with('test')
         mock_session.get_cookie.assert_called_once()
         self.assertEqual(cookie, 'test-cookie')

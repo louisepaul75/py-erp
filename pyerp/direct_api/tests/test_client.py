@@ -21,7 +21,7 @@ class TestDirectAPIClient(unittest.TestCase):
         """Set up test fixtures."""
         self.client = DirectAPIClient(environment='test')
 
-        # Sample 4D API response
+ # Sample 4D API response
         self.sample_response = {
             "__DATACLASS": "Artikel_Familie",  # noqa: E128
             "__entityModel": "Artikel_Familie",
@@ -29,41 +29,40 @@ class TestDirectAPIClient(unittest.TestCase):
             "__COUNT": 3,
             "__FIRST": 0,
             "__ENTITIES": [
-                {  # noqa: E128
-                    "__KEY": "key1",
-                    "UID": "uid1",
-                    "Bezeichnung": "Item 1"
-                },
-                {
-                    "__KEY": "key2",  # noqa: E128
-                    "UID": "uid2",
-                    "Bezeichnung": "Item 2"
-                },
-                {
-                    "__KEY": "key3",  # noqa: E128
-                    "UID": "uid3",
-                    "Bezeichnung": "Item 3"
-                }
-            ]
+            {  # noqa: E128
+                "__KEY": "key1",
+                "UID": "uid1",
+                "Bezeichnung": "Item 1"
+            },
+                                {
+                                    "__KEY": "key2",  # noqa: E128
+                                    "UID": "uid2",
+                                    "Bezeichnung": "Item 2"
+                                },
+                                {
+                                    "__KEY": "key3",  # noqa: E128
+                                    "UID": "uid3",
+                                    "Bezeichnung": "Item 3"
+                                }
+                                ]
         }
 
     @patch('pyerp.direct_api.client.DirectAPIClient._make_request')
     def test_fetch_table_success(self, mock_make_request):
         """Test successful table fetch."""
-        # Setup mock response
         mock_response = MagicMock()
         mock_response.json.return_value = self.sample_response
         mock_make_request.return_value = mock_response
 
-        # Call the method
+ # Call the method
         result = self.client.fetch_table('Artikel_Familie', top=10)
 
-        # Verify the result
+ # Verify the result
         self.assertIsInstance(result, pd.DataFrame)
         self.assertEqual(len(result), 3)
         self.assertEqual(result.iloc[0]['Bezeichnung'], 'Item 1')
 
-        # Verify the request was made correctly
+ # Verify the request was made correctly
         mock_make_request.assert_called_once_with(
             'GET',  # noqa: E128
             'Artikel_Familie',
@@ -73,7 +72,6 @@ class TestDirectAPIClient(unittest.TestCase):
     @patch('pyerp.direct_api.client.DirectAPIClient._make_request')
     def test_fetch_table_pagination(self, mock_make_request):
         """Test table fetch with pagination."""
-        # Setup first response with pagination
         first_response = MagicMock()
         first_response.json.return_value = {
             "__DATACLASS": "Artikel_Familie",  # noqa: E128
@@ -81,37 +79,37 @@ class TestDirectAPIClient(unittest.TestCase):
             "__COUNT": 5,  # Total count is 5
             "__FIRST": 0,
             "__ENTITIES": [
-                {"__KEY": "key1", "UID": "uid1", "Bezeichnung": "Item 1"},  # noqa: E128
-                {"__KEY": "key2", "UID": "uid2", "Bezeichnung": "Item 2"}
-            ]
-        }
+                                            {"__KEY": "key1", "UID": "uid1", "Bezeichnung": "Item 1"},  # noqa: E128
+                                            {"__KEY": "key2", "UID": "uid2", "Bezeichnung": "Item 2"}  # noqa: E501
+                                            ]
+                                            }
 
-        # Setup second response
+ # Setup second response
         second_response = MagicMock()
         second_response.json.return_value = {
             "__DATACLASS": "Artikel_Familie",  # noqa: E128
-            "__entityModel": "Artikel_Familie",
+            "__entityModel": "Artikel_Familie",  # noqa: E501
             "__COUNT": 5,
             "__FIRST": 2,
             "__ENTITIES": [
-                {"__KEY": "key3", "UID": "uid3", "Bezeichnung": "Item 3"},  # noqa: E128
-                {"__KEY": "key4", "UID": "uid4", "Bezeichnung": "Item 4"},
-                {"__KEY": "key5", "UID": "uid5", "Bezeichnung": "Item 5"}
-            ]
-        }
+                                             {"__KEY": "key3", "UID": "uid3", "Bezeichnung": "Item 3"},  # noqa: E128
+                                             {"__KEY": "key4", "UID": "uid4", "Bezeichnung": "Item 4"},  # noqa: E501
+                                             {"__KEY": "key5", "UID": "uid5", "Bezeichnung": "Item 5"}  # noqa: E501
+                                             ]
+                                             }
 
-        # Configure mock to return different responses
+ # Configure mock to return different responses
         mock_make_request.side_effect = [first_response, second_response]
 
-        # Call the method with top=2 to trigger pagination
+ # Call the method with top=2 to trigger pagination
         result = self.client.fetch_table('Artikel_Familie', top=2)
 
-        # Verify the result
+ # Verify the result
         self.assertIsInstance(result, pd.DataFrame)
         self.assertEqual(len(result), 5)  # Should have all 5 records
         self.assertEqual(result.iloc[2]['Bezeichnung'], 'Item 3')
 
-        # Verify both requests were made
+ # Verify both requests were made
         self.assertEqual(mock_make_request.call_count, 2)
         mock_make_request.assert_any_call(
             'GET',  # noqa: E128
@@ -122,54 +120,46 @@ class TestDirectAPIClient(unittest.TestCase):
             'GET',  # noqa: E128
             'Artikel_Familie',
             params={'$top': 2, '$skip': 2, 'new_data_only': 'true'}  # noqa: F841
-  # noqa: F841
         )
 
     @patch('pyerp.direct_api.client.DirectAPIClient._make_request')
     def test_fetch_table_error_handling(self, mock_make_request):
         """Test error handling during table fetch."""
-        # Setup mock to raise an exception
         mock_make_request.side_effect = ResponseError(
             404, "Not found", "Resource not found")  # noqa: E128
 
-        # Verify the exception is propagated
+ # Verify the exception is propagated
         with self.assertRaises(ResponseError):
             self.client.fetch_table('Artikel_Familie')
 
     @patch('pyerp.direct_api.client.DirectAPIClient._make_request')
     def test_push_field_success(self, mock_make_request):
         """Test successful field update."""
-        # Setup mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
-  # noqa: F841
         mock_make_request.return_value = mock_response
-  # noqa: F841
 
-        # Call the method
+ # Call the method
         result = self.client.push_field(
             'Artikel_Familie', 'key1', 'Bezeichnung', 'New Name')  # noqa: E128
 
-        # Verify the result
+ # Verify the result
         self.assertTrue(result)
 
-        # Verify the request was made correctly
+ # Verify the request was made correctly
         mock_make_request.assert_called_once_with(
             'PUT',  # noqa: E128
             'Artikel_Familie/key1/Bezeichnung',
             data={'value': 'New Name'}  # noqa: F841
-  # noqa: F841
         )
 
     @patch('pyerp.direct_api.client.DirectAPIClient._make_request')
     def test_push_field_error(self, mock_make_request):
         """Test error handling during field update."""
-        # Setup mock to raise an exception
         mock_make_request.side_effect = ResponseError(
-  # noqa: F841
             404, "Not found", "Record not found")
 
-        # Verify the exception is propagated
+ # Verify the exception is propagated
         with self.assertRaises(ResponseError):
             self.client.push_field(
                 'Artikel_Familie',  # noqa: E128
@@ -179,5 +169,4 @@ class TestDirectAPIClient(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  # noqa: F841
     unittest.main()

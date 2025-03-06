@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 getTable.py - Simplified script to fetch tables from the legacy ERP system
 
@@ -29,30 +28,29 @@ import pandas as pd  # noqa: F401
 from datetime import datetime
 from pathlib import Path
 
-# Add the parent directory to the path so we can import the direct_api module
+ # Add the parent directory to the path so we can import the direct_api module
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
-# Configure logging
+ # Configure logging
 logging.basicConfig(
     level=logging.INFO,  # noqa: E128
     format='%(asctime)s - %(levelname)s - %(message)s',  # noqa: F841
     handlers=[logging.StreamHandler(sys.stdout)]  # noqa: F841
-  # noqa: F841
 )
 logger = logging.getLogger(__name__)
 
-# Global constants
+ # Global constants
 COOKIE_FILE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'auth.py'))),  # noqa: E501
     '.global_session_cookie'
 )
 
-# Set up Django environment
+ # Set up Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings')
 import django
 django.setup()
 
-# Import after Django setup
+ # Import after Django setup
 try:
     from pyerp.direct_api.settings import API_ENVIRONMENTS
     logger.info(f"Available environments: {list(API_ENVIRONMENTS.keys())}")
@@ -67,7 +65,6 @@ class SimpleAPIClient:
 
     def __init__(self, environment='live'):
         """Initialize the client with the specified environment."""
-        # Check if environment exists in settings
         if environment not in API_ENVIRONMENTS:
             available_envs = list(API_ENVIRONMENTS.keys())
             logger.error(f"Invalid environment: '{environment}'. Available environments: {available_envs}")  # noqa: E501
@@ -75,7 +72,7 @@ class SimpleAPIClient:
 
         self.environment = environment
 
-        # Check if URL is properly configured in settings
+ # Check if URL is properly configured in settings
         if 'base_url' not in API_ENVIRONMENTS[environment]:
             logger.error(f"Missing URL configuration for environment '{environment}'")  # noqa: E501
             logger.error(f"API_ENVIRONMENTS['{environment}']: {API_ENVIRONMENTS[environment]}")  # noqa: E501
@@ -91,7 +88,6 @@ class SimpleAPIClient:
     def __del__(self):
 
         """Destructor to ensure sessions are cleaned up."""
-        # Do nothing - logout functionality has been removed
         pass
 
     def load_session_cookie(self):
@@ -105,15 +101,13 @@ class SimpleAPIClient:
                 cookie_data = json.load(f)
 
                 if 'value' in cookie_data:
-                    # Extract the cookie value (without the name part)
                     self.session_id = cookie_data['value']
 
-                    # Clear any existing WASID4D cookies to prevent duplicates
+ # Clear any existing WASID4D cookies to prevent duplicates
                     self._clear_cookies('WASID4D')
 
-                    # Set the WASID4D cookie with the loaded value
+ # Set the WASID4D cookie with the loaded value
                     self.session.cookies.set('WASID4D', self.session_id)
-                    # Provide safe version of cookie for logging (only show first/last few chars)  # noqa: E501
                     safe_id = f"{self.session_id[:5]}...{self.session_id[-5:]}" if len(self.session_id) > 10 else self.session_id  # noqa: E501
                     logger.info(f"Loaded session ID from {COOKIE_FILE_PATH}")
                     logger.info(f"Set cookie: WASID4D={safe_id}")
@@ -131,17 +125,16 @@ class SimpleAPIClient:
         try:
             if cookie_name in self.session.cookies:
                 logger.info(f"Clearing existing {cookie_name} cookies to prevent duplicates")  # noqa: E501
-                # Get a list of all cookies to remove
                 cookies_to_remove = []
                 for cookie in self.session.cookies:
                     if cookie.name == cookie_name:
                         cookies_to_remove.append(cookie)
 
-                # Remove each cookie
+ # Remove each cookie
                 for cookie in cookies_to_remove:
                     self.session.cookies.clear(cookie.domain, cookie.path, cookie.name)  # noqa: E501
 
-                # Verify they're cleared
+ # Verify they're cleared
                 remaining = sum(1 for c in self.session.cookies if c.name == cookie_name)  # noqa: E501
                 if remaining > 0:
                     logger.warning(f"Failed to clear all {cookie_name} cookies, {remaining} remain")  # noqa: E501
@@ -152,30 +145,29 @@ class SimpleAPIClient:
 
     def save_session_cookie(self):
         """Save current session ID to file."""
-        # Extract session ID from cookies
         wasid_cookie = self.session.cookies.get('WASID4D')
         dsid_cookie = self.session.cookies.get('4DSID_WSZ-DB')
 
-        # Prefer WASID4D cookie, fall back to 4DSID_WSZ-DB
+ # Prefer WASID4D cookie, fall back to 4DSID_WSZ-DB
         session_id = wasid_cookie or dsid_cookie
 
         if not session_id:
             logger.warning("No session ID found in cookies")
             return False
 
-        # Store just the value, not the name=value format
+ # Store just the value, not the name=value format
         self.session_id = session_id
 
-        # Create the cookie data
+ # Create the cookie data
         cookie_data = {
-            'timestamp': datetime.now().isoformat(),  # noqa: E128
-            'value': session_id
+                       'timestamp': datetime.now().isoformat(),  # noqa: E128
+                       'value': session_id
         }
 
-        # Ensure directory exists
+ # Ensure directory exists
         os.makedirs(os.path.dirname(COOKIE_FILE_PATH), exist_ok=True)
 
-        # Save the cookie data
+ # Save the cookie data
         try:
             with open(COOKIE_FILE_PATH, 'w') as f:
                 json.dump(cookie_data, f)
@@ -190,10 +182,10 @@ class SimpleAPIClient:
         if self.session_id:
             headers = request_kwargs.get('headers', {})
 
-            # Create the cookie header with WASID4D=value format
+ # Create the cookie header with WASID4D=value format
             cookie_header = f"WASID4D={self.session_id}"
 
-            # Add to existing cookies if present
+ # Add to existing cookies if present
             if 'Cookie' in headers:
                 headers['Cookie'] += f"; {cookie_header}"
             else:
@@ -212,7 +204,6 @@ class SimpleAPIClient:
 
         logger.info(f"{prefix}: {len(cookies)} cookie(s)")
         for name, value in cookies.items():
-            # Show partial value for security (first and last few chars)
             safe_value = f"{value[:5]}...{value[-5:]}" if len(value) > 10 else value  # noqa: E501
             logger.info(f"  - {name}={safe_value}")
 
@@ -225,37 +216,35 @@ class SimpleAPIClient:
         cookies = response.cookies.get_dict()
         logger.info(f"{prefix}: {len(cookies)} cookie(s)")
         for name, value in cookies.items():
-            # Show partial value for security (first and last few chars)
             safe_value = f"{value[:5]}...{value[-5:]}" if len(value) > 10 else value  # noqa: E501
             logger.info(f"  - {name}={safe_value}")
 
-        # Also check Set-Cookie header which might contain additional metadata
+ # Also check Set-Cookie header which might contain additional metadata
         if 'Set-Cookie' in response.headers:
             logger.info(f"Raw Set-Cookie header: {response.headers['Set-Cookie'][:100]}...")  # noqa: E501
 
     def validate_session(self):
         """Validate the current session by making a simple API request."""
         try:
-            # Log current cookies before request
             logger.info("------ VALIDATING SESSION ------")
             self._log_cookies("Cookies before validation")
 
-            # Try a simple API request to check if our session is valid
+ # Try a simple API request to check if our session is valid
             url = f"{self.base_url}/rest/$info"
             logger.info(f"Validation request URL: {url}")
 
-            # Make the request, ensuring the session cookie is used
+ # Make the request, ensuring the session cookie is used
             response = self.session.get(url)
 
-            # Log response and cookies
+ # Log response and cookies
             logger.info(f"Validation response status: {response.status_code}")
             self._log_response_cookies(response)
 
-            # Check if we got a successful response
+ # Check if we got a successful response
             if response.status_code == 200:
                 logger.info("Session validated successfully")
 
-                # Get the new session cookie from the response
+ # Get the new session cookie from the response
                 wasid_cookie = None
                 for cookie in response.cookies:
                     if cookie.name == 'WASID4D':
@@ -263,23 +252,21 @@ class SimpleAPIClient:
                         logger.info(f"Found new session cookie in response: {cookie.name}")  # noqa: E501
                         break
 
-                # If we received a new cookie, update our session
+ # If we received a new cookie, update our session
                 if wasid_cookie:
                     logger.info("Updating session with new cookie from response")  # noqa: E501
-                    # First, completely clear all existing cookies
                     self.session.cookies.clear()
                     logger.info("Cleared all existing cookies")
 
-                    # Set the new cookie value
+ # Set the new cookie value
                     self.session_id = wasid_cookie
                     self.session.cookies.set('WASID4D', wasid_cookie)
                     logger.info("Set single new cookie WASID4D with value from response")  # noqa: E501
 
-                    # Save the updated cookie
+ # Save the updated cookie
                     self.save_session_cookie()
                 else:
                     logger.info("No new session cookie received, keeping existing one")  # noqa: E501
-                    # Ensure existing cookie is set
                     if self.session_id and not self.session.cookies.get('WASID4D'):  # noqa: E501
                         logger.info("Re-adding existing session cookie")
                         self.session.cookies.clear()
@@ -299,22 +286,21 @@ class SimpleAPIClient:
         """Attempt to log in and get a new session cookie."""
         try:
             logger.info("------ LOGGING IN ------")
-            # Clear any existing session data
             self.session.cookies.clear()
             logger.info("Cleared existing cookies")
 
-            # Attempt to access an endpoint that will set a cookie
+ # Attempt to access an endpoint that will set a cookie
             url = f"{self.base_url}/rest/$info"
             logger.info(f"Login request URL: {url}")
 
-            # Make the request
+ # Make the request
             response = self.session.get(url)
 
-            # Log response details
+ # Log response details
             logger.info(f"Login response status: {response.status_code}")
             self._log_response_cookies(response)
 
-            # Check if we got cookies in the response
+ # Check if we got cookies in the response
             wasid_cookie = None
             for cookie in response.cookies:
                 if cookie.name == 'WASID4D':
@@ -323,15 +309,13 @@ class SimpleAPIClient:
 
             dsid_cookie = self.session.cookies.get('4DSID_WSZ-DB')
 
-            # Log what we found
+ # Log what we found
             logger.info(f"Found WASID4D cookie: {'Yes' if wasid_cookie else 'No'}")  # noqa: E501
             logger.info(f"Found 4DSID_WSZ-DB cookie: {'Yes' if dsid_cookie else 'No'}")  # noqa: E501
 
-            # Use either cookie (prefer WASID4D)
+ # Use either cookie (prefer WASID4D)
             if wasid_cookie:
-                # Clear all cookies first
                 self.session.cookies.clear()
-                # Set only the new WASID4D cookie
                 self.session_id = wasid_cookie
                 self.session.cookies.set('WASID4D', wasid_cookie)
                 safe_id = f"{wasid_cookie[:5]}...{wasid_cookie[-5:]}" if len(wasid_cookie) > 10 else wasid_cookie  # noqa: E501
@@ -339,9 +323,7 @@ class SimpleAPIClient:
                 self.save_session_cookie()
                 return True
             elif dsid_cookie:
-                # Clear all cookies first
                 self.session.cookies.clear()
-                # Set only the new cookie (using DSID as WASID)
                 self.session_id = dsid_cookie
                 self.session.cookies.set('WASID4D', dsid_cookie)
                 safe_id = f"{dsid_cookie[:5]}...{dsid_cookie[-5:]}" if len(dsid_cookie) > 10 else dsid_cookie  # noqa: E501
@@ -357,24 +339,23 @@ class SimpleAPIClient:
 
     def ensure_session(self):
         """Ensure we have a valid session, attempting login if needed."""
-        # First check if we have a session ID loaded
         if not self.session_id:
             logger.info("No session ID loaded, attempting login")
             return self.login()
 
-        # Clear all cookies and start fresh
+ # Clear all cookies and start fresh
         self.session.cookies.clear()
 
-        # Set just our session ID cookie
+ # Set just our session ID cookie
         self.session.cookies.set('WASID4D', self.session_id)
         safe_id = f"{self.session_id[:5]}...{self.session_id[-5:]}" if len(self.session_id) > 10 else self.session_id  # noqa: E501
         logger.info(f"Set single WASID4D cookie: {safe_id}")
 
-        # Validate the session
+ # Validate the session
         if self.validate_session():
             return True
 
-        # If validation failed, try to log in
+ # If validation failed, try to log in
         logger.info("Session validation failed, attempting to get a new session")  # noqa: E501
         return self.login()
 
@@ -395,15 +376,14 @@ class SimpleAPIClient:
         Returns:
             pandas.DataFrame: The fetched data
         """
-        # Ensure we have a valid session
         if not self.ensure_session():
             raise Exception("Failed to establish a valid session")
 
-        # Log cookies before making the table request
+ # Log cookies before making the table request
         logger.info("------ FETCHING TABLE ------")
         self._log_cookies("Cookies for table request")
 
-        # Ensure we have exactly one cookie with the correct session ID
+ # Ensure we have exactly one cookie with the correct session ID
         self.session.cookies.clear()
         if self.session_id:
             self.session.cookies.set('WASID4D', self.session_id)
@@ -413,50 +393,44 @@ class SimpleAPIClient:
             logger.error("No session ID available for table request")
             raise Exception("No valid session ID available")
 
-        # Prepare the request URL and parameters
+ # Prepare the request URL and parameters
         url = f"{self.base_url}/rest/{table_name}"
 
-        # Handle pagination
+ # Handle pagination
         if all_records:
-            # Fetch all records using pagination
             logger.info(f"Fetching all records from {table_name}")
             return self._fetch_all_records(url, filter_query, new_data_only, date_created_start)  # noqa: E501
         else:
-            # Fetch only the specified number of records
             params = {'$top': top, '$skip': skip}
 
-            # Handle filter query with the correct syntax (quoted filter expression)  # noqa: E501
+ # Handle filter query with the correct syntax (quoted filter expression)  # noqa: E501
             if filter_query:
-                # Format the filter query as a URL parameter with quotes
                 params['$filter'] = f'"{filter_query}"'
                 logger.info(f"Using filter query: {filter_query}")
 
-            # Handle date filtering
+ # Handle date filtering
             if new_data_only and date_created_start:
                 date_filter = f"CREATIONDATE ge '{date_created_start}'"
                 if filter_query:
-                    # Combine with existing filter using AND
                     params['$filter'] = f'"{filter_query} AND {date_filter}"'
                 else:
-                    # Just use the date filter
                     params['$filter'] = f'"{date_filter}"'
                 logger.info(f"Using date filter: {date_filter}")
 
             logger.info(f"Fetching up to {top} records from {table_name} (skip: {skip})")  # noqa: E501
             logger.info(f"Full request URL: {url} with params: {params}")
 
-            # Make the request with error handling for filter failures
+ # Make the request with error handling for filter failures
             try:
-                # Try with filter
                 response = self.session.get(url, params=params)
 
-                # Check for filter-related errors
+ # Check for filter-related errors
                 if response.status_code != 200 and '$filter' in params:
                     logger.warning(f"Request failed with status code {response.status_code}. This might be a filter error.")  # noqa: E501
                     logger.warning(f"Response text: {response.text[:200]}...")
                     logger.warning("Attempting to retry without filter...")
 
-                    # Remove the filter and try again
+ # Remove the filter and try again
                     params_without_filter = params.copy()
                     params_without_filter.pop('$filter', None)
                     logger.info(f"Retrying request without filter: {url} with params: {params_without_filter}")  # noqa: E501
@@ -465,38 +439,33 @@ class SimpleAPIClient:
                 logger.error(f"API request failed: {str(e)}")
                 raise
 
-            # Check for successful response
+ # Check for successful response
             if response.status_code != 200:
                 raise Exception(f"API request failed with status code {response.status_code}: {response.text}")  # noqa: E501
 
-            # Parse the response
+ # Parse the response
             data = response.json()
 
-            # Debug response structure
+ # Debug response structure
             logger.info(f"Response structure: {list(data.keys()) if isinstance(data, dict) else type(data)}")  # noqa: E501
             logger.info(f"Response data: {str(data)[:500]}...")
 
-            # Convert to DataFrame
+ # Convert to DataFrame
             if 'value' in data and isinstance(data['value'], list):
                 df = pd.DataFrame(data['value'])
                 logger.info(f"Retrieved {len(df)} records")
                 return df
             else:
                 logger.warning("Response does not contain expected 'value' list")  # noqa: E501
-                # Try alternate response formats
                 if '__ENTITIES' in data and isinstance(data['__ENTITIES'], list):  # noqa: E501
-                    # 4D specific format
                     df = pd.DataFrame(data['__ENTITIES'])
                     logger.info(f"Retrieved {len(df)} records from __ENTITIES")
                     return df
                 elif isinstance(data, list):
-                    # If response is directly a list of records
                     df = pd.DataFrame(data)
                     logger.info(f"Retrieved {len(df)} records from direct list response")  # noqa: E501
                     return df
                 elif isinstance(data, dict) and len(data) > 0:
-                    # If response is a dict with data (not in 'value' key)
-                    # Try to convert to DataFrame directly
                     try:
                         df = pd.DataFrame([data])
                         logger.info("Retrieved 1 record from direct dict response")  # noqa: E501
@@ -509,27 +478,23 @@ class SimpleAPIClient:
 
     def _fetch_all_records(self, url, filter_query=None, new_data_only=True, date_created_start=None):  # noqa: E501
         """Fetch all records from a table using pagination."""
-        # Initial parameters
         params = {'$top': 1000, '$skip': 0}
 
-        # Handle filter query with the correct syntax (quoted filter expression)  # noqa: E501
+ # Handle filter query with the correct syntax (quoted filter expression)  # noqa: E501
         if filter_query:
-            # Format the filter query as a URL parameter with quotes
             params['$filter'] = f'"{filter_query}"'
             logger.info(f"Using filter query: {filter_query}")
 
-        # Handle date filtering
+ # Handle date filtering
         if new_data_only and date_created_start:
             date_filter = f"CREATIONDATE ge '{date_created_start}'"
             if filter_query:
-                # Combine with existing filter using AND
                 params['$filter'] = f'"{filter_query} AND {date_filter}"'
             else:
-                # Just use the date filter
                 params['$filter'] = f'"{date_filter}"'
             logger.info(f"Using date filter: {date_filter}")
 
-        # Fetch data using pagination
+ # Fetch data using pagination
         all_data = []
         total_fetched = 0
         retry_count = 0
@@ -537,7 +502,6 @@ class SimpleAPIClient:
         filter_error_detected = False
 
         while True:
-            # Ensure we have exactly one cookie with the current session ID for each request  # noqa: E501
             self.session.cookies.clear()
             if not self.session_id:
                 logger.error("No session ID available for paginated request")
@@ -547,10 +511,9 @@ class SimpleAPIClient:
             if retry_count > 0:
                 logger.info(f"Reset to single session cookie for retry attempt {retry_count}")  # noqa: E501
 
-            # Make the request with error handling for filter failures
+ # Make the request with error handling for filter failures
             logger.info(f"Making paginated request: {url} with params: {params}")  # noqa: E501
             try:
-                # If we've detected a filter error previously, don't use the filter  # noqa: E501
                 current_params = params.copy()
                 if filter_error_detected and '$filter' in current_params:
                     logger.info("Filter error previously detected, removing filter for this request")  # noqa: E501
@@ -558,31 +521,28 @@ class SimpleAPIClient:
 
                 response = self.session.get(url, params=current_params)
 
-                # Check for filter-related errors
+ # Check for filter-related errors
                 if response.status_code != 200 and '$filter' in current_params and not filter_error_detected:  # noqa: E501
                     logger.warning(f"Request failed with status code {response.status_code}. This might be a filter error.")  # noqa: E501
                     logger.warning(f"Response text: {response.text[:200]}...")
                     logger.warning("Attempting to retry without filter...")
 
-                    # Remove the filter and try again
+ # Remove the filter and try again
                     current_params.pop('$filter', None)
                     logger.info(f"Retrying request without filter: {url} with params: {current_params}")  # noqa: E501
                     response = self.session.get(url, params=current_params)
 
-                    # Mark that we've detected a filter error
+ # Mark that we've detected a filter error
                     filter_error_detected = True
-  # noqa: F841
 
-                # Check for successful response
+ # Check for successful response
                 if response.status_code != 200:
                     error_msg = f"API request failed with status code {response.status_code}"  # noqa: E501
 
-                    # Check if this is a 'maximum sessions' error
+ # Check if this is a 'maximum sessions' error
                     if response.status_code == 402 and "Maximum number of sessions" in response.text:  # noqa: E501
-  # noqa: E501, F841
                         if retry_count < max_retries:
                             logger.warning("Maximum sessions error detected. Attempting to login with a new session...")  # noqa: E501
-                            # Clear cookies and login to get a new session
                             self.session.cookies.clear()
                             if self.login():
                                 retry_count += 1
@@ -593,55 +553,51 @@ class SimpleAPIClient:
                     error_msg += f": {response.text}"
                     raise Exception(error_msg)
 
-                # Check for new session cookie in response and update if found
+ # Check for new session cookie in response and update if found
                 for cookie in response.cookies:
                     if cookie.name == 'WASID4D' and cookie.value != self.session_id:  # noqa: E501
                         logger.info("Received new session cookie in paginated response, updating...")  # noqa: E501
                         self.session_id = cookie.value
                         self.save_session_cookie()
-                        # Clear cookies and set the new one
                         self.session.cookies.clear()
                         self.session.cookies.set('WASID4D', self.session_id)
                         break
 
-                # Parse the response
+ # Parse the response
                 data = response.json()
 
-                # Debug first request response
+ # Debug first request response
                 if total_fetched == 0:
                     logger.info(f"First response structure: {list(data.keys()) if isinstance(data, dict) else type(data)}")  # noqa: E501
                     logger.info(f"First response sample: {str(data)[:500]}...")
 
-                # Extract the records based on the actual response structure
+ # Extract the records based on the actual response structure
                 if 'value' in data and isinstance(data['value'], list):
-                    # Standard OData format
                     records = data['value']
                     all_data.extend(records)
                     total_fetched += len(records)
                     logger.info(f"Fetched {len(records)} records (total: {total_fetched})")  # noqa: E501
 
-                    # Check if we've received fewer records than requested
+ # Check if we've received fewer records than requested
                     if len(records) < current_params.get('$top', 1000):
                         break
 
-                    # Update skip for next page
+ # Update skip for next page
                     params['$skip'] += params.get('$top', 1000)
                 elif '__ENTITIES' in data and isinstance(data['__ENTITIES'], list):  # noqa: E501
-                    # 4D specific format
                     records = data['__ENTITIES']
                     all_data.extend(records)
                     total_fetched += len(records)
                     logger.info(f"Fetched {len(records)} records from __ENTITIES (total: {total_fetched})")  # noqa: E501
 
-                    # Check if there are more records
+ # Check if there are more records
                     if '__COUNT' in data and total_fetched >= int(data['__COUNT']):  # noqa: E501
                         logger.info(f"Reached total count of {data['__COUNT']} records")  # noqa: E501
                         break
 
-                    # Update skip for next page
+ # Update skip for next page
                     params['$skip'] += params.get('$top', 1000)
                 elif isinstance(data, list):
-                    # Direct list response
                     all_data.extend(data)
                     total_fetched += len(data)
                     logger.info(f"Fetched {len(data)} records from direct list response (total: {total_fetched})")  # noqa: E501
@@ -651,16 +607,15 @@ class SimpleAPIClient:
                     logger.warning(f"Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}")  # noqa: E501
                     break
 
-                # Reset retry counter after successful request
+ # Reset retry counter after successful request
                 retry_count = 0
 
             except Exception as e:
                 if "Maximum number of sessions" in str(e) and retry_count < max_retries:  # noqa: E501
-                    # Already handled in the status code check
                     continue
                 raise
 
-        # Convert all data to DataFrame
+ # Convert all data to DataFrame
         df = pd.DataFrame(all_data)
         logger.info(f"Total records retrieved: {len(df)}")
         return df
@@ -671,7 +626,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Fetch data from a table in the legacy ERP system')  # noqa: E501
 
     parser.add_argument('table_name', nargs='?', default=None,
-  # noqa: F841
                         help='Name of the table to fetch data from')  # noqa: F841
 
     parser.add_argument('--env', default='live',
@@ -681,27 +635,22 @@ def parse_args():
                         help='Number of records to fetch (default: 100)')  # noqa: F841
 
     parser.add_argument('--skip', type=int, default=0,
-  # noqa: F841
                         help='Number of records to skip (default: 0)')  # noqa: F841
 
     parser.add_argument('--all', action='store_true',
                         help='Fetch all records (overrides --top and --skip)')  # noqa: F841
 
     parser.add_argument('--filter', dest='filter_query',
-  # noqa: F841
                         help='Filter query string')  # noqa: F841
 
     parser.add_argument('--output',
                         help='Output file (default: stdout)')  # noqa: F841
 
     parser.add_argument('--format', choices=['csv', 'json', 'excel'], default='csv',  # noqa: E501
-  # noqa: E501, F841
                         help='Output format (csv, json, excel, default: csv)')  # noqa: F841
 
     parser.add_argument('--verbose', action='store_true',
-  # noqa: F841
                         help='Enable verbose output')  # noqa: F841
-  # noqa: F841
 
     return parser.parse_args()
 
@@ -710,60 +659,46 @@ def main():
     """Main function to execute when script is run."""
     args = parse_args()
 
-    # Check if table_name is provided
+ # Check if table_name is provided
     if not args.table_name:
         logger.error("Table name is required")
         sys.exit(1)
 
-    # Set logging level based on verbose flag
+ # Set logging level based on verbose flag
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
     try:
-        # Create the client
         client = SimpleAPIClient(environment=args.env)
 
-        # Fetch the data
+ # Fetch the data
         df = client.fetch_table(
             table_name=args.table_name,  # noqa: E128
             top=args.top,
-  # noqa: F841
             skip=args.skip,
-  # noqa: F841
             all_records=args.all,
-  # noqa: F841
             filter_query=args.filter_query
-  # noqa: F841
         )
 
-        # Save the output
+ # Save the output
         if args.output:
             output_path = Path(args.output)
 
-            # Create directory if it doesn't exist
+ # Create directory if it doesn't exist
             output_path.parent.mkdir(parents=True, exist_ok=True)
-  # noqa: F841
 
-            # Save to file in the specified format
+ # Save to file in the specified format
             if args.format == 'csv':
                 df.to_csv(output_path, index=False)
             elif args.format == 'json':
                 df.to_json(output_path, orient='records', indent=2)
-  # noqa: F841
             elif args.format == 'excel':
                 df.to_excel(output_path, index=False)
-  # noqa: F841
 
             logger.info(f"Data saved to {output_path}")
         else:
-            # Print to stdout as a formatted DataFrame
-            # Set pandas display options for better readability
-            # pd.set_option('display.max_rows', 20)  # Limit rows to avoid huge output  # noqa: E501
-            # pd.set_option('display.max_columns', None)  # Show all columns
-            # pd.set_option('display.width', None)  # Auto-detect width
-            # pd.set_option('display.expand_frame_repr', False)  # Don't wrap to multiple lines  # noqa: E501
 
-            # Print number of records and a sample of the DataFrame
+ # Print number of records and a sample of the DataFrame
             print(f"\nFetched {len(df)} records from '{args.table_name}'")
             print("\nDataFrame Preview:")
             print(df.tail())
@@ -775,5 +710,4 @@ def main():
 
 
 if __name__ == '__main__':
-  # noqa: F841
     main()

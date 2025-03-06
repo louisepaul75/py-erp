@@ -25,14 +25,12 @@ class Command(BaseCommand):
         parser.add_argument(
             'action',  # noqa: E128
             choices=['extract', 'compile', 'status', 'update'],  # noqa: F841
-  # noqa: F841
             help='Action to perform (extract, compile, status, update)'  # noqa: F841
         )
         parser.add_argument(
             '--locale',  # noqa: E128
             '-l',
             help='Specific locale to work with (e.g., "de" for German). If not specified, all locales will be processed.'  # noqa: E501
-  # noqa: E501, F841
         )
 
     def handle(self, *args, **options):
@@ -56,7 +54,6 @@ class Command(BaseCommand):
         locale_arg = ['-l', locale] if locale else []
 
         try:
-            # Check if we're running in a virtual environment
             venv_path = os.environ.get('VIRTUAL_ENV')
             if venv_path:
                 python_exe = os.path.join(venv_path, 'Scripts', 'python')
@@ -80,7 +77,7 @@ class Command(BaseCommand):
         """Compile .po files into .mo files."""
         self.stdout.write('Compiling messages...')
 
-        # Try using Django's compilemessages first
+ # Try using Django's compilemessages first
         try:
             locale_arg = ['-l', locale] if locale else []
             venv_path = os.environ.get('VIRTUAL_ENV')
@@ -94,7 +91,6 @@ class Command(BaseCommand):
 
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
-  # noqa: F841
                 self.stdout.write(self.style.SUCCESS('Messages compiled successfully using Django.'))  # noqa: E501
                 return
             else:
@@ -103,7 +99,7 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.WARNING(f'Django compilemessages error: {e}. Falling back to Python implementation.'))  # noqa: E501
 
-        # Fallback: Use Python-based .mo file generation
+ # Fallback: Use Python-based .mo file generation
         self._compile_messages_python(locale)
 
     def _compile_messages_python(self, locale=None):
@@ -117,7 +113,7 @@ class Command(BaseCommand):
 
         locale_dirs = []
 
-        # Get all locales or specific locale directory
+ # Get all locales or specific locale directory
         if locale:
             locale_path = os.path.join(settings.LOCALE_PATHS[0], locale)
             if os.path.exists(locale_path):
@@ -132,14 +128,13 @@ class Command(BaseCommand):
                 if os.path.isdir(full_path):
                     locale_dirs.append((item, full_path))
 
-        # Process each locale
+ # Process each locale
         for locale_code, locale_path in locale_dirs:
             po_path = os.path.join(locale_path, 'LC_MESSAGES', 'django.po')
             mo_path = os.path.join(locale_path, 'LC_MESSAGES', 'django.mo')
 
             if os.path.exists(po_path):
                 try:
-                    # Use polib to convert .po to .mo
                     po = polib.pofile(po_path)
                     po.save_as_mofile(mo_path)
                     self.stdout.write(self.style.SUCCESS(f"Compiled {locale_code} messages to {mo_path}"))  # noqa: E501
@@ -153,7 +148,7 @@ class Command(BaseCommand):
         self.stdout.write('Translation status:')
         locale_dirs = []
 
-        # Get all locales or specific locale directory
+ # Get all locales or specific locale directory
         if locale:
             locale_path = os.path.join(settings.LOCALE_PATHS[0], locale)
             if os.path.exists(locale_path):
@@ -168,27 +163,24 @@ class Command(BaseCommand):
                 if os.path.isdir(full_path):
                     locale_dirs.append((item, full_path))
 
-        # Process each locale
+ # Process each locale
         for locale_code, locale_path in locale_dirs:
             po_path = os.path.join(locale_path, 'LC_MESSAGES', 'django.po')
             if os.path.exists(po_path):
                 self.stdout.write(self.style.SUCCESS(f"Locale: {locale_code}"))
-                # Try to count messages
                 try:
                     with open(po_path, 'r', encoding='utf-8') as f:
-  # noqa: F841
                         content = f.read()
                         msgid_count = content.count('msgid ')
-                        # Subtract the header msgid, which is usually empty
                         if content.find('msgid ""') == content.find('msgid '):
                             msgid_count -= 1
                         self.stdout.write(f"  - Total messages: {msgid_count}")
 
-                        # Try to count fuzzy/untranslated messages
+ # Try to count fuzzy/untranslated messages
                         fuzzy_count = content.count('#, fuzzy')
                         self.stdout.write(f"  - Fuzzy translations: {fuzzy_count}")  # noqa: E501
 
-                        # Check if compiled .mo file exists
+ # Check if compiled .mo file exists
                         mo_path = os.path.join(locale_path, 'LC_MESSAGES', 'django.mo')  # noqa: E501
                         mo_status = "Exists" if os.path.exists(mo_path) else "Missing"  # noqa: E501
                         self.stdout.write(f"  - Compiled .mo file: {mo_status}")  # noqa: E501
@@ -202,13 +194,13 @@ class Command(BaseCommand):
         """Update .po files with new messages from source code."""
         self.stdout.write('Updating translations...')
 
-        # First extract messages
+ # First extract messages
         self.extract_messages(locale)
 
-        # Then compile messages
+ # Then compile messages
         self.compile_messages(locale)
 
-        # Show status
+ # Show status
         self.translation_status(locale)
 
         self.stdout.write(self.style.SUCCESS('Translation files updated successfully.'))  # noqa: E501

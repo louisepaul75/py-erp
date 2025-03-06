@@ -11,72 +11,63 @@ import dj_database_url  # noqa: F401
 from .base import *  # noqa
 from pathlib import Path  # noqa: F401
 
-# Load environment variables using centralized loader
+ # Load environment variables using centralized loader
 from pyerp.utils.env_loader import load_environment_variables
 load_environment_variables(verbose=True)
 
-# Print environment variables for debugging
+ # Print environment variables for debugging
 print(f"DB_NAME: {os.environ.get('DB_NAME', 'not set')}")
 print(f"DB_USER: {os.environ.get('DB_USER', 'not set')}")
 print(f"DB_PASSWORD: {os.environ.get('DB_PASSWORD', 'not set')}")
 print(f"DB_HOST: {os.environ.get('DB_HOST', 'not set')}")
 print(f"DB_PORT: {os.environ.get('DB_PORT', 'not set')}")
 
-# Configure for test environment
+ # Configure for test environment
 DEBUG = True
-  # noqa: F841
 
-# Remove debug toolbar for tests
+ # Remove debug toolbar for tests
 if 'debug_toolbar' in INSTALLED_APPS:
     INSTALLED_APPS.remove('debug_toolbar')
 
 MIDDLEWARE = [middleware for middleware in MIDDLEWARE if 'debug_toolbar' not in middleware]  # noqa: E501
-  # noqa: E501, F841
 
 ALLOWED_HOSTS = ['*']
-  # noqa: F841
 
-# Database configuration for tests
-# Try to use PostgreSQL first, fall back to SQLite if connection fails
+ # Database configuration for tests
+ # Try to use PostgreSQL first, fall back to SQLite if connection fails
 import socket
 import psycopg2
 
-# Define PostgreSQL connection parameters
+ # Define PostgreSQL connection parameters
 PG_PARAMS = {
     'ENGINE': 'django.db.backends.postgresql',  # noqa: E128
-    'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-    'USER': os.environ.get('DB_USER', 'postgres'),
-    'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-    'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
-    'PORT': os.environ.get('DB_PORT', '5432'),
-    'TEST': {
-        'NAME': 'test_pyerp_testing',  # noqa: E128
-    },
+             'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+             'USER': os.environ.get('DB_USER', 'postgres'),
+             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+             'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
+             'PORT': os.environ.get('DB_PORT', '5432'),
+             'TEST': {
+                 'NAME': 'test_pyerp_testing',  # noqa: E128
+             },
 }
 
-# Define SQLite connection parameters as fallback
+ # Define SQLite connection parameters as fallback
 SQLITE_PARAMS = {
     'ENGINE': 'django.db.backends.sqlite3',  # noqa: E128
-    'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
+                 'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
 }
 
-# Try to connect to PostgreSQL, use SQLite if it fails
+ # Try to connect to PostgreSQL, use SQLite if it fails
 try:
-    # Force more verbose output during tests
     sys.stderr.write(f"Attempting to connect to PostgreSQL at {PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n")  # noqa: E501
 
     conn = psycopg2.connect(
         dbname=PG_PARAMS['NAME'],  # noqa: F841
-  # noqa: F841
         user=PG_PARAMS['USER'],  # noqa: F841
-  # noqa: F841
         password=PG_PARAMS['PASSWORD'],  # noqa: F841
         host=PG_PARAMS['HOST'],  # noqa: F841
-  # noqa: F841
         port=PG_PARAMS['PORT'],  # noqa: F841
-  # noqa: F841
         connect_timeout=5  # noqa: F841
-  # noqa: F841
     )
     conn.close()
     DATABASES = {'default': PG_PARAMS}  # noqa: F841
@@ -85,61 +76,54 @@ except (psycopg2.OperationalError, socket.error) as e:
     sys.stderr.write(f"ERROR: Could not connect to PostgreSQL: {str(e)}\n")
     sys.stderr.write("FALLBACK: Using SQLite for testing\n")
     DATABASES = {'default': SQLITE_PARAMS}  # noqa: F841
-  # noqa: F841
 
-# Use the fastest possible password hasher
+ # Use the fastest possible password hasher
 PASSWORD_HASHERS = [
-  # noqa: F841
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# Simplify password validation for faster tests
+ # Simplify password validation for faster tests
 AUTH_PASSWORD_VALIDATORS = []
-  # noqa: F841
 
-# Disable template debug mode for faster tests
+ # Disable template debug mode for faster tests
 for template in TEMPLATES:
     template['OPTIONS']['debug'] = False
 
-# Use console email backend for tests
+ # Use console email backend for tests
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-  # noqa: F841
 
-# Disable logging during tests
+ # Disable logging during tests
 LOGGING = {
-  # noqa: F841
     'version': 1,
     'disable_existing_loggers': True,
     'handlers': {
-        'null': {  # noqa: E128
-            'class': 'logging.NullHandler',
-        },
-        'console': {
-            'class': 'logging.StreamHandler',  # noqa: E128
-            'level': 'WARNING',
-        },
-    },
-    'loggers': {
-        '': {  # noqa: E128
-            'handlers': ['console'],
-            'propagate': False,
-            'level': 'WARNING',
-        },
-        'django.db.backends': {
-            'handlers': ['console'],  # noqa: E128
-            'level': 'WARNING',
-            'propagate': False,
-        },
-    },
+    'null': {  # noqa: E128
+    'class': 'logging.NullHandler',
+},
+           'console': {
+               'class': 'logging.StreamHandler',  # noqa: E128
+               'level': 'WARNING',
+           },
+           },
+           'loggers': {
+               '': {  # noqa: E128
+           'handlers': ['console'],
+           'propagate': False,
+           'level': 'WARNING',
+           },
+           'django.db.backends': {
+           'handlers': ['console'],  # noqa: E128
+           'level': 'WARNING',
+           'propagate': False,
+           },
+           },
 }
 
-# Celery settings for testing
+ # Celery settings for testing
 CELERY_TASK_ALWAYS_EAGER = True
-  # noqa: F841
 CELERY_TASK_EAGER_PROPAGATES = True
-  # noqa: F841
 
-# Disable migrations when running tests
+ # Disable migrations when running tests
 
 
 class DisableMigrations:
@@ -152,23 +136,18 @@ class DisableMigrations:
         return None
 
 MIGRATION_MODULES = DisableMigrations()
-  # noqa: F841
 
-# Use simple caching for tests
+ # Use simple caching for tests
 CACHES = {
-  # noqa: F841
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # noqa: E128
-        'LOCATION': '',
-    }
+    'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # noqa: E128
+    'LOCATION': '',
+}
 }
 
-# Disable CSRF validation in tests
+ # Disable CSRF validation in tests
 CSRF_COOKIE_SECURE = False
-  # noqa: F841
 SESSION_COOKIE_SECURE = False
-  # noqa: F841
 
-# Media settings for tests
+ # Media settings for tests
 MEDIA_ROOT = BASE_DIR / 'test_media'
-  # noqa: F841

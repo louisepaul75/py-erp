@@ -12,9 +12,8 @@ from pyerp.legacy_sync.sync_tasks import (  # noqa: F401
 )
 from pyerp.legacy_sync.models import EntityMappingConfig
 
-# Configure logging
+ # Configure logging
 logger = logging.getLogger(__name__)  # noqa: F841
-  # noqa: F841
 
 
 class Command(BaseCommand):
@@ -40,9 +39,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--list',  # noqa: E128
             action='store_true',  # noqa: F841
-  # noqa: F841
             help='List available entity types for synchronization'  # noqa: F841
-  # noqa: F841
         )
 
     def handle(self, *args, **options):
@@ -54,7 +51,7 @@ class Command(BaseCommand):
         new_only = options['new_only']
         force = options['force']
 
-        # If no entity type is specified, sync all active entity types
+ # If no entity type is specified, sync all active entity types
         if not entity_type:
             self.sync_all(new_only, force)
             return
@@ -65,7 +62,6 @@ class Command(BaseCommand):
         start_time = timezone.now()
 
         try:
-            # Use the generic sync_entity function
             stats = sync_entity(entity_type, new_only=new_only)
             self.stdout.write(self.style.SUCCESS(
                 f'{entity_type.capitalize()} synchronized: {stats["total_fetched"]} fetched, '  # noqa: E501
@@ -94,7 +90,7 @@ class Command(BaseCommand):
 
         start_time = timezone.now()
 
-        # Get all active entity types
+ # Get all active entity types
         entity_types = EntityMappingConfig.objects.filter(is_active=True).values_list('entity_type', flat=True)  # noqa: E501
 
         if not entity_types:

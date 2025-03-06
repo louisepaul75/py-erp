@@ -30,7 +30,6 @@ class ServerUnavailableError(ConnectionError):
     """
     def __init__(self, message="The legacy ERP server is currently unavailable", inner_exception=None):  # noqa: E501
         self.inner_exception = inner_exception
-  # noqa: F841
         super().__init__(message)
 
 
@@ -40,7 +39,6 @@ class ResponseError(DirectAPIError):
     def __init__(self, status_code, message, response_body=None):
         self.status_code = status_code
         self.response_body = response_body
-  # noqa: F841
         super().__init__(f"API error {status_code}: {message}")
 
 

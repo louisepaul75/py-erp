@@ -17,7 +17,6 @@ class Command(BaseCommand):
             '--force',  # noqa: E128
             action='store_true',  # noqa: F841
             help='Skip confirmation prompt',  # noqa: F841
-  # noqa: F841
         )
 
     def handle(self, *args, **options):
@@ -26,7 +25,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("\n=== CREATING PLACEHOLDER PARENT PRODUCTS ===\n"))  # noqa: E501
 
-        # Get variants without parents
+ # Get variants without parents
         variants_without_parent = VariantProduct.objects.filter(parent__isnull=True)  # noqa: E501
         total_orphans = variants_without_parent.count()
 
@@ -36,7 +35,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("No orphaned variants found. Nothing to do."))  # noqa: E501
             return
 
-        # Ask for confirmation if not forced
+ # Ask for confirmation if not forced
         if not force and not dry_run:
             self.stdout.write("\nThis command will create placeholder parent products for orphaned variants.")  # noqa: E501
             self.stdout.write("These placeholder parents will use data from their variants with a 'PLACEHOLDER' prefix.")  # noqa: E501
@@ -46,33 +45,29 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING("Operation cancelled."))
                 return
 
-        # Create parents and update relationships
+ # Create parents and update relationships
         if dry_run:
             self.stdout.write(self.style.WARNING("\n[DRY RUN] No actual changes will be made\n"))  # noqa: E501
 
-        # Track results
+ # Track results
         created_parents = 0
         updated_relationships = 0
         errors = 0
         error_details = []
 
-        # Use transaction to ensure atomicity - only for dry run
+ # Use transaction to ensure atomicity - only for dry run
         if dry_run:
             with transaction.atomic():
-                # Create a savepoint for rollback in case of dry run
                 sid = transaction.savepoint()
 
                 for variant in variants_without_parent:
                     try:
-                        # Create placeholder parent
                         parent = ParentProduct(
                             sku=f"PLACEHOLDER-{variant.sku}",  # noqa: E128
                             name=f"PLACEHOLDER - {variant.name}" if variant.name else f"PLACEHOLDER Parent for {variant.sku}",  # noqa: E501
                             is_active=variant.is_active,  # noqa: F841
-                            # Set legacy_id to match the variant's legacy_familie for proper linking  # noqa: E501
                             legacy_id=variant.legacy_familie,  # noqa: F841
                             is_placeholder=True,  # noqa: F841
-                            # Set base_sku to match the variant's base_sku if available  # noqa: E501
                             base_sku=variant.base_sku if hasattr(variant, 'base_sku') and variant.base_sku else variant.sku  # noqa: E501
                         )
 
@@ -80,7 +75,7 @@ class Command(BaseCommand):
                             parent.save()
                         created_parents += 1
 
-                        # Update variant to link to this parent
+ # Update variant to link to this parent
                         if not dry_run:
                             variant.parent = parent
                             variant.save()
@@ -92,35 +87,26 @@ class Command(BaseCommand):
                         error_details.append(f"Error processing variant {variant.sku}: {str(e)}")  # noqa: E501
                         self.stdout.write(self.style.ERROR(f"Error processing variant {variant.sku}: {str(e)}"))  # noqa: E501
 
-                # If dry run, rollback all changes
+ # If dry run, rollback all changes
                 if dry_run:
                     transaction.savepoint_rollback(sid)
                     self.stdout.write(self.style.WARNING("\n[DRY RUN] All changes have been rolled back\n"))  # noqa: E501
         else:
-            # Process each variant individually without a transaction
             for variant in variants_without_parent:
                 try:
-                    # Create placeholder parent
                     parent = ParentProduct(
                         sku=f"PLACEHOLDER-{variant.sku}",  # noqa: E128
                         name=f"PLACEHOLDER - {variant.name}" if variant.name else f"PLACEHOLDER Parent for {variant.sku}",  # noqa: E501
-  # noqa: E501, F841
                         is_active=variant.is_active,  # noqa: F841
-  # noqa: F841
-                        # Set legacy_id to match the variant's legacy_familie for proper linking  # noqa: E501
                         legacy_id=variant.legacy_familie,  # noqa: F841
-  # noqa: F841
                         is_placeholder=True,  # noqa: F841
-  # noqa: F841
-                        # Set base_sku to match the variant's base_sku if available  # noqa: E501
                         base_sku=variant.base_sku if hasattr(variant, 'base_sku') and variant.base_sku else variant.sku  # noqa: E501
-  # noqa: E501, F841
                     )
 
                     parent.save()
                     created_parents += 1
 
-                    # Update variant to link to this parent
+ # Update variant to link to this parent
                     variant.parent = parent
                     variant.save()
                     updated_relationships += 1
@@ -131,7 +117,7 @@ class Command(BaseCommand):
                     error_details.append(f"Error processing variant {variant.sku}: {str(e)}")  # noqa: E501
                     self.stdout.write(self.style.ERROR(f"Error processing variant {variant.sku}: {str(e)}"))  # noqa: E501
 
-        # Summary
+ # Summary
         self.stdout.write(self.style.SUCCESS("\n=== OPERATION SUMMARY ==="))
         self.stdout.write(f"Total orphaned variants: {total_orphans}")
         self.stdout.write(f"Placeholder parents {'would be' if dry_run else ''} created: {created_parents}")  # noqa: E501
@@ -147,10 +133,9 @@ class Command(BaseCommand):
             success_rate = (updated_relationships / total_orphans) * 100
             self.stdout.write(f"Success rate: {success_rate:.2f}%")
 
-        # Next steps
+ # Next steps
         self.stdout.write(self.style.SUCCESS("\n=== NEXT STEPS ==="))
         self.stdout.write("1. Review the created placeholder parents in the admin interface")  # noqa: E501
         self.stdout.write("2. Add additional data to the placeholder parents as needed")  # noqa: E501
         self.stdout.write("3. Run validation checks to ensure proper parent-child relationships")  # noqa: E501
         self.stdout.write(self.style.SUCCESS("\n=== OPERATION COMPLETE ===\n"))
-  # noqa: F841

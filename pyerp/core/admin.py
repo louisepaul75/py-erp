@@ -14,7 +14,6 @@ class AuditLogAdmin(admin.ModelAdmin):
     """Admin interface for the AuditLog model."""
 
     list_display = (  # noqa: F841
-  # noqa: F841
         'timestamp',
         'event_type',
         'username',
@@ -22,18 +21,15 @@ class AuditLogAdmin(admin.ModelAdmin):
         'message_short',
     )
     list_filter = (  # noqa: F841
-  # noqa: F841
         'event_type',
         'timestamp',
     )
     search_fields = (  # noqa: F841
-  # noqa: F841
         'username',
         'ip_address',
         'message',
     )
     readonly_fields = (  # noqa: F841
-  # noqa: F841
         'timestamp',
         'event_type',
         'message',
@@ -47,24 +43,22 @@ class AuditLogAdmin(admin.ModelAdmin):
         'uuid',
     )
     fieldsets = (  # noqa: F841
-  # noqa: F841
         (None, {
-            'fields': ('timestamp', 'event_type', 'message', 'uuid')  # noqa: E128
-        }),
-        (_('User Information'), {
-            'fields': ('user', 'username', 'ip_address', 'user_agent')  # noqa: E128
-        }),
-        (_('Related Object'), {
-            'fields': ('content_type', 'object_id'),  # noqa: E128
-            'classes': ('collapse',),
-        }),
-        (_('Additional Data'), {
-            'fields': ('additional_data',),  # noqa: E128
-            'classes': ('collapse',),
-        }),
+                 'fields': ('timestamp', 'event_type', 'message', 'uuid')  # noqa: E128
+                 }),
+                 (_('User Information'), {
+                 'fields': ('user', 'username', 'ip_address', 'user_agent')  # noqa: E128
+                 }),
+                 (_('Related Object'), {
+                 'fields': ('content_type', 'object_id'),  # noqa: E128
+                 'classes': ('collapse',),
+                 }),
+                 (_('Additional Data'), {
+                 'fields': ('additional_data',),  # noqa: E128
+                 'classes': ('collapse',),
+                 }),
     )
     date_hierarchy = 'timestamp'  # noqa: F841
-  # noqa: F841
 
     def message_short(self, obj):
 
@@ -74,7 +68,6 @@ class AuditLogAdmin(admin.ModelAdmin):
             return f"{obj.message[:47]}..."
         return obj.message
     message_short.short_description = _('Message')
-  # noqa: F841
 
     def has_add_permission(self, request):
 
@@ -87,6 +80,5 @@ class AuditLogAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-  # noqa: F841
         """Allow deletion only by superusers."""
         return request.user.is_superuser

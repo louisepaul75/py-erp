@@ -11,14 +11,12 @@ class MonitoringAppConfig(AppConfig):
 
     name = 'pyerp.monitoring'  # noqa: F841
     verbose_name = _('Monitoring')  # noqa: F841
-  # noqa: F841
 
     def ready(self):
         """
         Initialize app when Django starts.
         This is where we can register signal handlers or perform other initialization.  # noqa: E501
         """
-        # Import signal handlers to register them
         try:
             import pyerp.monitoring.signals  # noqa
         except ImportError:

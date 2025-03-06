@@ -5,19 +5,18 @@ from pyerp.products.models import ImageSyncLog
 
 class Command(BaseCommand):
     help = 'Checks the structure of the ImageSyncLog model and table'  # noqa: F841
-  # noqa: F841
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS('Checking ImageSyncLog model structure...'))  # noqa: E501
 
-        # Check model fields
+ # Check model fields
         self.stdout.write('\nModel Fields:')
         self.stdout.write('=' * 80)
 
         for field in ImageSyncLog._meta.fields:
             field_type = field.get_internal_type()
 
-            # Get default value
+ # Get default value
             if hasattr(field, 'default'):
                 default = field.default
                 if callable(default):
@@ -27,15 +26,15 @@ class Command(BaseCommand):
             else:
                 default_str = "None"
 
-            # Get auto_now and auto_now_add for DateTimeField
+ # Get auto_now and auto_now_add for DateTimeField
             auto_now = getattr(field, 'auto_now', False)
             auto_now_add = getattr(field, 'auto_now_add', False)
 
-            # Get choices
+ # Get choices
             choices = getattr(field, 'choices', None)
             choices_str = str(choices) if choices else "None"
 
-            # Get max_length for CharField
+ # Get max_length for CharField
             max_length = getattr(field, 'max_length', None)
             max_length_str = str(max_length) if max_length else "N/A"
 
@@ -46,26 +45,24 @@ class Command(BaseCommand):
                 self.stdout.write(f"{'  auto_now_add:':<20} {str(auto_now_add):<20}")  # noqa: E501
 
             if field_type == 'CharField':
-  # noqa: F841
                 self.stdout.write(f"{'  max_length:':<20} {max_length_str:<20}")  # noqa: E501
                 self.stdout.write(f"{'  choices:':<20} {choices_str:<60}")
 
-        # Check database structure
+ # Check database structure
         with connection.cursor() as cursor:
-            # Get column information
             cursor.execute("""
                 SELECT
-                    column_name,
-                    data_type,
-                    character_maximum_length,
-                    is_nullable,
-                    column_default
+                column_name,
+                data_type,
+                character_maximum_length,
+                is_nullable,
+                column_default
                 FROM
-                    information_schema.columns
+                information_schema.columns
                 WHERE
-                    table_name = 'products_imagesynclog'  # noqa: F841
+                table_name = 'products_imagesynclog'  # noqa: F841
                 ORDER BY
-                    ordinal_position
+                ordinal_position
             """)
 
             columns = cursor.fetchall()
@@ -80,22 +77,21 @@ class Command(BaseCommand):
                 max_length_str = str(max_length) if max_length is not None else ""  # noqa: E501
                 self.stdout.write(f"{col_name:<20} {data_type:<20} {max_length_str:<15} {nullable:<10} {str(default or ''):<30}")  # noqa: E501
 
-            # Get constraints
+ # Get constraints
             cursor.execute("""
                 SELECT
-                    tc.constraint_name,
-                    tc.constraint_type,
-                    kcu.column_name
+                tc.constraint_name,
+                tc.constraint_type,
+                kcu.column_name
                 FROM
-                    information_schema.table_constraints AS tc
-                    JOIN information_schema.key_column_usage AS kcu
-                        ON tc.constraint_name = kcu.constraint_name
+                information_schema.table_constraints AS tc
+                JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
                 WHERE
-                    tc.table_name = 'products_imagesynclog'
-  # noqa: F841
+                tc.table_name = 'products_imagesynclog'
                 ORDER BY
-                    tc.constraint_type,
-                    tc.constraint_name
+                tc.constraint_type,
+                tc.constraint_name
             """)
 
             constraints = cursor.fetchall()
@@ -110,7 +106,7 @@ class Command(BaseCommand):
                     name, type_, column = constraint
                     self.stdout.write(f"{name:<40} {type_:<20} {column:<20}")
 
-            # Get sequence information
+ # Get sequence information
             cursor.execute("SELECT pg_get_serial_sequence('products_imagesynclog', 'id')")  # noqa: E501
             sequence = cursor.fetchone()
 
@@ -121,7 +117,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'Last Value: {seq_info[0]}')
                 self.stdout.write(f'Is Called: {seq_info[1]}')
 
-        # Check for mismatches
+ # Check for mismatches
         model_fields = {field.name for field in ImageSyncLog._meta.fields}
         db_columns = {col[0] for col in columns}
 
@@ -137,7 +133,7 @@ class Command(BaseCommand):
         if not missing_in_db and not missing_in_model:
             self.stdout.write(self.style.SUCCESS('\nAll fields match between model and database!'))  # noqa: E501
 
-        # Validate status field
+ # Validate status field
         status_field = next((f for f in ImageSyncLog._meta.fields if f.name == 'status'), None)  # noqa: E501
         status_column = next((c for c in columns if c[0] == 'status'), None)
 
@@ -148,7 +144,6 @@ class Command(BaseCommand):
             if model_max_length != db_max_length and db_max_length is not None:
                 self.stdout.write(self.style.WARNING(
                     f'\nStatus field max_length mismatch: Model={model_max_length}, DB={db_max_length}'  # noqa: E501
-  # noqa: E501, F841
                 ))
             else:
                 self.stdout.write(self.style.SUCCESS('\nStatus field max_length is consistent.'))  # noqa: E501

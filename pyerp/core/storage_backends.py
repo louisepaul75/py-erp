@@ -20,8 +20,5 @@ class MediaStorage(S3Boto3Storage):
     Storage backend for media files on S3.
     """
     location = settings.MEDIA_LOCATION  # noqa: F841
-  # noqa: F841
     default_acl = 'public-read'  # noqa: F841
-  # noqa: F841
     file_overwrite = False  # noqa: F841
-  # noqa: F841

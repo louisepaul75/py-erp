@@ -56,7 +56,6 @@ class Command(BaseCommand):
             '--batch-size',  # noqa: E128
             type=int,  # noqa: F841
             default=1000,  # noqa: F841
-  # noqa: F841
             help='Number of records to process in each database batch',  # noqa: F841
         )
 
@@ -67,18 +66,16 @@ class Command(BaseCommand):
         force = options['force']
         skip_pages = options['skip_pages']
         batch_size = options['batch_size']  # noqa: F841
-  # noqa: F841
 
-        # Create sync log record (unless in dry-run mode)
+ # Create sync log record (unless in dry-run mode)
         sync_log = None
         if not dry_run:
             sync_log = ImageSyncLog.objects.create(
                 status='in_progress',  # noqa: E128
                 started_at=timezone.now()  # noqa: F841
-  # noqa: F841
             )
 
-            # If force option is used, delete all existing images
+ # If force option is used, delete all existing images
             if force:
                 self.stdout.write("Force option used - deleting all existing product images...")  # noqa: E501
                 try:
@@ -87,7 +84,6 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.SUCCESS(f"Deleted {deleted_count} existing product images"))  # noqa: E501
                         if sync_log:
                             sync_log.images_deleted = deleted_count
-  # noqa: F841
                             sync_log.save()
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"Error deleting existing images: {str(e)}"))  # noqa: E501
@@ -99,20 +95,19 @@ class Command(BaseCommand):
                     return
 
         try:
-            # Initialize counter variables
             images_added = 0
             images_updated = 0
             orphaned_images_added = 0
             orphaned_images_updated = 0
             products_affected = set()  # Use a set to count unique products
 
-            # Initialize API client
+ # Initialize API client
             client = ImageAPIClient()
 
-            # Store client as instance variable for use in helper methods
+ # Store client as instance variable for use in helper methods
             self.client = client
 
-            # Get API metadata to know total pages (with retries)
+ # Get API metadata to know total pages (with retries)
             max_retries = 3
             retry_delay = 5  # seconds
 
@@ -153,37 +148,36 @@ class Command(BaseCommand):
 
             self.stdout.write(f"Found {total_records} total images across {total_pages} pages")  # noqa: E501
 
-            # Limit pages if requested
+ # Limit pages if requested
             if limit:
                 total_pages = min(total_pages, skip_pages + limit)
 
-            # Process each page
+ # Process each page
             for page in range(skip_pages + 1, total_pages + 1):
                 self.stdout.write(f"Processing page {page}/{total_pages}")
 
-                # Get page of results from API
+ # Get page of results from API
                 results = client.get_all_images(page=page, page_size=page_size)
                 if not results or 'results' not in results:
                     self.stdout.write(self.style.WARNING(f"No results found on page {page}"))  # noqa: E501
                     continue
 
-                # Lists to store bulk operations
+ # Lists to store bulk operations
                 images_to_create = []
                 images_to_update = []
                 products_in_batch = set()
 
-                # Process each image
+ # Process each image
                 for image_data in results['results']:
-                    # Debug: Print raw image data
                     self.stdout.write("\nRaw image data:")
                     self.stdout.write(str(image_data))
 
-                    # Parse the image data
+ # Parse the image data
                     parsed_image = client.parse_image(image_data)
                     if not parsed_image:
                         continue
 
-                    # Print article numbers for debugging
+ # Print article numbers for debugging
                     articles = parsed_image.get('articles', [])
                     if articles:
                         self.stdout.write("\nFound articles in image:")
@@ -200,15 +194,15 @@ class Command(BaseCommand):
                             tablefmt='grid'  # noqa: F841
                         ))
 
-                    # Flag to track if this image was associated with any product  # noqa: E501
+ # Flag to track if this image was associated with any product  # noqa: E501
                     image_associated_with_product = False
 
-                    # Get associated articles
+ # Get associated articles
                     for article in parsed_image.get('articles', []):
                         article_number = article.get('article_number', '')
                         variant_code = article.get('variant_code', '')
 
-                        # Find matching product
+ # Find matching product
                         product = self._find_product(article_number, variant_code)  # noqa: E501
                         if not product:
                             continue
@@ -216,7 +210,6 @@ class Command(BaseCommand):
                         image_associated_with_product = True
 
                         if not dry_run:
-                            # Check if image exists
                             existing_image = None
                             if hasattr(product, 'images'):
                                 existing_image = ProductImage.objects.filter(
@@ -224,9 +217,8 @@ class Command(BaseCommand):
                                     external_id=parsed_image['external_id']  # noqa: F841
                                 ).first()
 
-                            # Prepare image instance
+ # Prepare image instance
                             if existing_image:
-                                # Update existing image
                                 existing_image.image_url = parsed_image['image_url']  # noqa: E501
                                 existing_image.thumbnail_url = parsed_image.get('thumbnail_url')  # noqa: E501
                                 existing_image.image_type = parsed_image['image_type']  # noqa: E501
@@ -234,7 +226,6 @@ class Command(BaseCommand):
                                 images_to_update.append(existing_image)
                                 images_updated += 1
                             else:
-                                # Create new image
                                 new_image = ProductImage(
                                     product=product,  # noqa: E128
                                     external_id=parsed_image['external_id'],  # noqa: F841
@@ -251,17 +242,14 @@ class Command(BaseCommand):
                         else:
                             self.stdout.write(f"  Would {'create' if not hasattr(product, 'images') or not product.images.filter(external_id=parsed_image['external_id']).exists() else 'update'} image for {product.sku}: {parsed_image['image_type']}")  # noqa: E501
 
-                    # If the image wasn't associated with any product, save it without a product reference  # noqa: E501
+ # If the image wasn't associated with any product, save it without a product reference  # noqa: E501
                     if not image_associated_with_product and not dry_run:
-                        # Check if this image already exists without a product
                         existing_image = ProductImage.objects.filter(
                             product__isnull=True,  # noqa: F841
-  # noqa: F841
                             external_id=parsed_image['external_id']  # noqa: F841
                         ).first()
 
                         if existing_image:
-                            # Update existing image
                             existing_image.image_url = parsed_image['image_url']  # noqa: E501
                             existing_image.thumbnail_url = parsed_image.get('thumbnail_url')  # noqa: E501
                             existing_image.image_type = parsed_image['image_type']  # noqa: E501
@@ -270,7 +258,6 @@ class Command(BaseCommand):
                             orphaned_images_updated += 1
                             self.stdout.write(f"  Updating orphaned image: {parsed_image['external_id']} ({parsed_image['image_type']})")  # noqa: E501
                         else:
-                            # Create new image without product
                             new_image = ProductImage(
                                 product=None,  # noqa: E128
                                 external_id=parsed_image['external_id'],  # noqa: F841
@@ -285,7 +272,7 @@ class Command(BaseCommand):
                     elif not image_associated_with_product and dry_run:
                         self.stdout.write(f"  Would create orphaned image: {parsed_image['external_id']} ({parsed_image['image_type']})")  # noqa: E501
 
-                # Print table of results for this page
+ # Print table of results for this page
                 table_data = []
                 for image in images_to_create + images_to_update:
                     table_data.append([
@@ -300,74 +287,58 @@ class Command(BaseCommand):
                     self.stdout.write(tabulate(
                         table_data,  # noqa: E128
                         headers=['SKU', 'Image Type', 'Is Front', 'Action'],  # noqa: F841
-  # noqa: F841
                         tablefmt='grid'  # noqa: F841
-  # noqa: F841
                     ))
                     self.stdout.write("\n")
 
-                # Create/update images individually instead of bulk operations
+ # Create/update images individually instead of bulk operations
                 if not dry_run and (images_to_create or images_to_update):
                     with transaction.atomic():
-                        # Create new images individually
                         if images_to_create:
                             for image in images_to_create:
                                 try:
-                                    # Save each image individually to let Django handle ID generation  # noqa: E501
                                     image.save()
                                 except Exception as e:
                                     product_info = f"product {image.product.sku}" if image.product else "orphaned image"  # noqa: E501
                                     self.stdout.write(self.style.ERROR(f"Error creating image for {product_info}: {str(e)}"))  # noqa: E501
-                                    # Log the error but continue with the next image  # noqa: E501
                                     logger.exception(f"Error creating product image for {product_info}")  # noqa: E501
                                     continue
 
-                        # Update existing images individually
+ # Update existing images individually
                         if images_to_update:
                             for image in images_to_update:
                                 try:
-                                    # Get the existing image from the database
                                     existing_image = ProductImage.objects.get(id=image.id)  # noqa: E501
-                                    # Update fields
                                     existing_image.image_url = image.image_url
-  # noqa: F841
                                     existing_image.thumbnail_url = image.thumbnail_url  # noqa: E501
-  # noqa: E501, F841
                                     existing_image.image_type = image.image_type  # noqa: E501
                                     existing_image.is_front = image.is_front
                                     existing_image.save()
                                 except Exception as e:
                                     product_info = f"product {image.product.sku}" if image.product else "orphaned image"  # noqa: E501
                                     self.stdout.write(self.style.ERROR(f"Error updating image {image.id} for {product_info}: {str(e)}"))  # noqa: E501
-                                    # Log the error but continue
                                     logger.exception(f"Error updating product image {image.id}")  # noqa: E501
                                     continue
 
-                        # Update primary flags for Produktfoto front images
+ # Update primary flags for Produktfoto front images
                         if products_in_batch:
                             try:
-                                # First, reset all primary flags
                                 ProductImage.objects.filter(
                                     product_id__in=products_in_batch  # noqa: E128
                                 ).update(is_primary=False)
 
-                                # Then set primary for front Produktfotos
+ # Then set primary for front Produktfotos
                                 ProductImage.objects.filter(
                                     product_id__in=products_in_batch,  # noqa: F841
-  # noqa: F841
                                     image_type='Produktfoto',  # noqa: F841
-  # noqa: F841
                                     is_front=True  # noqa: F841
-  # noqa: F841
                                 ).update(is_primary=True)
-  # noqa: F841
                             except Exception as e:
                                 self.stdout.write(self.style.ERROR(f"Error updating primary flags: {str(e)}"))  # noqa: E501
-                                # Log the error but continue
                                 logger.exception("Error updating primary flags for product images")  # noqa: E501
                                 continue
 
-            # Complete the sync log
+ # Complete the sync log
             self.stdout.write(self.style.SUCCESS(
                 f"Sync completed: {images_added} added, {images_updated} updated, "  # noqa: E501
                 f"{orphaned_images_added} orphaned images added, {orphaned_images_updated} orphaned images updated, "  # noqa: E501
@@ -378,11 +349,8 @@ class Command(BaseCommand):
                 sync_log.status = 'completed'
                 sync_log.completed_at = timezone.now()
                 sync_log.images_added = images_added + orphaned_images_added
-  # noqa: F841
                 sync_log.images_updated = images_updated + orphaned_images_updated  # noqa: E501
-  # noqa: E501, F841
                 sync_log.products_affected = len(products_affected)
-  # noqa: F841
                 sync_log.save()
 
         except Exception as e:
@@ -391,11 +359,8 @@ class Command(BaseCommand):
 
             if not dry_run and sync_log:
                 sync_log.status = 'failed'
-  # noqa: F841
                 sync_log.completed_at = timezone.now()
-  # noqa: F841
                 sync_log.error_message = str(e)
-  # noqa: F841
                 sync_log.save()
 
     def _find_product(self, article_number, variant_code):
@@ -403,17 +368,16 @@ class Command(BaseCommand):
         if not article_number:
             return None
 
-        # Try to find exact match first
+ # Try to find exact match first
         product = VariantProduct.objects.filter(sku=article_number).first()
         if product:
             self.stdout.write(f"    Found match by SKU: {article_number}")
             return product
 
-        # Try to find parent product
+ # Try to find parent product
         parent = ParentProduct.objects.filter(sku=article_number).first()
         if parent:
             if variant_code:
-                # Try to find specific variant
                 variant = VariantProduct.objects.filter(
                     parent=parent,  # noqa: E128
                     variant_code=variant_code
@@ -424,7 +388,7 @@ class Command(BaseCommand):
             self.stdout.write(f"    Found parent product: {article_number}")
             return parent
 
-        # Try prefix match for products with internal suffixes
+ # Try prefix match for products with internal suffixes
         if '-' in article_number:
             base_sku = article_number.split('-')[0]
             product = VariantProduct.objects.filter(sku__startswith=base_sku).first()  # noqa: E501
@@ -432,6 +396,6 @@ class Command(BaseCommand):
                 self.stdout.write(f"    Found product by prefix match: {product.sku}")  # noqa: E501
                 return product
 
-        # Not found - just log and return None
+ # Not found - just log and return None
         self.stdout.write(f"    No product found for article number: {article_number}")  # noqa: E501
         return None

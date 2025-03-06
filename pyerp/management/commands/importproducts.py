@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management command for importing products from external sources.
 """
@@ -38,20 +37,17 @@ class ProductImportValidator(ImportValidator):
             return ValidationResult(
                 is_valid=False,  # noqa: E128
                 errors={"list_price": ["Invalid price format"]}  # noqa: F841
-  # noqa: F841
             )
 
     def cross_validate_row(self, validated_data):
         """Perform cross-field validation."""
         return ValidationResult(is_valid=True)
-  # noqa: F841
 
 
 class Command(BaseCommand):
     """Command to import products from external sources."""
 
     help = "Import products from CSV file"  # noqa: F841
-  # noqa: F841
 
     def create_product_validator(self):
 
@@ -72,5 +68,4 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Execute the command."""
         self.stdout.write("Import products command executed")
-        # Implementation for test purposes only
         return True

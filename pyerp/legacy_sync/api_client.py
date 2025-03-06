@@ -12,10 +12,10 @@ import datetime
 from typing import Dict, List, Optional, Any, Union  # noqa: F401
 import pandas as pd  # noqa: F401
 
-# Configure logging
+ # Configure logging
 logger = logging.getLogger(__name__)
 
-# Import from our new direct_api module
+ # Import from our new direct_api module
 try:
     from pyerp.direct_api.client import DirectAPIClient
     from pyerp.direct_api.auth import get_session  # noqa: F401
@@ -24,16 +24,15 @@ try:
 except ImportError as e:
     logger.error(f"Failed to import direct_api modules: {e}")
 
-    # Fall back to WSZ_api if direct_api is not available
+ # Fall back to WSZ_api if direct_api is not available
     logger.warning("Falling back to WSZ_api package")
 
-    # Add the WSZ_api package to the Python path
+ # Add the WSZ_api package to the Python path
     WSZ_API_PATH = r'C:\Users\Joan-Admin\PycharmProjects\WSZ_api'
     if WSZ_API_PATH not in sys.path:
         sys.path.append(WSZ_API_PATH)
 
     try:
-        # Import the WSZ_api modules
         from wsz_api.getTable import fetch_data_from_api
         from wsz_api.pushField import push_data
         from wsz_api.auth import get_session_cookie
@@ -59,7 +58,6 @@ class LegacyAPIClient:
         self.availability_check_interval = datetime.timedelta(minutes=5)  # Check every 5 minutes  # noqa: E501
 
         try:
-            # Try to use DirectAPIClient
             self.direct_client = DirectAPIClient()
             logger.info("Using DirectAPIClient for legacy API interactions")
         except Exception as e:
@@ -69,7 +67,6 @@ class LegacyAPIClient:
         try:
             self.refresh_session()
         except (ServerUnavailableError, ResponseError) as e:
-            # Handle initialization errors gracefully
             logger.error(f"Could not establish initial connection to legacy ERP: {e}")  # noqa: E501
             self.server_available = False
             self.last_availability_check = datetime.datetime.now()
@@ -79,7 +76,6 @@ class LegacyAPIClient:
         Refresh the session cookie for API authentication.
         """
         if not self.server_available:
-            # Check if we should try again based on the time interval
             time_since_last_check = datetime.datetime.now() - self.last_availability_check  # noqa: E501
             if time_since_last_check < self.availability_check_interval:
                 logger.warning("Server was previously unavailable, skipping refresh_session")  # noqa: E501
@@ -87,12 +83,9 @@ class LegacyAPIClient:
 
         try:
             if self.direct_client:
-                # Use DirectAPIClient session management
                 self.session_cookie = self.direct_client._get_session().get_cookie()  # noqa: E501
             else:
-                # Fall back to WSZ_api
                 self.session_cookie = get_session_cookie(mode='live')
-  # noqa: F841
 
             logger.info("Successfully refreshed session cookie")
             self.server_available = True
@@ -100,13 +93,11 @@ class LegacyAPIClient:
             logger.error(f"Server is unavailable during session refresh: {e}")
             self.server_available = False
             self.last_availability_check = datetime.datetime.now()
-            # Don't raise the exception, just mark the server as unavailable
         except Exception as e:
             logger.error(f"Failed to refresh session cookie: {e}")
             raise
 
     def fetch_table(
-  # noqa: E128
 
         self,
         table_name: str,
@@ -133,7 +124,6 @@ class LegacyAPIClient:
             Exception: For other errors during data fetching
         """
         if not self.server_available:
-            # Check if we should try again based on the time interval
             time_since_last_check = datetime.datetime.now() - self.last_availability_check  # noqa: E501
             if time_since_last_check < self.availability_check_interval:
                 logger.warning(f"Server is currently unavailable, skipping fetch_table for {table_name}")  # noqa: E501
@@ -141,7 +131,6 @@ class LegacyAPIClient:
 
         try:
             if self.direct_client:
-                # Use DirectAPIClient
                 df = self.direct_client.fetch_table(
                     table_name=table_name,  # noqa: E128
                     top=top,
@@ -150,8 +139,6 @@ class LegacyAPIClient:
                     date_created_start=date_created_start
                 )
             else:
-                # Fall back to WSZ_api
-                # Convert date_created_start to datetime if it's a string
                 date_created_param = date_created_start
                 if isinstance(date_created_start, str):
                     date_created_param = datetime.datetime.fromisoformat(date_created_start)  # noqa: E501
@@ -159,12 +146,9 @@ class LegacyAPIClient:
                 df = fetch_data_from_api(
                     table_name=table_name,  # noqa: E128
                     top=top,
-  # noqa: F841
                     skip=skip,
                     new_data_only=new_data_only,
-  # noqa: F841
                     date_created_start=date_created_param
-  # noqa: F841
                 )
 
             logger.info(f"Successfully fetched {len(df)} records from {table_name}")  # noqa: E501
@@ -180,7 +164,6 @@ class LegacyAPIClient:
             raise
 
     def push_field(
-  # noqa: E128
 
         self,
         table_name: str,
@@ -205,7 +188,6 @@ class LegacyAPIClient:
             Exception: For other errors during data pushing
         """
         if not self.server_available:
-            # Check if we should try again based on the time interval
             time_since_last_check = datetime.datetime.now() - self.last_availability_check  # noqa: E501
             if time_since_last_check < self.availability_check_interval:
                 logger.warning(f"Server is currently unavailable, skipping push_field to {table_name}")  # noqa: E501
@@ -213,7 +195,6 @@ class LegacyAPIClient:
 
         try:
             if self.direct_client:
-                # Use DirectAPIClient
                 result = self.direct_client.push_field(
                     table_name=table_name,  # noqa: E128
                     record_id=record_id,
@@ -221,13 +202,10 @@ class LegacyAPIClient:
                     field_value=field_value
                 )
             else:
-                # Fall back to WSZ_api
                 result = push_data(
                     table=table_name,  # noqa: E128
                     column=field_name,  # noqa: F841
-  # noqa: F841
                     key=record_id,  # noqa: F841
-  # noqa: F841
                     value=field_value  # noqa: F841
                 )
 
@@ -244,7 +222,6 @@ class LegacyAPIClient:
             raise
 
     def fetch_record(
-  # noqa: E128
 
         self,
         table_name: str,
@@ -265,7 +242,6 @@ class LegacyAPIClient:
             Exception: For other errors during data fetching
         """
         if not self.server_available:
-            # Check if we should try again based on the time interval
             time_since_last_check = datetime.datetime.now() - self.last_availability_check  # noqa: E501
             if time_since_last_check < self.availability_check_interval:
                 logger.warning(f"Server is currently unavailable, skipping fetch_record for {table_name}/{record_id}")  # noqa: E501
@@ -273,13 +249,11 @@ class LegacyAPIClient:
 
         try:
             if self.direct_client:
-                # Use DirectAPIClient
                 record = self.direct_client.fetch_record(
                     table_name=table_name,  # noqa: E128
                     record_id=record_id
                 )
             else:
-                # Fall back to a workaround using WSZ_api
                 from wsz_api.getRecord import get_record
                 record = get_record(table_name, record_id)
 
@@ -289,15 +263,12 @@ class LegacyAPIClient:
         except ServerUnavailableError as e:
             logger.error(f"Server is unavailable during fetch_record for {table_name}/{record_id}: {e}")  # noqa: E501
             self.server_available = False
-  # noqa: F841
             self.last_availability_check = datetime.datetime.now()
-  # noqa: F841
             return {}  # Return empty dict instead of raising an exception
         except Exception as e:
             logger.error(f"Failed to fetch record {table_name}/{record_id}: {e}")  # noqa: E501
             raise
 
 
-# Create a singleton instance of the API client
+ # Create a singleton instance of the API client
 api_client = LegacyAPIClient()  # noqa: F841
-  # noqa: F841

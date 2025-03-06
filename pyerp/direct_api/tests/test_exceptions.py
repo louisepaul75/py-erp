@@ -23,18 +23,16 @@ class TestExceptions(TestCase):
     def test_base_exception(self):
 
         """Test the base DirectAPIError exception."""
-        # Create an instance with just a message
         error = DirectAPIError("Test error message")
         self.assertEqual(str(error), "Test error message")
 
     def test_response_error(self):
         """Test the ResponseError exception."""
-        # Create an instance with required parameters
         error = ResponseError(400, "Bad request")
         self.assertEqual(error.status_code, 400)
         self.assertEqual(str(error), "API error 400: Bad request")
 
-        # Create an instance with response_body
+ # Create an instance with response_body
         error = ResponseError(
             status_code=500,  # noqa: E128
             message="Server error",  # noqa: F841
@@ -47,61 +45,54 @@ class TestExceptions(TestCase):
 
     def test_connection_error(self):
         """Test the ConnectionError exception."""
-        # Create a basic instance
         error = ConnectionError("Connection refused")
         self.assertEqual(str(error), "Connection refused")
 
-        # Check inheritance from DirectAPIError
+ # Check inheritance from DirectAPIError
         self.assertIsInstance(error, DirectAPIError)
 
     def test_authentication_error(self):
         """Test the AuthenticationError exception."""
-        # Create a basic instance
         error = AuthenticationError("Invalid credentials")
         self.assertEqual(str(error), "Invalid credentials")
 
-        # Check inheritance
+ # Check inheritance
         self.assertIsInstance(error, DirectAPIError)
 
     def test_data_error(self):
         """Test the DataError exception."""
-        # Create a basic instance
         error = DataError("Invalid data format")
         self.assertEqual(str(error), "Invalid data format")
 
-        # Check inheritance
+ # Check inheritance
         self.assertIsInstance(error, DirectAPIError)
 
     def test_rate_limit_error(self):
         """Test the RateLimitError exception."""
-        # Create a basic instance with status code and message
         error = RateLimitError(429, "Too many requests")
         self.assertEqual(str(error), "API error 429: Too many requests")
 
-        # Check inheritance
+ # Check inheritance
         self.assertIsInstance(error, ResponseError)
 
     def test_session_error(self):
         """Test the SessionError exception."""
-        # Create a basic instance
         error = SessionError("Session expired")
         self.assertEqual(str(error), "Session expired")
 
-        # Check inheritance
+ # Check inheritance
         self.assertIsInstance(error, DirectAPIError)
 
     def test_configuration_error(self):
         """Test the ConfigurationError exception."""
-        # Create a basic instance
         error = ConfigurationError("Missing API URL")
         self.assertEqual(str(error), "Missing API URL")
 
-        # Check inheritance
+ # Check inheritance
         self.assertIsInstance(error, DirectAPIError)
 
     def test_exception_hierarchy(self):
         """Test the exception inheritance hierarchy."""
-        # Create instances of each exception type
         base_error = DirectAPIError("Base error")
         response_error = ResponseError(400, "Response error")
         connection_error = ConnectionError("Connection error")
@@ -109,7 +100,7 @@ class TestExceptions(TestCase):
         data_error = DataError("Data error")
         rate_limit_error = RateLimitError(429, "Rate limit error")
 
-        # Test that all exceptions inherit from DirectAPIError
+ # Test that all exceptions inherit from DirectAPIError
         self.assertIsInstance(base_error, DirectAPIError)
         self.assertIsInstance(response_error, DirectAPIError)
         self.assertIsInstance(connection_error, DirectAPIError)
@@ -117,12 +108,12 @@ class TestExceptions(TestCase):
         self.assertIsInstance(data_error, DirectAPIError)
         self.assertIsInstance(rate_limit_error, DirectAPIError)
 
-        # Test specific inheritance relationships
+ # Test specific inheritance relationships
         self.assertIsInstance(response_error, ResponseError)
         self.assertIsInstance(auth_error, AuthenticationError)
         self.assertIsInstance(rate_limit_error, ResponseError)
 
-        # Test that exceptions can be caught by their parent types
+ # Test that exceptions can be caught by their parent types
         try:
             raise auth_error
         except DirectAPIError as e:

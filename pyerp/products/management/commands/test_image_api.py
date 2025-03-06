@@ -6,10 +6,8 @@ import logging
 
 class Command(BaseCommand):
     help = 'Test the external image API connection'  # noqa: F841
-  # noqa: F841
 
     def handle(self, *args, **options):
-        # Show configuration being used
         self.stdout.write('Image API Configuration:')
         self.stdout.write(f'URL: {settings.IMAGE_API["BASE_URL"]}')
         self.stdout.write(f'Username: {settings.IMAGE_API["USERNAME"]}')
@@ -20,9 +18,8 @@ class Command(BaseCommand):
             f'Cache Enabled: {  # noqa: E128
                 settings.IMAGE_API["CACHE_ENABLED"]}')
 
-        # Enable debug logging for requests
+ # Enable debug logging for requests
         logging.basicConfig(level=logging.DEBUG)
-  # noqa: F841
         logging.getLogger('urllib3').setLevel(logging.DEBUG)
 
         client = ImageAPIClient()
@@ -33,10 +30,10 @@ class Command(BaseCommand):
         if images:
             self.stdout.write(
                 self.style.SUCCESS(  # noqa: E128
-                    f'Successfully retrieved {
+                f'Successfully retrieved {
                         len(images)} images'))  # noqa: E128
 
-            # Display details of the first image
+ # Display details of the first image
             if len(images) > 0:
                 first_image = client.parse_image(images[0])
                 self.stdout.write('\nFirst image details:')

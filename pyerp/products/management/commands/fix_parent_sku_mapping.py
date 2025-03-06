@@ -10,17 +10,16 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from pyerp.products.models import ParentProduct
 
-# Add the WSZ_api path to the Python path
+ # Add the WSZ_api path to the Python path
 WSZ_API_PATH = r'C:\Users\Joan-Admin\PycharmProjects\WSZ_api'
 if WSZ_API_PATH not in sys.path:
     sys.path.append(WSZ_API_PATH)
 
-# Now import from wsz_api
+ # Now import from wsz_api
 from wsz_api.getTable import fetch_data_from_api
 
-# Configure logging
+ # Configure logging
 logger = logging.getLogger(__name__)  # noqa: F841
-  # noqa: F841
 
 
 class Command(BaseCommand):
@@ -42,9 +41,7 @@ class Command(BaseCommand):
             '--batch-size',  # noqa: E128
             type=int,  # noqa: F841
             default=50,  # noqa: F841
-  # noqa: F841
             help='Number of parents to process in each transaction batch'  # noqa: F841
-  # noqa: F841
         )
 
     def handle(self, *args, **options):
@@ -54,7 +51,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.NOTICE('Starting parent product SKU mapping fix from Artikel_Familie...'))  # noqa: E501
 
-        # Get all parent products
+ # Get all parent products
         parent_products = ParentProduct.objects.all()
 
         if limit:
@@ -63,10 +60,9 @@ class Command(BaseCommand):
         total_parents = parent_products.count()
         self.stdout.write(self.style.SUCCESS(f'Found {total_parents} parent products to check'))  # noqa: E501
 
-        # Fetch data from legacy Artikel_Familie table using wsz_api
+ # Fetch data from legacy Artikel_Familie table using wsz_api
         self.stdout.write(self.style.NOTICE('Fetching Artikel_Familie data from legacy ERP...'))  # noqa: E501
         try:
-            # Use wsz_api to fetch the data
             artikel_familie_df = fetch_data_from_api('Artikel_Familie', top=10000, new_data_only=False)  # noqa: E501
 
             if artikel_familie_df is None or len(artikel_familie_df) == 0:
@@ -75,7 +71,7 @@ class Command(BaseCommand):
 
             self.stdout.write(self.style.SUCCESS(f'Fetched {len(artikel_familie_df)} records from Artikel_Familie'))  # noqa: E501
 
-            # Create mappings by different fields for flexible matching
+ # Create mappings by different fields for flexible matching
             legacy_data_by_id = {}       # Key is the __KEY value
             legacy_data_by_nummer = {}   # Key is the Nummer value
             legacy_data_by_oldart = {}   # Key is the oldArtKalk value
@@ -110,7 +106,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"Error fetching data from Artikel_Familie API: {str(e)}"))  # noqa: E501
             return
 
-        # Track statistics
+ # Track statistics
         stats = {
             'total': total_parents,  # noqa: E128
             'fixed': 0,
@@ -118,58 +114,57 @@ class Command(BaseCommand):
             'errors': 0
         }
 
-        # Process parents in batches
+ # Process parents in batches
         for i in range(0, total_parents, batch_size):
             batch = parent_products[i:i+batch_size]
             self.stdout.write(self.style.NOTICE(f'Processing batch {i//batch_size + 1} of {(total_parents + batch_size - 1)//batch_size}'))  # noqa: E501
 
-            # Process each parent product in this batch
+ # Process each parent product in this batch
             with transaction.atomic():
                 for parent in batch:
                     try:
-                        # Print current values
                         self.stdout.write(f"Checking parent: ID={parent.id}, SKU={parent.sku}, Legacy ID={parent.legacy_id}")  # noqa: E501
 
-                        # Try to find a match in the legacy data using multiple matching strategies  # noqa: E501
+ # Try to find a match in the legacy data using multiple matching strategies  # noqa: E501
                         legacy_record = None
                         match_type = None
 
-                        # Strategy 1: Try to match by legacy_id against ID
+ # Strategy 1: Try to match by legacy_id against ID
                         if parent.legacy_id and parent.legacy_id in legacy_data_by_id:  # noqa: E501
                             legacy_record = legacy_data_by_id[parent.legacy_id]
                             match_type = "legacy_id_to_id"
 
-                        # Strategy 2: Try to match by SKU against Nummer
+ # Strategy 2: Try to match by SKU against Nummer
                         elif parent.sku and parent.sku in legacy_data_by_nummer:  # noqa: E501
                             legacy_record = legacy_data_by_nummer[parent.sku]
                             match_type = "sku_to_nummer"
 
-                        # Strategy 3: Try to match by legacy_id against Nummer (handling swapped fields)  # noqa: E501
+ # Strategy 3: Try to match by legacy_id against Nummer (handling swapped fields)  # noqa: E501
                         elif parent.legacy_id and parent.legacy_id in legacy_data_by_nummer:  # noqa: E501
                             legacy_record = legacy_data_by_nummer[parent.legacy_id]  # noqa: E501
                             match_type = "legacy_id_to_nummer"
 
-                        # Strategy 4: Try to match by SKU against ID (handling swapped fields)  # noqa: E501
+ # Strategy 4: Try to match by SKU against ID (handling swapped fields)  # noqa: E501
                         elif parent.sku and parent.sku in legacy_data_by_id:
                             legacy_record = legacy_data_by_id[parent.sku]
                             match_type = "sku_to_id"
 
-                        # Strategy 5: Try to match by SKU against oldArtKalk
+ # Strategy 5: Try to match by SKU against oldArtKalk
                         elif parent.sku and parent.sku in legacy_data_by_oldart:  # noqa: E501
                             legacy_record = legacy_data_by_oldart[parent.sku]
                             match_type = "sku_to_oldart"
 
-                        # Strategy 6: Try to match by legacy_id against oldArtKalk  # noqa: E501
+ # Strategy 6: Try to match by legacy_id against oldArtKalk  # noqa: E501
                         elif parent.legacy_id and parent.legacy_id in legacy_data_by_oldart:  # noqa: E501
                             legacy_record = legacy_data_by_oldart[parent.legacy_id]  # noqa: E501
                             match_type = "legacy_id_to_oldart"
 
-                        # If we found a match
+ # If we found a match
                         if legacy_record:
                             new_sku = legacy_record['nummer']
                             new_legacy_id = legacy_record['oldArtKalk'] or legacy_record['id']  # noqa: E501
 
-                            # Check if update is needed
+ # Check if update is needed
                             if parent.sku != new_sku or parent.legacy_id != new_legacy_id:  # noqa: E501
                                 old_sku = parent.sku
                                 old_legacy_id = parent.legacy_id
@@ -200,16 +195,15 @@ class Command(BaseCommand):
                     except Exception as e:
                         self.stdout.write(self.style.ERROR(
                             f"Error processing parent ID={parent.id}: {str(e)}"
-  # noqa: F841
                         ))
                         stats['errors'] += 1
 
-            # Commit or rollback the batch transaction
+ # Commit or rollback the batch transaction
             if dry_run:
                 self.stdout.write(self.style.WARNING("DRY RUN - No changes were saved to the database for this batch"))  # noqa: E501
                 transaction.set_rollback(True)
 
-        # Print summary
+ # Print summary
         self.stdout.write("\nFix summary:")
         self.stdout.write(f"Total parents: {stats['total']}")
         self.stdout.write(f"Fixed: {stats['fixed']}")

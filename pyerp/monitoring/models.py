@@ -17,9 +17,9 @@ class HealthCheckResult(models.Model):
     STATUS_ERROR = 'error'
 
     STATUS_CHOICES = [
-        (STATUS_SUCCESS, _('Success')),  # noqa: E128
-        (STATUS_WARNING, _('Warning')),
-        (STATUS_ERROR, _('Error')),
+                      (STATUS_SUCCESS, _('Success')),  # noqa: E128
+                      (STATUS_WARNING, _('Warning')),
+                      (STATUS_ERROR, _('Error')),
     ]
 
     COMPONENT_DATABASE = 'database'
@@ -28,10 +28,10 @@ class HealthCheckResult(models.Model):
     COMPONENT_DATABASE_VALIDATION = 'database_validation'
 
     COMPONENT_CHOICES = [
-        (COMPONENT_DATABASE, _('Database')),  # noqa: E128
-        (COMPONENT_LEGACY_ERP, _('Legacy ERP')),
-        (COMPONENT_PICTURES_API, _('Pictures API')),
-        (COMPONENT_DATABASE_VALIDATION, _('Database Validation')),
+                         (COMPONENT_DATABASE, _('Database')),  # noqa: E128
+                         (COMPONENT_LEGACY_ERP, _('Legacy ERP')),
+                         (COMPONENT_PICTURES_API, _('Pictures API')),
+                         (COMPONENT_DATABASE_VALIDATION, _('Database Validation')),  # noqa: E501
     ]
 
     component = models.CharField(
@@ -44,16 +44,13 @@ class HealthCheckResult(models.Model):
     status = models.CharField(  # noqa: F841
         _('Status'),  # noqa: E128
         max_length=20,  # noqa: F841
-  # noqa: F841
         choices=STATUS_CHOICES,  # noqa: F841
-  # noqa: F841
         help_text=_('Health check result status')  # noqa: F841
     )
 
     timestamp = models.DateTimeField(  # noqa: F841
         _('Timestamp'),  # noqa: E128
         default=timezone.now,  # noqa: F841
-  # noqa: F841
         help_text=_('When the health check was performed')  # noqa: F841
     )
 
@@ -65,27 +62,20 @@ class HealthCheckResult(models.Model):
     )
 
     response_time = models.FloatField(  # noqa: F841
-  # noqa: F841
         _('Response Time (ms)'),
         null=True,  # noqa: F841
-  # noqa: F841
         blank=True,  # noqa: F841
-  # noqa: F841
         help_text=_('Time taken to complete the health check in milliseconds')  # noqa: F841
-  # noqa: F841
     )
 
     class Meta:
 
         verbose_name = _('Health Check Result')  # noqa: F841
         verbose_name_plural = _('Health Check Results')  # noqa: F841
-  # noqa: F841
         ordering = ['-timestamp']  # noqa: F841
-  # noqa: F841
         indexes = [  # noqa: F841
-  # noqa: F841
-            models.Index(fields=['component', '-timestamp']),
-  # noqa: F841
+                   models.Index(fields=['component', '-timestamp']),
+                   # noqa: F841
         ]
 
     def __str__(self):
@@ -105,6 +95,5 @@ class HealthCheckResult(models.Model):
         """
         try:
             return cls.objects.filter(component=component).latest('timestamp')
-  # noqa: F841
         except cls.DoesNotExist:
             return None

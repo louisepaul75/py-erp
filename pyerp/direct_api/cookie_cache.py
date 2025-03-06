@@ -16,15 +16,14 @@ import logging
 import threading
 from datetime import datetime, timedelta  # noqa: F401
 
-# Configure logging
+ # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')  # noqa: E501
-  # noqa: E501, F841
 logger = logging.getLogger(__name__)
 
-# Check if file cache is forced via environment variable
+ # Check if file cache is forced via environment variable
 FORCE_FILE_CACHE = os.environ.get('FORCE_FILE_CACHE', 'false').lower() in ('true', '1', 'yes')  # noqa: E501
 
-# Try to import Django's cache framework, fall back to file or local implementation if not available  # noqa: E501
+ # Try to import Django's cache framework, fall back to file or local implementation if not available  # noqa: E501
 try:
     from django.core.cache import cache as django_cache  # noqa: F401
     USING_DJANGO_CACHE = not FORCE_FILE_CACHE
@@ -33,10 +32,8 @@ try:
         logger.info("Using Django's cache framework for session cookie storage")  # noqa: E501
     else:
         logger.info("Django available but using file-based cache due to FORCE_FILE_CACHE=true")  # noqa: E501
-  # noqa: E501, F841
 except ImportError:
     USING_DJANGO_CACHE = False
-    # Use file-based cache by default if not in Django
     USING_FILE_CACHE = True
     logger.info("Django cache not available, using file-based cache for session cookie storage")  # noqa: E501
 
@@ -54,13 +51,11 @@ class InMemoryCache:
     def get(self, key):
 
         with self._lock:
-            # Check if key exists and hasn't expired
             if key in self._cache:
                 value, expiry = self._cache[key]
                 if expiry is None or expiry > time.time():
                     return value
                 else:
-                    # Clean up expired keys
                     del self._cache[key]
             return None
 
@@ -88,18 +83,16 @@ class FileCache:
         if cache_dir:
             self.cache_dir = cache_dir
         else:
-            # Use a .cache directory in the same directory as this script
             script_dir = os.path.dirname(os.path.abspath(__file__))
             self.cache_dir = os.path.join(script_dir, '.cache')
 
-        # Create cache directory if it doesn't exist
+ # Create cache directory if it doesn't exist
         if not os.path.exists(self.cache_dir):
             try:
                 os.makedirs(self.cache_dir)
                 logger.info(f"Created cache directory: {self.cache_dir}")
             except Exception as e:
                 logger.error(f"Failed to create cache directory: {e}")
-                # Fall back to temp directory
                 self.cache_dir = os.path.join(os.path.expanduser('~'), '.pyerp_cache')  # noqa: E501
                 if not os.path.exists(self.cache_dir):
                     os.makedirs(self.cache_dir)
@@ -108,7 +101,6 @@ class FileCache:
     def _get_cache_file_path(self, key):
 
         """Get the file path for a cache key."""
-        # Create a safe filename from the key
         safe_key = key.replace(':', '_').replace('/', '_')
         return os.path.join(self.cache_dir, f"{safe_key}.json")
 
@@ -122,18 +114,16 @@ class FileCache:
                 with open(file_path, 'r') as f:
                     cache_entry = json.load(f)
 
-                # Check if expired
+ # Check if expired
                 if 'expiry' in cache_entry:
                     expiry = cache_entry['expiry']
                     if expiry is not None and expiry < time.time():
-                        # Expired, remove the file
                         os.remove(file_path)
                         return None
 
                 return cache_entry['value']
             except Exception as e:
                 logger.error(f"Error reading cache file {file_path}: {e}")
-                # Remove corrupt file
                 try:
                     os.remove(file_path)
                 except:
@@ -147,8 +137,8 @@ class FileCache:
             try:
                 cache_entry = {
                     'value': value,  # noqa: E128
-                    'expiry': time.time() + timeout if timeout is not None else None,  # noqa: E501
-                    'created': time.time()
+                               'expiry': time.time() + timeout if timeout is not None else None,  # noqa: E501
+                               'created': time.time()
                 }
 
                 with open(file_path, 'w') as f:
@@ -171,15 +161,12 @@ class FileCache:
             return False
 
 
-# Create appropriate cache based on availability
+ # Create appropriate cache based on availability
 if USING_DJANGO_CACHE:
-    # Use Django's cache
     pass
 elif USING_FILE_CACHE:
-    # Use file-based cache
     file_cache = FileCache()
 else:
-    # Use in-memory cache
     local_cache = InMemoryCache()
 
 
@@ -192,7 +179,7 @@ class CookieCache:
     a file-based cache for persistence, or a fallback in-memory implementation.
     """
 
-    # Cookie cache timeout in seconds (1 hour by default)
+ # Cookie cache timeout in seconds (1 hour by default)
     DEFAULT_TIMEOUT = 3600  # noqa: F841
 
     @staticmethod
@@ -251,26 +238,23 @@ class CookieCache:
         """
         cache_key = CookieCache._get_cache_key(environment)
 
-        # Calculate timeout for the cache entry
+ # Calculate timeout for the cache entry
         if expires_at:
             now = datetime.now()
             if expires_at > now:
-                # Convert timedelta to seconds for the cache
                 timeout = int((expires_at - now).total_seconds())
             else:
-                # Already expired
                 logger.warning("Attempted to cache an already expired cookie")
                 return False
         else:
-            # Use default timeout
             timeout = CookieCache.DEFAULT_TIMEOUT
 
-        # Store cookie data in cache
+ # Store cookie data in cache
         cookie_data = {
             'name': cookie_name,  # noqa: E128
             'value': cookie_value,
-            'expires_at': expires_at.isoformat() if expires_at else None,
-            'cached_at': datetime.now().isoformat()
+                       'expires_at': expires_at.isoformat() if expires_at else None,  # noqa: E501
+                       'cached_at': datetime.now().isoformat()
         }
 
         if USING_DJANGO_CACHE:
@@ -296,7 +280,7 @@ class CookieCache:
         """
         cache_key = CookieCache._get_cache_key(environment)
 
-        # Check if the key exists first
+ # Check if the key exists first
         if USING_DJANGO_CACHE:
             cookie_exists = django_cache.get(cache_key) is not None
             if cookie_exists:

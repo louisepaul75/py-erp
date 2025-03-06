@@ -5,4 +5,3 @@ This package contains various utility scripts for managing the pyERP system.
 """
 
 __all__ = ['db_migrations']  # noqa: F841
-  # noqa: F841

@@ -6,11 +6,9 @@ the external WSZ_api package dependency.
 """
 
 __version__ = '0.1.0'  # noqa: F841
-  # noqa: F841
 
-# Import the client for easy access
+ # Import the client for easy access
 from pyerp.direct_api.client import DirectAPIClient
 
-# Create a singleton instance for backwards compatibility
+ # Create a singleton instance for backwards compatibility
 client = DirectAPIClient()  # noqa: F841
-  # noqa: F841

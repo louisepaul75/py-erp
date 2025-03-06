@@ -17,7 +17,7 @@ from datetime import datetime
 from pyerp.legacy_sync.api_client import api_client
 from pyerp.legacy_sync.models import SyncLog, SyncStatus, EntityMapping, EntityMappingConfig  # noqa: E501
 
-# Configure logging
+ # Configure logging
 logger = logging.getLogger(__name__)
 
 
@@ -51,45 +51,35 @@ def map_variant_product_fields(variant_product, legacy_data):
     Returns:
         The updated VariantProduct instance
     """
-    # Map high priority core fields
     variant_product.is_verkaufsartikel = legacy_data.get('Verkaufsartikel', False)  # noqa: E501
-  # noqa: E501, F841
 
-    # Handle date fields
+ # Handle date fields
     release_date = legacy_data.get('Release_Date')
     if release_date:
-        # Convert milliseconds timestamp to datetime if needed
         if isinstance(release_date, (int, float)):
             variant_product.release_date = datetime.fromtimestamp(release_date / 1000)  # noqa: E501
         else:
             variant_product.release_date = release_date
-  # noqa: F841
 
     auslaufdatum = legacy_data.get('Auslaufdatum')
     if auslaufdatum:
-        # Convert milliseconds timestamp to datetime if needed
         if isinstance(auslaufdatum, (int, float)):
             variant_product.auslaufdatum = datetime.fromtimestamp(auslaufdatum / 1000)  # noqa: E501
         else:
             variant_product.auslaufdatum = auslaufdatum
-  # noqa: F841
 
-    # Handle pricing fields from the Preise collection
+ # Handle pricing fields from the Preise collection
     preise = legacy_data.get('Preise', {}).get('Coll', [])
     for preis in preise:
         art = preis.get('Art')
         if art == 'Laden':  # Retail price
             variant_product.retail_price = preis.get('Preis')
-  # noqa: F841
             variant_product.retail_unit = preis.get('VE')
-  # noqa: F841
         elif art == 'Handel':  # Wholesale price
             variant_product.wholesale_price = preis.get('Preis')
-  # noqa: F841
             variant_product.wholesale_unit = preis.get('VE')
-  # noqa: F841
 
-    # Extract additional data for physical attributes from Properties if available  # noqa: E501
+ # Extract additional data for physical attributes from Properties if available  # noqa: E501
     properties = legacy_data.get('Properties', {})
     if isinstance(properties, dict) and 'results' in properties:
         props = properties.get('results', [])
@@ -99,35 +89,28 @@ def map_variant_product_fields(variant_product, legacy_data):
 
             if prop_name == 'farbe' or prop_name == 'color':
                 variant_product.color = prop_value
-  # noqa: F841
             elif prop_name == 'größe' or prop_name == 'size' or prop_name == 'groesse':  # noqa: E501
                 variant_product.size = prop_value
-  # noqa: F841
             elif prop_name == 'material':
                 variant_product.material = prop_value
-  # noqa: F841
             elif prop_name in ('gewicht', 'weight'):
                 try:
                     variant_product.weight_grams = float(prop_value)
-  # noqa: F841
                 except (ValueError, TypeError):
                     pass
             elif prop_name in ('länge', 'length', 'laenge'):
                 try:
                     variant_product.length_mm = float(prop_value)
-  # noqa: F841
                 except (ValueError, TypeError):
                     pass
             elif prop_name in ('breite', 'width'):
                 try:
                     variant_product.width_mm = float(prop_value)
-  # noqa: F841
                 except (ValueError, TypeError):
                     pass
             elif prop_name in ('höhe', 'height', 'hoehe'):
                 try:
                     variant_product.height_mm = float(prop_value)
-  # noqa: F841
                 except (ValueError, TypeError):
                     pass
 
@@ -147,19 +130,18 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
     """
     logger.info(f"Starting {entity_type} synchronization (new_only={new_only})")  # noqa: E501
 
-    # Get the mapping configuration
+ # Get the mapping configuration
     try:
         mapping_config = EntityMappingConfig.objects.get(entity_type=entity_type, is_active=True)  # noqa: E501
     except EntityMappingConfig.DoesNotExist:
         logger.error(f"No active mapping configuration found for {entity_type}")  # noqa: E501
         raise ValueError(f"No active mapping configuration found for {entity_type}")  # noqa: E501
 
-    # Create a sync log entry
+ # Create a sync log entry
     sync_log = SyncLog.objects.create(
         entity_type=entity_type,  # noqa: E128
         status=SyncStatus.IN_PROGRESS,  # noqa: F841
         started_at=timezone.now()  # noqa: F841
-  # noqa: F841
     )
 
     stats = {
@@ -170,26 +152,22 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
     }
 
     try:
-        # Get the model class
         model_class = get_model_class(mapping_config.new_model)
 
-        # Fetch entities from the legacy system
+ # Fetch entities from the legacy system
         legacy_table = mapping_config.legacy_table
         entities_df = api_client.fetch_table(
             table_name=legacy_table,  # noqa: F841
-  # noqa: F841
             new_data_only=new_only  # noqa: F841
-  # noqa: F841
         )
 
         stats['total_fetched'] = len(entities_df)
         logger.info(f"Fetched {stats['total_fetched']} {entity_type} records from legacy system")  # noqa: E501
 
-        # Process each entity
+ # Process each entity
         for _, row in entities_df.iterrows():
             try:
                 with transaction.atomic():
-                    # Convert DataFrame row to dict
                     legacy_data = row.to_dict()
                     legacy_id = str(legacy_data.get('id'))
 
@@ -197,20 +175,18 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
                         logger.warning(f"Skipping {entity_type} record with no ID")  # noqa: E501
                         continue
 
-                    # Transform the legacy data using the mapping configuration
+ # Transform the legacy data using the mapping configuration
                     new_data = mapping_config.transform_legacy_data(legacy_data)  # noqa: E501
 
-                    # Add the legacy ID to the new data
+ # Add the legacy ID to the new data
                     new_data['legacy_id'] = legacy_id
 
-                    # Apply additional custom mapping for variant products
+ # Apply additional custom mapping for variant products
                     if entity_type == 'variant_product':
                         try:
-                            # For creation, create minimal object first, then update  # noqa: E501
                             if not EntityMapping.objects.filter(entity_type=entity_type, legacy_id=legacy_id).exists():  # noqa: E501
                                 entity = model_class.objects.create(**new_data)
                                 map_variant_product_fields(entity, legacy_data)
-                                # Create mapping
                                 EntityMapping.objects.create(
                                     entity_type=entity_type,  # noqa: E128
                                     legacy_id=legacy_id,
@@ -220,13 +196,10 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
                                 logger.debug(f"Created {entity_type} {legacy_id} -> {entity.id}")  # noqa: E501
                                 continue  # Skip the regular create/update flow
                             else:
-                                # For updating, get existing entity and apply custom mapping  # noqa: E501
                                 mapping = EntityMapping.objects.get(entity_type=entity_type, legacy_id=legacy_id)  # noqa: E501
                                 entity = model_class.objects.get(id=mapping.new_id)  # noqa: E501
-                                # Update basic fields
                                 for field, value in new_data.items():
                                     setattr(entity, field, value)
-                                # Apply custom mapping
                                 map_variant_product_fields(entity, legacy_data)
                                 entity.save()
                                 stats['updated'] += 1
@@ -237,14 +210,13 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
                             stats['errors'] += 1
                             continue
 
-                    # Regular create/update flow for other entity types
-                    # Check if we already have a mapping for this entity
+ # Regular create/update flow for other entity types
+ # Check if we already have a mapping for this entity
                     try:
                         mapping = EntityMapping.objects.get(
                             entity_type=entity_type,  # noqa: E128
                             legacy_id=legacy_id
                         )
-                        # Update existing entity
                         entity = model_class.objects.get(id=mapping.new_id)
                         for field, value in new_data.items():
                             setattr(entity, field, value)
@@ -252,9 +224,7 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
                         stats['updated'] += 1
                         logger.debug(f"Updated {entity_type} {legacy_id} -> {entity.id}")  # noqa: E501
                     except EntityMapping.DoesNotExist:
-                        # Create new entity
                         entity = model_class.objects.create(**new_data)
-                        # Create mapping
                         EntityMapping.objects.create(
                             entity_type=entity_type,  # noqa: E128
                             legacy_id=legacy_id,
@@ -263,11 +233,8 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
                         stats['created'] += 1
                         logger.debug(f"Created {entity_type} {legacy_id} -> {entity.id}")  # noqa: E501
                     except model_class.DoesNotExist:
-                        # Mapping exists but entity doesn't - recreate it
                         entity = model_class.objects.create(**new_data)
-                        # Update mapping
                         mapping.new_id = str(entity.id)
-  # noqa: F841
                         mapping.save()
                         stats['created'] += 1
                         logger.debug(f"Recreated {entity_type} {legacy_id} -> {entity.id}")  # noqa: E501
@@ -276,17 +243,13 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
                 stats['errors'] += 1
                 logger.error(f"Error processing {entity_type} {legacy_data.get('id', 'unknown')}: {e}")  # noqa: E501
 
-        # Update the sync log
+ # Update the sync log
         sync_log.status = SyncStatus.COMPLETED
         sync_log.completed_at = timezone.now()
         sync_log.records_processed = stats['total_fetched']
-  # noqa: F841
         sync_log.records_created = stats['created']
-  # noqa: F841
         sync_log.records_updated = stats['updated']
-  # noqa: F841
         sync_log.records_failed = stats['errors']
-  # noqa: F841
         sync_log.save()
 
         logger.info(f"{entity_type.capitalize()} synchronization completed: {stats}")  # noqa: E501
@@ -295,13 +258,10 @@ def sync_entity(entity_type: str, new_only: bool = True) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error during {entity_type} synchronization: {e}")
 
-        # Update the sync log
+ # Update the sync log
         sync_log.status = SyncStatus.FAILED
-  # noqa: F841
         sync_log.completed_at = timezone.now()
-  # noqa: F841
         sync_log.error_message = str(e)
-  # noqa: F841
         sync_log.save()
 
         raise
@@ -333,7 +293,7 @@ def sync_customers(new_only: bool = True) -> Dict[str, Any]:
     return sync_entity('customer', new_only)
 
 
-# Add more specific sync functions as needed
+ # Add more specific sync functions as needed
 
 
 def sync_orders(new_only: bool = True) -> Dict[str, Any]:
@@ -367,7 +327,6 @@ def sync_variant_products(new_only: bool = True) -> Dict[str, Any]:
 
 
 def sync_inventory(new_only: bool = True) -> Dict[str, Any]:
-  # noqa: F841
     """
     Synchronize inventory from the legacy system to the new system.
 

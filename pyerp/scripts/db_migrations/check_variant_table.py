@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Script to check the variant table structure.
 """
@@ -22,7 +21,6 @@ def check_variant_table():
     print("Checking variant table structure...")
 
     with connection.cursor() as cursor:
-        # Check if the table exists
         cursor.execute(
             "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = %s)",  # noqa: E501
             ['products_variantproduct']
@@ -33,7 +31,7 @@ def check_variant_table():
             print("ERROR: Variant table does not exist!")
             return False
 
-        # Get the table columns
+ # Get the table columns
         cursor.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name = %s ORDER BY ordinal_position",  # noqa: E501
             ['products_variantproduct']
@@ -45,7 +43,7 @@ def check_variant_table():
         for col in column_names:
             print(f"  - {col}")
 
-        # Check for required fields
+ # Check for required fields
         required_fields = ['id', 'sku', 'name', 'parent_id', 'variant_code', 'base_sku']  # noqa: E501
         missing_fields = [field for field in required_fields if field not in column_names]  # noqa: E501
 
@@ -55,20 +53,16 @@ def check_variant_table():
         else:
             print("All required fields are present in the variant table.")
 
-        # Check for foreign key constraint
+ # Check for foreign key constraint
         cursor.execute(
             """  # noqa: E128
             SELECT EXISTS(
-                SELECT 1 FROM information_schema.table_constraints tc  # noqa: E128
-                JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name  # noqa: E501
-  # noqa: E501, F841
-                WHERE tc.constraint_type = 'FOREIGN KEY'
-  # noqa: F841
-                AND tc.table_name = 'products_variantproduct'
-  # noqa: F841
-                AND ccu.column_name = 'parent_id'
-  # noqa: F841
-            )
+            SELECT 1 FROM information_schema.table_constraints tc  # noqa: E128
+            JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name  # noqa: E501
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+            AND tc.table_name = 'products_variantproduct'
+            AND ccu.column_name = 'parent_id'
+        )
             """
         )
         has_fk = cursor.fetchone()[0]
@@ -89,5 +83,4 @@ def main():
     return 0 if success else 1
 
 if __name__ == "__main__":
-  # noqa: F841
     sys.exit(main())

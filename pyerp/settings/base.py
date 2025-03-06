@@ -11,14 +11,13 @@ from pathlib import Path
 import dj_database_url
 from .jwt import SIMPLE_JWT  # Import JWT settings  # noqa: F401
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'
+ # Build paths inside the project like this: BASE_DIR / 'subdir'
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
+ # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')  # noqa: E501
-  # noqa: E501, F841
 
-# Application definition
+ # Application definition
 DJANGO_APPS = [
     'django.contrib.admin',  # noqa: E128
     'django.contrib.auth',
@@ -41,14 +40,13 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     'pyerp.core',  # noqa: E128
     'pyerp.products',
-    # Make optional apps conditional to prevent crashes
     'pyerp.monitoring',  # Always include the monitoring app
 ]
 
-# Basic required apps that must exist
+ # Basic required apps that must exist
 REQUIRED_APPS = ['pyerp.core', 'pyerp.products']
 
-# Other apps that are loaded conditionally
+ # Other apps that are loaded conditionally
 OPTIONAL_APPS = [
     'pyerp.sales',  # noqa: E128
     'pyerp.inventory',
@@ -56,10 +54,10 @@ OPTIONAL_APPS = [
     'pyerp.legacy_sync',
 ]
 
-# Initialize LOCAL_APPS with required apps
+ # Initialize LOCAL_APPS with required apps
 LOCAL_APPS = REQUIRED_APPS.copy()
 
-# Try to import each optional app - if it fails, we'll skip it
+ # Try to import each optional app - if it fails, we'll skip it
 for app in OPTIONAL_APPS:
     try:
         __import__(app)
@@ -68,15 +66,13 @@ for app in OPTIONAL_APPS:
     except ImportError:
         print(f"WARNING: {app} module could not be imported, skipping it in INSTALLED_APPS")  # noqa: E501
 
-# Make sure monitoring app is always included
+ # Make sure monitoring app is always included
 if 'pyerp.monitoring' not in LOCAL_APPS:
     LOCAL_APPS.append('pyerp.monitoring')
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
-  # noqa: F841
 
 MIDDLEWARE = [
-  # noqa: F841
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -92,379 +88,335 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'pyerp.urls'
-  # noqa: F841
 
 TEMPLATES = [
-  # noqa: F841
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',  # noqa: E128
         'DIRS': [
-            BASE_DIR / 'pyerp' / 'templates',  # noqa: E128
-        ],
+        BASE_DIR / 'pyerp' / 'templates',  # noqa: E128
+],
         'APP_DIRS': True,
         'OPTIONS': {
-            'context_processors': [  # noqa: E128
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
+        'context_processors': [  # noqa: E128
+        'django.template.context_processors.debug',
+        'django.template.context_processors.request',
+        'django.contrib.auth.context_processors.auth',
+        'django.contrib.messages.context_processors.messages',
+        ],
     },
+             },
 ]
 
 WSGI_APPLICATION = 'pyerp.wsgi.application'
-  # noqa: F841
 
-# Authentication settings
+ # Authentication settings
 LOGIN_URL = 'login'
-  # noqa: F841
 LOGOUT_REDIRECT_URL = 'login'
-  # noqa: F841
 LOGIN_REDIRECT_URL = 'home'
-  # noqa: F841
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+ # Database
+ # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# First try to use DATABASE_URL if provided
+ # First try to use DATABASE_URL if provided
 if 'DATABASE_URL' in os.environ:
-    # Parse database configuration from DATABASE_URL
     print(f"Using DATABASE_URL: {os.environ.get('DATABASE_URL', '').replace('://', '://****:****@')}")  # noqa: E501
     DATABASES = {
         'default': dj_database_url.config(  # noqa: E128
-            conn_max_age=600,  # noqa: F841
-  # noqa: F841
-            conn_health_checks=True,  # noqa: F841
-  # noqa: F841
-        )
+        conn_max_age=600,  # noqa: F841
+        conn_health_checks=True,  # noqa: F841
+    )
     }
 else:
-    # Fallback to explicit database settings
     print("DATABASE_URL not provided, using explicit database settings")
     DATABASES = {
         'default': {  # noqa: E128
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-        }
+        'ENGINE': 'django.db.backends.postgresql',
+                 'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
+                 'USER': os.environ.get('DB_USER', 'postgres'),
+                 'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+                 'HOST': os.environ.get('DB_HOST', 'localhost'),
+                 'PORT': os.environ.get('DB_PORT', '5432'),
+                 }
     }
 
-# If SQLite is in use but filename has no path, ensure it's in a writable location  # noqa: E501
+ # If SQLite is in use but filename has no path, ensure it's in a writable location  # noqa: E501
 if DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
     db_name = DATABASES['default']['NAME']
     if not os.path.isabs(db_name):
         DATABASES['default']['NAME'] = os.path.join(BASE_DIR, db_name)
 
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+ # Password validation
+ # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
-  # noqa: F841
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',  # noqa: E501
     },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',  # noqa: E501
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',  # noqa: E501
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',  # noqa: E501
-    },
+                            {
+                                'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',  # noqa: E501
+                            },
+                            {
+                                'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',  # noqa: E501
+                            },
+                            {
+                                'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',  # noqa: E501
+                            },
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
+ # Internationalization
+ # https://docs.djangoproject.com/en/4.2/topics/i18n/
 LANGUAGE_CODE = 'de'
-  # noqa: F841
 
-# Define supported languages
+ # Define supported languages
 from django.utils.translation import gettext_lazy as _  # noqa: F401
 LANGUAGES = [
-  # noqa: F841
-    ('de', _('German')),
-    ('en', _('English')),
+             ('de', _('German')),
+             ('en', _('English')),
 ]
 
-# Set the location of the translation files
+ # Set the location of the translation files
 LOCALE_PATHS = [
-  # noqa: F841
     BASE_DIR / 'pyerp' / 'locale',
 ]
 
-# Language cookie settings
+ # Language cookie settings
 LANGUAGE_COOKIE_NAME = 'django_language'
-  # noqa: F841
 LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365
-  # noqa: F841
 LANGUAGE_COOKIE_PATH = '/'
-  # noqa: F841
 LANGUAGE_COOKIE_SECURE = False
-  # noqa: F841
 LANGUAGE_COOKIE_HTTPONLY = False
-  # noqa: F841
 LANGUAGE_COOKIE_SAMESITE = None
-  # noqa: F841
 
-# Language detection settings
+ # Language detection settings
 USE_I18N = True
-  # noqa: F841
 USE_L10N = True
-  # noqa: F841
 
-# Session settings
+ # Session settings
 SESSION_COOKIE_NAME = 'sessionid'
-  # noqa: F841
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
-  # noqa: F841
 SESSION_SAVE_EVERY_REQUEST = True
-  # noqa: F841
 
 TIME_ZONE = 'UTC'
 USE_TZ = True
-  # noqa: F841
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
+ # Static files (CSS, JavaScript, Images)
+ # https://docs.djangoproject.com/en/4.2/howto/static-files/
 STATIC_URL = 'static/'
-  # noqa: F841
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-  # noqa: F841
 STATICFILES_DIRS = [
-  # noqa: F841
     BASE_DIR / 'pyerp' / 'static',
 ]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-  # noqa: F841
 
-# Cache configuration - use dummy cache in development for better debugging
+ # Cache configuration - use dummy cache in development for better debugging
 CACHES = {
-  # noqa: F841
     'default': {
-        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',  # noqa: E128
-    }
+    'BACKEND': 'django.core.cache.backends.dummy.DummyCache',  # noqa: E128
+}
 }
 
-# Media files (User Uploads)
+ # Media files (User Uploads)
 MEDIA_URL = 'media/'
-  # noqa: F841
 MEDIA_ROOT = BASE_DIR / 'media'
-  # noqa: F841
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+ # Default primary key field type
+ # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-  # noqa: F841
 
-# REST Framework settings
+ # REST Framework settings
 REST_FRAMEWORK = {
-  # noqa: F841
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',  # noqa: E128
-    ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',  # noqa: E128
-        'rest_framework.authentication.SessionAuthentication',
-    ],
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',  # noqa: E128
-        'rest_framework.filters.SearchFilter',
-        'rest_framework.filters.OrderingFilter',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',  # noqa: E501
-    'PAGE_SIZE': 20,
+    'rest_framework.permissions.IsAuthenticated',  # noqa: E128
+],
+                  'DEFAULT_AUTHENTICATION_CLASSES': [
+                      'rest_framework_simplejwt.authentication.JWTAuthentication',  # noqa: E128
+                      'rest_framework.authentication.SessionAuthentication',
+                  ],
+                  'DEFAULT_FILTER_BACKENDS': [
+                      'django_filters.rest_framework.DjangoFilterBackend',  # noqa: E128
+                      'rest_framework.filters.SearchFilter',
+                      'rest_framework.filters.OrderingFilter',
+                  ],
+                  'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',  # noqa: E501
+                  'PAGE_SIZE': 20,
 }
 
-# Celery settings
+ # Celery settings
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')  # noqa: E501
-  # noqa: E501, F841
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'django-db')
-  # noqa: F841
 CELERY_ACCEPT_CONTENT = ['json']
-  # noqa: F841
 CELERY_TASK_SERIALIZER = 'json'
-  # noqa: F841
 CELERY_RESULT_SERIALIZER = 'json'
-  # noqa: F841
 CELERY_TIMEZONE = TIME_ZONE
-  # noqa: F841
 CELERY_TASK_TRACK_STARTED = True
-  # noqa: F841
 CELERY_TASK_TIME_LIMIT = 30 * 60
-  # noqa: F841
 
-# Logging Configuration
+ # Logging Configuration
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
 JSON_LOGGING = os.environ.get('JSON_LOGGING', 'False').lower() == 'true'
 try:
     LOG_FILE_SIZE_LIMIT = int(os.environ.get('LOG_FILE_SIZE_LIMIT', 2097152))  # Default to 2MB  # noqa: E501
 except ValueError:
-    # Fallback in case the environment variable has issues
     LOG_FILE_SIZE_LIMIT = 2097152  # 2MB in bytes
 
 LOGGING = {
     'version': 1,  # noqa: E128
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {  # noqa: E128
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',  # noqa: E501
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',  # noqa: E128
-            'style': '{',
-        },
-        'json': {
-            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',  # noqa: E128
-            'format': '%(asctime)s %(name)s %(levelname)s %(message)s',
-            'rename_fields': {
-                'asctime': 'timestamp',  # noqa: E128
-                'levelname': 'level',
-            },
-        },
-    },
-    'filters': {
-        'require_debug_true': {  # noqa: E128
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',  # noqa: E128
-        },
-    },
-    'handlers': {
-        'console': {  # noqa: E128
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'json' if JSON_LOGGING else 'verbose',
-        },
-        'app_file': {
-            'level': LOG_LEVEL,  # noqa: E128
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'app.log',
-            'maxBytes': LOG_FILE_SIZE_LIMIT,
-            'backupCount': 10,
-            'formatter': 'json' if JSON_LOGGING else 'verbose',
-        },
-        'security_file': {
-            'level': 'INFO',  # noqa: E128
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'security.log',
-            'maxBytes': LOG_FILE_SIZE_LIMIT,
-            'backupCount': 10,
-            'formatter': 'json' if JSON_LOGGING else 'verbose',
-        },
-        'performance_file': {
-            'level': 'INFO',  # noqa: E128
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'performance.log',
-            'maxBytes': LOG_FILE_SIZE_LIMIT,
-            'backupCount': 5,
-            'formatter': 'json' if JSON_LOGGING else 'verbose',
-        },
-        'data_sync_file': {
-            'level': 'INFO',  # noqa: E128
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'data_sync.log',
-            'maxBytes': LOG_FILE_SIZE_LIMIT,
-            'backupCount': 10,
-            'formatter': 'json' if JSON_LOGGING else 'verbose',
-        },
-        'mail_admins': {
-            'level': 'ERROR',  # noqa: E128
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler',
-            'formatter': 'verbose',
-        },
-    },
-    'loggers': {
-        'django': {  # noqa: E128
-            'handlers': ['console', 'app_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.server': {
-            'handlers': ['console', 'app_file'],  # noqa: E128
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.request': {
-            'handlers': ['mail_admins', 'console', 'app_file'],  # noqa: E128
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'django.security': {
-            'handlers': ['security_file', 'mail_admins'],  # noqa: E128
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'pyerp': {
-            'handlers': ['console', 'app_file'],  # noqa: E128
-            'level': LOG_LEVEL,
-            'propagate': False,
-        },
-        'pyerp.legacy_sync': {
-            'handlers': ['console', 'data_sync_file'],  # noqa: E128
-            'level': LOG_LEVEL,
-            'propagate': False,
-        },
-        'pyerp.performance': {
-            'handlers': ['performance_file'],  # noqa: E128
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'pyerp.products.image_api': {
-            'handlers': ['console', 'data_sync_file'],  # noqa: E128
-            'level': LOG_LEVEL,
-            'propagate': False,
-        },
-    },
-}
+    'verbose': {  # noqa: E128
+           'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',  # noqa: E501
+           'style': '{',
+           },
+           'simple': {
+           'format': '{levelname} {message}',  # noqa: E128
+           'style': '{',
+           },
+           'json': {
+           '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',  # noqa: E128
+           'format': '%(asctime)s %(name)s %(levelname)s %(message)s',
+           'rename_fields': {
+               'asctime': 'timestamp',  # noqa: E128
+               'levelname': 'level',
+           },
+           },
+           },
+           'filters': {
+               'require_debug_true': {  # noqa: E128
+           '()': 'django.utils.log.RequireDebugTrue',
+           },
+           'require_debug_false': {
+           '()': 'django.utils.log.RequireDebugFalse',  # noqa: E128
+           },
+           },
+           'handlers': {
+               'console': {  # noqa: E128
+               'level': 'DEBUG',
+               'class': 'logging.StreamHandler',
+               'formatter': 'json' if JSON_LOGGING else 'verbose',
+           },
+           'app_file': {
+               'level': LOG_LEVEL,  # noqa: E128
+               'class': 'logging.handlers.RotatingFileHandler',
+               'filename': BASE_DIR / 'logs' / 'app.log',
+               'maxBytes': LOG_FILE_SIZE_LIMIT,
+               'backupCount': 10,
+               'formatter': 'json' if JSON_LOGGING else 'verbose',
+           },
+           'security_file': {
+               'level': 'INFO',  # noqa: E128
+               'class': 'logging.handlers.RotatingFileHandler',
+               'filename': BASE_DIR / 'logs' / 'security.log',
+               'maxBytes': LOG_FILE_SIZE_LIMIT,
+               'backupCount': 10,
+               'formatter': 'json' if JSON_LOGGING else 'verbose',
+           },
+           'performance_file': {
+               'level': 'INFO',  # noqa: E128
+               'class': 'logging.handlers.RotatingFileHandler',
+               'filename': BASE_DIR / 'logs' / 'performance.log',
+               'maxBytes': LOG_FILE_SIZE_LIMIT,
+               'backupCount': 5,
+               'formatter': 'json' if JSON_LOGGING else 'verbose',
+           },
+           'data_sync_file': {
+               'level': 'INFO',  # noqa: E128
+               'class': 'logging.handlers.RotatingFileHandler',
+               'filename': BASE_DIR / 'logs' / 'data_sync.log',
+               'maxBytes': LOG_FILE_SIZE_LIMIT,
+               'backupCount': 10,
+               'formatter': 'json' if JSON_LOGGING else 'verbose',
+           },
+           'mail_admins': {
+               'level': 'ERROR',  # noqa: E128
+           'filters': ['require_debug_false'],
+           'class': 'django.utils.log.AdminEmailHandler',
+           'formatter': 'verbose',
+           },
+           },
+           'loggers': {
+               'django': {  # noqa: E128
+           'handlers': ['console', 'app_file'],
+           'level': 'INFO',
+           'propagate': False,
+           },
+           'django.server': {
+           'handlers': ['console', 'app_file'],  # noqa: E128
+           'level': 'INFO',
+           'propagate': False,
+           },
+           'django.request': {
+           'handlers': ['mail_admins', 'console', 'app_file'],  # noqa: E128
+           'level': 'ERROR',
+           'propagate': False,
+           },
+           'django.security': {
+           'handlers': ['security_file', 'mail_admins'],  # noqa: E128
+           'level': 'INFO',
+           'propagate': False,
+           },
+           'pyerp': {
+           'handlers': ['console', 'app_file'],  # noqa: E128
+           'level': LOG_LEVEL,
+           'propagate': False,
+           },
+           'pyerp.legacy_sync': {
+           'handlers': ['console', 'data_sync_file'],  # noqa: E128
+           'level': LOG_LEVEL,
+           'propagate': False,
+           },
+           'pyerp.performance': {
+           'handlers': ['performance_file'],  # noqa: E128
+           'level': 'INFO',
+           'propagate': False,
+           },
+           'pyerp.products.image_api': {
+           'handlers': ['console', 'data_sync_file'],  # noqa: E128
+           'level': LOG_LEVEL,
+           'propagate': False,
+           },
+           },
+           }
 
-# Image API Configuration
-IMAGE_API = {
-    'BASE_URL': os.environ.get('IMAGE_API_URL', 'http://webapp.zinnfiguren.de/api/'),  # noqa: E501
-    'USERNAME': os.environ.get('IMAGE_API_USERNAME', ''),
-    'PASSWORD': os.environ.get('IMAGE_API_PASSWORD', ''),
-    'TIMEOUT': 30,  # Default value
-    'CACHE_ENABLED': os.environ.get('IMAGE_API_CACHE_ENABLED', 'True').lower() == 'true',  # noqa: E501
-    'CACHE_TIMEOUT': 3600,  # Default to 1 hour
-}
+ # Image API Configuration
+           IMAGE_API = {
+           'BASE_URL': os.environ.get('IMAGE_API_URL', 'http://webapp.zinnfiguren.de/api/'),  # noqa: E501
+           'USERNAME': os.environ.get('IMAGE_API_USERNAME', ''),
+           'PASSWORD': os.environ.get('IMAGE_API_PASSWORD', ''),
+           'TIMEOUT': 30,  # Default value
+           'CACHE_ENABLED': os.environ.get('IMAGE_API_CACHE_ENABLED', 'True').lower() == 'true',  # noqa: E501
+           'CACHE_TIMEOUT': 3600,  # Default to 1 hour
+           }
 
-# Try to get IMAGE_API_TIMEOUT from environment
-try:
-    IMAGE_API['TIMEOUT'] = int(os.environ.get('IMAGE_API_TIMEOUT', 30))
-except ValueError:
-    # Keep default if conversion fails
-    pass
+ # Try to get IMAGE_API_TIMEOUT from environment
+           try:
+           IMAGE_API['TIMEOUT'] = int(os.environ.get('IMAGE_API_TIMEOUT', 30))
+           except ValueError:
+               # Keep default if conversion fails
+           pass
 
-# Try to get IMAGE_API_CACHE_TIMEOUT from environment
-try:
-    IMAGE_API['CACHE_TIMEOUT'] = int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600))  # noqa: E501
-except ValueError:
-    # Keep default if conversion fails
-    pass
+ # Try to get IMAGE_API_CACHE_TIMEOUT from environment
+           try:
+           IMAGE_API['CACHE_TIMEOUT'] = int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600))  # noqa: E501
+           except ValueError:
+               # Keep default if conversion fails
+           pass
 
-# Custom CSRF failure view
-CSRF_FAILURE_VIEW = 'pyerp.core.views.csrf_failure'
-  # noqa: F841
+ # Custom CSRF failure view
+           CSRF_FAILURE_VIEW = 'pyerp.core.views.csrf_failure'
+           # noqa: F841
 
-# CSRF Trusted Origins - important for Docker environments
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
-if not any(CSRF_TRUSTED_ORIGINS):
-    # Default trusted origins if not specified in environment
-    CSRF_TRUSTED_ORIGINS = [
-  # noqa: F841
-        'http://localhost:8050',
-        'http://127.0.0.1:8050',
-    ]
+ # CSRF Trusted Origins - important for Docker environments
+           CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')  # noqa: E501
+           if not any(CSRF_TRUSTED_ORIGINS):
+               # Default trusted origins if not specified in environment
+           CSRF_TRUSTED_ORIGINS = [
+           # noqa: F841
+               'http://localhost:8050',
+               'http://127.0.0.1:8050',
+           ]
 
-# Update loggers for image API
-LOGGING['loggers']['pyerp.products.image_api'] = {
-    'handlers': ['console', 'data_sync_file'],  # noqa: E128
-    'level': LOG_LEVEL,
-    'propagate': False,
-}
+ # Update loggers for image API
+           LOGGING['loggers']['pyerp.products.image_api'] = {
+           'handlers': ['console', 'data_sync_file'],  # noqa: E128
+           'level': LOG_LEVEL,
+           'propagate': False,
+           }

@@ -10,15 +10,13 @@ class Command(BaseCommand):
         parser.add_argument(
             '--dry-run',  # noqa: E128
             action='store_true',  # noqa: F841
-  # noqa: F841
             help='Show SQL that would be executed without actually executing it',  # noqa: E501
-  # noqa: E501, F841
         )
 
     def handle(self, *args, **options):
         dry_run = options.get('dry_run', False)
 
-        # SQL to truncate the table and reset the sequence
+ # SQL to truncate the table and reset the sequence
         sql = """
         -- Truncate the table (remove all rows)
         TRUNCATE TABLE products_imagesynclog;
@@ -32,7 +30,7 @@ class Command(BaseCommand):
             self.stdout.write(sql)
             return
 
-        # Execute the SQL
+ # Execute the SQL
         with connection.cursor() as cursor:
             self.stdout.write(self.style.WARNING('Wiping ImageSyncLog table...'))  # noqa: E501
             cursor.execute("TRUNCATE TABLE products_imagesynclog;")

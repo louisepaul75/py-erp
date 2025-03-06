@@ -42,23 +42,23 @@ class SyncLogAdmin(admin.ModelAdmin):
     )
     fieldsets = (  # noqa: F841
         (None, {  # noqa: E128
-            'fields': ('entity_type', 'status')
-        }),
-        (_('Timing'), {
-            'fields': ('started_at', 'completed_at')  # noqa: E128
-        }),
-        (_('Statistics'), {
-            'fields': (  # noqa: E128
-                'records_processed',
-                'records_created',
-                'records_updated',
-                'records_failed',
-            )
-        }),
-        (_('Error Details'), {
-            'fields': ('error_message',),  # noqa: E128
-            'classes': ('collapse',),
-        }),
+                 'fields': ('entity_type', 'status')
+                 }),
+                 (_('Timing'), {
+                 'fields': ('started_at', 'completed_at')  # noqa: E128
+                 }),
+                 (_('Statistics'), {
+                 'fields': (  # noqa: E128
+                     'records_processed',
+                     'records_created',
+                     'records_updated',
+                     'records_failed',
+                 )
+                 }),
+                 (_('Error Details'), {
+                 'fields': ('error_message',),  # noqa: E128
+                 'classes': ('collapse',),
+                 }),
     )
 
     def has_add_permission(self, request):
@@ -66,7 +66,6 @@ class SyncLogAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
-  # noqa: F841
         return False
 
 
@@ -83,11 +82,11 @@ class EntityMappingAdmin(admin.ModelAdmin):
     readonly_fields = ('last_synced_at',)  # noqa: F841
     fieldsets = (  # noqa: F841
         (None, {  # noqa: E128
-            'fields': ('entity_type', 'legacy_id', 'new_id')
-        }),
-        (_('Timing'), {
-            'fields': ('last_synced_at',)  # noqa: E128
-        }),
+                 'fields': ('entity_type', 'legacy_id', 'new_id')
+                 }),
+                 (_('Timing'), {
+                 'fields': ('last_synced_at',)  # noqa: E128
+                 }),
     )
 
 
@@ -97,10 +96,8 @@ class EntityMappingConfigForm(forms.ModelForm):
     """
     field_mappings_raw = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 20, 'cols': 80}),  # noqa: F841
-  # noqa: F841
         required=False,  # noqa: F841
         help_text=_('JSON mapping of legacy fields to new fields, including transformations')  # noqa: E501
-  # noqa: E501, F841
     )
 
     class Meta:
@@ -108,17 +105,13 @@ class EntityMappingConfigForm(forms.ModelForm):
         model = EntityMappingConfig  # noqa: F841
         fields = '__all__'  # noqa: F841
         exclude = ('field_mappings',)  # noqa: F841
-  # noqa: F841
 
     def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
-        # Convert field_mappings to JSON string for editing
         if self.instance.pk and hasattr(self.instance, 'field_mappings'):
             self.fields['field_mappings_raw'].initial = json.dumps(
-  # noqa: F841
                 self.instance.field_mappings, indent=2
-  # noqa: F841
             )
 
     def clean_field_mappings_raw(self):
@@ -155,19 +148,19 @@ class EntityMappingConfigAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')  # noqa: F841
     fieldsets = (  # noqa: F841
         (None, {  # noqa: E128
-            'fields': ('entity_type', 'legacy_table', 'new_model', 'is_active')
-        }),
-        (_('Field Mappings'), {
-            'fields': ('field_mappings_raw',),  # noqa: E128
-            'description': _(
-                'Define how fields from the legacy system map to fields in the new system. '  # noqa: E501
-                'Format: {"legacy_field": {"new_field": "new_field_name", "transform": "transformation_name", "required": true/false}}'  # noqa: E501
-            )
-        }),
-        (_('Timing'), {
-            'fields': ('created_at', 'updated_at'),  # noqa: E128
-            'classes': ('collapse',),
-        }),
+                 'fields': ('entity_type', 'legacy_table', 'new_model', 'is_active')  # noqa: E501
+                 }),
+                 (_('Field Mappings'), {
+                 'fields': ('field_mappings_raw',),  # noqa: E128
+                 'description': _(
+                     'Define how fields from the legacy system map to fields in the new system. '  # noqa: E501
+                 'Format: {"legacy_field": {"new_field": "new_field_name", "transform": "transformation_name", "required": true/false}}'  # noqa: E501
+                 )
+                 }),
+                 (_('Timing'), {
+                 'fields': ('created_at', 'updated_at'),  # noqa: E128
+                 'classes': ('collapse',),
+                 }),
     )
 
 
@@ -186,7 +179,7 @@ class TransformationFunctionForm(forms.ModelForm):
         if not code:
             return code
 
-        # Basic validation - try to compile the code
+ # Basic validation - try to compile the code
         try:
             compile(code, '<string>', 'exec')
             return code
@@ -203,27 +196,22 @@ class TransformationFunctionAdmin(admin.ModelAdmin):
     """
     form = TransformationFunctionForm  # noqa: F841
     list_display = ('name', 'description', 'is_active', 'updated_at')  # noqa: F841
-  # noqa: F841
     list_filter = ('is_active', 'created_at', 'updated_at')  # noqa: F841
-  # noqa: F841
     search_fields = ('name', 'description', 'code')  # noqa: F841
-  # noqa: F841
     readonly_fields = ('created_at', 'updated_at')  # noqa: F841
-  # noqa: F841
     fieldsets = (  # noqa: F841
-  # noqa: F841
         (None, {
-            'fields': ('name', 'description', 'is_active')  # noqa: E128
-        }),
-        (_('Code'), {
-            'fields': ('code',),  # noqa: E128
-            'description': _(
-                'Python code for the transformation function. The function should set a variable named "result" '  # noqa: E501
-                'with the transformed value. The input value is available as the variable "value".'  # noqa: E501
-            )
-        }),
-        (_('Timing'), {
-            'fields': ('created_at', 'updated_at'),  # noqa: E128
-            'classes': ('collapse',),
-        }),
+                 'fields': ('name', 'description', 'is_active')  # noqa: E128
+                 }),
+                 (_('Code'), {
+                 'fields': ('code',),  # noqa: E128
+                 'description': _(
+                     'Python code for the transformation function. The function should set a variable named "result" '  # noqa: E501
+                     'with the transformed value. The input value is available as the variable "value".'  # noqa: E501
+                 )
+                 }),
+                 (_('Timing'), {
+                 'fields': ('created_at', 'updated_at'),  # noqa: E128
+                 'classes': ('collapse',),
+                 }),
     )

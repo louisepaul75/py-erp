@@ -12,7 +12,7 @@ from datetime import datetime
 from pyerp.monitoring.services import run_all_health_checks
 
 
-# Apply decorators to exempt this view from authentication and CSRF protection
+ # Apply decorators to exempt this view from authentication and CSRF protection
 @require_GET
 @csrf_exempt
 def run_health_checks(request):
@@ -31,7 +31,7 @@ def run_health_checks(request):
             'hot_reload_test': 'SUCCESS'
         })
 
-        # Store the response in case the middleware needs to bypass authentication  # noqa: E501
+ # Store the response in case the middleware needs to bypass authentication  # noqa: E501
         if hasattr(request, '_auth_exempt'):
             request._auth_exempt_response = response
 
@@ -41,11 +41,9 @@ def run_health_checks(request):
             'success': False,  # noqa: E128
             'error': str(e)
         }, status=500)
-  # noqa: F841
 
-        # Store the error response in case the middleware needs to bypass authentication  # noqa: E501
+ # Store the error response in case the middleware needs to bypass authentication  # noqa: E501
         if hasattr(request, '_auth_exempt'):
             request._auth_exempt_response = error_response
-  # noqa: F841
 
         return error_response

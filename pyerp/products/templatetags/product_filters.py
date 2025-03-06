@@ -14,49 +14,44 @@ def get_item(dictionary, key):
     Usage in template:
     {{ my_dict|get_item:key_variable }}
     """
-    if not dictionary:
+        if not dictionary:
         return None
 
     return dictionary.get(key)
 
 @register.filter
-def get_primary_image(product):
+        def get_primary_image(product):
     """
     Get the primary image for a product.
 
-    Usage in template:
+        Usage in template:
     {{ product|get_primary_image }}
     """
-    if hasattr(product, 'images'):
-        # Safely try to find the best image based on the priority:
-        # 1. Produktfoto with front=True
-        # 2. Any Produktfoto
-        # 3. Any image with front=True
-        # 4. Any is_primary=True image
-        # 5. First image
+        if hasattr(product, 'images'):
+            # Safely try to find the best image based on the priority:
+            # 4. Any is_primary=True image
         try:
-            # First priority: Produktfoto with front=True
-            image = product.images.filter(image_type__iexact='Produktfoto', is_front=True).first()  # noqa: E501
-            if image:
-                return image
+        image = product.images.filter(image_type__iexact='Produktfoto', is_front=True).first()  # noqa: E501
+        if image:
+        return image
 
-            # Second priority: Any Produktfoto
-            image = product.images.filter(image_type__iexact='Produktfoto').first()  # noqa: E501
-            if image:
-                return image
+ # Second priority: Any Produktfoto
+        image = product.images.filter(image_type__iexact='Produktfoto').first()  # noqa: E501
+        if image:
+        return image
 
-            # Third priority: Any front=True image
-            image = product.images.filter(is_front=True).first()
-            if image:
-                return image
+ # Third priority: Any front=True image
+        image = product.images.filter(is_front=True).first()
+        if image:
+        return image
 
-            # Fourth priority: Any image marked as primary
-            image = product.images.filter(is_primary=True).first()
-            if image:
-                return image
+ # Fourth priority: Any image marked as primary
+        image = product.images.filter(is_primary=True).first()
+        if image:
+        return image
 
-            # Last resort: first image
-            return product.images.first()
+ # Last resort: first image
+        return product.images.first()
         except:
-            return None
+        return None
     return None

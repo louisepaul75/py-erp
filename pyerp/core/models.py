@@ -20,55 +20,39 @@ class AuditLog(models.Model):
 
         LOGIN = 'login', _('Login')  # noqa: F841
         LOGOUT = 'logout', _('Logout')  # noqa: F841
-  # noqa: F841
         LOGIN_FAILED = 'login_failed', _('Login Failed')  # noqa: F841
-  # noqa: F841
         PASSWORD_CHANGE = 'password_change', _('Password Change')  # noqa: F841
-  # noqa: F841
         PASSWORD_RESET = 'password_reset', _('Password Reset')  # noqa: F841
-  # noqa: F841
         USER_CREATED = 'user_created', _('User Created')  # noqa: F841
-  # noqa: F841
         USER_UPDATED = 'user_updated', _('User Updated')  # noqa: F841
-  # noqa: F841
         USER_DELETED = 'user_deleted', _('User Deleted')  # noqa: F841
-  # noqa: F841
         PERMISSION_CHANGE = 'permission_change', _('Permission Change')  # noqa: F841
-  # noqa: F841
         DATA_ACCESS = 'data_access', _('Data Access')  # noqa: F841
-  # noqa: F841
         DATA_CHANGE = 'data_change', _('Data Change')  # noqa: F841
-  # noqa: F841
         SYSTEM_ERROR = 'system_error', _('System Error')  # noqa: F841
-  # noqa: F841
         OTHER = 'other', _('Other')  # noqa: F841
-  # noqa: F841
 
-    # Basic event information
+ # Basic event information
     timestamp = models.DateTimeField(  # noqa: F841
         auto_now_add=True,  # noqa: F841
-  # noqa: F841
         help_text=_('When the event occurred')  # noqa: F841
     )
     event_type = models.CharField(  # noqa: F841
         max_length=50,  # noqa: E128
         choices=EventType.choices,  # noqa: F841
-  # noqa: F841
         help_text=_('Type of event being logged')  # noqa: F841
     )
     message = models.TextField(  # noqa: F841
-  # noqa: F841
         help_text=_('Description of the event')  # noqa: F841
     )
 
-    # User information
+ # User information
     user = models.ForeignKey(  # noqa: F841
         settings.AUTH_USER_MODEL,  # noqa: E128
         null=True,  # noqa: F841
         blank=True,  # noqa: F841
         on_delete=models.SET_NULL,  # noqa: F841
         related_name='audit_logs',  # noqa: F841
-  # noqa: F841
         help_text=_('User who triggered the event (if applicable)')  # noqa: F841
     )
     username = models.CharField(  # noqa: F841
@@ -82,66 +66,52 @@ class AuditLog(models.Model):
         help_text=_('IP address where the event originated')  # noqa: F841
     )
     user_agent = models.TextField(  # noqa: F841
-  # noqa: F841
         blank=True,  # noqa: F841
         help_text=_('User agent/browser information')  # noqa: F841
     )
 
-    # Related object (optional)
+ # Related object (optional)
     content_type = models.ForeignKey(  # noqa: F841
         ContentType,  # noqa: E128
         null=True,  # noqa: F841
         blank=True,  # noqa: F841
         on_delete=models.SET_NULL,  # noqa: F841
-  # noqa: F841
         help_text=_('Type of object this event relates to')  # noqa: F841
     )
     object_id = models.CharField(  # noqa: F841
         max_length=255,  # noqa: F841
-  # noqa: F841
         blank=True,  # noqa: F841
         help_text=_('ID of related object')  # noqa: F841
     )
     content_object = GenericForeignKey('content_type', 'object_id')  # noqa: F841
-  # noqa: F841
 
-    # Additional data
+ # Additional data
     additional_data = models.JSONField(  # noqa: F841
-  # noqa: F841
         null=True,  # noqa: F841
-  # noqa: F841
         blank=True,  # noqa: F841
-  # noqa: F841
         help_text=_('Additional event-specific data stored as JSON')  # noqa: F841
     )
 
-    # Unique identifier for the event
+ # Unique identifier for the event
     uuid = models.UUIDField(
         default=uuid.uuid4,  # noqa: F841
-  # noqa: F841
         editable=False,  # noqa: F841
-  # noqa: F841
         unique=True,  # noqa: F841
-  # noqa: F841
         help_text=_('Unique identifier for this audit event')  # noqa: F841
-  # noqa: F841
     )
 
     class Meta:
 
         verbose_name = _('Audit Log')  # noqa: F841
         verbose_name_plural = _('Audit Logs')  # noqa: F841
-  # noqa: F841
         ordering = ['-timestamp']  # noqa: F841
-  # noqa: F841
         indexes = [  # noqa: F841
-  # noqa: F841
-            models.Index(fields=['timestamp']),
-            models.Index(fields=['event_type']),
-            models.Index(fields=['username']),
-            models.Index(fields=['ip_address']),
-            models.Index(fields=['content_type', 'object_id']),
-  # noqa: F841
+                   models.Index(fields=['timestamp']),
+                   models.Index(fields=['event_type']),
+                   models.Index(fields=['username']),
+                   models.Index(fields=['ip_address']),
+                   models.Index(fields=['content_type', 'object_id']),
+                   # noqa: F841
         ]
 
     def __str__(self):
@@ -151,8 +121,6 @@ class AuditLog(models.Model):
         return f"{self.get_event_type_display()} - {self.timestamp}"
 
     def save(self, *args, **kwargs):
-        # Ensure username is always stored as a backup
         if self.user and not self.username:
             self.username = self.user.username
-  # noqa: F841
         super().save(*args, **kwargs)

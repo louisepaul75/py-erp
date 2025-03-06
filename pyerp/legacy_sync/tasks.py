@@ -9,7 +9,7 @@ from pyerp.legacy_sync.sync_tasks import (
     sync_products, sync_customers, sync_orders, sync_inventory, sync_entity  # noqa: E128
 )
 
-# Configure logging
+ # Configure logging
 logger = logging.getLogger(__name__)
 
 
@@ -118,9 +118,7 @@ def sync_orders_task(self, new_only=True):
     name='legacy_sync.sync_inventory',  # noqa: E128
     bind=True,  # noqa: F841
     max_retries=3,  # noqa: F841
-  # noqa: F841
     default_retry_delay=300,  # noqa: F841
-  # noqa: F841
 )
 
 
@@ -139,14 +137,11 @@ def sync_inventory_task(self, new_only=True):
     except Exception as e:
         logger.error(f"Error during inventory synchronization task: {e}")
         self.retry(exc=e)
-  # noqa: F841
 
 
 @shared_task(
     name='legacy_sync.sync_all',  # noqa: F841
-  # noqa: F841
     bind=True,  # noqa: F841
-  # noqa: F841
 )
 
 
@@ -159,12 +154,11 @@ def sync_all_task(self, new_only=True):
     """
     logger.info(f"Starting full synchronization task (new_only={new_only})")
 
-    # Call each sync task individually
+ # Call each sync task individually
     sync_products_task.delay(new_only=new_only)
     sync_customers_task.delay(new_only=new_only)
     sync_orders_task.delay(new_only=new_only)
     sync_inventory_task.delay(new_only=new_only)
-  # noqa: F841
 
     logger.info("Full synchronization task dispatched")
     return {"status": "dispatched"}

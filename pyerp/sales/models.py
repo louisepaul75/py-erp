@@ -9,7 +9,6 @@ class SalesModel(models.Model):
     """
     class Meta:
         abstract = True  # noqa: F841
-  # noqa: F841
 
 
 def get_sales_status():
@@ -18,7 +17,6 @@ def get_sales_status():
     This will be used by other modules that might attempt to import from sales.
     """
     try:
-        # Just a placeholder for something that connects to the database
         from django.db import connection
         cursor = connection.cursor()
         cursor.close()

@@ -25,34 +25,30 @@ class Command(BaseCommand):
         parser.add_argument(
             '--json',  # noqa: E128
             action='store_true',  # noqa: F841
-  # noqa: F841
             dest='json',  # noqa: F841
-  # noqa: F841
             default=False,  # noqa: F841
             help=_('Output results in JSON format'),  # noqa: F841
-  # noqa: F841
         )
 
     def handle(self, *args, **options):
         """Run the command."""
         self.stdout.write(self.style.NOTICE(_('Running system health checks...')))  # noqa: E501
 
-        # Run all health checks
+ # Run all health checks
         results = run_all_health_checks()
 
-        # Output in JSON format if requested
+ # Output in JSON format if requested
         if options['json']:
             self.stdout.write(json.dumps(results, indent=2, default=str))
-  # noqa: F841
             return
 
-        # Otherwise, output in a human-readable format
+ # Otherwise, output in a human-readable format
         self.stdout.write('\n')
 
         for component, result in results.items():
             status = result['status']
 
-            # Format the output with colors
+ # Format the output with colors
             if status == 'success':
                 status_style = self.style.SUCCESS
                 status_text = _('SUCCESS')
@@ -63,7 +59,7 @@ class Command(BaseCommand):
                 status_style = self.style.ERROR
                 status_text = _('ERROR')
 
-            # Print the component status
+ # Print the component status
             self.stdout.write(f"{component.upper()}: {status_style(status_text)}")  # noqa: E501
             self.stdout.write(f"  {_('Details')}: {result['details']}")
 
@@ -72,7 +68,7 @@ class Command(BaseCommand):
 
             self.stdout.write('\n')
 
-        # Print a summary
+ # Print a summary
         success_count = sum(1 for r in results.values() if r['status'] == 'success')  # noqa: E501
         warning_count = sum(1 for r in results.values() if r['status'] == 'warning')  # noqa: E501
         error_count = sum(1 for r in results.values() if r['status'] == 'error')  # noqa: E501
@@ -82,7 +78,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  {self.style.WARNING(_('Warning'))}: {warning_count}")  # noqa: E501
         self.stdout.write(f"  {self.style.ERROR(_('Error'))}: {error_count}")
 
-        # Set exit code based on results
+ # Set exit code based on results
         if error_count > 0:
             return 2  # Error exit code
         elif warning_count > 0:

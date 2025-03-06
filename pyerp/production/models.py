@@ -8,4 +8,3 @@ class ProductionModel(models.Model):
     """
     class Meta:
         abstract = True  # noqa: F841
-  # noqa: F841

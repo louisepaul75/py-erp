@@ -12,8 +12,7 @@ class ProductCategoryForm(forms.ModelForm):
         model = ProductCategory  # noqa: F841
         fields = ['code', 'name']  # noqa: F841
         widgets = {  # noqa: F841
-  # noqa: F841
-            'description': forms.Textarea(attrs={'rows': 3}),
+                   'description': forms.Textarea(attrs={'rows': 3}),
         }
 
 
@@ -24,7 +23,6 @@ class ProductForm(forms.ModelForm):
 
         model = UnifiedProduct  # noqa: F841
         fields = [  # noqa: F841
-            # Basic information  # noqa: E128
             'sku', 'name', 'description', 'price',
             'is_active', 'is_parent', 'is_variant'
         ]
@@ -35,11 +33,9 @@ class ProductForm(forms.ModelForm):
         instance = getattr(self, 'instance', None)
 
         if instance and instance.pk:
-            # If this is an existing product, exclude it from the uniqueness check  # noqa: E501
             if UnifiedProduct.objects.filter(sku=sku).exclude(pk=instance.pk).exists():  # noqa: E501
                 raise forms.ValidationError(_('A product with this SKU already exists.'))  # noqa: E501
         else:
-            # If this is a new product
             if UnifiedProduct.objects.filter(sku=sku).exists():
                 raise forms.ValidationError(_('A product with this SKU already exists.'))  # noqa: E501
 
@@ -51,7 +47,7 @@ class ProductForm(forms.ModelForm):
         is_parent = cleaned_data.get('is_parent')
         is_variant = cleaned_data.get('is_variant')
 
-        # A product cannot be both a parent and a variant
+ # A product cannot be both a parent and a variant
         if is_parent and is_variant:
             self.add_error('is_parent', _('A product cannot be both a parent and a variant.'))  # noqa: E501
             self.add_error('is_variant', _('A product cannot be both a parent and a variant.'))  # noqa: E501
@@ -66,7 +62,6 @@ class ParentProductForm(forms.ModelForm):
 
         model = ParentProduct  # noqa: F841
         fields = [  # noqa: F841
-            # Basic information  # noqa: E128
             'sku', 'base_sku', 'name', 'is_active',
         ]
 
@@ -76,11 +71,9 @@ class ParentProductForm(forms.ModelForm):
         instance = getattr(self, 'instance', None)
 
         if instance and instance.pk:
-            # If this is an existing product, exclude it from the uniqueness check  # noqa: E501
             if ParentProduct.objects.filter(sku=sku).exclude(pk=instance.pk).exists():  # noqa: E501
                 raise forms.ValidationError(_('A product with this SKU already exists.'))  # noqa: E501
         else:
-            # If this is a new product
             if ParentProduct.objects.filter(sku=sku).exists():
                 raise forms.ValidationError(_('A product with this SKU already exists.'))  # noqa: E501
 
@@ -93,10 +86,7 @@ class VariantProductForm(forms.ModelForm):
     class Meta:
 
         model = VariantProduct  # noqa: F841
-  # noqa: F841
         fields = [  # noqa: F841
-  # noqa: F841
-            # Basic information
             'sku', 'name', 'parent', 'variant_code', 'is_active',
         ]
 
@@ -106,11 +96,9 @@ class VariantProductForm(forms.ModelForm):
         instance = getattr(self, 'instance', None)
 
         if instance and instance.pk:
-            # If this is an existing product, exclude it from the uniqueness check  # noqa: E501
             if VariantProduct.objects.filter(sku=sku).exclude(pk=instance.pk).exists():  # noqa: E501
                 raise forms.ValidationError(_('A product with this SKU already exists.'))  # noqa: E501
         else:
-            # If this is a new product
             if VariantProduct.objects.filter(sku=sku).exists():
                 raise forms.ValidationError(_('A product with this SKU already exists.'))  # noqa: E501
 
@@ -124,19 +112,16 @@ class ProductSearchForm(forms.Form):
         label=_('Search'),  # noqa: E128
         required=False,  # noqa: F841
         widget=forms.TextInput(attrs={  # noqa: F841
-            'placeholder': _('Search products...'),  # noqa: E128
-            'class': 'form-control'
+        'placeholder': _('Search products...'),  # noqa: E128
+        'class': 'form-control'
         })
     )
 
     category = forms.ModelChoiceField(  # noqa: F841
-  # noqa: F841
         label=_('Category'),  # noqa: F841
         queryset=ProductCategory.objects.all(),  # noqa: F841
-  # noqa: F841
         required=False,  # noqa: F841
         empty_label=_('All Categories'),  # noqa: F841
-  # noqa: F841
         widget=forms.Select(attrs={'class': 'form-control'})  # noqa: F841
     )
 
@@ -145,8 +130,8 @@ class ProductSearchForm(forms.Form):
         required=False,  # noqa: F841
         min_value=0,  # noqa: F841
         widget=forms.NumberInput(attrs={  # noqa: F841
-            'placeholder': _('Min'),  # noqa: E128
-            'class': 'form-control'
+        'placeholder': _('Min'),  # noqa: E128
+        'class': 'form-control'
         })
     )
 
@@ -154,30 +139,23 @@ class ProductSearchForm(forms.Form):
         label=_('Max Price'),  # noqa: E128
         required=False,  # noqa: F841
         min_value=0,  # noqa: F841
-  # noqa: F841
         widget=forms.NumberInput(attrs={  # noqa: F841
-            'placeholder': _('Max'),  # noqa: E128
-            'class': 'form-control'
+        'placeholder': _('Max'),  # noqa: E128
+        'class': 'form-control'
         })
     )
 
     in_stock = forms.BooleanField(  # noqa: F841
-  # noqa: F841
         label=_('In Stock Only'),  # noqa: F841
         required=False,  # noqa: F841
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})  # noqa: F841
     )
 
     is_active = forms.BooleanField(  # noqa: F841
-  # noqa: F841
         label=_('Active Only'),  # noqa: F841
-  # noqa: F841
         required=False,  # noqa: F841
-  # noqa: F841
         initial=True,  # noqa: F841
-  # noqa: F841
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})  # noqa: F841
-  # noqa: F841
     )
 
     def clean(self):

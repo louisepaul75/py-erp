@@ -32,7 +32,6 @@ class AuditService:
             AuditLog: The created audit log entry
         """
         try:
-            # Get IP and user agent if request is provided
             ip_address = None
             user_agent = ''
 
@@ -40,11 +39,11 @@ class AuditService:
                 ip_address = cls._get_client_ip(request)
                 user_agent = request.META.get('HTTP_USER_AGENT', '')
 
-                # Use authenticated user from request if not explicitly provided  # noqa: E501
+ # Use authenticated user from request if not explicitly provided  # noqa: E501
                 if user is None and request.user.is_authenticated:
                     user = request.user
 
-            # Create content type reference if object is provided
+ # Create content type reference if object is provided
             content_type = None
             object_id = ''
 
@@ -52,7 +51,7 @@ class AuditService:
                 content_type = ContentType.objects.get_for_model(obj)
                 object_id = str(obj.pk)
 
-            # Create the log entry
+ # Create the log entry
             log_entry = AuditLog.objects.create(
                 event_type=event_type,  # noqa: E128
                 message=message,
@@ -60,31 +59,24 @@ class AuditService:
                 username=user.username if user else '',  # noqa: F841
                 ip_address=ip_address,
                 user_agent=user_agent,
-  # noqa: F841
                 content_type=content_type,
-  # noqa: F841
                 object_id=object_id,
-  # noqa: F841
                 additional_data=additional_data
-  # noqa: F841
             )
 
-            # Also log to the security logger
+ # Also log to the security logger
             logger.info(
                 f"AUDIT: {event_type} - {message}",  # noqa: E128
                 extra={  # noqa: F841
-  # noqa: F841
                     'event_type': event_type,
                     'username': log_entry.username,
-                    'ip_address': str(ip_address) if ip_address else None,
+                'ip_address': str(ip_address) if ip_address else None,
                 }
             )
 
             return log_entry
 
         except Exception as e:
-            # If something goes wrong, log the error but don't raise
-            # This ensures audit logging failures don't disrupt normal operation  # noqa: E501
             logger.error(f"Error creating audit log: {str(e)}")
             return None
 
@@ -153,10 +145,10 @@ class AuditService:
     @classmethod
     def log_permission_change(cls, user, target_user, request=None,
 
-                             permissions=None, added=None, removed=None):
+                permissions=None, added=None, removed=None):
         """Log permission changes."""
         return cls.log_event(
-            AuditLog.EventType.PERMISSION_CHANGE,  # noqa: E128
+                AuditLog.EventType.PERMISSION_CHANGE,  # noqa: E128
             f"Permissions changed for '{target_user.username}'",
             user,
             request,
@@ -186,7 +178,6 @@ class AuditService:
         """Extract the client IP address from the request."""
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
-            # Get the first IP in case of proxy chains
             ip = x_forwarded_for.split(',')[0].strip()
         else:
             ip = request.META.get('REMOTE_ADDR')

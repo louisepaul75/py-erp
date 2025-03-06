@@ -10,7 +10,6 @@ from django.utils import timezone
 from pyerp.products.models import ParentProduct, VariantProduct  # noqa: F401
 
 logger = logging.getLogger(__name__)  # noqa: F841
-  # noqa: F841
 
 
 @receiver(pre_save, sender=VariantProduct)
@@ -22,18 +21,13 @@ def variant_product_pre_save(sender, instance, **kwargs):
     - Set timestamps appropriately
     """
     if instance.parent and instance.variant_code and not instance.sku:
-        # Generate SKU from parent SKU and variant code
         parent_sku = instance.parent.sku or str(instance.parent.legacy_id)
         instance.sku = f"{parent_sku}-{instance.variant_code}"
-  # noqa: F841
 
-    # Handle timestamp logic (equivalent to auto_now and auto_now_add)
+ # Handle timestamp logic (equivalent to auto_now and auto_now_add)
     if not instance.pk:  # New instance
-        # Only set created_at for new instances (equivalent to auto_now_add)
         if not instance.created_at:
             instance.created_at = timezone.now()
-  # noqa: F841
 
-    # Always update the updated_at timestamp (equivalent to auto_now)
+ # Always update the updated_at timestamp (equivalent to auto_now)
     instance.updated_at = timezone.now()
-  # noqa: F841

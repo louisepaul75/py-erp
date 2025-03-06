@@ -26,6 +26,5 @@ class DummySalesViewSet(viewsets.ViewSet):
         return {"id": pk, "name": "Example Sale", "description": "This is a placeholder"}  # noqa: E501
 
 
-# This helps other modules check if this module is available
+ # This helps other modules check if this module is available
 API_VERSION = '0.1.0'  # noqa: F841
-  # noqa: F841

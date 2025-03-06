@@ -43,27 +43,25 @@ class ImageAPIClient:
         self.cache_timeout = settings.IMAGE_API.get('CACHE_TIMEOUT', 3600)  # 1 hour  # noqa: E501
         self.verify_ssl = settings.IMAGE_API.get('VERIFY_SSL', False)  # Default to not verifying SSL  # noqa: E501
 
-        # Ensure the base URL ends with a slash
+ # Ensure the base URL ends with a slash
         if not self.base_url.endswith('/'):
             self.base_url += '/'
 
-        # Set up retry strategy
+ # Set up retry strategy
         retry_strategy = Retry(
             total=3,  # number of retries  # noqa: E128
             backoff_factor=0.5,  # noqa: F841
-  # noqa: E501, F841
             status_forcelist=[500, 502, 503, 504]  # noqa: F841
-  # noqa: E501, F841
         )
 
-        # Create a session with the retry strategy
+ # Create a session with the retry strategy
         self.session = requests.Session()
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
         self.session.auth = HTTPBasicAuth(self.username, self.password)
 
-        # Disable SSL verification warnings if verify_ssl is False
+ # Disable SSL verification warnings if verify_ssl is False
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -80,28 +78,28 @@ class ImageAPIClient:
         """
         logger.debug(f"Determining appropriate article number for product {product.sku}")  # noqa: E501
 
-        # For parent products (ParentProduct model)
+ # For parent products (ParentProduct model)
         if isinstance(product, ParentProduct):
             logger.debug(f"Using parent SKU: {product.sku}")
             return product.sku
 
-        # For variants (VariantProduct model)
-        # First, check if the variant has its own images
+ # For variants (VariantProduct model)
+ # First, check if the variant has its own images
         variant_sku = product.sku
         logger.debug(f"Checking variant SKU: {variant_sku}")
 
-        # If it's a variant with a parent, also try the parent's SKU
+ # If it's a variant with a parent, also try the parent's SKU
         if hasattr(product, 'parent') and product.parent:
             parent_sku = product.parent.sku
             logger.debug(f"Also checking parent SKU: {parent_sku}")
             return parent_sku
 
-        # If no parent but has base_sku, use that
+ # If no parent but has base_sku, use that
         if hasattr(product, 'base_sku') and product.base_sku and product.base_sku != product.sku:  # noqa: E501
             logger.debug(f"Using base SKU: {product.base_sku}")
             return product.base_sku
 
-        # Default to the product's own SKU
+ # Default to the product's own SKU
         logger.debug(f"Defaulting to product SKU: {product.sku}")
         return product.sku
 
@@ -116,19 +114,17 @@ class ImageAPIClient:
         Returns:
             dict: JSON response from the API or None if the request failed
         """
-        # Form the full URL
         url = f"{self.base_url}{endpoint}"
 
-        # Create a safe cache key
+ # Create a safe cache key
         if params:
-            # Convert params to a sorted JSON string and hash it for a safe cache key  # noqa: E501
             params_str = json.dumps(params, sort_keys=True)
             params_hash = hashlib.md5(params_str.encode()).hexdigest()
             cache_key = f"image_api_{endpoint}_{params_hash}"
         else:
             cache_key = f"image_api_{endpoint}_none"
 
-        # Check if the response is in cache
+ # Check if the response is in cache
         if self.cache_enabled:
             cached_response = cache.get(cache_key)
             if cached_response:
@@ -147,7 +143,7 @@ class ImageAPIClient:
             if response.status_code == 200:
                 data = response.json()
 
-                # Cache the response if caching is enabled
+ # Cache the response if caching is enabled
                 if self.cache_enabled:
                     cache.set(cache_key, data, self.cache_timeout)
 
@@ -161,7 +157,6 @@ class ImageAPIClient:
             logger.error(f"SSL Error: {e}")
             if self.verify_ssl:
                 logger.warning("Consider setting VERIFY_SSL=False in settings if the certificate is self-signed")  # noqa: E501
-  # noqa: E501, F841
             return None
         except requests.exceptions.RequestException as e:
             logger.error(f"API connection error: {e}")
@@ -181,7 +176,6 @@ class ImageAPIClient:
         return self._make_request(
             "all-files-and-articles/",  # noqa: E128
             params={"page": page, "page_size": page_size}
-  # noqa: F841
         )
 
     def search_product_images(self, article_number):
@@ -194,7 +188,6 @@ class ImageAPIClient:
         Returns:
             list: List of image data for the product
         """
-        # Check if we have a cached result for this specific product
         product_cache_key = f"product_images_{article_number}"
         if self.cache_enabled:
             cached_images = cache.get(product_cache_key)
@@ -202,7 +195,7 @@ class ImageAPIClient:
                 logger.debug(f"Using cached images for product {article_number}")  # noqa: E501
                 return cached_images
 
-        # This could be optimized if the API supports direct filtering
+ # This could be optimized if the API supports direct filtering
         page = 1
         page_size = 100
         total_pages = None
@@ -214,17 +207,17 @@ class ImageAPIClient:
             if not data:
                 break
 
-            # Calculate total pages on first response
+ # Calculate total pages on first response
             if total_pages is None:
                 count = data.get('count', 0)
                 total_pages = (count + page_size - 1) // page_size
                 logger.info(f"Found {count} total records across {total_pages} pages")  # noqa: E501
 
-            # Filter results for the specific article number
+ # Filter results for the specific article number
             for item in data.get('results', []):
                 articles = item.get('articles', [])
 
-                # Check if any article matches our article number
+ # Check if any article matches our article number
                 for article in articles:
                     if article.get('number') == article_number:
                         product_images.append(item)
@@ -232,14 +225,14 @@ class ImageAPIClient:
 
             page += 1
 
-            # Continue searching through all pages instead of stopping early
-            # We want to find ALL images for this product across all pages
+ # Continue searching through all pages instead of stopping early
+ # We want to find ALL images for this product across all pages
 
-        # Log how many images were found total
+ # Log how many images were found total
         if product_images:
             logger.info(f"Found {len(product_images)} images for article {article_number}")  # noqa: E501
 
-        # Cache the results for this product
+ # Cache the results for this product
         if self.cache_enabled and product_images:
             cache.set(product_cache_key, product_images, self.cache_timeout)
 
@@ -256,18 +249,18 @@ class ImageAPIClient:
             dict: Parsed image information with URLs and metadata
         """
         result = {
-            'external_id': image_data.get('id', ''),  # noqa: E128
-            'image_type': image_data.get('original_file', {}).get('type', ''),
-            'images': [],
-            'metadata': image_data,
+                  'external_id': image_data.get('id', ''),  # noqa: E128
+                  'image_type': image_data.get('original_file', {}).get('type', ''),  # noqa: E501
+                  'images': [],
+                  'metadata': image_data,
         }
 
-        # Initialize image URL variables
+ # Initialize image URL variables
         primary_image_url = None
         png_url = None
         jpeg_url = None
 
-        # Add original image
+ # Add original image
         if image_data.get('original_file') and 'file_url' in image_data['original_file']:  # noqa: E501
             original_url = image_data['original_file']['file_url']
             original_format = image_data['original_file'].get('format', '').lower()  # noqa: E501
@@ -279,7 +272,7 @@ class ImageAPIClient:
                 'resolution': None
             })
 
-            # Set as potential primary image based on format
+ # Set as potential primary image based on format
             if original_format == 'png':
                 png_url = original_url
             elif original_format in ('jpg', 'jpeg'):
@@ -287,7 +280,7 @@ class ImageAPIClient:
             else:
                 primary_image_url = original_url  # Default to original if not PNG or JPEG  # noqa: E501
 
-        # Add exported images (different formats/resolutions)
+ # Add exported images (different formats/resolutions)
         thumbnail_url = None
         highest_res_png = (0, None)
         highest_res_jpeg = (0, None)
@@ -305,12 +298,12 @@ class ImageAPIClient:
                     'resolution': resolution
                 })
 
-                # Find a suitable thumbnail (prefer PNG around 200px)
+ # Find a suitable thumbnail (prefer PNG around 200px)
                 if img_format == 'png' and resolution and resolution[0] <= 300:
                     if thumbnail_url is None or (resolution[0] <= 300 and resolution[0] > 150):  # noqa: E501
                         thumbnail_url = img_url
 
-                # Track highest resolution PNG and JPEG for primary image selection  # noqa: E501
+ # Track highest resolution PNG and JPEG for primary image selection  # noqa: E501
                 if img_format == 'png' and resolution:
                     total_pixels = resolution[0] * resolution[1] if len(resolution) >= 2 else 0  # noqa: E501
                     if total_pixels > highest_res_png[0]:
@@ -320,13 +313,13 @@ class ImageAPIClient:
                     if total_pixels > highest_res_jpeg[0]:
                         highest_res_jpeg = (total_pixels, img_url)
 
-        # Select the primary image URL with format preference: PNG > JPEG > Original  # noqa: E501
+ # Select the primary image URL with format preference: PNG > JPEG > Original  # noqa: E501
         if highest_res_png[1]:
             png_url = highest_res_png[1]
         if highest_res_jpeg[1]:
             jpeg_url = highest_res_jpeg[1]
 
-        # Prioritize PNG > JPEG > Original
+ # Prioritize PNG > JPEG > Original
         if png_url:
             result['image_url'] = png_url
         elif jpeg_url:
@@ -336,7 +329,7 @@ class ImageAPIClient:
 
         result['thumbnail_url'] = thumbnail_url
 
-        # Set front flag and add article info
+ # Set front flag and add article info
         result['articles'] = []
         for article in image_data.get('articles', []):
             result['articles'].append({
@@ -346,7 +339,7 @@ class ImageAPIClient:
                 'stock': article.get('stock')
             })
 
-        # Set is_front flag based on any article being marked as front
+ # Set is_front flag based on any article being marked as front
         result['is_front'] = any(a.get('front', False) for a in image_data.get('articles', []))  # noqa: E501
 
         return result
@@ -362,17 +355,14 @@ class ImageAPIClient:
         Returns:
             int: Priority value (lower is higher priority)
         """
-        # Get the image type and front flag
         if 'original_file' in image_data:
-            # Raw API data
             image_type = image_data.get('original_file', {}).get('type', '')
             is_front = any(a.get('front', False) for a in image_data.get('articles', []))  # noqa: E501
         else:
-            # Parsed data
             image_type = image_data.get('image_type', '')
             is_front = image_data.get('is_front', False)
 
-        # Calculate priority (lower is higher priority)
+ # Calculate priority (lower is higher priority)
         if image_type == 'Produktfoto' and is_front:
             return 1  # Highest priority: Produktfoto + front
         elif image_type == 'Produktfoto':
@@ -380,7 +370,6 @@ class ImageAPIClient:
         elif is_front:
             return 3  # Third priority: Any front image
         elif image_type == 'Markt-Messe-Shop':
-  # noqa: F841
             return 4  # Fourth priority: Market/Shop images
         else:
             return 5  # Lowest priority: Everything else
@@ -412,7 +401,7 @@ class ImageAPIClient:
         if not images:
             return None
 
-        # Sort by priority and take the first one
+ # Sort by priority and take the first one
         sorted_images = self.sort_images_by_priority(images)
         best_image = sorted_images[0]
 
@@ -435,7 +424,7 @@ class ImageAPIClient:
         if not article_numbers:
             return {}
 
-        # Check which products already have cached images
+ # Check which products already have cached images
         uncached_articles = []
         result = {}
 
@@ -444,7 +433,6 @@ class ImageAPIClient:
             cached_images = cache.get(product_cache_key)
 
             if cached_images:
-                # Use cached images for this product
                 sorted_images = self.sort_images_by_priority(cached_images)
                 if sorted_images:
                     result[article] = self.parse_image(sorted_images[0])
@@ -454,10 +442,10 @@ class ImageAPIClient:
         if not uncached_articles:
             return result
 
-        # Fetch images for products that aren't cached yet
+ # Fetch images for products that aren't cached yet
         logger.info(f"Preloading images for {len(uncached_articles)} products")
 
-        # Process in batches to avoid excessive API calls
+ # Process in batches to avoid excessive API calls
         page = 1
         page_size = 100
         total_pages = None
@@ -468,36 +456,34 @@ class ImageAPIClient:
             if not data:
                 break
 
-            # Calculate total pages on first response
+ # Calculate total pages on first response
             if total_pages is None:
                 count = data.get('count', 0)
                 total_pages = (count + page_size - 1) // page_size
-  # noqa: F841
 
-            # Process each image and check if it matches any of our products
+ # Process each image and check if it matches any of our products
             for item in data.get('results', []):
                 articles = item.get('articles', [])
 
-                # Check if this image is associated with any of our uncached products  # noqa: E501
+ # Check if this image is associated with any of our uncached products  # noqa: E501
                 for article in articles:
                     article_number = article.get('number')
                     if article_number in uncached_articles:
-                        # Add to the product's image list
                         product_cache_key = f"product_images_{article_number}"
                         product_images = cache.get(product_cache_key) or []
                         product_images.append(item)
 
-                        # Cache the updated list
+ # Cache the updated list
                         cache.set(product_cache_key, product_images, self.cache_timeout)  # noqa: E501
 
-                        # If this is the first image for this product, add it to the result  # noqa: E501
+ # If this is the first image for this product, add it to the result  # noqa: E501
                         if article_number not in result:
                             result[article_number] = self.parse_image(item)
 
-            # Move to the next page
+ # Move to the next page
             page += 1
 
-            # Stop if we've found images for all products
+ # Stop if we've found images for all products
             if all(article in result for article in uncached_articles):
                 break
 
@@ -519,7 +505,6 @@ class ImageAPIClient:
         Returns:
             list: List of image data for the product
         """
-        # Try with the appropriate article number first
         article_number = self.get_appropriate_article_number(product)
         logger.info(f"Searching for images with primary article number: {article_number}")  # noqa: E501
         images = self.search_product_images(article_number)
@@ -528,7 +513,7 @@ class ImageAPIClient:
             logger.info(f"Found {len(images)} images using primary article number")  # noqa: E501
             return images
 
-        # If no images found and the article number wasn't the product's own SKU, try that  # noqa: E501
+ # If no images found and the article number wasn't the product's own SKU, try that  # noqa: E501
         if article_number != product.sku:
             logger.info(f"No images found with primary article number, trying product SKU: {product.sku}")  # noqa: E501
             images = self.search_product_images(product.sku)
@@ -537,7 +522,7 @@ class ImageAPIClient:
                 logger.info(f"Found {len(images)} images using product SKU")
                 return images
 
-        # If still no images and it's a variant with a base_sku different from what we've tried  # noqa: E501
+ # If still no images and it's a variant with a base_sku different from what we've tried  # noqa: E501
         if not product.is_parent and product.base_sku and product.base_sku != article_number and product.base_sku != product.sku:  # noqa: E501
             logger.info(f"Trying base SKU: {product.base_sku}")
             images = self.search_product_images(product.base_sku)
@@ -546,7 +531,7 @@ class ImageAPIClient:
                 logger.info(f"Found {len(images)} images using base SKU")
                 return images
 
-        # If still no images and it has a parent that we haven't tried yet
+ # If still no images and it has a parent that we haven't tried yet
         if product.parent and product.parent.sku != article_number and product.parent.sku != product.sku:  # noqa: E501
             logger.info(f"Trying parent SKU: {product.parent.sku}")
             images = self.search_product_images(product.parent.sku)
@@ -555,6 +540,6 @@ class ImageAPIClient:
                 logger.info(f"Found {len(images)} images using parent SKU")
                 return images
 
-        # If we've tried everything and found nothing
+ # If we've tried everything and found nothing
         logger.warning(f"No images found for product {product.sku} after trying all fallback options")  # noqa: E501
         return []

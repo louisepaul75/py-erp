@@ -32,27 +32,25 @@ class TestSettings(TestCase):
         self.assertIn('live', API_ENVIRONMENTS)
         self.assertIn('test', API_ENVIRONMENTS)
 
-        # Check structure of environment settings
+ # Check structure of environment settings
         live_env = API_ENVIRONMENTS['live']
         self.assertIn('base_url', live_env)
         self.assertIn('username', live_env)
         self.assertIn('password', live_env)
 
     @override_settings(LEGACY_API_BASE_URL='https://custom-api.example.com')
-  # noqa: F841
     def test_override_base_url(self):
         """Test overriding API_BASE_URL through Django settings."""
-        # We need to reload the settings module to apply the override
         import importlib
         from pyerp.direct_api import settings as api_settings  # noqa: F401
         importlib.reload(api_settings)
 
-        # Check that the override was applied
+ # Check that the override was applied
         self.assertEqual(
             api_settings.API_BASE_URL,  # noqa: E128
             'https://custom-api.example.com')
 
-        # Restore original settings
+ # Restore original settings
         importlib.reload(api_settings)
 
     def test_timeout_setting(self):
@@ -75,25 +73,23 @@ class TestSettings(TestCase):
         self.assertGreater(API_PAGINATION_SIZE, 0)
 
     @override_settings(LEGACY_API_ENVIRONMENTS={
-  # noqa: F841
         'custom': {
-            'base_url': 'https://custom.example.com',  # noqa: E128
-            'username': 'custom_user',
-            'password': 'custom_pass'
-        }
+        'base_url': 'https://custom.example.com',  # noqa: E128
+        'username': 'custom_user',
+        'password': 'custom_pass'
+    }
     })
     def test_override_environments(self):
         """Test overriding API_ENVIRONMENTS through Django settings."""
-        # We need to reload the settings module to apply the override
         import importlib
         from pyerp.direct_api import settings as api_settings  # noqa: F401
         importlib.reload(api_settings)
 
-        # Check that the override was applied
+ # Check that the override was applied
         self.assertIn('custom', api_settings.API_ENVIRONMENTS)
         custom_env = api_settings.API_ENVIRONMENTS['custom']
         self.assertEqual(custom_env['base_url'], 'https://custom.example.com')
         self.assertEqual(custom_env['username'], 'custom_user')
 
-        # Restore original settings
+ # Restore original settings
         importlib.reload(api_settings)

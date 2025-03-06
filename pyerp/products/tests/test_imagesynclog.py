@@ -6,7 +6,6 @@ from django.db import connections
 class ImageSyncLogTest(TestCase):
     def test_create_log(self):
         """Test that we can create an ImageSyncLog instance with auto-incrementing ID."""  # noqa: E501
-        # Print database connection information
         connection = connections['default']
         print(
             f"\nDATABASE INFO: {connection.vendor} - {connection.settings_dict['ENGINE']}")  # noqa: E501
@@ -19,7 +18,7 @@ class ImageSyncLogTest(TestCase):
         self.assertIsNotNone(log.id)
         self.assertTrue(log.id > 0)
 
-        # Create another log to ensure IDs are incrementing
+ # Create another log to ensure IDs are incrementing
         log2 = ImageSyncLog()
         log2.save()
         self.assertIsNotNone(log2.id)

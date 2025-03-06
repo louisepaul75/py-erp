@@ -17,7 +17,7 @@ from django.conf import settings
 
 from pyerp.monitoring.models import HealthCheckResult
 
-# Import the API clients we'll check
+ # Import the API clients we'll check
 try:
     from pyerp.direct_api.client import DirectAPIClient
     from pyerp.direct_api.exceptions import DirectAPIError, ServerUnavailableError  # noqa: E501
@@ -46,7 +46,6 @@ def check_database_connection():
     details = "Database connection is healthy."
 
     try:
-        # Try to get a connection to the database and execute a simple query
         connections['default'].ensure_connection()
         with connections['default'].cursor() as cursor:
             cursor.execute("SELECT 1")
@@ -62,7 +61,7 @@ def check_database_connection():
 
     response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
 
-    # Create and return the health check result
+ # Create and return the health check result
     result = HealthCheckResult.objects.create(
         component=HealthCheckResult.COMPONENT_DATABASE,  # noqa: E128
         status=status,
@@ -96,15 +95,13 @@ def check_legacy_erp_connection():
         response_time = 0
     else:
         try:
-            # Try to connect to the legacy ERP API
             client = DirectAPIClient()
 
-            # Try to fetch a small amount of data to verify connection
+ # Try to fetch a small amount of data to verify connection
             response = client._make_request(
                 'GET',  # noqa: E128
                 'tables',
                 params={'$top': 1}  # noqa: F841
-  # noqa: F841
             )
 
             if response.status_code != 200:
@@ -126,7 +123,7 @@ def check_legacy_erp_connection():
 
     response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
 
-    # Create and return the health check result
+ # Create and return the health check result
     result = HealthCheckResult.objects.create(
         component=HealthCheckResult.COMPONENT_LEGACY_ERP,  # noqa: E128
         status=status,
@@ -160,10 +157,9 @@ def check_pictures_api_connection():
         response_time = 0
     else:
         try:
-            # Try to connect to the pictures API
             client = ImageAPIClient()
 
-            # Try to fetch a small amount of data to verify connection
+ # Try to fetch a small amount of data to verify connection
             response = client.get_all_images(page=1, page_size=1)
 
             if not response or 'results' not in response:
@@ -177,7 +173,7 @@ def check_pictures_api_connection():
 
     response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
 
-    # Create and return the health check result
+ # Create and return the health check result
     result = HealthCheckResult.objects.create(
         component=HealthCheckResult.COMPONENT_PICTURES_API,  # noqa: E128
         status=status,
@@ -206,7 +202,6 @@ def validate_database():
     details = "Database validation completed successfully. No issues found."
 
     try:
-        # Get the path to the validation script
         script_path = Path(settings.BASE_DIR) / 'scripts' / 'db_validation.py'
 
         if not script_path.exists():
@@ -214,11 +209,10 @@ def validate_database():
             details = f"Database validation script not found at {script_path}"
             logger.error(details)
         else:
-            # Run the validation script with the --verbose flag
             cmd = [sys.executable, str(script_path), '--verbose', '--json']
             result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: E501
 
-            # Check if the script ran successfully
+ # Check if the script ran successfully
             if result.returncode != 0:
                 status = HealthCheckResult.STATUS_ERROR
                 details = f"Database validation failed with exit code {result.returncode}.\n\n"  # noqa: E501
@@ -226,73 +220,70 @@ def validate_database():
                 details += f"Output: {result.stdout}"
                 logger.error(f"Database validation failed: {result.stderr}")
             else:
-                # Try to parse the JSON output
                 try:
-                    # Extract just the JSON part from the output
                     json_start = result.stdout.find('{')
-                    if json_start >= 0:
+                        if json_start >= 0:
                         json_output = result.stdout[json_start:]
                         validation_results = json.loads(json_output)
 
-                        # Check for issues
+ # Check for issues
                         issues_found = validation_results.get('issues_found', 0)  # noqa: E501
                         warnings_found = validation_results.get('warnings_found', 0)  # noqa: E501
 
                         if issues_found > 0:
-                            status = HealthCheckResult.STATUS_ERROR
-                            details = f"Database validation found {issues_found} issues.\n\n"  # noqa: E501
-                            details += validation_results.get('summary', '')
+                        status = HealthCheckResult.STATUS_ERROR
+                        details = f"Database validation found {issues_found} issues.\n\n"  # noqa: E501
+                        details += validation_results.get('summary', '')
                         elif warnings_found > 0:
-                            status = HealthCheckResult.STATUS_WARNING
-                            details = f"Database validation found {warnings_found} warnings.\n\n"  # noqa: E501
-                            details += validation_results.get('summary', '')
+                        status = HealthCheckResult.STATUS_WARNING
+                        details = f"Database validation found {warnings_found} warnings.\n\n"  # noqa: E501
+                        details += validation_results.get('summary', '')
                         else:
-                            details = "Database validation completed successfully. No issues found.\n\n"  # noqa: E501
-                            details += validation_results.get('summary', '')
-                    else:
+                        details = "Database validation completed successfully. No issues found.\n\n"  # noqa: E501
+                        details += validation_results.get('summary', '')
+                        else:
                         details = f"Database validation completed, but output format is not recognized:\n\n{result.stdout}"  # noqa: E501
-                except json.JSONDecodeError:
-                    # If JSON parsing fails, use the raw output
-                    if 'Issues found: 0' in result.stdout:
+                        except json.JSONDecodeError:
+                        if 'Issues found: 0' in result.stdout:
                         details = f"Database validation completed successfully. Raw output:\n\n{result.stdout}"  # noqa: E501
-                    else:
+                        else:
                         status = HealthCheckResult.STATUS_WARNING
                         details = f"Database validation completed with possible issues. Raw output:\n\n{result.stdout}"  # noqa: E501
-    except Exception as e:
-        status = HealthCheckResult.STATUS_ERROR
-        details = f"Error running database validation: {str(e)}"
-        logger.error(f"Database validation failed with unexpected error: {str(e)}")  # noqa: E501
+                        except Exception as e:
+                        status = HealthCheckResult.STATUS_ERROR
+                        details = f"Error running database validation: {str(e)}"  # noqa: E501
+                        logger.error(f"Database validation failed with unexpected error: {str(e)}")  # noqa: E501
 
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
+                        response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
 
-    # Create and return the health check result
-    result = HealthCheckResult.objects.create(
-        component=HealthCheckResult.COMPONENT_DATABASE_VALIDATION,  # noqa: E128
-        status=status,
-        details=details,
-        response_time=response_time
-    )
+ # Create and return the health check result
+                        result = HealthCheckResult.objects.create(
+                            component=HealthCheckResult.COMPONENT_DATABASE_VALIDATION,  # noqa: E128
+                            status=status,
+                            details=details,
+                            response_time=response_time
+                        )
 
-    return {
-        'component': HealthCheckResult.COMPONENT_DATABASE_VALIDATION,  # noqa: E128
-        'status': status,
-        'details': details,
-        'response_time': response_time,
-        'timestamp': result.timestamp
-    }
+                        return {
+                            'component': HealthCheckResult.COMPONENT_DATABASE_VALIDATION,  # noqa: E128
+                            'status': status,
+                            'details': details,
+                            'response_time': response_time,
+                            'timestamp': result.timestamp
+                        }
 
 
-def run_all_health_checks():
-    """
-    Run all available health checks.
+                        def run_all_health_checks():
+                        """
+                        Run all available health checks.
 
-    Returns:
-        dict: Dictionary containing all health check results
-    """
-    results = {
-        'database': check_database_connection(),  # noqa: E128
-        'legacy_erp': check_legacy_erp_connection(),
-        'pictures_api': check_pictures_api_connection(),
-    }
+                        Returns:
+                        dict: Dictionary containing all health check results
+                        """
+                        results = {
+                        'database': check_database_connection(),  # noqa: E128
+                        'legacy_erp': check_legacy_erp_connection(),
+                        'pictures_api': check_pictures_api_connection(),
+                        }
 
-    return results
+                        return results
