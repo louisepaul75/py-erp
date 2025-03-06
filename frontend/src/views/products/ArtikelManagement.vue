@@ -23,7 +23,7 @@
             </button>
             <div class="search-input-container">
                 <AtSignIcon class="search-icon"/>
-                <input class="search-input" placeholder="Search..."/>
+                <input class="search-input" placeholder="Search..." v-model="searchQuery" @input="debounceSearch"/>
             </div>
             <button class="toolbar-button">
                 <TypeIcon class="icon-small"/>
@@ -53,148 +53,121 @@
         <div class="artikel-content">
             <!-- Left Panel - Product List -->
             <div class="product-list-panel">
-                <div class="list-header">
-                    <div class="nummer-column">Nummer</div>
-                    <div class="bezeichnung-column">Bezeichnung</div>
-                </div>
-                <div class="product-list-container">
-                    <div v-for="product in productData" 
-                         :key="product.nummer" 
-                         :class="['product-list-item', product.selected ? 'selected' : '']" 
-                         @click="selectProduct(product)">
-                        <div class="nummer-column">{{ product.nummer }}</div>
-                        <div class="bezeichnung-column">{{ product.bezeichnung }}</div>
+                <div class="artikel-list-container">
+                    <div class="artikel-list-header">
+                        <div class="artikel-list-header-item">Nummer</div>
+                        <div class="artikel-list-header-item">Bezeichnung</div>
+                    </div>
+                    <div class="artikel-list">
+                        <!-- Loading state -->
+                        <div v-if="isLoadingProductList" class="artikel-loading">
+                            <p>Loading products...</p>
+                        </div>
+                        
+                        <!-- Error state -->
+                        <div v-else-if="productListError" class="artikel-error">
+                            <p>{{ productListError }}</p>
+                            <button class="artikel-button" @click="loadProducts">Retry</button>
+                        </div>
+                        
+                        <!-- Empty state -->
+                        <div v-else-if="productData.length === 0" class="artikel-empty">
+                            <p>No products found</p>
+                            <p v-if="searchQuery" class="artikel-empty-hint">Try a different search term</p>
+                        </div>
+                        
+                        <!-- Product list -->
+                        <div v-else
+                            v-for="product in productData" 
+                            :key="product.nummer"
+                            class="artikel-list-item"
+                            :class="{ 'selected': product.selected }"
+                            @click="selectProduct(product)">
+                            <div class="artikel-list-item-nummer">{{ product.nummer }}</div>
+                            <div class="artikel-list-item-bezeichnung">{{ product.bezeichnung }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
             <!-- Right Panel - Product Details -->
             <div class="product-details-panel">
-                <div class="details-container">
-                    <!-- Tabs -->
-                    <div class="tabs-container">
-                        <button :class="['tab-button', activeTab === 'mutter' ? 'active' : '']" 
-                                @click="activeTab = 'mutter'">
+                <!-- Loading state -->
+                <div v-if="isLoadingProduct" class="artikel-loading">
+                    <p>Loading product details...</p>
+                </div>
+                
+                <!-- Error state -->
+                <div v-else-if="productLoadError" class="artikel-error">
+                    <p>{{ productLoadError }}</p>
+                </div>
+                
+                <!-- Product details -->
+                <div v-else class="artikel-details">
+                    <div class="artikel-tabs">
+                        <button 
+                            class="artikel-tab" 
+                            :class="{ 'active': activeTab === 'mutter' }"
+                            @click="activeTab = 'mutter'">
                             Mutter
                         </button>
-                        <button :class="['tab-button', activeTab === 'varianten' ? 'active' : '']" 
-                                @click="activeTab = 'varianten'">
+                        <button 
+                            class="artikel-tab" 
+                            :class="{ 'active': activeTab === 'varianten' }"
+                            @click="activeTab = 'varianten'">
                             Varianten
                         </button>
                     </div>
-                    <!-- Tab Content -->
-                    <div v-if="activeTab === 'mutter'" class="tab-content">
-                        <div class="form-sections">
-                            <!-- Bezeichnung -->
-                            <div class="form-section">
-                                <div class="section-header">
-                                    <label class="section-label">Bezeichnung</label>
-                                    <div class="section-actions">
-                                        <button class="action-button">
-                                            <PlusIcon class="icon-tiny"/>
-                                        </button>
-                                        <button class="action-button">
-                                            <MinusIcon class="icon-tiny"/>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="input-with-button">
-                                    <input class="form-input" v-model="selectedProductData.bezeichnung"/>
-                                    <button class="form-button">
-                                        <FlagIcon class="icon-small"/>
-                                    </button>
-                                </div>
+                    <div class="artikel-details-content">
+                        <div class="artikel-form-section">
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Bezeichnung</div>
+                                <input class="artikel-form-input" v-model="selectedProductData.bezeichnung" />
                             </div>
-                            <!-- Beschreibung -->
-                            <div class="form-section">
-                                <label class="section-label">Beschreibung</label>
-                                <textarea class="form-textarea" v-model="selectedProductData.beschreibung"></textarea>
-                            </div>
-                            <!-- Maße -->
-                            <div class="form-section">
-                                <div class="section-header">
-                                    <label class="section-label">Maße</label>
-                                    <div class="section-actions">
-                                        <span class="section-label-small">Tags</span>
-                                        <button class="action-button">
-                                            <MinusIcon class="icon-tiny"/>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="two-column-grid">
-                                    <div class="form-column">
-                                        <div class="checkbox-field">
-                                            <input type="checkbox" id="hangend" v-model="selectedProductData.hangend" class="form-checkbox"/>
-                                            <label for="hangend" class="checkbox-label">Hängend</label>
-                                        </div>
-                                        <div class="checkbox-field">
-                                            <input type="checkbox" id="einseitig" v-model="selectedProductData.einseitig" class="form-checkbox"/>
-                                            <label for="einseitig" class="checkbox-label">Einseitig</label>
-                                        </div>
-                                        <div class="labeled-input">
-                                            <label class="input-label">Breite</label>
-                                            <input class="small-input" v-model="selectedProductData.breite"/>
-                                        </div>
-                                        <div class="labeled-input">
-                                            <label class="input-label">Höhe</label>
-                                            <input class="small-input" v-model="selectedProductData.hohe"/>
-                                        </div>
-                                        <div class="labeled-input">
-                                            <label class="input-label">Tiefe</label>
-                                            <input class="small-input" v-model="selectedProductData.tiefe"/>
-                                        </div>
-                                        <div class="labeled-input">
-                                            <label class="input-label">Gewicht</label>
-                                            <input class="small-input" v-model="selectedProductData.gewicht"/>
-                                        </div>
-                                    </div>
-                                    <div class="form-column">
-                                        <div class="labeled-input">
-                                            <label class="input-label">Boxgröße</label>
-                                            <input class="medium-input" v-model="selectedProductData.boxgrosse"/>
-                                        </div>
-                                        <div class="form-field">
-                                            <label class="section-label">Tags</label>
-                                            <input class="form-input" v-model="selectedProductData.tags"/>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Kategorien -->
-                            <div class="form-section">
-                                <div class="section-header">
-                                    <label class="section-label">Kategorien</label>
-                                    <div class="section-actions">
-                                        <button class="action-button">
-                                            <PlusIcon class="icon-tiny"/>
-                                        </button>
-                                        <button class="action-button">
-                                            <MinusIcon class="icon-tiny"/>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="table-container">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th v-for="(header, i) in categoriesHeaders" :key="i" class="table-header">
-                                                    {{ header }}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr v-for="(row, rowIndex) in categoriesData" :key="rowIndex">
-                                                <td v-for="(cell, cellIndex) in row" :key="cellIndex" class="table-cell">
-                                                    {{ cell }}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Beschreibung</div>
+                                <textarea class="artikel-form-textarea" v-model="selectedProductData.beschreibung"></textarea>
                             </div>
                         </div>
-                    </div>
-                    <div v-if="activeTab === 'varianten'" class="tab-content">
-                        <p class="empty-message">Varianten-Inhalte würden hier angezeigt werden.</p>
+                        <div class="artikel-form-section">
+                            <div class="artikel-form-row checkbox-row">
+                                <label class="artikel-checkbox-label">
+                                    <input type="checkbox" v-model="selectedProductData.hangend" />
+                                    <span>Hängend</span>
+                                </label>
+                                <label class="artikel-checkbox-label">
+                                    <input type="checkbox" v-model="selectedProductData.einseitig" />
+                                    <span>Einseitig</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="artikel-form-section">
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Breite</div>
+                                <input class="artikel-form-input" v-model="selectedProductData.breite" />
+                            </div>
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Höhe</div>
+                                <input class="artikel-form-input" v-model="selectedProductData.hohe" />
+                            </div>
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Tiefe</div>
+                                <input class="artikel-form-input" v-model="selectedProductData.tiefe" />
+                            </div>
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Gewicht</div>
+                                <input class="artikel-form-input" v-model="selectedProductData.gewicht" />
+                            </div>
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Boxgröße</div>
+                                <input class="artikel-form-input" v-model="selectedProductData.boxgrosse" />
+                            </div>
+                        </div>
+                        <div class="artikel-form-section">
+                            <div class="artikel-form-row">
+                                <div class="artikel-form-label">Tags</div>
+                                <input class="artikel-form-input" v-model="selectedProductData.tags" />
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <!-- Right Side Panel -->
@@ -281,55 +254,24 @@ const router = useRouter();
 // State for loading product data
 const isLoadingProduct = ref(false);
 const productLoadError = ref('');
+const searchQuery = ref('');
 
-// Sample data for the product list
-const productData = ref([
-  { nummer: "307967", bezeichnung: "" },
-  { nummer: "132355", bezeichnung: "" },
-  { nummer: "-1", bezeichnung: "" },
-  { nummer: "912859", bezeichnung: "\"Adler\"-Erste Eisenbahn" },
-  { nummer: "218300", bezeichnung: "\"Adler\"-Lock" },
-  { nummer: "310048", bezeichnung: "\"Adler\"-Tender" },
-  { nummer: "411430", bezeichnung: "\"Adler\"-Wagen" },
-  { nummer: "409129", bezeichnung: "\"Adler\"-Wagen-offen", selected: true },
-  { nummer: "300251", bezeichnung: "\"Adler\"-Wagen/Führer" },
-  { nummer: "922678", bezeichnung: "100-0" },
-  { nummer: "325473", bezeichnung: "100-0/3" },
-  { nummer: "530620", bezeichnung: "100-0/5" },
-  { nummer: "921063", bezeichnung: "1x Saugnapf für Glasscheibe Vitrine" },
-  { nummer: "903786", bezeichnung: "22 Zoll Display Sichtschutz Bildschirm" },
-  { nummer: "718205", bezeichnung: "27 Zoll Display Sichtschutz Bildschirm" },
-  { nummer: "701703", bezeichnung: "5x BelegDrucker Rollen" },
-  { nummer: "831738", bezeichnung: "7 miniatur Hasen in drei Teile" },
-  { nummer: "309069", bezeichnung: "7 Schwaben mit Hase" },
-  { nummer: "811140", bezeichnung: "80-2" },
-  { nummer: "304527", bezeichnung: "80-4" },
-  { nummer: "219557", bezeichnung: "Abschiles Planen Draht Seil Nürnberg" },
-  { nummer: "218118", bezeichnung: "ADAC Bus" },
-  { nummer: "717971", bezeichnung: "Adam und Eva" },
-  { nummer: "729258", bezeichnung: "Adler Lock(Weygang 1830)" },
-  { nummer: "224917", bezeichnung: "Adler Zug klein" },
-  { nummer: "414760", bezeichnung: "Adventskranz" },
-  { nummer: "326122", bezeichnung: "Adventskranz 3D" },
-  { nummer: "523275", bezeichnung: "Adventskranz mit Puten" },
-  { nummer: "525070", bezeichnung: "Aeffchen" },
-  { nummer: "701792", bezeichnung: "Akkupack Batterie Powerbank" },
-  { nummer: "717761", bezeichnung: "Alchimist" },
-  { nummer: "705870", bezeichnung: "Alchimist klein" },
-  { nummer: "105515", bezeichnung: "alter Raddampfer Diessen" },
-]);
+// Product data from API
+const productData = ref<any[]>([]);
+const isLoadingProductList = ref(true);
+const productListError = ref('');
 
 // Selected product data
 const selectedProductData = reactive({
-  bezeichnung: '"Adler"-Wagen-offen',
-  beschreibung: 'Tauchen Sie ein in eine Ära eleganter Fahrten und vornehmer Gesellschaften mit dieser exquisiten Zinnfigur. Ein nostalgischer Wagen, kunstvoll gestaltet, bietet Sitz für sechs Personen in festlicher Garderobe, welche die feine Eleganz vergangener Tage widerspiegeln. Ideal als Geschenk oder für die eigene Sammlung, misst dieses Meisterwerk 6.0 x 5.0 cm und verkörpert die Schönheit und den Geist traditioneller Handwerkskunst. Ein Schmuckstück, das jede Vitrine bereichert.',
+  bezeichnung: '',
+  beschreibung: '',
   hangend: false,
   einseitig: false,
-  breite: '5',
-  hohe: '6',
-  tiefe: '0,7',
-  gewicht: '20',
-  boxgrosse: 'B2',
+  breite: '',
+  hohe: '',
+  tiefe: '',
+  gewicht: '',
+  boxgrosse: '',
   tags: ''
 });
 
@@ -342,10 +284,218 @@ const categoriesData = [
   ['', '', 'Home', 'All Products']
 ];
 
+// Load products from API
+const loadProducts = async () => {
+  isLoadingProductList.value = true;
+  productListError.value = '';
+  
+  try {
+    console.log('Loading products from API...');
+    
+    // Create params object for filtering
+    const params: Record<string, any> = {
+      page_size: 100, // Fetch a reasonable number of products
+      q: searchQuery.value, // Apply search query if any
+      is_parent: true // Only fetch parent products
+    };
+    
+    const response = await productApi.getProducts(params);
+    console.log('Products API response:', response);
+    
+    if (response && response.data) {
+      let products = [];
+      
+      if (Array.isArray(response.data)) {
+        // Handle case where response is a direct array
+        products = response.data;
+      } else if (response.data.results) {
+        // Handle paginated response
+        products = response.data.results;
+      }
+      
+      // Map the products to the format needed for the list
+      productData.value = products.map((product: any) => ({
+        nummer: product.sku || '', // Map SKU to Nummer
+        bezeichnung: product.name || '', // Map Name to Bezeichnung
+        id: product.id,
+        selected: false,
+        product: product // Keep the original product data
+      }));
+      
+      console.log('Mapped products:', productData.value);
+    }
+  } catch (err: any) {
+    console.error('Error loading products:', err);
+    productListError.value = `Failed to load products: ${err.message || 'Unknown error'}`;
+    
+    // Set empty array on error
+    productData.value = [];
+  } finally {
+    isLoadingProductList.value = false;
+  }
+};
+
+// Filter products based on search query
+const filterProducts = () => {
+  if (!searchQuery.value.trim()) {
+    // If no search query, reload all products
+    loadProducts();
+    return;
+  }
+  
+  // Otherwise, filter the existing products
+  loadProducts();
+};
+
+// Debounce search input
+let searchTimeout: number | null = null;
+const debounceSearch = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+  searchTimeout = setTimeout(() => {
+    filterProducts();
+  }, 300) as unknown as number;
+};
+
 // Select product function
-const selectProduct = (product: { nummer: string; bezeichnung: string; selected?: boolean }) => {
+const selectProduct = async (product: { nummer: string; bezeichnung: string; selected?: boolean; id?: number }) => {
+  // Clear previous selection
   productData.value.forEach(p => p.selected = false);
+  
+  // Set new selection
   product.selected = true;
+  
+  // If product has ID, load its details
+  if (product.id) {
+    await loadProductDetails(product.id);
+  }
+};
+
+// Load product details from API
+const loadProductDetails = async (productId: number) => {
+  isLoadingProduct.value = true;
+  productLoadError.value = '';
+  
+  try {
+    console.log('Loading product details for ID:', productId);
+    const response = await productApi.getProduct(productId);
+    
+    if (response && response.data) {
+      console.log('Product details loaded:', response.data);
+      
+      // Map API product data to ArtikelManagement format
+      const product = response.data;
+      
+      selectedProductData.bezeichnung = product.name || '';
+      selectedProductData.beschreibung = product.description || '';
+      
+      // Map additional fields if they exist
+      if (product.attributes) {
+        // Extract dimensions and other attributes
+        product.attributes.forEach((attr: any) => {
+          const name = attr.name?.toLowerCase();
+          const value = attr.value;
+          
+          if (name === 'breite' || name === 'width') {
+            selectedProductData.breite = value;
+          } else if (name === 'höhe' || name === 'height') {
+            selectedProductData.hohe = value;
+          } else if (name === 'tiefe' || name === 'depth') {
+            selectedProductData.tiefe = value;
+          } else if (name === 'gewicht' || name === 'weight') {
+            selectedProductData.gewicht = value;
+          } else if (name === 'boxgröße' || name === 'box size') {
+            selectedProductData.boxgrosse = value;
+          } else if (name === 'hängend' && (value === 'true' || value === 'yes')) {
+            selectedProductData.hangend = true;
+          } else if (name === 'einseitig' && (value === 'true' || value === 'yes')) {
+            selectedProductData.einseitig = true;
+          }
+        });
+      }
+      
+      // Extract tags if they exist
+      if (product.tags) {
+        selectedProductData.tags = Array.isArray(product.tags) 
+          ? product.tags.join(', ') 
+          : product.tags;
+      }
+    }
+  } catch (err: any) {
+    console.error('Error loading product details:', err);
+    productLoadError.value = `Failed to load product details: ${err.message || 'Unknown error'}`;
+  } finally {
+    isLoadingProduct.value = false;
+  }
+};
+
+// Load product data from API by ID
+const loadProductFromApi = async (productId: string | number) => {
+  isLoadingProduct.value = true;
+  productLoadError.value = '';
+  
+  try {
+    console.log('Loading product data for ID:', productId);
+    // Ensure productId is a number
+    const id = typeof productId === 'string' ? parseInt(productId, 10) : productId;
+    const response = await productApi.getProduct(id);
+    
+    if (response && response.data) {
+      console.log('Product data loaded:', response.data);
+      
+      // Map API product data to ArtikelManagement format
+      const product = response.data;
+      
+      selectedProductData.bezeichnung = product.name || '';
+      selectedProductData.beschreibung = product.description || '';
+      
+      // Map additional fields if they exist
+      if (product.attributes) {
+        // Extract dimensions and other attributes
+        product.attributes.forEach((attr: any) => {
+          const name = attr.name?.toLowerCase();
+          const value = attr.value;
+          
+          if (name === 'breite' || name === 'width') {
+            selectedProductData.breite = value;
+          } else if (name === 'höhe' || name === 'height') {
+            selectedProductData.hohe = value;
+          } else if (name === 'tiefe' || name === 'depth') {
+            selectedProductData.tiefe = value;
+          } else if (name === 'gewicht' || name === 'weight') {
+            selectedProductData.gewicht = value;
+          } else if (name === 'boxgröße' || name === 'box size') {
+            selectedProductData.boxgrosse = value;
+          } else if (name === 'hängend' && (value === 'true' || value === 'yes')) {
+            selectedProductData.hangend = true;
+          } else if (name === 'einseitig' && (value === 'true' || value === 'yes')) {
+            selectedProductData.einseitig = true;
+          }
+        });
+      }
+      
+      // Extract tags if they exist
+      if (product.tags) {
+        selectedProductData.tags = Array.isArray(product.tags) 
+          ? product.tags.join(', ') 
+          : product.tags;
+      }
+      
+      // Select the corresponding product in the list if it exists
+      if (product.sku) {
+        const matchingProduct = productData.value.find(p => p.nummer === product.sku);
+        if (matchingProduct) {
+          selectProduct(matchingProduct);
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error('Error loading product:', err);
+    productLoadError.value = `Failed to load product: ${err.message || 'Unknown error'}`;
+  } finally {
+    isLoadingProduct.value = false;
+  }
 };
 
 // Window control functions
@@ -368,58 +518,45 @@ const closeWindow = () => {
   }
 };
 
-// Load product data from API
-const loadProductFromApi = async (productId: string | number) => {
-  isLoadingProduct.value = true;
-  productLoadError.value = '';
-  
-  try {
-    console.log('Loading product data for ID:', productId);
-    // Ensure productId is a number
-    const id = typeof productId === 'string' ? parseInt(productId, 10) : productId;
-    const response = await productApi.getProduct(id);
-    
-    if (response && response.data) {
-      console.log('Product data loaded:', response.data);
-      
-      // Map API product data to ArtikelManagement format
-      if (response.data.name) {
-        selectedProductData.bezeichnung = response.data.name;
-      }
-      
-      if (response.data.description) {
-        selectedProductData.beschreibung = response.data.description;
-      }
-      
-      // Select the corresponding product in the list if it exists
-      if (response.data.sku) {
-        const matchingProduct = productData.value.find(p => p.nummer === response.data.sku);
-        if (matchingProduct) {
-          selectProduct(matchingProduct);
-        }
-      }
-    }
-  } catch (err: any) {
-    console.error('Error loading product:', err);
-    productLoadError.value = `Failed to load product: ${err.message || 'Unknown error'}`;
-  } finally {
-    isLoadingProduct.value = false;
-  }
-};
-
 // Watch for product prop changes
 watch(() => props.product, (newProduct) => {
   if (newProduct) {
     console.log('Product data received via prop:', newProduct);
-    // Map the product data to the ArtikelManagement format if needed
     
-    // For example:
-    if (newProduct.name) {
-      selectedProductData.bezeichnung = newProduct.name;
+    // Map the product data to the ArtikelManagement format
+    selectedProductData.bezeichnung = newProduct.name || '';
+    selectedProductData.beschreibung = newProduct.description || '';
+    
+    // Map additional fields if they exist
+    if (newProduct.attributes) {
+      // Extract dimensions and other attributes
+      newProduct.attributes.forEach((attr: any) => {
+        const name = attr.name?.toLowerCase();
+        const value = attr.value;
+        
+        if (name === 'breite' || name === 'width') {
+          selectedProductData.breite = value;
+        } else if (name === 'höhe' || name === 'height') {
+          selectedProductData.hohe = value;
+        } else if (name === 'tiefe' || name === 'depth') {
+          selectedProductData.tiefe = value;
+        } else if (name === 'gewicht' || name === 'weight') {
+          selectedProductData.gewicht = value;
+        } else if (name === 'boxgröße' || name === 'box size') {
+          selectedProductData.boxgrosse = value;
+        } else if (name === 'hängend' && (value === 'true' || value === 'yes')) {
+          selectedProductData.hangend = true;
+        } else if (name === 'einseitig' && (value === 'true' || value === 'yes')) {
+          selectedProductData.einseitig = true;
+        }
+      });
     }
     
-    if (newProduct.description) {
-      selectedProductData.beschreibung = newProduct.description;
+    // Extract tags if they exist
+    if (newProduct.tags) {
+      selectedProductData.tags = Array.isArray(newProduct.tags) 
+        ? newProduct.tags.join(', ') 
+        : newProduct.tags;
     }
     
     // Select the corresponding product in the list if it exists
@@ -446,6 +583,9 @@ onMounted(() => {
   console.log('Initial product prop:', props.product);
   console.log('Route params:', route.params);
   
+  // Load the product list
+  loadProducts();
+  
   // If we have an ID from the route and no product prop, load the product
   const routeId = route.params.id || props.id;
   if (routeId && !props.product) {
@@ -460,70 +600,63 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  max-height: 100vh;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
-/* Header styles */
 .artikel-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  background-color: #f8f9fa;
   padding: 10px;
-  border-bottom: 1px solid #ddd;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eaeaea;
 }
 
 .artikel-title {
-  display: flex;
-  align-items: center;
+  font-size: 16px;
   font-weight: 600;
 }
 
-.artikel-heart {
-  color: #d2bc9b;
-  font-weight: bold;
-  margin-right: 5px;
-}
-
 .window-controls {
-  margin-left: auto;
   display: flex;
-  gap: 5px;
+  gap: 10px;
 }
 
 .window-control-button {
-  padding: 4px 8px;
-  background-color: #eaeaea;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.window-control-button:hover {
-  background-color: #d5d5d5;
-}
-
-/* Toolbar styles */
-.artikel-toolbar {
-  display: flex;
-  align-items: center;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #ddd;
-}
-
-.toolbar-button {
-  height: 32px;
-  width: 32px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  background-color: #d2bc9b;
+  color: white;
+}
+
+.window-control-button:hover {
+  background-color: #c0a989;
+}
+
+.artikel-toolbar {
+  display: flex;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #eaeaea;
+  gap: 10px;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   background-color: white;
-  margin-right: 5px;
   cursor: pointer;
+  font-size: 14px;
 }
 
 .toolbar-button:hover {
@@ -532,389 +665,268 @@ onMounted(() => {
 
 .search-input-container {
   position: relative;
-  margin-right: 5px;
+  flex: 1;
 }
 
 .search-icon {
   position: absolute;
-  left: 8px;
+  left: 10px;
   top: 50%;
   transform: translateY(-50%);
   color: #6c757d;
-  height: 16px;
   width: 16px;
+  height: 16px;
 }
 
 .search-input {
-  height: 32px;
-  padding-left: 32px;
-  width: 200px;
+  width: 100%;
+  padding: 8px 12px 8px 36px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  font-size: 14px;
 }
 
-.artikel-button {
-  padding: 8px 15px;
-  background-color: #d2bc9b;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  margin-left: 10px;
-}
-
-.artikel-button:hover {
-  background-color: #c0a989;
-}
-
-.toolbar-right {
-  margin-left: auto;
-  display: flex;
-  gap: 5px;
-}
-
-/* Main content styles */
 .artikel-content {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
-/* Left panel styles */
 .product-list-panel {
-  width: 320px;
-  border-right: 1px solid #ddd;
+  width: 40%;
+  border-right: 1px solid #eaeaea;
   display: flex;
   flex-direction: column;
-}
-
-.list-header {
-  display: flex;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #ddd;
-}
-
-.nummer-column {
-  width: 100px;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.bezeichnung-column {
-  flex: 1;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.product-list-container {
-  overflow-y: auto;
-  flex: 1;
-}
-
-.product-list-item {
-  display: flex;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.product-list-item:hover {
-  background-color: #f8f9fa;
-}
-
-.product-list-item.selected {
-  background-color: #e6f2ff;
-}
-
-.product-list-item .nummer-column,
-.product-list-item .bezeichnung-column {
-  padding: 10px;
-  border-bottom: 1px solid #eaeaea;
-  font-weight: normal;
-}
-
-/* Right panel styles */
-.product-details-panel {
-  flex: 1;
-  display: flex;
-}
-
-.details-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Tabs styles */
-.tabs-container {
-  margin: 10px 0 0 15px;
-  display: inline-flex;
-  height: 40px;
-  align-items: center;
-  background-color: #f8f9fa;
-  padding: 4px;
-  border-radius: 6px;
-}
-
-.tab-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #6c757d;
-}
-
-.tab-button.active {
-  background-color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  color: #333;
-}
-
-/* Tab content styles */
-.tab-content {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
-}
-
-.form-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.form-section {
-  margin-bottom: 15px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.section-label {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.section-label-small {
-  font-size: 14px;
-  margin-right: 8px;
-}
-
-.section-actions {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
-
-.action-button {
-  height: 24px;
-  width: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  cursor: pointer;
-}
-
-.action-button:hover {
-  background-color: #f0f0f0;
-}
-
-.input-with-button {
-  display: flex;
-}
-
-.form-input {
-  flex: 1;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px;
-}
-
-.form-button {
-  margin-left: 8px;
-  height: 40px;
-  width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  cursor: pointer;
-}
-
-.form-button:hover {
-  background-color: #f0f0f0;
-}
-
-.form-textarea {
-  width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px;
-  height: 160px;
-  resize: vertical;
-}
-
-.two-column-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.form-column {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.checkbox-field {
-  display: flex;
-  align-items: center;
-}
-
-.form-checkbox {
-  height: 16px;
-  width: 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.checkbox-label {
-  margin-left: 8px;
-  font-size: 14px;
-}
-
-.labeled-input {
-  display: flex;
-  align-items: center;
-}
-
-.input-label {
-  width: 100px;
-  font-size: 14px;
-}
-
-.small-input {
-  width: 60px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 4px;
-}
-
-.medium-input {
-  width: 100px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 4px;
-  margin-left: 8px;
-}
-
-.form-field {
-  margin-top: 16px;
-}
-
-.table-container {
-  border: 1px solid #ddd;
-  border-radius: 4px;
   overflow: hidden;
 }
 
-.data-table {
-  width: 100%;
-  font-size: 14px;
-  border-collapse: collapse;
+.product-details-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.table-header {
-  padding: 8px;
-  text-align: left;
-  font-weight: 500;
-  border-bottom: 1px solid #ddd;
+.artikel-list-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.artikel-list-header {
+  display: flex;
+  padding: 10px;
   background-color: #f8f9fa;
-}
-
-.table-cell {
-  padding: 8px;
   border-bottom: 1px solid #eaeaea;
 }
 
-.empty-message {
+.artikel-list-header-item {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.artikel-list-header-item:first-child {
+  width: 100px;
+}
+
+.artikel-list-header-item:last-child {
+  flex: 1;
+}
+
+.artikel-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.artikel-list-item {
+  display: flex;
+  padding: 10px;
+  border-bottom: 1px solid #eaeaea;
+  cursor: pointer;
+}
+
+.artikel-list-item:hover {
+  background-color: #f8f9fa;
+}
+
+.artikel-list-item.selected {
+  background-color: #f0f7ff;
+  border-left: 3px solid #d2bc9b;
+}
+
+.artikel-list-item-nummer {
+  width: 100px;
+  font-size: 14px;
+}
+
+.artikel-list-item-bezeichnung {
+  flex: 1;
+  font-size: 14px;
+}
+
+/* Loading and error states */
+.artikel-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  height: 100%;
+  color: #6c757d;
+}
+
+.artikel-error {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  height: 100%;
+  color: #dc3545;
+}
+
+.artikel-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  height: 100%;
+  color: #6c757d;
+}
+
+.artikel-empty-hint {
+  font-size: 14px;
+  color: #6c757d;
+  margin-top: 10px;
+}
+
+/* Product details styles */
+.artikel-details {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.artikel-tabs {
+  display: flex;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.artikel-tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
   font-size: 14px;
   color: #6c757d;
 }
 
-/* Side panel styles */
-.side-panel {
-  width: 300px;
-  border-left: 1px solid #ddd;
-  padding: 15px;
-  position: relative;
+.artikel-tab:hover {
+  color: #495057;
 }
 
-.side-panel-header {
-  display: flex;
-  justify-content: space-between;
+.artikel-tab.active {
+  border-bottom: 2px solid #d2bc9b;
+  font-weight: 600;
+  color: #212529;
+}
+
+.artikel-details-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.artikel-form-section {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eaeaea;
+  padding-bottom: 20px;
+}
+
+.artikel-form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.artikel-form-row {
   margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
 }
 
-.publish-button-container {
-  position: absolute;
-  bottom: 15px;
-  right: 15px;
+.artikel-form-label {
+  font-size: 14px;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #495057;
 }
 
-.publish-button {
+.artikel-form-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.artikel-form-input:focus {
+  border-color: #d2bc9b;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(210, 188, 155, 0.25);
+}
+
+.artikel-form-textarea {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.artikel-form-textarea:focus {
+  border-color: #d2bc9b;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(210, 188, 155, 0.25);
+}
+
+.checkbox-row {
+  flex-direction: row;
+  gap: 20px;
+}
+
+.artikel-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.artikel-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
   background-color: #d2bc9b;
   color: white;
   border: none;
-  padding: 8px 24px;
   border-radius: 4px;
+  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.3s;
 }
 
-.publish-button:hover {
+.artikel-button:hover {
   background-color: #c0a989;
 }
 
-.help-button-container {
-  position: absolute;
-  bottom: 80px;
-  right: 30px;
-}
-
-.help-button {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: #d2bc9b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  cursor: pointer;
-}
-
-/* Icon sizes */
 .icon-small {
-  height: 16px;
   width: 16px;
+  height: 16px;
 }
 
 .icon-tiny {
-  height: 12px;
   width: 12px;
+  height: 12px;
 }
 </style>
