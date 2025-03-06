@@ -66,7 +66,7 @@
                         <!-- Error state -->
                         <div v-else-if="productListError && !productData.length" class="artikel-error">
                             <p>{{ productListError }}</p>
-                            <button class="artikel-button" @click="loadProducts">Retry</button>
+                            <button class="artikel-button" @click="() => loadProducts(false)">Retry</button>
                         </div>
                         <!-- Empty state -->
                         <div v-else-if="productData.length === 0" class="artikel-empty">
@@ -244,9 +244,7 @@ import {
   Search as SearchIcon, 
   FileText as FileTextIcon, 
   RotateCcw as RotateCcwIcon, 
-  Settings as SettingsIcon,
-  Flag as FlagIcon,
-  X as XIcon
+  Settings as SettingsIcon
 } from 'lucide-vue-next';
 import { productApi } from '@/services/api';
 
@@ -302,12 +300,6 @@ const selectedProductData = reactive({
 
 // Active tab
 const activeTab = ref('mutter');
-
-// Categories data
-const categoriesHeaders = ['Home', 'Sortiment', 'Tradition', 'Maschinerie'];
-const categoriesData = [
-  ['', '', 'Home', 'All Products']
-];
 
 // Debug mode detection
 const isDevelopment = computed(() => {
