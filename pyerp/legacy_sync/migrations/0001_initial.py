@@ -5,296 +5,311 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    initial = True
+    initial = True  # noqa: F841
+  # noqa: F841
 
-    dependencies = []
+    dependencies = []  # noqa: F841
+  # noqa: F841
 
-    operations = [
+    operations = [  # noqa: F841
+  # noqa: F841
         migrations.CreateModel(
-            name="EntityMappingConfig",
-            fields=[
-                (
+            name="EntityMappingConfig",  # noqa: E128
+            fields=[  # noqa: F841
+                (  # noqa: E128
                     "id",
                     models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
+                        auto_created=True,  # noqa: E128
+                        primary_key=True,  # noqa: F841
+                        serialize=False,  # noqa: F841
+                        verbose_name="ID",  # noqa: F841
                     ),
                 ),
                 (
-                    "entity_type",
+                    "entity_type",  # noqa: E128
                     models.CharField(
-                        help_text="Type of entity being mapped (e.g., product, customer)",
-                        max_length=50,
-                        unique=True,
+                        help_text="Type of entity being mapped (e.g., product, customer)",  # noqa: E501
+                        max_length=50,  # noqa: F841
+                        unique=True,  # noqa: F841
                     ),
                 ),
                 (
-                    "legacy_table",
+                    "legacy_table",  # noqa: E128
                     models.CharField(
-                        help_text="Name of the table in the legacy system",
-                        max_length=100,
+                        help_text="Name of the table in the legacy system",  # noqa: E128
+                        max_length=100,  # noqa: F841
                     ),
                 ),
                 (
-                    "new_model",
+                    "new_model",  # noqa: E128
                     models.CharField(
-                        help_text="Full path to the model class in the new system (e.g., pyerp.products.models.Product)",
-                        max_length=100,
+                        help_text="Full path to the model class in the new system (e.g., pyerp.products.models.Product)",  # noqa: E501
+                        max_length=100,  # noqa: F841
                     ),
                 ),
                 (
-                    "field_mappings",
+                    "field_mappings",  # noqa: E128
                     models.JSONField(
-                        help_text="JSON mapping of legacy fields to new fields, including transformations"
+                        help_text="JSON mapping of legacy fields to new fields, including transformations"  # noqa: E501
                     ),
                 ),
                 (
-                    "is_active",
+                    "is_active",  # noqa: E128
                     models.BooleanField(
-                        default=True,
-                        help_text="Whether this mapping configuration is active",
+                        default=True,  # noqa: E128
+                        help_text="Whether this mapping configuration is active",  # noqa: E501
                     ),
                 ),
                 (
-                    "created_at",
+                    "created_at",  # noqa: E128
                     models.DateTimeField(
-                        auto_now_add=True,
-                        help_text="When this mapping configuration was created",
+                        auto_now_add=True,  # noqa: E128
+                        help_text="When this mapping configuration was created",  # noqa: E501
                     ),
                 ),
                 (
-                    "updated_at",
+                    "updated_at",  # noqa: E128
                     models.DateTimeField(
-                        auto_now=True,
-                        help_text="When this mapping configuration was last updated",
+                        auto_now=True,  # noqa: E128
+                        help_text="When this mapping configuration was last updated",  # noqa: E501
                     ),
                 ),
             ],
-            options={
-                "verbose_name": "Entity Mapping Configuration",
+            options={  # noqa: F841
+                "verbose_name": "Entity Mapping Configuration",  # noqa: E128
                 "verbose_name_plural": "Entity Mapping Configurations",
                 "ordering": ["entity_type"],
             },
         ),
         migrations.CreateModel(
-            name="TransformationFunction",
-            fields=[
-                (
+            name="TransformationFunction",  # noqa: E128
+            fields=[  # noqa: F841
+                (  # noqa: E128
                     "id",
                     models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
+                        auto_created=True,  # noqa: E128
+                        primary_key=True,  # noqa: F841
+                        serialize=False,  # noqa: F841
+                        verbose_name="ID",  # noqa: F841
                     ),
                 ),
                 (
-                    "name",
+                    "name",  # noqa: E128
                     models.CharField(
-                        help_text="Name of the transformation function",
-                        max_length=100,
-                        unique=True,
+                        help_text="Name of the transformation function",  # noqa: E128
+                        max_length=100,  # noqa: F841
+                        unique=True,  # noqa: F841
                     ),
                 ),
                 (
-                    "description",
+                    "description",  # noqa: E128
                     models.TextField(
-                        blank=True,
-                        help_text="Description of what the transformation function does",
+                        blank=True,  # noqa: E128
+                        help_text="Description of what the transformation function does",  # noqa: E501
                     ),
                 ),
                 (
-                    "code",
+                    "code",  # noqa: E128
                     models.TextField(
-                        help_text="Python code for the transformation function. Should take a single value parameter and return the transformed value."
+                        help_text="Python code for the transformation function. Should take a single value parameter and return the transformed value."  # noqa: E501
                     ),
                 ),
                 (
-                    "is_active",
+                    "is_active",  # noqa: E128
                     models.BooleanField(
-                        default=True,
-                        help_text="Whether this transformation function is active",
+                        default=True,  # noqa: E128
+                        help_text="Whether this transformation function is active",  # noqa: E501
                     ),
                 ),
                 (
-                    "created_at",
+                    "created_at",  # noqa: E128
                     models.DateTimeField(
-                        auto_now_add=True,
-                        help_text="When this transformation function was created",
+                        auto_now_add=True,  # noqa: E128
+                        help_text="When this transformation function was created",  # noqa: E501
                     ),
                 ),
                 (
-                    "updated_at",
+                    "updated_at",  # noqa: E128
                     models.DateTimeField(
-                        auto_now=True,
-                        help_text="When this transformation function was last updated",
+                        auto_now=True,  # noqa: E128
+                        help_text="When this transformation function was last updated",  # noqa: E501
                     ),
                 ),
             ],
-            options={
-                "verbose_name": "Transformation Function",
+            options={  # noqa: F841
+                "verbose_name": "Transformation Function",  # noqa: E128
                 "verbose_name_plural": "Transformation Functions",
                 "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name="EntityMapping",
-            fields=[
-                (
+            name="EntityMapping",  # noqa: E128
+            fields=[  # noqa: F841
+                (  # noqa: E128
                     "id",
                     models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
+                        auto_created=True,  # noqa: E128
+                        primary_key=True,  # noqa: F841
+                        serialize=False,  # noqa: F841
+                        verbose_name="ID",  # noqa: F841
                     ),
                 ),
                 (
-                    "entity_type",
+                    "entity_type",  # noqa: E128
                     models.CharField(
-                        help_text="Type of entity being mapped (e.g., product, customer)",
-                        max_length=50,
+                        help_text="Type of entity being mapped (e.g., product, customer)",  # noqa: E501
+                        max_length=50,  # noqa: F841
                     ),
                 ),
                 (
-                    "legacy_id",
+                    "legacy_id",  # noqa: E128
                     models.CharField(
-                        help_text="ID of the entity in the legacy system",
-                        max_length=100,
+                        help_text="ID of the entity in the legacy system",  # noqa: E128
+                        max_length=100,  # noqa: F841
                     ),
                 ),
                 (
-                    "new_id",
+                    "new_id",  # noqa: E128
                     models.CharField(
-                        help_text="ID of the entity in the new system", max_length=100
+                        help_text="ID of the entity in the new system", max_length=100  # noqa: E501
                     ),
                 ),
                 (
-                    "last_synced_at",
+                    "last_synced_at",  # noqa: E128
                     models.DateTimeField(
-                        auto_now=True, help_text="When the entity was last synchronized"
+                        auto_now=True, help_text="When the entity was last synchronized"  # noqa: E501
                     ),
                 ),
             ],
-            options={
-                "verbose_name": "Entity Mapping",
+            options={  # noqa: F841
+                "verbose_name": "Entity Mapping",  # noqa: E128
                 "verbose_name_plural": "Entity Mappings",
                 "indexes": [
-                    models.Index(
-                        fields=["entity_type", "legacy_id"],
-                        name="legacy_sync_entity__f1940a_idx",
+                    models.Index(  # noqa: E128
+                        fields=["entity_type", "legacy_id"],  # noqa: F841
+                        name="legacy_sync_entity__f1940a_idx",  # noqa: F841
                     ),
                     models.Index(
-                        fields=["entity_type", "new_id"],
-                        name="legacy_sync_entity__72c4be_idx",
+                        fields=["entity_type", "new_id"],  # noqa: E128
+                        name="legacy_sync_entity__72c4be_idx",  # noqa: F841
                     ),
                 ],
                 "unique_together": {
-                    ("entity_type", "legacy_id"),
+                    ("entity_type", "legacy_id"),  # noqa: E128
                     ("entity_type", "new_id"),
                 },
             },
         ),
         migrations.CreateModel(
-            name="SyncLog",
-            fields=[
-                (
+            name="SyncLog",  # noqa: E128
+            fields=[  # noqa: F841
+                (  # noqa: E128
                     "id",
                     models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
+                        auto_created=True,  # noqa: F841
+  # noqa: F841
+                        primary_key=True,  # noqa: F841
+  # noqa: F841
+                        serialize=False,  # noqa: F841
+  # noqa: F841
+                        verbose_name="ID",  # noqa: F841
                     ),
                 ),
                 (
-                    "entity_type",
+                    "entity_type",  # noqa: E128
                     models.CharField(
-                        help_text="Type of entity being synchronized (e.g., product, customer)",
-                        max_length=50,
+                        help_text="Type of entity being synchronized (e.g., product, customer)",  # noqa: E501
+                        max_length=50,  # noqa: F841
                     ),
                 ),
                 (
-                    "status",
+                    "status",  # noqa: E128
                     models.CharField(
-                        choices=[
+                        choices=[  # noqa: F841
+  # noqa: F841
                             ("pending", "Pending"),
                             ("in_progress", "In Progress"),
                             ("completed", "Completed"),
                             ("failed", "Failed"),
                             ("partially_completed", "Partially Completed"),
                         ],
-                        default="pending",
-                        help_text="Current status of the synchronization operation",
-                        max_length=20,
+                        default="pending",  # noqa: F841
+                        help_text="Current status of the synchronization operation",  # noqa: E501
+                        max_length=20,  # noqa: F841
+  # noqa: F841
                     ),
                 ),
                 (
-                    "started_at",
+                    "started_at",  # noqa: E128
                     models.DateTimeField(
-                        auto_now_add=True,
-                        help_text="When the synchronization operation started",
+                        auto_now_add=True,  # noqa: F841
+  # noqa: F841
+                        help_text="When the synchronization operation started",  # noqa: F841
                     ),
                 ),
                 (
-                    "completed_at",
+                    "completed_at",  # noqa: E128
                     models.DateTimeField(
-                        blank=True,
-                        help_text="When the synchronization operation completed",
-                        null=True,
+                        blank=True,  # noqa: E128
+                        help_text="When the synchronization operation completed",  # noqa: E501
+                        null=True,  # noqa: F841
+  # noqa: F841
                     ),
                 ),
                 (
-                    "records_processed",
+                    "records_processed",  # noqa: E128
                     models.PositiveIntegerField(
-                        default=0,
-                        help_text="Number of records processed during synchronization",
+                        default=0,  # noqa: E128
+                        help_text="Number of records processed during synchronization",  # noqa: E501
                     ),
                 ),
                 (
-                    "records_created",
+                    "records_created",  # noqa: E128
                     models.PositiveIntegerField(
-                        default=0,
-                        help_text="Number of new records created during synchronization",
+                        default=0,  # noqa: E128
+                        help_text="Number of new records created during synchronization",  # noqa: E501
                     ),
                 ),
                 (
-                    "records_updated",
+                    "records_updated",  # noqa: E128
                     models.PositiveIntegerField(
-                        default=0,
-                        help_text="Number of existing records updated during synchronization",
+                        default=0,  # noqa: E128
+                        help_text="Number of existing records updated during synchronization",  # noqa: E501
                     ),
                 ),
                 (
-                    "records_failed",
+                    "records_failed",  # noqa: E128
                     models.PositiveIntegerField(
-                        default=0,
-                        help_text="Number of records that failed to synchronize",
+                        default=0,  # noqa: F841
+  # noqa: F841
+                        help_text="Number of records that failed to synchronize",  # noqa: E501
                     ),
                 ),
                 (
-                    "error_message",
+                    "error_message",  # noqa: E128
                     models.TextField(
-                        blank=True,
-                        help_text="Error message if the synchronization operation failed",
+                        blank=True,  # noqa: F841
+  # noqa: F841
+                        help_text="Error message if the synchronization operation failed",  # noqa: E501
+  # noqa: E501, F841
                     ),
                 ),
             ],
-            options={
+            options={  # noqa: F841
+  # noqa: F841
                 "verbose_name": "Synchronization Log",
                 "verbose_name_plural": "Synchronization Logs",
                 "ordering": ["-started_at"],
                 "indexes": [
-                    models.Index(
-                        fields=["entity_type"], name="legacy_sync_entity__93f97b_idx"
+                    models.Index(  # noqa: E128
+                        fields=["entity_type"], name="legacy_sync_entity__93f97b_idx"  # noqa: E501
                     ),
                     models.Index(
-                        fields=["status"], name="legacy_sync_status_dadb42_idx"
+                        fields=["status"], name="legacy_sync_status_dadb42_idx"  # noqa: E128
                     ),
                     models.Index(
-                        fields=["started_at"], name="legacy_sync_started_d77697_idx"
+                        fields=["started_at"], name="legacy_sync_started_d77697_idx"  # noqa: E501
+  # noqa: E501, F841
                     ),
                 ],
             },

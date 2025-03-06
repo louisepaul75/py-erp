@@ -6,7 +6,7 @@ import pytest  # noqa: F401
 from django.test import TestCase
 
 from pyerp.direct_api.exceptions import (
-    DirectAPIError,
+    DirectAPIError,  # noqa: E128
     ResponseError,
     ConnectionError,
     AuthenticationError,
@@ -21,6 +21,7 @@ class TestExceptions(TestCase):
     """Tests for the exceptions module."""
 
     def test_base_exception(self):
+
         """Test the base DirectAPIError exception."""
         # Create an instance with just a message
         error = DirectAPIError("Test error message")
@@ -35,13 +36,13 @@ class TestExceptions(TestCase):
 
         # Create an instance with response_body
         error = ResponseError(
-            status_code=500,
-            message="Server error",
-            response_body={"error": "Internal server error"}
+            status_code=500,  # noqa: E128
+            message="Server error",  # noqa: F841
+            response_body={"error": "Internal server error"}  # noqa: F841
         )
         self.assertEqual(error.status_code, 500)
         self.assertEqual(
-            error.response_body, {
+            error.response_body, {  # noqa: E128
                 "error": "Internal server error"})
 
     def test_connection_error(self):

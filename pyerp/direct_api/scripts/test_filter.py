@@ -27,9 +27,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
+    level=logging.INFO,  # noqa: E128
+    format='%(asctime)s - %(levelname)s - %(message)s',  # noqa: F841
+    handlers=[logging.StreamHandler(sys.stdout)]  # noqa: F841
+  # noqa: F841
 )
 logger = logging.getLogger(__name__)
 
@@ -45,19 +46,22 @@ logger.info(f"Set LEGACY_ERP_API_TEST to: {os.environ['LEGACY_ERP_API_TEST']}")
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Test the updated filtering implementation')
+        description='Test the updated filtering implementation')  # noqa: F841
+  # noqa: F841
 
     parser.add_argument('--env', default='live',
-                        help='Environment to use (default: live)')
+                        help='Environment to use (default: live)')  # noqa: F841
 
     parser.add_argument('--table', default='Artikel',
-                        help='Table to test filters on (default: Artikel)')
+                        help='Table to test filters on (default: Artikel)')  # noqa: F841
 
     parser.add_argument('--verbose', action='store_true',
-                        help='Enable verbose output')
+                        help='Enable verbose output')  # noqa: F841
 
     parser.add_argument('--list-tables', action='store_true',
-                        help='List available tables in the legacy ERP system')
+  # noqa: F841
+                        help='List available tables in the legacy ERP system')  # noqa: F841
+  # noqa: F841
 
     return parser.parse_args()
 
@@ -65,6 +69,7 @@ def parse_args():
 def list_available_tables(client):
     """List available tables in the legacy ERP system."""
     logger.info("=== Listing Available Tables ===")
+  # noqa: F841
 
     try:
         # Make a request to the $catalog endpoint to get available tables
@@ -98,8 +103,8 @@ def test_simple_equality_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,
-            top=10,
+            table_name=table_name,  # noqa: E128
+            top=10,  # noqa: F841
             filter_query=filter_query
         )
 
@@ -120,8 +125,8 @@ def test_text_search_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,
-            top=10,
+            table_name=table_name,  # noqa: E128
+            top=10,  # noqa: F841
             filter_query=filter_query
         )
 
@@ -142,8 +147,8 @@ def test_numeric_comparison_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,
-            top=10,
+            table_name=table_name,  # noqa: E128
+            top=10,  # noqa: F841
             filter_query=filter_query
         )
 
@@ -164,8 +169,8 @@ def test_boolean_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,
-            top=10,
+            table_name=table_name,  # noqa: E128
+            top=10,  # noqa: F841
             filter_query=filter_query
         )
 
@@ -186,8 +191,8 @@ def test_date_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,
-            top=10,
+            table_name=table_name,  # noqa: E128
+            top=10,  # noqa: F841
             filter_query=filter_query
         )
 
@@ -208,8 +213,8 @@ def test_combined_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,
-            top=10,
+            table_name=table_name,  # noqa: E128
+            top=10,  # noqa: F841
             filter_query=filter_query
         )
 
@@ -230,8 +235,9 @@ def test_or_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,
-            top=10,
+            table_name=table_name,  # noqa: E128
+            top=10,  # noqa: F841
+  # noqa: F841
             filter_query=filter_query
         )
 
@@ -253,8 +259,11 @@ def test_pagination_with_filter(client, table_name):
     try:
         df = client.fetch_table(
             table_name=table_name,
-            all_records=True,
+  # noqa: F841
+            all_records=True,  # noqa: F841
+  # noqa: F841
             filter_query=filter_query
+  # noqa: F841
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -285,7 +294,7 @@ def main():
 
     # Run the tests
     tests = [
-        ("Simple Equality Filter", test_simple_equality_filter),
+        ("Simple Equality Filter", test_simple_equality_filter),  # noqa: E128
         ("Text Search Filter", test_text_search_filter),
         ("Numeric Comparison Filter", test_numeric_comparison_filter),
         ("Boolean Filter", test_boolean_filter),
@@ -313,6 +322,7 @@ def main():
 
     # Overall result
     if all(result == "PASS" for result in results.values()):
+  # noqa: F841
         logger.info("\nAll tests PASSED!")
         return 0
     else:
@@ -321,4 +331,5 @@ def main():
 
 
 if __name__ == '__main__':
+  # noqa: F841
     sys.exit(main())

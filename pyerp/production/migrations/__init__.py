@@ -1,1 +1,1 @@
-# Empty file for Django migrations package 
+# Empty file for Django migrations package

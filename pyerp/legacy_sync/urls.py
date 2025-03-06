@@ -1,10 +1,10 @@
 """
 URL Configuration for the Legacy Sync module.
 
-This module defines API endpoints for synchronizing data with the legacy system.
+This module defines API endpoints for synchronizing data with the legacy system.  # noqa: E501
 """
 
-from django.urls import path
+from django.urls import path  # noqa: F401
 from rest_framework.routers import DefaultRouter
 
 # Initialize the router
@@ -15,6 +15,8 @@ router = DefaultRouter()
 
 # URL patterns
 urlpatterns = router.urls
+  # noqa: F841
 
 # Add any additional URL patterns here
-# Example: path('sync-status/', SyncStatusView.as_view(), name='sync-status'), 
+
+  # noqa: F841

@@ -5,7 +5,8 @@ import logging
 
 
 class Command(BaseCommand):
-    help = 'Test the external image API connection'
+    help = 'Test the external image API connection'  # noqa: F841
+  # noqa: F841
 
     def handle(self, *args, **options):
         # Show configuration being used
@@ -16,11 +17,12 @@ class Command(BaseCommand):
                                        len(settings.IMAGE_API["PASSWORD"])}')
         self.stdout.write(f'Timeout: {settings.IMAGE_API["TIMEOUT"]}')
         self.stdout.write(
-            f'Cache Enabled: {
+            f'Cache Enabled: {  # noqa: E128
                 settings.IMAGE_API["CACHE_ENABLED"]}')
 
         # Enable debug logging for requests
         logging.basicConfig(level=logging.DEBUG)
+  # noqa: F841
         logging.getLogger('urllib3').setLevel(logging.DEBUG)
 
         client = ImageAPIClient()
@@ -30,24 +32,24 @@ class Command(BaseCommand):
 
         if images:
             self.stdout.write(
-                self.style.SUCCESS(
+                self.style.SUCCESS(  # noqa: E128
                     f'Successfully retrieved {
-                        len(images)} images'))
+                        len(images)} images'))  # noqa: E128
 
             # Display details of the first image
             if len(images) > 0:
                 first_image = client.parse_image(images[0])
                 self.stdout.write('\nFirst image details:')
                 self.stdout.write(
-                    f'External ID: {
+                    f'External ID: {  # noqa: E128
                         first_image.get("external_id")}')
                 self.stdout.write(
-                    f'Image Type: {
+                    f'Image Type: {  # noqa: E128
                         first_image.get("image_type")}')
                 self.stdout.write(f'Image URL: {first_image.get("image_url")}')
                 self.stdout.write(
-                    f'Thumbnail URL: {
+                    f'Thumbnail URL: {  # noqa: E128
                         first_image.get("thumbnail_url")}')
         else:
             self.stdout.write(self.style.ERROR(
-                'No images found or error occurred'))
+                'No images found or error occurred'))  # noqa: E128

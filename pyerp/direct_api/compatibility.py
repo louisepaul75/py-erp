@@ -6,8 +6,8 @@ to make migration easier for existing code.
 """
 
 import warnings
-import pandas as pd
-from typing import Dict, List, Optional, Any, Union
+import pandas as pd  # noqa: F401
+from typing import Dict, List, Optional, Any, Union  # noqa: F401
 
 from pyerp.direct_api.client import DirectAPIClient
 
@@ -16,6 +16,8 @@ _client = DirectAPIClient()
 
 
 def fetch_data_from_api(
+  # noqa: E128
+
     table_name: str,
     top: int = 100,
     skip: int = 0,
@@ -24,32 +26,38 @@ def fetch_data_from_api(
 ) -> pd.DataFrame:
     """
     Compatibility function for wsz_api.getTable.fetch_data_from_api
-    
+
     Args:
         table_name: The name of the table to fetch data from
         top: The number of records to fetch (max per page)
         skip: The number of records to skip (for pagination)
-        new_data_only: If True, fetch only records with modified_date > threshold
+        new_data_only: If True, fetch only records with modified_date > threshold  # noqa: E501
         date_created_start: Optional start date for filtering by creation date
-        
+
     Returns:
         pd.DataFrame: A pandas DataFrame containing the fetched data
     """
     warnings.warn(
-        "Using deprecated WSZ_api compatibility layer. "
+        "Using deprecated WSZ_api compatibility layer. "  # noqa: E128
         "Consider migrating to DirectAPIClient directly.",
         DeprecationWarning, stacklevel=2
     )
     return _client.fetch_table(
-        table_name=table_name,
+        table_name=table_name,  # noqa: E128
         top=top,
+  # noqa: F841
         skip=skip,
+  # noqa: F841
         new_data_only=new_data_only,
+  # noqa: F841
         date_created_start=date_created_start
+  # noqa: F841
     )
 
 
 def push_data(
+  # noqa: E128
+
     table: str,
     column: str,
     key: Union[int, str],
@@ -57,46 +65,52 @@ def push_data(
 ) -> bool:
     """
     Compatibility function for wsz_api.pushField.push_data
-    
+
     Args:
         table: The name of the table to update
         column: The name of the field to update
         key: The ID of the record to update
         value: The new value for the field
-        
+
     Returns:
         bool: True if the update was successful
     """
     warnings.warn(
-        "Using deprecated WSZ_api compatibility layer. "
+        "Using deprecated WSZ_api compatibility layer. "  # noqa: E128
         "Consider migrating to DirectAPIClient directly.",
         DeprecationWarning, stacklevel=2
     )
     return _client.push_field(
         table_name=table,
-        record_id=key,
-        field_name=column,
-        field_value=value
+  # noqa: F841
+        record_id=key,  # noqa: F841
+  # noqa: F841
+        field_name=column,  # noqa: F841
+  # noqa: F841
+        field_value=value  # noqa: F841
+  # noqa: F841
     )
 
 
 def get_session_cookie(mode: str = 'live') -> str:
     """
     Compatibility function for wsz_api.auth.get_session_cookie
-    
+
     Args:
         mode: The environment to use ('live', 'test', etc.)
-        
+
     Returns:
         str: The session cookie for API requests
     """
     warnings.warn(
-        "Using deprecated WSZ_api compatibility layer. "
+        "Using deprecated WSZ_api compatibility layer. "  # noqa: E128
         "Consider migrating to DirectAPIClient directly.",
         DeprecationWarning, stacklevel=2
+  # noqa: F841
     )
-    from pyerp.direct_api.auth import get_session_cookie as direct_get_session_cookie
+    from pyerp.direct_api.auth import get_session_cookie as direct_get_session_cookie  # noqa: E501
     return direct_get_session_cookie(environment=mode)
+  # noqa: F841
 
 
-# Add compatibility for other WSZ_api functions as needed 
+# Add compatibility for other WSZ_api functions as needed

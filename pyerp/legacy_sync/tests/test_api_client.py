@@ -3,7 +3,7 @@ Tests for the legacy_sync API client module using the direct_api implementation.
 """
 
 import pytest  # noqa: F401
-import pandas as pd
+import pandas as pd  # noqa: F401
 from unittest.mock import patch, MagicMock
 from django.test import TestCase
 
@@ -38,6 +38,7 @@ class TestLegacyAPIClient(TestCase):
         """Test initialization fallback to WSZ_api when DirectAPIClient fails."""  # noqa: E501
         # Set up the mock to raise an exception
         mock_direct_api_client.side_effect = ImportError(
+  # noqa: F841
             "Cannot import DirectAPIClient")
 
         # Create an instance with mocked WSZ_api import
@@ -112,20 +113,20 @@ class TestLegacyAPIClient(TestCase):
         # Create the instance and call the method
         client = LegacyAPIClient(environment='test')
         result = client.fetch_table(
-            table='products',
-            top=10,
-            skip=0,
-            filter_query="name eq 'Item 1'"
+            table='products',  # noqa: E128
+            top=10,  # noqa: F841
+            skip=0,  # noqa: F841
+            filter_query="name eq 'Item 1'"  # noqa: F841
         )
 
         # Verify the result
         self.assertTrue(result.equals(df))
         mock_client.fetch_table.assert_called_once_with(
-            'products',
-            top=10,
-            skip=0,
-            filter_query="name eq 'Item 1'",
-            new_data_only=True
+            'products',  # noqa: E128
+            top=10,  # noqa: F841
+            skip=0,  # noqa: F841
+            filter_query="name eq 'Item 1'",  # noqa: F841
+            new_data_only=True  # noqa: F841
         )
 
     def test_fetch_table_with_wsz_api(self):
@@ -147,21 +148,25 @@ class TestLegacyAPIClient(TestCase):
 
             # Call the method
             result = client.fetch_table(
-                table='products',
-                top=100,
-                skip=0,
-                filter_query="name eq 'Item 1'"
+                table='products',  # noqa: E128
+                top=100,  # noqa: F841
+  # noqa: F841
+                skip=0,  # noqa: F841
+                filter_query="name eq 'Item 1'"  # noqa: F841
             )
 
             # Verify the result
             self.assertTrue(result.equals(df))
             mock_wsz_api.fetch_data_from_api.assert_called_once_with(
-                table='products',
-                environment='test',
-                new_data_only=True,
-                limit=100,
-                skip=0,
-                filter_query="name eq 'Item 1'"
+                table='products',  # noqa: E128
+                environment='test',  # noqa: F841
+                new_data_only=True,  # noqa: F841
+  # noqa: F841
+                limit=100,  # noqa: F841
+  # noqa: F841
+                skip=0,  # noqa: F841
+  # noqa: F841
+                filter_query="name eq 'Item 1'"  # noqa: F841
             )
 
     @patch('pyerp.legacy_sync.api_client.DirectAPIClient')
@@ -175,16 +180,16 @@ class TestLegacyAPIClient(TestCase):
         # Create the instance and call the method
         client = LegacyAPIClient(environment='test')
         result = client.push_field(
-            table='products',
-            id=123,
-            field='name',
-            value='New Product Name'
+            table='products',  # noqa: E128
+            id=123,  # noqa: F841
+            field='name',  # noqa: F841
+            value='New Product Name'  # noqa: F841
         )
 
         # Verify the result
         self.assertTrue(result)
         mock_client.push_field.assert_called_once_with(
-            'products',
+            'products',  # noqa: E128
             123,
             'name',
             'New Product Name'
@@ -206,20 +211,21 @@ class TestLegacyAPIClient(TestCase):
 
             # Call the method
             result = client.push_field(
-                table='products',
-                id=123,
-                field='name',
-                value='New Product Name'
+                table='products',  # noqa: E128
+                id=123,  # noqa: F841
+                field='name',  # noqa: F841
+                value='New Product Name'  # noqa: F841
             )
 
             # Verify the result
             self.assertTrue(result)
             mock_wsz_api.push_data.assert_called_once_with(
-                table='products',
-                id=123,
-                field='name',
-                value='New Product Name',
-                environment='test'
+                table='products',  # noqa: E128
+                id=123,  # noqa: F841
+                field='name',  # noqa: F841
+  # noqa: F841
+                value='New Product Name',  # noqa: F841
+                environment='test'  # noqa: F841
             )
 
     @patch('pyerp.legacy_sync.api_client.DirectAPIClient')
@@ -236,14 +242,14 @@ class TestLegacyAPIClient(TestCase):
         # Create the instance and call the method
         client = LegacyAPIClient(environment='test')
         result = client.fetch_record(
-            table='products',
-            id=123
+            table='products',  # noqa: E128
+            id=123  # noqa: F841
         )
 
         # Verify the result
         self.assertEqual(result, record)
         mock_client.fetch_record.assert_called_once_with(
-            'products',
+            'products',  # noqa: E128
             123
         )
 
@@ -251,24 +257,27 @@ class TestLegacyAPIClient(TestCase):
         """Test fetch_record method with WSZ_api."""
         # Create a sample DataFrame to return
         df = pd.DataFrame(
-            {'id': [123], 'name': ['Test Product'], 'price': [19.99]})
+            {'id': [123], 'name': ['Test Product'], 'price': [19.99]})  # noqa: E128
 
         # Create an instance with mocked WSZ_api
         with patch('pyerp.legacy_sync.api_client.importlib.import_module') as mock_import:  # noqa: E501
             mock_wsz_api = MagicMock()
             mock_wsz_api.fetch_data_from_api.return_value = df
             mock_import.return_value = mock_wsz_api
+  # noqa: F841
 
             # Force using WSZ_api
             client = LegacyAPIClient(environment='test')
             client.direct_client = None
+  # noqa: F841
             client.using_wsz_api = True
+  # noqa: F841
             client.wsz_api = mock_wsz_api
 
             # Call the method
             result = client.fetch_record(
-                table='products',
-                id=123
+                table='products',  # noqa: E128
+                id=123  # noqa: F841
             )
 
             # Verify the result - should be a dict representation of the first

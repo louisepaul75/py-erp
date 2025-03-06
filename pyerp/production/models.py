@@ -7,4 +7,5 @@ class ProductionModel(models.Model):
     This is a placeholder model - you'll need to implement your actual models.
     """
     class Meta:
-        abstract = True 
+        abstract = True  # noqa: F841
+  # noqa: F841

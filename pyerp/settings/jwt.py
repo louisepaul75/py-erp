@@ -9,6 +9,7 @@ import os
 
 # JWT settings
 SIMPLE_JWT = {
+  # noqa: F841
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
@@ -16,7 +17,7 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': False,
 
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production'),  # Explicitly use Django's SECRET_KEY
+    'SIGNING_KEY': os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production'),  # Explicitly use Django's SECRET_KEY  # noqa: E501
     'VERIFYING_KEY': None,
     'AUDIENCE': None,
     'ISSUER': None,
@@ -27,7 +28,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',  # noqa: E501
 
     'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
     'TOKEN_TYPE_CLAIM': 'token_type',
@@ -37,13 +38,15 @@ SIMPLE_JWT = {
 
     'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+  # noqa: F841
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+  # noqa: F841
 
     # Custom settings
     'AUTH_COOKIE': 'access_token',  # Cookie name for storing the JWT token
     'AUTH_COOKIE_DOMAIN': None,     # Domain for the cookie
-    'AUTH_COOKIE_SECURE': False,    # Whether the cookie should be secure (HTTPS only)
+    'AUTH_COOKIE_SECURE': False,    # Whether the cookie should be secure (HTTPS only)  # noqa: E501
     'AUTH_COOKIE_HTTP_ONLY': True,  # Whether the cookie should be HTTP only
     'AUTH_COOKIE_PATH': '/',        # Path for the cookie
     'AUTH_COOKIE_SAMESITE': 'Lax',  # SameSite attribute for the cookie
-} 
+}

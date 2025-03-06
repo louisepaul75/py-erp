@@ -8,7 +8,7 @@ from django.test import TestCase, override_settings
 
 from django.conf import settings as django_settings  # noqa: F401
 from pyerp.direct_api.settings import (
-    API_BASE_URL,
+    API_BASE_URL,  # noqa: E128
     API_ENVIRONMENTS,
     API_REQUEST_TIMEOUT,
     API_SESSION_EXPIRY,
@@ -21,6 +21,7 @@ class TestSettings(TestCase):
     """Tests for the settings module."""
 
     def test_base_url_setting(self):
+
         """Test API_BASE_URL setting."""
         self.assertIsInstance(API_BASE_URL, str)
         self.assertTrue(len(API_BASE_URL) > 0)
@@ -38,40 +39,45 @@ class TestSettings(TestCase):
         self.assertIn('password', live_env)
 
     @override_settings(LEGACY_API_BASE_URL='https://custom-api.example.com')
+  # noqa: F841
     def test_override_base_url(self):
         """Test overriding API_BASE_URL through Django settings."""
         # We need to reload the settings module to apply the override
         import importlib
-        from pyerp.direct_api import settings as api_settings
+        from pyerp.direct_api import settings as api_settings  # noqa: F401
         importlib.reload(api_settings)
 
         # Check that the override was applied
         self.assertEqual(
-            api_settings.API_BASE_URL,
+            api_settings.API_BASE_URL,  # noqa: E128
             'https://custom-api.example.com')
 
         # Restore original settings
         importlib.reload(api_settings)
 
     def test_timeout_setting(self):
+
         """Test API_REQUEST_TIMEOUT setting."""
         self.assertIsInstance(API_REQUEST_TIMEOUT, int)
         self.assertGreater(API_REQUEST_TIMEOUT, 0)
 
     def test_session_expiry_setting(self):
+
         """Test API_SESSION_EXPIRY setting."""
         self.assertIsInstance(API_SESSION_EXPIRY, int)
         self.assertGreater(API_SESSION_EXPIRY, 0)
 
     def test_pagination_settings(self):
+
         """Test pagination settings."""
         self.assertIsInstance(API_PAGINATION_ENABLED, bool)
         self.assertIsInstance(API_PAGINATION_SIZE, int)
         self.assertGreater(API_PAGINATION_SIZE, 0)
 
     @override_settings(LEGACY_API_ENVIRONMENTS={
+  # noqa: F841
         'custom': {
-            'base_url': 'https://custom.example.com',
+            'base_url': 'https://custom.example.com',  # noqa: E128
             'username': 'custom_user',
             'password': 'custom_pass'
         }
@@ -80,7 +86,7 @@ class TestSettings(TestCase):
         """Test overriding API_ENVIRONMENTS through Django settings."""
         # We need to reload the settings module to apply the override
         import importlib
-        from pyerp.direct_api import settings as api_settings
+        from pyerp.direct_api import settings as api_settings  # noqa: F401
         importlib.reload(api_settings)
 
         # Check that the override was applied

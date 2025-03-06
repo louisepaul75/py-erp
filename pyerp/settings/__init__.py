@@ -1,1 +1,1 @@
-# pyERP Settings Package 
+# pyERP Settings Package

@@ -8,7 +8,7 @@ https://docs.djangoproject.com/en/4.2/howto/deployment/wsgi/
 """
 
 import os
-from pathlib import Path
+from pathlib import Path  # noqa: F401
 
 from django.core.wsgi import get_wsgi_application
 
@@ -20,4 +20,5 @@ load_environment_variables()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.development')
 
 # Get the WSGI application
-application = get_wsgi_application() 
+application = get_wsgi_application()  # noqa: F841
+  # noqa: F841

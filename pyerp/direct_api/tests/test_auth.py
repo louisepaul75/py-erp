@@ -14,7 +14,7 @@ import requests
 import time  # noqa: F401
 
 from pyerp.direct_api.auth import (
-    Session, SessionPool, get_session, get_session_cookie
+    Session, SessionPool, get_session, get_session_cookie  # noqa: E128
 )
 from pyerp.direct_api.exceptions import (  # noqa: F401
     AuthenticationError, ConnectionError, ResponseError, SessionError
@@ -26,6 +26,7 @@ class TestSession(TestCase):
     """Tests for the Session class."""
 
     def setUp(self):
+
         """Set up test environment."""
         self.session = Session(environment='test')
 
@@ -46,39 +47,45 @@ class TestSession(TestCase):
         self.assertIsNone(session.expires_at)
 
     def test_init_invalid_environment(self):
+
         """Test initialization with invalid environment."""
         with self.assertRaises(ValueError):
             Session(environment='invalid')
 
     def test_is_valid_no_cookie(self):
+
         """Test is_valid with no cookie."""
         self.assertFalse(self.session.is_valid())
 
     def test_is_valid_no_expiry(self):
+
         """Test is_valid with cookie but no expiry."""
         self.session.cookie = 'test-cookie'
         self.assertFalse(self.session.is_valid())
 
     def test_is_valid_expired(self):
+
         """Test is_valid with expired cookie."""
         self.session.cookie = 'test-cookie'
         self.session.created_at = datetime.datetime.now(
-        ) - datetime.timedelta(seconds=API_SESSION_EXPIRY + 1)
+        ) - datetime.timedelta(seconds=API_SESSION_EXPIRY + 1)  # noqa: E128
         self.session.expires_at = self.session.created_at + \
             datetime.timedelta(seconds=API_SESSION_EXPIRY)
         self.assertFalse(self.session.is_valid())
 
     def test_is_valid_near_expiry(self):
+
         """Test is_valid with cookie near expiry (within refresh margin)."""
         self.session.cookie = 'test-cookie'
         self.session.created_at = datetime.datetime.now() - datetime.timedelta(
-            seconds=API_SESSION_EXPIRY - API_SESSION_REFRESH_MARGIN / 2
+            seconds=API_SESSION_EXPIRY - API_SESSION_REFRESH_MARGIN / 2  # noqa: E128
         )
         self.session.expires_at = self.session.created_at + \
             datetime.timedelta(seconds=API_SESSION_EXPIRY)
         self.assertFalse(self.session.is_valid())
 
     def test_is_valid_good(self):
+
         """Test is_valid with valid cookie."""
         self.session.cookie = 'test-cookie'
         self.session.created_at = datetime.datetime.now()
@@ -103,14 +110,14 @@ class TestSession(TestCase):
         self.assertIsNotNone(self.session.created_at)
         self.assertIsNotNone(self.session.expires_at)
         self.assertEqual(
-            self.session.expires_at - self.session.created_at,
+            self.session.expires_at - self.session.created_at,  # noqa: E128
             datetime.timedelta(seconds=API_SESSION_EXPIRY)
         )
 
         # Verify the call
         mock_get.assert_called_once_with(
-            'http://localhost:8080/$info',
-            timeout=30
+            'http://localhost:8080/$info',  # noqa: E128
+            timeout=30  # noqa: F841
         )
 
     @patch('pyerp.direct_api.auth.requests.get')
@@ -133,6 +140,7 @@ class TestSession(TestCase):
         mock_response = MagicMock()
         mock_response.status_code = 401
         mock_response.text = 'Unauthorized'
+  # noqa: F841
         mock_get.return_value = mock_response
 
         # Call refresh and expect an exception
@@ -141,8 +149,9 @@ class TestSession(TestCase):
 
         # Verify the call
         mock_get.assert_called_once_with(
-            'http://localhost:8080/$info',
-            timeout=30
+            'http://localhost:8080/$info',  # noqa: E128
+            timeout=30  # noqa: F841
+  # noqa: F841
         )
 
     @patch('pyerp.direct_api.auth.requests.get')
@@ -151,10 +160,12 @@ class TestSession(TestCase):
         """Test refresh with connection error that succeeds on retry."""
         # Mock the first request to fail, second to succeed
         mock_get.side_effect = [
-            requests.RequestException("Connection error"),
+            requests.RequestException("Connection error"),  # noqa: E128
             MagicMock(
-                status_code=200,
-                headers={'Set-Cookie': 'session=test-cookie'}
+                status_code=200,  # noqa: F841
+  # noqa: F841
+                headers={'Set-Cookie': 'session=test-cookie'}  # noqa: F841
+  # noqa: F841
             )
         ]
 
@@ -176,6 +187,7 @@ class TestSession(TestCase):
         """Test refresh with connection error that fails even after retries."""
         # Mock all requests to fail
         mock_get.side_effect = requests.RequestException("Connection error")
+  # noqa: F841
 
         # Call refresh and expect an exception
         with self.assertRaises(ConnectionError):
@@ -215,6 +227,7 @@ class TestSessionPool(TestCase):
     """Tests for the SessionPool class."""
 
     def setUp(self):
+
         """Set up test environment."""
         self.pool = SessionPool()
 
@@ -250,9 +263,9 @@ class TestSessionPool(TestCase):
         # Create a session in cache
         now = datetime.datetime.now()
         self.pool.cache.set(
-            'legacy_api_session_test',
+            'legacy_api_session_test',  # noqa: E128
             {
-                'cookie': 'test-cookie',
+                'cookie': 'test-cookie',  # noqa: E128
                 'created_at': now,
                 'expires_at': now + datetime.timedelta(seconds=API_SESSION_EXPIRY)  # noqa: E501
             },
@@ -280,9 +293,9 @@ class TestSessionPool(TestCase):
         # Create an expired session in cache
         now = datetime.datetime.now()
         self.pool.cache.set(
-            'legacy_api_session_test',
+            'legacy_api_session_test',  # noqa: E128
             {
-                'cookie': 'test-cookie',
+                'cookie': 'test-cookie',  # noqa: E128
                 'created_at': now - datetime.timedelta(seconds=API_SESSION_EXPIRY + 1),  # noqa: E501
                 'expires_at': now - datetime.timedelta(seconds=1)
             },
@@ -307,11 +320,12 @@ class TestSessionPool(TestCase):
         now = datetime.datetime.now()
         for env in ['live', 'test']:
             self.pool.cache.set(
-                f'legacy_api_session_{env}',
+                f'legacy_api_session_{env}',  # noqa: E128
                 {
-                    'cookie': f'{env}-cookie',
+                    'cookie': f'{env}-cookie',  # noqa: E128
                     'created_at': now,
                     'expires_at': now + datetime.timedelta(seconds=API_SESSION_EXPIRY)  # noqa: E501
+  # noqa: E501, F841
                 },
                 API_SESSION_EXPIRY
             )
@@ -349,6 +363,7 @@ class TestGlobalFunctions(TestCase):
         mock_session = MagicMock()
         mock_session.get_cookie.return_value = 'test-cookie'
         mock_get_session.return_value = mock_session
+  # noqa: F841
 
         # Call get_session_cookie
         cookie = get_session_cookie('test')

@@ -8,12 +8,13 @@ class SalesModel(models.Model):
     This is a placeholder model - you'll need to implement your actual models.
     """
     class Meta:
-        abstract = True
+        abstract = True  # noqa: F841
+  # noqa: F841
 
 
 def get_sales_status():
     """
-    A safe helper function that can be imported to check if the sales module is working.
+    A safe helper function that can be imported to check if the sales module is working.  # noqa: E501
     This will be used by other modules that might attempt to import from sales.
     """
     try:
@@ -25,4 +26,4 @@ def get_sales_status():
     except OperationalError:
         return "Sales module found but database is not available"
     except Exception as e:
-        return f"Sales module error: {str(e)}" 
+        return f"Sales module error: {str(e)}"

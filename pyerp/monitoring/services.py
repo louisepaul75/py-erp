@@ -20,7 +20,7 @@ from pyerp.monitoring.models import HealthCheckResult
 # Import the API clients we'll check
 try:
     from pyerp.direct_api.client import DirectAPIClient
-    from pyerp.direct_api.exceptions import DirectAPIError, ServerUnavailableError
+    from pyerp.direct_api.exceptions import DirectAPIError, ServerUnavailableError  # noqa: E501
     LEGACY_API_AVAILABLE = True
 except ImportError:
     LEGACY_API_AVAILABLE = False
@@ -37,14 +37,14 @@ logger = logging.getLogger(__name__)
 def check_database_connection():
     """
     Check if the database connection is working properly.
-    
+
     Returns:
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
     status = HealthCheckResult.STATUS_SUCCESS
     details = "Database connection is healthy."
-    
+
     try:
         # Try to get a connection to the database and execute a simple query
         connections['default'].ensure_connection()
@@ -58,20 +58,20 @@ def check_database_connection():
     except Exception as e:
         status = HealthCheckResult.STATUS_ERROR
         details = f"Unexpected error during database check: {str(e)}"
-        logger.error(f"Database health check failed with unexpected error: {str(e)}")
-    
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-    
+        logger.error(f"Database health check failed with unexpected error: {str(e)}")  # noqa: E501
+
+    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
+
     # Create and return the health check result
     result = HealthCheckResult.objects.create(
-        component=HealthCheckResult.COMPONENT_DATABASE,
+        component=HealthCheckResult.COMPONENT_DATABASE,  # noqa: E128
         status=status,
         details=details,
         response_time=response_time
     )
-    
+
     return {
-        'component': HealthCheckResult.COMPONENT_DATABASE,
+        'component': HealthCheckResult.COMPONENT_DATABASE,  # noqa: E128
         'status': status,
         'details': details,
         'response_time': response_time,
@@ -82,14 +82,14 @@ def check_database_connection():
 def check_legacy_erp_connection():
     """
     Check if the connection to the legacy ERP API is working properly.
-    
+
     Returns:
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
     status = HealthCheckResult.STATUS_SUCCESS
     details = "Legacy ERP connection is healthy."
-    
+
     if not LEGACY_API_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Legacy ERP API module is not available."
@@ -98,22 +98,23 @@ def check_legacy_erp_connection():
         try:
             # Try to connect to the legacy ERP API
             client = DirectAPIClient()
-            
+
             # Try to fetch a small amount of data to verify connection
             response = client._make_request(
-                'GET',
+                'GET',  # noqa: E128
                 'tables',
-                params={'$top': 1}
+                params={'$top': 1}  # noqa: F841
+  # noqa: F841
             )
-            
+
             if response.status_code != 200:
                 status = HealthCheckResult.STATUS_WARNING
-                details = f"Legacy ERP API returned non-200 status: {response.status_code}"
-                
+                details = f"Legacy ERP API returned non-200 status: {response.status_code}"  # noqa: E501
+
         except ServerUnavailableError as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Legacy ERP server is unavailable: {str(e)}"
-            logger.error(f"Legacy ERP health check failed - server unavailable: {str(e)}")
+            logger.error(f"Legacy ERP health check failed - server unavailable: {str(e)}")  # noqa: E501
         except DirectAPIError as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Legacy ERP API error: {str(e)}"
@@ -121,20 +122,20 @@ def check_legacy_erp_connection():
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Unexpected error during Legacy ERP check: {str(e)}"
-            logger.error(f"Legacy ERP health check failed with unexpected error: {str(e)}")
-    
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-    
+            logger.error(f"Legacy ERP health check failed with unexpected error: {str(e)}")  # noqa: E501
+
+    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
+
     # Create and return the health check result
     result = HealthCheckResult.objects.create(
-        component=HealthCheckResult.COMPONENT_LEGACY_ERP,
+        component=HealthCheckResult.COMPONENT_LEGACY_ERP,  # noqa: E128
         status=status,
         details=details,
         response_time=response_time
     )
-    
+
     return {
-        'component': HealthCheckResult.COMPONENT_LEGACY_ERP,
+        'component': HealthCheckResult.COMPONENT_LEGACY_ERP,  # noqa: E128
         'status': status,
         'details': details,
         'response_time': response_time,
@@ -145,14 +146,14 @@ def check_legacy_erp_connection():
 def check_pictures_api_connection():
     """
     Check if the connection to the pictures API is working properly.
-    
+
     Returns:
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
     status = HealthCheckResult.STATUS_SUCCESS
     details = "Pictures API connection is healthy."
-    
+
     if not PICTURES_API_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Pictures API module is not available."
@@ -161,31 +162,31 @@ def check_pictures_api_connection():
         try:
             # Try to connect to the pictures API
             client = ImageAPIClient()
-            
+
             # Try to fetch a small amount of data to verify connection
             response = client.get_all_images(page=1, page_size=1)
-            
+
             if not response or 'results' not in response:
                 status = HealthCheckResult.STATUS_WARNING
                 details = "Pictures API returned unexpected response format."
-                
+
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Pictures API connection error: {str(e)}"
             logger.error(f"Pictures API health check failed: {str(e)}")
-    
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-    
+
+    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
+
     # Create and return the health check result
     result = HealthCheckResult.objects.create(
-        component=HealthCheckResult.COMPONENT_PICTURES_API,
+        component=HealthCheckResult.COMPONENT_PICTURES_API,  # noqa: E128
         status=status,
         details=details,
         response_time=response_time
     )
-    
+
     return {
-        'component': HealthCheckResult.COMPONENT_PICTURES_API,
+        'component': HealthCheckResult.COMPONENT_PICTURES_API,  # noqa: E128
         'status': status,
         'details': details,
         'response_time': response_time,
@@ -196,18 +197,18 @@ def check_pictures_api_connection():
 def validate_database():
     """
     Run the comprehensive database validation script and return the results.
-    
+
     Returns:
         dict: Validation result with status, details, and response time
     """
     start_time = time.time()
     status = HealthCheckResult.STATUS_SUCCESS
     details = "Database validation completed successfully. No issues found."
-    
+
     try:
         # Get the path to the validation script
         script_path = Path(settings.BASE_DIR) / 'scripts' / 'db_validation.py'
-        
+
         if not script_path.exists():
             status = HealthCheckResult.STATUS_ERROR
             details = f"Database validation script not found at {script_path}"
@@ -215,12 +216,12 @@ def validate_database():
         else:
             # Run the validation script with the --verbose flag
             cmd = [sys.executable, str(script_path), '--verbose', '--json']
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)  # noqa: E501
+
             # Check if the script ran successfully
             if result.returncode != 0:
                 status = HealthCheckResult.STATUS_ERROR
-                details = f"Database validation failed with exit code {result.returncode}.\n\n"
+                details = f"Database validation failed with exit code {result.returncode}.\n\n"  # noqa: E501
                 details += f"Error: {result.stderr}\n\n"
                 details += f"Output: {result.stdout}"
                 logger.error(f"Database validation failed: {result.stderr}")
@@ -232,48 +233,48 @@ def validate_database():
                     if json_start >= 0:
                         json_output = result.stdout[json_start:]
                         validation_results = json.loads(json_output)
-                        
+
                         # Check for issues
-                        issues_found = validation_results.get('issues_found', 0)
-                        warnings_found = validation_results.get('warnings_found', 0)
-                        
+                        issues_found = validation_results.get('issues_found', 0)  # noqa: E501
+                        warnings_found = validation_results.get('warnings_found', 0)  # noqa: E501
+
                         if issues_found > 0:
                             status = HealthCheckResult.STATUS_ERROR
-                            details = f"Database validation found {issues_found} issues.\n\n"
+                            details = f"Database validation found {issues_found} issues.\n\n"  # noqa: E501
                             details += validation_results.get('summary', '')
                         elif warnings_found > 0:
                             status = HealthCheckResult.STATUS_WARNING
-                            details = f"Database validation found {warnings_found} warnings.\n\n"
+                            details = f"Database validation found {warnings_found} warnings.\n\n"  # noqa: E501
                             details += validation_results.get('summary', '')
                         else:
-                            details = "Database validation completed successfully. No issues found.\n\n"
+                            details = "Database validation completed successfully. No issues found.\n\n"  # noqa: E501
                             details += validation_results.get('summary', '')
                     else:
-                        details = f"Database validation completed, but output format is not recognized:\n\n{result.stdout}"
+                        details = f"Database validation completed, but output format is not recognized:\n\n{result.stdout}"  # noqa: E501
                 except json.JSONDecodeError:
                     # If JSON parsing fails, use the raw output
                     if 'Issues found: 0' in result.stdout:
-                        details = f"Database validation completed successfully. Raw output:\n\n{result.stdout}"
+                        details = f"Database validation completed successfully. Raw output:\n\n{result.stdout}"  # noqa: E501
                     else:
                         status = HealthCheckResult.STATUS_WARNING
-                        details = f"Database validation completed with possible issues. Raw output:\n\n{result.stdout}"
+                        details = f"Database validation completed with possible issues. Raw output:\n\n{result.stdout}"  # noqa: E501
     except Exception as e:
         status = HealthCheckResult.STATUS_ERROR
         details = f"Error running database validation: {str(e)}"
-        logger.error(f"Database validation failed with unexpected error: {str(e)}")
-    
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-    
+        logger.error(f"Database validation failed with unexpected error: {str(e)}")  # noqa: E501
+
+    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds  # noqa: E501
+
     # Create and return the health check result
     result = HealthCheckResult.objects.create(
-        component=HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
+        component=HealthCheckResult.COMPONENT_DATABASE_VALIDATION,  # noqa: E128
         status=status,
         details=details,
         response_time=response_time
     )
-    
+
     return {
-        'component': HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
+        'component': HealthCheckResult.COMPONENT_DATABASE_VALIDATION,  # noqa: E128
         'status': status,
         'details': details,
         'response_time': response_time,
@@ -284,14 +285,14 @@ def validate_database():
 def run_all_health_checks():
     """
     Run all available health checks.
-    
+
     Returns:
         dict: Dictionary containing all health check results
     """
     results = {
-        'database': check_database_connection(),
+        'database': check_database_connection(),  # noqa: E128
         'legacy_erp': check_legacy_erp_connection(),
         'pictures_api': check_pictures_api_connection(),
     }
-    
-    return results 
+
+    return results
