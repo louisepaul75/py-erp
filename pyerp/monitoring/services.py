@@ -99,32 +99,45 @@ def check_legacy_erp_connection():
     else:
         try:
             client = DirectAPIClient()
-
-            # Try to fetch a small amount of data to verify connection
+            
+            # Try to validate connection using the $info endpoint
             response = client._make_request(
                 "GET",
-                "tables",
-                params={"$top": 1},
+                "$info",
             )
 
             if response.status_code != 200:
                 status = HealthCheckResult.STATUS_WARNING
+                status_code = response.status_code
                 details = (
-                    f"Legacy ERP API returned non-200 status: {response.status_code}"
+                    f"Legacy ERP API returned non-200 status: "
+                    f"{status_code}"
                 )
+                logger.warning(
+                    "Legacy ERP health check warning: "
+                    f"{details}"
+                )
+                if response.text:
+                    text_preview = response.text[:200]
+                    logger.warning(
+                        f"Response text: {text_preview}..."
+                    )
 
         except ServerUnavailableError as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Legacy ERP server is unavailable: {e!s}"
-            logger.error(f"Legacy ERP health check failed - server unavailable: {e!s}")
+            msg = "Legacy ERP health check failed - server unavailable: "
+            logger.error(f"{msg}{e!s}")
         except DirectAPIError as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Legacy ERP API error: {e!s}"
-            logger.error(f"Legacy ERP health check failed: {e!s}")
+            msg = "Legacy ERP health check failed: "
+            logger.error(f"{msg}{e!s}")
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Unexpected error during Legacy ERP check: {e!s}"
-            logger.error(f"Legacy ERP health check failed with unexpected error: {e!s}")
+            msg = "Legacy ERP health check failed with unexpected error: "
+            logger.error(f"{msg}{e!s}")
 
     response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
 

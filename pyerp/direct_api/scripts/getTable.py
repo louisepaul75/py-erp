@@ -25,7 +25,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-
+import django
 import pandas as pd
 import requests
 
@@ -41,16 +41,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Global constants
+DIRECT_API_ROOT = Path(__file__).resolve().parent.parent
 COOKIE_FILE_PATH = os.path.join(
-    os.path.dirname(
-        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "auth.py")),
-    ),
-    ".global_session_cookie",
+    str(DIRECT_API_ROOT),
+    ".global_session_cookie"
 )
 
 # Set up Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
-import django
 
 django.setup()
 
@@ -104,30 +102,38 @@ class SimpleAPIClient:
         if not os.path.exists(COOKIE_FILE_PATH):
             logger.info("No session cookie file found")
             return False
-
+            
         try:
-            with open(COOKIE_FILE_PATH) as f:
+            with open(COOKIE_FILE_PATH, 'r') as f:
                 cookie_data = json.load(f)
-
-                if "value" in cookie_data:
-                    self.session_id = cookie_data["value"]
-
+                
+                if 'value' in cookie_data:
+                    # Extract the cookie value
+                    self.session_id = cookie_data['value']
+                    
                     # Clear any existing WASID4D cookies to prevent duplicates
-                    self._clear_cookies("WASID4D")
-
+                    self._clear_cookies('WASID4D')
+                    
                     # Set the WASID4D cookie with the loaded value
-                    self.session.cookies.set("WASID4D", self.session_id)
+                    self.session.cookies.set('WASID4D', self.session_id)
+                    
+                    # Provide safe version of cookie for logging
                     safe_id = (
                         f"{self.session_id[:5]}...{self.session_id[-5:]}"
                         if len(self.session_id) > 10
                         else self.session_id
                     )
                     logger.info(f"Loaded session ID from {COOKIE_FILE_PATH}")
-                    logger.info(f"Set cookie: WASID4D={safe_id}")
+                    logger.info(
+                        f"Set cookie: WASID4D={safe_id}"
+                    )
                     return True
-                logger.warning("Cookie file has invalid format (missing 'value' field)")
-                return False
-
+                else:
+                    logger.warning(
+                        "Cookie file has invalid format (missing 'value' field)"
+                    )
+                    return False
+                    
         except Exception as e:
             logger.warning(f"Failed to load session cookie: {e}")
             return False
@@ -163,31 +169,32 @@ class SimpleAPIClient:
 
     def save_session_cookie(self):
         """Save current session ID to file."""
-        wasid_cookie = self.session.cookies.get("WASID4D")
-        dsid_cookie = self.session.cookies.get("4DSID_WSZ-DB")
-
+        # Extract session ID from cookies
+        wasid_cookie = self.session.cookies.get('WASID4D')
+        dsid_cookie = self.session.cookies.get('4DSID_WSZ-DB')
+        
         # Prefer WASID4D cookie, fall back to 4DSID_WSZ-DB
         session_id = wasid_cookie or dsid_cookie
-
+        
         if not session_id:
             logger.warning("No session ID found in cookies")
             return False
-
+        
         # Store just the value, not the name=value format
         self.session_id = session_id
-
-        # Create the cookie data
+        
+        # Create the cookie data in the simpler format that worked before
         cookie_data = {
-            "timestamp": datetime.now().isoformat(),
-            "value": session_id,
+            'timestamp': datetime.now().isoformat(),
+            'value': session_id
         }
-
+        
         # Ensure directory exists
         os.makedirs(os.path.dirname(COOKIE_FILE_PATH), exist_ok=True)
-
+        
         # Save the cookie data
         try:
-            with open(COOKIE_FILE_PATH, "w") as f:
+            with open(COOKIE_FILE_PATH, 'w') as f:
                 json.dump(cookie_data, f)
             logger.info(f"Saved session ID to {COOKIE_FILE_PATH}")
             return True
@@ -824,4 +831,57 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # First run validation script if no arguments provided
+    if len(sys.argv) == 1:
+        print("\n=== Running Session Validation ===")
+        try:
+            client = SimpleAPIClient()
+            
+            # Check current cookie file
+            print("\nChecking session cookie file...")
+            if os.path.exists(COOKIE_FILE_PATH):
+                with open(COOKIE_FILE_PATH) as f:
+                    cookie_data = json.load(f)
+                    print(f"Found cookie file at: {COOKIE_FILE_PATH}")
+                    print(f"Cookie name: {cookie_data.get('name', 'Not specified')}")
+                    value = cookie_data.get('value', '')
+                    safe_value = f"{value[:5]}...{value[-5:]}" if len(value) > 10 else value
+                    print(f"Cookie value: {safe_value}")
+                    print(f"Created at: {cookie_data.get('created_at', 'Not specified')}")
+            else:
+                print("No existing cookie file found")
+
+            # Validate session
+            print("\nValidating session...")
+            if client.validate_session():
+                print("✓ Session validation successful")
+                print("\nCurrent session cookies:")
+                client._log_cookies()
+            else:
+                print("✗ Session validation failed, attempting login...")
+                if client.login():
+                    print("✓ Login successful")
+                    print("\nNew session cookies:")
+                    client._log_cookies()
+                else:
+                    print("✗ Login failed")
+                    sys.exit(1)
+
+            # Try to fetch a small sample from a known table
+            print("\nTesting table fetch...")
+            try:
+                df = client.fetch_table("Kunden", top=1)
+                print(f"✓ Successfully fetched sample from Kunden ({len(df)} records)")
+                if not df.empty:
+                    print("\nSample data:")
+                    print(df.head())
+            except Exception as e:
+                print(f"✗ Failed to fetch sample table: {e}")
+
+        except Exception as e:
+            print(f"✗ Validation failed: {e}")
+            sys.exit(1)
+    else:
+        # Run normal table fetch with provided arguments
+        main()
+    
