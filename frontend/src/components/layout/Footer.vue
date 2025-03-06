@@ -93,7 +93,7 @@ const checkHealthStatus = async () => {
     }
 
     const statuses = detailedHealth.data.results.map((result: any) => result.status);
-    
+
     if (statuses.includes('error')) {
       healthStatus.value = 'error';
     } else if (statuses.includes('warning')) {

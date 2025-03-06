@@ -4,19 +4,19 @@ Management command to wipe all variant products and reload them from Artikel_Var
 
 import logging
 import sys
-from typing import Any, Dict, List, Optional
 from decimal import Decimal
+from typing import Any
 
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from wsz_api.getTable import fetch_data_from_api
 
 from pyerp.products.models import (
     ParentProduct,
     ProductCategory,
     VariantProduct,
 )
+from wsz_api.getTable import fetch_data_from_api
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ if WSZ_API_PATH not in sys.path:
     sys.path.append(WSZ_API_PATH)
 
 # Now import from wsz_api
-from wsz_api.getTable import fetch_data_from_api
+
 
 class Command(BaseCommand):
     help = "Wipe all variant products and reload them from Artikel_Variante"
@@ -66,7 +66,7 @@ class Command(BaseCommand):
             help="Print detailed information for each record",
         )
 
-    def handle(self, *args: Any, **options: Dict[str, Any]) -> None:
+    def handle(self, *args: Any, **options: dict[str, Any]) -> None:
         """Handle command execution."""
         dry_run = options["dry_run"]
         limit = options["limit"]

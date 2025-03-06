@@ -9,6 +9,7 @@ and parsing of API responses.
 import hashlib
 import json
 import logging
+from typing import Any, Dict, Optional
 
 import requests
 import urllib3
@@ -18,7 +19,16 @@ from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
-from pyerp.products.models import ParentProduct
+from pyerp.products.models import ParentProduct, Product
+
+# Constants
+DEFAULT_TIMEOUT = 60
+DEFAULT_CACHE_TIMEOUT = 3600  # 1 hour
+DEFAULT_PAGE_SIZE = 50
+MAX_RETRIES = 3
+BACKOFF_FACTOR = 0.5
+RETRY_STATUS_CODES = [500, 502, 503, 504]
+HTTP_OK = 200
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +44,7 @@ class ImageAPIClient:
     - Finding images for specific products
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the client with settings from Django configuration."""
         self.base_url = settings.IMAGE_API.get(
             "BASE_URL",
@@ -44,17 +54,17 @@ class ImageAPIClient:
         self.password = settings.IMAGE_API.get("PASSWORD")
         self.timeout = settings.IMAGE_API.get(
             "TIMEOUT",
-            60,
-        )  # Increased default timeout
+            DEFAULT_TIMEOUT,
+        )
         self.cache_enabled = settings.IMAGE_API.get("CACHE_ENABLED", True)
         self.cache_timeout = settings.IMAGE_API.get(
             "CACHE_TIMEOUT",
-            3600,
-        )  # 1 hour
+            DEFAULT_CACHE_TIMEOUT,
+        )
         self.verify_ssl = settings.IMAGE_API.get(
             "VERIFY_SSL",
             False,
-        )  # Default to not verifying SSL
+        )
 
         # Ensure the base URL ends with a slash
         if not self.base_url.endswith("/"):
@@ -62,9 +72,9 @@ class ImageAPIClient:
 
         # Set up retry strategy
         retry_strategy = Retry(
-            total=3,  # number of retries
-            backoff_factor=0.5,
-            status_forcelist=[500, 502, 503, 504],
+            total=MAX_RETRIES,
+            backoff_factor=BACKOFF_FACTOR,
+            status_forcelist=RETRY_STATUS_CODES,
         )
 
         # Create a session with the retry strategy
@@ -78,7 +88,7 @@ class ImageAPIClient:
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    def get_appropriate_article_number(self, product):
+    def get_appropriate_article_number(self, product: Product) -> str:
         """
         Determine the appropriate article number to use for image search
         based on whether the product is a parent or variant.
@@ -90,23 +100,24 @@ class ImageAPIClient:
             str: The article number to use for image search
         """
         logger.debug(
-            f"Determining appropriate article number for product {product.sku}",
+            "Determining appropriate article number for product %s",
+            product.sku,
         )
 
         # For parent products (ParentProduct model)
         if isinstance(product, ParentProduct):
-            logger.debug(f"Using parent SKU: {product.sku}")
+            logger.debug("Using parent SKU: %s", product.sku)
             return product.sku
 
         # For variants (VariantProduct model)
         # First, check if the variant has its own images
         variant_sku = product.sku
-        logger.debug(f"Checking variant SKU: {variant_sku}")
+        logger.debug("Checking variant SKU: %s", variant_sku)
 
         # If it's a variant with a parent, also try the parent's SKU
         if hasattr(product, "parent") and product.parent:
             parent_sku = product.parent.sku
-            logger.debug(f"Also checking parent SKU: {parent_sku}")
+            logger.debug("Also checking parent SKU: %s", parent_sku)
             return parent_sku
 
         # If no parent but has base_sku, use that
@@ -115,23 +126,27 @@ class ImageAPIClient:
             and product.base_sku
             and product.base_sku != product.sku
         ):
-            logger.debug(f"Using base SKU: {product.base_sku}")
+            logger.debug("Using base SKU: %s", product.base_sku)
             return product.base_sku
 
         # Default to the product's own SKU
-        logger.debug(f"Defaulting to product SKU: {product.sku}")
+        logger.debug("Defaulting to product SKU: %s", product.sku)
         return product.sku
 
-    def _make_request(self, endpoint, params=None):
+    def _make_request(
+        self,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
         """
         Make a request to the API endpoint with authentication.
 
         Args:
-            endpoint (str): API endpoint to request
-            params (dict, optional): Query parameters
+            endpoint: API endpoint to request
+            params: Query parameters
 
         Returns:
-            dict: JSON response from the API or None if the request failed
+            JSON response from the API or None if the request failed
         """
         url = f"{self.base_url}{endpoint}"
 
@@ -139,7 +154,8 @@ class ImageAPIClient:
         if params:
             params_str = json.dumps(params, sort_keys=True)
             params_hash = hashlib.sha256(
-                params_str.encode(), usedforsecurity=False
+                params_str.encode(),
+                usedforsecurity=False,
             ).hexdigest()
             cache_key = f"image_api_{endpoint}_{params_hash}"
         else:
@@ -149,19 +165,19 @@ class ImageAPIClient:
         if self.cache_enabled:
             cached_response = cache.get(cache_key)
             if cached_response:
-                logger.debug(f"Using cached response for {url}")
+                logger.debug("Using cached response for %s", url)
                 return cached_response
 
         try:
-            logger.debug(f"Making request to {url} with params {params}")
+            logger.debug("Making request to %s with params %s", url, params)
             response = self.session.get(
                 url,
                 params=params,
                 timeout=self.timeout,
-                verify=self.verify_ssl,  # Use the SSL verification setting
+                verify=self.verify_ssl,
             )
 
-            if response.status_code == 200:
+            if response.status_code == HTTP_OK:
                 data = response.json()
 
                 # Cache the response if caching is enabled
@@ -169,19 +185,23 @@ class ImageAPIClient:
                     cache.set(cache_key, data, self.cache_timeout)
 
                 return data
-            logger.error(f"API request failed with status code: {response.status_code}")
-            logger.error(f"Response: {response.text}")
+            logger.error(
+                "API request failed with status code: %s",
+                response.status_code,
+            )
+            logger.error("Response: %s", response.text)
             return None
 
         except requests.exceptions.SSLError as e:
-            logger.error(f"SSL Error: {e}")
+            logger.error("SSL Error: %s", e)
             if self.verify_ssl:
                 logger.warning(
-                    "Consider setting VERIFY_SSL=False in settings if the certificate is self-signed",
+                    "Consider setting VERIFY_SSL=False in settings "
+                    "if the certificate is self-signed",
                 )
             return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"API connection error: {e}")
+            logger.error("API connection error: %s", e)
             return None
 
     def get_all_images(self, page=1, page_size=50):

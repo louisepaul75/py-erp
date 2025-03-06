@@ -7,7 +7,7 @@ records in the local database, linking them to the appropriate products.
 
 import logging
 import time
-from typing import Any, Optional
+from typing import Any
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -455,7 +455,9 @@ class Command(BaseCommand):
                 sync_log.error_message = str(e)
                 sync_log.save()
 
-    def _find_product(self, article_number: str, variant_code: str) -> Optional[UnifiedProduct]:
+    def _find_product(
+        self, article_number: str, variant_code: str
+    ) -> UnifiedProduct | None:
         """Find matching product for the given article number and variant code."""
         if not article_number:
             return None

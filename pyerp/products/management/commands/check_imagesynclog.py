@@ -1,11 +1,9 @@
 from typing import Any
 
+from django.apps import apps
 from django.core.management.base import BaseCommand
 from django.db import connection
 from django.db.models import Field
-from django.apps import apps
-
-from pyerp.products.models import ImageSyncLog
 
 
 class Command(BaseCommand):
@@ -18,9 +16,9 @@ class Command(BaseCommand):
         self.stdout.write("=" * 79)
 
         # Get model fields using model's _meta API
-        model = apps.get_model('products', 'ImageSyncLog')
+        model = apps.get_model("products", "ImageSyncLog")
         fields = model._meta.get_fields()
-        
+
         for field in fields:
             if isinstance(field, Field):
                 field_type = field.get_internal_type()
@@ -68,10 +66,7 @@ class Command(BaseCommand):
 
             if sequence and sequence[0]:
                 self.stdout.write(f"\nID Sequence: {sequence[0]}")
-                cursor.execute(
-                    "SELECT last_value, is_called FROM %s",
-                    [sequence[0]]
-                )
+                cursor.execute("SELECT last_value, is_called FROM %s", [sequence[0]])
                 seq_info = cursor.fetchone()
                 self.stdout.write(f"Last Value: {seq_info[0]}")
                 self.stdout.write(f"Is Called: {seq_info[1]}")
@@ -107,8 +102,6 @@ class Command(BaseCommand):
             self.stdout.write("\nStatus field found in model")
             # Additional status field validation could go here
         else:
-            self.stdout.write(
-                self.style.WARNING("\nStatus field not found in model")
-            )
+            self.stdout.write(self.style.WARNING("\nStatus field not found in model"))
 
         self.stdout.write(self.style.SUCCESS("\nCheck complete"))

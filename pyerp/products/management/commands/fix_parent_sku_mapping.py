@@ -8,9 +8,8 @@ import sys
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from typing import Any
 
-from pyerp.products.models import ParentProduct, VariantProduct
+from pyerp.products.models import ParentProduct
 
 # Add the WSZ_api path to the Python path
 WSZ_API_PATH = r"C:\Users\Joan-Admin\PycharmProjects\WSZ_api"

@@ -67,7 +67,11 @@ class Command(BaseCommand):
         # Group variants by prefix
         prefix_groups = {}
         for variant in missing_variants:
-            prefix = variant.sku[:SKU_PREFIX_LENGTH] if len(variant.sku) >= SKU_PREFIX_LENGTH else variant.sku
+            prefix = (
+                variant.sku[:SKU_PREFIX_LENGTH]
+                if len(variant.sku) >= SKU_PREFIX_LENGTH
+                else variant.sku
+            )
             if prefix not in prefix_groups:
                 prefix_groups[prefix] = []
             prefix_groups[prefix].append(variant)
