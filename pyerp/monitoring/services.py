@@ -156,7 +156,16 @@ def check_pictures_api_connection():
         response_time = 0
     else:
         try:
+            # Log the API URL being used for debugging
+            logger.debug(
+                f"Pictures API URL from settings: {settings.IMAGE_API.get('BASE_URL')}",
+            )
+            
+            # Create client with explicit settings to ensure it uses the correct URL
             client = ImageAPIClient()
+            
+            # Log the actual URL being used by the client
+            logger.debug(f"Pictures API client using base URL: {client.base_url}")
 
             # Try to fetch a small amount of data to verify connection
             response = client.get_all_images(page=1, page_size=1)
@@ -169,6 +178,12 @@ def check_pictures_api_connection():
             status = HealthCheckResult.STATUS_ERROR
             details = f"Pictures API connection error: {e!s}"
             logger.error(f"Pictures API health check failed: {e!s}")
+            # Add more detailed error logging
+            logger.error(
+                f"Pictures API connection error details: {type(e).__name__}: {e}",
+            )
+            if hasattr(e, '__cause__') and e.__cause__:
+                logger.error(f"Caused by: {e.__cause__}")
 
     response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
 

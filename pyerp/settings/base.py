@@ -385,8 +385,18 @@ LOGGING = {
 }
 
 # Image API Configuration
+# Log the environment variable value for debugging
+print(f"IMAGE_API_URL from environment: {os.environ.get('IMAGE_API_URL', 'not set')}")
+
+# Get the base URL from environment and ensure it has a proper scheme
+image_api_url = os.environ.get("IMAGE_API_URL", "http://webapp.zinnfiguren.de/api/")
+# Add http:// if no scheme is provided
+if image_api_url and not (image_api_url.startswith("http://") or image_api_url.startswith("https://")):
+    image_api_url = f"http://{image_api_url}"
+    print(f"Added http:// scheme to IMAGE_API_URL: {image_api_url}")
+
 IMAGE_API = {
-    "BASE_URL": os.environ.get("IMAGE_API_URL", "http://webapp.zinnfiguren.de/api/"),
+    "BASE_URL": image_api_url,
     "USERNAME": os.environ.get("IMAGE_API_USERNAME", ""),
     "PASSWORD": os.environ.get("IMAGE_API_PASSWORD", ""),
     "TIMEOUT": 30,  # Default value
@@ -408,6 +418,12 @@ try:
 except ValueError:
     # Keep default if conversion fails
     pass
+
+# Print the final IMAGE_API configuration for debugging (without password)
+image_api_debug = IMAGE_API.copy()
+if "PASSWORD" in image_api_debug:
+    image_api_debug["PASSWORD"] = "*****" if image_api_debug["PASSWORD"] else ""
+print(f"Final IMAGE_API configuration: {image_api_debug}")
 
 # Custom CSRF failure view
 CSRF_FAILURE_VIEW = "pyerp.core.views.csrf_failure"

@@ -46,10 +46,15 @@ class ImageAPIClient:
 
     def __init__(self) -> None:
         """Initialize the client with settings from Django configuration."""
+        # Get the base URL from settings, with a fallback
         self.base_url = settings.IMAGE_API.get(
             "BASE_URL",
             "http://webapp.zinnfiguren.de/api/",
         )
+        
+        # Log the base URL for debugging
+        logger.debug(f"Initializing ImageAPIClient with base URL: {self.base_url}")
+        
         self.username = settings.IMAGE_API.get("USERNAME")
         self.password = settings.IMAGE_API.get("PASSWORD")
         self.timeout = settings.IMAGE_API.get(
@@ -69,6 +74,7 @@ class ImageAPIClient:
         # Ensure the base URL ends with a slash
         if not self.base_url.endswith("/"):
             self.base_url += "/"
+            logger.debug(f"Added trailing slash to base URL: {self.base_url}")
 
         # Set up retry strategy
         retry_strategy = Retry(
@@ -87,6 +93,8 @@ class ImageAPIClient:
         # Disable SSL verification warnings if verify_ssl is False
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            
+        logger.debug(f"ImageAPIClient initialized with username: {self.username}")
 
     def get_appropriate_article_number(self, product: Product) -> str:
         """
@@ -149,6 +157,7 @@ class ImageAPIClient:
             JSON response from the API or None if the request failed
         """
         url = f"{self.base_url}{endpoint}"
+        logger.debug(f"Constructed full URL: {url} from base_url: {self.base_url}")
 
         # Create a safe cache key
         if params:
@@ -170,6 +179,9 @@ class ImageAPIClient:
 
         try:
             logger.debug("Making request to %s with params %s", url, params)
+            logger.debug(f"Request auth: {self.username}:{'*' * len(self.password)}")
+            logger.debug(f"Request timeout: {self.timeout}s, verify_ssl: {self.verify_ssl}")
+            
             response = self.session.get(
                 url,
                 params=params,
@@ -179,12 +191,14 @@ class ImageAPIClient:
 
             if response.status_code == HTTP_OK:
                 data = response.json()
+                logger.debug(f"Request successful, received {len(data)} bytes of data")
 
                 # Cache the response if caching is enabled
                 if self.cache_enabled:
                     cache.set(cache_key, data, self.cache_timeout)
 
                 return data
+            
             logger.error(
                 "API request failed with status code: %s",
                 response.status_code,
