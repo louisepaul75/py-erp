@@ -3,6 +3,7 @@ Middleware for the Core app.
 """
 
 import logging
+import os
 
 from django.conf import settings
 from django.db.utils import DatabaseError, InterfaceError, OperationalError
@@ -27,6 +28,88 @@ class DatabaseConnectionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Special handling for health check endpoint
+        if request.path.endswith("/health/"):
+            try:
+                response = self.get_response(request)
+                # Return if we already have a JsonResponse
+                if isinstance(response, JsonResponse):
+                    return response
+                
+                # Generate our own response for non-JSON responses
+                try:
+                    env_module = settings.DJANGO_SETTINGS_MODULE
+                    env = env_module.split(".")[-1]
+                except AttributeError:
+                    # Handle missing DJANGO_SETTINGS_MODULE
+                    django_settings = os.environ.get(
+                        "DJANGO_SETTINGS_MODULE", 
+                        "unknown"
+                    )
+                    env = django_settings.split(".")[-1]
+                
+                try:
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT 1")
+                        cursor.fetchone()
+                    db_status = "ok"
+                    error_msg = None
+                except Exception as e:
+                    db_status = "error"
+                    error_msg = str(e)
+                    msg = "Database health check failed: {}"
+                    logger.error(msg.format(e))
+
+                status_code = (
+                    status.HTTP_200_OK if db_status == "ok"
+                    else status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+
+                health_status = (
+                    "healthy" if db_status == "ok" else "unhealthy"
+                )
+                db_conn_status = "connected" if db_status == "ok" else "error"
+                msg = error_msg if error_msg else "Database is connected"
+
+                return JsonResponse(
+                    {
+                        "status": health_status,
+                        "database": {
+                            "status": db_conn_status,
+                            "message": msg,
+                        },
+                        "environment": env,
+                        "version": getattr(settings, "APP_VERSION", "unknown"),
+                    },
+                    status=status_code
+                )
+            except Exception as e:
+                try:
+                    env_module = settings.DJANGO_SETTINGS_MODULE
+                    env = env_module.split(".")[-1]
+                except AttributeError:
+                    # Handle missing DJANGO_SETTINGS_MODULE
+                    django_settings = os.environ.get(
+                        "DJANGO_SETTINGS_MODULE", 
+                        "unknown"
+                    )
+                    env = django_settings.split(".")[-1]
+                
+                return JsonResponse(
+                    {
+                        "status": "unhealthy",
+                        "database": {
+                            "status": "error",
+                            "message": str(e),
+                        },
+                        "environment": env,
+                        "version": getattr(settings, "APP_VERSION", "unknown"),
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+        # Handle other paths that don't require database access
         db_optional_paths = [
             "/health/",
             "/api/health/",
@@ -36,55 +119,26 @@ class DatabaseConnectionMiddleware:
             "/monitoring/health-check/public/",
         ]
 
-        # Check if current path should be excluded from DB connection requirement
-        path_is_db_optional = any(
+        # Check if path is in optional paths list
+        is_optional = any(
             request.path.startswith(path) for path in db_optional_paths
         )
+        if is_optional:
+            return self.get_response(request)
 
+        # Handle database errors for all other paths
         try:
-            response = self.get_response(request)
-            return response
-
-        except (OperationalError, InterfaceError, DatabaseError) as e:
-            logger.error(f"Database connection error: {e!s}")
-
-            # If the path is in the exempt list, return a basic response
-            if path_is_db_optional:
-                if (
-                    request.path.startswith("/health/")
-                    or request.path.startswith("/api/health/")
-                    or request.path.startswith("/monitoring/health-check/")
-                ):
-                    return JsonResponse(
-                        {
-                            "status": "db_error",
-                            "message": "Database connection is unavailable",
-                            "error": str(e),
-                        },
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    )
-                if request.path.startswith("/static/"):
-                    return HttpResponse("Static file not found", status=404)
-                return HttpResponse(
-                    "<html><body><h1>Database Error</h1><p>The database is "
-                    "currently unavailable. Please try again later.</p></body></html>",
-                    content_type="text/html",
-                )
-            if request.headers.get(
-                "accept",
-            ) == "application/json" or request.path.startswith("/api/"):
+            return self.get_response(request)
+        except (DatabaseError, InterfaceError, OperationalError) as e:
+            msg = "Database error: {}"
+            logger.error(msg.format(e))
+            if request.path.startswith("/api/"):
                 return JsonResponse(
-                    {
-                        "error": "database_error",
-                        "message": "Database connection is unavailable",
-                        "detail": str(e),
-                    },
+                    {"error": "Database connection error"},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
             return HttpResponse(
-                "<html><body><h1>Database Error</h1><p>The database is "
-                "currently unavailable. Please try again later.</p></body></html>",
-                content_type="text/html",
+                "Database connection error",
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
@@ -139,9 +193,8 @@ class AuthExemptMiddleware(MiddlewareMixin):
             and response.status_code == 302
             and response.get("Location", "").startswith(settings.LOGIN_URL)
         ):
-            logger.debug(
-                f"Canceled authentication redirect for exempt path: {request.path}",
-            )
+            msg = f"Canceled auth redirect for exempt path: {request.path}"
+            logger.debug(msg)
 
             # Instead of redirecting, pass through to the view
             if hasattr(request, "_auth_exempt_response"):

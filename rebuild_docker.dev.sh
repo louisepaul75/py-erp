@@ -20,6 +20,8 @@ docker run -d \
   -p 8050:8050 \
   -p 3000:3000 \
   -p 6379:6379 \
+  -p 5173:5173 \
+  -p 80:80 \
   -v $(pwd):/app \
   pyerp-dev-image \
   bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"

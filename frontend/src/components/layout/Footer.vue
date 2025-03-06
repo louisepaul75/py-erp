@@ -24,7 +24,7 @@ import axios from 'axios';
 const currentYear = computed(() => new Date().getFullYear());
 
 // App version
-const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+const appVersion = ref('');
 
 // Check if in development mode
 const currentPort = computed(() => typeof window !== 'undefined' ? window.location.port : '');
@@ -79,31 +79,63 @@ const handleDebugPanelToggle = (event: Event) => {
   }
 };
 
+interface HealthCheckResult {
+  status: string;
+  details?: string;
+  response_time?: number;
+  timestamp?: string;
+}
+
+interface DetailedHealthResponse {
+  success: boolean;
+  results: HealthCheckResult[];
+}
+
 // Check health status
 const checkHealthStatus = async () => {
   try {
-    const [basicHealth, detailedHealth] = await Promise.all([
-      axios.get('/api/health/'),
-      axios.get('/api/monitoring/health-checks/')
-    ]);
+    // First try the basic health check
+    const basicHealth = await axios.get('/api/health/', {
+      timeout: 5000, // 5 second timeout
+    });
 
-    if (basicHealth.data.status === 'unhealthy' || !detailedHealth.data.success) {
+    // Set version from health check response
+    appVersion.value = basicHealth.data.version || 'unknown';
+
+    if (basicHealth.data.status === 'unhealthy') {
       healthStatus.value = 'error';
       return;
     }
 
-    const statuses = detailedHealth.data.results.map((result: any) => result.status);
+    // Then try the detailed health check
+    try {
+      const detailedHealth = await axios.get<DetailedHealthResponse>('/api/monitoring/health-checks/', {
+        timeout: 5000, // 5 second timeout
+      });
 
-    if (statuses.includes('error')) {
-      healthStatus.value = 'error';
-    } else if (statuses.includes('warning')) {
+      if (!detailedHealth.data.success) {
+        healthStatus.value = 'warning';
+        return;
+      }
+
+      const statuses = detailedHealth.data.results.map((result: HealthCheckResult) => result.status);
+
+      if (statuses.includes('error')) {
+        healthStatus.value = 'error';
+      } else if (statuses.includes('warning')) {
+        healthStatus.value = 'warning';
+      } else if (statuses.every((status: string) => status === 'success')) {
+        healthStatus.value = 'success';
+      } else {
+        healthStatus.value = 'unknown';
+      }
+    } catch (detailedError) {
+      console.warn('Detailed health check failed:', detailedError);
+      // If detailed check fails but basic check succeeded, show warning
       healthStatus.value = 'warning';
-    } else if (statuses.every((status: string) => status === 'success')) {
-      healthStatus.value = 'success';
-    } else {
-      healthStatus.value = 'unknown';
     }
   } catch (error) {
+    console.error('Health check failed:', error);
     healthStatus.value = 'error';
   }
 };

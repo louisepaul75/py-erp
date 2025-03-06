@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
   let apiUrl;
   if (isSpecificIP) {
     // Use HTTPS instead of HTTP to avoid Mixed Content errors
-    apiUrl = 'https://192.168.73.65/api';
+    apiUrl = 'https://192.168.73.65';
   } else if (isLocalDev) {
     apiUrl = 'http://localhost:8050';
   } else {
@@ -54,15 +54,16 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
+      vue(),
       liveDesigner({
-        // Customize plugin options as needed
+        iconPreferredCase: 'unocss', // default value is 'unocss'
+        devtoolsKey: 'devtoolsKey',
       }),
-      vue()
     ],
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
-      }
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
     },
     build: {
       // Output directory for production build
@@ -98,36 +99,27 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
-      // Development server configuration
-      host: '0.0.0.0',
-      port: 3000,
-      // Proxy API requests to Django server
       proxy: {
+        // Proxy API requests to Django backend
         '/api': {
-          target: apiBaseUrl,
-          changeOrigin: true
-        },
-        '/v1': {
-          target: apiBaseUrl,
+          target: apiUrl,
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/v1/, '/api/v1')
+          secure: false,
+          ws: true,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('proxy error', err);
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log('Sending Request:', req.method, req.url);
+            });
+            proxy.on('proxyRes', (proxyRes, req, _res) => {
+              console.log('Received Response:', proxyRes.statusCode, req.url);
+            });
+          },
         },
-        '/products': {
-          target: apiBaseUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/products/, '/api/products')
-        },
-        '/sales': {
-          target: apiBaseUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/sales/, '/api/sales')
-        },
-        '/token': {
-          target: apiBaseUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/token/, '/api/token')
-        }
-      }
+      },
+      host: true,
     }
   };
 });

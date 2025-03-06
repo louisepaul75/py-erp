@@ -32,41 +32,61 @@ def health_check(request):
     """
     Health check endpoint to verify the system is running.
     Checks database connection and returns system status.
-    This view is intentionally not protected by authentication to allow external monitoring.
+    This view is intentionally not protected by authentication to allow
+    external monitoring.
     """
     logger.debug("Health check requested")
 
-    # Check database connection
-    db_status = "ok"
+    # Get environment and version info
+    env_module = settings.DJANGO_SETTINGS_MODULE
+    environment = env_module.split(".")[-1]
+    version = getattr(settings, "APP_VERSION", "unknown")
+
     try:
+        # Check database connection
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
+            
+        response_data = {
+            "status": "healthy",
+            "database": {
+                "status": "connected",
+                "message": "Database is connected"
+            },
+            "environment": environment,
+            "version": version
+        }
+        status_code = status.HTTP_200_OK
+
     except Exception as e:
-        db_status = "error"
-        logger.error(f"Database health check failed: {e}")
+        msg = "Database health check failed: {}"
+        logger.error(msg.format(e))
+        response_data = {
+            "status": "unhealthy",
+            "database": {
+                "status": "error",
+                "message": str(e)
+            },
+            "environment": environment,
+            "version": version
+        }
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    # Get environment and debug status
-    environment = settings.DJANGO_SETTINGS_MODULE.split(".")[-1]
+    # Create response with explicit content type
+    response = JsonResponse(response_data, status=status_code)
+    response["Content-Type"] = "application/json"
+    
+    # Disable debug-related middleware processing
+    setattr(request, "_dont_enforce_csrf_checks", True)
+    if hasattr(request, "_auth_exempt"):
+        request._auth_exempt_response = response
 
-    # Return system status
-    response_data = {
-        "status": "healthy" if db_status == "ok" else "unhealthy",
-        "database": db_status,
-        "environment": environment,
-        "version": getattr(settings, "APP_VERSION", "unknown"),
-    }
-
-    status_code = (
-        status.HTTP_200_OK if db_status == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE
-    )
-    return JsonResponse(response_data, status=status_code)
+    return response
 
 
 class UserProfileView(APIView):
-    """
-    View to retrieve and update the authenticated user's profile.
-    """
+    """View to retrieve and update the authenticated user's profile."""
 
     permission_classes = [IsAuthenticated]
 
@@ -104,9 +124,9 @@ class UserProfileView(APIView):
 
         if updated_fields:
             user.save()
-            logger.info(
-                f"User {user.username} updated profile fields: {', '.join(updated_fields.keys())}",
-            )
+            fields_str = ", ".join(updated_fields.keys())
+            msg = f"User {user.username} updated profile fields: {fields_str}"
+            logger.info(msg)
             return Response(
                 {
                     "message": "Profile updated successfully",
@@ -121,17 +141,16 @@ class UserProfileView(APIView):
 
 
 class DashboardSummaryView(APIView):
-    """
-    View to retrieve summary data for the dashboard.
-    """
+    """View to retrieve summary data for the dashboard."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Get summary data for the dashboard."""
-        logger.debug(f"Dashboard summary requested by {request.user.username}")
+        msg = f"Dashboard summary requested by {request.user.username}"
+        logger.debug(msg)
 
-        # Example summary data - in a real implementation, this would be fetched from the database
+        # Example summary data - this would be fetched from the database
         response_data = {
             "pending_orders": 0,
             "low_stock_items": 0,
@@ -144,26 +163,24 @@ class DashboardSummaryView(APIView):
 
 
 class SystemSettingsView(APIView):
-    """
-    View to retrieve and update system settings.
-    """
+    """View to retrieve and update system settings."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Get system settings."""
         if not request.user.is_staff:
-            logger.warning(
-                f"Unauthorized system settings access attempt by {request.user.username}",
-            )
+            msg = f"Unauthorized settings access by {request.user.username}"
+            logger.warning(msg)
             return Response(
-                {"error": "You do not have permission to view system settings"},
+                {"error": "You do not have permission to view settings"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        logger.debug(f"System settings requested by {request.user.username}")
+        msg = f"System settings requested by {request.user.username}"
+        logger.debug(msg)
 
-        # Example settings data - in a real implementation, this would be fetched from the database
+        # Example settings - this would be fetched from the database
         response_data = {
             "company_name": "Example Corp",
             "timezone": settings.TIME_ZONE,
@@ -176,35 +193,30 @@ class SystemSettingsView(APIView):
     def patch(self, request):
         """Update system settings."""
         if not request.user.is_superuser:
-            logger.warning(
-                f"Unauthorized system settings update attempt by {request.user.username}",
-            )
+            msg = f"Unauthorized settings update by {request.user.username}"
+            logger.warning(msg)
             return Response(
-                {"error": "You do not have permission to update system settings"},
+                {"error": "You do not have permission to update settings"},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        logger.debug(f"System settings update requested by {request.user.username}")
+        msg = f"Settings update requested by {request.user.username}"
+        logger.debug(msg)
 
         # This would typically update settings in the database
-        # For demonstration, we'll just acknowledge the request
         return Response({"message": "Settings updated successfully"})
 
 
 @require_GET
 def test_db_error(request):
-    """
-    Test view to simulate a database connection error.
-    This is for testing the database connection middleware.
-    """
+    """Test view to simulate a database connection error."""
     logger.info("Simulating database connection error for testing")
-    raise OperationalError("This is a simulated database connection error for testing")
+    msg = "This is a simulated database connection error for testing"
+    raise OperationalError(msg)
 
 
 def csrf_failure(request, reason=""):
-    """
-    Custom view for CSRF failures that provides more detailed error information.  # noqa: E501
-    """
+    """Custom view for CSRF failures with detailed error information."""
     context = {
         "reason": reason,
         "cookies_enabled": request.COOKIES,
@@ -223,12 +235,13 @@ class VueAppView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Explicitly pass debug flag to template
         context["debug"] = settings.DEBUG
 
-        # In production mode, parse the Vue.js manifest to get correct asset paths
+        # Parse Vue.js manifest for correct asset paths in production
         if not settings.DEBUG:
-            manifest_path = os.path.join(settings.STATIC_ROOT, "vue", "manifest.json")
+            manifest_path = os.path.join(
+                settings.STATIC_ROOT, "vue", "manifest.json"
+            )
             if os.path.exists(manifest_path):
                 with open(manifest_path) as f:
                     try:
