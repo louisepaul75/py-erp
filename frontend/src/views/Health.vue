@@ -56,12 +56,11 @@
       <!-- Connection Status Section -->
       <div class="connection-section">
         <h2>Connection Status</h2>
-        <div v-if="Object.keys(healthResults || {}).length === 0" class="no-status">
+        <div v-if="Object.keys(filteredHealthResults || {}).length === 0" class="no-status">
           No connection status data available
         </div>
-        <div v-if="healthResults && Object.keys(healthResults).length > 0" class="status-cards">
-          <div v-for="(result, componentKey) in healthResults" :key="componentKey"
-               v-if="componentKey !== 'database'"
+        <div v-if="filteredHealthResults && Object.keys(filteredHealthResults).length > 0" class="status-cards">
+          <div v-for="(result, componentKey) in filteredHealthResults" :key="componentKey"
                :class="['status-card', result.status]">
             <div class="status-card-header">
               <div class="component-name">
@@ -177,6 +176,12 @@ export default {
         return this.healthResults.database.response_time;
       }
       return 100; // Default response time if not available
+    },
+    filteredHealthResults() {
+      if (!this.healthResults) return {};
+      return Object.fromEntries(
+        Object.entries(this.healthResults).filter(([key]) => key !== 'database')
+      );
     }
   },
   mounted() {
