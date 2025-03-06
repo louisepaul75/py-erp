@@ -65,7 +65,7 @@ For detailed contribution guidelines, including branch naming conventions, commi
 The project uses environment files to manage configuration variables across different environments:
 
 - Development: `config/env/.env.dev`
-- Production: `config/env/.env.prod` 
+- Production: `config/env/.env.prod`
 - Testing: `config/env/.env.test` (if needed)
 
 To set up your environment, use the setup script:
@@ -224,7 +224,7 @@ The project uses GitHub Actions for continuous integration with the following wo
 - **Lint**: Runs code quality checks including:
   - Flake8 for Python syntax and style validation
   - MyPy for static type checking
-  
+
 - **Tests**: Runs the test suite with pytest to validate functionality
   - Runs unit and integration tests
   - Uploads test coverage results to Codecov
@@ -233,7 +233,7 @@ The project uses GitHub Actions for continuous integration with the following wo
 - **Build**: Builds the Docker image for deployment
   - Creates a containerized version of the application
   - Pushes to GitHub Container Registry with appropriate tags
-  
+
 - **Deploy**: Deploys to appropriate environments based on branch/tag:
   - `develop` branch → Development environment
   - `release/*` branches → Staging environment
@@ -513,7 +513,7 @@ This project uses [mypy](https://mypy.readthedocs.io/) for static type checking.
    ```bash
    pip install -r requirements-types.txt
    ```
-   
+
    Or run the provided script:
    ```bash
    ./scripts/tools/install_type_stubs.sh
@@ -523,7 +523,7 @@ This project uses [mypy](https://mypy.readthedocs.io/) for static type checking.
    ```bash
    ./scripts/tools/run_mypy.sh
    ```
-   
+
    Or manually:
    ```bash
    mypy --config-file scripts/tools/mypy.ini .
@@ -602,4 +602,4 @@ cd frontend
 npm run build
 ```
 
-This will generate optimized assets in the `static/vue/` directory, which Django will serve in production mode. 
+This will generate optimized assets in the `static/vue/` directory, which Django will serve in production mode.

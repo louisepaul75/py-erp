@@ -66,4 +66,4 @@ See the [Environment Variables](dependency_management.md#environment-variables) 
 1. Continue monitoring for compatibility issues with Python 3.12
 2. Consider implementing a more robust solution for PostgreSQL dependencies
 3. Update the CI/CD pipeline to verify environment variable formatting
-4. Document any additional issues encountered during development 
+4. Document any additional issues encountered during development

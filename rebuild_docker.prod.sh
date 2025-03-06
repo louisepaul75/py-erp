@@ -27,4 +27,4 @@ docker run -d \
 echo "Showing initial container logs (10 seconds)..."
 timeout 10 docker logs -f pyerp-prod || true
 
-echo -e "\nContainer is running in the background. Use 'docker logs pyerp-prod' to view logs again." 
+echo -e "\nContainer is running in the background. Use 'docker logs pyerp-prod' to view logs again."

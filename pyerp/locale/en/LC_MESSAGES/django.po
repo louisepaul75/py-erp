@@ -77,4 +77,4 @@ msgstr "Edit"
 
 #: pyerp/templates/products/product_detail.html
 msgid "Delete"
-msgstr "Delete" 
+msgstr "Delete"

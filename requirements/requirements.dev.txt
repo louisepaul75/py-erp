@@ -26,4 +26,4 @@ django-browser-reload==1.12.1
 watchdog==4.0.0
 
 # Additional dependencies
-pandas==2.2.0 
+pandas==2.2.0

@@ -56,13 +56,13 @@ api.interceptors.request.use((config) => {
   if (csrfToken) {
     config.headers['X-CSRFToken'] = csrfToken;
   }
-  
+
   // Add JWT token if available
   const token = localStorage.getItem('access_token');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   return config;
 });
 
@@ -88,9 +88,9 @@ export const useAuthStore = defineStore('auth', {
     isLoading: false,
     error: null
   }),
-  
+
   getters: { ... },
-  
+
   actions: {
     async init() { ... },
     async login(credentials: LoginCredentials) { ... },
@@ -110,11 +110,11 @@ Router guards protect routes based on authentication status:
 // Authentication guard for protected routes
 export async function authGuard(to, from, next) {
   const authStore = useAuthStore();
-  
+
   if (!authStore.isAuthenticated && !authStore.isLoading) {
     await authStore.init();
   }
-  
+
   if (authStore.isAuthenticated) {
     next();
   } else {
@@ -189,4 +189,4 @@ The authentication system includes the following components:
 
 ## Conclusion
 
-The Vue.js authentication implementation provides a secure and user-friendly authentication experience that integrates seamlessly with Django's authentication system. The modular design allows for easy extension and maintenance as the application evolves. 
+The Vue.js authentication implementation provides a secure and user-friendly authentication experience that integrates seamlessly with Django's authentication system. The modular design allows for easy extension and maintenance as the application evolves.

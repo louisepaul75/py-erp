@@ -37,10 +37,10 @@ This document provides guidelines and best practices for developers working on t
 
 - **Be careful with pluralization**
   - Use Django's pluralization capabilities
-  - Example: 
+  - Example:
     ```python
-    ngettext('%(count)d product found', 
-             '%(count)d products found', 
+    ngettext('%(count)d product found',
+             '%(count)d products found',
              count) % {'count': count}
     ```
 
@@ -75,7 +75,7 @@ This document provides guidelines and best practices for developers working on t
 - **Use gettext for runtime translations**
   ```python
   from django.utils.translation import gettext as _
-  
+
   def view_function(request):
       message = _('Welcome to our site')
       return render(request, 'template.html', {'message': message})
@@ -84,15 +84,15 @@ This document provides guidelines and best practices for developers working on t
 - **Set active language when needed**
   ```python
   from django.utils.translation import activate, get_language
-  
+
   # Save current language
   current_language = get_language()
-  
+
   # Switch to a specific language
   activate('de')
-  
+
   # Do something in German
-  
+
   # Restore original language
   activate(current_language)
   ```
@@ -136,18 +136,18 @@ This document provides guidelines and best practices for developers working on t
   ```javascript
   // Simple translation
   const message = gettext('Hello world');
-  
+
   // With placeholders
   const welcome = interpolate(
-      gettext('Welcome, %(name)s'), 
-      {'name': username}, 
+      gettext('Welcome, %(name)s'),
+      {'name': username},
       true
   );
-  
+
   // Pluralization
   const itemCount = ngettext(
-      'One item', 
-      '%(count)s items', 
+      'One item',
+      '%(count)s items',
       count
   ).replace('%(count)s', count);
   ```
@@ -206,4 +206,4 @@ This document provides guidelines and best practices for developers working on t
 - [Django Translation Documentation](https://docs.djangoproject.com/en/4.2/topics/i18n/translation/)
 - [Django Internationalization Documentation](https://docs.djangoproject.com/en/4.2/topics/i18n/)
 - [Django JavaScript Translation Catalog](https://docs.djangoproject.com/en/4.2/topics/i18n/translation/#django.views.i18n.JavaScriptCatalog)
-- [Django Model Translation](https://django-modeltranslation.readthedocs.io/) 
+- [Django Model Translation](https://django-modeltranslation.readthedocs.io/)

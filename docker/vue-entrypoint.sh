@@ -14,4 +14,4 @@ fi
 # If a command was passed, execute it, otherwise just return
 if [ $# -gt 0 ]; then
     exec "$@"
-fi 
+fi

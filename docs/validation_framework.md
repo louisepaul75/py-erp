@@ -39,10 +39,10 @@ The `Validator` abstract base class defines the interface for all validators:
 class MyValidator(Validator):
     def __init__(self, message=None):
         super().__init__(message or "Custom validation message")
-    
+
     def _validate(self, value, result, **kwargs):
         field_name = kwargs.get('field_name', 'field')
-        
+
         # Implement validation logic
         if not valid_condition(value):
             result.add_error(field_name, self.message)
@@ -56,12 +56,12 @@ The `ImportValidator` class is specifically designed for validating data during 
 class MyImportValidator(ImportValidator):
     def __init__(self, strict=False, transform_data=True):
         super().__init__(strict, transform_data)
-    
+
     def validate_field_name(self, value, row_data, row_index=None):
         result = ValidationResult()
-        
+
         # Field-specific validation
-        
+
         return transformed_value, result
 ```
 
@@ -98,16 +98,16 @@ from pyerp.core.validators import validate_data, RegexValidator, RequiredValidat
 
 class MyModel(models.Model):
     code = models.CharField(max_length=10)
-    
+
     def clean(self):
         # Validate code field
         validators = [
             RequiredValidator(),
             RegexValidator(r'^[A-Z]{3}\d{3}$', "Code must be 3 uppercase letters followed by 3 digits")
         ]
-        
+
         result = validate_data(self.code, validators, {'field_name': 'code'})
-        
+
         if not result.is_valid:
             raise ValidationError(result.errors)
 ```
@@ -123,11 +123,11 @@ class ProductForm(ValidatedModelForm):
     class Meta:
         model = Product
         fields = ['sku', 'name', 'list_price']
-    
+
     def setup_validators(self):
         self.add_validator('sku', RequiredValidator("SKU is required"))
         self.add_validator('list_price', RangeValidator(min_value=0))
-    
+
     def apply_form_validators(self, cleaned_data):
         # Cross-field validation example
         if cleaned_data.get('list_price') < cleaned_data.get('cost_price'):
@@ -143,28 +143,28 @@ from decimal import Decimal
 class MyImportValidator(ImportValidator):
     def __init__(self, strict=False):
         super().__init__(strict=strict, transform_data=True)
-    
+
     def validate_price(self, value, row_data, row_index=None):
         result = ValidationResult()
-        
+
         # Transform to Decimal
         try:
             decimal_value = Decimal(str(value))
         except (ValueError, TypeError):
             result.add_error('price', "Invalid price format")
             return Decimal('0.00'), result
-        
+
         # Validate price range
         if decimal_value < Decimal('0.00'):
             result.add_error('price', "Price cannot be negative")
-        
+
         return decimal_value, result
-    
+
     def _post_validate_row(self, row_data, result, row_index=None):
         # Cross-field business rule
         list_price = row_data.get('list_price', Decimal('0.00'))
         cost_price = row_data.get('cost_price', Decimal('0.00'))
-        
+
         if list_price < cost_price:
             result.add_warning('list_price', "List price is less than cost price")
 ```
@@ -182,7 +182,7 @@ def test_price_validation(self):
     # Simulate the validation logic from ProductForm.clean
     list_price = Decimal('40.00')
     cost_price = Decimal('50.00')
-    
+
     # In a real form, this would add an error to the form
     if list_price and cost_price and list_price < cost_price:
         error_message = "List price should not be less than cost price."
@@ -201,30 +201,30 @@ def test_sku_uniqueness_validation(self):
     """Test that SKU uniqueness validation works correctly."""
     # Create a mock for the filter method
     mock_filter = MagicMock()
-    
+
     # Test case 1: New product with unique SKU
     mock_queryset = MockQuerySet()
     mock_queryset.exists_return = False
     mock_filter.return_value = mock_queryset
-    
+
     # Simulate the validation logic from ProductForm.clean_sku
     sku = 'NEW-SKU'
     if mock_filter(sku=sku).exists():
         raise ValueError("A product with this SKU already exists.")
-    
+
     # No exception should be raised
-    
+
     # Test case 2: New product with duplicate SKU
     mock_queryset = MockQuerySet([MockProduct(sku='DUPLICATE-SKU')])
     mock_queryset.exists_return = True
     mock_filter.return_value = mock_queryset
-    
+
     # Simulate the validation logic
     sku = 'DUPLICATE-SKU'
     with pytest.raises(ValueError) as excinfo:
         if mock_filter(sku=sku).exists():
             raise ValueError("A product with this SKU already exists.")
-    
+
     # Verify the error message
     assert "already exists" in str(excinfo.value)
 ```
@@ -244,12 +244,12 @@ Validators should be thoroughly tested to ensure they work correctly:
 ```python
 def test_required_validator():
     validator = RequiredValidator()
-    
+
     # Test with empty value
     result = validator("", field_name="test_field")
     assert not result.is_valid
     assert "test_field" in result.errors
-    
+
     # Test with valid value
     result = validator("value", field_name="test_field")
     assert result.is_valid
@@ -266,4 +266,4 @@ To add new validation capabilities:
 
 ## Conclusion
 
-The validation framework provides a solid foundation for data integrity throughout the pyERP system. By leveraging this framework, we ensure consistent validation rules, clear error reporting, and maintainable validation logic. 
+The validation framework provides a solid foundation for data integrity throughout the pyERP system. By leveraging this framework, we ensure consistent validation rules, clear error reporting, and maintainable validation logic.

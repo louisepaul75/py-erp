@@ -131,7 +131,7 @@ python manage.py sync_product_images [--limit N] [--force]
 
 ## API Integration
 
-The products app integrates with an external image database through the image_api.py module. 
+The products app integrates with an external image database through the image_api.py module.
 Key features:
 
 - Secure API connection to external Django application
@@ -162,4 +162,4 @@ Key features:
 
 - Pillow: Required for image handling
 - Django: 4.2 or higher
-- Requests: Required for API integration 
+- Requests: Required for API integration

@@ -76,4 +76,4 @@ The following features were removed in Django 5.1 and should not be used:
 
 - [Django 5.1 Release Notes](https://docs.djangoproject.com/en/5.1/releases/5.1/)
 - [Django 5.0 Release Notes](https://docs.djangoproject.com/en/5.1/releases/5.0/)
-- [Django Documentation](https://docs.djangoproject.com/en/5.1/) 
+- [Django Documentation](https://docs.djangoproject.com/en/5.1/)

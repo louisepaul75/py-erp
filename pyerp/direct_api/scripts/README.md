@@ -106,7 +106,7 @@ You can also customize the script by modifying the `if __name__ == '__main__':` 
 if __name__ == '__main__':
     # Example 1: Use command line arguments
     # main()
-    
+
     # Example 2: Hardcode the table name and other parameters
     fetch_table(
         table_name="Customers",
@@ -148,4 +148,4 @@ If you're experiencing issues with multiple sessions being created, try these st
 
 3. Check the legacy ERP server logs to see if multiple sessions are still being created
 
-4. Ensure you're not running multiple instances of the script simultaneously 
+4. Ensure you're not running multiple instances of the script simultaneously

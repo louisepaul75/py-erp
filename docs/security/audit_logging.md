@@ -158,4 +158,4 @@ The audit logging system helps meet the following compliance requirements:
 - Record keeping of security events
 - User access monitoring
 - Change tracking for sensitive data
-- Accountability and non-repudiation 
+- Accountability and non-repudiation

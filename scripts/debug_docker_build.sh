@@ -1,6 +1,6 @@
 #!/bin/bash
 # Debug Docker Build Script
-# This script builds a Docker image using the debug Dockerfile 
+# This script builds a Docker image using the debug Dockerfile
 # to identify dependency issues
 
 set -e  # Exit on error
@@ -31,7 +31,7 @@ if [ $BUILD_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}Docker build succeeded!${NC}"
     echo -e "${GREEN}This means all dependencies can be installed individually.${NC}"
     echo -e "${YELLOW}The issue might be related to conflicts between packages during pip-compile.${NC}"
-    
+
     # Suggest alternative approach
     echo -e "\n${CYAN}Suggested workaround:${NC}"
     echo "1. Skip pip-compile in the Dockerfile"
@@ -41,4 +41,4 @@ else
     echo -e "${RED}Docker build failed.${NC}"
     echo -e "${YELLOW}Review the output to identify which package is causing the issue.${NC}"
     exit 1
-fi 
+fi

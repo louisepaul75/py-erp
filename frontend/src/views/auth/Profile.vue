@@ -12,62 +12,62 @@
                 <span class="visually-hidden">Loading...</span>
               </div>
             </div>
-            
+
             <div v-else-if="authStore.user">
               <!-- Profile Information Form -->
               <form @submit.prevent="updateProfile">
                 <div v-if="message" :class="['alert', messageType === 'success' ? 'alert-success' : 'alert-danger']">
                   {{ message }}
                 </div>
-                
+
                 <div class="mb-3">
                   <label for="username" class="form-label">Username</label>
-                  <input 
-                    type="text" 
-                    class="form-control" 
-                    id="username" 
-                    :value="authStore.user.username" 
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    :value="authStore.user.username"
                     disabled
                   >
                 </div>
-                
+
                 <div class="mb-3">
                   <label for="email" class="form-label">Email</label>
-                  <input 
-                    type="email" 
-                    class="form-control" 
-                    id="email" 
-                    v-model="profileData.email" 
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="email"
+                    v-model="profileData.email"
                     required
                   >
                 </div>
-                
+
                 <div class="row">
                   <div class="col-md-6 mb-3">
                     <label for="first_name" class="form-label">First Name</label>
-                    <input 
-                      type="text" 
-                      class="form-control" 
-                      id="first_name" 
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="first_name"
                       v-model="profileData.first_name"
                     >
                   </div>
-                  
+
                   <div class="col-md-6 mb-3">
                     <label for="last_name" class="form-label">Last Name</label>
-                    <input 
-                      type="text" 
-                      class="form-control" 
-                      id="last_name" 
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="last_name"
                       v-model="profileData.last_name"
                     >
                   </div>
                 </div>
-                
+
                 <div class="d-grid gap-2">
-                  <button 
-                    type="submit" 
-                    class="btn btn-primary" 
+                  <button
+                    type="submit"
+                    class="btn btn-primary"
                     :disabled="isUpdating"
                   >
                     <span v-if="isUpdating" class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -75,53 +75,53 @@
                   </button>
                 </div>
               </form>
-              
+
               <!-- Password Change Form -->
               <hr class="my-4">
               <h3>Change Password</h3>
-              
+
               <form @submit.prevent="changePassword">
                 <div v-if="passwordMessage" :class="['alert', passwordMessageType === 'success' ? 'alert-success' : 'alert-danger']">
                   {{ passwordMessage }}
                 </div>
-                
+
                 <div class="mb-3">
                   <label for="old_password" class="form-label">Current Password</label>
-                  <input 
-                    type="password" 
-                    class="form-control" 
-                    id="old_password" 
-                    v-model="passwordData.oldPassword" 
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="old_password"
+                    v-model="passwordData.oldPassword"
                     required
                   >
                 </div>
-                
+
                 <div class="mb-3">
                   <label for="new_password" class="form-label">New Password</label>
-                  <input 
-                    type="password" 
-                    class="form-control" 
-                    id="new_password" 
-                    v-model="passwordData.newPassword" 
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="new_password"
+                    v-model="passwordData.newPassword"
                     required
                   >
                 </div>
-                
+
                 <div class="mb-3">
                   <label for="confirm_password" class="form-label">Confirm New Password</label>
-                  <input 
-                    type="password" 
-                    class="form-control" 
-                    id="confirm_password" 
-                    v-model="passwordData.confirmPassword" 
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="confirm_password"
+                    v-model="passwordData.confirmPassword"
                     required
                   >
                 </div>
-                
+
                 <div class="d-grid gap-2">
-                  <button 
-                    type="submit" 
-                    class="btn btn-primary" 
+                  <button
+                    type="submit"
+                    class="btn btn-primary"
                     :disabled="isChangingPassword"
                   >
                     <span v-if="isChangingPassword" class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -130,7 +130,7 @@
                 </div>
               </form>
             </div>
-            
+
             <div v-else class="alert alert-warning">
               You need to be logged in to view your profile.
             </div>
@@ -183,7 +183,7 @@ onMounted(() => {
 const updateProfile = async () => {
   isUpdating.value = true;
   message.value = '';
-  
+
   try {
     await authStore.updateProfile(profileData.value as Partial<User>);
     message.value = 'Profile updated successfully';
@@ -204,21 +204,21 @@ const changePassword = async () => {
     passwordMessageType.value = 'error';
     return;
   }
-  
+
   isChangingPassword.value = true;
   passwordMessage.value = '';
-  
+
   try {
     await authStore.changePassword(
       passwordData.value.oldPassword,
       passwordData.value.newPassword
     );
-    
+
     // Clear password fields
     passwordData.value.oldPassword = '';
     passwordData.value.newPassword = '';
     passwordData.value.confirmPassword = '';
-    
+
     passwordMessage.value = 'Password changed successfully';
     passwordMessageType.value = 'success';
   } catch (error: any) {
@@ -234,4 +234,4 @@ const changePassword = async () => {
 .profile-container {
   padding: 20px;
 }
-</style> 
+</style>

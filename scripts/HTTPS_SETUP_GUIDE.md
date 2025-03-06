@@ -109,4 +109,4 @@ Once your certificates are in place and containers restarted:
 
 - The existing Nginx configuration is already set up for HTTPS with the correct SSL certificate paths
 - For Docker setup changes, you may need to update volume mounts in `docker-compose.prod.yml`
-- In production, consider implementing automated Let's Encrypt renewal 
+- In production, consider implementing automated Let's Encrypt renewal

@@ -33,7 +33,7 @@ def mock_api_response():
 class TestLegacyAPIClient(TestCase):
     def setUp(self):
         self.client = LegacyAPIClient(environment='test')
-        
+
     @patch('pyerp.legacy_api.client.requests.post')
     def test_authentication_success(self, mock_post):
         # Setup mock response
@@ -41,14 +41,14 @@ class TestLegacyAPIClient(TestCase):
         mock_response.status_code = 200
         mock_response.json.return_value = {'status': 'success', 'session': 'test_session_id'}
         mock_post.return_value = mock_response
-        
+
         # Perform authentication
         self.client.authenticate()
-        
+
         # Assert authentication was successful
         self.assertTrue(self.client.is_authenticated)
         self.assertEqual(self.client.session_id, 'test_session_id')
-        
+
     @patch('pyerp.legacy_api.client.requests.post')
     def test_authentication_failure(self, mock_post):
         # Setup mock response for failure
@@ -56,7 +56,7 @@ class TestLegacyAPIClient(TestCase):
         mock_response.status_code = 401
         mock_response.json.return_value = {'status': 'error', 'message': 'Invalid credentials'}
         mock_post.return_value = mock_response
-        
+
         # Assert authentication fails with appropriate exception
         with self.assertRaises(AuthenticationError):
             self.client.authenticate()
@@ -86,7 +86,7 @@ class TestStockCalculation(TestCase):
             name='Test Product',
             cost=Decimal('10.00')
         )
-        
+
         # Create stock items
         self.stock_item1 = StockItem.objects.create(
             product=self.product,
@@ -98,12 +98,12 @@ class TestStockCalculation(TestCase):
             warehouse_id=2,
             quantity=10
         )
-    
+
     def test_calculate_stock_value_single_warehouse(self):
         # Test for a single warehouse
         value = calculate_stock_value(self.product.id, warehouse_id=1)
         self.assertEqual(value, Decimal('50.00'))  # 5 * 10.00
-        
+
     def test_calculate_stock_value_all_warehouses(self):
         # Test for all warehouses
         value = calculate_stock_value(self.product.id)
@@ -127,14 +127,14 @@ class TestProductAPI(APITestCase):
     def setUp(self):
         # Create user with permissions
         self.user = User.objects.create_user(
-            username='testuser', 
+            username='testuser',
             password='password123'
         )
         self.user.user_permissions.add(
             Permission.objects.get(codename='view_product')
         )
         self.client.force_authenticate(user=self.user)
-        
+
         # Create test data
         self.category = Category.objects.create(name='Test Category')
         self.product = Product.objects.create(
@@ -143,11 +143,11 @@ class TestProductAPI(APITestCase):
             category=self.category,
             price=Decimal('99.99')
         )
-        
+
     def test_get_product_list(self):
         url = reverse('api:product-list')
         response = self.client.get(url)
-        
+
         # Check response status and content
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
@@ -174,32 +174,32 @@ class TestProductModel(TestCase):
             is_manufactured=True,
             cost=Decimal('0')  # Cost will be calculated from BOM
         )
-        
+
         self.component1 = Product.objects.create(
             sku='COMP001',
             name='Component 1',
             cost=Decimal('10.00')
         )
-        
+
         self.component2 = Product.objects.create(
             sku='COMP002',
             name='Component 2',
             cost=Decimal('5.00')
         )
-        
+
         # Create BOM items
         BOMItem.objects.create(
             parent=self.product,
             component=self.component1,
             quantity=2
         )
-        
+
         BOMItem.objects.create(
             parent=self.product,
             component=self.component2,
             quantity=3
         )
-    
+
     def test_bom_cost_calculation(self):
         # Test that product cost is calculated correctly from BOM
         expected_cost = (2 * Decimal('10.00')) + (3 * Decimal('5.00'))  # 2*10 + 3*5 = 35
@@ -223,28 +223,28 @@ class TestProductViews(TestCase):
     def setUp(self):
         # Create test user and login
         self.user = User.objects.create_user(
-            username='testuser', 
+            username='testuser',
             password='password123'
         )
         self.client.login(username='testuser', password='password123')
-        
+
         # Create test product
         self.product = Product.objects.create(
             sku='TEST001',
             name='Test Product',
             price=Decimal('99.99')
         )
-    
+
     def test_product_detail_view(self):
         url = reverse('products:detail', args=[self.product.id])
         response = self.client.get(url)
-        
+
         # Test response status
         self.assertEqual(response.status_code, 200)
-        
+
         # Test context data
         self.assertEqual(response.context['product'].sku, 'TEST001')
-        
+
         # Test template used
         self.assertTemplateUsed(response, 'products/detail.html')
 ```
@@ -272,14 +272,14 @@ class TestLegacyAPIIntegration(TestCase):
             {'id': 2, 'name': 'Product 2'}
         ]
         mock_client_class.return_value = mock_client
-        
+
         # Call function under test
         result = get_table_data('products', limit=10)
-        
+
         # Assert expected results
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]['name'], 'Product 1')
-        
+
         # Verify correct parameters were used
         mock_client.get_table_data.assert_called_once_with('products', limit=10)
 ```
@@ -324,10 +324,10 @@ def test_api_request(self, mock_get):
     mock_response.status_code = 200
     mock_response.json.return_value = {'status': 'success', 'data': [...]}
     mock_get.return_value = mock_response
-    
+
     # Test API function
     result = legacy_api_function()
-    
+
     # Assertions
     self.assertEqual(result, expected_result)
 ```
@@ -341,7 +341,7 @@ def test_api_error_handling(self, mock_get):
     mock_response.status_code = 500
     mock_response.json.return_value = {'status': 'error', 'message': 'Server error'}
     mock_get.return_value = mock_response
-    
+
     # Test error handling
     with self.assertRaises(LegacyAPIError):
         legacy_api_function()
@@ -354,7 +354,7 @@ def test_session_expiration(self):
     client = LegacyAPIClient()
     client.session_id = 'expired_session'
     client.session_expiry = datetime.now() - timedelta(hours=2)
-    
+
     # Test that client refreshes session
     with patch.object(client, '_refresh_session') as mock_refresh:
         client.get_table_data('products')
@@ -431,4 +431,4 @@ def test_calculate_reorder_point(self):
 - Follow pattern: test_[function]_[scenario]_[expected]
 - Examples:
   - test_calculate_stock_value_empty_warehouse
-  - test_authentication_with_invalid_credentials_raises_error 
+  - test_authentication_with_invalid_credentials_raises_error

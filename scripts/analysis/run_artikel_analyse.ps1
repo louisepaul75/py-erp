@@ -8,10 +8,10 @@ if (Test-Path $pythonPath) {
 } else {
     Write-Host "Error: Python not found at $pythonPath" -ForegroundColor Red
     Write-Host "Please make sure the virtual environment is created in the 'venv' directory." -ForegroundColor Yellow
-    
+
     # Try to offer alternative
     Write-Host "`nAlternatively, you can activate the virtual environment manually with:" -ForegroundColor Yellow
     Write-Host "  . .\venv\Scripts\Activate.ps1" -ForegroundColor Yellow
     Write-Host "And then run:" -ForegroundColor Yellow
     Write-Host "  python scripts/analyse_artikel_stamm.py" -ForegroundColor Yellow
-} 
+}

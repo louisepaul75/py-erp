@@ -9,15 +9,17 @@ Usage:
     python scripts/test_image_api_connection.py [--verbose]
 """
 
-from pyerp.utils.env_loader import load_environment_variables
+import argparse
+import json
+import logging
 import os
 import sys
-import argparse
-import requests
-import json
-from requests.auth import HTTPBasicAuth
-import logging
 from pathlib import Path
+
+import requests
+from requests.auth import HTTPBasicAuth
+
+from pyerp.utils.env_loader import load_environment_variables
 
 # Add project root to path for imports
 project_root = Path(__file__).resolve().parent.parent.parent
@@ -28,9 +30,9 @@ sys.path.insert(0, str(project_root))
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
-logger = logging.getLogger('image_api_test')
+logger = logging.getLogger("image_api_test")
 
 
 def setup_environment():
@@ -39,25 +41,21 @@ def setup_environment():
     load_environment_variables()
 
     # Check if required variables are set
-    required_vars = [
-        'IMAGE_API_URL',
-        'IMAGE_API_USERNAME',
-        'IMAGE_API_PASSWORD']
+    required_vars = ["IMAGE_API_URL", "IMAGE_API_USERNAME", "IMAGE_API_PASSWORD"]
     missing_vars = [var for var in required_vars if not os.environ.get(var)]
 
     if missing_vars:
         logger.error(
-            f"Missing required environment variables: {
-                ', '.join(missing_vars)}")
-        logger.error(
-            "Please set these variables in your .env file or environment.")
+            f"Missing required environment variables: {', '.join(missing_vars)}",
+        )
+        logger.error("Please set these variables in your .env file or environment.")
         sys.exit(1)
 
     return {
-        'base_url': os.environ.get('IMAGE_API_URL'),
-        'username': os.environ.get('IMAGE_API_USERNAME'),
-        'password': os.environ.get('IMAGE_API_PASSWORD'),
-        'timeout': int(os.environ.get('IMAGE_API_TIMEOUT', 30)),
+        "base_url": os.environ.get("IMAGE_API_URL"),
+        "username": os.environ.get("IMAGE_API_USERNAME"),
+        "password": os.environ.get("IMAGE_API_PASSWORD"),
+        "timeout": int(os.environ.get("IMAGE_API_TIMEOUT", 30)),
     }
 
 
@@ -71,8 +69,8 @@ def test_api_connection(config, verbose=False):
     try:
         response = requests.get(
             url,
-            auth=HTTPBasicAuth(config['username'], config['password']),
-            timeout=config['timeout']
+            auth=HTTPBasicAuth(config["username"], config["password"]),
+            timeout=config["timeout"],
         )
 
         # Check if request was successful
@@ -80,23 +78,16 @@ def test_api_connection(config, verbose=False):
             data = response.json()
 
             logger.info("✅ Connection successful!")
-            logger.info(
-                f"API returned {
-                    data.get(
-                        'count',
-                        'unknown')} total records")
+            logger.info(f"API returned {data.get('count', 'unknown')} total records")
 
-            if verbose and data.get('results'):
+            if verbose and data.get("results"):
                 logger.info("\nSample data (first record):")
-                print(json.dumps(data['results'][0], indent=2))
+                print(json.dumps(data["results"][0], indent=2))
 
             return True
-        else:
-            logger.error(
-                f"❌ Connection failed with status code: {
-                    response.status_code}")
-            logger.error(f"Response: {response.text}")
-            return False
+        logger.error(f"❌ Connection failed with status code: {response.status_code}")
+        logger.error(f"Response: {response.text}")
+        return False
 
     except requests.exceptions.RequestException as e:
         logger.error(f"❌ Connection error: {e}")
@@ -104,12 +95,13 @@ def test_api_connection(config, verbose=False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Test Image API connection')
+    parser = argparse.ArgumentParser(description="Test Image API connection")
     parser.add_argument(
-        '--verbose',
-        '-v',
-        action='store_true',
-        help='Display verbose output')
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Display verbose output",
+    )
     args = parser.parse_args()
 
     # Load configuration

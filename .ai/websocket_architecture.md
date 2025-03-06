@@ -231,4 +231,4 @@ The WebSocket implementation in pyERP will follow a layered architecture that in
 - [Django Channels Documentation](https://channels.readthedocs.io/)
 - [WebSocket API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
 - [Redis Pub/Sub](https://redis.io/topics/pubsub)
-- [ASGI Specification](https://asgi.readthedocs.io/en/latest/) 
+- [ASGI Specification](https://asgi.readthedocs.io/en/latest/)

@@ -112,7 +112,7 @@ The `direct_api` module includes comprehensive tests for all components:
 
 ### Client Tests (`test_client.py`)
 
-- ✅ **Initialization Tests**: 
+- ✅ **Initialization Tests**:
   - `test_init`: Verify client initialization with default and custom parameters
   - `test_init_invalid_environment`: Test error handling for invalid environments
 
@@ -179,4 +179,4 @@ Planned improvements for the `direct_api` module include:
 1. Enhanced caching for frequently accessed data
 2. Performance optimizations for large dataset handling
 3. Improved monitoring and logging
-4. Bulk operations for data updates 
+4. Bulk operations for data updates

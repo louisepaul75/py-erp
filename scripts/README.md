@@ -84,4 +84,4 @@ If you encounter issues after rebuilding the containers:
 
 - `docker_rebuild_with_nginx.sh` / `docker_rebuild_with_nginx.ps1`: Advanced scripts that handle separate Django and Nginx containers, with proper networking setup.
 
-- `docker_https_troubleshooting.md`: Comprehensive guide for troubleshooting HTTPS-related issues. 
+- `docker_https_troubleshooting.md`: Comprehensive guide for troubleshooting HTTPS-related issues.

@@ -152,4 +152,4 @@ Each business domain (products, sales, inventory, etc.) follows a similar struct
 2. Create the legacy_sync app with API client functionality
 3. Implement core models to support data synchronization
 4. Begin analyzing legacy ERP schema
-5. Implement the product domain as the first business module 
+5. Implement the product domain as the first business module

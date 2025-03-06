@@ -8,17 +8,14 @@ to provide better error handling and more specific error types.
 
 class DirectAPIError(Exception):
     """Base exception for all Direct API errors."""
-    pass
 
 
 class AuthenticationError(DirectAPIError):
     """Raised when authentication fails."""
-    pass
 
 
 class ConnectionError(DirectAPIError):
     """Raised when unable to connect to the API."""
-    pass
 
 
 class ServerUnavailableError(ConnectionError):
@@ -28,7 +25,12 @@ class ServerUnavailableError(ConnectionError):
     is down, not responding, or cannot be reached. This allows for specific
     handling of server unavailability in the application.
     """
-    def __init__(self, message="The legacy ERP server is currently unavailable", inner_exception=None):  # noqa: E501
+
+    def __init__(
+        self,
+        message="The legacy ERP server is currently unavailable",
+        inner_exception=None,
+    ):
         self.inner_exception = inner_exception
         super().__init__(message)
 
@@ -44,19 +46,15 @@ class ResponseError(DirectAPIError):
 
 class RateLimitError(ResponseError):
     """Raised when rate limits are exceeded."""
-    pass
 
 
 class DataError(DirectAPIError):
     """Raised when there's an issue with the data format."""
-    pass
 
 
 class SessionError(DirectAPIError):
     """Raised when there's an issue with the session management."""
-    pass
 
 
 class ConfigurationError(DirectAPIError):
     """Raised when there's an issue with the API configuration."""
-    pass

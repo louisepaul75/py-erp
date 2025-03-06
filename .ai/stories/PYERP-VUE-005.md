@@ -67,5 +67,5 @@ Following the successful migration of the product management module to Vue.js (P
 
 ---
 
-**Last Updated:** March 4, 2024  
-**Created By:** pyERP Development Team 
+**Last Updated:** March 4, 2024
+**Created By:** pyERP Development Team

@@ -7,148 +7,155 @@ focused on test performance and isolation.
 
 import os
 import sys
-import dj_database_url  # noqa: F401
-from .base import *  # noqa
 from pathlib import Path
 
- # Load environment variables from .env file
+# Load environment variables from .env file
 from dotenv import load_dotenv
+
+from .base import *
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-env_path = PROJECT_ROOT / 'config' / 'env' / '.env'
+env_path = PROJECT_ROOT / "config" / "env" / ".env"
 print(f"Loading environment variables from: {env_path}")
 load_dotenv(dotenv_path=env_path)
 
- # Print environment variables for debugging
+# Print environment variables for debugging
 print(f"DB_NAME: {os.environ.get('DB_NAME', 'not set')}")
 print(f"DB_USER: {os.environ.get('DB_USER', 'not set')}")
 print(f"DB_PASSWORD: {os.environ.get('DB_PASSWORD', 'not set')}")
 print(f"DB_HOST: {os.environ.get('DB_HOST', 'not set')}")
 print(f"DB_PORT: {os.environ.get('DB_PORT', 'not set')}")
 
- # Configure for test environment
-DEBUG = True  # noqa: F841
+# Configure for test environment
+DEBUG = True
 
- # Remove debug toolbar for tests
-if 'debug_toolbar' in INSTALLED_APPS:
-    INSTALLED_APPS.remove('debug_toolbar')
+# Remove debug toolbar for tests
+if "debug_toolbar" in INSTALLED_APPS:
+    INSTALLED_APPS.remove("debug_toolbar")
 
-MIDDLEWARE = [middleware for middleware in MIDDLEWARE if 'debug_toolbar' not in middleware]  # noqa: E501
+MIDDLEWARE = [
+    middleware for middleware in MIDDLEWARE if "debug_toolbar" not in middleware
+]
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
- # Database configuration for tests
- # Try to use PostgreSQL first, fall back to SQLite if connection fails
-import socket  # noqa: F401
+# Database configuration for tests
+# Try to use PostgreSQL first, fall back to SQLite if connection fails
+
 import psycopg2
 
- # Define PostgreSQL connection parameters
+# Define PostgreSQL connection parameters
 PG_PARAMS = {
-    'ENGINE': 'django.db.backends.postgresql',  # noqa: E128
-             'NAME': os.environ.get('DB_NAME', 'pyerp_testing'),
-             'USER': os.environ.get('DB_USER', 'postgres'),
-             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-             'HOST': os.environ.get('DB_HOST', '192.168.73.65'),
-             'PORT': os.environ.get('DB_PORT', '5432'),
-             'TEST': {
-                 'NAME': 'test_pyerp_testing',  # noqa: E128
-             },
+    "ENGINE": "django.db.backends.postgresql",
+    "NAME": os.environ.get("DB_NAME", "pyerp_testing"),
+    "USER": os.environ.get("DB_USER", "postgres"),
+    "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+    "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
+    "PORT": os.environ.get("DB_PORT", "5432"),
+    "TEST": {
+        "NAME": "test_pyerp_testing",
+    },
 }
 
- # Define SQLite connection parameters as fallback
+# Define SQLite connection parameters as fallback
 SQLITE_PARAMS = {
-    'ENGINE': 'django.db.backends.sqlite3',  # noqa: E128
-    'NAME': 'file:memorydb_default?mode=memory&cache=shared',
-    'TEST': {
-    'NAME': 'file:memorydb_default?mode=memory&cache=shared',  # noqa: E128
-},
+    "ENGINE": "django.db.backends.sqlite3",
+    "NAME": "file:memorydb_default?mode=memory&cache=shared",
+    "TEST": {
+        "NAME": "file:memorydb_default?mode=memory&cache=shared",
+    },
 }
 
- # Try to connect to PostgreSQL, fall back to SQLite if connection fails
+# Try to connect to PostgreSQL, fall back to SQLite if connection fails
 try:
-    print("Attempting to connect to PostgreSQL at {}:{}".format(PG_PARAMS['HOST'], PG_PARAMS['PORT']))  # noqa: E501
+    print(
+        "Attempting to connect to PostgreSQL at {}:{}".format(
+            PG_PARAMS["HOST"],
+            PG_PARAMS["PORT"],
+        ),
+    )
     conn = psycopg2.connect(
-        dbname=PG_PARAMS['NAME'],  # noqa: F841
-        user=PG_PARAMS['USER'],  # noqa: F841
-        password=PG_PARAMS['PASSWORD'],  # noqa: F841
-        host=PG_PARAMS['HOST'],  # noqa: F841
-        port=PG_PARAMS['PORT'],  # noqa: F841
-        connect_timeout=5  # noqa: F841
+        dbname=PG_PARAMS["NAME"],
+        user=PG_PARAMS["USER"],
+        password=PG_PARAMS["PASSWORD"],
+        host=PG_PARAMS["HOST"],
+        port=PG_PARAMS["PORT"],
+        connect_timeout=5,
     )
     conn.close()
     print("SUCCESS: Connected to PostgreSQL")
-    DATABASES = {'default': PG_PARAMS}  # noqa: F841
+    DATABASES = {"default": PG_PARAMS}
 except Exception as e:
     print("ERROR: Could not connect to PostgreSQL:", str(e))
     print("\nFALLBACK: Using SQLite for testing")
-    DATABASES = {'default': SQLITE_PARAMS}  # noqa: F841
+    DATABASES = {"default": SQLITE_PARAMS}
 
- # Use the fastest possible password hasher
+# Use the fastest possible password hasher
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.MD5PasswordHasher',
+    "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
- # Simplify password validation for faster tests
+# Simplify password validation for faster tests
 AUTH_PASSWORD_VALIDATORS = []
 
- # Disable template debug mode for faster tests
+# Disable template debug mode for faster tests
 for template in TEMPLATES:
-    template['OPTIONS']['debug'] = False
+    template["OPTIONS"]["debug"] = False
 
- # Use console email backend for tests
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Use console email backend for tests
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
- # Disable logging during tests
+# Disable logging during tests
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-    'console': {  # noqa: E128
-    'class': 'logging.StreamHandler',
-    'stream': sys.stdout,
-},
-           },
-           'loggers': {
-               'django': {  # noqa: E128
-           'handlers': ['console'],
-           'level': 'WARNING',
-           },
-           },
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "WARNING",
+        },
+    },
 }
 
- # Celery settings for testing
+# Celery settings for testing
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
- # Disable migrations when running tests
+# Disable migrations when running tests
 
 
 class DisableMigrations:
     def __contains__(self, item):
-
         return True
 
     def __getitem__(self, item):
-
         return None
+
 
 MIGRATION_MODULES = DisableMigrations()
 
- # Use simple caching for tests
+# Use simple caching for tests
 CACHES = {
-    'default': {
-    'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',  # noqa: E128
-    'LOCATION': '',
-}
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "",
+    },
 }
 
- # Disable CSRF validation in tests
+# Disable CSRF validation in tests
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
 
- # Media settings for tests
-MEDIA_ROOT = BASE_DIR / 'test_media'
+# Media settings for tests
+MEDIA_ROOT = BASE_DIR / "test_media"
 
- # Debug toolbar configuration
+# Debug toolbar configuration
 DEBUG_TOOLBAR_CONFIG = {
-    'IS_RUNNING_TESTS': False,
+    "IS_RUNNING_TESTS": False,
 }

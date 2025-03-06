@@ -44,4 +44,4 @@ For more details about the consolidation process, see:
 
 ## Questions?
 
-If you have any questions or encounter any issues, please reach out to the DevOps team. 
+If you have any questions or encounter any issues, please reach out to the DevOps team.

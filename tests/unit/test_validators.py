@@ -3,13 +3,20 @@ Tests for the core validation framework.
 
 This module contains tests for the validation classes and utilities.
 """
-from decimal import Decimal
-import pytest
 
+from decimal import Decimal
+
+import pytest
 from core.validators import (
-    ValidationResult, Validator, RequiredValidator, RegexValidator,
-    RangeValidator, LengthValidator, validate_data, SkuValidator,
-    DecimalValidator
+    DecimalValidator,
+    LengthValidator,
+    RangeValidator,
+    RegexValidator,
+    RequiredValidator,
+    SkuValidator,
+    ValidationResult,
+    Validator,
+    validate_data,
 )
 
 
@@ -27,60 +34,60 @@ class TestValidationResult:
     def test_add_error(self):
         """Test adding errors to ValidationResult."""
         result = ValidationResult()
-        result.add_error('field1', 'Error 1')
+        result.add_error("field1", "Error 1")
 
         assert result.is_valid is False
-        assert 'field1' in result.errors
-        assert result.errors['field1'] == ['Error 1']
+        assert "field1" in result.errors
+        assert result.errors["field1"] == ["Error 1"]
 
         # Add another error for the same field
-        result.add_error('field1', 'Error 2')
-        assert result.errors['field1'] == ['Error 1', 'Error 2']
+        result.add_error("field1", "Error 2")
+        assert result.errors["field1"] == ["Error 1", "Error 2"]
 
         # Add error for a different field
-        result.add_error('field2', 'Error 3')
-        assert 'field2' in result.errors
-        assert result.errors['field2'] == ['Error 3']
+        result.add_error("field2", "Error 3")
+        assert "field2" in result.errors
+        assert result.errors["field2"] == ["Error 3"]
 
     def test_add_warning(self):
         """Test adding warnings to ValidationResult."""
         result = ValidationResult()
-        result.add_warning('field1', 'Warning 1')
+        result.add_warning("field1", "Warning 1")
 
         assert result.is_valid is True  # Warnings don't affect validity
-        assert 'field1' in result.warnings
-        assert result.warnings['field1'] == ['Warning 1']
+        assert "field1" in result.warnings
+        assert result.warnings["field1"] == ["Warning 1"]
 
         # Add another warning for the same field
-        result.add_warning('field1', 'Warning 2')
-        assert result.warnings['field1'] == ['Warning 1', 'Warning 2']
+        result.add_warning("field1", "Warning 2")
+        assert result.warnings["field1"] == ["Warning 1", "Warning 2"]
 
     def test_merge(self):
         """Test merging two ValidationResults."""
         result1 = ValidationResult()
-        result1.add_error('field1', 'Error 1')
-        result1.add_warning('field2', 'Warning 1')
-        result1.context['key1'] = 'value1'
+        result1.add_error("field1", "Error 1")
+        result1.add_warning("field2", "Warning 1")
+        result1.context["key1"] = "value1"
 
         result2 = ValidationResult()
-        result2.add_error('field3', 'Error 2')
-        result2.add_warning('field4', 'Warning 2')
-        result2.context['key2'] = 'value2'
+        result2.add_error("field3", "Error 2")
+        result2.add_warning("field4", "Warning 2")
+        result2.context["key2"] = "value2"
 
         result1.merge(result2)
 
         assert result1.is_valid is False
         assert result1.errors == {
-            'field1': ['Error 1'],
-            'field3': ['Error 2']
+            "field1": ["Error 1"],
+            "field3": ["Error 2"],
         }
         assert result1.warnings == {
-            'field2': ['Warning 1'],
-            'field4': ['Warning 2']
+            "field2": ["Warning 1"],
+            "field4": ["Warning 2"],
         }
         assert result1.context == {
-            'key1': 'value1',
-            'key2': 'value2'
+            "key1": "value1",
+            "key2": "value2",
         }
 
     def test_str(self):
@@ -88,10 +95,10 @@ class TestValidationResult:
         result = ValidationResult()
         assert str(result) == "Valid"
 
-        result.add_error('field1', 'Error 1')
+        result.add_error("field1", "Error 1")
         assert str(result) == "Invalid: field1: Error 1"
 
-        result.add_error('field2', 'Error 2')
+        result.add_error("field2", "Error 2")
         assert "field1: Error 1" in str(result)
         assert "field2: Error 2" in str(result)
 
@@ -154,9 +161,9 @@ class TestRegexValidator:
         validator = RegexValidator(r"^[A-Z]{3}\d{3}$")
 
         assert not validator("abc123").is_valid  # lowercase
-        assert not validator("AB123").is_valid   # too few letters
+        assert not validator("AB123").is_valid  # too few letters
         assert not validator("ABCD123").is_valid  # too many letters
-        assert not validator("ABC12").is_valid   # too few digits
+        assert not validator("ABC12").is_valid  # too few digits
         assert not validator("ABC1234").is_valid  # too many digits
 
 
@@ -267,7 +274,7 @@ def test_validate_data_utility():
     """Test the validate_data utility function."""
     validators = [
         RequiredValidator(),
-        LengthValidator(min_length=3)
+        LengthValidator(min_length=3),
     ]
 
     # Valid data

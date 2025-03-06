@@ -152,7 +152,7 @@ Environment variables are used to configure the application without modifying co
    - Correct: `LOG_FILE_SIZE_LIMIT=2097152`
    - Incorrect: `LOG_FILE_SIZE_LIMIT=2097152  # 2MB in bytes`
 
-2. **Storage**: 
+2. **Storage**:
    - Development: Use `.env` file (not committed to version control)
    - Production: Use system environment variables or a secure environment variable management system
 
@@ -183,4 +183,4 @@ docker-compose -f docker/docker-compose.prod.yml up -d
 2. **Minimize Production Dependencies**: Keep production containers lean
 3. **Security First**: Run security scans regularly
 4. **Documentation**: Document why non-obvious dependencies are included
-5. **License Compliance**: Verify license compatibility for all dependencies 
+5. **License Compliance**: Verify license compatibility for all dependencies

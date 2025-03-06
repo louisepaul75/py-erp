@@ -20,7 +20,7 @@ The Legacy ERP Sync module is responsible for extracting data from the 4D-based 
 ```python
 class Legacy4DClient:
     """Client for connecting to the 4D legacy ERP API."""
-    
+
     def __init__(self, host, port, username, password, timeout=30):
         self.host = host
         self.port = port
@@ -28,38 +28,38 @@ class Legacy4DClient:
         self.password = password
         self.timeout = timeout
         self.session = None
-        
+
     def connect(self):
         """Establish connection to the 4D ERP API."""
         # Implementation depends on 4D API specifics
-        
+
     def disconnect(self):
         """Close the connection to the 4D ERP API."""
         # Implementation depends on 4D API specifics
-        
+
     def query_table(self, table_name, filters=None, fields=None, limit=None, offset=None):
         """Query data from a specific table in the legacy ERP.
-        
+
         Args:
             table_name (str): Name of the table to query
             filters (dict, optional): Filtering conditions
             fields (list, optional): Specific fields to retrieve
             limit (int, optional): Maximum number of records to return
             offset (int, optional): Offset for pagination
-            
+
         Returns:
             list: List of dictionaries containing the retrieved records
         """
         # Implementation depends on 4D API specifics
-        
+
     def get_record(self, table_name, record_id, fields=None):
         """Retrieve a specific record by ID.
-        
+
         Args:
             table_name (str): Name of the table
             record_id: Primary key value of the record
             fields (list, optional): Specific fields to retrieve
-            
+
         Returns:
             dict: Dictionary containing the record data
         """
@@ -109,7 +109,7 @@ from django.utils import timezone
 
 class SyncLog(models.Model):
     """Log of synchronization operations."""
-    
+
     SYNC_STATUS_CHOICES = [
         ('PENDING', 'Pending'),
         ('RUNNING', 'Running'),
@@ -117,7 +117,7 @@ class SyncLog(models.Model):
         ('FAILED', 'Failed'),
         ('PARTIALLY_COMPLETED', 'Partially Completed'),
     ]
-    
+
     table_name = models.CharField(max_length=100)
     status = models.CharField(max_length=20, choices=SYNC_STATUS_CHOICES, default='PENDING')
     records_processed = models.IntegerField(default=0)
@@ -127,21 +127,21 @@ class SyncLog(models.Model):
     start_time = models.DateTimeField(null=True)
     end_time = models.DateTimeField(null=True)
     error_message = models.TextField(blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
-        
+
     def __str__(self):
         return f"Sync {self.table_name} - {self.status} ({self.created_at})"
-    
+
     def mark_as_running(self):
         self.status = 'RUNNING'
         self.start_time = timezone.now()
         self.save()
-        
+
     def mark_as_completed(self, records_processed, records_created, records_updated, records_failed):
         self.status = 'COMPLETED' if records_failed == 0 else 'PARTIALLY_COMPLETED'
         self.records_processed = records_processed
@@ -150,7 +150,7 @@ class SyncLog(models.Model):
         self.records_failed = records_failed
         self.end_time = timezone.now()
         self.save()
-        
+
     def mark_as_failed(self, error_message):
         self.status = 'FAILED'
         self.error_message = error_message
@@ -160,16 +160,16 @@ class SyncLog(models.Model):
 
 class SyncError(models.Model):
     """Detailed error records for sync operations."""
-    
+
     sync_log = models.ForeignKey(SyncLog, on_delete=models.CASCADE, related_name='errors')
     record_id = models.CharField(max_length=100)
     error_message = models.TextField()
     record_data = models.JSONField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-created_at']
-        
+
     def __str__(self):
         return f"Error in {self.sync_log.table_name} - Record {self.record_id}"
 ```
@@ -179,25 +179,25 @@ class SyncError(models.Model):
 ```python
 class BaseMapper:
     """Base class for mapping legacy data to new system models."""
-    
+
     def __init__(self, legacy_record):
         self.legacy_record = legacy_record
         self.errors = []
-        
+
     def map(self):
         """Map the legacy record to the format for the new system.
-        
+
         Returns:
             dict: Data for the new system
         """
         raise NotImplementedError("Subclasses must implement map method")
-        
+
     def validate(self, mapped_data):
         """Validate the mapped data before saving.
-        
+
         Args:
             mapped_data (dict): The mapped data to validate
-            
+
         Returns:
             bool: True if valid, False otherwise
         """
@@ -211,11 +211,11 @@ from products.models import Product, Category
 
 class ProductMapper(BaseMapper):
     """Maps legacy product data to the new Product model."""
-    
+
     def map(self):
         """Map legacy product fields to new product fields."""
         legacy_data = self.legacy_record
-        
+
         # Get or create category
         category = None
         if 'Category' in legacy_data and legacy_data['Category']:
@@ -223,7 +223,7 @@ class ProductMapper(BaseMapper):
                 name=legacy_data['Category'],
                 defaults={'description': f"Imported from legacy: {legacy_data['Category']}"}
             )
-        
+
         # Map to new product fields
         mapped_data = {
             'legacy_id': legacy_data.get('ProductID'),
@@ -238,27 +238,27 @@ class ProductMapper(BaseMapper):
             'is_purchased': bool(legacy_data.get('IsPurchased', False)),
             'is_manufactured': bool(legacy_data.get('IsManufactured', False)),
         }
-        
+
         return mapped_data
-    
+
     def validate(self, mapped_data):
         """Validate the mapped product data."""
         # Basic validation
         if not mapped_data.get('name'):
             self.errors.append("Product name is required")
             return False
-            
+
         if not mapped_data.get('sku'):
             self.errors.append("SKU is required")
             return False
-            
+
         # Check for duplicate SKU
         if Product.objects.filter(sku=mapped_data['sku']).exclude(
             legacy_id=mapped_data.get('legacy_id')
         ).exists():
             self.errors.append(f"Duplicate SKU: {mapped_data['sku']}")
             return False
-            
+
         return True
 ```
 
@@ -278,7 +278,7 @@ logger = logging.getLogger(__name__)
 
 class SyncService:
     """Base service for synchronizing data from legacy ERP."""
-    
+
     def __init__(self, api_client=None):
         self.api_client = api_client or Legacy4DClient(
             host=settings.LEGACY_API_HOST,
@@ -286,35 +286,35 @@ class SyncService:
             username=settings.LEGACY_API_USERNAME,
             password=settings.LEGACY_API_PASSWORD,
         )
-        
+
     def sync_table(self, table_name, model_class, mapper_class, batch_size=100, filters=None):
         """Synchronize data from a legacy table to a Django model.
-        
+
         Args:
             table_name (str): Name of the legacy table
             model_class: Django model class for the new system
             mapper_class: Mapper class for transforming the data
             batch_size (int): Number of records to process in each batch
             filters (dict, optional): Filters to apply to the legacy data query
-            
+
         Returns:
             SyncLog: Log of the synchronization operation
         """
         # Create sync log
         sync_log = SyncLog.objects.create(table_name=table_name)
         sync_log.mark_as_running()
-        
+
         try:
             # Connect to legacy API
             self.api_client.connect()
-            
+
             # Get total record count for progress tracking
             offset = 0
             records_processed = 0
             records_created = 0
             records_updated = 0
             records_failed = 0
-            
+
             # Process records in batches
             while True:
                 # Get batch of records from legacy system
@@ -324,10 +324,10 @@ class SyncService:
                     limit=batch_size,
                     offset=offset
                 )
-                
+
                 if not legacy_records:
                     break
-                    
+
                 # Process batch
                 for legacy_record in legacy_records:
                     try:
@@ -335,27 +335,27 @@ class SyncService:
                             # Map legacy record to new format
                             mapper = mapper_class(legacy_record)
                             mapped_data = mapper.map()
-                            
+
                             # Validate mapped data
                             if not mapper.validate(mapped_data):
                                 raise ValueError(f"Validation failed: {', '.join(mapper.errors)}")
-                                
+
                             # Get or create record in new system
                             legacy_id = str(legacy_record.get('id') or legacy_record.get('ID'))
                             obj, created = model_class.objects.update_or_create(
                                 legacy_id=legacy_id,
                                 defaults=mapped_data
                             )
-                            
+
                             if created:
                                 records_created += 1
                             else:
                                 records_updated += 1
-                                
+
                     except Exception as e:
                         records_failed += 1
                         logger.exception(f"Error syncing {table_name} record: {str(e)}")
-                        
+
                         # Log the error
                         SyncError.objects.create(
                             sync_log=sync_log,
@@ -363,20 +363,20 @@ class SyncService:
                             error_message=str(e),
                             record_data=legacy_record
                         )
-                        
+
                     finally:
                         records_processed += 1
-                        
+
                 # Update offset for next batch
                 offset += len(legacy_records)
-                
+
                 # Update sync log with progress
                 sync_log.records_processed = records_processed
                 sync_log.records_created = records_created
                 sync_log.records_updated = records_updated
                 sync_log.records_failed = records_failed
                 sync_log.save()
-                
+
             # Mark sync as completed
             sync_log.mark_as_completed(
                 records_processed=records_processed,
@@ -384,15 +384,15 @@ class SyncService:
                 records_updated=records_updated,
                 records_failed=records_failed
             )
-            
+
         except Exception as e:
             logger.exception(f"Error syncing {table_name}: {str(e)}")
             sync_log.mark_as_failed(str(e))
-            
+
         finally:
             # Disconnect from legacy API
             self.api_client.disconnect()
-            
+
         return sync_log
 ```
 
@@ -420,7 +420,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE('Starting product synchronization...'))
-        
+
         # Create API client
         client = Legacy4DClient(
             host=settings.LEGACY_API_HOST,
@@ -428,17 +428,17 @@ class Command(BaseCommand):
             username=settings.LEGACY_API_USERNAME,
             password=settings.LEGACY_API_PASSWORD,
         )
-        
+
         # Create sync service
         sync_service = SyncService(api_client=client)
-        
+
         # Determine filters
         filters = None
         if not options['full']:
             # For incremental sync, get products updated since last sync
             # Logic to determine latest sync time would go here
             pass
-            
+
         # Perform sync
         sync_log = sync_service.sync_table(
             table_name=LEGACY_TABLES['PRODUCTS'],
@@ -446,7 +446,7 @@ class Command(BaseCommand):
             mapper_class=ProductMapper,
             filters=filters
         )
-        
+
         # Output results
         self.stdout.write(self.style.SUCCESS(
             f'Product sync completed: '
@@ -454,7 +454,7 @@ class Command(BaseCommand):
             f'{sync_log.records_updated} updated, '
             f'{sync_log.records_failed} failed'
         ))
-        
+
         if sync_log.records_failed > 0:
             self.stdout.write(self.style.WARNING(
                 f'There were {sync_log.records_failed} errors during sync. '
@@ -474,13 +474,13 @@ class SyncErrorInline(admin.TabularInline):
     readonly_fields = ['record_id', 'error_message', 'created_at']
     fields = readonly_fields
     can_delete = False
-    
+
     def has_add_permission(self, request, obj=None):
         return False
 
 @admin.register(SyncLog)
 class SyncLogAdmin(admin.ModelAdmin):
-    list_display = ['table_name', 'status', 'records_processed', 'records_created', 
+    list_display = ['table_name', 'status', 'records_processed', 'records_created',
                    'records_updated', 'records_failed', 'start_time', 'end_time']
     list_filter = ['status', 'table_name']
     search_fields = ['table_name']
@@ -499,10 +499,10 @@ class SyncLogAdmin(admin.ModelAdmin):
         }),
     ]
     inlines = [SyncErrorInline]
-    
+
     def has_add_permission(self, request):
         return False
-        
+
     def has_change_permission(self, request, obj=None):
         return False
 ```
@@ -529,17 +529,17 @@ def sync_products(full_sync=False):
         username=settings.LEGACY_API_USERNAME,
         password=settings.LEGACY_API_PASSWORD,
     )
-    
+
     # Create sync service
     sync_service = SyncService(api_client=client)
-    
+
     # Determine filters
     filters = None
     if not full_sync:
         # For incremental sync, get products updated since last sync
         # Logic to determine latest sync time would go here
         pass
-        
+
     # Perform sync
     sync_log = sync_service.sync_table(
         table_name=LEGACY_TABLES['PRODUCTS'],
@@ -547,7 +547,7 @@ def sync_products(full_sync=False):
         mapper_class=ProductMapper,
         filters=filters
     )
-    
+
     return {
         'table': sync_log.table_name,
         'status': sync_log.status,
@@ -594,4 +594,4 @@ LEGACY_SYNC_BATCH_SIZE = int(os.environ.get('LEGACY_SYNC_BATCH_SIZE', '100'))
 5. Build sync service for orchestrating the synchronization
 6. Add management commands for manual sync operations
 7. Create admin interface for monitoring and control
-8. Implement Celery tasks for scheduled sync jobs 
+8. Implement Celery tasks for scheduled sync jobs

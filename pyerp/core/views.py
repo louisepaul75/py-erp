@@ -2,39 +2,41 @@
 Views for the Core app.
 """
 
-import logging
 import json
+import logging
 import os
 
 from django.conf import settings
 from django.db import connection
-from django.http import JsonResponse, HttpResponseRedirect  # noqa: F401
+from django.db.utils import OperationalError
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
+from django.views.generic import TemplateView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.views.decorators.http import require_GET, require_http_methods  # noqa: F401
-from django.db.utils import OperationalError
-from django.utils.translation import activate, get_language  # noqa: F401
-from django.utils import translation  # noqa: F401
-from django.shortcuts import render
-from django.views.generic import TemplateView
 
- # Set up logging
-logger = logging.getLogger('pyerp.core')
+# Set up logging
+logger = logging.getLogger("pyerp.core")
 
- # Language session key constant (compatible with Django 5.1+)
-LANGUAGE_SESSION_KEY = 'django_language'  # noqa: F841
+# Language session key constant (compatible with Django 5.1+)
+LANGUAGE_SESSION_KEY = "django_language"
 
 
+@require_GET
+@csrf_exempt
 def health_check(request):
     """
     Health check endpoint to verify the system is running.
     Checks database connection and returns system status.
+    This view is intentionally not protected by authentication to allow external monitoring.
     """
     logger.debug("Health check requested")
 
- # Check database connection
+    # Check database connection
     db_status = "ok"
     try:
         with connection.cursor() as cursor:
@@ -44,18 +46,20 @@ def health_check(request):
         db_status = "error"
         logger.error(f"Database health check failed: {e}")
 
- # Get environment and debug status
-    environment = settings.DJANGO_SETTINGS_MODULE.split('.')[-1]
+    # Get environment and debug status
+    environment = settings.DJANGO_SETTINGS_MODULE.split(".")[-1]
 
- # Return system status
+    # Return system status
     response_data = {
-        "status": "healthy" if db_status == "ok" else "unhealthy",  # noqa: E128
+        "status": "healthy" if db_status == "ok" else "unhealthy",
         "database": db_status,
         "environment": environment,
-                     "version": getattr(settings, 'APP_VERSION', 'unknown'),
+        "version": getattr(settings, "APP_VERSION", "unknown"),
     }
 
-    status_code = status.HTTP_200_OK if db_status == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE  # noqa: E501
+    status_code = (
+        status.HTTP_200_OK if db_status == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE
+    )
     return JsonResponse(response_data, status=status_code)
 
 
@@ -63,7 +67,8 @@ class UserProfileView(APIView):
     """
     View to retrieve and update the authenticated user's profile.
     """
-    permission_classes = [IsAuthenticated]  # noqa: F841
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Get the authenticated user's profile."""
@@ -71,7 +76,7 @@ class UserProfileView(APIView):
 
         user = request.user
         response_data = {
-            "id": user.id,  # noqa: E128
+            "id": user.id,
             "username": user.username,
             "email": user.email,
             "first_name": user.first_name,
@@ -88,8 +93,8 @@ class UserProfileView(APIView):
         user = request.user
         logger.debug(f"User profile update requested by {user.username}")
 
- # Only allow updating specific fields
-        allowed_fields = ['first_name', 'last_name', 'email']
+        # Only allow updating specific fields
+        allowed_fields = ["first_name", "last_name", "email"]
         updated_fields = {}
 
         for field in allowed_fields:
@@ -99,29 +104,40 @@ class UserProfileView(APIView):
 
         if updated_fields:
             user.save()
-            logger.info(f"User {user.username} updated profile fields: {', '.join(updated_fields.keys())}")  # noqa: E501
-            return Response({"message": "Profile updated successfully", "updated_fields": updated_fields})  # noqa: E501
+            logger.info(
+                f"User {user.username} updated profile fields: {', '.join(updated_fields.keys())}",
+            )
+            return Response(
+                {
+                    "message": "Profile updated successfully",
+                    "updated_fields": updated_fields,
+                },
+            )
 
-        return Response({"message": "No valid fields to update"}, status=status.HTTP_400_BAD_REQUEST)  # noqa: E501
+        return Response(
+            {"message": "No valid fields to update"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class DashboardSummaryView(APIView):
     """
     View to retrieve summary data for the dashboard.
     """
-    permission_classes = [IsAuthenticated]  # noqa: F841
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Get summary data for the dashboard."""
         logger.debug(f"Dashboard summary requested by {request.user.username}")
 
- # Example summary data - in a real implementation, this would be fetched from the database  # noqa: E501
+        # Example summary data - in a real implementation, this would be fetched from the database
         response_data = {
-            "pending_orders": 0,  # noqa: E128
+            "pending_orders": 0,
             "low_stock_items": 0,
             "sales_today": 0,
             "production_status": "normal",
-                         "recent_activities": [],
+            "recent_activities": [],
         }
 
         return Response(response_data)
@@ -131,87 +147,93 @@ class SystemSettingsView(APIView):
     """
     View to retrieve and update system settings.
     """
-    permission_classes = [IsAuthenticated]  # noqa: F841
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """Get system settings."""
         if not request.user.is_staff:
-            logger.warning(f"Unauthorized system settings access attempt by {request.user.username}")  # noqa: E501
+            logger.warning(
+                f"Unauthorized system settings access attempt by {request.user.username}",
+            )
             return Response(
-                {"error": "You do not have permission to view system settings"},  # noqa: E501
-                status=status.HTTP_403_FORBIDDEN
+                {"error": "You do not have permission to view system settings"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         logger.debug(f"System settings requested by {request.user.username}")
 
- # Example settings data - in a real implementation, this would be fetched from the database  # noqa: E501
+        # Example settings data - in a real implementation, this would be fetched from the database
         response_data = {
-                    "company_name": "Example Corp",  # noqa: E128
-                    "timezone": settings.TIME_ZONE,
-                    "decimal_precision": 2,
-                    "default_currency": "USD",
-                }
+            "company_name": "Example Corp",
+            "timezone": settings.TIME_ZONE,
+            "decimal_precision": 2,
+            "default_currency": "USD",
+        }
 
         return Response(response_data)
 
     def patch(self, request):
         """Update system settings."""
         if not request.user.is_superuser:
-            logger.warning(f"Unauthorized system settings update attempt by {request.user.username}")  # noqa: E501
+            logger.warning(
+                f"Unauthorized system settings update attempt by {request.user.username}",
+            )
             return Response(
-                {"error": "You do not have permission to update system settings"},  # noqa: E501
-                status=status.HTTP_403_FORBIDDEN
+                {"error": "You do not have permission to update system settings"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-                    logger.debug(f"System settings update requested by {request.user.username}")  # noqa: E501
+        logger.debug(f"System settings update requested by {request.user.username}")
 
- # This would typically update settings in the database
- # For demonstration, we'll just acknowledge the request
-                    return Response({"message": "Settings updated successfully"})  # noqa: E501
+        # This would typically update settings in the database
+        # For demonstration, we'll just acknowledge the request
+        return Response({"message": "Settings updated successfully"})
 
 
 @require_GET
-                    def test_db_error(request):
+def test_db_error(request):
     """
     Test view to simulate a database connection error.
     This is for testing the database connection middleware.
     """
     logger.info("Simulating database connection error for testing")
-                    raise OperationalError("This is a simulated database connection error for testing")  # noqa: E501
+    raise OperationalError("This is a simulated database connection error for testing")
 
 
-                    def csrf_failure(request, reason=""):
+def csrf_failure(request, reason=""):
     """
-                    Custom view for CSRF failures that provides more detailed error information.  # noqa: E501
+    Custom view for CSRF failures that provides more detailed error information.  # noqa: E501
     """
     context = {
-                    'reason': reason,  # noqa: E128
-                    'cookies_enabled': request.COOKIES,
-                    'csrf_cookie': request.META.get('CSRF_COOKIE', None),
-                    'http_referer': request.META.get('HTTP_REFERER', None),
-                    'http_host': request.META.get('HTTP_HOST', None),
-                }
-    return render(request, 'csrf_failure.html', context)
+        "reason": reason,
+        "cookies_enabled": request.COOKIES,
+        "csrf_cookie": request.META.get("CSRF_COOKIE", None),
+        "http_referer": request.META.get("HTTP_REFERER", None),
+        "http_host": request.META.get("HTTP_HOST", None),
+    }
+    return render(request, "csrf_failure.html", context)
 
 
 class VueAppView(TemplateView):
     """View for rendering the Vue.js application as the main frontend."""
-    template_name = 'base/vue_base.html'  # noqa: F841
+
+    template_name = "base/vue_base.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
- # Explicitly pass debug flag to template
-        context['debug'] = settings.DEBUG
+        # Explicitly pass debug flag to template
+        context["debug"] = settings.DEBUG
 
- # In production mode, parse the Vue.js manifest to get correct asset paths  # noqa: E501
+        # In production mode, parse the Vue.js manifest to get correct asset paths
         if not settings.DEBUG:
-            manifest_path = os.path.join(settings.STATIC_ROOT, 'vue', 'manifest.json')  # noqa: E501
+            manifest_path = os.path.join(settings.STATIC_ROOT, "vue", "manifest.json")
             if os.path.exists(manifest_path):
-                with open(manifest_path, 'r') as f:
+                with open(manifest_path) as f:
                     try:
                         manifest = json.load(f)
-                        context['vue_manifest'] = manifest
+                        context["vue_manifest"] = manifest
                     except json.JSONDecodeError:
                         pass
 

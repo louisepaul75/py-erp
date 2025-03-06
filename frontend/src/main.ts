@@ -26,4 +26,4 @@ app.mount('#vue-app');
 // Make the app available in development mode for debugging
 if (import.meta.env.DEV) {
   window.app = app;
-} 
+}

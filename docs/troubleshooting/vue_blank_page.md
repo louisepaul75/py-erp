@@ -70,7 +70,7 @@ When accessing the Vue.js frontend on localhost:8050 (Django server) or localhos
       <script type="module">
           // During development, this connects to the Vite dev server for HMR
           import { createApp } from 'http://localhost:3000/@vite/client';
-          
+
           // Load main entry from Vite dev server
           import('http://localhost:3000/src/main.ts');
       </script>
@@ -81,10 +81,10 @@ When accessing the Vue.js frontend on localhost:8050 (Django server) or localhos
   ```python
   def get_context_data(self, **kwargs):
       context = super().get_context_data(**kwargs)
-      
+
       # Explicitly pass debug flag to template
       context['debug'] = settings.DEBUG
-      
+
       # ... rest of the method
   ```
 
@@ -117,4 +117,4 @@ The issue has been identified as a combination of mount point mismatches and tem
 3. Check that the debug flag is correctly passed to the template context
 4. Monitor both Django and Vue.js logs for errors during startup
 5. When integrating Vue.js with Django, ensure all configuration points are aligned
-6. Pay attention to template inheritance and how it affects the rendering of the application 
+6. Pay attention to template inheritance and how it affects the rendering of the application

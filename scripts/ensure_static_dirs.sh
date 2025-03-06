@@ -35,4 +35,4 @@ if command -v python &> /dev/null; then
   echo "Collectstatic completed."
 fi
 
-echo "Static directories setup completed." 
+echo "Static directories setup completed."

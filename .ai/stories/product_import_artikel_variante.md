@@ -123,4 +123,4 @@ The implementation handles several complex data structures:
 
 - [Product Requirements Document - Section 4.6.1](../.ai/prd.md#461-product-data-migration-strategy)
 - [Product Model Documentation](../pyerp/products/models.py)
-- [Legacy Data API Documentation](../scripts/analyze_artikel_variante.py) 
+- [Legacy Data API Documentation](../scripts/analyze_artikel_variante.py)

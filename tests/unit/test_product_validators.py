@@ -3,6 +3,7 @@ Tests for the product-specific validators.
 
 This module contains tests for the product validation classes and utilities.
 """
+
 import unittest
 from decimal import Decimal
 
@@ -12,7 +13,7 @@ from pyerp.core.validators import ValidationResult
 class MockProductCategory:
     """Mock ProductCategory model for testing."""
 
-    def __init__(self, code='', name=''):
+    def __init__(self, code="", name=""):
         self.code = code
         self.name = name
 
@@ -23,12 +24,13 @@ class MockProductCategory:
 class MockProduct:
     """Mock Product model for testing."""
 
-    def __init__(self, sku='', name='', category=None, list_price=0):
+    def __init__(self, sku="", name="", category=None, list_price=0):
         self.sku = sku
         self.name = name
         self.category = category
         self.list_price = list_price
         self.errors = {}
+
 
 # Mock the ProductImportValidator class
 
@@ -36,11 +38,7 @@ class MockProduct:
 class MockProductImportValidator:
     """Mock implementation of ProductImportValidator for testing."""
 
-    def __init__(
-            self,
-            strict=False,
-            transform_data=True,
-            default_category=None):
+    def __init__(self, strict=False, transform_data=True, default_category=None):
         self.strict = strict
         self.transform_data = transform_data
         self.default_category = default_category
@@ -68,8 +66,7 @@ class MockProductImportValidator:
             return None, result
 
         if len(value) > 255:
-            result.add_warning(
-                "name", "Name is too long and will be truncated")
+            result.add_warning("name", "Name is too long and will be truncated")
             value = value[:255]
 
         return value, result
@@ -99,15 +96,16 @@ class MockProductImportValidator:
     def _pre_validate_row(self, row_data, result, row_index=None):
         """Mock pre-validation."""
         # Just a placeholder for testing
-        pass
 
     def _post_validate_row(self, row_data, result, row_index=None):
         """Mock post-validation with business rules."""
         # Check that list price >= cost price
-        if 'list_price' in row_data and 'cost_price' in row_data:
-            if row_data['list_price'] < row_data['cost_price']:
-                result.add_error("list_price",
-                                 "List price cannot be less than cost price")
+        if "list_price" in row_data and "cost_price" in row_data:
+            if row_data["list_price"] < row_data["cost_price"]:
+                result.add_error(
+                    "list_price",
+                    "List price cannot be less than cost price",
+                )
 
 
 class TestMockProductImportValidator(unittest.TestCase):
@@ -116,9 +114,12 @@ class TestMockProductImportValidator(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.default_category = MockProductCategory(
-            code="DEFAULT", name="Default Category")
+            code="DEFAULT",
+            name="Default Category",
+        )
         self.validator = MockProductImportValidator(
-            default_category=self.default_category)
+            default_category=self.default_category,
+        )
 
     def test_validate_sku(self):
         """Test SKU validation."""
@@ -198,7 +199,7 @@ class TestMockProductImportValidator(unittest.TestCase):
         # Test case where list price < cost price
         row_data = {
             "list_price": Decimal("50.00"),
-            "cost_price": Decimal("60.00")
+            "cost_price": Decimal("60.00"),
         }
         result = ValidationResult()
         self.validator._post_validate_row(row_data, result)
@@ -208,7 +209,7 @@ class TestMockProductImportValidator(unittest.TestCase):
         # Test case where list price >= cost price
         row_data = {
             "list_price": Decimal("70.00"),
-            "cost_price": Decimal("60.00")
+            "cost_price": Decimal("60.00"),
         }
         result = ValidationResult()
         self.validator._post_validate_row(row_data, result)

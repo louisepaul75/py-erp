@@ -1,22 +1,22 @@
 <template>
   <div class="category-list">
     <h1>Product Categories</h1>
-    
+
     <!-- Loading indicator -->
     <div v-if="loading" class="loading">
       <p>Loading categories...</p>
     </div>
-    
+
     <!-- Error message -->
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
     </div>
-    
+
     <!-- Categories grid -->
     <div v-else class="categories-grid">
-      <div 
-        v-for="category in categories" 
-        :key="category.id" 
+      <div
+        v-for="category in categories"
+        :key="category.id"
         class="category-card"
         @click="filterProductsByCategory(category.id)"
       >
@@ -27,7 +27,7 @@
         </p>
       </div>
     </div>
-    
+
     <!-- No categories message -->
     <div v-if="categories.length === 0 && !loading" class="no-results">
       <p>No categories found.</p>
@@ -52,7 +52,7 @@ const error = ref('');
 const loadCategories = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     const response = await productApi.getCategories();
     categories.value = response.data;
@@ -134,4 +134,4 @@ h1 {
   font-weight: 500;
   color: #28a745;
 }
-</style> 
+</style>

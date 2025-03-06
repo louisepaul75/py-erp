@@ -4,13 +4,13 @@
     <div v-if="loading" class="loading">
       <p>Loading product details...</p>
     </div>
-    
+
     <!-- Error message -->
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
       <button @click="goBack" class="back-button">Go Back</button>
     </div>
-    
+
     <!-- Product details -->
     <div v-else class="product-content">
       <div class="product-header">
@@ -23,21 +23,21 @@
           {{ product.category.name }}
         </div>
       </div>
-      
+
       <div class="product-layout">
         <!-- Product images -->
         <div class="product-images">
           <div class="main-image">
-            <img 
-              :src="selectedImage ? selectedImage.url : (product.primary_image ? product.primary_image.url : '/static/images/no-image.png')" 
+            <img
+              :src="selectedImage ? selectedImage.url : (product.primary_image ? product.primary_image.url : '/static/images/no-image.png')"
               :alt="product.name"
             />
           </div>
-          
+
           <div v-if="product.images && product.images.length > 1" class="image-thumbnails">
-            <div 
-              v-for="image in product.images" 
-              :key="image.id" 
+            <div
+              v-for="image in product.images"
+              :key="image.id"
               class="thumbnail"
               :class="{ active: selectedImage && selectedImage.id === image.id }"
               @click="selectedImage = image"
@@ -46,7 +46,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Product info -->
         <div class="product-info">
           <div class="info-section">
@@ -54,7 +54,7 @@
             <p v-if="product.description">{{ product.description }}</p>
             <p v-else>No description available.</p>
           </div>
-          
+
           <div class="info-section">
             <h3>Details</h3>
             <table class="details-table">
@@ -78,21 +78,21 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Variants section -->
       <div v-if="product.variants && product.variants.length > 0" class="variants-section">
         <h2>Product Variants ({{ product.variants.length }})</h2>
-        
+
         <div class="variants-grid">
-          <div 
-            v-for="variant in product.variants" 
-            :key="variant.id" 
+          <div
+            v-for="variant in product.variants"
+            :key="variant.id"
             class="variant-card"
             @click="viewVariantDetails(variant.id)"
           >
             <div class="variant-image">
-              <img 
-                :src="variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png'" 
+              <img
+                :src="variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png'"
                 :alt="variant.name"
               />
             </div>
@@ -100,9 +100,9 @@
               <h3>{{ variant.name }}</h3>
               <p class="variant-sku">SKU: {{ variant.sku }}</p>
               <div class="variant-attributes" v-if="variant.attributes && variant.attributes.length">
-                <span 
-                  v-for="(attr, index) in variant.attributes" 
-                  :key="index" 
+                <span
+                  v-for="(attr, index) in variant.attributes"
+                  :key="index"
                   class="attribute-badge"
                 >
                   {{ attr.name }}: {{ attr.value }}
@@ -115,7 +115,7 @@
           </div>
         </div>
       </div>
-      
+
       <div v-else class="no-variants">
         <p>This product has no variants.</p>
       </div>
@@ -187,18 +187,18 @@ const selectedImage = ref<ProductImage | null>(null);
 const loadProduct = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     // Get product ID from props or route params
     const productId = props.id || route.params.id;
-    
+
     if (!productId) {
       throw new Error('Product ID is required');
     }
-    
+
     const response = await productApi.getProduct(Number(productId));
     product.value = response.data;
-    
+
     // Set default selected image
     if (product.value.images && product.value.images.length > 0) {
       selectedImage.value = product.value.primary_image || product.value.images[0];
@@ -483,4 +483,4 @@ h1 {
   border-radius: 8px;
   margin-top: 40px;
 }
-</style> 
+</style>

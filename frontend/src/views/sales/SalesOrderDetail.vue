@@ -3,22 +3,22 @@
     <div class="header">
       <h1>Sales Order Details</h1>
       <div class="actions">
-        <button 
-          v-if="order && order.status === 'draft'" 
+        <button
+          v-if="order && order.status === 'draft'"
           class="btn-edit"
           @click="editOrder"
         >
           Edit Order
         </button>
-        <button 
-          v-if="order && order.status === 'draft'" 
+        <button
+          v-if="order && order.status === 'draft'"
           class="btn-confirm"
           @click="confirmOrder"
         >
           Confirm Order
         </button>
-        <button 
-          v-if="order && ['confirmed', 'invoiced'].includes(order.status)" 
+        <button
+          v-if="order && ['confirmed', 'invoiced'].includes(order.status)"
           class="btn-invoice"
           @click="createInvoice"
         >
@@ -29,17 +29,17 @@
         </button>
       </div>
     </div>
-    
+
     <!-- Loading indicator -->
     <div v-if="loading" class="loading">
       <p>Loading order details...</p>
     </div>
-    
+
     <!-- Error message -->
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
     </div>
-    
+
     <!-- Order details -->
     <div v-else-if="order" class="order-container">
       <div class="order-header">
@@ -66,7 +66,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="order-sections">
         <!-- Customer Information -->
         <div class="section">
@@ -95,7 +95,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Order Items -->
         <div class="section">
           <h3>Order Items</h3>
@@ -146,7 +146,7 @@
             </table>
           </div>
         </div>
-        
+
         <!-- Notes -->
         <div class="section" v-if="order.notes">
           <h3>Notes</h3>
@@ -154,7 +154,7 @@
             <p class="notes">{{ order.notes }}</p>
           </div>
         </div>
-        
+
         <!-- Related Documents -->
         <div class="section" v-if="order.documents && order.documents.length > 0">
           <h3>Related Documents</h3>
@@ -169,7 +169,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- No order found message -->
     <div v-else class="not-found">
       <p>Sales order not found.</p>
@@ -244,7 +244,7 @@ const orderId = Number(route.params.id);
 const loadOrderDetails = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     const response = await salesApi.getSalesOrder(orderId);
     order.value = response.data;
@@ -551,4 +551,4 @@ onMounted(() => {
   color: #757575;
   font-size: 0.9rem;
 }
-</style> 
+</style>

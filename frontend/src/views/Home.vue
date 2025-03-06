@@ -4,7 +4,7 @@
             <h1>Welcome to pyERP</h1>
             <p class="lead text-muted">A comprehensive ERP system for managing your business operations.</p>
         </div>
-        
+
         <div class="modules">
             <div class="module-card" @click="navigateTo('/products')">
                 <div class="icon-container mb-3">
@@ -13,7 +13,7 @@
                 <h3>Products</h3>
                 <p class="text-muted">Manage your product catalog, variants, and categories</p>
             </div>
-            
+
             <div class="module-card" @click="navigateTo('/sales')">
                 <div class="icon-container mb-3">
                     <i class="fas fa-chart-line fa-2x"></i>
@@ -21,7 +21,7 @@
                 <h3>Sales</h3>
                 <p class="text-muted">Track orders, invoices, and customer information</p>
             </div>
-            
+
             <div class="module-card" @click="navigateTo('/inventory')">
                 <div class="icon-container mb-3">
                     <i class="fas fa-warehouse fa-2x"></i>
@@ -29,7 +29,7 @@
                 <h3>Inventory</h3>
                 <p class="text-muted">Monitor stock levels and manage warehouses</p>
             </div>
-            
+
             <div class="module-card" @click="navigateTo('/production')">
                 <div class="icon-container mb-3">
                     <i class="fas fa-industry fa-2x"></i>
@@ -101,4 +101,4 @@ h1 {
   color: var(--primary-color);
   margin-bottom: 15px;
 }
-</style> 
+</style>

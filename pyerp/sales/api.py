@@ -1,7 +1,5 @@
 from rest_framework import viewsets
 
-from .serializers import DummySalesSerializer  # noqa: F401
-
 
 class DummySalesViewSet(viewsets.ViewSet):
     """
@@ -11,7 +9,6 @@ class DummySalesViewSet(viewsets.ViewSet):
     """
 
     def list(self, request):
-
         """
         List dummy sales objects.
         This is a placeholder that returns an empty list.
@@ -23,8 +20,12 @@ class DummySalesViewSet(viewsets.ViewSet):
         Retrieve a dummy sales object.
         This is a placeholder that returns a mock object.
         """
-        return {"id": pk, "name": "Example Sale", "description": "This is a placeholder"}  # noqa: E501
+        return {
+            "id": pk,
+            "name": "Example Sale",
+            "description": "This is a placeholder",
+        }
 
 
- # This helps other modules check if this module is available
-API_VERSION = '0.1.0'  # noqa: F841
+# This helps other modules check if this module is available
+API_VERSION = "0.1.0"

@@ -10,8 +10,8 @@ These user stories cover the import of product data from the legacy 4D system to
 ### Phase 1: Product Variant Import (In Progress)
 
 #### US-P101: Import Basic Product Variants
-**As a** System Administrator  
-**I want to** import basic product variant data from the legacy 4D system Artikel_Stamm table  
+**As a** System Administrator
+**I want to** import basic product variant data from the legacy 4D system Artikel_Stamm table
 **So that** we can start using the new system with our existing product catalog
 
 **Acceptance Criteria:**
@@ -22,8 +22,8 @@ These user stories cover the import of product data from the legacy 4D system to
 - The import process logs successes, errors, and skipped records
 
 #### US-P102: Map Complex Product Attributes
-**As a** System Administrator  
-**I want to** map all relevant product attributes from the legacy system to the new system  
+**As a** System Administrator
+**I want to** map all relevant product attributes from the legacy system to the new system
 **So that** all product information is preserved during migration
 
 **Acceptance Criteria:**
@@ -34,8 +34,8 @@ These user stories cover the import of product data from the legacy 4D system to
 - Multi-language support (German/English) for product names and descriptions
 
 #### US-P103: Incremental Product Updates
-**As a** System Administrator  
-**I want to** update existing products with new data from the legacy system  
+**As a** System Administrator
+**I want to** update existing products with new data from the legacy system
 **So that** changes made in the legacy system are reflected in the new system during transition
 
 **Acceptance Criteria:**
@@ -47,8 +47,8 @@ These user stories cover the import of product data from the legacy 4D system to
 ### Phase 2: Parent Product Import (Planned)
 
 #### US-P201: Import Parent Product Data
-**As a** System Administrator  
-**I want to** import parent product data from the Art_Kalkulation table  
+**As a** System Administrator
+**I want to** import parent product data from the Art_Kalkulation table
 **So that** we have a complete product hierarchy in the new system
 
 **Acceptance Criteria:**
@@ -58,8 +58,8 @@ These user stories cover the import of product data from the legacy 4D system to
 - The import handles cases where variants exist but parents don't (and vice versa)
 
 #### US-P202: Enhance Product Categorization
-**As a** Product Manager  
-**I want to** have a complete product category hierarchy  
+**As a** Product Manager
+**I want to** have a complete product category hierarchy
 **So that** products are properly organized and easy to find
 
 **Acceptance Criteria:**
@@ -69,8 +69,8 @@ These user stories cover the import of product data from the legacy 4D system to
 - Category metadata (descriptions, images) is imported
 
 #### US-P203: Consolidate Product Attributes
-**As a** Product Manager  
-**I want to** intelligently merge attributes from parent and variant products  
+**As a** Product Manager
+**I want to** intelligently merge attributes from parent and variant products
 **So that** product data is consistent and complete
 
 **Acceptance Criteria:**
@@ -101,4 +101,4 @@ These user stories cover the import of product data from the legacy 4D system to
 - [ ] Develop attribute inheritance/override logic
 - [ ] Create conflict resolution mechanisms
 - [ ] Add validation for parent-variant consistency
-- [ ] Implement full product relationship model 
+- [ ] Implement full product relationship model

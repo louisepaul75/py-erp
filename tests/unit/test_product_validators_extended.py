@@ -18,25 +18,25 @@ def mock_gettext(text):
     """Mock function for gettext_lazy."""
     return text
 
+
 # Patch gettext_lazy before importing anything else
 
 
-with patch('django.utils.translation.gettext_lazy', lambda x: x):
+with patch("django.utils.translation.gettext_lazy", lambda x: x):
     # Create mock classes before importing the validator
     class MockProduct:
         """Mock Product class for testing."""
+
         class DoesNotExist(Exception):
             """Mock exception for when a product doesn't exist."""
-            pass
 
         objects = MagicMock()
 
     class MockProductCategory:
         """Mock ProductCategory class for testing."""
+
         class DoesNotExist(Exception):
             """Mock exception for when a category doesn't exist."""
-
-            pass
 
         objects = MagicMock()
 
@@ -46,6 +46,7 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
 
     # Monkey patch the validators module to use our mock classes
     import pyerp.products.validators
+
     pyerp.products.validators.Product = MockProduct
     pyerp.products.validators.ProductCategory = MockProductCategory
 
@@ -58,7 +59,9 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
         validator = ProductImportValidator()
         # Add default_category attribute to fix the tests
         validator.default_category = MockProductCategory(
-            code="DEFAULT", name="Default Category")
+            code="DEFAULT",
+            name="Default Category",
+        )
         return validator
 
     class TestProductImportValidator:
@@ -237,7 +240,9 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
         def test_validate_category_not_found(self, validator):
             """Test validation of a category that doesn't exist."""
             # Setup
-            MockProductCategory.objects.get.side_effect = MockProductCategory.DoesNotExist  # noqa: E501
+            MockProductCategory.objects.get.side_effect = (
+                MockProductCategory.DoesNotExist
+            )
 
             # Execute
             value, result = validator.validate_category("NONEXISTENT", {})
@@ -262,7 +267,7 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
                 "list_price": "99.99",
                 "wholesale_price": "79.99",
                 "cost_price": "59.99",
-                "category": "CAT1"
+                "category": "CAT1",
             }
             result = MagicMock()
 
@@ -271,7 +276,6 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
 
             # Assert
             # Just testing that it doesn't raise an exception
-            pass
 
         def test_post_validate_row(self, validator):
             """Test post-validation of a row."""
@@ -279,7 +283,7 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
             row_data = {
                 "sku": "ABC123",
                 "is_parent": True,
-                "variant_code": "V1"
+                "variant_code": "V1",
                 # This should cause an error for a parent product
             }
             result = MagicMock()
@@ -289,7 +293,6 @@ with patch('django.utils.translation.gettext_lazy', lambda x: x):
 
             # Assert
             # Just testing that it doesn't raise an exception
-            pass
 
 
 class TestValidateProductModel:
@@ -314,42 +317,51 @@ class TestValidateProductModel:
 
             # Check SKU format
             sku_validator = SkuValidator()
-            sku_result = sku_validator(product.sku, field_name='sku')
+            sku_result = sku_validator(product.sku, field_name="sku")
             if not sku_result.is_valid:
-                errors['sku'] = sku_result.errors['sku']
+                errors["sku"] = sku_result.errors["sku"]
 
             # Check parent-variant relationship
             if product.is_parent and product.variant_code:
-                errors.setdefault('is_parent', []).append(
-                    "Parent products should not have variant codes")
+                errors.setdefault("is_parent", []).append(
+                    "Parent products should not have variant codes",
+                )
 
             # Ensure base_sku is set
             if not product.base_sku:
-                if '-' in product.sku:
-                    base_sku, _ = product.sku.split('-', 1)
+                if "-" in product.sku:
+                    base_sku, _ = product.sku.split("-", 1)
                     product.base_sku = base_sku
                 else:
                     product.base_sku = product.sku
 
             # Check prices
             if product.list_price < product.cost_price:
-                errors.setdefault('list_price', []).append(
-                    "List price should not be less than cost price")
+                errors.setdefault("list_price", []).append(
+                    "List price should not be less than cost price",
+                )
 
             # Raise ValidationError if there are any errors
             if errors:
                 from django.core.exceptions import ValidationError
+
                 raise ValidationError(errors)
 
         # Replace the function with our patched version
         import pyerp.products.validators
-        pyerp.products.validators.validate_product_model = patched_validate_product_model  # noqa: E501
+
+        pyerp.products.validators.validate_product_model = (
+            patched_validate_product_model
+        )
 
     def teardown_method(self):
         """Clean up after each test."""
         # Restore the original function
         import pyerp.products.validators
-        pyerp.products.validators.validate_product_model = self.original_validate_product_model  # noqa: E501
+
+        pyerp.products.validators.validate_product_model = (
+            self.original_validate_product_model
+        )
 
     def test_validate_product_model_valid(self):
         """Test validation of a valid product model."""
@@ -361,8 +373,8 @@ class TestValidateProductModel:
         product.is_parent = False
         product.variant_code = ""
         product.base_sku = "ABC123"
-        product.list_price = Decimal('100.00')
-        product.cost_price = Decimal('80.00')
+        product.list_price = Decimal("100.00")
+        product.cost_price = Decimal("80.00")
 
         # Should not raise any exceptions
         validate_product_model(product)
@@ -380,15 +392,15 @@ class TestValidateProductModel:
         product.is_parent = False
         product.variant_code = ""
         product.base_sku = ""
-        product.list_price = Decimal('100.00')
-        product.cost_price = Decimal('80.00')
+        product.list_price = Decimal("100.00")
+        product.cost_price = Decimal("80.00")
 
         # Should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
             validate_product_model(product)
 
         # Check error message
-        assert 'sku' in exc_info.value.error_dict
+        assert "sku" in exc_info.value.error_dict
 
     def test_validate_product_model_parent_with_variant_code(self):
         """Test validation of a parent product with a variant code."""
@@ -400,18 +412,18 @@ class TestValidateProductModel:
         product.is_parent = True
         product.variant_code = "VAR1"  # Invalid for parent
         product.base_sku = "ABC123"
-        product.list_price = Decimal('100.00')
-        product.cost_price = Decimal('80.00')
+        product.list_price = Decimal("100.00")
+        product.cost_price = Decimal("80.00")
 
         # Should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
             validate_product_model(product)
 
         # Check error message
-        assert 'is_parent' in exc_info.value.error_dict
+        assert "is_parent" in exc_info.value.error_dict
 
     def test_validate_product_model_list_price_less_than_cost(self):
-        """Test validation of a product with list price less than cost price."""  # noqa: E501
+        """Test validation of a product with list price less than cost price."""
         from pyerp.products.validators import validate_product_model
 
         # Create a product with list price less than cost price
@@ -420,18 +432,18 @@ class TestValidateProductModel:
         product.is_parent = False
         product.variant_code = ""
         product.base_sku = "ABC123"
-        product.list_price = Decimal('50.00')  # Less than cost price
-        product.cost_price = Decimal('80.00')
+        product.list_price = Decimal("50.00")  # Less than cost price
+        product.cost_price = Decimal("80.00")
 
         # Should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
             validate_product_model(product)
 
         # Check error message
-        assert 'list_price' in exc_info.value.error_dict
+        assert "list_price" in exc_info.value.error_dict
 
     def test_validate_product_model_sets_base_sku_from_variant(self):
-        """Test that validate_product_model sets base_sku from sku for variants."""  # noqa: E501
+        """Test that validate_product_model sets base_sku from sku for variants."""
         from pyerp.products.validators import validate_product_model
 
         # Create a variant product with no base_sku set
@@ -440,8 +452,8 @@ class TestValidateProductModel:
         product.is_parent = False
         product.variant_code = "V1"
         product.base_sku = ""  # Empty base_sku
-        product.list_price = Decimal('100.00')
-        product.cost_price = Decimal('80.00')
+        product.list_price = Decimal("100.00")
+        product.cost_price = Decimal("80.00")
 
         # Should set the base_sku
         validate_product_model(product)

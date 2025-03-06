@@ -2,8 +2,8 @@
 
 ## Story Overview
 
-**As a** systems developer,  
-**I want to** replace the external WSZ_api package with a properly implemented internal module,  
+**As a** systems developer,
+**I want to** replace the external WSZ_api package with a properly implemented internal module,
 **So that** we have better control over the integration with the legacy system, improved session management, and increased reliability.
 
 ## Background
@@ -72,15 +72,15 @@ The WSZ_api package provides three main functionalities:
    class LegacyAPIError(Exception):
        """Base exception for all legacy API errors."""
        pass
-   
+
    class LegacyAPIConnectionError(LegacyAPIError):
        """Error connecting to the legacy API."""
        pass
-   
+
    class LegacyAPIAuthenticationError(LegacyAPIError):
        """Authentication error with the legacy API."""
        pass
-   
+
    class LegacyAPIDataError(LegacyAPIError):
        """Error processing data from the legacy API."""
        pass
@@ -139,12 +139,12 @@ The WSZ_api package provides three main functionalities:
    try:
        # Try with filter
        response = self.session.get(url, params=params)
-       
+
        # Check for filter-related errors
        if response.status_code != 200 and '$filter' in params:
            logger.warning(f"Request failed with status code {response.status_code}. This might be a filter error.")
            logger.warning("Attempting to retry without filter...")
-           
+
            # Remove the filter and try again
            params_without_filter = params.copy()
            params_without_filter.pop('$filter', None)
@@ -161,7 +161,7 @@ The WSZ_api package provides three main functionalities:
            # Make a request to the $catalog endpoint
            url = f"{client.base_url}/rest/$catalog"
            response = client.session.get(url)
-           
+
            if response.status_code == 200:
                data = response.json()
                # Extract table names from the response
@@ -251,4 +251,4 @@ These findings should be incorporated into the implementation to ensure robust h
 - Integration tests with the legacy system pass
 - Code review is complete
 - Documentation is complete
-- No breaking changes to existing functionality 
+- No breaking changes to existing functionality

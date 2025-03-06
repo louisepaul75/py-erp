@@ -5,6 +5,7 @@ class SalesConfig(AppConfig):
     """
     Configuration for the Sales application.
     """
-    default_auto_field = 'django.db.models.BigAutoField'  # noqa: F841
-    name = 'pyerp.sales'  # noqa: F841
-    verbose_name = 'Sales'  # noqa: F841
+
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "pyerp.sales"
+    verbose_name = "Sales"

@@ -87,4 +87,4 @@ However, a comprehensive, secure, and well-documented external API is needed to 
 
 ## Estimation
 - Story Points: 13
-- Time Estimate: 3 weeks 
+- Time Estimate: 3 weeks

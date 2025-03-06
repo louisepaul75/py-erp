@@ -1,164 +1,157 @@
-
-import django.db.models.deletion  # noqa: F401
 import uuid
+
+import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+    initial = True
 
-    initial = True  # noqa: F841
-
-    dependencies = [  # noqa: F841
-                    ("contenttypes", "0002_remove_content_type_name"),
-                    migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    dependencies = [
+        ("contenttypes", "0002_remove_content_type_name"),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
-    operations = [  # noqa: F841
+    operations = [
         migrations.CreateModel(
-        name="AuditLog",  # noqa: E128
-        fields=[  # noqa: F841
-        (  # noqa: E128
-        "id",
-        models.BigAutoField(
-        auto_created=True,  # noqa: F841
-        primary_key=True,  # noqa: F841
-        serialize=False,  # noqa: F841
-        verbose_name="ID",  # noqa: F841
-    ),
-                  ),
-                  (
-                      "timestamp",  # noqa: E128
-                      models.DateTimeField(
-                      auto_now_add=True, help_text="When the event occurred"  # noqa: F841
-                      # noqa: F841
-                  ),
-                  ),
-                  (
-                      "event_type",  # noqa: E128
-                      models.CharField(
-                      choices=[  # noqa: F841
-                      # noqa: F841
-                  ("login", "Login"),
-                  ("logout", "Logout"),
-                  ("login_failed", "Login Failed"),
-                  ("password_change", "Password Change"),
-                  ("password_reset", "Password Reset"),
-                  ("user_created", "User Created"),
-                  ("user_updated", "User Updated"),
-                  ("user_deleted", "User Deleted"),
-                  ("permission_change", "Permission Change"),
-                  ("data_access", "Data Access"),
-                  ("data_change", "Data Change"),
-                  ("system_error", "System Error"),
-                  ("other", "Other"),
-                  ],
-                  help_text="Type of event being logged",  # noqa: F841
-                  max_length=50,  # noqa: F841
-                  ),
-                  ),
-                  ("message", models.TextField(help_text="Description of the event")),  # noqa: E501
-                  (
-                      "username",  # noqa: E128
-                      models.CharField(
-                      blank=True,  # noqa: E128
-                      help_text="Username as a backup if user record is deleted",  # noqa: E501
-                      max_length=150,  # noqa: F841
-                  ),
-                  ),
-                  (
-                      "ip_address",  # noqa: E128
-                      models.GenericIPAddressField(
-                      blank=True,  # noqa: E128
-                      help_text="IP address where the event originated",  # noqa: F841
-                      null=True,  # noqa: F841
-                  ),
-                  ),
-                  (
-                      "user_agent",  # noqa: E128
-                      models.TextField(
-                      blank=True, help_text="User agent/browser information"  # noqa: E128
-                  ),
-                  ),
-                  (
-                      "object_id",  # noqa: E128
-                      models.CharField(
-                      blank=True, help_text="ID of related object", max_length=255  # noqa: E501
-                  ),
-                  ),
-                  (
-                      "additional_data",  # noqa: E128
-                      models.JSONField(
-                      blank=True,  # noqa: E128
-                      help_text="Additional event-specific data stored as JSON",  # noqa: E501
-                      null=True,  # noqa: F841
-                  ),
-                  ),
-                  (
-                      "uuid",  # noqa: E128
-                      models.UUIDField(
-                      default=uuid.uuid4,  # noqa: F841
-                      # noqa: F841
-                      editable=False,  # noqa: F841
-                      # noqa: F841
-                      help_text="Unique identifier for this audit event",  # noqa: F841
-                      unique=True,  # noqa: F841
-                      # noqa: F841
-                  ),
-                  ),
-                  (
-                      "content_type",  # noqa: E128
-                      models.ForeignKey(
-                      blank=True,  # noqa: E128
-                      help_text="Type of object this event relates to",  # noqa: F841
-                      null=True,  # noqa: F841
-                      on_delete=django.db.models.deletion.SET_NULL,  # noqa: F841
-                      to="contenttypes.contenttype",  # noqa: F841
-                  ),
-                  ),
-                  (
-                      "user",  # noqa: E128
-                      models.ForeignKey(
-                      blank=True,  # noqa: F841
-                      # noqa: F841
-                  help_text="User who triggered the event (if applicable)",  # noqa: E501
-                  # noqa: E501, F841
-                  null=True,  # noqa: F841
-                  # noqa: F841
-                  on_delete=django.db.models.deletion.SET_NULL,  # noqa: F841
-                  # noqa: F841
-                  related_name="audit_logs",  # noqa: F841
-                  # noqa: F841
-                  to=settings.AUTH_USER_MODEL,  # noqa: F841
-                  # noqa: F841
-                  ),
-                  ),
-                  ],
-                  options={  # noqa: F841
-                  # noqa: F841
-                      "verbose_name": "Audit Log",
-                      "verbose_name_plural": "Audit Logs",
-                  "ordering": ["-timestamp"],
-                  "indexes": [
-                      models.Index(  # noqa: E128
-                  fields=["timestamp"], name="core_auditl_timesta_80074f_idx"  # noqa: E501
-                  ),
-                  models.Index(
-                  fields=["event_type"], name="core_auditl_event_t_04b2f0_idx"  # noqa: E501
-                  ),
-                  models.Index(
-                  fields=["username"], name="core_auditl_usernam_6bebd7_idx"  # noqa: E501
-                  ),
-                  models.Index(
-                  fields=["ip_address"], name="core_auditl_ip_addr_d66782_idx"  # noqa: E501
-                  ),
-                  models.Index(
-                  fields=["content_type", "object_id"],  # noqa: F841
-                  # noqa: F841
-                  name="core_auditl_content_fec0c4_idx",  # noqa: F841
-                  # noqa: F841
-                  ),
-                  ],
-                  },
-                  ),
+            name="AuditLog",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "timestamp",
+                    models.DateTimeField(
+                        auto_now_add=True,
+                        help_text="When the event occurred",
+                    ),
+                ),
+                (
+                    "event_type",
+                    models.CharField(
+                        choices=[
+                            ("login", "Login"),
+                            ("logout", "Logout"),
+                            ("login_failed", "Login Failed"),
+                            ("password_change", "Password Change"),
+                            ("password_reset", "Password Reset"),
+                            ("user_created", "User Created"),
+                            ("user_updated", "User Updated"),
+                            ("user_deleted", "User Deleted"),
+                            ("permission_change", "Permission Change"),
+                            ("data_access", "Data Access"),
+                            ("data_change", "Data Change"),
+                            ("system_error", "System Error"),
+                            ("other", "Other"),
+                        ],
+                        help_text="Type of event being logged",
+                        max_length=50,
+                    ),
+                ),
+                ("message", models.TextField(help_text="Description of the event")),
+                (
+                    "username",
+                    models.CharField(
+                        blank=True,
+                        help_text="Username as a backup if user record is deleted",
+                        max_length=150,
+                    ),
+                ),
+                (
+                    "ip_address",
+                    models.GenericIPAddressField(
+                        blank=True,
+                        help_text="IP address where the event originated",
+                        null=True,
+                    ),
+                ),
+                (
+                    "user_agent",
+                    models.TextField(
+                        blank=True,
+                        help_text="User agent/browser information",
+                    ),
+                ),
+                (
+                    "object_id",
+                    models.CharField(
+                        blank=True,
+                        help_text="ID of related object",
+                        max_length=255,
+                    ),
+                ),
+                (
+                    "additional_data",
+                    models.JSONField(
+                        blank=True,
+                        help_text="Additional event-specific data stored as JSON",
+                        null=True,
+                    ),
+                ),
+                (
+                    "uuid",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        help_text="Unique identifier for this audit event",
+                        unique=True,
+                    ),
+                ),
+                (
+                    "content_type",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Type of object this event relates to",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="contenttypes.contenttype",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="User who triggered the event (if applicable)",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="audit_logs",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Audit Log",
+                "verbose_name_plural": "Audit Logs",
+                "ordering": ["-timestamp"],
+                "indexes": [
+                    models.Index(
+                        fields=["timestamp"],
+                        name="core_auditl_timesta_80074f_idx",
+                    ),
+                    models.Index(
+                        fields=["event_type"],
+                        name="core_auditl_event_t_04b2f0_idx",
+                    ),
+                    models.Index(
+                        fields=["username"],
+                        name="core_auditl_usernam_6bebd7_idx",
+                    ),
+                    models.Index(
+                        fields=["ip_address"],
+                        name="core_auditl_ip_addr_d66782_idx",
+                    ),
+                    models.Index(
+                        fields=["content_type", "object_id"],
+                        name="core_auditl_content_fec0c4_idx",
+                    ),
+                ],
+            },
+        ),
     ]

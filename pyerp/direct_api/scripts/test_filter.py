@@ -14,49 +14,59 @@ Options:
     --list-tables         List available tables in the legacy ERP system
 """
 
-from pyerp.direct_api.scripts.getTable import SimpleAPIClient
-import os
-import sys
 import argparse
 import logging
+import os
+import sys
 from pathlib import Path
 
- # Add the parent directory to the path so we can import the getTable module
+from pyerp.direct_api.scripts.getTable import SimpleAPIClient
+
+# Add the parent directory to the path so we can import the getTable module
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
 
- # Configure logging
+# Configure logging
 logging.basicConfig(
-    level=logging.INFO,  # noqa: E128
-    format='%(asctime)s - %(levelname)s - %(message)s',  # noqa: F841
-    handlers=[logging.StreamHandler(sys.stdout)]  # noqa: F841
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
- # Explicitly set environment variables for legacy ERP API URLs
-os.environ['LEGACY_ERP_API_TEST'] = 'http://192.168.73.26:8090'
-os.environ['LEGACY_ERP_API_LIVE'] = 'http://192.168.73.28:8080'
+# Explicitly set environment variables for legacy ERP API URLs
+os.environ["LEGACY_ERP_API_TEST"] = "http://192.168.73.26:8090"
+os.environ["LEGACY_ERP_API_LIVE"] = "http://192.168.73.28:8080"
 logger.info(f"Set LEGACY_ERP_API_LIVE to: {os.environ['LEGACY_ERP_API_LIVE']}")
 logger.info(f"Set LEGACY_ERP_API_TEST to: {os.environ['LEGACY_ERP_API_TEST']}")
 
- # Import the SimpleAPIClient from getTable
+# Import the SimpleAPIClient from getTable
 
 
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Test the updated filtering implementation')  # noqa: F841
+        description="Test the updated filtering implementation",
+    )
 
-    parser.add_argument('--env', default='live',
-                        help='Environment to use (default: live)')  # noqa: F841
+    parser.add_argument(
+        "--env",
+        default="live",
+        help="Environment to use (default: live)",
+    )
 
-    parser.add_argument('--table', default='Artikel',
-                        help='Table to test filters on (default: Artikel)')  # noqa: F841
+    parser.add_argument(
+        "--table",
+        default="Artikel",
+        help="Table to test filters on (default: Artikel)",
+    )
 
-    parser.add_argument('--verbose', action='store_true',
-                        help='Enable verbose output')  # noqa: F841
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 
-    parser.add_argument('--list-tables', action='store_true',
-                        help='List available tables in the legacy ERP system')  # noqa: F841
+    parser.add_argument(
+        "--list-tables",
+        action="store_true",
+        help="List available tables in the legacy ERP system",
+    )
 
     return parser.parse_args()
 
@@ -75,7 +85,7 @@ def list_available_tables(client):
             if isinstance(data, list):
                 logger.info(f"Found {len(data)} tables:")
                 for table in data:
-                    if isinstance(table, dict) and 'name' in table:
+                    if isinstance(table, dict) and "name" in table:
                         logger.info(f"  - {table['name']}")
                     else:
                         logger.info(f"  - {table}")
@@ -83,7 +93,8 @@ def list_available_tables(client):
                 logger.info(f"Unexpected catalog response format: {data}")
         else:
             logger.error(
-                f"Failed to get catalog: {response.status_code} - {response.text}")  # noqa: E501
+                f"Failed to get catalog: {response.status_code} - {response.text}",
+            )
     except Exception as e:
         logger.error(f"Error listing tables: {e}")
 
@@ -96,9 +107,9 @@ def test_simple_equality_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,  # noqa: E128
-            top=10,  # noqa: F841
-            filter_query=filter_query
+            table_name=table_name,
+            top=10,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -118,9 +129,9 @@ def test_text_search_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,  # noqa: E128
-            top=10,  # noqa: F841
-            filter_query=filter_query
+            table_name=table_name,
+            top=10,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -140,9 +151,9 @@ def test_numeric_comparison_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,  # noqa: E128
-            top=10,  # noqa: F841
-            filter_query=filter_query
+            table_name=table_name,
+            top=10,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -162,9 +173,9 @@ def test_boolean_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,  # noqa: E128
-            top=10,  # noqa: F841
-            filter_query=filter_query
+            table_name=table_name,
+            top=10,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -184,9 +195,9 @@ def test_date_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,  # noqa: E128
-            top=10,  # noqa: F841
-            filter_query=filter_query
+            table_name=table_name,
+            top=10,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -206,9 +217,9 @@ def test_combined_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,  # noqa: E128
-            top=10,  # noqa: F841
-            filter_query=filter_query
+            table_name=table_name,
+            top=10,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -228,9 +239,9 @@ def test_or_filter(client, table_name):
 
     try:
         df = client.fetch_table(
-            table_name=table_name,  # noqa: E128
-            top=10,  # noqa: F841
-            filter_query=filter_query
+            table_name=table_name,
+            top=10,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -251,8 +262,8 @@ def test_pagination_with_filter(client, table_name):
     try:
         df = client.fetch_table(
             table_name=table_name,
-            all_records=True,  # noqa: F841
-            filter_query=filter_query
+            all_records=True,
+            filter_query=filter_query,
         )
 
         logger.info(f"Result: {len(df)} records found")
@@ -269,28 +280,28 @@ def main():
     """Main function to execute when script is run."""
     args = parse_args()
 
- # Set logging level based on verbose flag
+    # Set logging level based on verbose flag
     if args.verbose:
         logger.setLevel(logging.DEBUG)
 
- # Create the client
+    # Create the client
     client = SimpleAPIClient(environment=args.env)
 
- # List available tables if requested
+    # List available tables if requested
     if args.list_tables:
         list_available_tables(client)
         return 0
 
- # Run the tests
+    # Run the tests
     tests = [
-             ("Simple Equality Filter", test_simple_equality_filter),  # noqa: E128
-             ("Text Search Filter", test_text_search_filter),
-             ("Numeric Comparison Filter", test_numeric_comparison_filter),
-             ("Boolean Filter", test_boolean_filter),
-             ("Date Filter", test_date_filter),
-             ("Combined Filter", test_combined_filter),
-             ("OR Filter", test_or_filter),
-             ("Pagination with Filter", test_pagination_with_filter)
+        ("Simple Equality Filter", test_simple_equality_filter),
+        ("Text Search Filter", test_text_search_filter),
+        ("Numeric Comparison Filter", test_numeric_comparison_filter),
+        ("Boolean Filter", test_boolean_filter),
+        ("Date Filter", test_date_filter),
+        ("Combined Filter", test_combined_filter),
+        ("OR Filter", test_or_filter),
+        ("Pagination with Filter", test_pagination_with_filter),
     ]
 
     results = {}
@@ -304,19 +315,18 @@ def main():
             logger.error(f"Test {test_name} raised an exception: {e}")
             results[test_name] = "ERROR"
 
- # Print summary
+    # Print summary
     logger.info("\n\n=== TEST RESULTS SUMMARY ===")
     for test_name, result in results.items():
         logger.info(f"{test_name}: {result}")
 
- # Overall result
+    # Overall result
     if all(result == "PASS" for result in results.values()):
         logger.info("\nAll tests PASSED!")
         return 0
-    else:
-        logger.info("\nSome tests FAILED or had ERRORS!")
-        return 1
+    logger.info("\nSome tests FAILED or had ERRORS!")
+    return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

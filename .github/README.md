@@ -134,4 +134,4 @@ If you need to manually deploy the application, you can follow these steps:
 4. Pull the latest Docker image: `docker pull ghcr.io/[repository]:[tag]`
 5. Restart the containers: `docker-compose -f docker/docker-compose.prod.yml up -d`
 6. Apply migrations: `docker-compose -f docker/docker-compose.prod.yml exec pyerp python manage.py migrate`
-7. Collect static files: `docker-compose -f docker/docker-compose.prod.yml exec pyerp python manage.py collectstatic --noinput` 
+7. Collect static files: `docker-compose -f docker/docker-compose.prod.yml exec pyerp python manage.py collectstatic --noinput`

@@ -31,14 +31,14 @@ except requests.exceptions.ConnectTimeout as e:
     last_error = e
     logger.warning(f"Connection timeout during API request: {e}")
     # Retry logic here...
-    
+
 # Connection refused handling
 except requests.exceptions.ConnectionError as e:
     if "Connection refused" in str(e) or "Failed to establish a new connection" in str(e):
         # Server is down handling...
     else:
         # Other connection error handling...
-        
+
 # DNS resolution errors
 except socket.gaierror as e:
     # DNS failure handling...
@@ -107,7 +107,7 @@ def fetch_table(self, table_name, ...):
     if not self.server_available:
         # ... availability check logic ...
         return pd.DataFrame()  # Return empty DataFrame instead of raising exception
-    
+
     try:
         # ... normal operation ...
     except ServerUnavailableError as e:
@@ -186,4 +186,4 @@ All tests pass successfully and verify the resilience of the system under differ
 - Connection timeouts
 - Connection refused errors
 - DNS resolution failures
-- Authentication failures due to server issues 
+- Authentication failures due to server issues

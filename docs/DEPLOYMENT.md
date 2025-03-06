@@ -238,10 +238,10 @@ If you prefer to deploy manually, follow these steps:
    ```bash
    # Update system packages
    sudo apt update && sudo apt upgrade -y
-   
+
    # Install required packages
    sudo apt install -y curl git software-properties-common
-   
+
    # Install Docker and Docker Compose if not already installed
    curl -fsSL https://get.docker.com | sudo sh
    sudo usermod -aG docker $USER
@@ -563,4 +563,3 @@ docker inspect container_name | grep Health
 # Enter container shell
 docker compose -f docker-compose.prod.yml exec service_name bash
 ```
-

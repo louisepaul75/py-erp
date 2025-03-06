@@ -108,4 +108,4 @@ This document should be updated as new tables are discovered or as more informat
 1. The table name and description
 2. Common fields and their data types
 3. Supported filter types with examples
-4. Any special considerations for accessing the table 
+4. Any special considerations for accessing the table

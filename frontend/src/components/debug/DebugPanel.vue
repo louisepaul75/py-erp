@@ -41,7 +41,7 @@ const isDevServer = computed(() => currentPort.value === '3000');
 const isDocker = computed(() => {
   // Check for common Docker environment indicators
   return typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' || 
+    window.location.hostname === 'localhost' ||
     window.location.hostname.includes('docker') ||
     window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/) // IP address format
   );
@@ -69,7 +69,7 @@ const nodeEnv = import.meta.env.MODE;
 
 const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value;
-  
+
   // Dispatch custom event for the footer to listen to
   window.dispatchEvent(new CustomEvent('debug-panel-toggle', {
     detail: {
@@ -80,7 +80,7 @@ const toggleExpanded = () => {
 
 onMounted(() => {
   console.log('Debug Panel mounted. Development mode:', isDev.value);
-  
+
   // Calculate page load time
   if (typeof window !== 'undefined' && window.performance) {
     const perfData = window.performance.timing;
@@ -170,4 +170,4 @@ onMounted(() => {
   margin: 5px 0;
   font-size: 12px;
 }
-</style> 
+</style>

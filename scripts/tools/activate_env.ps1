@@ -7,7 +7,7 @@ if (Test-Path $venvPath) {
     Write-Host "Activating virtual environment from $venvPath"
     & $venvPath
     Write-Host "Virtual environment activated successfully."
-    
+
     # Display available commands
     Write-Host "`nAvailable commands:"
     Write-Host "  python scripts/analyse_artikel_stamm.py - Analyze Artikel_Stamm table structure"
@@ -16,4 +16,4 @@ if (Test-Path $venvPath) {
 } else {
     Write-Host "Error: Virtual environment not found at $venvPath" -ForegroundColor Red
     Write-Host "Please make sure the virtual environment is created in the 'venv' directory." -ForegroundColor Yellow
-} 
+}

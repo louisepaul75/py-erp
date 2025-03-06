@@ -83,4 +83,4 @@ If you encounter issues with the Datadog integration:
 
 - [Datadog Documentation](https://docs.datadoghq.com/)
 - [Datadog Python Integration](https://docs.datadoghq.com/tracing/setup_overview/setup/python/)
-- [Datadog Docker Integration](https://docs.datadoghq.com/agent/docker/) 
+- [Datadog Docker Integration](https://docs.datadoghq.com/agent/docker/)

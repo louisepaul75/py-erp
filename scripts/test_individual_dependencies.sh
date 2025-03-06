@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 test_package() {
     local package="$1"
     echo -e "\n${CYAN}Testing package: $package${NC}"
-    
+
     # Try installing the package
     if pip install "$package" --dry-run; then
         echo -e "${GREEN}Package $package can be installed successfully${NC}"
@@ -30,20 +30,20 @@ test_package() {
 test_all_packages() {
     local req_file="$1"
     echo -e "${CYAN}Testing all packages in $req_file${NC}"
-    
+
     # Parse the requirements file to extract package specifications
     while read -r line; do
         # Skip empty lines, comments, and -r includes
         if [[ -z "$line" || "$line" == \#* || "$line" == -r* ]]; then
             continue
         fi
-        
+
         # Test each package
         if ! test_package "$line"; then
             failed_packages+=("$line")
         fi
     done < "$req_file"
-    
+
     # Report results
     if [ ${#failed_packages[@]} -eq 0 ]; then
         echo -e "\n${GREEN}All packages can be installed successfully!${NC}"
@@ -85,4 +85,4 @@ else
     fi
     test_all_packages "$1"
     exit $?
-fi 
+fi

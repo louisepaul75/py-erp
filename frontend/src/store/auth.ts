@@ -8,17 +8,17 @@ export const useAuthStore = defineStore('auth', {
     isLoading: false,
     error: null
   }),
-  
+
   getters: {
     // Get the current user
     currentUser: (state) => state.user,
-    
+
     // Check if user is authenticated
     userIsAuthenticated: (state) => state.isAuthenticated,
-    
+
     // Check if user is admin
     isAdmin: (state) => state.user?.is_staff || state.user?.is_superuser || false,
-    
+
     // Get user's full name
     fullName: (state) => {
       if (!state.user) return '';
@@ -28,7 +28,7 @@ export const useAuthStore = defineStore('auth', {
       return state.user.username;
     }
   },
-  
+
   actions: {
     // Initialize the auth state
     async init() {
@@ -53,12 +53,12 @@ export const useAuthStore = defineStore('auth', {
         this.isLoading = false;
       }
     },
-    
+
     // Login user
     async login(credentials: LoginCredentials) {
       this.isLoading = true;
       this.error = null;
-      
+
       try {
         const user = await authService.login(credentials);
         this.user = user;
@@ -71,19 +71,19 @@ export const useAuthStore = defineStore('auth', {
         this.isLoading = false;
       }
     },
-    
+
     // Logout user
     logout() {
       authService.logout();
       this.user = null;
       this.isAuthenticated = false;
     },
-    
+
     // Update user profile
     async updateProfile(userData: Partial<User>) {
       this.isLoading = true;
       this.error = null;
-      
+
       try {
         const updatedUser = await authService.updateProfile(userData);
         this.user = updatedUser;
@@ -95,12 +95,12 @@ export const useAuthStore = defineStore('auth', {
         this.isLoading = false;
       }
     },
-    
+
     // Change password
     async changePassword(oldPassword: string, newPassword: string) {
       this.isLoading = true;
       this.error = null;
-      
+
       try {
         await authService.changePassword(oldPassword, newPassword);
       } catch (error: any) {
@@ -110,10 +110,10 @@ export const useAuthStore = defineStore('auth', {
         this.isLoading = false;
       }
     },
-    
+
     // Clear any error messages
     clearError() {
       this.error = null;
     }
   }
-}); 
+});

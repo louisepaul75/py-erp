@@ -2,7 +2,7 @@
   <div class="home">
     <h1>Welcome to pyERP</h1>
     <p>A comprehensive ERP system for managing your business operations.</p>
-    
+
     <div class="modules">
       <div class="module-card" @click="navigateTo('/products')">
         <h3>Products</h3>
@@ -62,4 +62,4 @@ h1 {
   color: #d2bc9b;
   margin-bottom: 10px;
 }
-</style> 
+</style>

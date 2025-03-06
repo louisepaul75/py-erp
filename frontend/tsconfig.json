@@ -19,23 +19,23 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    
+
     /* Paths */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
-    
+
     /* Type checking */
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true
   },
   "include": [
-    "src/**/*.ts", 
-    "src/**/*.d.ts", 
-    "src/**/*.tsx", 
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
     "src/**/*.vue",
     "vite.config.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
-} 
+}

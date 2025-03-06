@@ -78,4 +78,4 @@ onUnmounted(() => {
 .footer.with-expanded-debug {
   margin-bottom: 0;
 }
-</style> 
+</style>

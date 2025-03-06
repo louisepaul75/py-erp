@@ -2,19 +2,19 @@ name: Build
 
 on:
   push:
-    branches: [ prod, dev,dev-ui ]
+    branches: [ prod, dev]
   pull_request:
-    branches: [ prod, dev,dev-ui ]
+    branches: [ prod, dev]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Build pyERP Docker image
         uses: docker/build-push-action@v5
         with:
@@ -25,7 +25,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/pyerp.tar
-      
+
       - name: Upload pyERP Docker image as artifact
         uses: actions/upload-artifact@v4
         with:

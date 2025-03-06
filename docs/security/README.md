@@ -105,4 +105,4 @@ AuditService.log_event(
 
 ## Future Security Roadmap
 
-See the [Product Requirements Document](../../.ai/prd.md) for detailed information about upcoming security features in Phase 2 and Phase 3 of the implementation. 
+See the [Product Requirements Document](../../.ai/prd.md) for detailed information about upcoming security features in Phase 2 and Phase 3 of the implementation.

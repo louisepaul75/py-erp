@@ -4,12 +4,12 @@
 
 ### Epic: Legacy ERP Data Integration
 
-**Context:**  
+**Context:**
 To facilitate a smooth transition from the legacy 4D-based ERP to our new Django-based system, we need to build robust utilities for data extraction, analysis, and synchronization. This will enable module-by-module development while maintaining data integrity between systems.
 
 #### Story 1: Set Up Development Environment ✅
-**As a** Developer  
-**I want to** set up a standardized development environment  
+**As a** Developer
+**I want to** set up a standardized development environment
 **So that** all team members can work consistently on the project
 
 **Acceptance Criteria:**
@@ -34,8 +34,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Document setup process in README ✅
 
 #### Story 2: Project Structure Organization ✅
-**As a** Developer  
-**I want to** establish a well-organized project structure  
+**As a** Developer
+**I want to** establish a well-organized project structure
 **So that** the codebase is maintainable and follows best practices
 
 **Acceptance Criteria:**
@@ -59,8 +59,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Create base templates and style guide ✅
 
 #### Story 3: Database Environment Configuration ✅
-**As a** Developer  
-**I want to** set up separate database environments for development and production  
+**As a** Developer
+**I want to** set up separate database environments for development and production
 **So that** development work doesn't affect production data and settings persist across Git operations
 
 **Acceptance Criteria:**
@@ -84,8 +84,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Install necessary MySQL client libraries (mysqlclient) ✅
 
 #### Story 3.1: MySQL Database Migration ✅
-**As a** Developer  
-**I want to** migrate the database configuration from PostgreSQL to MySQL  
+**As a** Developer
+**I want to** migrate the database configuration from PostgreSQL to MySQL
 **So that** the system can use MySQL for all environments
 
 **Acceptance Criteria:**
@@ -106,8 +106,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Update PRD to replace PostgreSQL references with MySQL ✅
 
 #### Story 3.2: Secure Database Credential Management ✅
-**As a** Developer  
-**I want to** implement secure handling of database credentials  
+**As a** Developer
+**I want to** implement secure handling of database credentials
 **So that** sensitive information is not exposed in code or documentation
 
 **Acceptance Criteria:**
@@ -127,8 +127,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Refactor relevant code to use dj-database-url package for connection handling ✅
 
 #### Story 4: Legacy ERP API Client
-**As a** Developer  
-**I want to** create an API client for the legacy 4D ERP  
+**As a** Developer
+**I want to** create an API client for the legacy 4D ERP
 **So that** I can extract data from the existing system
 
 **Acceptance Criteria:**
@@ -146,8 +146,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Write tests for API client functionality
 
 #### Story 5: Legacy Database Schema Analysis
-**As a** Developer  
-**I want to** analyze and document the legacy ERP database structure  
+**As a** Developer
+**I want to** analyze and document the legacy ERP database structure
 **So that** I can design an appropriate schema for the new system
 
 **Acceptance Criteria:**
@@ -165,8 +165,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Create mapping document for field transformations
 
 #### Story 6: Core Models Definition
-**As a** Developer  
-**I want to** define the core Django models for the new ERP  
+**As a** Developer
+**I want to** define the core Django models for the new ERP
 **So that** I can begin storing and processing data
 
 **Acceptance Criteria:**
@@ -184,8 +184,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Write unit tests for model functionality
 
 #### Story 7: Data Synchronization Framework
-**As a** Developer  
-**I want to** create a framework for one-way data synchronization  
+**As a** Developer
+**I want to** create a framework for one-way data synchronization
 **So that** data can be imported from legacy to new system incrementally
 
 **Acceptance Criteria:**
@@ -205,8 +205,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Create admin interface for manual sync operations
 
 #### Story 8: Product Module Synchronization
-**As a** Business User  
-**I want to** synchronize product data from the legacy system  
+**As a** Business User
+**I want to** synchronize product data from the legacy system
 **So that** I can begin using the product management features of the new ERP
 
 **Acceptance Criteria:**
@@ -226,8 +226,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Build basic product management UI
 
 #### Story 9: Comprehensive Testing Framework
-**As a** Developer  
-**I want to** implement a comprehensive testing framework  
+**As a** Developer
+**I want to** implement a comprehensive testing framework
 **So that** we can ensure code quality, prevent regressions, and facilitate continuous integration
 
 **Acceptance Criteria:**
@@ -253,8 +253,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Configure CI pipeline for test execution ✅ *Implemented*
 
 #### Story 10: Structured Logging System (Partially Complete)
-**As a** Developer  
-**I want to** implement a comprehensive logging system with LLM-friendly log files  
+**As a** Developer
+**I want to** implement a comprehensive logging system with LLM-friendly log files
 **So that** we can effectively monitor, debug, and analyze system behavior
 
 **Acceptance Criteria:**
@@ -283,8 +283,8 @@ To facilitate a smooth transition from the legacy 4D-based ERP to our new Django
 - Implement log analysis utilities for common debugging tasks
 
 #### Story 15: Database Migration from SQLite to MySQL ✅
-**As a** Developer  
-**I want to** migrate the development environment from SQLite to MySQL  
+**As a** Developer
+**I want to** migrate the development environment from SQLite to MySQL
 **So that** development and production environments use the same database engine for consistency
 
 **Acceptance Criteria:**
@@ -352,8 +352,8 @@ This document outlines the key user stories for the PyERP system. Each story rep
 
 ### US-PM-001: Import Products from Legacy System
 
-**As a** Product Manager  
-**I want to** import products from the legacy 4D system  
+**As a** Product Manager
+**I want to** import products from the legacy 4D system
 **So that** I can migrate our product catalog to the new ERP system without manual data entry
 
 **Acceptance Criteria:**
@@ -382,8 +382,8 @@ This document outlines the key user stories for the PyERP system. Each story rep
 
 ### US-PM-002: Product Image Integration
 
-**As a** Product Manager  
-**I want to** view and manage product images from our external image database within the ERP  
+**As a** Product Manager
+**I want to** view and manage product images from our external image database within the ERP
 **So that** I can efficiently work with product visuals while ensuring consistent product representation
 
 **Acceptance Criteria:**
@@ -408,4 +408,4 @@ This document outlines the key user stories for the PyERP system. Each story rep
 - Created custom template filter for accessing dictionary items by key
 - See detailed progress in [Product Image Integration Story](../docs/legacy_erp/product_image_integration_story.md)
 
-**Status:** Mostly Implemented (Core functionality complete) 
+**Status:** Mostly Implemented (Core functionality complete)

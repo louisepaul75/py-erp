@@ -45,4 +45,4 @@ if (-not (Test-Path -Path $CERT_FILE) -or -not (Test-Path -Path $KEY_FILE)) {
 # Run the server with HTTPS
 Write-Host "Starting Django development server with HTTPS..."
 Write-Host "You can access the site at: https://localhost:8000"
-python manage.py runserver_plus --cert-file=$CERT_FILE --key-file=$KEY_FILE 0.0.0.0:8000 --settings=pyerp.settings.production 
+python manage.py runserver_plus --cert-file=$CERT_FILE --key-file=$KEY_FILE 0.0.0.0:8000 --settings=pyerp.settings.production

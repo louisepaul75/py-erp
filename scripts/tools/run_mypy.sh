@@ -21,4 +21,4 @@ if [ $? -eq 0 ]; then
     echo "mypy check passed successfully!"
 else
     echo "mypy check failed. Please fix the remaining errors."
-fi 
+fi

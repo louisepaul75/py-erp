@@ -61,4 +61,4 @@ echo -e "\n${YELLOW}Updated disk space usage:${NC}"
 df -h
 
 echo -e "\n${GREEN}Docker resources cleaned up successfully.${NC}"
-echo -e "${YELLOW}You can now proceed with your Docker build.${NC}" 
+echo -e "${YELLOW}You can now proceed with your Docker build.${NC}"

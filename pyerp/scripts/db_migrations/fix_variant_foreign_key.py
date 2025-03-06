@@ -1,17 +1,18 @@
 """
 Script to add the missing foreign key constraint to the variant table.
 """
+
 import os
 import sys
+
 import django
 from django.db import connection
 
 
 def setup_django():
-
     """Set up Django environment if not already set up."""
-    if not os.environ.get('DJANGO_SETTINGS_MODULE'):
-        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings')
+    if not os.environ.get("DJANGO_SETTINGS_MODULE"):
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
         django.setup()
 
 
@@ -31,27 +32,29 @@ def fix_variant_foreign_key():
                 WHERE attrelid = 'products_variantproduct'::regclass
             AND attname = 'parent_id')
             ]::smallint[];
-            """
+            """,
         )
         constraint_count = cursor.fetchone()[0]
 
         if constraint_count > 0:
-            print(f"Found {constraint_count} foreign key constraint(s) for parent_id.")  # noqa: E501
+            print(f"Found {constraint_count} foreign key constraint(s) for parent_id.")
             return True
 
- # Add the foreign key constraint
+        # Add the foreign key constraint
         try:
             cursor.execute(
                 """  # noqa: E128
                 SELECT COUNT(*) FROM products_variantproduct v
                 LEFT JOIN products_parentproduct p ON v.parent_id = p.id
                 WHERE v.parent_id IS NOT NULL AND p.id IS NULL;
-                """
+                """,
             )
             orphaned_count = cursor.fetchone()[0]
 
             if orphaned_count > 0:
-                print(f"WARNING: Found {orphaned_count} orphaned records. Setting parent_id to NULL for these records.")  # noqa: E501
+                print(
+                    f"WARNING: Found {orphaned_count} orphaned records. Setting parent_id to NULL for these records.",
+                )
                 cursor.execute(
                     """  # noqa: E128
                     UPDATE products_variantproduct v
@@ -59,21 +62,21 @@ def fix_variant_foreign_key():
                     WHERE parent_id IS NOT NULL AND NOT EXISTS (
                     SELECT 1 FROM products_parentproduct p WHERE v.parent_id = p.id  # noqa: E501
                 );
-                    """
+                    """,
                 )
 
- # Now add the constraint
+            # Now add the constraint
             cursor.execute(
                 """  # noqa: E128
                 ALTER TABLE products_variantproduct
                 ADD CONSTRAINT products_variantproduct_parent_id_fk
                 FOREIGN KEY (parent_id) REFERENCES products_parentproduct(id)
                 ON DELETE CASCADE;
-                """
+                """,
             )
             print("Foreign key constraint added successfully.")
 
- # Verify using the same query as above
+            # Verify using the same query as above
             cursor.execute(
                 """  # noqa: E128
                 SELECT COUNT(*) FROM pg_constraint
@@ -84,16 +87,17 @@ def fix_variant_foreign_key():
                     WHERE attrelid = 'products_variantproduct'::regclass
                 AND attname = 'parent_id')
                 ]::smallint[];
-                """
+                """,
             )
             constraint_count = cursor.fetchone()[0]
 
             if constraint_count > 0:
-                print(f"Verification successful: Found {constraint_count} foreign key constraint(s) for parent_id.")  # noqa: E501
+                print(
+                    f"Verification successful: Found {constraint_count} foreign key constraint(s) for parent_id.",
+                )
                 return True
-            else:
-                print("ERROR: Foreign key constraint still not found after adding!")  # noqa: E501
-                return False
+            print("ERROR: Foreign key constraint still not found after adding!")
+            return False
 
         except Exception as e:
             print(f"ERROR: Failed to add foreign key constraint: {e}")
@@ -101,10 +105,10 @@ def fix_variant_foreign_key():
 
 
 def main():
-
     """Main entry point for the script."""
     success = fix_variant_foreign_key()
     return 0 if success else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

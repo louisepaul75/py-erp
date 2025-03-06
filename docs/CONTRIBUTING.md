@@ -80,7 +80,7 @@ We follow a modified GitFlow workflow with the following branches:
 2. Fix the critical bug and commit your changes.
 
 3. Push your branch and create a pull request to `prod`.
-   
+
 4. After merging to `prod`, ensure the fix is also merged to `dev`.
 
 ### For Releases
@@ -168,4 +168,4 @@ Closes #123
 - Use pytest as the primary testing framework.
 - Follow the test organization structure as defined in the project.
 
-Thank you for contributing to pyERP! 
+Thank you for contributing to pyERP!

@@ -40,4 +40,4 @@ For more specific templates based on the type of change:
 - [Feature Template](.github/PULL_REQUEST_TEMPLATE/feature.md)
 - [Bug Fix Template](.github/PULL_REQUEST_TEMPLATE/bugfix.md)
 - [Hotfix Template](.github/PULL_REQUEST_TEMPLATE/hotfix.md)
-- [Release Template](.github/PULL_REQUEST_TEMPLATE/release.md) 
+- [Release Template](.github/PULL_REQUEST_TEMPLATE/release.md)

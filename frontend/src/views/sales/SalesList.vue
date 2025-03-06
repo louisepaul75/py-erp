@@ -1,18 +1,18 @@
 <template>
   <div class="sales-list">
     <h1>Sales Orders</h1>
-    
+
     <!-- Search and filter form -->
     <div class="filters">
       <div class="search-box">
-        <input 
-          type="text" 
-          v-model="searchQuery" 
-          placeholder="Search orders..." 
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Search orders..."
           @input="debounceSearch"
         />
       </div>
-      
+
       <div class="filter-options">
         <select v-model="selectedStatus" @change="loadSalesOrders">
           <option value="">All Statuses</option>
@@ -22,35 +22,35 @@
           <option value="completed">Completed</option>
           <option value="canceled">Canceled</option>
         </select>
-        
+
         <div class="date-filter">
           <label>From:</label>
-          <input 
-            type="date" 
-            v-model="dateFrom" 
+          <input
+            type="date"
+            v-model="dateFrom"
             @change="loadSalesOrders"
           />
-          
+
           <label>To:</label>
-          <input 
-            type="date" 
-            v-model="dateTo" 
+          <input
+            type="date"
+            v-model="dateTo"
             @change="loadSalesOrders"
           />
         </div>
       </div>
     </div>
-    
+
     <!-- Loading indicator -->
     <div v-if="loading" class="loading">
       <p>Loading sales orders...</p>
     </div>
-    
+
     <!-- Error message -->
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
     </div>
-    
+
     <!-- Sales orders table -->
     <div v-else class="sales-table-container">
       <table class="sales-table">
@@ -65,8 +65,8 @@
           </tr>
         </thead>
         <tbody>
-          <tr 
-            v-for="order in salesOrders" 
+          <tr
+            v-for="order in salesOrders"
             :key="order.id"
             :class="{ 'highlight': order.status === 'draft' }"
           >
@@ -80,14 +80,14 @@
               </span>
             </td>
             <td class="actions">
-              <button 
-                class="btn-view" 
+              <button
+                class="btn-view"
                 @click="viewOrderDetails(order.id)"
               >
                 View
               </button>
-              <button 
-                v-if="order.status === 'draft'" 
+              <button
+                v-if="order.status === 'draft'"
                 class="btn-edit"
                 @click="editOrder(order.id)"
               >
@@ -98,23 +98,23 @@
         </tbody>
       </table>
     </div>
-    
+
     <!-- No results message -->
     <div v-if="salesOrders.length === 0 && !loading" class="no-results">
       <p>No sales orders found matching your criteria.</p>
     </div>
-    
+
     <!-- Pagination -->
     <div v-if="salesOrders.length > 0" class="pagination">
-      <button 
-        :disabled="currentPage === 1" 
+      <button
+        :disabled="currentPage === 1"
         @click="changePage(currentPage - 1)"
       >
         Previous
       </button>
       <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button 
-        :disabled="currentPage === totalPages" 
+      <button
+        :disabled="currentPage === totalPages"
         @click="changePage(currentPage + 1)"
       >
         Next
@@ -173,7 +173,7 @@ const debounceSearch = () => {
 const loadSalesOrders = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     const params = {
       page: currentPage.value,
@@ -182,7 +182,7 @@ const loadSalesOrders = async () => {
       date_from: dateFrom.value,
       date_to: dateTo.value,
     };
-    
+
     const response = await salesApi.getSalesOrders(params);
     salesOrders.value = response.data.results;
     totalOrders.value = response.data.count;
@@ -425,4 +425,4 @@ h1 {
   opacity: 0.5;
   cursor: not-allowed;
 }
-</style> 
+</style>

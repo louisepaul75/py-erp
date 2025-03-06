@@ -12,19 +12,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Download workflow artifacts
         uses: dawidd6/action-download-artifact@v2
         if: github.event_name == 'workflow_run'
@@ -32,26 +32,26 @@ jobs:
           workflow: CI
           run_id: ${{ github.event.workflow_run.id }}
           path: /tmp
-      
+
       - name: Build Docker images if workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
         run: |
           docker buildx build --file ./docker/Dockerfile.prod --tag pyerp-backend:latest .
           docker buildx build --tag pyerp-frontend:latest ./frontend
-      
+
       - name: Load Docker images from artifacts
         if: github.event_name == 'workflow_run'
         run: |
           docker load --input /tmp/pyerp-backend/pyerp-backend.tar
           docker load --input /tmp/pyerp-frontend/pyerp-frontend.tar
-      
+
       - name: Tag and push Docker images
         run: |
           docker tag pyerp-backend:latest ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-backend:latest
           docker tag pyerp-frontend:latest ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-frontend:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-backend:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/pyerp-frontend:latest
-      
+
       - name: Deploy to production server
         uses: appleboy/ssh-action@master
         with:
@@ -66,21 +66,21 @@ jobs:
             echo "DD_ENV=production" >> .env
             echo "DD_SERVICE=pyerp" >> .env
             echo "DD_VERSION=1.0.0" >> .env
-            
+
             # Copy the datadog.yaml file if it doesn't exist
             if [ ! -f docker/datadog.yaml ]; then
               mkdir -p docker
               cp /tmp/datadog.yaml docker/datadog.yaml 2>/dev/null || echo "Datadog config template not found, will use default"
             fi
-            
+
             # Pull latest images and restart services with Datadog agent
             docker-compose -f docker/docker-compose.prod.yml pull
             docker-compose -f docker/docker-compose.prod.yml down
             docker-compose -f docker/docker-compose.prod.yml up -d
-            
+
             # Verify Datadog agent is running
             sleep 10
             docker ps | grep datadog-agent || echo "Warning: Datadog agent may not be running"
-            
+
             # Clean up old images
             docker system prune -af

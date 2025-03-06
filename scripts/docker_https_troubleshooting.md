@@ -122,4 +122,4 @@ This should show the proper SSL handshake and confirm that HTTPS is working corr
   1. Nginx not properly passing the `X-Forwarded-Proto: https` header
   2. Django not properly handling the `X-Forwarded-Proto` header or having an incorrect `SECURE_SSL_REDIRECT` setting
 
-- Remember that Django settings in the container might be different from your local settings. Use environment variables or check the active settings inside the container. 
+- Remember that Django settings in the container might be different from your local settings. Use environment variables or check the active settings inside the container.

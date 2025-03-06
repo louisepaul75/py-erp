@@ -115,4 +115,4 @@ When developing features related to the image integration:
 
 1. Use the dry-run option for sync commands to preview changes
 2. Run tests with `pytest tests/test_image_api.py`
-3. Check the code coverage with `pytest --cov=products.image_api tests/` 
+3. Check the code coverage with `pytest --cov=products.image_api tests/`

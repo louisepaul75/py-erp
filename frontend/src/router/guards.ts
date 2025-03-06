@@ -11,12 +11,12 @@ export async function authGuard(
   next: NavigationGuardNext
 ) {
   const authStore = useAuthStore();
-  
+
   // If auth store is not initialized yet, initialize it
   if (!authStore.isAuthenticated && !authStore.isLoading) {
     await authStore.init();
   }
-  
+
   // If user is authenticated, allow access
   if (authStore.isAuthenticated) {
     next();
@@ -39,12 +39,12 @@ export async function adminGuard(
   next: NavigationGuardNext
 ) {
   const authStore = useAuthStore();
-  
+
   // If auth store is not initialized yet, initialize it
   if (!authStore.isAuthenticated && !authStore.isLoading) {
     await authStore.init();
   }
-  
+
   // If user is authenticated and is an admin, allow access
   if (authStore.isAuthenticated && authStore.isAdmin) {
     next();
@@ -70,12 +70,12 @@ export async function guestGuard(
   next: NavigationGuardNext
 ) {
   const authStore = useAuthStore();
-  
+
   // If auth store is not initialized yet, initialize it
   if (!authStore.isLoading) {
     await authStore.init();
   }
-  
+
   // If user is authenticated, redirect to home or the intended destination
   if (authStore.isAuthenticated) {
     // If there's a redirect query parameter, go there
@@ -90,4 +90,4 @@ export async function guestGuard(
     // If user is not authenticated, allow access
     next();
   }
-} 
+}

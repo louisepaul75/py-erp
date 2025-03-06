@@ -77,7 +77,7 @@ The legacy 4D system has these notable behaviors:
 3. The system uses the `WASID4D` cookie to track sessions
 4. The server doesn't prevent multiple sessions from being created
 5. Some endpoints (like `$info` and `$catalog`) work without authentication
-6. The server doesn't have a dedicated authentication endpoint 
+6. The server doesn't have a dedicated authentication endpoint
 
 ## Legacy ERP API Direct Access
 
@@ -85,7 +85,7 @@ This module provides direct access to the legacy ERP system's REST API without u
 
 ### Features
 
-- **Session Management**: 
+- **Session Management**:
   - Properly maintains a single session with the legacy API
   - Reuses session cookies across requests to prevent creating multiple server sessions
   - Includes session cache to share cookies across processes/instances
@@ -125,9 +125,9 @@ print(f"Found {len(tables)} tables")
 
 # Update a field value
 success = client.push_field_update(
-    table_name="ArtikelGruppe", 
-    record_id=1, 
-    field_name="Bezeichnung", 
+    table_name="ArtikelGruppe",
+    record_id=1,
+    field_name="Bezeichnung",
     field_value="New Value"
 )
 
@@ -176,4 +176,4 @@ The legacy ERP system's REST API has some specific behaviors that this implement
 3. **Session Timeout**: Sessions timeout after inactivity (default is 60 minutes)
 4. **No Logout Endpoint**: The API doesn't provide a standard endpoint to explicitly terminate sessions
 
-Due to these behaviors, the implementation focuses on ensuring proper session reuse to minimize the number of concurrent sessions on the server. 
+Due to these behaviors, the implementation focuses on ensuring proper session reuse to minimize the number of concurrent sessions on the server.

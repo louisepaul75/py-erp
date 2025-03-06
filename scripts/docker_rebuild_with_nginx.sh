@@ -68,7 +68,7 @@ if [ "$SCRIPT_USER" = "root" ]; then
     # Try to find the actual user from environment variables
     ACTUAL_USER=$SUDO_USER
   fi
-  
+
   if [ -n "$ACTUAL_USER" ]; then
     ACTUAL_USER_HOME=$(eval echo ~$ACTUAL_USER)
     echo -e "${YELLOW}Detected actual user: $ACTUAL_USER${NC}"
@@ -88,7 +88,7 @@ if [ -z "$BRANCH" ]; then
   echo -e "${YELLOW}Auto-detecting default branch...${NC}"
   # First check local default branch
   DEFAULT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
-  
+
   if [ -n "$DEFAULT_BRANCH" ]; then
     BRANCH="$DEFAULT_BRANCH"
     echo -e "${GREEN}Using current branch: $BRANCH${NC}"
@@ -129,7 +129,7 @@ if [ "$SCRIPT_USER" = "root" ]; then
   if [ -d "$DOCKER_DIR" ]; then
     FREE_SPACE=$(df -m "$DOCKER_DIR" | tail -1 | awk '{print $4}')
     echo -e "${CYAN}Available space in Docker directory: ${FREE_SPACE}MB${NC}"
-    
+
     if [ "$FREE_SPACE" -lt 1000 ]; then
         echo -e "${YELLOW}Low disk space detected (less than 1GB free).${NC}"
         LOW_SPACE=true
@@ -141,7 +141,7 @@ else
   if [ -d "$DOCKER_DIR" ]; then
     FREE_SPACE=$(sudo df -m "$DOCKER_DIR" 2>/dev/null | tail -1 | awk '{print $4}')
     echo -e "${CYAN}Available space in Docker directory: ${FREE_SPACE}MB${NC}"
-    
+
     if [ "$FREE_SPACE" -lt 1000 ]; then
         echo -e "${YELLOW}Low disk space detected (less than 1GB free).${NC}"
         LOW_SPACE=true
@@ -203,7 +203,7 @@ if [ -z "$COMPOSE_FILE" ]; then
   echo -e "  ${RED}No Docker Compose file found in standard locations${NC}"
   echo -e "  ${YELLOW}Please specify the path to your Docker Compose file:${NC}"
   read -p "  Docker Compose file path: " COMPOSE_FILE
-  
+
   if [ ! -f "$COMPOSE_FILE" ]; then
     echo -e "  ${RED}File not found: $COMPOSE_FILE${NC}"
     exit 1
@@ -218,7 +218,7 @@ if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
   else
     sudo grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
   fi
-  
+
   if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}Nginx configuration found in production compose file${NC}"
     NGINX_COMPOSE_FILE="$COMPOSE_FILE"
@@ -231,7 +231,7 @@ if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
       else
         sudo grep -q "nginx" "docker/docker-compose.prod.yml" 2>/dev/null
       fi
-      
+
       if [ $? -eq 0 ]; then
         echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.prod.yml${NC}"
         NGINX_COMPOSE_FILE="docker/docker-compose.prod.yml"
@@ -245,7 +245,7 @@ else
   else
     sudo grep -q "nginx" "$COMPOSE_FILE" 2>/dev/null
   fi
-  
+
   if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}Nginx configuration found in main compose file${NC}"
     NGINX_COMPOSE_FILE="$COMPOSE_FILE"
@@ -257,7 +257,7 @@ else
       else
         sudo grep -q "nginx" "docker/docker-compose.yml" 2>/dev/null
       fi
-      
+
       if [ $? -eq 0 ]; then
         echo -e "  ${GREEN}Found separate Nginx compose file: docker/docker-compose.yml${NC}"
         NGINX_COMPOSE_FILE="docker/docker-compose.yml"
@@ -312,25 +312,25 @@ echo -e "\n${GREEN}[2/5] Pulling latest code from GitHub...${NC}"
 check_ssh_git_connection() {
     # Get the current repository URL
     REPO_URL=$(git config --get remote.origin.url)
-    
+
     # Only check if it's using SSH format
     if [[ $REPO_URL == git@* ]]; then
         echo -e "  ${YELLOW}Using SSH for GitHub: $REPO_URL${NC}"
-        
+
         # Display the key we're using
         echo -e "  ${YELLOW}Using SSH key: $SSH_KEY_PATH${NC}"
-        
+
         # Check if the key exists
         if [ -f "$SSH_KEY_PATH" ]; then
             echo -e "  ${GREEN}SSH key file exists.${NC}"
-            
+
             # Check key permissions
             KEY_PERMS=$(stat -c "%a" "$SSH_KEY_PATH" 2>/dev/null || stat -f "%Lp" "$SSH_KEY_PATH" 2>/dev/null)
             if [ "$KEY_PERMS" != "600" ]; then
                 echo -e "  ${YELLOW}Setting correct permissions on SSH key...${NC}"
                 chmod 600 "$SSH_KEY_PATH" || echo -e "  ${RED}Failed to set permissions on SSH key${NC}"
             fi
-            
+
             # Test SSH connection directly with the key
             echo -e "  ${YELLOW}Testing connection to GitHub...${NC}"
             if ssh -i "$SSH_KEY_PATH" -o IdentitiesOnly=yes -T git@github.com -o StrictHostKeyChecking=no -o BatchMode=yes 2>&1 | grep -q "success"; then
@@ -339,7 +339,7 @@ check_ssh_git_connection() {
                 echo -e "  ${RED}Cannot connect to GitHub via SSH.${NC}"
                 echo -e "  ${YELLOW}Detailed SSH debugging:${NC}"
                 ssh -i "$SSH_KEY_PATH" -vT git@github.com
-                
+
                 echo -e "\n  ${YELLOW}SSH troubleshooting:${NC}"
                 echo -e "  ${YELLOW}1. Check permissions: chmod 600 $SSH_KEY_PATH${NC}"
                 echo -e "  ${YELLOW}2. Make sure known_hosts file exists${NC}"
@@ -370,11 +370,11 @@ else
     echo -e "  ${YELLOW}2. Make sure this key is added to your GitHub account${NC}"
     echo -e "  ${YELLOW}3. Try testing with: ssh -i $SSH_KEY_PATH -T git@github.com${NC}"
     echo -e "  ${YELLOW}4. Check if you have local changes that need to be stashed/committed${NC}"
-    
+
     # Show available branches
     echo -e "  ${YELLOW}Available remote branches:${NC}"
     GIT_SSH_COMMAND="ssh -i $SSH_KEY_PATH -o IdentitiesOnly=yes" git ls-remote --heads origin
-    
+
     # Ask if user wants to continue
     read -p "  Continue with deployment anyway? (y/n): " continue_anyway
     if [[ "$continue_anyway" != "y" && "$continue_anyway" != "Y" ]]; then
@@ -396,7 +396,7 @@ if [ -n "$COMPOSE_FILE" ]; then
     elif [ -f "docker-compose.prod.yml" ]; then
         PROD_FILE="docker-compose.prod.yml"
     fi
-    
+
     if [ -n "$PROD_FILE" ]; then
         echo -e "  ${YELLOW}Using production compose file: $PROD_FILE${NC}"
         if docker_compose_cmd "$PROD_FILE" build --no-cache; then
@@ -443,7 +443,7 @@ fi
 check_port() {
     local port=$1
     local service=$2
-    
+
     # Check if the port is in use
     if command -v nc >/dev/null 2>&1; then
         if nc -z localhost $port >/dev/null 2>&1; then
@@ -464,7 +464,7 @@ check_port() {
 # Check for port conflicts before starting containers
 check_for_port_conflicts() {
     echo -e "\n${YELLOW}Checking for potential port conflicts...${NC}"
-    
+
     # Extract ports from the docker-compose file
     if [[ "$COMPOSE_FILE" == *"prod"* ]]; then
         check_port 80 "Nginx (HTTP)"
@@ -527,4 +527,4 @@ echo -e "${YELLOW}If you encounter 'too many redirects' errors:${NC}"
 echo -e "${YELLOW}  1. Clear your browser cache and cookies${NC}"
 echo -e "${YELLOW}  2. Check that settings_https.py is being properly loaded${NC}"
 echo -e "${YELLOW}  3. Verify X-Forwarded-Proto header is set to 'https' in Nginx config${NC}"
-echo -e "${YELLOW}  4. Check container networking with 'docker network inspect pyerp-network'${NC}" 
+echo -e "${YELLOW}  4. Check container networking with 'docker network inspect pyerp-network'${NC}"

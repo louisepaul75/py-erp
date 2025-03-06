@@ -73,4 +73,4 @@ The current implementation has the following issues:
 
 ## Estimation
 - Story Points: 5
-- Time Estimate: 3 days 
+- Time Estimate: 3 days

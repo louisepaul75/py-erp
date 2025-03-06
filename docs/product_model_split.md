@@ -97,7 +97,7 @@ The admin interface has been updated to provide separate admin classes for `Pare
 
 ## Backward Compatibility
 
-The original `Product` model is kept for backward compatibility during the migration process. Once all code has been updated to use the new models, the old model can be deprecated and eventually removed. 
+The original `Product` model is kept for backward compatibility during the migration process. Once all code has been updated to use the new models, the old model can be deprecated and eventually removed.
 
 ## Migration Results
 
@@ -210,4 +210,4 @@ To fix the data issues, follow this workflow:
 
 ## Conclusion
 
-The product model split has been successfully implemented, with most products migrated to the new structure. The new model provides a clearer separation between parent products and variants, making the data model more intuitive and easier to work with. The remaining issues with missing parent products should be addressed to complete the migration process. 
+The product model split has been successfully implemented, with most products migrated to the new structure. The new model provides a clearer separation between parent products and variants, making the data model more intuitive and easier to work with. The remaining issues with missing parent products should be addressed to complete the migration process.

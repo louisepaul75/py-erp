@@ -4,68 +4,72 @@
       <router-link class="navbar-brand" to="/">
         <img src="@/assets/wsz_logo_long.png" alt="WSZ Logo" height="40">
       </router-link>
-      
-      <button 
-        class="navbar-toggler" 
-        type="button" 
-        data-bs-toggle="collapse" 
+
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
         data-bs-target="#navbarContent"
       >
         <span class="navbar-toggler-icon"></span>
       </button>
-      
+
       <div class="collapse navbar-collapse" id="navbarContent">
         <ul class="navbar-nav mx-auto">
           <li class="nav-item">
             <router-link class="nav-link" to="/">Dashboard</router-link>
           </li>
-          
+
           <li class="nav-item">
             <router-link class="nav-link" to="/products">Products</router-link>
           </li>
-          
+
           <li class="nav-item">
             <router-link class="nav-link" to="/sales">Sales</router-link>
           </li>
-          
+
           <li class="nav-item">
             <router-link class="nav-link" to="/inventory">Inventory</router-link>
           </li>
-          
+
           <li class="nav-item">
             <router-link class="nav-link" to="/production">Production</router-link>
           </li>
+
+          <li class="nav-item">
+            <router-link class="nav-link" to="/Health">System Health</router-link>
+          </li>
         </ul>
-        
+
         <!-- Authentication Links -->
         <ul class="navbar-nav">
           <template v-if="authStore.isAuthenticated">
             <li class="nav-item dropdown">
-              <a 
-                class="nav-link dropdown-toggle" 
-                href="#" 
-                role="button" 
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                role="button"
                 data-bs-toggle="dropdown"
               >
                 <i class="fas fa-user me-1"></i>
                 {{ authStore.fullName || authStore.user?.username }}
               </a>
-              
+
               <ul class="dropdown-menu dropdown-menu-end">
                 <li>
                   <router-link class="dropdown-item" to="/profile">
                     <i class="fas fa-id-card me-2"></i> Profile
                   </router-link>
                 </li>
-                
+
                 <li v-if="authStore.isAdmin">
                   <a class="dropdown-item" href="/admin/" target="_blank">
                     <i class="fas fa-cog me-2"></i> Admin
                   </a>
                 </li>
-                
+
                 <li><hr class="dropdown-divider"></li>
-                
+
                 <li>
                   <router-link class="dropdown-item" to="/logout">
                     <i class="fas fa-sign-out-alt me-2"></i> Logout
@@ -74,7 +78,7 @@
               </ul>
             </li>
           </template>
-          
+
           <template v-else>
             <li class="nav-item">
               <router-link class="nav-link" to="/login">
@@ -123,4 +127,4 @@ const authStore = useAuthStore();
   background-color: #f8f9fa;
   color: #d2bc9b;
 }
-</style> 
+</style>

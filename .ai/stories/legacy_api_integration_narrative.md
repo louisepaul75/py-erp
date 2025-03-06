@@ -51,27 +51,27 @@ We need to bring this critical integration point under our control by internaliz
 Before replacing the API, we need to fully understand how the current implementation works:
 
 1. **Code Archaeology**
-   
+
    We've examined the current WSZ_api implementation and identified its key components:
    - `auth.py`: Handles session management with the legacy 4D system
    - `getTable.py`: Fetches data from tables in the legacy system
    - `pushField.py`: Updates data in the legacy system
    - `api_logger.py`: Provides logging for API operations
-   
+
    The implementation uses simple HTTP requests to a REST API endpoint, with a cookie-based session for authentication.
 
 2. **Session Management Analysis**
-   
+
    The session management approach in the current implementation:
    - Fetches a cookie from the legacy system by calling a specific REST endpoint (`$info`)
    - Stores this cookie in a configuration file on disk
    - Checks if the stored cookie is valid before making API calls
    - Creates a new session if the stored cookie is invalid or expired
-   
+
    This approach works for simple scenarios but fails in concurrent environments.
 
 3. **API Interaction Patterns**
-   
+
    The API follows a straightforward pattern:
    - Authentication via cookie-based sessions
    - Standard REST endpoints for data retrieval and updates
@@ -83,7 +83,7 @@ Before replacing the API, we need to fully understand how the current implementa
 With this understanding, we can create a robust internal implementation:
 
 1. **Architecture Design**
-   
+
    Our new implementation will follow these principles:
    - **Separation of concerns**: Clear boundaries between authentication, data retrieval, and data updates
    - **Configuration via settings**: All environment-specific settings in Django's configuration system
@@ -93,7 +93,7 @@ With this understanding, we can create a robust internal implementation:
    - **Test coverage**: Comprehensive unit and integration tests
 
 2. **Module Structure**
-   
+
    We'll create a new Django app called `legacy_api` with this structure:
    ```
    pyerp/legacy_api/
@@ -117,7 +117,7 @@ With this understanding, we can create a robust internal implementation:
    ```
 
 3. **Session Management Improvement**
-   
+
    Our new session management will:
    - Store session data in Django's cache framework instead of on disk
    - Support multiple concurrent sessions for different environments
@@ -127,7 +127,7 @@ With this understanding, we can create a robust internal implementation:
    - Be thread-safe and suitable for distributed environments
 
 4. **Configuration System**
-   
+
    We'll move from hardcoded paths to a flexible configuration system:
    - Use Django's settings module for all configuration
    - Provide sensible defaults that can be overridden
@@ -136,7 +136,7 @@ With this understanding, we can create a robust internal implementation:
    - Add timeout and retry settings
 
 5. **Error Handling and Logging**
-   
+
    Our improved error handling will:
    - Define a custom exception hierarchy for different error types
    - Implement automatic retries with exponential backoff for transient errors
@@ -149,7 +149,7 @@ With this understanding, we can create a robust internal implementation:
 Replacing an existing integration point requires careful planning:
 
 1. **Compatibility Layer**
-   
+
    To minimize disruption, we'll create a compatibility layer that:
    - Provides the same function signatures as the original WSZ_api
    - Routes calls through our new implementation
@@ -157,7 +157,7 @@ Replacing an existing integration point requires careful planning:
    - Logs deprecation warnings for legacy usage patterns
 
 2. **Gradual Migration**
-   
+
    We'll migrate code in stages:
    - Start with the `pyerp/legacy_sync/api_client.py` module
    - Test thoroughly in development and staging environments
@@ -166,7 +166,7 @@ Replacing an existing integration point requires careful planning:
    - Monitor for issues in production
 
 3. **Documentation and Training**
-   
+
    To ensure successful adoption:
    - Document the new API thoroughly
    - Create examples for common use cases
@@ -179,7 +179,7 @@ Replacing an existing integration point requires careful planning:
 Once the basic functionality is stable, we can add enhanced features:
 
 1. **Performance Optimizations**
-   
+
    To improve performance and reliability:
    - Add caching for frequently accessed data
    - Implement bulk operations for improved throughput
@@ -187,7 +187,7 @@ Once the basic functionality is stable, we can add enhanced features:
    - Implement result pagination for large datasets
 
 2. **Monitoring and Observability**
-   
+
    To understand system behavior:
    - Add metrics collection for API performance
    - Create monitoring dashboards
@@ -195,7 +195,7 @@ Once the basic functionality is stable, we can add enhanced features:
    - Add health checks for the legacy system
 
 3. **Advanced Features**
-   
+
    To further enhance the integration:
    - Add async versions of API functions for non-blocking operations
    - Implement data validation and transformation
@@ -383,7 +383,7 @@ The session management issue deserves special attention as it has been a source 
 The current implementation in `auth.py` manages sessions as follows:
 
 1. **Session Storage**
-   
+
    Sessions are stored in a global configuration file (`config.toml`) with this structure:
    ```toml
    [session]
@@ -393,14 +393,14 @@ The current implementation in `auth.py` manages sessions as follows:
    ```
 
 2. **Session Validation**
-   
+
    Before making API calls, the code checks if:
    - The cookie exists in the config file
    - The expiration time hasn't passed
    - The URL matches the environment (test/live)
 
 3. **Session Refresh**
-   
+
    If any of these conditions fail, the code:
    - Makes a request to the `$info` endpoint
    - Extracts the cookie from the response
@@ -412,7 +412,7 @@ The current implementation in `auth.py` manages sessions as follows:
 This approach has led to several production issues:
 
 1. **Race Conditions**
-   
+
    When multiple processes access the API simultaneously:
    - Process A reads the config and determines the session is valid
    - Process B reads the config and also determines the session is valid
@@ -422,7 +422,7 @@ This approach has led to several production issues:
    - Both processes receive authentication errors
 
 2. **Session Corruption**
-   
+
    When concurrent processes attempt to refresh sessions:
    - Process A determines the session needs renewal
    - Process B also determines the session needs renewal
@@ -432,14 +432,14 @@ This approach has led to several production issues:
    - Later, when Process A checks the config, it finds an unknown session
 
 3. **Expiration Misalignment**
-   
+
    The 1-hour hardcoded expiration doesn't account for:
    - Server-side session timeouts that may be shorter
    - Network delays that can make sessions appear valid when they're not
    - Clock differences between servers
 
 4. **Cross-Environment Contamination**
-   
+
    The global config can be overwritten by different environments:
    - A test script using the 'test' environment updates the config
    - A production process using the 'live' environment now has invalid session data
@@ -449,32 +449,32 @@ This approach has led to several production issues:
 Our new session management approach addresses these issues comprehensively:
 
 1. **Isolated Session Storage**
-   
+
    We'll use Django's cache framework to store sessions:
    - Each environment gets a unique cache key: `legacy_api_session_{environment}`
    - Sessions are stored in memory or in a distributed cache (e.g., Redis)
    - Different processes can access their own session information without conflicts
-   
+
    ```python
    from django.core.cache import cache
-   
+
    def get_session(environment='live'):
        """Get a valid session for the specified environment."""
        cache_key = f"legacy_api_session_{environment}"
        session_data = cache.get(cache_key)
-       
+
        # Continue with validation or creation...
    ```
 
 2. **Thread-Safety Improvements**
-   
+
    To handle concurrent access:
    - Use atomic operations for session updates
    - Implement locking mechanisms for critical sections
    - Use thread-local storage for per-request session data
 
 3. **Smart Expiration Handling**
-   
+
    Instead of arbitrary timeouts:
    - Set cache expiration slightly before the actual session timeout
    - Extract and honor any expiration information from the server
@@ -482,7 +482,7 @@ Our new session management approach addresses these issues comprehensively:
    - Add jitter to prevent thundering herd problems
 
 4. **Graceful Recovery**
-   
+
    For cases where sessions fail:
    - Implement automatic retry with exponential backoff
    - Add circuit breakers to prevent cascading failures
@@ -490,14 +490,14 @@ Our new session management approach addresses these issues comprehensively:
    - Log detailed diagnostic information
 
 5. **Environment Isolation**
-   
+
    To prevent cross-environment issues:
    - Store sessions by environment name
    - Keep separate HTTP clients for each environment
    - Validate that session URLs match the expected environment
 
 6. **Request Context**
-   
+
    For better debugging and tracing:
    - Generate unique request IDs
    - Associate session information with request contexts
@@ -615,4 +615,4 @@ Looking forward, we can leverage modern technologies to enhance our integration 
 - **Containerization**: Package integration components in containers for better isolation and deployment
 - **Service Mesh**: Implement service mesh patterns for improved observability and resilience
 
-By starting with this foundational work of replacing the WSZ_api, we're not just solving immediate problems but setting the stage for a comprehensive modernization of our integration with legacy systems. 
+By starting with this foundational work of replacing the WSZ_api, we're not just solving immediate problems but setting the stage for a comprehensive modernization of our integration with legacy systems.

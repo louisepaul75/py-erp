@@ -96,4 +96,4 @@ The Admin Status Dashboard has been successfully implemented in the pyERP system
 
 ## Conclusion
 
-The Admin Status Dashboard implementation has successfully delivered all required functionality, providing system administrators with a powerful tool for monitoring and maintaining system health. The modular design ensures that this feature can be extended to monitor additional components as the system evolves. 
+The Admin Status Dashboard implementation has successfully delivered all required functionality, providing system administrators with a powerful tool for monitoring and maintaining system health. The modular design ensures that this feature can be extended to monitor additional components as the system evolves.

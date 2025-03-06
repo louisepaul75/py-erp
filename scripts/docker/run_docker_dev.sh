@@ -20,4 +20,4 @@ docker-compose -f ../../docker/docker-compose.yml up -d
 
 echo "Container is starting up..."
 echo "You can view logs with: docker-compose -f ../../docker/docker-compose.yml logs -f"
-echo "Application should be available at http://localhost:8050" 
+echo "Application should be available at http://localhost:8050"

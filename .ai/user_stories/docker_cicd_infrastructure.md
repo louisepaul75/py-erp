@@ -8,8 +8,8 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
 ### Docker Infrastructure
 
 #### US-D101: System Dependencies for Complex Python Packages
-**As a** DevOps Engineer  
-**I want to** ensure all necessary system dependencies are installed in Docker containers  
+**As a** DevOps Engineer
+**I want to** ensure all necessary system dependencies are installed in Docker containers
 **So that** Python packages with complex C extensions compile successfully
 
 **Acceptance Criteria:**
@@ -30,8 +30,8 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
   - Runtime equivalents of development libraries (e.g., `libcairo2` vs `libcairo2-dev`)
 
 #### US-D102: Multi-Stage Docker Builds
-**As a** DevOps Engineer  
-**I want to** implement multi-stage Docker builds  
+**As a** DevOps Engineer
+**I want to** implement multi-stage Docker builds
 **So that** production images remain small and secure
 
 **Acceptance Criteria:**
@@ -44,8 +44,8 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
 ### CI/CD Pipeline
 
 #### US-C101: GitHub Actions Container Registry Integration
-**As a** DevOps Engineer  
-**I want to** push Docker images to GitHub Container Registry as part of CI/CD  
+**As a** DevOps Engineer
+**I want to** push Docker images to GitHub Container Registry as part of CI/CD
 **So that** images are versioned and readily available for deployment
 
 **Acceptance Criteria:**
@@ -74,8 +74,8 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
   - Commit SHA for unique version tracking
 
 #### US-C102: CI/CD Workflow Optimization
-**As a** Developer  
-**I want to** fast and reliable CI/CD pipelines  
+**As a** Developer
+**I want to** fast and reliable CI/CD pipelines
 **So that** feedback on changes is quick and deployment is efficient
 
 **Acceptance Criteria:**
@@ -85,8 +85,8 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
 - Failed builds provide clear error messages
 
 #### US-C103: Automated Deployment Server Setup
-**As a** DevOps Engineer  
-**I want to** automate the setup of deployment servers  
+**As a** DevOps Engineer
+**I want to** automate the setup of deployment servers
 **So that** production environments are consistent and easy to provision
 
 **Acceptance Criteria:**
@@ -115,8 +115,8 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
   - Isolation of application user permissions
 
 #### US-C104: Branch-Based Deployment Pipeline
-**As a** Developer  
-**I want to** deploy to production by merging branches  
+**As a** Developer
+**I want to** deploy to production by merging branches
 **So that** the deployment process is simple and follows Git workflow
 
 **Acceptance Criteria:**
@@ -148,11 +148,11 @@ These user stories cover the infrastructure setup for Docker containers and CI/C
 ### CI/CD Tasks
 - [x] Set up GitHub Actions for Docker builds
 - [x] Configure GitHub Container Registry integration
-- [x] Add proper permissions to GitHub workflows 
+- [x] Add proper permissions to GitHub workflows
 - [x] Implement intelligent tagging strategy
 - [x] Create automated server setup script
 - [x] Implement smart environment variable handling
 - [x] Configure branch-based deployment pipeline
 - [x] Add health checks for deployment verification
 - [ ] Add vulnerability scanning for container images
-- [ ] Configure deployment pipeline for different environments 
+- [ ] Configure deployment pipeline for different environments

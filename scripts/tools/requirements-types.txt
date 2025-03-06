@@ -17,4 +17,4 @@ types-django-cors-headers
 
 # Other type stubs
 celery-types
-types-boto3 
+types-boto3

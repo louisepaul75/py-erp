@@ -40,4 +40,4 @@ fi
 
 # Verify the files were copied
 echo "Verifying files in staticfiles/vue directory:"
-ls -la /app/staticfiles/vue/ 
+ls -la /app/staticfiles/vue/

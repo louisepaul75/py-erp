@@ -1,22 +1,24 @@
 #!/usr/bin/env python
 import logging
-from pyerp.products.image_api import ImageAPIClient
 import os
 import sys
+
 import django
+
+from pyerp.products.image_api import ImageAPIClient
 
 # Add the project root directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Set up Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.local')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.local")
 django.setup()
 
 
 def main():
     # Enable debug logging
     logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger('urllib3').setLevel(logging.DEBUG)
+    logging.getLogger("urllib3").setLevel(logging.DEBUG)
 
     client = ImageAPIClient()
 

@@ -42,4 +42,4 @@ services:
       "
 
 volumes:
-  pyerp_data: 
+  pyerp_data:

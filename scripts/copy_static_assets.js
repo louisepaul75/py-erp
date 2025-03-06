@@ -62,4 +62,4 @@ fs.readdir(sourceDir, (err, files) => {
   });
 });
 
-console.log('Static assets copy process completed.'); 
+console.log('Static assets copy process completed.');

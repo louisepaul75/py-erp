@@ -1,7 +1,9 @@
 """
 Management command for importing products from external sources.
 """
-from django.core.management.base import BaseCommand, CommandError  # noqa: F401
+
+from django.core.management.base import BaseCommand
+
 from pyerp.core.validators import ImportValidator, ValidationResult
 
 
@@ -9,34 +11,34 @@ class ProductImportValidator(ImportValidator):
     """Validator for product import data."""
 
     def validate_sku(self, value, row_data):
-
         """Validate the product SKU."""
         if not value:
-            return ValidationResult(is_valid=False, errors={"sku": ["SKU is required"]})  # noqa: E501
+            return ValidationResult(is_valid=False, errors={"sku": ["SKU is required"]})
         return ValidationResult(is_valid=True)
 
     def validate_name(self, value, row_data):
-
         """Validate the product name."""
         if not value:
-            return ValidationResult(is_valid=False, errors={"name": ["Name is required"]})  # noqa: E501
+            return ValidationResult(
+                is_valid=False,
+                errors={"name": ["Name is required"]},
+            )
         return ValidationResult(is_valid=True)
 
     def validate_list_price(self, value, row_data):
-
         """Validate the list price."""
         try:
             price = float(value)
             if price < 0:
                 return ValidationResult(
-                    is_valid=False,  # noqa: E128
-                    errors={"list_price": ["Price cannot be negative"]}  # noqa: F841
+                    is_valid=False,
+                    errors={"list_price": ["Price cannot be negative"]},
                 )
             return ValidationResult(is_valid=True)
         except (ValueError, TypeError):
             return ValidationResult(
-                is_valid=False,  # noqa: E128
-                errors={"list_price": ["Invalid price format"]}  # noqa: F841
+                is_valid=False,
+                errors={"list_price": ["Invalid price format"]},
             )
 
     def cross_validate_row(self, validated_data):
@@ -47,10 +49,9 @@ class ProductImportValidator(ImportValidator):
 class Command(BaseCommand):
     """Command to import products from external sources."""
 
-    help = "Import products from CSV file"  # noqa: F841
+    help = "Import products from CSV file"
 
     def create_product_validator(self):
-
         """Create and return a product validator instance."""
         return ProductImportValidator()
 

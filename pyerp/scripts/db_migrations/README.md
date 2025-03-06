@@ -53,4 +53,4 @@ python -m pyerp.scripts.db_migrations.fix_variant_table
 
 - **Migration conflicts**: When multiple migration paths try to create the same table or modify the same fields, conflicts can occur. Use `fix_migration_state.py` to resolve these conflicts.
 - **Missing foreign key constraints**: If foreign key constraints are missing, use `fix_variant_foreign_key.py` to add them.
-- **Table structure issues**: If the table structure is incorrect, use `check_variant_table.py` to diagnose the issues and `fix_variant_table.py` to fix them. 
+- **Table structure issues**: If the table structure is incorrect, use `check_variant_table.py` to diagnose the issues and `fix_variant_table.py` to fix them.

@@ -152,17 +152,17 @@ For models needing translated content, use language-specific fields:
 class Product(models.Model):
     name = models.CharField(_('Name (German)'), max_length=255)  # Primary language (German)
     name_en = models.CharField(_('Name (English)'), max_length=255, blank=True)
-    
+
     description = models.TextField(_('Description (German)'), blank=True)
     description_en = models.TextField(_('Description (English)'), blank=True)
-    
+
     # Helper method to get name in current language
     def get_name(self):
         current_lang = get_language()
         if current_lang == 'en' and self.name_en:
             return self.name_en
         return self.name  # Default to primary language
-    
+
     # Helper method to get description in current language
     def get_description(self):
         current_lang = get_language()
@@ -266,11 +266,11 @@ class I18nTests(TestCase):
     def test_language_switching(self):
         # Test switching languages
         c = Client()
-        
+
         # Default language (German)
         response = c.get(reverse('products:product_list'))
         self.assertContains(response, 'Produkte')  # German word
-        
+
         # Switch to English
         response = c.get(reverse('products:product_list'), HTTP_ACCEPT_LANGUAGE='en')
         self.assertContains(response, 'Products')  # English word
@@ -288,4 +288,4 @@ class I18nTests(TestCase):
 - Establish a process for updating translations when new features are added
 - Create guidelines for developers to mark all user-facing strings for translation
 - Set up regular validation to catch missing translations
-- Document language-specific testing procedures for QA team 
+- Document language-specific testing procedures for QA team

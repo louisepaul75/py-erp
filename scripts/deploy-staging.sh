@@ -28,4 +28,4 @@ docker-compose -f docker/docker-compose.prod.yml --env-file config/env/.env.prod
 echo "Checking deployment status..."
 docker-compose -f docker/docker-compose.prod.yml --env-file config/env/.env.prod ps
 
-echo "Deployment completed successfully!" 
+echo "Deployment completed successfully!"

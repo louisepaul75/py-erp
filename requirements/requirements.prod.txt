@@ -63,4 +63,4 @@ gunicorn==21.2.0
 whitenoise==6.9.0
 
 # Datadog APM and tracing
-ddtrace==2.0.0 
+ddtrace==2.0.0

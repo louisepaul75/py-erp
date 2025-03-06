@@ -99,7 +99,7 @@ python-*.exe
 docs/_build/
 
 # Backup files
-backups/ 
+backups/
 
 
 *dump.rdb

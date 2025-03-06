@@ -1,17 +1,18 @@
 """
 Script to check the variant table structure.
 """
+
 import os
 import sys
+
 import django
 from django.db import connection
 
 
 def setup_django():
-
     """Set up Django environment if not already set up."""
-    if not os.environ.get('DJANGO_SETTINGS_MODULE'):
-        os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings')
+    if not os.environ.get("DJANGO_SETTINGS_MODULE"):
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
         django.setup()
 
 
@@ -23,7 +24,7 @@ def check_variant_table():
     with connection.cursor() as cursor:
         cursor.execute(
             "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = %s)",  # noqa: E501
-            ['products_variantproduct']
+            ["products_variantproduct"],
         )
         exists = cursor.fetchone()[0]
 
@@ -31,10 +32,10 @@ def check_variant_table():
             print("ERROR: Variant table does not exist!")
             return False
 
- # Get the table columns
+        # Get the table columns
         cursor.execute(
             "SELECT column_name FROM information_schema.columns WHERE table_name = %s ORDER BY ordinal_position",  # noqa: E501
-            ['products_variantproduct']
+            ["products_variantproduct"],
         )
         columns = cursor.fetchall()
         column_names = [col[0] for col in columns]
@@ -43,17 +44,18 @@ def check_variant_table():
         for col in column_names:
             print(f"  - {col}")
 
- # Check for required fields
-        required_fields = ['id', 'sku', 'name', 'parent_id', 'variant_code', 'base_sku']  # noqa: E501
-        missing_fields = [field for field in required_fields if field not in column_names]  # noqa: E501
+        # Check for required fields
+        required_fields = ["id", "sku", "name", "parent_id", "variant_code", "base_sku"]
+        missing_fields = [
+            field for field in required_fields if field not in column_names
+        ]
 
         if missing_fields:
-            print(f"WARNING: Missing required fields: {', '.join(missing_fields)}")  # noqa: E501
+            print(f"WARNING: Missing required fields: {', '.join(missing_fields)}")
             return False
-        else:
-            print("All required fields are present in the variant table.")
+        print("All required fields are present in the variant table.")
 
- # Check for foreign key constraint
+        # Check for foreign key constraint
         cursor.execute(
             """  # noqa: E128
             SELECT EXISTS(
@@ -63,7 +65,7 @@ def check_variant_table():
             AND tc.table_name = 'products_variantproduct'
             AND ccu.column_name = 'parent_id'
         )
-            """
+            """,
         )
         has_fk = cursor.fetchone()[0]
 
@@ -77,10 +79,10 @@ def check_variant_table():
 
 
 def main():
-
     """Main entry point for the script."""
     success = check_variant_table()
     return 0 if success else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -4,13 +4,13 @@
     <div v-if="loading" class="loading">
       <p>Loading variant details...</p>
     </div>
-    
+
     <!-- Error message -->
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
       <button @click="goBack" class="back-button">Go Back</button>
     </div>
-    
+
     <!-- Variant details -->
     <div v-else class="variant-content">
       <div class="variant-header">
@@ -34,21 +34,21 @@
           </div>
         </div>
       </div>
-      
+
       <div class="variant-layout">
         <!-- Variant images -->
         <div class="variant-images">
           <div class="main-image">
-            <img 
-              :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png')" 
+            <img
+              :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png')"
               :alt="variant.name"
             />
           </div>
-          
+
           <div v-if="variant.images && variant.images.length > 1" class="image-thumbnails">
-            <div 
-              v-for="image in variant.images" 
-              :key="image.id" 
+            <div
+              v-for="image in variant.images"
+              :key="image.id"
               class="thumbnail"
               :class="{ active: selectedImage && selectedImage.id === image.id }"
               @click="selectedImage = image"
@@ -57,7 +57,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Variant info -->
         <div class="variant-info">
           <!-- Description -->
@@ -66,7 +66,7 @@
             <p v-if="variant.description">{{ variant.description }}</p>
             <p v-else>No description available.</p>
           </div>
-          
+
           <!-- Attributes -->
           <div v-if="variant.attributes && variant.attributes.length > 0" class="info-section">
             <h3>Attributes</h3>
@@ -77,7 +77,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Details -->
           <div class="info-section">
             <h3>Details</h3>
@@ -106,21 +106,21 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Related variants section -->
       <div v-if="relatedVariants.length > 0" class="related-variants-section">
         <h2>Other Variants of {{ variant.parent?.name }}</h2>
-        
+
         <div class="variants-grid">
-          <div 
-            v-for="relatedVariant in relatedVariants" 
-            :key="relatedVariant.id" 
+          <div
+            v-for="relatedVariant in relatedVariants"
+            :key="relatedVariant.id"
             class="variant-card"
             @click="viewVariantDetails(relatedVariant.id)"
           >
             <div class="variant-image">
-              <img 
-                :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : '/static/images/no-image.png'" 
+              <img
+                :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : '/static/images/no-image.png'"
                 :alt="relatedVariant.name"
               />
             </div>
@@ -128,9 +128,9 @@
               <h3>{{ relatedVariant.name }}</h3>
               <p class="variant-sku">SKU: {{ relatedVariant.sku }}</p>
               <div class="variant-attributes" v-if="relatedVariant.attributes && relatedVariant.attributes.length">
-                <span 
-                  v-for="(attr, index) in relatedVariant.attributes" 
-                  :key="index" 
+                <span
+                  v-for="(attr, index) in relatedVariant.attributes"
+                  :key="index"
                   class="attribute-badge"
                 >
                   {{ attr.name }}: {{ attr.value }}
@@ -215,23 +215,23 @@ const isCurrentVariant = (id: number) => {
 const loadVariant = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     // Get variant ID from props or route params
     const variantId = props.id || route.params.id;
-    
+
     if (!variantId) {
       throw new Error('Variant ID is required');
     }
-    
+
     const response = await productApi.getVariant(Number(variantId));
     variant.value = response.data;
-    
+
     // Set default selected image
     if (variant.value.images && variant.value.images.length > 0) {
       selectedImage.value = variant.value.primary_image || variant.value.images[0];
     }
-    
+
     // Load related variants if this is part of a parent product
     if (variant.value.parent && variant.value.parent.id) {
       await loadRelatedVariants(variant.value.parent.id);
@@ -586,4 +586,4 @@ h1 {
 .out-of-stock {
   color: #dc3545;
 }
-</style> 
+</style>

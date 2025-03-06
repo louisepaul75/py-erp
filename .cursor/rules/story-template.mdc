@@ -1,6 +1,6 @@
 ---
 description: This document provides standardized templates for creating user stories and feature requests in the pyERP system. It ensures that all requirements are captured consistently and comprehensively, making it easier for both development teams and AI tools to understand and implement new features.
-globs: 
+globs:
 ---
 # Story Template for pyERP
 

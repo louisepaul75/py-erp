@@ -2,30 +2,30 @@
 Test script to verify the new product model structure.
 """
 
-from pyerp.products.models import ParentProduct, VariantProduct, ProductCategory  # noqa: E501, F401
 import os
 import sys
+
 import django
 import pytest
 from django.db import connection
 from django.db.models import Count
 from dotenv import load_dotenv
 
-# Add the project root directory to the Python path  # noqa: E501
-sys.path.insert(
-    0,
-    os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            '../..')))
+from pyerp.products.models import (
+    ParentProduct,
+    VariantProduct,
+)
+
+# Add the project root directory to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # Load environment variables from .env file in config/env folder
-env_path = os.path.join(os.path.dirname(__file__), '../../config/env/.env')
+env_path = os.path.join(os.path.dirname(__file__), "../../config/env/.env")
 
 load_dotenv(env_path)
 
 # Set up Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.development')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.development")
 django.setup()
 
 # Import Django models
@@ -37,7 +37,6 @@ django.setup()
 @pytest.fixture(scope="module")
 def django_db_setup():
     """Set up the database for testing."""
-    pass
 
 
 def table_exists(table_name):
@@ -49,47 +48,49 @@ def table_exists(table_name):
 def test_model_structure():
     """Test the structure of the new models."""
     # Skip test if tables don't exist
-    if not table_exists('products_parentproduct') or not table_exists(
-            'products_variantproduct'):
-        pytest.skip(
-            "Product tables don't exist yet - migrations may need to be run")
+    if not table_exists("products_parentproduct") or not table_exists(
+        "products_variantproduct",
+    ):
+        pytest.skip("Product tables don't exist yet - migrations may need to be run")
 
     # Check if the new models exist
-    assert ParentProduct._meta.db_table in connection.introspection.table_names()  # noqa: E501
-    assert VariantProduct._meta.db_table in connection.introspection.table_names()  # noqa: E501
+    assert ParentProduct._meta.db_table in connection.introspection.table_names()
+    assert VariantProduct._meta.db_table in connection.introspection.table_names()
 
     # Check the fields of the new models
     parent_fields = {field.name for field in ParentProduct._meta.get_fields()}
-    variant_fields = {
-        field.name for field in VariantProduct._meta.get_fields()}
+    variant_fields = {field.name for field in VariantProduct._meta.get_fields()}
 
     # Assert essential fields exist
-    assert 'sku' in parent_fields
-    assert 'name' in parent_fields
-    assert 'base_sku' in parent_fields
+    assert "sku" in parent_fields
+    assert "name" in parent_fields
+    assert "base_sku" in parent_fields
 
-    assert 'sku' in variant_fields
-    assert 'name' in variant_fields
-    assert 'parent' in variant_fields
+    assert "sku" in variant_fields
+    assert "name" in variant_fields
+    assert "parent" in variant_fields
 
 
 @pytest.mark.django_db
 def test_relationships():
     """Test the relationships between parent and variant products."""
     # Skip test if tables don't exist
-    if not table_exists('products_parentproduct') or not table_exists(
-            'products_variantproduct'):
-        pytest.skip(
-            "Product tables don't exist yet - migrations may need to be run")
+    if not table_exists("products_parentproduct") or not table_exists(
+        "products_variantproduct",
+    ):
+        pytest.skip("Product tables don't exist yet - migrations may need to be run")
 
     # Check variants with no parent
-    orphan_variants = VariantProduct.objects.filter(
-        parent__isnull=True).count()
+    orphan_variants = VariantProduct.objects.filter(parent__isnull=True).count()
 
     # Check parents with no variants
-    childless_parents = ParentProduct.objects.annotate(
-        variant_count=Count('variants')
-    ).filter(variant_count=0).count()
+    childless_parents = (
+        ParentProduct.objects.annotate(
+            variant_count=Count("variants"),
+        )
+        .filter(variant_count=0)
+        .count()
+    )
 
     # These are not necessarily failures, but we should be aware of them
     # Just assert that the counts can be retrieved
@@ -101,16 +102,16 @@ def test_relationships():
 def test_parent_variant_relationship():
     """Test that parent-variant relationships can be created and queried."""
     # Skip test if tables don't exist
-    if not table_exists('products_parentproduct') or not table_exists(
-            'products_variantproduct'):
-        pytest.skip(
-            "Product tables don't exist yet - migrations may need to be run")
+    if not table_exists("products_parentproduct") or not table_exists(
+        "products_variantproduct",
+    ):
+        pytest.skip("Product tables don't exist yet - migrations may need to be run")
 
     # Create a test parent product
     parent = ParentProduct.objects.create(
         sku="TEST-PARENT-001",
         name="Test Parent Product",
-        base_sku="TEST-PARENT"
+        base_sku="TEST-PARENT",
     )
 
     # Create a test variant product
@@ -119,7 +120,7 @@ def test_parent_variant_relationship():
         name="Test Variant Product",
         parent=parent,
         variant_code="001",
-        base_sku="TEST-PARENT"
+        base_sku="TEST-PARENT",
     )
 
     # Test the relationship
@@ -130,12 +131,15 @@ def test_parent_variant_relationship():
     variant.delete()
     parent.delete()
 
+
 # Keep the script functionality for direct execution
 
 
 if __name__ == "__main__":
     print("=== PRODUCT MODEL MIGRATION TEST ===")
-    print("This script checks the migration from the old Product model to the new ParentProduct/VariantProduct models.")  # noqa: E501
+    print(
+        "This script checks the migration from the old Product model to the new ParentProduct/VariantProduct models.",
+    )
 
     # Original function calls for script mode
     def check_model_structure():
@@ -145,10 +149,14 @@ if __name__ == "__main__":
         # Check if the new models exist
         print(
             f"ParentProduct model exists: {
-                ParentProduct._meta.db_table in connection.introspection.table_names()}")  # noqa: E501
+                ParentProduct._meta.db_table in connection.introspection.table_names()
+            }",
+        )
         print(
             f"VariantProduct model exists: {
-                VariantProduct._meta.db_table in connection.introspection.table_names()}")  # noqa: E501
+                VariantProduct._meta.db_table in connection.introspection.table_names()
+            }",
+        )
 
         # Check the fields of the new models
         print("\nParentProduct fields:")
@@ -164,14 +172,17 @@ if __name__ == "__main__":
         print("\n=== RELATIONSHIP CHECK ===")
 
         # Check variants with no parent
-        orphan_variants = VariantProduct.objects.filter(
-            parent__isnull=True).count()
+        orphan_variants = VariantProduct.objects.filter(parent__isnull=True).count()
         print(f"Orphan variants (no parent): {orphan_variants}")
 
         # Check parents with no variants
-        childless_parents = ParentProduct.objects.annotate(
-            variant_count=Count('variants')
-        ).filter(variant_count=0).count()
+        childless_parents = (
+            ParentProduct.objects.annotate(
+                variant_count=Count("variants"),
+            )
+            .filter(variant_count=0)
+            .count()
+        )
         print(f"Childless parents (no variants): {childless_parents}")
 
         # Check average variants per parent

@@ -5,18 +5,18 @@ to identify which one is causing installation problems.
 """
 
 import os
-import sys
 import subprocess
+import sys
 import tempfile
 
 
 def parse_requirements(file_path):
     """Parse a requirements file and extract package specifications."""
     packages = []
-    with open(file_path, 'r') as f:
+    with open(file_path) as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith('#') or line.startswith('-r '):
+            if not line or line.startswith("#") or line.startswith("-r "):
                 continue
             packages.append(line)
     return packages
@@ -24,16 +24,17 @@ def parse_requirements(file_path):
 
 def test_package(package):
     """Test if a package can be processed by pip-compile."""
-    with tempfile.NamedTemporaryFile('w', suffix='.in', delete=False) as temp:
-        temp.write(package + '\n')
+    with tempfile.NamedTemporaryFile("w", suffix=".in", delete=False) as temp:
+        temp.write(package + "\n")
         temp_path = temp.name
 
     try:
         print(f"\n\nTesting package: {package}")
         result = subprocess.run(
-            ['pip-compile', '--verbose', temp_path],
+            ["pip-compile", "--verbose", temp_path],
             capture_output=True,
-            text=True
+            text=True,
+            check=False,
         )
 
         if result.returncode != 0:

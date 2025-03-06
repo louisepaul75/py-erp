@@ -23,15 +23,15 @@ export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current directory.
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '');
-  
+
   // Get the local IP address
   const localIpAddress = getLocalIpAddress();
   const isSpecificIP = localIpAddress === '192.168.73.65';
-  
+
   // Determine if we're running in a local development environment
-  const isLocalDev = process.env.NODE_ENV === 'development' && 
+  const isLocalDev = process.env.NODE_ENV === 'development' &&
                     (!process.env.VITE_API_HOST || process.env.VITE_API_HOST === 'localhost');
-  
+
   // Get API URL based on the detected IP
   let apiUrl;
   if (isSpecificIP) {
@@ -41,16 +41,16 @@ export default defineConfig(({ mode }) => {
   } else {
     apiUrl = env.VITE_API_NETWORK_URL || env.VITE_API_BASE_URL || 'http://localhost:8050';
   }
-  
+
   const apiBaseUrl = apiUrl && apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
-  
+
   console.log('Mode:', mode);
   console.log('Environment:', process.env.NODE_ENV);
   console.log('Local IP Address:', localIpAddress);
   console.log('Is Specific IP (192.168.73.65):', isSpecificIP);
   console.log('API Base URL:', apiBaseUrl);
   console.log('Is Local Development:', isLocalDev);
-  
+
   return {
     plugins: [
       liveDesigner({
@@ -127,4 +127,4 @@ export default defineConfig(({ mode }) => {
       }
     }
   };
-}); 
+});

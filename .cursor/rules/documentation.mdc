@@ -1,6 +1,6 @@
 ---
 description: This document outlines the documentation standards for the pyERP system. It provides guidelines for writing clear, consistent, and maintainable documentation across the codebase. These standards ensure that all team members and AI tools can easily understand and work with the code.
-globs: 
+globs:
 ---
 # Documentation Standards for pyERP
 
@@ -14,15 +14,15 @@ This document outlines documentation standards for the pyERP system (Django-base
 def calculate_stock_value(product_id: int, warehouse_id: int, currency: Optional[str] = None) -> Decimal:
     """
     Calculate the total stock value for a specific product in a warehouse.
-    
+
     Args:
         product_id (int): The ID of the product
         warehouse_id (int): The ID of the warehouse
         currency (Optional[str]): Currency code for conversion, uses default if None
-        
+
     Returns:
         Decimal: Total value of the product stock in the specified currency
-        
+
     Raises:
         ProductNotFound: If the product ID is invalid
         WarehouseNotFound: If the warehouse ID is invalid
@@ -35,14 +35,14 @@ def calculate_stock_value(product_id: int, warehouse_id: int, currency: Optional
 class LegacyAPIClient:
     """
     Client for interacting with the legacy 4D-based ERP system.
-    
+
     Handles authentication, session management, and API requests to the legacy system.
-    
+
     Attributes:
         base_url (str): Base URL of the legacy API
         environment (str): Current environment ('test' or 'live')
         timeout (int): Request timeout in seconds
-        
+
     Methods:
         authenticate(): Authenticate with the legacy system
         get_table_data(): Retrieve data from a specific table
@@ -69,10 +69,10 @@ Created: [Date]
 class Product(models.Model):
     """
     Represents a product in the inventory system.
-    
+
     Products can be raw materials, manufactured items, or finished goods.
     They may have a bill of materials (BOM) if they are manufactured.
-    
+
     Attributes:
         sku (str): Stock Keeping Unit - unique product identifier
         name (str): Product name
@@ -84,7 +84,7 @@ class Product(models.Model):
         is_active (bool): Whether product is active in the system
         created_at (DateTime): When the product was created
         updated_at (DateTime): When the product was last updated
-    
+
     Related Models:
         - ProductImage: Images of the product
         - BOMItem: Bill of materials components
@@ -103,19 +103,19 @@ class Product(models.Model):
 def product_detail(request, product_id):
     """
     Get detailed information about a product.
-    
+
     URL Parameters:
         product_id (int): The ID of the product
-        
+
     Query Parameters:
         include_images (bool): Whether to include product images
         include_bom (bool): Whether to include bill of materials
         warehouse_id (int): Limit stock info to specific warehouse
-        
+
     Returns:
         200 OK: Product details including requested information
         404 Not Found: If product doesn't exist
-        
+
     Example Response:
         {
             "id": 123,
@@ -291,4 +291,4 @@ Common issues and their solutions.
 - Document schema changes with migrations
 - Explain model relationships
 - Document custom queries and optimizations
-- Include index information for performance-critical tables 
+- Include index information for performance-critical tables

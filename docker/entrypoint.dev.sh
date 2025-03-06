@@ -45,4 +45,4 @@ python manage.py migrate --noinput
 echo "Migrations applied"
 
 # Execute the command passed to docker run
-exec "$@" 
+exec "$@"

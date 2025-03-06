@@ -28,4 +28,4 @@
 - [ ] I have added type hints where applicable
 - [ ] My changes generate no new warnings or errors
 - [ ] I have run the pre-commit hooks on my changes
-- [ ] I have verified that my changes work as expected 
+- [ ] I have verified that my changes work as expected

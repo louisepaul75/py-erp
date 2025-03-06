@@ -116,7 +116,7 @@ The Django template (`pyerp/templates/base/vue_base.html`) includes the followin
     <script type="module">
         // During development, this connects to the Vite dev server for HMR
         import { createApp } from 'http://localhost:3000/@vite/client';
-        
+
         // Load main entry from Vite dev server
         import('http://localhost:3000/src/main.ts');
     </script>
@@ -193,4 +193,4 @@ If you're experiencing authentication issues, check the following:
 - [TypeScript Documentation](https://www.typescriptlang.org/)
 - [Vite Documentation](https://vitejs.dev/)
 - [Pinia Documentation](https://pinia.vuejs.org/)
-- [Vue Router Documentation](https://router.vuejs.org/) 
+- [Vue Router Documentation](https://router.vuejs.org/)

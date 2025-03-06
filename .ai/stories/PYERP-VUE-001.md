@@ -31,19 +31,19 @@ Currently, the application uses Django templates with AJAX for real-time updates
   - Setup TypeScript configuration
   - Configure ESLint and Prettier
   - Setup Jest for unit testing
-  
+
 - [ ] Configure Build Pipeline
   - Setup development and production build configurations
   - Configure static asset handling
   - Setup source maps for debugging
   - Configure code splitting
-  
+
 - [ ] Django Integration
   - Create Vue.js entry points in Django templates
   - Configure Django to serve Vue.js assets
   - Setup API endpoints for Vue.js components
   - Configure CSRF token handling
-  
+
 - [ ] Development Environment
   - Configure hot module replacement
   - Setup TypeScript type checking
@@ -82,4 +82,4 @@ Currently, the application uses Django templates with AJAX for real-time updates
 - Package Manager: npm
 - Testing Framework: Jest
 - Code Quality: ESLint + Prettier
-- CSS Framework: Tailwind CSS 
+- CSS Framework: Tailwind CSS

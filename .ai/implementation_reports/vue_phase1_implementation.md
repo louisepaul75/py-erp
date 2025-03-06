@@ -165,5 +165,5 @@ The Phase 1 implementation has successfully established the foundation for integ
 
 ---
 
-**Date**: March 4, 2024  
-**Implemented by**: pyERP Development Team 
+**Date**: March 4, 2024
+**Implemented by**: pyERP Development Team

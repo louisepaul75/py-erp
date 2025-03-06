@@ -1,13 +1,15 @@
 #!/usr/bin/env python
-from pyerp.products.image_api import ImageAPIClient
 import os
 import sys
+
 import django
 from django.conf import settings  # noqa: F401
 
+from pyerp.products.image_api import ImageAPIClient
+
 # Set up Django environment
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.local')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.local")
 django.setup()
 
 

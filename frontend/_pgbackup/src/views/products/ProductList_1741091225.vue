@@ -1,18 +1,18 @@
 <template>
   <div class="product-list">
     <h1>Products</h1>
-    
+
     <!-- Search and filter form -->
     <div class="filters">
       <div class="search-box">
-        <input 
-          type="text" 
-          v-model="searchQuery" 
-          placeholder="Search products..." 
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Search products..."
           @input="debounceSearch"
         />
       </div>
-      
+
       <div class="filter-options">
         <select v-model="selectedCategory" @change="loadProducts">
           <option value="">All Categories</option>
@@ -20,19 +20,19 @@
             {{ category.name }}
           </option>
         </select>
-        
+
         <label>
           <input type="checkbox" v-model="inStock" @change="loadProducts" />
           In Stock Only
         </label>
       </div>
     </div>
-    
+
     <!-- Loading indicator -->
     <div v-if="loading" class="loading">
       <p>Loading products...</p>
     </div>
-    
+
     <!-- Error message -->
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
@@ -48,10 +48,10 @@
         <h4>Debug API Connection</h4>
         <div class="api-url-input">
           <label for="apiUrl">API URL:</label>
-          <input 
-            type="text" 
-            id="apiUrl" 
-            v-model="apiUrl" 
+          <input
+            type="text"
+            id="apiUrl"
+            v-model="apiUrl"
             placeholder="http://localhost:8050/api"
           />
           <button @click="updateApiUrl" class="update-button">Update</button>
@@ -61,18 +61,18 @@
         {{ showApiDebug ? 'Hide Debug Options' : 'Show Debug Options' }}
       </button>
     </div>
-    
+
     <!-- Product grid -->
     <div v-else class="product-grid">
-      <div 
-        v-for="product in products" 
-        :key="product.id" 
+      <div
+        v-for="product in products"
+        :key="product.id"
         class="product-card"
         @click="viewProductDetails(product.id)"
       >
         <div class="product-image">
-          <img 
-            :src="product.primary_image ? product.primary_image.url : '/static/images/no-image.png'" 
+          <img
+            :src="product.primary_image ? product.primary_image.url : '/static/images/no-image.png'"
             :alt="product.name"
           />
         </div>
@@ -88,24 +88,24 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Pagination -->
     <div v-if="products.length > 0" class="pagination">
-      <button 
-        :disabled="currentPage === 1" 
+      <button
+        :disabled="currentPage === 1"
         @click="changePage(currentPage - 1)"
       >
         Previous
       </button>
       <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button 
-        :disabled="currentPage === totalPages" 
+      <button
+        :disabled="currentPage === totalPages"
         @click="changePage(currentPage + 1)"
       >
         Next
       </button>
     </div>
-    
+
     <!-- No results message -->
     <div v-if="products.length === 0 && !loading" class="no-results">
       <p>No products found matching your criteria.</p>
@@ -186,8 +186,8 @@ const mockProducts = [
     sku: 'DESK-001',
     variants_count: 4,
     category: { id: 1, name: 'Furniture' },
-    primary_image: { 
-      id: 1, 
+    primary_image: {
+      id: 1,
       url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -199,8 +199,8 @@ const mockProducts = [
     sku: 'CHAIR-002',
     variants_count: 6,
     category: { id: 1, name: 'Furniture' },
-    primary_image: { 
-      id: 2, 
+    primary_image: {
+      id: 2,
       url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -212,8 +212,8 @@ const mockProducts = [
     sku: 'SHELF-003',
     variants_count: 3,
     category: { id: 1, name: 'Furniture' },
-    primary_image: { 
-      id: 3, 
+    primary_image: {
+      id: 3,
       url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -225,8 +225,8 @@ const mockProducts = [
     sku: 'TECH-001',
     variants_count: 5,
     category: { id: 2, name: 'Electronics' },
-    primary_image: { 
-      id: 4, 
+    primary_image: {
+      id: 4,
       url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -238,8 +238,8 @@ const mockProducts = [
     sku: 'TECH-002',
     variants_count: 3,
     category: { id: 2, name: 'Electronics' },
-    primary_image: { 
-      id: 5, 
+    primary_image: {
+      id: 5,
       url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -251,8 +251,8 @@ const mockProducts = [
     sku: 'TECH-003',
     variants_count: 4,
     category: { id: 2, name: 'Electronics' },
-    primary_image: { 
-      id: 6, 
+    primary_image: {
+      id: 6,
       url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -264,8 +264,8 @@ const mockProducts = [
     sku: 'STAT-001',
     variants_count: 2,
     category: { id: 3, name: 'Stationery' },
-    primary_image: { 
-      id: 7, 
+    primary_image: {
+      id: 7,
       url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -277,8 +277,8 @@ const mockProducts = [
     sku: 'STAT-002',
     variants_count: 3,
     category: { id: 3, name: 'Stationery' },
-    primary_image: { 
-      id: 8, 
+    primary_image: {
+      id: 8,
       url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -290,26 +290,26 @@ const mockProducts = [
 const loadProducts = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     // Create params object with only defined values
     const params: Record<string, any> = {
       page: currentPage.value,
     };
-    
+
     // Only add parameters that have values
     if (searchQuery.value) params.q = searchQuery.value;
     if (selectedCategory.value) params.category = selectedCategory.value;
     if (inStock.value) params.in_stock = inStock.value;
-    
+
     // Always include is_parent parameter
     params.is_parent = true;
-    
+
     console.log('API request params:', params);
-    
+
     const response = await productApi.getProducts(params);
     console.log('API response:', response);
-    
+
     if (response && response.data) {
       if (response.data.results) {
         products.value = response.data.results;
@@ -332,7 +332,7 @@ const loadProducts = async () => {
     console.error('Error loading products:', err);
     // More detailed error message
     error.value = `Failed to load products: ${err.message || 'Unknown error'}`;
-    
+
     // If there's a response with error details, show them
     if (err.response && err.response.data) {
       console.error('API error details:', err.response.data);
@@ -340,7 +340,7 @@ const loadProducts = async () => {
         error.value += ` - ${err.response.data.detail}`;
       }
     }
-    
+
     // Clear products on error
     products.value = [];
     totalProducts.value = 0;
@@ -355,7 +355,7 @@ const loadCategories = async () => {
     console.log('Loading categories...');
     const response = await productApi.getCategories();
     console.log('Categories response:', response);
-    
+
     if (response && response.data) {
       categories.value = response.data;
     } else {
@@ -365,7 +365,7 @@ const loadCategories = async () => {
   } catch (err: any) {
     console.error('Error loading categories:', err);
     categories.value = [];
-    
+
     // Don't show error for categories, just log it
     // This allows the product list to still load even if categories fail
   }
@@ -386,17 +386,17 @@ const viewProductDetails = (id: number) => {
 const testApiConnection = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     console.log('Testing API connection with minimal parameters');
-    
+
     // Try a simple request with no filters
     const response = await productApi.getProducts();
     console.log('API test successful:', response.data);
-    
+
     // If successful, show success message
     error.value = 'API test successful! Now trying to load products...';
-    
+
     // Then try to load products again
     setTimeout(() => {
       loadProducts();
@@ -404,19 +404,19 @@ const testApiConnection = async () => {
   } catch (err: any) {
     console.error('API test failed:', err);
     error.value = `API test failed: ${err.message || 'Unknown error'}`;
-    
+
     if (err.response) {
       console.error('API test response:', err.response);
       error.value += ` (Status: ${err.response.status})`;
-      
+
       if (err.response.data && err.response.data.detail) {
         error.value += ` - ${err.response.data.detail}`;
       }
     }
-    
+
     // Show option to use mock data
     error.value += '\n\nWould you like to use sample data instead?';
-    
+
     // Add button to use mock data
     setTimeout(() => {
       const errorDiv = document.querySelector('.error');
@@ -437,7 +437,7 @@ const testApiConnection = async () => {
 const useMockData = () => {
   loading.value = true;
   error.value = '';
-  
+
   setTimeout(() => {
     products.value = mockProducts;
     totalProducts.value = mockProducts.length;
@@ -449,7 +449,7 @@ const useMockData = () => {
 const updateApiUrl = () => {
   // Store in localStorage for persistence
   localStorage.setItem('apiUrl', apiUrl.value);
-  
+
   // Force reload the page to apply the new API URL
   window.location.reload();
 };
@@ -457,17 +457,17 @@ const updateApiUrl = () => {
 // Initialize component
 onMounted(() => {
   console.log('ProductList component mounted');
-  
+
   // Check for stored API URL
   const storedApiUrl = localStorage.getItem('apiUrl');
   if (storedApiUrl) {
     apiUrl.value = storedApiUrl;
     console.log('Using stored API URL:', apiUrl.value);
   }
-  
+
   // Use mock data by default since the API is not working
   useMockData();
-  
+
   // Still load categories for the filter
   loadCategories();
 });
@@ -476,7 +476,7 @@ onMounted(() => {
 const checkServerStatus = async (): Promise<boolean> => {
   try {
     console.log('Checking server status...');
-    
+
     // Try to fetch the API status
     let response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api'}/status`, {
       method: 'GET',
@@ -485,7 +485,7 @@ const checkServerStatus = async (): Promise<boolean> => {
       },
       mode: 'cors',
     });
-    
+
     // If status endpoint doesn't exist, try the products endpoint
     if (response.status === 404) {
       console.log('Status endpoint not found, trying products endpoint...');
@@ -497,15 +497,15 @@ const checkServerStatus = async (): Promise<boolean> => {
         mode: 'cors',
       });
     }
-    
+
     console.log('Server status response:', response);
-    
+
     // Consider 500 errors as server being up but having issues
     if (response.status === 500) {
       console.warn('Server is up but returning 500 error');
       return true;
     }
-    
+
     return response.ok;
   } catch (err) {
     console.error('Server status check failed:', err);
@@ -701,11 +701,11 @@ h1 {
   .filters {
     flex-direction: column;
   }
-  
+
   .filter-options {
     flex-wrap: wrap;
   }
-  
+
   .product-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
@@ -763,4 +763,4 @@ h1 {
 .debug-toggle:hover {
   background-color: #f8f9fa;
 }
-</style> 
+</style>

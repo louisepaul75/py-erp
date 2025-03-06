@@ -4,8 +4,10 @@ Template for writing new unit tests.
 This file provides examples of how to test different components of the pyERP
     system.
 """
-import pytest
+
 from unittest.mock import patch
+
+import pytest
 
 # Import the module you're testing
 # from pyerp.core.models import YourModel
@@ -25,30 +27,27 @@ class TestModelExample:
         """Create a test instance of your model."""
         # Example:
         # return YourModel(name="Test", value=42)
-        pass
 
     def test_model_creation(self, model_instance):
         """Test that a model can be created with expected values."""
         # Example:
         # assert model_instance.name == "Test"
         # assert model_instance.value == 42
-        pass
 
     def test_model_methods(self, model_instance):
         """Test model methods."""
         # Example:
         # resultt = model_instance.calculate_something()
         # assert resultt == expected_value
-        pass
 
-    @patch('django.db.models.Model.save')
+    @patch("django.db.models.Model.save")
     def test_model_save(self, mock_save, model_instance):
         """Test model save behavior without hitting the database."""
         # Example:
         # model_instance.save()
         # assert mock_save.called
         # assert model_instance.modified_date is not None
-        pass
+
 
 ###############################################################################
 # 2. Form Validation Test Example
@@ -66,7 +65,6 @@ class TestFormExample:
         #     'field1': 'valid_value',
         #     'field2': 42,
         # }
-        pass
 
     @pytest.fixture
     def invalid_form_data(self):
@@ -76,14 +74,12 @@ class TestFormExample:
         #     'field1': '',  # Required field
         #     'field2': -1,  # Must be positive
         # }
-        pass
 
     def test_form_valid(self, valid_form_data):
         """Test form with valid data."""
         # Example:
         # form = YourForm(data=valid_form_data)
         # assert form.is_valid() is True
-        pass
 
     def test_form_invalid(self, invalid_form_data):
         """Test form with invalid data."""
@@ -92,7 +88,7 @@ class TestFormExample:
         # assert form.is_valid() is False
         # assert 'field1' in form.errors
         # assert 'field2' in form.errors
-        pass
+
 
 ###############################################################################
 # 3. View Test Example
@@ -111,9 +107,8 @@ class TestViewExample:
         # request.user.is_authenticated = True
         # request.method = 'GET'
         # return request
-        pass
 
-    @patch('pyerp.core.models.YourModel.objects.filter')
+    @patch("pyerp.core.models.YourModel.objects.filter")
     def test_list_view(self, mock_filter, mock_request):
         """Test that a list view returns expected objects."""
         # Example:
@@ -125,9 +120,8 @@ class TestViewExample:
         #
         # assert response.status_code == 200
         # assert mock_filter.called
-        pass
 
-    @patch('pyerp.core.models.YourModel.objects.get')
+    @patch("pyerp.core.models.YourModel.objects.get")
     def test_detail_view(self, mock_get, mock_request):
         """Test that a detail view returns the expected object."""
         # Example:
@@ -139,7 +133,7 @@ class TestViewExample:
         #
         # assert response.status_code == 200
         # assert mock_get.called_with(pk=1)
-        pass
+
 
 ###############################################################################
 # 4. API Test Example
@@ -154,9 +148,8 @@ class TestApiExample:
         """Create an API client."""
         # from rest_framework.test import APIClient
         # return APIClient()
-        pass
 
-    @patch('pyerp.core.models.YourModel.objects.all')
+    @patch("pyerp.core.models.YourModel.objects.all")
     def test_list_api(self, mock_all, api_client):
         """Test API list endpoint."""
         # Example:
@@ -171,9 +164,8 @@ class TestApiExample:
         #
         # assert response.status_code == 200
         # assert len(response.json()) == 2
-        pass
 
-    @patch('pyerp.core.models.YourModel.objects.create')
+    @patch("pyerp.core.models.YourModel.objects.create")
     def test_create_api(self, mock_create, api_client):
         """Test API create endpoint."""
         # Example:
@@ -187,7 +179,7 @@ class TestApiExample:
         #
         # assert response.status_code == 201
         # assert response.json()['name'] == 'New Object'
-        pass
+
 
 ###############################################################################
 # 5. Utility Function Test Example
@@ -199,7 +191,7 @@ def test_utility_function():
     # Example:
     # resultt = your_function(arg1=1, arg2="test")
     # assert resultt == expected_value
-    pass
+
 
 ###############################################################################
 # 6. Command Test Example
@@ -209,11 +201,10 @@ def test_utility_function():
 class TestCommandExample:
     """Example of how to test management commands."""
 
-    @patch('pyerp.core.management.commands.your_command.Command.handle')
+    @patch("pyerp.core.management.commands.your_command.Command.handle")
     def test_command(self, mock_handle):
         """Test that a management command can be called."""
         # Example:
         # from django.core.management import call_command
         # call_command('your_command', arg1='value1', arg2='value2')
         # mock_handle.assert_called_once()
-        pass

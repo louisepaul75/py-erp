@@ -91,4 +91,4 @@ If you encounter issues with Docker:
 
 3. Ensure PostgreSQL is accessible from the container.
 
-4. Check for port conflicts on the host machine. 
+4. Check for port conflicts on the host machine.

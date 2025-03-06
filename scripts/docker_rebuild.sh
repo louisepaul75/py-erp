@@ -40,7 +40,7 @@ if [ -z "$COMPOSE_FILE" ]; then
   echo -e "  ${RED}No Docker Compose file found in standard locations${NC}"
   echo -e "  ${YELLOW}Please specify the path to your Docker Compose file:${NC}"
   read -p "  Docker Compose file path: " COMPOSE_FILE
-  
+
   if [ ! -f "$COMPOSE_FILE" ]; then
     echo -e "  ${RED}File not found: $COMPOSE_FILE${NC}"
     exit 1
@@ -93,4 +93,4 @@ echo -e "${GREEN}The web application should now be accessible via HTTPS${NC}"
 echo -e "${YELLOW}If you encounter 'too many redirects' errors:${NC}"
 echo -e "${YELLOW}  1. Clear your browser cache${NC}"
 echo -e "${YELLOW}  2. Check that settings_https.py is being properly loaded${NC}"
-echo -e "${YELLOW}  3. Verify X-Forwarded-Proto header is set to 'https' in Nginx config${NC}" 
+echo -e "${YELLOW}  3. Verify X-Forwarded-Proto header is set to 'https' in Nginx config${NC}"

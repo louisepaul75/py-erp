@@ -79,7 +79,7 @@ class ProductImage(models.Model):
     priority = models.IntegerField(default=0, help_text="Display priority (lower numbers shown first)")
     metadata = models.JSONField(default=dict, blank=True, help_text="Additional metadata from the source system")
     last_synced = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['priority', 'id']
         unique_together = [('product', 'external_id')]
@@ -108,7 +108,7 @@ class ImageSyncLog(models.Model):
     images_deleted = models.IntegerField(default=0)
     products_affected = models.IntegerField(default=0)
     error_message = models.TextField(blank=True)
-    
+
     class Meta:
         ordering = ['-started_at']
 ```
@@ -216,7 +216,7 @@ IMAGE_API = {
   2. If no images found, tries with the product's own SKU
   3. If still no images and it's a variant, tries with the base_sku
   4. If still no images and it has a parent, tries with the parent's SKU
-  
+
 - ✅ **Optimized Batch Processing**: Enhanced ProductListView to:
   - Create a mapping of products to their appropriate article numbers
   - Get unique article numbers to search for (reducing API calls)
@@ -251,12 +251,12 @@ IMAGE_API = {
   - Replaced bulk operations with individual record creation and updates
   - Each image is saved individually using `image.save()` to ensure proper ID generation
   - Added error handling for individual records to prevent sync failures
-  
+
 - ✅ **Sequence Management**:
   - Ensured proper usage of the `products_productimage_id_seq` sequence
   - Fixed potential ID conflicts that could occur with bulk operations
   - Improved compatibility with PostgreSQL's sequence management
-  
+
 - ✅ **Performance Optimizations**:
   - Maintained transaction handling for database consistency
   - Optimized page size defaults for better performance
@@ -283,4 +283,4 @@ IMAGE_API = {
 - Code passes all tests (>80% coverage) and meets quality standards
 - Documentation is complete and up-to-date
 - Feature has been tested in staging environment with real data
-- Product owners have approved the implementation 
+- Product owners have approved the implementation

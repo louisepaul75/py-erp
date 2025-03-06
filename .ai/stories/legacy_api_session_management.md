@@ -2,8 +2,8 @@
 
 ## Story Overview
 
-**As a** systems developer,  
-**I want to** improve session management in our Legacy API integration,  
+**As a** systems developer,
+**I want to** improve session management in our Legacy API integration,
 **So that** we avoid session-related errors and optimize the stability of our data synchronization processes.
 
 ## Background
@@ -53,7 +53,7 @@ Our integration with the legacy 4D ERP system relies on proper session managemen
    ```python
    # Clear any existing cookies to prevent duplicates
    self.session.cookies.clear()
-   
+
    # Set exactly one cookie with the current session ID
    if self.session_id:
        self.session.cookies.set('WASID4D', self.session_id)
@@ -66,7 +66,7 @@ Our integration with the legacy 4D ERP system relies on proper session managemen
        'timestamp': datetime.now().isoformat(),
        'value': session_id
    }
-   
+
    with open(COOKIE_FILE_PATH, 'w') as f:
        json.dump(cookie_data, f)
    ```
@@ -86,7 +86,7 @@ Our integration with the legacy 4D ERP system relies on proper session managemen
    ```python
    # Make a simple API request to check if session is valid
    response = self.session.get(f"{self.base_url}/rest/$info")
-   
+
    # Check if response is successful
    if response.status_code == 200:
        return True
@@ -99,7 +99,7 @@ Our integration with the legacy 4D ERP system relies on proper session managemen
    # If validation fails, attempt to get a new session
    self.session.cookies.clear()
    response = self.session.get(f"{self.base_url}/rest/$info")
-   
+
    # Extract new session cookie
    for cookie in response.cookies:
        if cookie.name == 'WASID4D':
@@ -125,4 +125,4 @@ Our integration with the legacy 4D ERP system relies on proper session managemen
 ## Related Documentation
 
 Detailed technical findings and implementation notes are available in:
-- [docs/legacy_erp/api/direct_api_integration.md](../../docs/legacy_erp/api/direct_api_integration.md) 
+- [docs/legacy_erp/api/direct_api_integration.md](../../docs/legacy_erp/api/direct_api_integration.md)

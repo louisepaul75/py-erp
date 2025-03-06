@@ -2,38 +2,38 @@ name: Lint
 
 on:
   push:
-    branches: [ prod, dev,dev-ui ]
+    branches: [ prod, dev]
   pull_request:
-    branches: [ prod, dev,dev-ui ]
+    branches: [ prod, dev]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.dev.txt
-      
+
       - name: Lint with flake8
-        run: flake8 pyerp tests
-      
+        run: flake8 --disable-noqa pyerp tests
+
       - name: Check formatting with black
         run: black --check pyerp tests
-      
+
       - name: Check imports with isort
         run: isort --check-only --profile black pyerp tests
-      
+
       - name: Type check with mypy
         run: mypy pyerp
-      
+
       - name: Security check with bandit
         run: bandit -c pyproject.toml -r pyerp

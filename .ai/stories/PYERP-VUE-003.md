@@ -61,5 +61,5 @@ Following the successful setup of the Vue.js infrastructure (PYERP-VUE-001 and P
 
 ---
 
-**Last Updated:** March 4, 2024  
-**Created By:** pyERP Development Team 
+**Last Updated:** March 4, 2024
+**Created By:** pyERP Development Team

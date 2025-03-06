@@ -5,32 +5,40 @@ This module provides the DirectAPIClient class which handles all interactions
 with the legacy API, including data retrieval and updates.
 """
 
-import logging
-import requests
 import json
-import pandas as pd  # noqa: F401
+import logging
 import os
-from typing import Dict, List, Optional, Any, Union  # noqa: F401
-from urllib.parse import urljoin
 import socket
 import time
+from typing import Any
+from urllib.parse import urljoin
 
-from pyerp.direct_api.exceptions import (  # noqa: F401
-    DirectAPIError, AuthenticationError, ConnectionError,  # noqa: E128
-    ResponseError, DataError, ServerUnavailableError  # noqa: E501
+import pandas as pd
+import requests
+
+from pyerp.direct_api.auth import (
+    get_session,
+    invalidate_session,
+    is_session_limit_reached,
+    set_session_limit_reached,
 )
-from pyerp.direct_api.auth import get_session, invalidate_session, set_session_limit_reached, is_session_limit_reached  # noqa: E501
-from pyerp.direct_api.settings import (  # noqa: F401
-    API_ENVIRONMENTS,  # noqa: E128
-    API_REST_ENDPOINT,
-    API_REQUEST_TIMEOUT,
+from pyerp.direct_api.exceptions import (
+    ConnectionError,
+    DataError,
+    DirectAPIError,
+    ResponseError,
+    ServerUnavailableError,
+)
+from pyerp.direct_api.settings import (
+    API_ENVIRONMENTS,
     API_MAX_RETRIES,
-    API_RETRY_BACKOFF_FACTOR,
     API_PAGINATION_ENABLED,
-    API_PAGINATION_SIZE
+    API_REQUEST_TIMEOUT,
+    API_REST_ENDPOINT,
+    API_RETRY_BACKOFF_FACTOR,
 )
 
- # Configure logging
+# Configure logging
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +50,7 @@ class DirectAPIClient:
     the legacy system, replacing the WSZ_api package with a direct implementation.  # noqa: E501
     """
 
-    def __init__(self, environment: str = 'live', timeout: int = None):
+    def __init__(self, environment: str = "live", timeout: int = None):
         """
         Initialize the API client.
 
@@ -53,26 +61,29 @@ class DirectAPIClient:
         self.environment = environment
         self.timeout = timeout or API_REQUEST_TIMEOUT
 
- # Load environment configuration
+        # Load environment configuration
         try:
             self.config = API_ENVIRONMENTS[environment]
         except KeyError:
-            raise ValueError(f"Unknown environment: {environment}. "
-                           f"Available environments: {', '.join(API_ENVIRONMENTS.keys())}")  # noqa: E501
+            raise ValueError(
+                f"Unknown environment: {environment}. "
+                f"Available environments: {', '.join(API_ENVIRONMENTS.keys())}",
+            )
 
- # Check if we have required configuration
-        if not self.config.get('base_url'):
-            raise ValueError(f"Missing base_url in environment configuration for {environment}")  # noqa: E501
+        # Check if we have required configuration
+        if not self.config.get("base_url"):
+            raise ValueError(
+                f"Missing base_url in environment configuration for {environment}",
+            )
 
     def _get_base_url(self) -> str:
-
         """Get the base URL for API requests."""
-        return self.config['base_url']
+        return self.config["base_url"]
 
     def _get_session(self):
         """Get a session for the current environment."""
         if is_session_limit_reached():
-            error_msg = "Cannot get session because the session limit has been reached (402 error)"  # noqa: E501
+            error_msg = "Cannot get session because the session limit has been reached (402 error)"
             logger.error(error_msg)
             raise DirectAPIError(error_msg)
 
@@ -93,13 +104,12 @@ class DirectAPIClient:
         return urljoin(f"{api_path}/", endpoint)
 
     def _make_request(
-
         self,
         method: str,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> requests.Response:
         """
         Make an HTTP request to the API.
@@ -120,54 +130,61 @@ class DirectAPIClient:
             ResponseError: If the API returns an error response
         """
         if is_session_limit_reached():
-            error_msg = "Cannot make API request because the session limit has been reached (402 error)"  # noqa: E501
+            error_msg = "Cannot make API request because the session limit has been reached (402 error)"
             logger.error(error_msg)
             raise DirectAPIError(error_msg)
 
         url = self._build_url(endpoint)
 
- # Cookie file path - directly use the same path as in auth.py
-        cookie_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.global_session_cookie')  # noqa: E501
+        # Cookie file path - directly use the same path as in auth.py
+        cookie_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            ".global_session_cookie",
+        )
         cookie_value = None
 
- # Try to directly read the cookie from file
+        # Try to directly read the cookie from file
         if os.path.exists(cookie_file):
             try:
-                with open(cookie_file, 'r') as f:
+                with open(cookie_file) as f:
                     cookie_data = json.load(f)
-                    if 'value' in cookie_data:
-                        cookie_value = cookie_data['value']
-                        logger.debug(f"Loaded cookie value directly from file: {cookie_value[:10]}...")  # noqa: E501
+                    if "value" in cookie_data:
+                        cookie_value = cookie_data["value"]
+                        logger.debug(
+                            f"Loaded cookie value directly from file: {cookie_value[:10]}...",
+                        )
             except Exception as e:
                 logger.warning(f"Error reading cookie file directly: {e}")
 
- # Fall back to session method if direct reading failed
+        # Fall back to session method if direct reading failed
         if not cookie_value:
-            logger.debug("Using session method to get cookie as direct file read failed")  # noqa: E501
+            logger.debug(
+                "Using session method to get cookie as direct file read failed",
+            )
             cookie_value = self._get_session().get_cookie()
 
- # Keep track of whether or not we've already retried with a refreshed session  # noqa: E501
+        # Keep track of whether or not we've already retried with a refreshed session
         retries = 0
         last_error = None
 
- # Store the original cookie value to detect changes
-        original_cookie_value = cookie_value  # noqa: F841
+        # Store the original cookie value to detect changes
+        original_cookie_value = cookie_value
 
- # Always use WASID4D as the cookie name
-        cookie_name = 'WASID4D'
+        # Always use WASID4D as the cookie name
+        cookie_name = "WASID4D"
 
         while retries <= API_MAX_RETRIES:
             cookie_header = f"{cookie_name}={cookie_value}"
 
- # Prepare headers
+            # Prepare headers
             request_headers = {
-                'Cookie': cookie_header,  # noqa: E128
-                'Accept': 'application/json'
+                "Cookie": cookie_header,
+                "Accept": "application/json",
             }
             if headers:
                 request_headers.update(headers)
 
- # Log the cookie being used (truncated for security)
+            # Log the cookie being used (truncated for security)
             logger.debug(f"Using cookie: {cookie_name}={cookie_value[:10]}...")
 
             try:
@@ -178,45 +195,58 @@ class DirectAPIClient:
                     params=params,
                     json=data,
                     headers=request_headers,
-                    timeout=self.timeout
+                    timeout=self.timeout,
                 )
 
- # Check for successful response
+                # Check for successful response
                 if 200 <= response.status_code < 300:
                     return response
-                elif response.status_code == 401 or response.status_code == 403 or response.status_code == 404:  # noqa: E501
+                if (
+                    response.status_code == 401
+                    or response.status_code == 403
+                    or response.status_code == 404
+                ):
                     if is_session_limit_reached():
-                        error_msg = f"Authentication error with status {response.status_code}, but cannot refresh because session limit reached"  # noqa: E501
+                        error_msg = f"Authentication error with status {response.status_code}, but cannot refresh because session limit reached"
                         logger.error(error_msg)
-                        raise ResponseError(response.status_code, error_msg, response.text)  # noqa: E501
+                        raise ResponseError(
+                            response.status_code,
+                            error_msg,
+                            response.text,
+                        )
 
-                    logger.warning(f"Authentication failed with status {response.status_code}, invalidating session and refreshing")  # noqa: E501
+                    logger.warning(
+                        f"Authentication failed with status {response.status_code}, invalidating session and refreshing",
+                    )
                     invalidate_session(self.environment)
                     self._get_session().refresh()
 
- # Get new cookie value and update headers
+                    # Get new cookie value and update headers
                     cookie_value = self._get_session().get_cookie()
                     cookie_header = f"{cookie_name}={cookie_value}"
-                    request_headers['Cookie'] = cookie_header
+                    request_headers["Cookie"] = cookie_header
 
- # Log the new cookie being used (truncated for security)
-                    logger.debug(f"Using new cookie after refresh: {cookie_name}={cookie_value[:10]}...")  # noqa: E501
+                    # Log the new cookie being used (truncated for security)
+                    logger.debug(
+                        f"Using new cookie after refresh: {cookie_name}={cookie_value[:10]}...",
+                    )
 
                     retries += 1
                     continue
-                elif response.status_code == 402:
+                if response.status_code == 402:
                     set_session_limit_reached(True)
 
- # Do NOT create a new session - that would make the problem worse  # noqa: E501
-                    logger.warning("Received 402 error (too many sessions) - setting global session limit flag")  # noqa: E501
+                    # Do NOT create a new session - that would make the problem worse
+                    logger.warning(
+                        "Received 402 error (too many sessions) - setting global session limit flag",
+                    )
 
-                    error_msg = "API request failed with status 402 (too many sessions)"  # noqa: E501
+                    error_msg = "API request failed with status 402 (too many sessions)"
                     logger.error(error_msg)
-                    raise ResponseError(response.status_code, error_msg, response.text)  # noqa: E501
-                else:
-                    error_msg = f"API request failed with status {response.status_code}"  # noqa: E501
-                    logger.error(error_msg)
-                    raise ResponseError(response.status_code, error_msg, response.text)  # noqa: E501
+                    raise ResponseError(response.status_code, error_msg, response.text)
+                error_msg = f"API request failed with status {response.status_code}"
+                logger.error(error_msg)
+                raise ResponseError(response.status_code, error_msg, response.text)
 
             except requests.exceptions.ConnectTimeout as e:
                 last_error = e
@@ -224,42 +254,56 @@ class DirectAPIClient:
                 retries += 1
 
                 if retries <= API_MAX_RETRIES:
-                    backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
-                    logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")  # noqa: E501
+                    backoff = API_RETRY_BACKOFF_FACTOR * (2**retries)
+                    logger.info(
+                        f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})",
+                    )
                     time.sleep(backoff)
                 else:
-                    logger.error(f"Server appears to be unavailable after {retries-1} retries")  # noqa: E501
+                    logger.error(
+                        f"Server appears to be unavailable after {retries - 1} retries",
+                    )
                     raise ServerUnavailableError(
-                        f"Legacy ERP server at {self._get_base_url()} is unavailable (connection timeout)",  # noqa: E501
-                        inner_exception=last_error  # noqa: F841
+                        f"Legacy ERP server at {self._get_base_url()} is unavailable (connection timeout)",
+                        inner_exception=last_error,
                     )
 
             except requests.exceptions.ConnectionError as e:
                 last_error = e
                 logger.warning(f"Connection error during API request: {e}")
 
- # Check if this is a connection refused error, which indicates server unavailability  # noqa: E501
-                if "Connection refused" in str(e) or "Failed to establish a new connection" in str(e):  # noqa: E501
+                # Check if this is a connection refused error, which indicates server unavailability
+                if "Connection refused" in str(
+                    e,
+                ) or "Failed to establish a new connection" in str(e):
                     retries += 1
                     if retries <= API_MAX_RETRIES:
-                        backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
-                        logger.info(f"Server appears to be down. Retrying in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")  # noqa: E501
+                        backoff = API_RETRY_BACKOFF_FACTOR * (2**retries)
+                        logger.info(
+                            f"Server appears to be down. Retrying in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})",
+                        )
                         time.sleep(backoff)
                     else:
-                        logger.error(f"Server is unreachable after {retries-1} retries")  # noqa: E501
+                        logger.error(
+                            f"Server is unreachable after {retries - 1} retries",
+                        )
                         raise ServerUnavailableError(
-                            f"Legacy ERP server at {self._get_base_url()} is unavailable (connection refused)",  # noqa: E501
-                            inner_exception=last_error  # noqa: F841
+                            f"Legacy ERP server at {self._get_base_url()} is unavailable (connection refused)",
+                            inner_exception=last_error,
                         )
                 else:
                     retries += 1
                     if retries <= API_MAX_RETRIES:
-                        backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
-                        logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")  # noqa: E501
+                        backoff = API_RETRY_BACKOFF_FACTOR * (2**retries)
+                        logger.info(
+                            f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})",
+                        )
                         time.sleep(backoff)
                     else:
-                        logger.error(f"API request failed after {retries-1} retries")  # noqa: E501
-                        raise ConnectionError(f"Unable to connect to the API after {retries-1} retries") from last_error  # noqa: E501
+                        logger.error(f"API request failed after {retries - 1} retries")
+                        raise ConnectionError(
+                            f"Unable to connect to the API after {retries - 1} retries",
+                        ) from last_error
 
             except socket.gaierror as e:
                 last_error = e
@@ -267,48 +311,55 @@ class DirectAPIClient:
                 retries += 1
 
                 if retries <= API_MAX_RETRIES:
-                    backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
-                    logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")  # noqa: E501
+                    backoff = API_RETRY_BACKOFF_FACTOR * (2**retries)
+                    logger.info(
+                        f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})",
+                    )
                     time.sleep(backoff)
                 else:
-                    logger.error(f"Cannot resolve server hostname after {retries-1} retries")  # noqa: E501
+                    logger.error(
+                        f"Cannot resolve server hostname after {retries - 1} retries",
+                    )
                     raise ServerUnavailableError(
-                        f"Cannot resolve legacy ERP server at {self._get_base_url()} (DNS error)",  # noqa: E501
-                        inner_exception=last_error  # noqa: F841
+                        f"Cannot resolve legacy ERP server at {self._get_base_url()} (DNS error)",
+                        inner_exception=last_error,
                     )
 
             except requests.RequestException as e:
                 last_error = e
                 logger.warning(f"Request error during API request: {e}")
 
- # Calculate backoff time for retry
+                # Calculate backoff time for retry
                 retries += 1
 
                 if retries <= API_MAX_RETRIES:
-                    backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
-                    logger.info(f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")  # noqa: E501
+                    backoff = API_RETRY_BACKOFF_FACTOR * (2**retries)
+                    logger.info(
+                        f"Retrying request in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})",
+                    )
                     time.sleep(backoff)
                 else:
-                    logger.error(f"API request failed after {retries-1} retries")  # noqa: E501
-                    raise ConnectionError(f"Unable to connect to the API after {retries-1} retries") from last_error  # noqa: E501
+                    logger.error(f"API request failed after {retries - 1} retries")
+                    raise ConnectionError(
+                        f"Unable to connect to the API after {retries - 1} retries",
+                    ) from last_error
 
             except Exception as e:
                 logger.error(f"Unexpected error during API request: {e}")
                 raise
 
- # This should not be reached due to the retry logic above, but just in case  # noqa: E501
+        # This should not be reached due to the retry logic above, but just in case
         if last_error:
-            raise ConnectionError("Unable to connect to the API") from last_error  # noqa: E501
+            raise ConnectionError("Unable to connect to the API") from last_error
 
     def fetch_table(
-
         self,
         table_name: str,
         top: int = 100,
         skip: int = 0,
         new_data_only: bool = True,
-        date_created_start: Optional[str] = None,
-        filter_query: Optional[str] = None
+        date_created_start: str | None = None,
+        filter_query: str | None = None,
     ) -> pd.DataFrame:
         """
         Fetch data from a table in the legacy system.
@@ -330,105 +381,122 @@ class DirectAPIClient:
             DataError: If there's an issue with the data format
         """
         params = {
-            '$top': top,  # noqa: E128
-            '$skip': skip,
+            "$top": top,
+            "$skip": skip,
         }
 
- # Add optional filters
+        # Add optional filters
         if new_data_only:
-            params['new_data_only'] = 'true'
+            params["new_data_only"] = "true"
 
         if date_created_start:
-            params['date_created_start'] = date_created_start
+            params["date_created_start"] = date_created_start
 
         if filter_query:
-            params['$filter'] = filter_query
+            params["$filter"] = filter_query
 
         try:
-            response = self._make_request('GET', table_name, params=params)
+            response = self._make_request("GET", table_name, params=params)
 
- # Parse the response
+            # Parse the response
             try:
                 data = response.json()
             except json.JSONDecodeError as e:
                 raise DataError(f"Invalid JSON response: {e}") from e
 
- # Handle 4D API response format
-            if isinstance(data, dict) and '__ENTITIES' in data:
-                entities = data['__ENTITIES']
-                logger.info(f"Extracted {len(entities)} entities from 4D API response")  # noqa: E501
+            # Handle 4D API response format
+            if isinstance(data, dict) and "__ENTITIES" in data:
+                entities = data["__ENTITIES"]
+                logger.info(f"Extracted {len(entities)} entities from 4D API response")
 
- # Check if pagination is enabled and more data is available
-                total_count = data.get('__COUNT', 0)
+                # Check if pagination is enabled and more data is available
+                total_count = data.get("__COUNT", 0)
                 current_count = len(entities)
 
-                if API_PAGINATION_ENABLED and current_count < total_count and current_count == top:  # noqa: E501
-                    logger.debug(f"Fetched {current_count} of {total_count} records, pagination needed")  # noqa: E501
+                if (
+                    API_PAGINATION_ENABLED
+                    and current_count < total_count
+                    and current_count == top
+                ):
+                    logger.debug(
+                        f"Fetched {current_count} of {total_count} records, pagination needed",
+                    )
 
- # Use the fetched data as the starting point
+                    # Use the fetched data as the starting point
                     result_data = entities
                     current_skip = skip + top
 
- # Fetch additional pages if available
-                    while current_skip < total_count and len(result_data) < total_count:  # noqa: E501
-                        params['$skip'] = current_skip
+                    # Fetch additional pages if available
+                    while current_skip < total_count and len(result_data) < total_count:
+                        params["$skip"] = current_skip
 
- # Fetch the next page
+                        # Fetch the next page
                         try:
-                            page_response = self._make_request('GET', table_name, params=params)  # noqa: E501
+                            page_response = self._make_request(
+                                "GET",
+                                table_name,
+                                params=params,
+                            )
                             page_data = page_response.json()
 
- # Check if we got data in the expected format
-                            if isinstance(page_data, dict) and '__ENTITIES' in page_data:  # noqa: E501
-                                page_entities = page_data['__ENTITIES']
+                            # Check if we got data in the expected format
+                            if (
+                                isinstance(page_data, dict)
+                                and "__ENTITIES" in page_data
+                            ):
+                                page_entities = page_data["__ENTITIES"]
 
- # Add to our result data
+                                # Add to our result data
                                 result_data.extend(page_entities)
-                                logger.debug(f"Fetched additional {len(page_entities)} records, total: {len(result_data)}")  # noqa: E501
+                                logger.debug(
+                                    f"Fetched additional {len(page_entities)} records, total: {len(result_data)}",
+                                )
 
- # Update for next page
+                                # Update for next page
                                 current_skip += len(page_entities)
 
- # Break if we got fewer records than requested (last page)  # noqa: E501
+                                # Break if we got fewer records than requested (last page)
                                 if len(page_entities) < top:
                                     break
                             else:
-                                logger.warning(f"Unexpected format in pagination response: {type(page_data)}")  # noqa: E501
+                                logger.warning(
+                                    f"Unexpected format in pagination response: {type(page_data)}",
+                                )
                                 break
 
                         except Exception as e:
-                            logger.warning(f"Error fetching additional pages: {e}")  # noqa: E501
+                            logger.warning(f"Error fetching additional pages: {e}")
                             break
 
- # Use the combined data
+                    # Use the combined data
                     all_data = result_data
                 else:
                     all_data = entities
 
- # Convert to DataFrame
+                # Convert to DataFrame
                 df = pd.DataFrame(all_data)
-                logger.info(f"Successfully fetched {len(df)} records from {table_name}")  # noqa: E501
+                logger.info(f"Successfully fetched {len(df)} records from {table_name}")
                 return df
-            elif isinstance(data, list):
+            if isinstance(data, list):
                 df = pd.DataFrame(data)
-                logger.info(f"Successfully fetched {len(df)} records from {table_name}")  # noqa: E501
+                logger.info(f"Successfully fetched {len(df)} records from {table_name}")
                 return df
-            else:
-                raise DataError(f"Unexpected data format: {type(data)}. Keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")  # noqa: E501
+            raise DataError(
+                f"Unexpected data format: {type(data)}. Keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}",
+            )
 
-        except (ConnectionError, ResponseError) as e:
+        except (ConnectionError, ResponseError):
             raise
         except Exception as e:
             logger.error(f"Failed to fetch data from {table_name}: {e}")
             raise DirectAPIError(f"Error fetching data: {e}") from e
 
     def push_field(
-
         self,
         table_name: str,
-        record_id: Union[int, str],
+        record_id: int | str,
         field_name: str,
-        field_value: Any
+        field_value: Any,
     ) -> bool:
         """
         Push a field value to the legacy system.
@@ -449,27 +517,28 @@ class DirectAPIClient:
         try:
             endpoint = f"{table_name}/{record_id}/{field_name}"
 
- # Prepare the data
-            data = {'value': field_value}
+            # Prepare the data
+            data = {"value": field_value}
 
- # Make the API request
-            response = self._make_request('PUT', endpoint, data=data)
+            # Make the API request
+            response = self._make_request("PUT", endpoint, data=data)
 
- # Check for success
+            # Check for success
             return response.status_code == 200
 
-        except (ConnectionError, ResponseError) as e:
+        except (ConnectionError, ResponseError):
             raise
         except Exception as e:
-            logger.error(f"Failed to push {field_name}={field_value} to {table_name}/{record_id}: {e}")  # noqa: E501
+            logger.error(
+                f"Failed to push {field_name}={field_value} to {table_name}/{record_id}: {e}",
+            )
             raise DirectAPIError(f"Error updating data: {e}") from e
 
     def fetch_record(
-
         self,
         table_name: str,
-        record_id: Union[int, str]
-    ) -> Dict[str, Any]:
+        record_id: int | str,
+    ) -> dict[str, Any]:
         """
         Fetch a single record by ID.
 
@@ -488,18 +557,18 @@ class DirectAPIClient:
         try:
             endpoint = f"{table_name}/{record_id}"
 
- # Make the API request
-            response = self._make_request('GET', endpoint)
+            # Make the API request
+            response = self._make_request("GET", endpoint)
 
- # Parse the response
+            # Parse the response
             try:
                 data = response.json()
                 return data
             except json.JSONDecodeError as e:
                 raise DataError(f"Invalid JSON response: {e}") from e
 
-        except (ConnectionError, ResponseError, DataError) as e:
+        except (ConnectionError, ResponseError, DataError):
             raise
         except Exception as e:
-            logger.error(f"Failed to fetch record {record_id} from {table_name}: {e}")  # noqa: E501
+            logger.error(f"Failed to fetch record {record_id} from {table_name}: {e}")
             raise DirectAPIError(f"Error fetching record: {e}") from e

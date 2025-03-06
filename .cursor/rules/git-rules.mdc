@@ -1,6 +1,6 @@
 ---
 description: This document establishes standardized Git workflows and best practices for the pyERP system. It ensures consistent version control practices, making it easier to track changes, manage releases, and collaborate effectively across the team.
-globs: 
+globs:
 ---
 # Git Workflow Standards for pyERP
 

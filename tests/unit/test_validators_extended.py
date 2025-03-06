@@ -4,20 +4,21 @@ Extended tests for the core validators module.
 This module contains additional tests for the validator classes in
 pyerp/core/validators.py to improve test coverage.
 """
+
 from decimal import Decimal
 
 from pyerp.core.validators import (
-    ValidationResult,
-    RequiredValidator,
-    RegexValidator,
-    RangeValidator,
-    LengthValidator,
-    ChoiceValidator,
-    DecimalValidator,
-    SkuValidator,
-    CompoundValidator,
     BusinessRuleValidator,
-    validate_data
+    ChoiceValidator,
+    CompoundValidator,
+    DecimalValidator,
+    LengthValidator,
+    RangeValidator,
+    RegexValidator,
+    RequiredValidator,
+    SkuValidator,
+    ValidationResult,
+    validate_data,
 )
 
 
@@ -61,7 +62,7 @@ class TestValidationResult:
         result.add_warning("field1", "Warning message 2")
         assert result.warnings["field1"] == [
             "Warning message 1",
-            "Warning message 2"
+            "Warning message 2",
         ]
 
     def test_merge(self):
@@ -133,7 +134,7 @@ class TestRegexValidator:
         """Test RegexValidator with non-matching pattern."""
         validator = RegexValidator(
             r"^\d{3}-\d{2}-\d{4}$",
-            error_message="Invalid format. Use XXX-XX-XXXX"
+            error_message="Invalid format. Use XXX-XX-XXXX",
         )
         result = validator("123-456-789")
         assert result.is_valid is False
@@ -163,7 +164,7 @@ class TestRangeValidator:
         validator = RangeValidator(
             min_value=0,
             max_value=100,
-            error_message="Value must be between 0 and 100"
+            error_message="Value must be between 0 and 100",
         )
         result = validator(-10)
         assert result.is_valid is False
@@ -254,7 +255,7 @@ class TestChoiceValidator:
         choices = ["red", "green", "blue"]
         validator = ChoiceValidator(
             choices,
-            error_message="Invalid color choice"
+            error_message="Invalid color choice",
         )
         result = validator("yellow")
         assert result.is_valid is False
@@ -324,7 +325,7 @@ class TestCompoundValidator:
         validators = [
             RequiredValidator(),
             LengthValidator(min_length=3, max_length=10),
-            RegexValidator(r"^[A-Z]")  # Must start with uppercase
+            RegexValidator(r"^[A-Z]"),  # Must start with uppercase
         ]
         validator = CompoundValidator(validators)
         result = validator("Hello")
@@ -336,7 +337,7 @@ class TestCompoundValidator:
         validators = [
             RequiredValidator(),
             LengthValidator(min_length=3, max_length=10),
-            RegexValidator(r"^[A-Z]")  # Must start with uppercase
+            RegexValidator(r"^[A-Z]"),  # Must start with uppercase
         ]
         validator = CompoundValidator(validators)
         result = validator("hello")  # lowercase, should fail regex
@@ -348,7 +349,7 @@ class TestCompoundValidator:
         validators = [
             RequiredValidator(),
             LengthValidator(min_length=3, max_length=10),
-            RegexValidator(r"^[A-Z]")  # Must start with uppercase
+            RegexValidator(r"^[A-Z]"),  # Must start with uppercase
         ]
         validator = CompoundValidator(validators)
         result = validator("")  # Empty, fails all validators
@@ -361,7 +362,7 @@ class TestCompoundValidator:
         """Test CompoundValidator with require_all_valid=False."""
         validators = [
             LengthValidator(min_length=3, max_length=5),
-            RegexValidator(r"^[A-Z]")  # Must start with uppercase
+            RegexValidator(r"^[A-Z]"),  # Must start with uppercase
         ]
         validator = CompoundValidator(validators, require_all_valid=False)
         result = validator("Hello")  # Valid length, valid regex
@@ -385,15 +386,16 @@ class TestBusinessRuleValidator:
 
     def test_business_rule_validator_valid(self):
         """Test BusinessRuleValidator with passing rule."""
+
         # Rule: price must be at least 10% of cost
         def price_rule(value, **kwargs):
-            cost = kwargs.get('cost', 0)
+            cost = kwargs.get("cost", 0)
             price = value
             return price >= cost * 0.1
 
         validator = BusinessRuleValidator(
             price_rule,
-            error_message="Price must be at least 10% of cost"
+            error_message="Price must be at least 10% of cost",
         )
         result = validator(20, cost=100)  # 20 is 20% of 100, should pass
         assert result.is_valid is True
@@ -401,15 +403,16 @@ class TestBusinessRuleValidator:
 
     def test_business_rule_validator_invalid(self):
         """Test BusinessRuleValidator with failing rule."""
+
         # Rule: price must be at least 10% of cost
         def price_rule(value, **kwargs):
-            cost = kwargs.get('cost', 0)
+            cost = kwargs.get("cost", 0)
             price = value
             return price >= cost * 0.1
 
         validator = BusinessRuleValidator(
             price_rule,
-            error_message="Price must be at least 10% of cost"
+            error_message="Price must be at least 10% of cost",
         )
         result = validator(5, cost=100)  # 5 is 5% of 100, should fail
         assert result.is_valid is False
@@ -421,7 +424,7 @@ def test_validate_data():
     """Test validate_data function."""
     validators = [
         RequiredValidator(),
-        LengthValidator(min_length=3)
+        LengthValidator(min_length=3),
     ]
 
     # Valid data
@@ -441,7 +444,7 @@ def test_validate_data():
         return True
 
     validators = [
-        BusinessRuleValidator(context_validator, error_message="Admin only")
+        BusinessRuleValidator(context_validator, error_message="Admin only"),
     ]
     result = validate_data("test", validators, context={"user_role": "user"})
     assert result.is_valid is False

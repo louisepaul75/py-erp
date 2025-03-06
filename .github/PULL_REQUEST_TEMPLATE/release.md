@@ -14,20 +14,20 @@
 
 ### Features Included
 <!-- List the major features included in this release -->
-- 
-- 
-- 
+-
+-
+-
 
 ### Bug Fixes
 <!-- List the major bugs fixed in this release -->
-- 
-- 
-- 
+-
+-
+-
 
 ### Breaking Changes
 <!-- List any breaking changes included in this release -->
-- 
-- 
+-
+-
 
 ### Upgrade Notes
 <!-- Instructions for users to upgrade to this version -->
@@ -37,8 +37,8 @@
 
 ### Documentation Updates
 <!-- List of documentation that was updated for this release -->
-- 
-- 
+-
+-
 
 ### Checklist
 - [ ] Version numbers have been updated in all necessary files
@@ -46,4 +46,4 @@
 - [ ] All tests are passing
 - [ ] Documentation has been updated
 - [ ] Migration scripts have been tested
-- [ ] Deployment instructions have been verified 
+- [ ] Deployment instructions have been verified

@@ -4,6 +4,7 @@ Mock models for unit testing.
 This module contains mock classes to simulate Django models without requiring
 the Django app registry to be set up.
 """
+
 from unittest.mock import MagicMock
 
 
@@ -51,12 +52,10 @@ class MockQuerySet:
 
 class DoesNotExist(Exception):
     """Mock DoesNotExist exception."""
-    pass
 
 
 class MultipleObjectsReturned(Exception):
     """Mock MultipleObjectsReturned exception."""
-    pass
 
 
 class MockModelBase:
@@ -88,22 +87,20 @@ class MockProduct(MockModelBase):
             setattr(self, key, value)
 
         # Default attributes
-        if 'sku' not in kwargs:
+        if "sku" not in kwargs:
             self.sku = "MOCK-SKU"
-        if 'name' not in kwargs:
+        if "name" not in kwargs:
             self.name = "Mock Product"
-        if 'list_price' not in kwargs:
+        if "list_price" not in kwargs:
             self.list_price = 100.0
-        if 'is_active' not in kwargs:
+        if "is_active" not in kwargs:
             self.is_active = True
 
     def save(self, *args, **kwargs):
         """Mock save method."""
-        pass
 
     def clean(self):
         """Mock clean method."""
-        pass
 
     def __str__(self):
         """String representation."""
@@ -121,14 +118,13 @@ class MockProductCategory(MockModelBase):
             setattr(self, key, value)
 
         # Default attributes
-        if 'code' not in kwargs:
+        if "code" not in kwargs:
             self.code = "MOCK-CAT"
-        if 'name' not in kwargs:
+        if "name" not in kwargs:
             self.name = "Mock Category"
 
     def save(self, *args, **kwargs):
         """Mock save method."""
-        pass
 
     def __str__(self):
         """String representation."""

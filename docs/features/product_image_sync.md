@@ -114,7 +114,7 @@ The synchronization process follows these steps:
 The sync process uses individual record creation and updates rather than bulk operations to ensure proper ID generation:
 
 1. For new images:
-   - Each image is saved individually using `image.save()` 
+   - Each image is saved individually using `image.save()`
    - This allows Django's ORM to handle ID generation correctly
    - Error handling is implemented to catch and log any issues with individual records
 
@@ -166,4 +166,4 @@ call_command('sync_product_images', limit=1, page_size=10)
 - Consider using smaller page sizes (10-20) for more frequent updates
 - Use larger page sizes (100-500) for initial synchronization or full refreshes
 - Monitor database performance during large sync operations
-- Review error logs for any issues with individual image processing 
+- Review error logs for any issues with individual image processing

@@ -8,36 +8,36 @@
         <div v-if="authStore.error" class="alert alert-danger">
           {{ authStore.error }}
         </div>
-        
+
         <form @submit.prevent="handleLogin">
           <div class="mb-3">
             <label for="username" class="form-label">Username</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              id="username" 
-              v-model="credentials.username" 
+            <input
+              type="text"
+              class="form-control"
+              id="username"
+              v-model="credentials.username"
               required
               autocomplete="username"
             >
           </div>
-          
+
           <div class="mb-3">
             <label for="password" class="form-label">Password</label>
-            <input 
-              type="password" 
-              class="form-control" 
-              id="password" 
-              v-model="credentials.password" 
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              v-model="credentials.password"
               required
               autocomplete="current-password"
             >
           </div>
-          
+
           <div class="d-grid gap-2">
-            <button 
-              type="submit" 
-              class="btn btn-primary" 
+            <button
+              type="submit"
+              class="btn btn-primary"
               :disabled="authStore.isLoading"
             >
               <span v-if="authStore.isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -45,7 +45,7 @@
             </button>
           </div>
         </form>
-        
+
         <div class="mt-3 text-center">
           <a href="/accounts/password_reset/">Forgot password?</a>
         </div>
@@ -74,7 +74,7 @@ const credentials = ref<LoginCredentials>({
 const handleLogin = async () => {
   try {
     await authStore.login(credentials.value);
-    
+
     // Redirect to the intended destination or home
     const redirectPath = route.query.redirect as string || '/';
     router.push(redirectPath);
@@ -104,4 +104,4 @@ onMounted(() => {
   max-width: 400px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-</style> 
+</style>

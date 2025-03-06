@@ -3,12 +3,14 @@ System health checks for the Core app.
 """
 
 import logging
-from django.core.checks import register, Warning, Error  # noqa: F401
-from django.db import connections
-from django.db.utils import OperationalError, InterfaceError, DatabaseError
 
- # Set up logging
-logger = logging.getLogger('pyerp.core')
+from django.core.checks import Warning, register
+from django.db import connections
+from django.db.utils import DatabaseError, InterfaceError, OperationalError
+
+# Set up logging
+logger = logging.getLogger("pyerp.core")
+
 
 @register()
 def check_database_connection(app_configs, **kwargs):
@@ -20,16 +22,16 @@ def check_database_connection(app_configs, **kwargs):
     errors = []
 
     try:
-        conn = connections['default']
+        conn = connections["default"]
         conn.cursor()
     except (OperationalError, InterfaceError, DatabaseError) as e:
-        logger.error(f"Database connection check failed: {str(e)}")
+        logger.error(f"Database connection check failed: {e!s}")
         errors.append(
-            Warning(  # noqa: E128
-            f"Database connection failed: {str(e)}",
-            hint="The application will still start but database-dependent features will be unavailable.",  # noqa: E501
-            id="pyerp.core.W001",  # noqa: F841
-            )
+            Warning(
+                f"Database connection failed: {e!s}",
+                hint="The application will still start but database-dependent features will be unavailable.",
+                id="pyerp.core.W001",
+            ),
         )
 
     return errors

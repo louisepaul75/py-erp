@@ -36,14 +36,14 @@ const authService = {
     try {
       // Get JWT tokens
       const tokenResponse = await api.post<TokenResponse>('/api/token/', credentials);
-      
+
       // Store tokens in localStorage
       localStorage.setItem('access_token', tokenResponse.data.access);
       localStorage.setItem('refresh_token', tokenResponse.data.refresh);
-      
+
       // Set the token in the API headers for future requests
       api.defaults.headers.common['Authorization'] = `Bearer ${tokenResponse.data.access}`;
-      
+
       // Get user profile
       const userResponse = await api.get<User>('/api/v1/profile/');
       return userResponse.data;
@@ -52,22 +52,22 @@ const authService = {
       throw error;
     }
   },
-  
+
   // Logout user
   logout: () => {
     // Remove tokens from localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
-    
+
     // Remove Authorization header
     delete api.defaults.headers.common['Authorization'];
   },
-  
+
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem('access_token');
   },
-  
+
   // Get current user profile
   getCurrentUser: async (): Promise<User | null> => {
     try {
@@ -76,10 +76,10 @@ const authService = {
       if (!token) {
         return null;
       }
-      
+
       // Set the token in the API headers
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+
       // Get user profile
       const response = await api.get<User>('/api/v1/profile/');
       return response.data;
@@ -88,7 +88,7 @@ const authService = {
       return null;
     }
   },
-  
+
   // Refresh the access token using the refresh token
   refreshToken: async (): Promise<string | null> => {
     try {
@@ -96,15 +96,15 @@ const authService = {
       if (!refreshToken) {
         return null;
       }
-      
+
       const response = await api.post<{ access: string }>('/api/token/refresh/', {
         refresh: refreshToken
       });
-      
+
       const newAccessToken = response.data.access;
       localStorage.setItem('access_token', newAccessToken);
       api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-      
+
       return newAccessToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -113,13 +113,13 @@ const authService = {
       return null;
     }
   },
-  
+
   // Update the user's profile
   updateProfile: async (userData: Partial<User>): Promise<User> => {
     const response = await api.patch<User>('/api/v1/profile/', userData);
     return response.data;
   },
-  
+
   // Change the user's password
   changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
     await api.post('/accounts/password_change/', {
@@ -130,4 +130,4 @@ const authService = {
   }
 };
 
-export default authService; 
+export default authService;

@@ -116,30 +116,30 @@ def test_sku_uniqueness_validation(self):
     """Test that SKU uniqueness validation works correctly."""
     # Create a mock for the filter method
     mock_filter = MagicMock()
-    
+
     # Test case 1: New product with unique SKU
     mock_queryset = MockQuerySet()
     mock_queryset.exists_return = False
     mock_filter.return_value = mock_queryset
-    
+
     # Simulate the validation logic from ProductForm.clean_sku
     sku = 'NEW-SKU'
     if mock_filter(sku=sku).exists():
         raise ValueError("A product with this SKU already exists.")
-    
+
     # No exception should be raised
-    
+
     # Test case 2: New product with duplicate SKU
     mock_queryset = MockQuerySet([MockProduct(sku='DUPLICATE-SKU')])
     mock_queryset.exists_return = True
     mock_filter.return_value = mock_queryset
-    
+
     # Simulate the validation logic
     sku = 'DUPLICATE-SKU'
     with pytest.raises(ValueError) as excinfo:
         if mock_filter(sku=sku).exists():
             raise ValueError("A product with this SKU already exists.")
-    
+
     # Verify the error message
     assert "already exists" in str(excinfo.value)
 ```
@@ -161,4 +161,4 @@ For CI/CD, we recommend:
 3. **Small, Focused Tests**: Write small, targeted tests that verify specific behavior
 4. **Test Real Business Logic**: Focus on testing actual business logic, not framework features
 5. **Consistent Naming**: Follow the pattern `test_<what_being_tested>_<expected_behavior>`
-6. **Setup Fixtures**: Use pytest fixtures to set up test dependencies 
+6. **Setup Fixtures**: Use pytest fixtures to set up test dependencies

@@ -9,7 +9,15 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/Home.vue'),
     meta: { requiresAuth: true }
   },
-  
+
+  // Health status page (no auth required)
+  {
+    path: '/Health',
+    name: 'Health',
+    component: () => import('../views/Health.vue'),
+    meta: { requiresAuth: false }
+  },
+
   // Authentication routes
   {
     path: '/login',
@@ -28,7 +36,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/auth/Profile.vue'),
     beforeEnter: authGuard
   },
-  
+
   // Product routes
   {
     path: '/products',
@@ -56,7 +64,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/products/CategoryList.vue'),
     meta: { requiresAuth: true }
   },
-  
+
   // Sales routes
   {
     path: '/sales',
@@ -71,7 +79,7 @@ const routes: Array<RouteRecordRaw> = [
     props: true,
     meta: { requiresAuth: true }
   },
-  
+
   // Catch-all route for 404
   {
     path: '/:pathMatch(.*)*',
@@ -98,4 +106,4 @@ router.beforeEach(async (to, from, next) => {
   }
 });
 
-export default router; 
+export default router;

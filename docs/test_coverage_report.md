@@ -136,6 +136,6 @@ python tests/run_tests.py tests/unit/test_core_views.py
 1. Add CI/CD integration for automatic coverage reporting
 2. Implement coverage badges in documentation
 3. Set up pre-commit hooks to enforce minimum coverage
-4. Create more comprehensive end-to-end tests 
+4. Create more comprehensive end-to-end tests
 
-For complete details, refer to the [Test Coverage Improvement Plan](../docs/test_coverage_improvement_plan.md). 
+For complete details, refer to the [Test Coverage Improvement Plan](../docs/test_coverage_improvement_plan.md).

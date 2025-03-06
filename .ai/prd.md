@@ -1,12 +1,12 @@
 # Product Requirements Document (PRD)
 
-**Project:** Custom ERP System (Django Monolith)  
-**Sponsor/Stakeholders:**  
-- Managing Director  
-- Production Manager  
-- Warehouse Manager  
-- Sales & Marketing Manager  
-- IT Department Lead  
+**Project:** Custom ERP System (Django Monolith)
+**Sponsor/Stakeholders:**
+- Managing Director
+- Production Manager
+- Warehouse Manager
+- Sales & Marketing Manager
+- IT Department Lead
 
 
 
@@ -16,63 +16,63 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 ## 2. Scope
 
-**In-Scope**  
-1. **Core Modules**  
-   - Product & BOM Management  
-   - Sales Management (Quotes, Orders, Invoicing)  
-   - Production Management (Manufacturing Orders, Workflows)  
-   - Warehouse/Inventory (Multiple Warehouses, Stock Movements)  
-2. **Integrations**  
-   - POS (Point-of-Sale) for in-store sales  
-   - eCommerce (Website) to synchronize products and orders  
-   - Local/network printers for invoice and delivery note forms  
-3. **Migration & Data Sync**  
-   - One-time and incremental data migration from the 4D-based ERP  
-4. **Performance & Scalability**  
-   - On-prem deployment with Docker or Docker Compose  
-   - Support for 15 concurrent users; handle expansions as needed  
-   - Future-proof design for potential microservices refactoring  
-5. **Security & Authentication**  
-   - Django's built-in RBAC (Role-Based Access Control)  
-   - Token-based external integrations (OAuth2/JWT)  
-   - Auditing & logging for critical records  
+**In-Scope**
+1. **Core Modules**
+   - Product & BOM Management
+   - Sales Management (Quotes, Orders, Invoicing)
+   - Production Management (Manufacturing Orders, Workflows)
+   - Warehouse/Inventory (Multiple Warehouses, Stock Movements)
+2. **Integrations**
+   - POS (Point-of-Sale) for in-store sales
+   - eCommerce (Website) to synchronize products and orders
+   - Local/network printers for invoice and delivery note forms
+3. **Migration & Data Sync**
+   - One-time and incremental data migration from the 4D-based ERP
+4. **Performance & Scalability**
+   - On-prem deployment with Docker or Docker Compose
+   - Support for 15 concurrent users; handle expansions as needed
+   - Future-proof design for potential microservices refactoring
+5. **Security & Authentication**
+   - Django's built-in RBAC (Role-Based Access Control)
+   - Token-based external integrations (OAuth2/JWT)
+   - Auditing & logging for critical records
    - JWT authentication between Vue.js frontend and Django backend ✅ *Implemented*
    - Proper configuration of JWT token signing keys ✅ *Implemented*
    - Correct API endpoint routing for authentication requests ✅ *Implemented*
 
-**Out-of-Scope**  
-1. Advanced accounting features or full finance module (handled by external system or future phase).  
-2. Complex planning/scheduling algorithms (MRP/APS), beyond basic manufacturing orders and BOM.  
+**Out-of-Scope**
+1. Advanced accounting features or full finance module (handled by external system or future phase).
+2. Complex planning/scheduling algorithms (MRP/APS), beyond basic manufacturing orders and BOM.
 3. Sophisticated analytics/BI dashboards (simple reporting is in-scope, advanced analytics may come later).
 
 ## 3. Stakeholders & Users
 
-1. **Production Manager**  
-   - Oversees creation and management of manufacturing orders, BOM updates, capacity planning, etc.  
-2. **Sales & Marketing Team**  
-   - Manages quotations, sales orders, invoicing, customer data. B2B and B2C channels.  
-3. **Warehouse/Inventory Staff**  
-   - Handles goods receipt, picking, packing, and internal transfers. Manages lot tracking and stock levels.  
-4. **Finance/Accounting**  
-   - Needs invoice data and revenue reports. Integration or export to external accounting software.  
-5. **IT Department**  
-   - Responsible for system deployment, maintenance, and data migration from the 4D-based ERP.  
-6. **External Integrations**  
-   - POS system used by retail staff  
-   - eCommerce website for B2C orders  
+1. **Production Manager**
+   - Oversees creation and management of manufacturing orders, BOM updates, capacity planning, etc.
+2. **Sales & Marketing Team**
+   - Manages quotations, sales orders, invoicing, customer data. B2B and B2C channels.
+3. **Warehouse/Inventory Staff**
+   - Handles goods receipt, picking, packing, and internal transfers. Manages lot tracking and stock levels.
+4. **Finance/Accounting**
+   - Needs invoice data and revenue reports. Integration or export to external accounting software.
+5. **IT Department**
+   - Responsible for system deployment, maintenance, and data migration from the 4D-based ERP.
+6. **External Integrations**
+   - POS system used by retail staff
+   - eCommerce website for B2C orders
 
 ## 4. Functional Requirements
 
 ### 4.1 Product & BOM Management
 
-- **Create/Edit Products:**  
-  - Unique SKU and name.  
-  - Product categories.  
-  - Flags (manufactured item, purchased item).  
-- **Bill of Materials (BOM):**  
-  - Many-to-many relationship (through table) mapping to component products.  
-  - Support multi-level assemblies (recursive BOM).  
-  - Track cost roll-up from child components.  
+- **Create/Edit Products:**
+  - Unique SKU and name.
+  - Product categories.
+  - Flags (manufactured item, purchased item).
+- **Bill of Materials (BOM):**
+  - Many-to-many relationship (through table) mapping to component products.
+  - Support multi-level assemblies (recursive BOM).
+  - Track cost roll-up from child components.
 
 ### 4.1.1 Product Image Integration
 
@@ -272,52 +272,52 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 ### 4.2 Sales Management
 
-- **Customer Master Data:**  
-  - Store B2B and B2C customer information (company/individual).  
-  - Payment terms and pricing tiers.  
-- **Sales Orders & Quotations:**  
-  - Draft → Confirmed → Invoiced flow.  
-  - Capture line items with snapshots of price, tax, discount.  
-  - Generate PDF documents (quotes, confirmations, etc.).  
-- **Invoicing & Payment Tracking:**  
-  - Create invoices directly from sales orders or partial invoicing.  
-  - Track invoice status (draft, open, paid, canceled).  
-  - Optionally integrate with external accounting for payment records.  
+- **Customer Master Data:**
+  - Store B2B and B2C customer information (company/individual).
+  - Payment terms and pricing tiers.
+- **Sales Orders & Quotations:**
+  - Draft → Confirmed → Invoiced flow.
+  - Capture line items with snapshots of price, tax, discount.
+  - Generate PDF documents (quotes, confirmations, etc.).
+- **Invoicing & Payment Tracking:**
+  - Create invoices directly from sales orders or partial invoicing.
+  - Track invoice status (draft, open, paid, canceled).
+  - Optionally integrate with external accounting for payment records.
 
 ### 4.3 Production Management
 
-- **Manufacturing Orders (MO):**  
-  - Statuses: Draft, In Progress, Completed, Canceled.  
-  - Link to BOM for material consumption.  
-  - Automatic stock reservations (components) and final product receipt.  
-- **Multi-Stage Production:**  
-  - Optional steps (e.g. picking, assembly, QC, final storage).  
-  - Track operations, start/end times (basic scheduling).  
-- **Lot/Serial Tracking (if needed):**  
-  - Assign batch/lot numbers to produced goods.  
+- **Manufacturing Orders (MO):**
+  - Statuses: Draft, In Progress, Completed, Canceled.
+  - Link to BOM for material consumption.
+  - Automatic stock reservations (components) and final product receipt.
+- **Multi-Stage Production:**
+  - Optional steps (e.g. picking, assembly, QC, final storage).
+  - Track operations, start/end times (basic scheduling).
+- **Lot/Serial Tracking (if needed):**
+  - Assign batch/lot numbers to produced goods.
 
 ### 4.4 Warehouse/Inventory
 
-- **Multi-Warehouse Management:**  
-  - Create multiple warehouse locations (main, secondary, workshops, etc.).  
-  - Transfer stock between locations.  
-- **Stock Movements:**  
-  - Every physical movement creates a record (product, from-location, to-location, quantity, date).  
-  - Summation or real-time queries for on-hand inventory.  
-- **Batch/Lot Management (if required):**  
-  - Track product lots, link them to stock movements and production orders.  
+- **Multi-Warehouse Management:**
+  - Create multiple warehouse locations (main, secondary, workshops, etc.).
+  - Transfer stock between locations.
+- **Stock Movements:**
+  - Every physical movement creates a record (product, from-location, to-location, quantity, date).
+  - Summation or real-time queries for on-hand inventory.
+- **Batch/Lot Management (if required):**
+  - Track product lots, link them to stock movements and production orders.
 
 ### 4.5 Integrations
 
-- **POS System:**  
-  - Expose REST endpoints for order creation in real time.  
-  - Possibly replicate product and stock data from ERP to POS.  
-- **Web Shop (B2C & B2B):** 
-  - Synchronize product data (names, prices, stock) to eCommerce platform.  
-  - Receive eCommerce orders back into ERP.  
-- **PDF & Document Generation:**  
-  - Generate and store PDF documents for quotes, invoices, delivery notes, picking lists.  
-  - Option to print directly (local network printer) or allow download.  
+- **POS System:**
+  - Expose REST endpoints for order creation in real time.
+  - Possibly replicate product and stock data from ERP to POS.
+- **Web Shop (B2C & B2B):**
+  - Synchronize product data (names, prices, stock) to eCommerce platform.
+  - Receive eCommerce orders back into ERP.
+- **PDF & Document Generation:**
+  - Generate and store PDF documents for quotes, invoices, delivery notes, picking lists.
+  - Option to print directly (local network printer) or allow download.
 - **Image Database API Integration:**
   - Secure connection to external image management Django application. ✅ *Verified*
   - Support for pagination, filtering, and sorting of image data. ✅ *Verified*
@@ -326,10 +326,10 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
 
 ### 4.6 Data Migration & Legacy Sync
 
-- **Initial Data Import:**  
-  - Export 4D data (products, customers, open orders, inventory) and load into the new system.  
-  - Cleanse, map, and store `legacy_id` on new records.  
-- **Incremental Sync (Required for phased rollout):**  
+- **Initial Data Import:**
+  - Export 4D data (products, customers, open orders, inventory) and load into the new system.
+  - Cleanse, map, and store `legacy_id` on new records.
+- **Incremental Sync (Required for phased rollout):**
   - Develop API utilities to extract data from legacy 4D system
   - Implement one-way synchronization from legacy ERP to new system
   - Create data mapping configurations for each business entity
@@ -338,7 +338,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Analyze legacy database structure to inform new ERP schema design
   - Document table relationships and data models from legacy system
   - Define transformation rules for data cleansing and normalization
-- **Cutover Plan:**  
+- **Cutover Plan:**
   - Module-by-module migration approach
   - Validation tools to ensure data integrity between systems
 
@@ -350,7 +350,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - **Artikel_Variante**: Current primary product table replacing Artikel_Stamm
     - Products in Artikel_Variante contain all necessary data including variant information
     - **Artikel_Familie**: Contains parent product data used as base for product variants
-  
+
 - **Multi-Source Product Import Approach:** ✅ *Implemented*
   - **Parent Product Import**: Successfully imported from Artikel_Familie ✅
     - Created 1,571 parent products with some exceptions due to missing descriptions ✅
@@ -364,7 +364,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - **Relationship Management**: Successfully updated parent-child relationships ✅
     - 4,078 variant products linked to their parent products ✅
     - Proper parent-child relationships established based on SKU patterns ✅
-  
+
 - **Product Data Quality Considerations:** ✅ *Partially Implemented*
   - Handle products with and without explicit variant codes consistently ✅
   - Create consistent parent-child relationships based on SKU patterns ✅
@@ -435,19 +435,19 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Variants with parent relationships: 4,228 (97.89%) ✅
     - Variants without parent relationships: 91 (2.11%) ✅
     - Relationship linking via `legacy_familie` in variants to `legacy_id` in parents ✅
-  
+
   - **Relationship Quality Verification:** ✅ *Implemented*
     - Verified consistent linking between variants and parents via `legacy_familie` field ✅
     - Example of correct relationship: Variant SKU 807130 linked to Parent SKU 912859 ✅
     - Confirmed matching values between variant's `legacy_familie` and parent's `legacy_id` ✅
     - Successfully established parent-child product hierarchy for 97.89% of variants ✅
-  
+
   - **Missing Relationship Analysis:** ✅ *Implemented*
     - Identified 91 variants without parent relationships ✅
     - Confirmed no matching parent products exist with corresponding `legacy_id` values ✅
     - Missing parent relationships appear to be genuine data gaps rather than import errors ✅
     - Sample variant without parent: SKU 206627, Familie: 692331CEA5947D448BACF105BEE181B8 ✅
-  
+
   - **Legacy Field Tracking:** ✅ *Implemented*
     - Added `legacy_key` field to store original `__KEY` values from source system ✅
     - Added `legacy_uid_original` field to store original `UID` values ✅
@@ -460,12 +460,12 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Create command to generate placeholder parent products for orphaned variants (91 products)
     - Set placeholder flag on these generated parent products for future data quality management
     - Re-run relationship linking command after placeholder creation
-  
+
   - **Medium-term Actions:** *Medium Priority*
     - Develop data quality report to identify incomplete or inconsistent product relationships
     - Implement consistency validation to ensure variants properly inherit attributes from parents
     - Create UI indicators for placeholder parent products that need manual review
-  
+
   - **Long-term Actions:** *Low Priority*
     - Integrate with legacy system to identify matching parents if they are created later
     - Develop automated rules for inferring parent attributes based on variant patterns
@@ -476,12 +476,12 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Successfully created 47 placeholder parent products for orphaned variants ✅
     - Added `is_placeholder` flag to `ParentProduct` model to mark generated placeholders ✅
     - Implemented naming convention with "PLACEHOLDER-" prefix for easy identification ✅
-  
+
   - **Variant-Parent Linking:** ✅ *Implemented*
     - Successfully linked 44 remaining variants to existing parent products ✅
     - Created `link_variants_to_existing_parents` command to handle duplicate legacy_id cases ✅
     - Achieved 100% parent-child relationship coverage for all 4,319 variants ✅
-  
+
   - **Verification Results:** ✅ *Implemented*
     - Confirmed all variants now have parent relationships ✅
     - Verified correct matching between variant's `legacy_familie` and parent's `legacy_id` ✅
@@ -501,13 +501,13 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - Updated development settings to use PostgreSQL configuration ✅
     - Created dedicated testing settings with PostgreSQL configuration ✅
     - Implemented environment variable-based connection parameters ✅
-  
+
   - **Environment Configuration**: ✅ *Implemented*
     - Created `.env` file for storing PostgreSQL connection parameters ✅
     - Configured connection to PostgreSQL server ✅
     - Set up appropriate database credentials and connection details ✅
     - Implemented fallback values for environment variables ✅
-  
+
   - **Testing & Validation**: ✅ *Implemented*
     - Verified database connection through Django's check commands ✅
     - Successfully ran basic tests with PostgreSQL configuration ✅
@@ -580,7 +580,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - **Manager:** Enhanced operational capabilities and limited administrative functions
     - **Administrator:** Full system administration within defined domains
     - **System Administrator:** Complete system access and configuration
-  
+
   - **Functional Roles:**
     - **Sales Representative:** Manage customers, quotes, orders
     - **Sales Manager:** Oversee sales operations, approve special pricing
@@ -593,7 +593,7 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
     - **Marketing User:** Access product data for marketing materials
     - **Quality Assurance:** Monitor and record quality control processes
     - **Customer Service:** Handle customer inquiries and returns
-  
+
   - **Role Assignment:**
     - Users can have multiple roles
     - Role inheritance hierarchy
@@ -748,7 +748,7 @@ The user and roles system will be built on Django's authentication framework wit
         phone = models.CharField(max_length=20, blank=True)
         # Additional fields as needed
     ```
-  
+
   - **Profile Model:** One-to-one relationship with User for extended attributes
     ```python
     # Example structure (not actual implementation)
@@ -760,7 +760,7 @@ The user and roles system will be built on Django's authentication framework wit
         preferences = models.JSONField(default=dict)
         # Additional profile fields
     ```
-  
+
   - **Role Implementation:**
     - Leverage Django's Group model for basic roles
     - Create a Role model that extends Group for advanced features
@@ -773,7 +773,7 @@ The user and roles system will be built on Django's authentication framework wit
         parent_role = models.ForeignKey('self', null=True, on_delete=models.SET_NULL)
         # Additional role metadata
     ```
-  
+
   - **Role Assignment:**
     - Use a through model for user-role assignments with time limits
     ```python
@@ -787,7 +787,7 @@ The user and roles system will be built on Django's authentication framework wit
         is_active = models.BooleanField(default=True)
         # Additional assignment metadata
     ```
-  
+
   - **Permission Extensions:**
     - Create models for function-level and object-level permissions
     ```python
@@ -797,7 +797,7 @@ The user and roles system will be built on Django's authentication framework wit
         code = models.CharField(max_length=100, unique=True)
         description = models.TextField(blank=True)
         roles = models.ManyToManyField(Role, related_name='function_permissions')
-        
+
     class ObjectPermission(models.Model):
         user = models.ForeignKey(User, on_delete=models.CASCADE)
         content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -833,7 +833,7 @@ The user and roles system will be built on Django's authentication framework wit
   - Comprehensive event tracking for security-related actions:
     - Authentication events (login, logout, failed logins)
     - User management (creation, updates, deletion)
-    - Permission changes 
+    - Permission changes
     - Critical data access and modifications
   - Automatic capture of contextual data:
     - User identification (with fallback username if user is deleted)
@@ -878,31 +878,31 @@ This architecture provides a solid foundation that can be implemented incrementa
   - Base test classes for common testing patterns ✅ *Implemented*
   - **Current Test Coverage:** 8% overall, with core validators at 79% ✅ *Measured*
   - **Test Coverage Goals:** Minimum 80% coverage for all core modules
-  
+
 - **Test Data Management:**
   - Factory patterns (factory_boy) for consistent test data generation (Planned)
   - Fixtures for complex test scenarios ✅ *Partially Implemented*
   - Realistic test data sets for integration testing (Planned)
   - Transactional test cases to prevent database pollution (Planned)
-  
+
 - **Integration Testing:**
   - API endpoint testing with real database interactions (Planned)
   - Service-level integration tests for business workflows (Planned)
   - Cross-module functionality testing (Planned)
   - Database transaction and integrity tests (Planned)
-  
+
 - **End-to-End Testing:**
   - Selenium/Playwright for UI automated testing (Planned)
   - Critical business workflow validation (Planned)
   - Cross-browser compatibility testing (Planned)
   - Real-world user scenarios simulation (Planned)
-  
+
 - **Performance Testing:**
   - Load testing for critical API endpoints (Planned)
   - Database query optimization validation (Planned)
   - Benchmark tests for key operations (Planned)
   - Scalability testing for concurrent user scenarios (Planned)
-  
+
 - **CI/CD Integration:**
   - Automated test execution on each commit ✅ *Implemented*
   - Required code coverage thresholds (minimum 80%) ✅ *Implemented*
@@ -983,7 +983,7 @@ This architecture provides a solid foundation that can be implemented incrementa
   - Price and decimal value validation ✅ *Implemented*
   - Parent-variant relationship validation ✅ *Implemented*
   - Business rule enforcement for products ✅ *Implemented*
-  
+
 - **Validation Documentation:** *Planned*
   - Guidelines for creating new validators
   - Best practices for validation implementation
@@ -1006,12 +1006,12 @@ This architecture provides a solid foundation that can be implemented incrementa
 
 ### 4.9 Performance & Scalability
 
-- **Caching & Indexing:**  
-  - Add essential DB indexes; use caching where applicable.  
-- **Load Balancing & Horizontal Scaling:**  
-  - Nginx + Gunicorn setup, multiple workers or servers if needed.  
-- **Celery for Background Tasks:**  
-  - Offload heavy tasks (bulk PDF generation, data imports) to Celery workers.  
+- **Caching & Indexing:**
+  - Add essential DB indexes; use caching where applicable.
+- **Load Balancing & Horizontal Scaling:**
+  - Nginx + Gunicorn setup, multiple workers or servers if needed.
+- **Celery for Background Tasks:**
+  - Offload heavy tasks (bulk PDF generation, data imports) to Celery workers.
 
 ### 4.10 Database Configuration Strategy
 
@@ -1068,7 +1068,7 @@ This architecture provides a solid foundation that can be implemented incrementa
   - Alternative using DATABASE_URL (implemented but commented out in code):
     ```python
     import dj_database_url
-    
+
     DATABASES = {
         'default': dj_database_url.config(
             default=os.environ.get('DATABASE_URL', 'postgresql://user:pass@localhost:5432/dbname'),
@@ -1086,19 +1086,19 @@ This architecture provides a solid foundation that can be implemented incrementa
 
 ### 4.11 Project Structure & Organization
 
-- **Modular Architecture:**  
-  - Django apps organized by business domain for clear separation of concerns.  
+- **Modular Architecture:**
+  - Django apps organized by business domain for clear separation of concerns.
   - Core module for shared functionality and utilities.
   - Consistent code organization patterns across applications.
-- **Environment Configuration:**  
+- **Environment Configuration:**
   - Settings module organized with base and environment-specific configurations.
   - Environment detection for automatic settings selection.
   - Consistent handling of environment variables and secrets.
-- **Developer Workflow:**  
+- **Developer Workflow:**
   - Standardized development environment with Docker Compose.
   - Code quality tools integration (linting, formatting, type checking).
   - Documentation for development practices and conventions.
-- **Asset Organization:**  
+- **Asset Organization:**
   - Clear organization of templates with inheritance patterns.
   - Static files management with proper versioning and caching.
   - Media files storage and access patterns.
@@ -1140,7 +1140,7 @@ This architecture provides a solid foundation that can be implemented incrementa
   - Develop dependency monitoring and update workflow
   - Implement dependency security scanning in CI/CD pipeline ✅ *Implemented*
   - Document dependency management procedures and upgrade guidelines ✅ *Implemented*
-- **Phase 1 (MVP):**  
+- **Phase 1 (MVP):**
   - Basic Product, BOM, Sales, Inventory, minimal Production.
   - Single-warehouse flow, no advanced scheduling.
   - Basic PDF invoices, initial and incremental 4D data import.
@@ -1181,10 +1181,10 @@ This architecture provides a solid foundation that can be implemented incrementa
     - Create logging system for tracking synchronization history ✅ *Implemented*
     - Add support for filtering and limiting synchronization scope ✅ *Implemented*
     - Develop image management capabilities for product administrators (Planned)
-- **Phase 2:**  
-  - Multi-warehouse, advanced production flows, partial/split invoicing.  
-  - POS/Ecommerce integrations.  
-  - Additional features as prioritized.  
+- **Phase 2:**
+  - Multi-warehouse, advanced production flows, partial/split invoicing.
+  - POS/Ecommerce integrations.
+  - Additional features as prioritized.
   - **Testing & Validation Expansion:**
     - Implement test coverage improvement plan Phase 2 (Business Logic)
     - Add tests for product models, inventory logic, and sales workflows
@@ -1199,11 +1199,11 @@ This architecture provides a solid foundation that can be implemented incrementa
     - Implement real-time inventory level updates for critical products
     - Add WebSocket testing framework and basic tests
 
-- **Phase 3+:**  
-  - Expand accounting integration, advanced analytics, further automation.  
+- **Phase 3+:**
+  - Expand accounting integration, advanced analytics, further automation.
   - **Testing & Validation Maturity:**
     - Implement test coverage improvement plan Phase 3 (Integration Points)
-    - Add tests for legacy sync modules and management commands 
+    - Add tests for legacy sync modules and management commands
     - Create end-to-end tests for key user journeys
     - Implement continuous performance monitoring
     - Add automated regression testing
@@ -1350,7 +1350,7 @@ This architecture provides a solid foundation that can be implemented incrementa
     - Layer caching for faster builds
     - Metadata extraction for consistent tagging
     - Multi-stage builds for optimized image size
-  
+
 - **Automated Testing Pipeline:** ✅ *Implemented*
   - Unit tests executed for all code changes
   - Integration tests for critical business flows
@@ -1531,7 +1531,7 @@ This architecture provides a solid foundation that can be implemented incrementa
     - Translation fields in database models (e.g., `name_de`, `name_en`, etc.)
     - API support for content translation and language-specific data
     - Translation fallback mechanism (use primary language if translation missing)
-  
+
 - **Date, Time, and Number Formatting:**
   - Locale-specific date and time formats
   - Number formatting with appropriate decimal and thousand separators
@@ -1639,55 +1639,55 @@ This architecture provides a solid foundation that can be implemented incrementa
 
 ### 7.1 Performance
 
-- **Response Time:**  
-  - User interface actions should complete within 1-2 seconds under normal load.  
-  - Reports may take up to 10 seconds for complex data analysis.  
-- **Concurrency:**  
-  - Support for 15 simultaneous users with no degradation.  
-  - Handle 50 concurrent API requests from external systems.  
-- **Transaction Volume:**  
-  - Manage up to 500 orders per day with related line items.  
-  - Inventory movements: 1,500 per day.  
+- **Response Time:**
+  - User interface actions should complete within 1-2 seconds under normal load.
+  - Reports may take up to 10 seconds for complex data analysis.
+- **Concurrency:**
+  - Support for 15 simultaneous users with no degradation.
+  - Handle 50 concurrent API requests from external systems.
+- **Transaction Volume:**
+  - Manage up to 500 orders per day with related line items.
+  - Inventory movements: 1,500 per day.
 
 ### 7.2 Reliability & Availability
 
-- **Uptime Target:**  
-  - 99.5% during business hours (8:00 AM to 6:00 PM, Monday through Friday).  
-  - Scheduled maintenance windows outside business hours.  
-- **Backup:**  
-  - Daily incremental backups.  
-  - Weekly full backups stored securely within the company's premises.  
-- **Disaster Recovery:**  
-  - Backup to production restored within 4 hours maximum.  
-  - Potential for simple Active/Passive setup with automated failover (optional/budget permitting).  
+- **Uptime Target:**
+  - 99.5% during business hours (8:00 AM to 6:00 PM, Monday through Friday).
+  - Scheduled maintenance windows outside business hours.
+- **Backup:**
+  - Daily incremental backups.
+  - Weekly full backups stored securely within the company's premises.
+- **Disaster Recovery:**
+  - Backup to production restored within 4 hours maximum.
+  - Potential for simple Active/Passive setup with automated failover (optional/budget permitting).
 
 ### 7.3 Scalability
 
-- **Data Growth:**  
-  - 20% annual growth in transaction volume.  
-  - No more than 10% degradation in performance with 2x data volume.  
-- **User Growth:**  
-  - Support scaling to 30 concurrent users within 2 years.  
-- **Instance Scaling:**  
-  - Docker Compose configuration allows for vertical scaling (more resources).  
-  - Potential for horizontal scaling in future microservices architecture.  
+- **Data Growth:**
+  - 20% annual growth in transaction volume.
+  - No more than 10% degradation in performance with 2x data volume.
+- **User Growth:**
+  - Support scaling to 30 concurrent users within 2 years.
+- **Instance Scaling:**
+  - Docker Compose configuration allows for vertical scaling (more resources).
+  - Potential for horizontal scaling in future microservices architecture.
 
 ### 7.4 Security
 
-- **Authentication & Authorization:**  
-  - Role-based access control with fine-grained permissions.  
-  - Password policies enforced (complexity, expiration).  
-  - MFA for admin users (optional/nice-to-have).  
-- **Data Protection:**  
-  - Encryption of sensitive data at rest and in transit.  
-  - In-network deployment with limited exposure to the internet (DMZ for APIs).  
-- **Audit Trail:**  
-  - Logging of all critical data modifications (who, what, when).  
-  - User session tracking.  
+- **Authentication & Authorization:**
+  - Role-based access control with fine-grained permissions.
+  - Password policies enforced (complexity, expiration).
+  - MFA for admin users (optional/nice-to-have).
+- **Data Protection:**
+  - Encryption of sensitive data at rest and in transit.
+  - In-network deployment with limited exposure to the internet (DMZ for APIs).
+- **Audit Trail:**
+  - Logging of all critical data modifications (who, what, when).
+  - User session tracking.
 
 ### 7.5 Testing Strategy
 
-- **Testing Approach:**  
+- **Testing Approach:**
   - Unit tests for core business logic components. ✅ *Implemented*
   - Integration tests for API endpoints and workflows.
   - User acceptance testing for key business processes.
@@ -2081,7 +2081,7 @@ This section outlines the plan to replace the WSZ_api with a properly implemente
 
 The external WSZ_api package provides the following key functionalities:
 
-- **Authentication and session management:** 
+- **Authentication and session management:**
   - Obtains and stores session cookies in a configuration file
   - Validates and refreshes sessions when needed
   - Maintains configuration for test and live environments
@@ -2156,12 +2156,12 @@ These findings have been documented in detail in [docs/legacy_erp/api/direct_api
     - This leads to rapid session proliferation and depletion of available server sessions
     - The 402 error (Too Many Sessions) should never even be encountered if session management worked properly
     - The system becomes completely clogged with sessions, making it unusable
-  
+
   - **Comparison with Working Implementation:**
     - The original `getTable.py` script works correctly by maintaining exactly one session
     - The `direct_api` reimplementation (`getTable_direct_api.py`) fundamentally fails to maintain session discipline
     - The original implementation never hits 402 errors because it properly reuses the same session
-  
+
   - **Technical Analysis:**
     - Despite code appearing to implement session management, it fails to maintain a single persistent session
     - Each component/call path appears to be creating its own session rather than sharing a global one
@@ -2182,12 +2182,12 @@ These findings have been documented in detail in [docs/legacy_erp/api/direct_api
     - Redesign session management to ensure exactly ONE session is maintained globally
     - Implement proper singleton pattern for session management
     - Add detailed session tracking logs to identify all session creation points
-  
+
   - *Medium Priority*
     - Refactor authentication module to use true singleton session instance
     - Verify all API call paths use the same session object
     - Create automated tests specifically for session reuse verification
-  
+
   - *Low Priority*
     - Update documentation to emphasize the "single session" requirement
     - Create monitoring tools for session tracking
@@ -2370,17 +2370,17 @@ These improvements align with our quality assurance strategy and support our goa
   - Status monitoring for pictures API connection. ✅ *Implemented*
   - Expandable framework to add monitoring for other critical system components. ✅ *Implemented*
   - Historical uptime logging and basic analytics. ✅ *Implemented*
-  
+
 - **Alerting & Notifications:** ✅ *Implemented*
   - Visual indicators for connection issues within the admin interface. ✅ *Implemented*
   - Optional email notifications for system administrators on connection failures. *Planned*
   - Error logging with detailed diagnostics for troubleshooting. ✅ *Implemented*
-  
+
 - **Health Checks:** ✅ *Implemented*
   - Periodic automated health checks for all monitored systems. ✅ *Implemented*
   - Manual refresh option for on-demand status updates. ✅ *Implemented*
   - Performance metrics for key integrations (response times, error rates). ✅ *Implemented*
-  
+
 - **Administration Actions:** ✅ *Partially Implemented*
   - Quick access to restart/reset problematic connections. *Planned*
   - Ability to configure monitoring thresholds and alert preferences. *Planned*
@@ -2392,23 +2392,23 @@ These improvements align with our quality assurance strategy and support our goa
   - Django app-based implementation with custom admin views ✅ *Implemented*
   - Database-backed health check result storage for historical tracking ✅ *Implemented*
   - Responsive UI with real-time status updates via AJAX ✅ *Implemented*
-  
+
 - **Component Monitoring:**
   - **Database Connection:** Direct testing of database connectivity with error detection ✅ *Implemented*
   - **Legacy ERP API:** Connection and authentication verification with the 4D-based system ✅ *Implemented*
   - **Pictures API:** Endpoint availability and authentication testing ✅ *Implemented*
-  
+
 - **Access Methods:**
   - Admin interface dashboard for visual monitoring ✅ *Implemented*
   - REST API endpoint for external monitoring tools integration ✅ *Implemented*
   - Management command for CLI and cron job execution ✅ *Implemented*
   - JSON output support for programmatic processing ✅ *Implemented*
-  
+
 - **Auto-Refresh Functionality:**
   - Configurable refresh period (default: 5 minutes) ✅ *Implemented*
   - On-demand manual refresh with visual feedback ✅ *Implemented*
   - Asyncronous updates to prevent UI blocking ✅ *Implemented*
-  
+
 - **Extensibility:** ✅ *Implemented*
   - Modular design allowing for easy addition of new components to monitor ✅ *Implemented*
   - Standardized health check interface for consistent implementation ✅ *Implemented*
@@ -2421,14 +2421,14 @@ These improvements align with our quality assurance strategy and support our goa
   - Vite for build tooling and development server ✅ *Implemented*
   - TypeScript for enhanced type safety and developer experience ✅ *Implemented*
   - Tailwind CSS for consistent styling and rapid development *Planned*
-  
+
 - **Integration Strategy:**
   - **Phase 1: Initial Setup and Infrastructure** ✅ *Implemented*
     - Setup Vue.js project structure within Django ✅ *Implemented*
     - Configure build pipeline and asset management ✅ *Implemented*
     - Establish API endpoints for Vue.js components ✅ *Implemented*
     - Create development environment with hot-reload ✅ *Implemented*
-    
+
   - **Phase 2: Component Migration** ✅ *In Progress*
     - Identify and prioritize components for migration ✅ *Implemented*
     - Create reusable Vue.js component library ✅ *Partially Implemented*
@@ -2438,29 +2438,29 @@ These improvements align with our quality assurance strategy and support our goa
     - Migrate Sales module views to Vue.js components ✅ *In Progress*
     - Implement state management with Pinia *Planned*
     - Develop component testing strategy *Planned*
-    
+
   - **Phase 3: Feature Implementation** *Planned*
     - Real-time updates using WebSocket integration
     - Enhanced UI/UX with modern component design
     - Client-side caching and performance optimization
     - Offline support for critical features
-    
+
 - **Key Features:**
   - **Component Architecture:**
     - Modular, reusable components ✅ *Implemented*
     - Shared component library ✅ *Partially Implemented*
     - Type-safe component props and events ✅ *Implemented*
-    
+
   - **State Management:**
     - Centralized state with Pinia ✅ *Implemented*
     - Real-time state synchronization *Planned*
     - Optimistic UI updates *Planned*
-    
+
   - **Performance Optimizations:**
     - Code splitting and lazy loading ✅ *Implemented*
     - Asset optimization and caching *Planned*
     - Server-side rendering where beneficial *Planned*
-    
+
   - **Developer Experience:**
     - Hot module replacement ✅ *Implemented*
     - TypeScript integration ✅ *Implemented*
@@ -2493,7 +2493,7 @@ These improvements align with our quality assurance strategy and support our goa
     - Category List view for product categorization ✅ *Implemented*
     - Responsive layouts with improved UX ✅ *Implemented*
     - Loading states and error handling ✅ *Implemented*
-  
+
   - **Sales Module:** ✅ *In Progress*
     - Sales Order List view with search, filtering, and pagination ✅ *Implemented*
     - Sales Order Detail view with comprehensive order information ✅ *Implemented*
@@ -2505,7 +2505,7 @@ These improvements align with our quality assurance strategy and support our goa
 
 ### 4.7 Vue.js Frontend Integration
 
-- **Vue.js 3.5 Integration:** 
+- **Vue.js 3.5 Integration:**
   - Modern frontend framework integration with Django backend. ✅ *Implemented*
   - Project structure setup with Vue.js best practices. ✅ *Implemented*
   - TypeScript integration for type safety and improved developer experience. ✅ *Implemented*

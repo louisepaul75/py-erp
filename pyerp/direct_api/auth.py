@@ -4,41 +4,41 @@ Authentication and session management for the direct_api module.
 This module handles authentication with the legacy API and maintains session information.  # noqa: E501
 """
 
+import datetime
+import json
 import logging
+import os
 import threading
 import time
-import datetime
-import requests
-import os
-import json
-from typing import Dict, Optional, Any  # noqa: F401
 from urllib.parse import urljoin
-from django.core.cache import caches  # noqa: F401
 
-from pyerp.direct_api.exceptions import (  # noqa: F401
-    AuthenticationError, ConnectionError, ResponseError, SessionError  # noqa: E128
+import requests
+
+from pyerp.direct_api.exceptions import (
+    AuthenticationError,
+    ConnectionError,
 )
-from pyerp.direct_api.settings import (  # noqa: F401
-    API_ENVIRONMENTS,  # noqa: E128
-    API_REQUEST_TIMEOUT,
+from pyerp.direct_api.settings import (
+    API_ENVIRONMENTS,
+    API_INFO_ENDPOINT,
     API_MAX_RETRIES,
+    API_REQUEST_TIMEOUT,
     API_RETRY_BACKOFF_FACTOR,
-    API_SESSION_EXPIRY,
-    API_SESSION_CACHE_NAME,
-    API_SESSION_CACHE_KEY_PREFIX,
-    API_INFO_ENDPOINT
 )
 
- # Configure logging
+# Configure logging
 logger = logging.getLogger(__name__)
 
- # File for storing the session cookie globally - single cookie for all environments  # noqa: E501
-COOKIE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.global_session_cookie')  # noqa: E501
+# File for storing the session cookie globally - single cookie for all environments
+COOKIE_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    ".global_session_cookie",
+)
 
- # Global lock for file operations
+# Global lock for file operations
 file_lock = threading.RLock()
 
- # Global flag to track if we've hit session limits across the system
+# Global flag to track if we've hit session limits across the system
 _SESSION_LIMIT_REACHED = False
 _session_limit_lock = threading.RLock()
 
@@ -53,7 +53,9 @@ def set_session_limit_reached(reached=True):
     global _SESSION_LIMIT_REACHED
     with _session_limit_lock:
         if reached and not _SESSION_LIMIT_REACHED:
-            logger.warning("SESSION LIMIT REACHED: Setting global flag to prevent new session creation")  # noqa: E501
+            logger.warning(
+                "SESSION LIMIT REACHED: Setting global flag to prevent new session creation",
+            )
         _SESSION_LIMIT_REACHED = reached
 
 
@@ -75,7 +77,7 @@ class Session:
     This class handles authentication, session validity checking, and automatic refresh.  # noqa: E501
     """
 
-    def __init__(self, environment: str = 'live'):
+    def __init__(self, environment: str = "live"):
         """
         Initialize a new session.
 
@@ -86,16 +88,20 @@ class Session:
         self.cookie = None
         self.created_at = None
 
- # Load environment configuration
+        # Load environment configuration
         try:
             self.config = API_ENVIRONMENTS[environment]
         except KeyError:
-            raise ValueError(f"Unknown environment: {environment}. "
-                            f"Available environments: {', '.join(API_ENVIRONMENTS.keys())}")  # noqa: E501
+            raise ValueError(
+                f"Unknown environment: {environment}. "
+                f"Available environments: {', '.join(API_ENVIRONMENTS.keys())}",
+            )
 
- # Check if we have required configuration
-        if not self.config.get('base_url'):
-            raise ValueError(f"Missing base_url in environment configuration for {environment}")  # noqa: E501
+        # Check if we have required configuration
+        if not self.config.get("base_url"):
+            raise ValueError(
+                f"Missing base_url in environment configuration for {environment}",
+            )
 
     def _load_cookie_from_file(self):
         """
@@ -106,14 +112,20 @@ class Session:
                 return False
 
             try:
-                with open(COOKIE_FILE, 'r') as f:
+                with open(COOKIE_FILE) as f:
                     cookie_data = json.load(f)
 
- # Very basic validation - just check if required fields exist
-                if 'name' in cookie_data and 'value' in cookie_data:
-                    self.cookie = cookie_data['value']
-                    self.created_at = datetime.datetime.fromisoformat(cookie_data['created_at']) if 'created_at' in cookie_data else datetime.datetime.now()  # noqa: E501
-                    logger.info(f"Loaded session cookie from file: {self.cookie[:30]}...")  # noqa: E501
+                # Very basic validation - just check if required fields exist
+                if "name" in cookie_data and "value" in cookie_data:
+                    self.cookie = cookie_data["value"]
+                    self.created_at = (
+                        datetime.datetime.fromisoformat(cookie_data["created_at"])
+                        if "created_at" in cookie_data
+                        else datetime.datetime.now()
+                    )
+                    logger.info(
+                        f"Loaded session cookie from file: {self.cookie[:30]}...",
+                    )
                     return True
 
                 return False
@@ -128,15 +140,19 @@ class Session:
         with file_lock:
             try:
                 cookie_data = {
-                    'name': 'WASID4D',  # Always use WASID4D as the cookie name  # noqa: E128
-                    'value': self.cookie,
-                               'created_at': self.created_at.isoformat() if self.created_at else datetime.datetime.now().isoformat()  # noqa: E501
+                    "name": "WASID4D",  # Always use WASID4D as the cookie name
+                    "value": self.cookie,
+                    "created_at": (
+                        self.created_at.isoformat()
+                        if self.created_at
+                        else datetime.datetime.now().isoformat()
+                    ),
                 }
 
-                with open(COOKIE_FILE, 'w') as f:
+                with open(COOKIE_FILE, "w") as f:
                     json.dump(cookie_data, f)
 
-                logger.info(f"Saved session cookie to file: {self.cookie[:10]}...")  # noqa: E501
+                logger.info(f"Saved session cookie to file: {self.cookie[:10]}...")
                 return True
             except Exception as e:
                 logger.warning(f"Error saving cookie to file: {e}")
@@ -161,15 +177,15 @@ class Session:
             ResponseError: If the API returns an error response
         """
         if is_session_limit_reached():
-            error_msg = "Cannot create a new session because the session limit has been reached (402 error)"  # noqa: E501
+            error_msg = "Cannot create a new session because the session limit has been reached (402 error)"
             logger.error(error_msg)
             raise AuthenticationError(error_msg)
 
- # Build the authentication URL
-        base_url = self.config['base_url']
+        # Build the authentication URL
+        base_url = self.config["base_url"]
         auth_url = urljoin(base_url, API_INFO_ENDPOINT)
 
- # Prepare for retries
+        # Prepare for retries
         retries = 0
         last_error = None
 
@@ -177,97 +193,113 @@ class Session:
             try:
                 logger.debug(f"Authenticating with {auth_url}")
                 response = requests.get(
-                    auth_url,  # noqa: E128
-                    timeout=API_REQUEST_TIMEOUT  # noqa: F841
+                    auth_url,
+                    timeout=API_REQUEST_TIMEOUT,
                 )
 
- # Check if we got a 402 error - if so, mark that we've hit the session limit  # noqa: E501
+                # Check if we got a 402 error - if so, mark that we've hit the session limit
                 if response.status_code == 402:
                     set_session_limit_reached(True)
-                    error_msg = "Too many sessions error (402) during authentication"  # noqa: E501
+                    error_msg = "Too many sessions error (402) during authentication"
                     logger.error(error_msg)
                     raise AuthenticationError(error_msg)
 
- # Check if we got a cookie (even with 404 status)
-                if 'Set-Cookie' in response.headers:
-                    cookie_header = response.headers['Set-Cookie']
+                # Check if we got a cookie (even with 404 status)
+                if "Set-Cookie" in response.headers:
+                    cookie_header = response.headers["Set-Cookie"]
 
- # Extract just the cookie value by parsing the Set-Cookie header  # noqa: E501
- # Set-Cookie header format is typically: name=value; path=/; domain=.example.com; ...  # noqa: E501
- # We want to extract just the value part
-                    if '=' in cookie_header:
-                        if 'WASID4D=' in cookie_header:
-                            start_index = cookie_header.find('WASID4D=') + 8  # Length of 'WASID4D='  # noqa: E501
-                            end_index = cookie_header.find(';', start_index)
-                            if end_index == -1:  # No semicolon found, take the rest of the string  # noqa: E501
+                    # Extract just the cookie value by parsing the Set-Cookie header
+                    # Set-Cookie header format is typically: name=value; path=/; domain=.example.com; ...
+                    # We want to extract just the value part
+                    if "=" in cookie_header:
+                        if "WASID4D=" in cookie_header:
+                            start_index = (
+                                cookie_header.find("WASID4D=") + 8
+                            )  # Length of 'WASID4D='
+                            end_index = cookie_header.find(";", start_index)
+                            if (
+                                end_index == -1
+                            ):  # No semicolon found, take the rest of the string
                                 end_index = len(cookie_header)
 
-                            cookie_value = cookie_header[start_index:end_index].strip()  # noqa: E501
+                            cookie_value = cookie_header[start_index:end_index].strip()
                             logger.info("Found WASID4D in Set-Cookie header")
 
- # Store just the value
+                            # Store just the value
                             self.cookie = cookie_value
-                            logger.info(f"Stored WASID4D cookie value: {cookie_value[:10]}...")  # noqa: E501
+                            logger.info(
+                                f"Stored WASID4D cookie value: {cookie_value[:10]}...",
+                            )
                             self.created_at = datetime.datetime.now()
 
- # Save the cookie to file for persistence
+                            # Save the cookie to file for persistence
                             self._save_cookie_to_file()
                             return
 
- # If no WASID4D found, fall back to general parsing
-                        cookie_parts = cookie_header.split(';')[0].split('=', 1)  # noqa: E501
+                        # If no WASID4D found, fall back to general parsing
+                        cookie_parts = cookie_header.split(";")[0].split("=", 1)
                         if len(cookie_parts) == 2:
                             cookie_name = cookie_parts[0].strip()
                             cookie_value = cookie_parts[1].strip()
-                            logger.info(f"Extracted cookie name: {cookie_name}")  # noqa: E501
+                            logger.info(f"Extracted cookie name: {cookie_name}")
 
-
- # noqa: F841
                             self.cookie = cookie_value
-                            logger.info(f"Stored cookie value: {cookie_value[:10]}...")  # noqa: E501
+                            logger.info(f"Stored cookie value: {cookie_value[:10]}...")
                         else:
-                            logger.warning("Failed to parse cookie header, using full header as fallback")  # noqa: E501
+                            logger.warning(
+                                "Failed to parse cookie header, using full header as fallback",
+                            )
                             self.cookie = cookie_header
                     else:
-                        logger.warning("Unexpected cookie format, using full header as fallback")  # noqa: E501
+                        logger.warning(
+                            "Unexpected cookie format, using full header as fallback",
+                        )
                         self.cookie = cookie_header
 
                     self.created_at = datetime.datetime.now()
-                    logger.info(f"Successfully obtained session cookie for {self.environment}")  # noqa: E501
+                    logger.info(
+                        f"Successfully obtained session cookie for {self.environment}",
+                    )
 
- # Save the cookie to file for persistence
+                    # Save the cookie to file for persistence
                     self._save_cookie_to_file()
                     return
 
- # Also check if cookies were set in the response's cookies attribute  # noqa: E501
-                elif response.cookies:
-                    if 'WASID4D' in response.cookies:
-                        cookie_value = response.cookies['WASID4D']
+                # Also check if cookies were set in the response's cookies attribute
+                if response.cookies:
+                    if "WASID4D" in response.cookies:
+                        cookie_value = response.cookies["WASID4D"]
                         logger.info("Found WASID4D cookie in response.cookies")
 
- # Store just the value
+                        # Store just the value
                         self.cookie = cookie_value
-                        logger.info(f"Stored WASID4D cookie value: {cookie_value[:10]}...")  # noqa: E501
+                        logger.info(
+                            f"Stored WASID4D cookie value: {cookie_value[:10]}...",
+                        )
                         self.created_at = datetime.datetime.now()
 
- # Save the cookie to file for persistence
+                        # Save the cookie to file for persistence
                         self._save_cookie_to_file()
                         return
-                    elif '4DSID_WSZ-DB' in response.cookies:
-                        cookie_value = response.cookies['4DSID_WSZ-DB']
-                        logger.info("Found 4DSID_WSZ-DB cookie in response.cookies (will use as WASID4D)")  # noqa: E501
+                    if "4DSID_WSZ-DB" in response.cookies:
+                        cookie_value = response.cookies["4DSID_WSZ-DB"]
+                        logger.info(
+                            "Found 4DSID_WSZ-DB cookie in response.cookies (will use as WASID4D)",
+                        )
 
- # Store just the value
+                        # Store just the value
                         self.cookie = cookie_value
-                        logger.info(f"Stored 4DSID_WSZ-DB cookie value as WASID4D: {cookie_value[:10]}...")  # noqa: E501
+                        logger.info(
+                            f"Stored 4DSID_WSZ-DB cookie value as WASID4D: {cookie_value[:10]}...",
+                        )
                         self.created_at = datetime.datetime.now()
 
- # Save the cookie to file for persistence
+                        # Save the cookie to file for persistence
                         self._save_cookie_to_file()
                         return
 
- # No cookie found in response
-                error_msg = f"No session cookie returned by the API (status {response.status_code})"  # noqa: E501
+                # No cookie found in response
+                error_msg = f"No session cookie returned by the API (status {response.status_code})"
                 logger.error(error_msg)
                 raise AuthenticationError(error_msg)
 
@@ -275,24 +307,28 @@ class Session:
                 last_error = e
                 logger.warning(f"Connection error during authentication: {e}")
 
- # Calculate backoff time for retry
-                backoff = API_RETRY_BACKOFF_FACTOR * (2 ** retries)
+                # Calculate backoff time for retry
+                backoff = API_RETRY_BACKOFF_FACTOR * (2**retries)
                 retries += 1
 
                 if retries <= API_MAX_RETRIES:
-                    logger.info(f"Retrying authentication in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})")  # noqa: E501
+                    logger.info(
+                        f"Retrying authentication in {backoff:.2f} seconds (attempt {retries}/{API_MAX_RETRIES})",
+                    )
                     time.sleep(backoff)
                 else:
-                    logger.error(f"Authentication failed after {retries-1} retries")  # noqa: E501
-                    raise ConnectionError(f"Unable to connect to the API after {retries-1} retries") from last_error  # noqa: E501
+                    logger.error(f"Authentication failed after {retries - 1} retries")
+                    raise ConnectionError(
+                        f"Unable to connect to the API after {retries - 1} retries",
+                    ) from last_error
 
             except Exception as e:
                 logger.error(f"Unexpected error during authentication: {e}")
                 raise
 
- # This should not be reached due to the retry logic above, but just in case  # noqa: E501
+        # This should not be reached due to the retry logic above, but just in case
         if last_error:
-            raise ConnectionError("Unable to connect to the API") from last_error  # noqa: E501
+            raise ConnectionError("Unable to connect to the API") from last_error
 
     def get_cookie(self) -> str:
         """
@@ -307,7 +343,7 @@ class Session:
         """
         if not self.is_valid():
             if is_session_limit_reached():
-                error_msg = "Cannot create a new session because the session limit has been reached (402 error)"  # noqa: E501
+                error_msg = "Cannot create a new session because the session limit has been reached (402 error)"
                 logger.error(error_msg)
                 raise AuthenticationError(error_msg)
 
@@ -326,7 +362,7 @@ class Session:
         """
         if not self.is_valid() and not self._load_cookie_from_file():
             if is_session_limit_reached():
-                error_msg = "Cannot create a new session because the session limit has been reached (402 error)"  # noqa: E501
+                error_msg = "Cannot create a new session because the session limit has been reached (402 error)"
                 logger.error(error_msg)
                 raise AuthenticationError(error_msg)
 
@@ -340,22 +376,22 @@ class Session:
         self.cookie = None
         self.created_at = None
 
- # Remove the cookie file if it exists
+        # Remove the cookie file if it exists
         with file_lock:
             if os.path.exists(COOKIE_FILE):
                 try:
                     os.remove(COOKIE_FILE)
                     logger.info(f"Removed session cookie file: {COOKIE_FILE}")
                 except Exception as e:
-                    logger.warning(f"Failed to remove session cookie file: {e}")  # noqa: E501
+                    logger.warning(f"Failed to remove session cookie file: {e}")
 
 
- # Session pool for reusing sessions
+# Session pool for reusing sessions
 _session_pool = {}
 _session_pool_lock = threading.RLock()
 
 
-def get_session(environment: str = 'live') -> Session:
+def get_session(environment: str = "live") -> Session:
     """
     Get a session for the specified environment.
 
@@ -372,7 +408,7 @@ def get_session(environment: str = 'live') -> Session:
         return _session_pool[environment]
 
 
-def invalidate_session(environment: str = 'live') -> None:
+def invalidate_session(environment: str = "live") -> None:
     """
     Invalidate the session for the specified environment.
 
@@ -385,7 +421,7 @@ def invalidate_session(environment: str = 'live') -> None:
             del _session_pool[environment]
 
 
-def get_session_cookie(environment: str = 'live') -> str:
+def get_session_cookie(environment: str = "live") -> str:
     """
     Get a session cookie for the specified environment.
 
@@ -398,7 +434,7 @@ def get_session_cookie(environment: str = 'live') -> str:
         str: The session cookie for API requests
     """
     if is_session_limit_reached():
-        error_msg = "Cannot get session cookie because the session limit has been reached (402 error)"  # noqa: E501
+        error_msg = "Cannot get session cookie because the session limit has been reached (402 error)"
         logger.error(error_msg)
         raise AuthenticationError(error_msg)
 

@@ -30,27 +30,27 @@ class TestValidateProductModel:
         """Set up before each test."""
         # Import the function we want to test
         from pyerp.products.validators import validate_product_model
-        
+
         # Store the original for later restoration
         self.original_validate_product_model = validate_product_model
-        
+
         # Define our testable replacement that avoids circular imports
         def patched_validate_product_model(product):
             errors = {}
-            
+
             # Re-import any dependencies needed in the function
             from pyerp.core.validators import SkuValidator
-            
+
             # Implement the same logic as the original
             sku_validator = SkuValidator()
             sku_result = sku_validator(product.sku, field_name='sku')
             if not sku_result.is_valid:
                 errors['sku'] = sku_result.errors['sku']
-            
+
             # Check parent-variant relationship
             if product.is_parent and product.variant_code:
                 errors.setdefault('is_parent', []).append("Parent products should not have variant codes")
-            
+
             # Ensure base_sku is set
             if not product.base_sku:
                 if '-' in product.sku:
@@ -58,20 +58,20 @@ class TestValidateProductModel:
                     product.base_sku = base_sku
                 else:
                     product.base_sku = product.sku
-            
+
             # Check prices
             if product.list_price < product.cost_price:
                 errors.setdefault('list_price', []).append("List price should not be less than cost price")
-            
+
             # Raise ValidationError if there are any errors
             if errors:
                 from django.core.exceptions import ValidationError
                 raise ValidationError(errors)
-        
+
         # Replace the function with our patched version
         import pyerp.products.validators
         pyerp.products.validators.validate_product_model = patched_validate_product_model
-    
+
     def teardown_method(self):
         """Clean up after each test."""
         # Restore the original function
@@ -122,4 +122,4 @@ This approach can be applied to test other components that:
 
 - [Testing Framework Overview](../README.md)
 - [Advanced Testing Techniques](../../tests/README.md#advanced-testing-techniques)
-- [Test Coverage Improvement Plan](../../.ai/stories/test_coverage_improvement.md) 
+- [Test Coverage Improvement Plan](../../.ai/stories/test_coverage_improvement.md)

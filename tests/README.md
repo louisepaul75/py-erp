@@ -148,29 +148,29 @@ class TestCircularImportComponent:
         """Set up before each test."""
         # Import the component to test
         from myapp.module import target_function
-        
+
         # Store the original function for restoration
         self.original_function = target_function
-        
+
         # Define a patched version that avoids circular imports
         def patched_function(arg1, arg2):
             # Re-import any needed dependencies
             from myapp.other_module import Helper
-            
+
             # Implement the same logic, but in a way that's testable
             # ...
             return result
-                
+
         # Replace the function with our patched version
         import myapp.module
         myapp.module.target_function = patched_function
-    
+
     def teardown_method(self):
         """Clean up after each test."""
         # Restore the original function
         import myapp.module
         myapp.module.target_function = self.original_function
-        
+
     def test_function(self):
         """Test the function."""
         from myapp.module import target_function
@@ -190,12 +190,12 @@ def setup_method(self):
     # Define a mock implementation
     def mock_gettext(text):
         return text
-        
+
     # Patch at the module level
     import myapp.module
     self.original_gettext = myapp.module._  # Store original
     myapp.module._ = mock_gettext  # Replace
-    
+
 def teardown_method(self):
     # Restore original
     import myapp.module
@@ -210,4 +210,4 @@ def test_translated_message(self):
     pass
 ```
 
-Both techniques are demonstrated in the validator tests in the pyERP codebase. 
+Both techniques are demonstrated in the validator tests in the pyERP codebase.

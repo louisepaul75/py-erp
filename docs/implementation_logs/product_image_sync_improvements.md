@@ -94,4 +94,4 @@ These changes were tested with specific SKUs known to have different image types
 - `pyerp/products/management/commands/sync_product_images.py`
 - `pyerp/products/templatetags/product_filters.py`
 - `pyerp/products/views.py`
-- `pyerp/products/image_api.py` 
+- `pyerp/products/image_api.py`

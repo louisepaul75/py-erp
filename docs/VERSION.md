@@ -89,4 +89,4 @@ MAJOR.MINOR.PATCH-PHASE
 - **PATCH**: Increment when making backward-compatible bug fixes
 - **PHASE**: Update to reflect the current stability level (alpha → beta → rc → release)
 
-Version bumps should be done as part of the release branch creation process. 
+Version bumps should be done as part of the release branch creation process.

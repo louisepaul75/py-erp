@@ -185,7 +185,7 @@ The API supports OData-style filtering through the `$filter` parameter. Our test
      try:
          # Try with filter
          response = session.get(url, params=params)
-         
+
          # Check for filter-related errors
          if response.status_code != 200 and '$filter' in params:
              # Remove the filter and try again
@@ -262,4 +262,4 @@ The `pyerp/direct_api/scripts/getTable.py` script provides a reference implement
 
 ## Conclusion
 
-The legacy ERP's direct API provides valuable access to system data but requires careful handling of sessions and response formats. By following the best practices outlined in this document, integrations can achieve reliable and efficient data exchange with the legacy system. 
+The legacy ERP's direct API provides valuable access to system data but requires careful handling of sessions and response formats. By following the best practices outlined in this document, integrations can achieve reliable and efficient data exchange with the legacy system.

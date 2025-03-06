@@ -22,4 +22,4 @@ chmod 600 ./docker/nginx/ssl/server.key
 echo ""
 echo "To apply the changes, restart your Docker containers with:"
 echo "docker-compose -f docker/docker-compose.prod.yml down"
-echo "docker-compose -f docker/docker-compose.prod.yml up -d" 
+echo "docker-compose -f docker/docker-compose.prod.yml up -d"

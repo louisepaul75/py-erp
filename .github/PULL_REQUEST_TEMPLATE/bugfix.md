@@ -11,9 +11,9 @@
 
 ### Reproduction Steps (Before Fix)
 <!-- Steps to reproduce the bug before your fix -->
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ### Testing
 <!-- Describe the tests you've added or updated to verify this fix -->
@@ -30,4 +30,4 @@
 - [ ] I have updated the documentation if necessary
 - [ ] My changes generate no new warnings or errors
 - [ ] I have run the pre-commit hooks on my changes
-- [ ] I have verified that my changes fix the bug 
+- [ ] I have verified that my changes fix the bug

@@ -10,7 +10,7 @@ Unlike static content that can be translated using Django's built-in translation
 
 ### 1. Multiple Fields Approach
 
-**Description:**  
+**Description:**
 Add language-specific fields for each translatable field in the database model.
 
 **Example:**
@@ -18,10 +18,10 @@ Add language-specific fields for each translatable field in the database model.
 class Product(models.Model):
     name = models.CharField(_('Name (German)'), max_length=255)  # Primary language (German)
     name_en = models.CharField(_('Name (English)'), max_length=255, blank=True)
-    
+
     description = models.TextField(_('Description (German)'), blank=True)
     description_en = models.TextField(_('Description (English)'), blank=True)
-    
+
     # Helper methods
     def get_name(self):
         current_lang = get_language()
@@ -46,7 +46,7 @@ class Product(models.Model):
 
 ### 2. django-modeltranslation
 
-**Description:**  
+**Description:**
 Use the django-modeltranslation package to automatically create language-specific fields and handle translations.
 
 **Example:**
@@ -91,7 +91,7 @@ class Product(models.Model):
 
 ### 3. JSON/JSONB Fields
 
-**Description:**  
+**Description:**
 Store translations in a JSON field with language codes as keys.
 
 **Example:**
@@ -99,13 +99,13 @@ Store translations in a JSON field with language codes as keys.
 class Product(models.Model):
     name_translations = models.JSONField(default=dict)
     description_translations = models.JSONField(default=dict)
-    
+
     @property
     def name(self):
         current_lang = get_language()
         translations = self.name_translations or {}
         return translations.get(current_lang, translations.get('de', ''))
-    
+
     def set_name(self, language_code, value):
         if not self.name_translations:
             self.name_translations = {}
@@ -129,7 +129,7 @@ class Product(models.Model):
 
 ### 4. Separate Translation Model
 
-**Description:**  
+**Description:**
 Create a separate model to store translations with a foreign key to the main model.
 
 **Example:**
@@ -138,11 +138,11 @@ class Product(models.Model):
     # Only non-translatable fields
     sku = models.CharField(max_length=100, unique=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    
+
     def get_translation(self, language_code=None):
         if language_code is None:
             language_code = get_language()
-        
+
         try:
             return self.translations.get(language_code=language_code)
         except ProductTranslation.DoesNotExist:
@@ -159,7 +159,7 @@ class ProductTranslation(models.Model):
     language_code = models.CharField(max_length=10, choices=settings.LANGUAGES)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     class Meta:
         unique_together = ('product', 'language_code')
         index_together = ('product', 'language_code')
@@ -228,18 +228,18 @@ Based on the existing codebase and requirements, we recommend the following appr
        # Base fields for primary language (German)
        name = models.CharField(_('Name (German)'), max_length=255)
        description = models.TextField(_('Description (German)'), blank=True)
-       
+
        # English translations
        name_en = models.CharField(_('Name (English)'), max_length=255, blank=True)
        description_en = models.TextField(_('Description (English)'), blank=True)
-       
+
        # Helper method for getting translated content
        def get_name(self):
            current_lang = get_language()
            if current_lang == 'en' and self.name_en:
                return self.name_en
            return self.name
-       
+
        def get_description(self):
            current_lang = get_language()
            if current_lang == 'en' and self.description_en:
@@ -275,7 +275,7 @@ Based on the existing codebase and requirements, we recommend the following appr
        'django.contrib.admin',
        # ... other apps
    ]
-   
+
    LANGUAGES = [
        ('de', _('German')),
        ('en', _('English')),
@@ -287,11 +287,11 @@ Based on the existing codebase and requirements, we recommend the following appr
    # pyerp/products/translation.py
    from modeltranslation.translator import register, TranslationOptions
    from .models import Product, ProductCategory
-   
+
    @register(Product)
    class ProductTranslationOptions(TranslationOptions):
        fields = ('name', 'description', 'short_description')
-   
+
    @register(ProductCategory)
    class ProductCategoryTranslationOptions(TranslationOptions):
        fields = ('name', 'description')
@@ -332,4 +332,4 @@ When migrating from one approach to another:
 3. **Testing:**
    - Test all CRUD operations in all supported languages
    - Verify fallback behavior works correctly
-   - Test impact on performance and query counts 
+   - Test impact on performance and query counts

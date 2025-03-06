@@ -301,20 +301,20 @@ LOGGING = {
            },
            }
 
- # Image API Configuration
-           IMAGE_API = {  # noqa: F841
-           'BASE_URL': os.environ.get('IMAGE_API_URL', 'http://webapp.zinnfiguren.de/api/'),  # noqa: E501
-           'USERNAME': os.environ.get('IMAGE_API_USERNAME', ''),
-           'PASSWORD': os.environ.get('IMAGE_API_PASSWORD', ''),
-           'TIMEOUT': int(os.environ.get('IMAGE_API_TIMEOUT', 60)),  # Increased default timeout  # noqa: E501
-           'CACHE_ENABLED': os.environ.get('IMAGE_API_CACHE_ENABLED', 'True').lower() == 'true',  # noqa: E501
-           'CACHE_TIMEOUT': int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600)),  # 1 hour  # noqa: E501
-           'VERIFY_SSL': os.environ.get('IMAGE_API_VERIFY_SSL', 'False').lower() == 'true',  # Default to not verifying SSL  # noqa: E501
-           }
+# Image API Configuration
+IMAGE_API = {  # noqa: F841
+    'BASE_URL': os.environ.get('IMAGE_API_URL', 'http://webapp.zinnfiguren.de/api/'),  # noqa: E501
+    'USERNAME': os.environ.get('IMAGE_API_USERNAME', ''),
+    'PASSWORD': os.environ.get('IMAGE_API_PASSWORD', ''),
+    'TIMEOUT': int(os.environ.get('IMAGE_API_TIMEOUT', 60)),  # Increased default timeout  # noqa: E501
+    'CACHE_ENABLED': os.environ.get('IMAGE_API_CACHE_ENABLED', 'True').lower() == 'true',  # noqa: E501
+    'CACHE_TIMEOUT': int(os.environ.get('IMAGE_API_CACHE_TIMEOUT', 3600)),  # 1 hour  # noqa: E501
+    'VERIFY_SSL': os.environ.get('IMAGE_API_VERIFY_SSL', 'False').lower() == 'true',  # Default to not verifying SSL  # noqa: E501
+}
 
- # Update loggers for image API
-           LOGGING['loggers']['pyerp.products.image_api'] = {
-           'handlers': ['console', 'data_sync_file'],  # noqa: E128
-           'level': LOG_LEVEL,
-           'propagate': False,
-           }
+# Update loggers for image API
+LOGGING['loggers']['pyerp.products.image_api'] = {
+    'handlers': ['console', 'data_sync_file'],
+    'level': LOG_LEVEL,
+    'propagate': False,
+}

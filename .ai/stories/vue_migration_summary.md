@@ -144,5 +144,5 @@ The migration to Vue.js is progressing well, with the Product module successfull
 
 ---
 
-**Last Updated:** March 4, 2024  
-**Created By:** pyERP Development Team 
+**Last Updated:** March 4, 2024
+**Created By:** pyERP Development Team

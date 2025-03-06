@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 88
-target-version = ["py313"]
+target-version = ["py312"]
 include = '\.pyi?$'
 exclude = '''
 (
@@ -33,7 +33,7 @@ use_parentheses = true
 skip_glob = ["*/migrations/*", "venv*/*"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -88,4 +88,71 @@ exclude_lines = [
 
 [tool.bandit]
 exclude_dirs = ["tests", "migrations"]
-skips = ["B101"] 
+skips = ["B101"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`), pycodestyle (`E`), isort (`I`), and more
+select = ["E", "F", "I", "B", "C4", "ARG", "SIM", "ERA", "PL", "N", "UP", "ANN", "FBT", "A", "C90", "T10", "EM", "FA", "ICN", "G", "INP", "PIE", "T20", "PT", "Q", "RSE", "RET", "SLF", "SLOT", "TRY", "YTT", "DTZ", "S", "BLE", "FLY", "PERF", "RUF"]
+ignore = ["COM812"]  # Ignore trailing comma rule that conflicts with formatter
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "*/migrations/*",
+]
+
+[tool.ruff.lint.isort]
+known-third-party = ["django", "rest_framework"]
+
+[tool.ruff.lint.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use assert and don't need return type annotations
+"tests/**/*" = ["S101", "ANN201", "ANN202", "ANN001", "ANN003", "ARG001", "ARG002", "ANN204", "PLR2004", "SLF001", "N818", "RUF012", "C901", "PLR0912", "PT009", "PT011", "PT012", "A002", "N803", "TRY003", "EM101", "UP028", "BLE001", "SIM117", "SIM102", "SIM103", "UP038", "RET504", "FBT002", "T201", "S603", "S605", "S607", "E501", "INP001", "ANN002", "ANN206", "ARG005", "PERF401", "SIM108"]
+# Template test files can have commented-out code
+"tests/**/test_template.py" = ["ERA001"]
+# Allow print statements, subprocess calls, and other common patterns in scripts
+"scripts/**/*" = ["T201", "S603", "S605", "S607", "ANN201", "DTZ005", "E501", "BLE001", "ANN001", "FBT002", "C901", "PLR0912", "PLR0915", "TRY300", "E402", "ARG001", "PLR2004", "PLW2901", "PIE810", "PERF401", "G004", "T203", "F401", "INP001", "SLF001", "F841", "S602", "S608", "UP035", "A001", "B007", "E722", "SIM102", "TRY400", "RUF100"]
+# Stub files can use Any
+"wsz_api/**/*" = ["ANN401", "EM101", "N999", "N802", "PLR0913", "FBT001", "FBT002", "E501", "F401", "UP035", "N801"]
+# Django settings files can use star imports and print statements
+"pyerp/settings/**/*" = ["F405", "T201", "BLE001", "E501", "E402", "ANN204", "ANN001", "F403", "SIM105", "ERA001", "ARG005", "RUF100"]
+# Django URLs can use print statements
+"pyerp/urls.py" = ["T201"]
+# Utils can have some common issues
+"pyerp/utils/**/*" = ["ANN201", "RET504", "FBT002", "ANN001", "E501", "T201"]
+# Django scripts can have common issues
+"pyerp/scripts/**/*" = ["T201", "ANN201", "E501", "BLE001", "TRY300", "F841", "ANN001", "RUF100"]
+# Products module can have common issues
+"pyerp/products/**/*" = ["ANN201", "ANN001", "ANN003", "ARG002", "TRY300", "BLE001", "T201", "E501", "ERA001", "C901", "PLR0912", "RET503", "S110", "SIM102", "F841", "ANN401", "RUF012"]
+# Sales module can have common issues
+"pyerp/sales/**/*" = ["ANN201", "ANN001", "ARG001", "ARG002", "TRY300", "BLE001", "E501"]

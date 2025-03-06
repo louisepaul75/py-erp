@@ -86,7 +86,7 @@ Implement logic to handle the parent-variant relationship:
 def process_parent_product(parent_data):
     parent = create_or_update_parent(parent_data)
     variants = Product.objects.filter(base_sku=parent.sku)
-    
+
     for variant in variants:
         associate_variant_with_parent(variant, parent)
         inherit_attributes_if_needed(variant, parent)
@@ -149,4 +149,4 @@ Plan for a staged rollout:
 | Inconsistent data between Art_Kalkulation and Artikel_Stamm | Data integrity issues | Implement validation rules, log discrepancies for review |
 | Missing parent records for some variants | Incomplete product hierarchy | Handle orphaned variants gracefully, create placeholder parents if needed |
 | Performance issues with large datasets | Slow import process | Optimize queries, implement batch processing, consider asynchronous operation |
-| Data loss during migration | Critical business impact | Ensure thorough testing, implement dry-run mode, maintain backups | 
+| Data loss during migration | Critical business impact | Ensure thorough testing, implement dry-run mode, maintain backups |

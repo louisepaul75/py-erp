@@ -34,4 +34,4 @@ fi
 # Create a marker file to indicate that type stubs have been installed
 touch scripts/tools/.type_stubs_installed
 
-echo "Type stubs installation complete!" 
+echo "Type stubs installation complete!"

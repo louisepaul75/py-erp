@@ -8,7 +8,7 @@ set -e
 
 # Check if script is run as root
 if [ "$(id -u)" -ne 0 ]; then
-    echo "This script must be run as root" 
+    echo "This script must be run as root"
     exit 1
 fi
 
@@ -102,7 +102,7 @@ get_env_var() {
     local var_name=$1
     local default_value=$2
     local var_value=${!var_name}
-    
+
     if [ -n "$var_value" ]; then
         echo "$var_value"
     else
@@ -184,4 +184,4 @@ echo "   - PROD_SSH_PRIVATE_KEY: The private key for SSH access to this server"
 echo ""
 echo "3. Make sure your firewall allows incoming connections to ports 80 and 443"
 echo ""
-echo "For more information, see the documentation at: https://github.com/your-org/pyERP" 
+echo "For more information, see the documentation at: https://github.com/your-org/pyERP"

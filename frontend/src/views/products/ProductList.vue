@@ -54,8 +54,8 @@
         <div v-else class="product-grid">
             <div v-for="product in products" :key="product.id" class="product-card" @click="viewProductDetails(product.id)">
                 <div class="product-image">
-                    <img 
-                        :src="getProductImage(product)" 
+                    <img
+                        :src="getProductImage(product)"
                         :alt="product.name"
                         @error="handleImageError"
                     />
@@ -64,10 +64,10 @@
                     <h3>{{ product.name }}</h3>
                     <p class="sku">SKU: {{ product.sku }}</p>
                     <p v-if="product.variants_count" class="variants-badge">
-                        {{ product.variants_count }} variants 
+                        {{ product.variants_count }} variants
                     </p>
                     <p v-if="product.category" class="category">
-                        {{ product.category.name }} 
+                        {{ product.category.name }}
                     </p>
                 </div>
             </div>
@@ -184,8 +184,8 @@ const mockProducts = [
     sku: 'DESK-001',
     variants_count: 4,
     category: { id: 1, name: 'Furniture' },
-    primary_image: { 
-      id: 1, 
+    primary_image: {
+      id: 1,
       url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -197,8 +197,8 @@ const mockProducts = [
     sku: 'CHAIR-002',
     variants_count: 6,
     category: { id: 1, name: 'Furniture' },
-    primary_image: { 
-      id: 2, 
+    primary_image: {
+      id: 2,
       url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -210,8 +210,8 @@ const mockProducts = [
     sku: 'SHELF-003',
     variants_count: 3,
     category: { id: 1, name: 'Furniture' },
-    primary_image: { 
-      id: 3, 
+    primary_image: {
+      id: 3,
       url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -223,8 +223,8 @@ const mockProducts = [
     sku: 'TECH-001',
     variants_count: 5,
     category: { id: 2, name: 'Electronics' },
-    primary_image: { 
-      id: 4, 
+    primary_image: {
+      id: 4,
       url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -236,8 +236,8 @@ const mockProducts = [
     sku: 'TECH-002',
     variants_count: 3,
     category: { id: 2, name: 'Electronics' },
-    primary_image: { 
-      id: 5, 
+    primary_image: {
+      id: 5,
       url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -249,8 +249,8 @@ const mockProducts = [
     sku: 'TECH-003',
     variants_count: 4,
     category: { id: 2, name: 'Electronics' },
-    primary_image: { 
-      id: 6, 
+    primary_image: {
+      id: 6,
       url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -262,8 +262,8 @@ const mockProducts = [
     sku: 'STAT-001',
     variants_count: 2,
     category: { id: 3, name: 'Stationery' },
-    primary_image: { 
-      id: 7, 
+    primary_image: {
+      id: 7,
       url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -275,8 +275,8 @@ const mockProducts = [
     sku: 'STAT-002',
     variants_count: 3,
     category: { id: 3, name: 'Stationery' },
-    primary_image: { 
-      id: 8, 
+    primary_image: {
+      id: 8,
       url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
       thumbnail_url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
@@ -288,7 +288,7 @@ const mockProducts = [
 const loadProducts = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     // Check if user is authenticated
     if (!authStore.isAuthenticated) {
@@ -296,7 +296,7 @@ const loadProducts = async () => {
       router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } });
       return;
     }
-    
+
     // Create params object with only defined values
     const params: Record<string, any> = {
       page: currentPage.value,
@@ -307,12 +307,12 @@ const loadProducts = async () => {
       is_active: isActive.value,
       include_variants: true
     };
-    
+
     console.log('API request params:', params);
-    
+
     const response = await productApi.getProducts(params);
     console.log('API response:', response);
-    
+
     if (response && response.data) {
       if (Array.isArray(response.data)) {
         // Handle case where response is a direct array
@@ -339,24 +339,24 @@ const loadProducts = async () => {
   } catch (err: any) {
     console.error('Error loading products:', err);
     error.value = `Failed to load products: ${err.message || 'Unknown error'}`;
-    
+
     if (err.response) {
       console.error('API error details:', err.response);
-      
+
       // Handle authentication errors
       if (err.response.status === 401) {
         error.value = 'Please log in to view products';
         router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } });
         return;
       }
-      
+
       error.value += ` (Status: ${err.response.status})`;
-      
+
       if (err.response.data && err.response.data.detail) {
         error.value += ` - ${err.response.data.detail}`;
       }
     }
-    
+
     products.value = [];
     totalProducts.value = 0;
   } finally {
@@ -370,7 +370,7 @@ const loadCategories = async () => {
     console.log('Loading categories...');
     const response = await productApi.getCategories();
     console.log('Categories response:', response);
-    
+
     if (response && response.data) {
       categories.value = response.data;
     } else {
@@ -380,7 +380,7 @@ const loadCategories = async () => {
   } catch (err: any) {
     console.error('Error loading categories:', err);
     categories.value = [];
-    
+
     // Don't show error for categories, just log it
     // This allows the product list to still load even if categories fail
   }
@@ -401,17 +401,17 @@ const viewProductDetails = (id: number) => {
 const testApiConnection = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     console.log('Testing API connection with minimal parameters');
-    
+
     // Try a simple request with no filters
     const response = await productApi.getProducts();
     console.log('API test successful:', response.data);
-    
+
     // If successful, show success message
     error.value = 'API test successful! Now trying to load products...';
-    
+
     // Then try to load products again
     setTimeout(() => {
       loadProducts();
@@ -419,19 +419,19 @@ const testApiConnection = async () => {
   } catch (err: any) {
     console.error('API test failed:', err);
     error.value = `API test failed: ${err.message || 'Unknown error'}`;
-    
+
     if (err.response) {
       console.error('API test response:', err.response);
       error.value += ` (Status: ${err.response.status})`;
-      
+
       if (err.response.data && err.response.data.detail) {
         error.value += ` - ${err.response.data.detail}`;
       }
     }
-    
+
     // Show option to use mock data
     error.value += '\n\nWould you like to use sample data instead?';
-    
+
     // Add button to use mock data
     setTimeout(() => {
       const errorDiv = document.querySelector('.error');
@@ -452,7 +452,7 @@ const testApiConnection = async () => {
 const useMockData = () => {
   loading.value = true;
   error.value = '';
-  
+
   setTimeout(() => {
     products.value = mockProducts;
     totalProducts.value = mockProducts.length;
@@ -464,7 +464,7 @@ const useMockData = () => {
 const updateApiUrl = () => {
   // Store in localStorage for persistence
   localStorage.setItem('apiUrl', apiUrl.value);
-  
+
   // Force reload the page to apply the new API URL
   window.location.reload();
 };
@@ -472,22 +472,22 @@ const updateApiUrl = () => {
 // Initialize component
 onMounted(async () => {
   console.log('ProductList component mounted');
-  
+
   // Check for stored API URL
   const storedApiUrl = localStorage.getItem('apiUrl');
   if (storedApiUrl) {
     apiUrl.value = storedApiUrl;
     console.log('Using stored API URL:', apiUrl.value);
   }
-  
+
   // Initialize auth store if needed
   if (!authStore.isAuthenticated && !authStore.isLoading) {
     await authStore.init();
   }
-  
+
   // Load products from API
   loadProducts();
-  
+
   // Load categories for the filter
   loadCategories();
 });
@@ -496,7 +496,7 @@ onMounted(async () => {
 const checkServerStatus = async (): Promise<boolean> => {
   try {
     console.log('Checking server status...');
-    
+
     // Try to fetch the API status
     let response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/status`, {
       method: 'GET',
@@ -505,7 +505,7 @@ const checkServerStatus = async (): Promise<boolean> => {
       },
       mode: 'cors',
     });
-    
+
     // If status endpoint doesn't exist, try the products endpoint
     if (response.status === 404) {
       console.log('Status endpoint not found, trying products endpoint...');
@@ -517,15 +517,15 @@ const checkServerStatus = async (): Promise<boolean> => {
         mode: 'cors',
       });
     }
-    
+
     console.log('Server status response:', response);
-    
+
     // Consider 500 errors as server being up but having issues
     if (response.status === 500) {
       console.warn('Server is up but returning 500 error');
       return true;
     }
-    
+
     return response.ok;
   } catch (err) {
     console.error('Server status check failed:', err);
@@ -538,84 +538,84 @@ const getProductImage = (product: Product) => {
     // First try to get images from variants if they exist
     if (product.variants && product.variants.length > 0) {
         // Try to find BE variant first
-        const beVariant = product.variants.find(v => 
-            v.attributes?.some(attr => 
-                attr.name.toLowerCase() === 'type' && 
+        const beVariant = product.variants.find(v =>
+            v.attributes?.some(attr =>
+                attr.name.toLowerCase() === 'type' &&
                 attr.value.toLowerCase() === 'be'
             ) ||
             v.sku?.toLowerCase().includes('be')
         );
-        
+
         if (beVariant) {
             // If BE variant has images, use the best one
             if (beVariant.images && beVariant.images.length > 0) {
-                const bestImage = beVariant.images.find(img => 
+                const bestImage = beVariant.images.find(img =>
                     img.image_type === 'Produktfoto' && img.is_front
-                ) || beVariant.images.find(img => 
+                ) || beVariant.images.find(img =>
                     img.image_type === 'Produktfoto'
-                ) || beVariant.images.find(img => 
+                ) || beVariant.images.find(img =>
                     img.is_front
-                ) || beVariant.images.find(img => 
+                ) || beVariant.images.find(img =>
                     img.is_primary
                 ) || beVariant.images[0];
-                
+
                 if (bestImage) {
                     return getValidImageUrl({ url: bestImage.url });
                 }
             }
-            
+
             // If BE variant has primary_image, use it
             if (beVariant.primary_image) {
                 return getValidImageUrl(beVariant.primary_image);
             }
         }
-        
+
         // If no BE variant or BE variant has no images, try other variants
         for (const variant of product.variants) {
             if (variant.images && variant.images.length > 0) {
-                const bestImage = variant.images.find(img => 
+                const bestImage = variant.images.find(img =>
                     img.image_type === 'Produktfoto' && img.is_front
-                ) || variant.images.find(img => 
+                ) || variant.images.find(img =>
                     img.image_type === 'Produktfoto'
-                ) || variant.images.find(img => 
+                ) || variant.images.find(img =>
                     img.is_front
-                ) || variant.images.find(img => 
+                ) || variant.images.find(img =>
                     img.is_primary
                 ) || variant.images[0];
-                
+
                 if (bestImage) {
                     return getValidImageUrl({ url: bestImage.url });
                 }
             }
-            
+
             if (variant.primary_image) {
                 return getValidImageUrl(variant.primary_image);
             }
         }
     }
-    
+
     // If product has images, use the best one
     if (product.images && product.images.length > 0) {
-        const bestImage = product.images.find(img => 
+        const bestImage = product.images.find(img =>
             img.image_type === 'Produktfoto' && img.is_front
-        ) || product.images.find(img => 
+        ) || product.images.find(img =>
             img.image_type === 'Produktfoto'
-        ) || product.images.find(img => 
+        ) || product.images.find(img =>
             img.is_front
-        ) || product.images.find(img => 
+        ) || product.images.find(img =>
             img.is_primary
         ) || product.images[0];
-        
+
         if (bestImage) {
             return getValidImageUrl({ url: bestImage.url });
         }
     }
-    
+
     // If product has primary image, use it
     if (product.primary_image) {
         return getValidImageUrl(product.primary_image);
     }
-    
+
     // Fallback to no-image
     return getNoImageUrl();
 };
@@ -848,13 +848,13 @@ h1 {
   .filters {
     flex-direction: column;
   }
-  
+
   .filter-options {
     flex-wrap: wrap;
   }
-  
+
   .product-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
-</style> 
+</style>

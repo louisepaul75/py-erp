@@ -25,7 +25,7 @@ const authStore = useAuthStore();
 onMounted(() => {
   // Logout the user
   authStore.logout();
-  
+
   // Redirect to login page after a short delay
   setTimeout(() => {
     router.push({ name: 'Login' });
@@ -47,4 +47,4 @@ onMounted(() => {
   max-width: 400px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-</style> 
+</style>

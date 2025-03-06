@@ -1,8 +1,8 @@
 # Story: PYERP-SYS-001 - Admin Status Dashboard Implementation
 
 ## Description
-As a system administrator  
-I want a centralized status dashboard in the admin view  
+As a system administrator
+I want a centralized status dashboard in the admin view
 So that I can quickly monitor the health of critical system connections and components
 
 ## Background
@@ -14,34 +14,34 @@ The pyERP system depends on several critical connections to function properly, i
 The admin status dashboard has been successfully implemented with all core features. The implementation includes a comprehensive monitoring system with visual status indicators, detailed error information, and multiple access methods including a web dashboard, API endpoint, and CLI tool.
 
 ## Acceptance Criteria
-1. Given I am logged in as an administrator  
-   When I navigate to the admin dashboard  
-   Then I should see a "System Status" section or page  
+1. Given I am logged in as an administrator
+   When I navigate to the admin dashboard
+   Then I should see a "System Status" section or page
    ✅ **IMPLEMENTED** - Added to admin site with dedicated dashboard view
 
-2. Given I am viewing the System Status dashboard  
-   When the page loads or is refreshed  
-   Then I should see the current status of the database connection with a visual indicator (green/yellow/red)  
+2. Given I am viewing the System Status dashboard
+   When the page loads or is refreshed
+   Then I should see the current status of the database connection with a visual indicator (green/yellow/red)
    ✅ **IMPLEMENTED** - Shows real-time database connection status with color coding
 
-3. Given I am viewing the System Status dashboard  
-   When the page loads or is refreshed  
-   Then I should see the current status of the legacy ERP connection with a visual indicator  
+3. Given I am viewing the System Status dashboard
+   When the page loads or is refreshed
+   Then I should see the current status of the legacy ERP connection with a visual indicator
    ✅ **IMPLEMENTED** - Displays legacy ERP connection status with detailed diagnostics
 
-4. Given I am viewing the System Status dashboard  
-   When the page loads or is refreshed  
-   Then I should see the current status of the pictures API connection with a visual indicator  
+4. Given I am viewing the System Status dashboard
+   When the page loads or is refreshed
+   Then I should see the current status of the pictures API connection with a visual indicator
    ✅ **IMPLEMENTED** - Shows pictures API connection status with response time metrics
 
-5. Given I am viewing the System Status dashboard  
-   When a connection is having issues  
-   Then I should see detailed error information and troubleshooting steps  
+5. Given I am viewing the System Status dashboard
+   When a connection is having issues
+   Then I should see detailed error information and troubleshooting steps
    ✅ **IMPLEMENTED** - Displays detailed error messages and diagnostic information
 
-6. Given I am viewing the System Status dashboard  
-   When I click a "Refresh" button  
-   Then the system should perform fresh health checks on all monitored components  
+6. Given I am viewing the System Status dashboard
+   When I click a "Refresh" button
+   Then the system should perform fresh health checks on all monitored components
    ✅ **IMPLEMENTED** - Added refresh button with loading indicator and status feedback
 
 ## Technical Requirements
@@ -110,4 +110,4 @@ The admin status dashboard has been successfully implemented with all core featu
 ## Estimation vs. Actual
 - Story Points: 5
 - Estimated Time: 3-4 days
-- Actual Time: 3 days 
+- Actual Time: 3 days

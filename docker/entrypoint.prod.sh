@@ -14,4 +14,4 @@ echo "PostgreSQL database is ready!"
 python manage.py migrate --noinput
 
 # Start Supervisor (which manages Gunicorn and Nginx)
-exec "$@" 
+exec "$@"

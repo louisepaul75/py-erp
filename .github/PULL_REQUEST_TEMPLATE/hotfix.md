@@ -30,4 +30,4 @@
 - [ ] I have tested this fix in an environment similar to production
 - [ ] I have documented the fix and updated any relevant documentation
 - [ ] This hotfix has been approved by a project maintainer
-- [ ] This hotfix will be merged into the `develop` branch after `main` 
+- [ ] This hotfix will be merged into the `develop` branch after `main`

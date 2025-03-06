@@ -5,9 +5,10 @@ This module provides a flexible, extensible validation system for ensuring data 
 throughout the application. It supports field-level validation, cross-field business rules,  # noqa: E501
 and special handling for import data.
 """
-from decimal import Decimal, InvalidOperation
+
 import re
-from typing import Any, Dict, List, Callable, Optional, Tuple, Union  # noqa: F401
+from decimal import Decimal, InvalidOperation
+
 from django.core.exceptions import ValidationError
 
 
@@ -19,7 +20,6 @@ class ValidationResult:
     """
 
     def __init__(self):
-
         """Initialize a ValidationResult with default values."""
         self.errors = {}
         self.warnings = {}
@@ -66,12 +66,12 @@ class ValidationResult:
             for message in messages:
                 self.add_error(field_name, message)
 
- # Merge warnings
+        # Merge warnings
         for field_name, messages in other_result.warnings.items():
             for message in messages:
                 self.add_warning(field_name, message)
 
- # Merge context
+        # Merge context
         self.context.update(other_result.context)
 
     def __str__(self):
@@ -100,7 +100,6 @@ class ImportValidationError(Exception):
     """Exception raised for validation errors during import."""
 
     def __init__(self, errors):
-
         """Initialize with validation errors dictionary."""
         self.errors = errors
         message = self._format_errors()
@@ -110,10 +109,10 @@ class ImportValidationError(Exception):
         """Format errors into a readable message."""
         messages = []
         for field, errors in self.errors.items():
-            field_errors = ', '.join(errors)
+            field_errors = ", ".join(errors)
             messages.append(f"{field}: {field_errors}")
 
-        return '; '.join(messages)
+        return "; ".join(messages)
 
 
 class SkipRowException(Exception):
@@ -188,11 +187,13 @@ class RequiredValidator(Validator):
 
     def _validate(self, value, result, **kwargs):
         """Check if value is not empty."""
-        field_name = kwargs.get('field_name', 'field')
+        field_name = kwargs.get("field_name", "field")
 
- # Check various empty values
-        if value is None or value == "" or (
-                                            isinstance(value, (list, dict)) and len(value) == 0  # noqa: E128
+        # Check various empty values
+        if (
+            value is None
+            or value == ""
+            or (isinstance(value, (list, dict)) and len(value) == 0)
         ):
             result.add_error(field_name, self.message)
 
@@ -214,17 +215,17 @@ class RegexValidator(Validator):
 
     def _validate(self, value, result, **kwargs):
         """Check if value matches the regex pattern."""
-        field_name = kwargs.get('field_name', 'field')
+        field_name = kwargs.get("field_name", "field")
 
- # Skip empty values (use RequiredValidator for that)
+        # Skip empty values (use RequiredValidator for that)
         if value is None or value == "":
             return
 
- # Convert to string if necessary
+        # Convert to string if necessary
         if not isinstance(value, str):
             value = str(value)
 
- # Validate against pattern
+        # Validate against pattern
         if not re.match(self.pattern, value):
             result.add_error(field_name, self.message)
 
@@ -244,9 +245,9 @@ class RangeValidator(Validator):
         self.min_value = min_value
         self.max_value = max_value
 
- # Create default message based on bounds
+        # Create default message based on bounds
         if min_value is not None and max_value is not None:
-            default_message = f"Value must be between {min_value} and {max_value}"  # noqa: E501
+            default_message = f"Value must be between {min_value} and {max_value}"
         elif min_value is not None:
             default_message = f"Value must be at least {min_value}"
         elif max_value is not None:
@@ -259,20 +260,24 @@ class RangeValidator(Validator):
 
     def _validate(self, value, result, **kwargs):
         """Check if value is within range."""
-        field_name = kwargs.get('field_name', 'field')
+        field_name = kwargs.get("field_name", "field")
 
- # Skip empty values
-        if value is None or value == "" or (isinstance(value, str) and value.strip() == ""):  # noqa: E501
+        # Skip empty values
+        if (
+            value is None
+            or value == ""
+            or (isinstance(value, str) and value.strip() == "")
+        ):
             return
 
- # Check if value is numeric
+        # Check if value is numeric
         try:
             num_value = float(value)
         except (ValueError, TypeError):
             result.add_error(field_name, "Value must be a number")
             return
 
- # Check bounds
+        # Check bounds
         if self.min_value is not None and num_value < self.min_value:
             message = self.message
             if "{min_value}" in message:
@@ -305,11 +310,13 @@ class LengthValidator(Validator):
         self.min_length = min_length
         self.max_length = max_length
 
- # Create default message based on bounds
+        # Create default message based on bounds
         if min_length is not None and max_length is not None:
-            default_message = f"Length must be between {min_length} and {max_length} characters"  # noqa: E501
+            default_message = (
+                f"Length must be between {min_length} and {max_length} characters"
+            )
         elif min_length is not None:
-            default_message = f"Length must be at least {min_length} characters"  # noqa: E501
+            default_message = f"Length must be at least {min_length} characters"
         elif max_length is not None:
             default_message = f"Length must be at most {max_length} characters"
         else:
@@ -320,17 +327,17 @@ class LengthValidator(Validator):
 
     def _validate(self, value, result, **kwargs):
         """Check if value's length is within range."""
-        field_name = kwargs.get('field_name', 'field')
+        field_name = kwargs.get("field_name", "field")
 
- # Skip empty values
+        # Skip empty values
         if value is None or value == "":
             return
 
- # Convert to string if necessary
+        # Convert to string if necessary
         if not isinstance(value, str):
             value = str(value)
 
- # Check length bounds
+        # Check length bounds
         length = len(value)
 
         if self.min_length is not None and length < self.min_length:
@@ -352,26 +359,28 @@ class ChoiceValidator(Validator):
             error_message: Custom error message
         """
         self.choices = choices
-        message = error_message or f"Value must be one of: {', '.join(map(str, choices))}"  # noqa: E501
+        message = (
+            error_message or f"Value must be one of: {', '.join(map(str, choices))}"
+        )
         super().__init__(message)
 
     def _validate(self, value, result, **kwargs):
         """Check if value is among valid choices."""
-        field_name = kwargs.get('field_name', 'field')
+        field_name = kwargs.get("field_name", "field")
 
- # Skip empty values
+        # Skip empty values
         if value is None or value == "":
             return
 
- # Check if value is in choices
+        # Check if value is in choices
         if value not in self.choices:
             result.add_error(field_name, self.message)
 
 
 class DecimalValidator(Validator):
-    """Validates that a value is a valid decimal number with specified precision."""  # noqa: E501
+    """Validates that a value is a valid decimal number with specified precision."""
 
-    def __init__(self, max_digits=None, decimal_places=None, error_message=None):  # noqa: E501
+    def __init__(self, max_digits=None, decimal_places=None, error_message=None):
         """
         Initialize with precision constraints and optional error message.
 
@@ -394,47 +403,50 @@ class DecimalValidator(Validator):
 
     def _validate(self, value, result, **kwargs):
         """Check if value is a valid decimal with correct precision."""
-        field_name = kwargs.get('field_name', 'field')
+        field_name = kwargs.get("field_name", "field")
 
- # Skip empty values
+        # Skip empty values
         if value is None or value == "":
             return
 
- # Convert to Decimal if not already
+        # Convert to Decimal if not already
         try:
             if not isinstance(value, Decimal):
                 decimal_value = Decimal(str(value))
             else:
                 decimal_value = value
         except (InvalidOperation, ValueError, TypeError):
-            result.add_error(field_name, "Value must be a valid decimal number")  # noqa: E501
+            result.add_error(field_name, "Value must be a valid decimal number")
             return
 
- # Check precision constraints
+        # Check precision constraints
         if self.max_digits is not None or self.decimal_places is not None:
             decimal_str = str(decimal_value)
-            if 'E' in decimal_str or 'e' in decimal_str:  # Handle scientific notation  # noqa: E501
+            if "E" in decimal_str or "e" in decimal_str:  # Handle scientific notation
                 decimal_str = str(decimal_value.normalize())
 
- # Split into integer and fractional parts
-            parts = decimal_str.split('.')
-            int_part = parts[0].lstrip('-')  # Remove negative sign
-            decimal_part = parts[1] if len(parts) > 1 else ''
+            # Split into integer and fractional parts
+            parts = decimal_str.split(".")
+            int_part = parts[0].lstrip("-")  # Remove negative sign
+            decimal_part = parts[1] if len(parts) > 1 else ""
 
- # Check decimal places
-            if self.decimal_places is not None and len(decimal_part) > self.decimal_places:  # noqa: E501
+            # Check decimal places
+            if (
+                self.decimal_places is not None
+                and len(decimal_part) > self.decimal_places
+            ):
                 result.add_error(
-                    field_name,  # noqa: E128
-                    f"Value must have at most {self.decimal_places} decimal places"  # noqa: E501
+                    field_name,
+                    f"Value must have at most {self.decimal_places} decimal places",
                 )
 
- # Check total digits
+            # Check total digits
             if self.max_digits is not None:
                 total_digits = len(int_part) + len(decimal_part)
                 if total_digits > self.max_digits:
                     result.add_error(
-                        field_name,  # noqa: E128
-                        f"Value must have at most {self.max_digits} total digits"  # noqa: E501
+                        field_name,
+                        f"Value must have at most {self.max_digits} total digits",
                     )
 
 
@@ -443,8 +455,11 @@ class SkuValidator(RegexValidator):
 
     def __init__(self, error_message=None):
         """Initialize with default SKU pattern and optional error message."""
-        pattern = r'^[A-Za-z0-9][A-Za-z0-9\-\.]*$'
-        message = error_message or "SKU must be in a valid format (letters, numbers, hyphens, dots, no spaces)"  # noqa: E501
+        pattern = r"^[A-Za-z0-9][A-Za-z0-9\-\.]*$"
+        message = (
+            error_message
+            or "SKU must be in a valid format (letters, numbers, hyphens, dots, no spaces)"
+        )
         super().__init__(pattern, message)
 
 
@@ -473,12 +488,12 @@ class CompoundValidator(Validator):
 
     def _validate(self, value, result, **kwargs):
         """Apply all validators according to configured logic."""
-        field_name = kwargs.get('field_name', 'field')
+        field_name = kwargs.get("field_name", "field")
 
         if not self.validators:
             return  # No validators to apply
 
- # Track validation results
+        # Track validation results
         validation_results = []
         for validator in self.validators:
             validation_results.append(validator(value, **kwargs))
@@ -486,13 +501,12 @@ class CompoundValidator(Validator):
         if self.require_all_valid:
             for val_result in validation_results:
                 result.merge(val_result)
-        else:
-            if all(not val_result.is_valid for val_result in validation_results):  # noqa: E501
-                result.add_error(field_name, self.message)
-                for val_result in validation_results:
-                    for field, messages in val_result.errors.items():
-                        for message in messages:
-                            result.add_error(field, message)
+        elif all(not val_result.is_valid for val_result in validation_results):
+            result.add_error(field_name, self.message)
+            for val_result in validation_results:
+                for field, messages in val_result.errors.items():
+                    for message in messages:
+                        result.add_error(field, message)
 
 
 class BusinessRuleValidator(Validator):
@@ -517,7 +531,7 @@ class BusinessRuleValidator(Validator):
     def _validate(self, value, result, **kwargs):
         """Apply the business rule validation function."""
         if not self.validation_func(value, **kwargs):
-            field_name = kwargs.get('field_name', 'field')
+            field_name = kwargs.get("field_name", "field")
             result.add_error(field_name, self.message)
 
 
@@ -555,7 +569,7 @@ class ImportValidator:
         validated_data = {}
         result = ValidationResult()
 
- # Process each field in the row
+        # Process each field in the row
         for field_name, value in row_data.items():
             validator_method_name = f"validate_{field_name}"
             validator_method = getattr(self, validator_method_name, None)
@@ -563,47 +577,49 @@ class ImportValidator:
             if validator_method:
                 try:
                     transformed_value, field_result = validator_method(
-                        value, row_data, row_index=row_index  # noqa: E128
+                        value,
+                        row_data,
+                        row_index=row_index,
                     )
 
- # Handle validation result
+                    # Handle validation result
                     if field_result.is_valid:
                         if self.transform_data:
                             validated_data[field_name] = transformed_value
                         else:
                             validated_data[field_name] = value
 
- # Handle field errors and warnings
+                    # Handle field errors and warnings
                     for msg_type, messages_dict in [
-                                                    ('errors', field_result.errors),  # noqa: E128
-                                                    ('warnings', field_result.warnings)  # noqa: E501
+                        ("errors", field_result.errors),
+                        ("warnings", field_result.warnings),
                     ]:
                         for field, messages in messages_dict.items():
                             for message in messages:
-                                if msg_type == 'errors':
+                                if msg_type == "errors":
                                     result.add_error(field, message)
                                 else:
                                     result.add_warning(field, message)
 
-                except SkipRowException as e:
+                except SkipRowException:
                     raise
 
                 except Exception as e:
-                    result.add_error(field_name, f"Validation error: {str(e)}")
+                    result.add_error(field_name, f"Validation error: {e!s}")
 
             else:
                 validated_data[field_name] = value
 
- # Apply cross-field validation rules
-        cross_field_result = self._post_validate_row(validated_data, result, row_index)  # noqa: E501
+        # Apply cross-field validation rules
+        cross_field_result = self._post_validate_row(validated_data, result, row_index)
         if cross_field_result:
             result.merge(cross_field_result)
 
- # Handle warnings in strict mode
+        # Handle warnings in strict mode
         if self.strict and result.warnings:
             for field, warnings in result.warnings.items():
                 for warning in warnings:
-                    result.add_error(field, f"Warning treated as error: {warning}")  # noqa: E501
+                    result.add_error(field, f"Warning treated as error: {warning}")
 
         return result.is_valid, validated_data, result
 
@@ -621,7 +637,7 @@ class ImportValidator:
         Returns:
             ValidationResult from cross-field validation
         """
-        if hasattr(self, 'cross_validate_row'):
+        if hasattr(self, "cross_validate_row"):
             return self.cross_validate_row(validated_data)
         return ValidationResult()
 
@@ -660,17 +676,17 @@ def validate_model_data(instance):
     """
     errors = {}
 
- # Get validators specific to this model type
-    fields_to_validate = getattr(instance, '_validators', {})
+    # Get validators specific to this model type
+    fields_to_validate = getattr(instance, "_validators", {})
 
- # Apply validators to each field
+    # Apply validators to each field
     for field_name, validators in fields_to_validate.items():
         value = getattr(instance, field_name, None)
-        result = validate_data(value, validators, {'field_name': field_name})
+        result = validate_data(value, validators, {"field_name": field_name})
 
         if not result.is_valid:
             errors.update(result.errors)
 
- # If errors were found, raise ValidationError
+    # If errors were found, raise ValidationError
     if errors:
         raise ValidationError(errors)

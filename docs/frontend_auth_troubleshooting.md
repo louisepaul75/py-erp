@@ -151,4 +151,4 @@ tail -f logs/django.log
 
 - [Vue.js Authentication Implementation](./vue_auth_implementation.md)
 - [Django REST Framework JWT Documentation](https://django-rest-framework-simplejwt.readthedocs.io/)
-- [Vite Proxy Configuration](https://vitejs.dev/config/server-options.html#server-proxy) 
+- [Vite Proxy Configuration](https://vitejs.dev/config/server-options.html#server-proxy)

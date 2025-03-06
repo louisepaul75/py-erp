@@ -2,16 +2,18 @@
 """
 Temporary script to list products in the database.
 """
+
 import os
-import sys
+
 import django
 
 # Set up Django environment
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
 django.setup()
 
 # Import models after Django setup
 from pyerp.products.models import Product, ProductCategory
+
 
 def main():
     """List all products in the database."""
@@ -20,11 +22,11 @@ def main():
     print(f"Total categories: {categories.count()}")
     for category in categories:
         print(f"- {category.code}: {category.name}")
-    
+
     print("\n=== Products ===")
     products = Product.objects.all()
     print(f"Total products: {products.count()}")
-    
+
     if products.count() > 0:
         print("\nProduct details:")
         for product in products:
@@ -39,5 +41,6 @@ def main():
     else:
         print("No products found in the database.")
 
+
 if __name__ == "__main__":
-    main() 
+    main()

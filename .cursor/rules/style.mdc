@@ -1,6 +1,6 @@
 ---
 description: This document defines the coding style standards for the pyERP system. It ensures consistent code formatting and structure across the entire codebase, making it easier to read, maintain, and work with for both developers and AI tools.
-globs: 
+globs:
 ---
 # Coding Style Guide for pyERP
 
@@ -56,7 +56,7 @@ STOCK_MOVEMENT_TYPES = ('receipt', 'issue', 'transfer', 'adjustment')
 # Classes and functions
 class ProductManager:
     # Class implementation
-    
+
 def get_available_stock(product_id: int, warehouse_id: int) -> int:
     # Function implementation
 ```
@@ -65,17 +65,17 @@ def get_available_stock(product_id: int, warehouse_id: int) -> int:
 ```python
 def calculate_reorder_point(product_id: int, lead_time_days: int = 14) -> int:
     """Calculate the reorder point for a product.
-    
+
     The reorder point is calculated based on average daily usage
     and the lead time for replenishment.
-    
+
     Args:
         product_id: ID of the product
         lead_time_days: Number of days it takes to receive new stock
-        
+
     Returns:
         The calculated reorder point quantity
-        
+
     Raises:
         ProductNotFoundError: If product_id doesn't exist
         NegativeLeadTimeError: If lead_time_days is negative
@@ -102,14 +102,14 @@ def calculate_reorder_point(product_id: int, lead_time_days: int = 14) -> int:
 ```python
 class Product(models.Model):
     """Model representing a product in the inventory system."""
-    
+
     # Choices as class variables
     PRODUCT_TYPES = [
         ('RAW', 'Raw Material'),
         ('MFG', 'Manufactured'),
         ('FG', 'Finished Good'),
     ]
-    
+
     # Fields
     sku = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=255)
@@ -118,22 +118,22 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     cost = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     # Metadata
     class Meta:
         ordering = ['sku']
         indexes = [models.Index(fields=['sku']), models.Index(fields=['name'])]
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
-    
+
     # String representation
     def __str__(self):
         return f"{self.sku} - {self.name}"
-    
+
     # Custom methods
     def get_available_stock(self, warehouse_id=None):
         """Get available stock quantity."""
@@ -159,7 +159,7 @@ class ProductListView(ListView):
     template_name = 'products/list.html'
     context_object_name = 'products'
     paginate_by = 20
-    
+
     def get_queryset(self):
         """Filter products by category if provided."""
         queryset = super().get_queryset().filter(is_active=True)
@@ -192,30 +192,30 @@ from .models import Product
 
 class ProductForm(forms.ModelForm):
     """Form for creating and editing products."""
-    
+
     # Add extra fields or validation
     confirm_price = forms.DecimalField(
-        max_digits=10, 
+        max_digits=10,
         decimal_places=2,
         help_text="Confirm the product price"
     )
-    
+
     class Meta:
         model = Product
         fields = ['sku', 'name', 'description', 'category', 'price', 'cost', 'is_active']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
         }
-    
+
     def clean(self):
         """Validate that price and confirm_price match."""
         cleaned_data = super().clean()
         price = cleaned_data.get('price')
         confirm_price = cleaned_data.get('confirm_price')
-        
+
         if price and confirm_price and price != confirm_price:
             raise forms.ValidationError("Price and confirm price must match.")
-        
+
         return cleaned_data
 ```
 
@@ -226,10 +226,10 @@ from .models import Product
 
 class ProductSerializer(serializers.ModelSerializer):
     """Serializer for the Product model."""
-    
+
     stock_count = serializers.IntegerField(read_only=True)
     category_name = serializers.ReadOnlyField(source='category.name')
-    
+
     class Meta:
         model = Product
         fields = [
@@ -237,7 +237,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'price', 'cost', 'is_active', 'stock_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
-        
+
     def validate_sku(self, value):
         """Ensure SKU is unique and properly formatted."""
         # Validation implementation
@@ -261,18 +261,18 @@ class ProductSerializer(serializers.ModelSerializer):
 {% block content %}
 <div class="product-detail">
   <h1>{{ product.name }}</h1>
-  
+
   {% if product.image %}
     <img src="{{ product.image.url }}" alt="{{ product.name }}">
   {% else %}
     <div class="no-image">No image available</div>
   {% endif %}
-  
+
   <div class="product-info">
     <p><strong>SKU:</strong> {{ product.sku }}</p>
     <p><strong>Price:</strong> {{ product.price }}</p>
     <p><strong>Category:</strong> {{ product.category.name }}</p>
-    
+
     {% if product.description %}
       <div class="description">
         <h2>Description</h2>
@@ -280,7 +280,7 @@ class ProductSerializer(serializers.ModelSerializer):
       </div>
     {% endif %}
   </div>
-  
+
   {% include "products/partials/stock_info.html" with product=product %}
 </div>
 {% endblock %}
@@ -311,7 +311,7 @@ from .models import Product, Category
 
 class TestProductModel(TestCase):
     """Tests for the Product model."""
-    
+
     def setUp(self):
         """Set up test data."""
         self.category = Category.objects.create(name='Test Category')
@@ -324,13 +324,13 @@ class TestProductModel(TestCase):
             cost=Decimal('50.00'),
             is_active=True
         )
-    
+
     def test_product_creation(self):
         """Test that a product can be created."""
         self.assertEqual(self.product.sku, 'TEST001')
         self.assertEqual(self.product.name, 'Test Product')
         self.assertEqual(self.product.price, Decimal('99.99'))
-        
+
     def test_get_available_stock(self):
         """Test the get_available_stock method."""
         # Test implementation
@@ -340,12 +340,12 @@ class TestProductModel(TestCase):
 ```python
 class TestProductAPI(APITestCase):
     """Tests for the Product API."""
-    
+
     def setUp(self):
         """Set up test data and authenticate."""
         self.user = User.objects.create_user(username='testuser', password='password')
         self.client.force_authenticate(user=self.user)
-        
+
         self.category = Category.objects.create(name='Test Category')
         self.product = Product.objects.create(
             sku='TEST001',
@@ -354,12 +354,12 @@ class TestProductAPI(APITestCase):
             price=Decimal('99.99'),
             is_active=True
         )
-    
+
     def test_get_product_list(self):
         """Test retrieving a list of products."""
         url = reverse('api:product-list')
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(response.data['results'][0]['sku'], 'TEST001')
@@ -383,4 +383,4 @@ class TestProductAPI(APITestCase):
 - Use environment variables for configuration
 - Follow the settings pattern (base, development, production)
 - Avoid hardcoded values
-- Document environment requirements 
+- Document environment requirements

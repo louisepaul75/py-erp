@@ -13,10 +13,10 @@ import { determineBaseUrl } from '@/services/api';
 export const getStaticAssetUrl = (path: string): string => {
   // Get the base URL for the current environment
   const baseUrl = determineBaseUrl();
-  
+
   // Ensure path starts with a slash
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  
+
   // Return the full URL
   return `${baseUrl}${normalizedPath}`;
 };
@@ -56,4 +56,4 @@ export const getValidImageUrl = (imageObj?: { url?: string }): string => {
 export const handleImageError = (event: Event): void => {
   const img = event.target as HTMLImageElement;
   img.src = getNoImageUrl();
-}; 
+};

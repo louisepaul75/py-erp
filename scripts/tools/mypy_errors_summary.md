@@ -87,4 +87,4 @@ The `wsz_api` module is referenced but not found. This appears to be a custom mo
 1. Create a stub package for wsz_api
 2. Fix the Product/BaseProduct references
 3. Add type annotations to the most critical models
-4. Address the type incompatibility issues in the direct_api module 
+4. Address the type incompatibility issues in the direct_api module

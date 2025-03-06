@@ -296,4 +296,4 @@ This document contains user stories for implementing WebSocket and real-time upd
       - Intrusion detection for abnormal WebSocket activity
       - Message encryption for sensitive data
       - Detailed security logging of WebSocket events
-      - Regular security audits of WebSocket implementation 
+      - Regular security audits of WebSocket implementation

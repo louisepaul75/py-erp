@@ -2,9 +2,14 @@ import unittest
 from decimal import Decimal
 
 from pyerp.core.validators import (
-    ValidationResult, RequiredValidator, RegexValidator,
-    RangeValidator, LengthValidator, DecimalValidator,
-    SkuValidator, CompoundValidator
+    CompoundValidator,
+    DecimalValidator,
+    LengthValidator,
+    RangeValidator,
+    RegexValidator,
+    RequiredValidator,
+    SkuValidator,
+    ValidationResult,
 )
 
 
@@ -12,7 +17,7 @@ class TestValidationResult(unittest.TestCase):
     """Test the ValidationResult class."""
 
     def test_validation_result_initialization(self):
-        """Test that ValidationResult initializes with correct default values."""  # noqa: E501
+        """Test that ValidationResult initializes with correct default values."""
         result = ValidationResult()
         self.assertTrue(result.is_valid)
         self.assertEqual(result.errors, {})
@@ -28,8 +33,9 @@ class TestValidationResult(unittest.TestCase):
 
         self.assertFalse(result.is_valid)
         self.assertEqual(
-            result.errors["field1"], [
-                "Error message 1", "Error message 2"])
+            result.errors["field1"],
+            ["Error message 1", "Error message 2"],
+        )
         self.assertEqual(result.errors["field2"], ["Error message 3"])
 
     def test_add_warning(self):
@@ -42,8 +48,9 @@ class TestValidationResult(unittest.TestCase):
         # Warnings don't affect validity
         self.assertTrue(result.is_valid)
         self.assertEqual(
-            result.warnings["field1"], [
-                "Warning message 1", "Warning message 2"])
+            result.warnings["field1"],
+            ["Warning message 1", "Warning message 2"],
+        )
         self.assertEqual(result.warnings["field2"], ["Warning message 3"])
 
     def test_merge(self):
@@ -280,7 +287,7 @@ class TestCompoundValidator(unittest.TestCase):
         validators = [
             RequiredValidator(),
             LengthValidator(min_length=3, max_length=10),
-            RegexValidator(r"^[a-zA-Z]+$")
+            RegexValidator(r"^[a-zA-Z]+$"),
         ]
         validator = CompoundValidator(validators)
         result = validator("Hello")
@@ -291,7 +298,7 @@ class TestCompoundValidator(unittest.TestCase):
         validators = [
             RequiredValidator(),
             LengthValidator(min_length=3, max_length=10),
-            RegexValidator(r"^[a-zA-Z]+$")
+            RegexValidator(r"^[a-zA-Z]+$"),
         ]
         validator = CompoundValidator(validators)
         result = validator("Hello123")  # Fails regex
@@ -302,7 +309,7 @@ class TestCompoundValidator(unittest.TestCase):
         """Test CompoundValidator with require_all_valid=False."""
         validators = [
             RegexValidator(r"^\d+$"),  # Only digits
-            RegexValidator(r"^[a-zA-Z]+$")  # Only letters
+            RegexValidator(r"^[a-zA-Z]+$"),  # Only letters
         ]
         validator = CompoundValidator(validators, require_all_valid=False)
         result = validator("123")  # Passes first validator

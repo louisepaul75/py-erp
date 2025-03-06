@@ -104,4 +104,4 @@ These improvements make the pyERP system more resilient when the legacy ERP API 
 4. Avoids excessive connection attempts to unavailable servers
 5. Automatically recovers when the server becomes available again
 
-This ensures that the pyERP system remains operational even when the legacy ERP system is temporarily down or unreachable. 
+This ensures that the pyERP system remains operational even when the legacy ERP system is temporarily down or unreachable.

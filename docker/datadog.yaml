@@ -46,7 +46,7 @@ integrations:
     instances:
       - name: pyerp
         service: pyerp
-        
+
   # Redis integration
   redis:
     init_config:
@@ -54,10 +54,10 @@ integrations:
       - host: localhost
         port: 6379
         service: redis-pyerp
-        
+
   # Nginx integration
   nginx:
     init_config:
     instances:
       - nginx_status_url: http://localhost/nginx_status
-        service: nginx-pyerp 
+        service: nginx-pyerp

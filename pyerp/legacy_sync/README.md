@@ -154,4 +154,4 @@ The `tasks.py` module provides Celery tasks for scheduled synchronization operat
 
 ## Admin Interface
 
-The admin interface provides a user-friendly way to manage entity mappings, transformation functions, and view synchronization logs. 
+The admin interface provides a user-friendly way to manage entity mappings, transformation functions, and view synchronization logs.

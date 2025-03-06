@@ -38,9 +38,9 @@
                         <div v-if="!selectedImage && !variant.primary_image" class="no-image-placeholder">
                             <span>No Image Available</span>
                         </div>
-                        <img 
+                        <img
                             v-else
-                            :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : getNoImageUrl())" 
+                            :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : getNoImageUrl())"
                             :alt="variant.name"
                             @load="imageLoaded = true"
                             @error="handleImageError"
@@ -50,20 +50,20 @@
                             <span>Loading...</span>
                         </div>
                     </div>
-                    
+
                     <div v-if="variant.images && variant.images.length > 1" class="image-thumbnails">
-                        <div 
-                            v-for="image in variant.images" 
-                            :key="image.id" 
+                        <div
+                            v-for="image in variant.images"
+                            :key="image.id"
                             class="thumbnail"
-                            :class="{ 
+                            :class="{
                                 active: selectedImage && selectedImage.id === image.id,
                                 'loading': !thumbnailsLoaded[image.id]
                             }"
                             @click="selectImage(image)"
                         >
-                            <img 
-                                :src="image.thumbnail_url || image.url" 
+                            <img
+                                :src="image.thumbnail_url || image.url"
                                 :alt="variant.name"
                                 @load="handleThumbnailLoad(image.id)"
                                 @error="() => handleThumbnailError(image.id)"
@@ -213,23 +213,23 @@ const isCurrentVariant = (id: number) => {
 const loadVariant = async () => {
   loading.value = true;
   error.value = '';
-  
+
   try {
     // Get variant ID from props or route params
     const variantId = props.id || route.params.id;
-    
+
     if (!variantId) {
       throw new Error('Variant ID is required');
     }
-    
+
     const response = await productApi.getVariant(Number(variantId));
     variant.value = response.data;
-    
+
     // Set default selected image
     if (variant.value.images && variant.value.images.length > 0) {
       selectedImage.value = variant.value.primary_image || variant.value.images[0];
     }
-    
+
     // Load related variants if this is part of a parent product
     if (variant.value.parent && variant.value.parent.id) {
       await loadRelatedVariants(variant.value.parent.id);
@@ -633,4 +633,4 @@ h1 {
 .out-of-stock {
   color: #dc3545;
 }
-</style> 
+</style>

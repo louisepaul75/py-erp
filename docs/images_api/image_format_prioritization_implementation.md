@@ -37,17 +37,17 @@ def parse_image(self, image_data):
         'images': [],
         'metadata': image_data,
     }
-    
+
     # Initialize image URL variables
     primary_image_url = None
     png_url = None
     jpeg_url = None
-    
+
     # Process original image
     if image_data.get('original_file') and 'file_url' in image_data['original_file']:
         original_url = image_data['original_file']['file_url']
         original_format = image_data['original_file'].get('format', '').lower()
-        
+
         # Add to images list
         result['images'].append({
             'type': 'original',
@@ -55,7 +55,7 @@ def parse_image(self, image_data):
             'url': original_url,
             'resolution': None
         })
-        
+
         # Set as potential primary image based on format
         if original_format == 'png':
             png_url = original_url
@@ -63,18 +63,18 @@ def parse_image(self, image_data):
             jpeg_url = original_url
         else:
             primary_image_url = original_url  # Default to original if not PNG or JPEG
-    
+
     # Process exported images with resolution tracking
     thumbnail_url = None
     highest_res_png = (0, None)
     highest_res_jpeg = (0, None)
-    
+
     for export in image_data.get('exported_files', []):
         if export.get('image_url'):
             img_format = export.get('type', '').lower()
             resolution = export.get('resolution', [])
             img_url = export['image_url']
-            
+
             # Add to images list
             result['images'].append({
                 'type': 'exported',
@@ -82,12 +82,12 @@ def parse_image(self, image_data):
                 'url': img_url,
                 'resolution': resolution
             })
-            
+
             # Find suitable thumbnail
             if img_format == 'png' and resolution and resolution[0] <= 300:
                 if thumbnail_url is None or (resolution[0] <= 300 and resolution[0] > 150):
                     thumbnail_url = img_url
-            
+
             # Track highest resolution by format
             if img_format == 'png' and resolution:
                 total_pixels = resolution[0] * resolution[1] if len(resolution) >= 2 else 0
@@ -97,13 +97,13 @@ def parse_image(self, image_data):
                 total_pixels = resolution[0] * resolution[1] if len(resolution) >= 2 else 0
                 if total_pixels > highest_res_jpeg[0]:
                     highest_res_jpeg = (total_pixels, img_url)
-    
+
     # Select highest resolution images by format
     if highest_res_png[1]:
         png_url = highest_res_png[1]
     if highest_res_jpeg[1]:
         jpeg_url = highest_res_jpeg[1]
-    
+
     # Apply format priority: PNG > JPEG > Original
     if png_url:
         result['image_url'] = png_url
@@ -111,15 +111,15 @@ def parse_image(self, image_data):
         result['image_url'] = jpeg_url
     elif primary_image_url:
         result['image_url'] = primary_image_url
-    
+
     result['thumbnail_url'] = thumbnail_url
-    
+
     # Process article data
     for article in image_data.get('articles', []):
         result['articles'] = image_data.get('articles', [])
         result['is_front'] = any(a.get('front', False) for a in image_data.get('articles', []))
         break
-    
+
     return result
 ```
 
@@ -171,4 +171,4 @@ def parse_image(self, image_data):
 
 The implementation of image format prioritization has significantly improved the handling of product images in PyERP. By intelligently selecting the most appropriate web-friendly formats at the optimal resolution, we've enhanced both performance and user experience while maintaining image quality.
 
-This implementation aligns with the requirements specified in the PRD and completes a key part of the Product Image Integration story. 
+This implementation aligns with the requirements specified in the PRD and completes a key part of the Product Image Integration story.

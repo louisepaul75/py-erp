@@ -128,4 +128,4 @@ The product module includes the following management commands:
 
 ## Conclusion
 
-The product module has made significant progress with the implementation of parent-variant models, image integration, and data import from legacy systems. The remaining tasks focus on enhancing the user experience, improving API functionality, and completing the category management implementation. 
+The product module has made significant progress with the implementation of parent-variant models, image integration, and data import from legacy systems. The remaining tasks focus on enhancing the user experience, improving API functionality, and completing the category management implementation.
