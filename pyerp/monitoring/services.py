@@ -272,15 +272,28 @@ def validate_database():
     }
 
 
-def run_all_health_checks():
+def run_all_health_checks(as_array=True):
     """
     Run all available health checks.
 
+    Args:
+        as_array (bool): If True, returns results as an array; otherwise as a dictionary
+
     Returns:
-    dict: Dictionary containing all health check results
+        list or dict: Health check results in the specified format
     """
-    return {
+    # Run all health checks
+    results = {
         "database": check_database_connection(),
         "legacy_erp": check_legacy_erp_connection(),
         "pictures_api": check_pictures_api_connection(),
     }
+    
+    # Optionally add database validation if needed
+    # results["database_validation"] = validate_database()
+    
+    # Return in the requested format
+    if as_array:
+        return list(results.values())
+    else:
+        return results

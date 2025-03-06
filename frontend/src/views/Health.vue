@@ -87,7 +87,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '@/services/api';
 
 export default {
   name: 'HealthView',
@@ -135,39 +135,92 @@ export default {
       this.message = '';
 
       try {
-        // Get basic health check
-        const basicHealthResponse = await axios.get('/api/health/');
-        this.systemInfo = {
-          environment: basicHealthResponse.data.environment,
-          version: basicHealthResponse.data.version
-        };
+        // Try to get basic health check
+        try {
+          const basicHealthResponse = await api.get('/api/health/');
+          this.systemInfo = {
+            environment: basicHealthResponse.data.environment,
+            version: basicHealthResponse.data.version
+          };
+        } catch (error) {
+          console.error('Basic health check error:', error);
+          this.systemInfo = {
+            environment: 'Unknown (API Unavailable)',
+            version: 'Unknown'
+          };
+        }
 
-        // Get detailed health checks
-        const response = await axios.get('/api/monitoring/health-checks/');
+        // Try to get detailed health checks
+        try {
+          const response = await api.get('/api/monitoring/health-checks/');
 
-        if (response.data.success) {
-          this.healthResults = {};
+          if (response.data.success) {
+            this.healthResults = {};
 
-          // Process the results
-          response.data.results.forEach(result => {
-            this.healthResults[result.component] = result;
-          });
-
-          this.lastUpdated = new Date();
-          this.message = 'Status updated successfully';
-          this.messageType = 'success';
-
-          // Hide success message after 3 seconds
-          setTimeout(() => {
-            if (this.messageType === 'success') {
-              this.message = '';
+            // Process the results - handling both array and object formats
+            if (Array.isArray(response.data.results)) {
+              // Handle array format
+              response.data.results.forEach(result => {
+                if (result && result.component) {
+                  this.healthResults[result.component] = result;
+                }
+              });
+            } else if (typeof response.data.results === 'object') {
+              // Handle object format
+              Object.entries(response.data.results).forEach(([key, value]) => {
+                if (value) {
+                  this.healthResults[key] = value;
+                }
+              });
             }
-          }, 3000);
-        } else {
-          this.message = 'Failed to update status: ' + (response.data.error || 'Unknown error');
+
+            this.lastUpdated = new Date();
+            this.message = 'Status updated successfully';
+            this.messageType = 'success';
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+              if (this.messageType === 'success') {
+                this.message = '';
+              }
+            }, 3000);
+          } else {
+            throw new Error(response.data.error || 'Unknown error');
+          }
+        } catch (error) {
+          console.error('Health checks error:', error);
+          
+          // If we can't connect to the backend, use mock data for testing
+          this.healthResults = {
+            'database': {
+              component: 'database',
+              status: 'error',
+              details: 'Database connection failed. The PostgreSQL server might be unreachable.',
+              response_time: 0,
+              timestamp: new Date()
+            },
+            'legacy_erp': {
+              component: 'legacy_erp',
+              status: 'warning',
+              details: 'Cannot verify Legacy ERP status - Backend API unavailable due to database connection issues',
+              response_time: 0,
+              timestamp: new Date()
+            },
+            'pictures_api': {
+              component: 'pictures_api',
+              status: 'warning',
+              details: 'Cannot verify Pictures API status - Backend API unavailable due to database connection issues',
+              response_time: 0,
+              timestamp: new Date()
+            }
+          };
+          
+          this.lastUpdated = new Date();
+          this.message = 'Failed to connect to backend API. Showing estimated status.';
           this.messageType = 'error';
         }
       } catch (error) {
+        console.error('Unexpected error in health check:', error);
         this.message = 'Failed to update status: ' + (error.message || 'Unknown error');
         this.messageType = 'error';
       } finally {
