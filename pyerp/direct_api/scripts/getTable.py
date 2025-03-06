@@ -47,15 +47,13 @@ COOKIE_FILE_PATH = os.path.join(
     ".global_session_cookie"
 )
 
-# Set up Django environment
+# Set up Django environment only when run as a script, not when imported
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
 
-django.setup()
-
-# Import after Django setup
+# Import after Django setup (no need to setup Django when imported 
+# since it will already be set up)
 try:
     from pyerp.direct_api.settings import API_ENVIRONMENTS
-
     logger.info(f"Available environments: {list(API_ENVIRONMENTS.keys())}")
 except ImportError as e:
     logger.error(f"Failed to import API_ENVIRONMENTS: {e}")
@@ -831,6 +829,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # Django setup should only happen when the script is run directly
+    import django
+    django.setup()
+    
     # First run validation script if no arguments provided
     if len(sys.argv) == 1:
         print("\n=== Running Session Validation ===")

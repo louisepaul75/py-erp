@@ -36,39 +36,12 @@
         
         <!-- Database Visualization Animation -->
         <div class="db-visualization">
-          <h3>Database Performance Visualization</h3>
           <canvas 
             ref="dbCanvas" 
             class="db-canvas"
             width="600" 
             height="100">
           </canvas>
-          
-          <!-- Database Statistics Display -->
-          <div class="db-stats">
-            <div class="stat-box transactions">
-              <h4>Transactions</h4>
-              <div class="stat-numbers">
-                <div>Active: {{ dbStats?.transactions?.active || 0 }}</div>
-                <div>Total: {{ getTotalTransactions().toLocaleString() }}</div>
-              </div>
-            </div>
-            <div class="stat-box queries">
-              <h4>Queries</h4>
-              <div class="stat-numbers">
-                <div>Total: {{ getTotalQueries().toLocaleString() }}</div>
-                <div>Avg Time: {{ formatNumber(dbStats?.performance?.avg_query_time) }} ms</div>
-              </div>
-            </div>
-            <div class="stat-box disk">
-              <h4>Database Size</h4>
-              <div class="stat-numbers">
-                <div>{{ formatNumber(dbStats?.disk?.size_mb) }} MB</div>
-                <div>Hit Ratio: {{ formatNumber(dbStats?.performance?.cache_hit_ratio) }}%</div>
-              </div>
-            </div>
-          </div>
-          
           <div class="canvas-legend">
             <div class="legend-item">
               <span>Speed: Average query time ({{ formatNumber(dbStats?.performance?.avg_query_time) }} ms)</span>
@@ -87,22 +60,92 @@
           No connection status data available
         </div>
         <div v-else class="status-cards">
-          <div v-for="(result, component) in healthResults" :key="component"
-               :class="['status-card', result && result.status ? result.status : 'unknown']">
+          <!-- Database Card with Stats -->
+          <div v-if="healthResults['database']" 
+               :class="['status-card', healthResults['database'].status]">
             <div class="status-card-header">
               <div class="component-name">
-                {{ getComponentDisplayName(component) }}
+                Database
               </div>
-              <span :class="['status-indicator', result && result.status ? result.status : 'unknown']"></span>
+              <span :class="['status-indicator', healthResults['database'].status]"></span>
             </div>
             <div class="status-details">
-              {{ result && result.details ? result.details : 'No health check data available' }}
+              {{ healthResults['database'].details }}
+              
+              <!-- Database Validation Section -->
+              <div v-if="healthResults['database'] && healthResults['database'].validation" class="db-validation-section">
+                <div class="db-validation-toggle" @click="toggleDatabaseValidation">
+                  <span>Database Validation</span>
+                  <span class="toggle-icon">{{ isDatabaseValidationExpanded ? '▼' : '▶' }}</span>
+                </div>
+                <div class="db-validation-details" v-show="isDatabaseValidationExpanded">
+                  <div :class="['validation-status', healthResults['database'].validation.status]">
+                    <span class="validation-indicator"></span>
+                    <span>{{ healthResults['database'].validation.details }}</span>
+                  </div>
+                  <div class="validation-meta" v-if="healthResults['database'].validation.response_time !== undefined">
+                    Response Time: {{ (Number(healthResults['database'].validation.response_time) || 0).toFixed(2) }} ms
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Database Stats Section -->
+              <div class="db-stats-toggle" @click="toggleDatabaseStats">
+                <span>Database Statistics</span>
+                <span class="toggle-icon">{{ isDatabaseStatsExpanded ? '▼' : '▶' }}</span>
+              </div>
+              <div class="db-stats" v-show="isDatabaseStatsExpanded">
+                <div class="stat-box transactions">
+                  <h4>Transactions</h4>
+                  <div class="stat-numbers">
+                    <div>Active: {{ dbStats?.transactions?.active || 0 }}</div>
+                    <div>Total: {{ getTotalTransactions().toLocaleString() }}</div>
+                  </div>
+                </div>
+                <div class="stat-box queries">
+                  <h4>Queries</h4>
+                  <div class="stat-numbers">
+                    <div>Total: {{ getTotalQueries().toLocaleString() }}</div>
+                    <div>Avg Time: {{ formatNumber(dbStats?.performance?.avg_query_time) }} ms</div>
+                  </div>
+                </div>
+                <div class="stat-box disk">
+                  <h4>Database Size</h4>
+                  <div class="stat-numbers">
+                    <div>{{ formatNumber(dbStats?.disk?.size_mb) }} MB</div>
+                    <div>Hit Ratio: {{ formatNumber(dbStats?.performance?.cache_hit_ratio) }}%</div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="status-meta">
-              <div v-if="result && result.response_time !== undefined">
+              <div v-if="healthResults['database'].response_time !== undefined">
+                Response Time: {{ (Number(healthResults['database'].response_time) || 0).toFixed(2) }} ms
+              </div>
+              <div v-if="healthResults['database'].timestamp">
+                {{ formatTimestamp(healthResults['database'].timestamp) }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Other Connection Cards -->
+          <div v-for="(result, componentKey) in healthResults" :key="componentKey"
+               v-if="componentKey !== 'database'"
+               :class="['status-card', result.status]">
+            <div class="status-card-header">
+              <div class="component-name">
+                {{ getComponentDisplayName(componentKey) }}
+              </div>
+              <span :class="['status-indicator', result.status]"></span>
+            </div>
+            <div class="status-details">
+              {{ result.details }}
+            </div>
+            <div class="status-meta">
+              <div v-if="result.response_time !== undefined">
                 Response Time: {{ (Number(result.response_time) || 0).toFixed(2) }} ms
               </div>
-              <div v-if="result && result.timestamp">
+              <div v-if="result.timestamp">
                 {{ formatTimestamp(result.timestamp) }}
               </div>
             </div>
@@ -178,7 +221,9 @@ export default {
       },
       // For animation updates
       lastTransactionCount: 0,
-      dbStatsInterval: null
+      dbStatsInterval: null,
+      isDatabaseStatsExpanded: false,
+      isDatabaseValidationExpanded: false
     };
   },
   computed: {
@@ -246,13 +291,19 @@ export default {
       try {
         // Try to get basic health check
         try {
-          const basicHealthResponse = await api.get('/api/health/');
+          const basicHealthResponse = await api.get('/api/health/', {
+            timeout: 30000 // Increased from 15000 to 30000 ms
+          });
           this.systemInfo = {
             environment: basicHealthResponse.data?.environment || 'development',
             version: basicHealthResponse.data?.version || 'unknown'
           };
         } catch (error) {
           console.error('Basic health check error:', error);
+          // Add specific logging for timeout errors
+          if (error.code === 'ECONNABORTED') {
+            console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
+          }
           this.systemInfo = {
             environment: 'Unknown (API Unavailable)',
             version: 'Unknown'
@@ -261,7 +312,9 @@ export default {
 
         // Try to get detailed health checks
         try {
-          const response = await api.get('/api/monitoring/health-checks/');
+          const response = await api.get('/api/monitoring/health-checks/', {
+            timeout: 30000 // Increased from 15000 to 30000 ms
+          });
 
           if (response.data && response.data.success) {
             // Create a new object to avoid reference issues
@@ -270,14 +323,39 @@ export default {
             // Process the results - always expect an array format
             const results = response.data.results;
             if (Array.isArray(results)) {
+              // First, find the main database result and validation result
+              const dbResult = results.find(result => result.component === 'database');
+              const dbValidationResult = results.find(result => result.component === 'database_validation');
+              
+              // If we have a database result, add it first with validation as a nested property
+              if (dbResult) {
+                newHealthResults['database'] = {
+                  status: dbResult.status,
+                  details: dbResult.details,
+                  response_time: dbResult.response_time,
+                  timestamp: dbResult.timestamp,
+                  // Add validation as a nested property if it exists
+                  validation: dbValidationResult ? {
+                    status: dbValidationResult.status,
+                    details: dbValidationResult.details,
+                    response_time: dbValidationResult.response_time,
+                    timestamp: dbValidationResult.timestamp
+                  } : null
+                };
+              }
+
+              // Then add all other non-database results
               results.forEach(result => {
-                if (result && result.component) {
-                  // Store by component key
-                  newHealthResults[result.component] = {
+                if (result && result.component && 
+                    !['database', 'database_validation'].includes(result.component)) {
+                  const componentKey = result.component;
+                  newHealthResults[componentKey] = {
                     status: result.status,
                     details: result.details,
                     response_time: result.response_time,
-                    timestamp: result.timestamp
+                    timestamp: result.timestamp,
+                    // Store the original component name as a type property to avoid 'component' naming conflict
+                    type: componentKey
                   };
                 }
               });
@@ -303,6 +381,11 @@ export default {
         } catch (error) {
           console.error('Health checks error:', error);
           
+          // Add specific logging for timeout errors
+          if (error.code === 'ECONNABORTED') {
+            console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
+          }
+          
           // Show error in UI
           this.message = `Failed to update status: ${error.message}`;
           this.messageType = 'error';
@@ -313,7 +396,13 @@ export default {
               status: 'error',
               details: 'Database connection failed',
               response_time: 0,
-              timestamp: new Date()
+              timestamp: new Date(),
+              validation: {
+                status: 'error',
+                details: 'Database validation not available',
+                response_time: 0,
+                timestamp: new Date()
+              }
             },
             'legacy_erp': {
               status: 'warning',
@@ -339,7 +428,9 @@ export default {
     },
     async fetchDatabaseStats() {
       try {
-        const response = await api.get('/api/monitoring/db-stats/');
+        const response = await api.get('/api/monitoring/db-stats/', {
+          timeout: 10000 // 10 second timeout
+        });
         if (response.data.success && response.data.stats) {
           // Store previous transaction count for animation
           this.lastTransactionCount = this.getTotalTransactions();
@@ -414,15 +505,13 @@ export default {
              (this.dbStats?.queries?.update_count || 0) + 
              (this.dbStats?.queries?.delete_count || 0);
     },
-    getComponentDisplayName(component) {
-      const displayNames = {
-        'database': 'Database',
-        'legacy_erp': 'Legacy ERP',
-        'pictures_api': 'Pictures API',
-        'database_validation': 'Database Validation'
-      };
-
-      return displayNames[component] || component;
+    getComponentDisplayName(key) {
+      // Convert snake_case or camelCase to Title Case with spaces
+      return key
+        .replace(/_/g, ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
     },
     formatTimestamp(timestamp) {
       if (!timestamp) return 'Unknown';
@@ -581,6 +670,12 @@ export default {
         default:
           return ['rgba(108, 117, 125, 0.7)', 'rgba(108, 117, 125, 0.5)', 'rgba(108, 117, 125, 0.3)'];
       }
+    },
+    toggleDatabaseStats() {
+      this.isDatabaseStatsExpanded = !this.isDatabaseStatsExpanded;
+    },
+    toggleDatabaseValidation() {
+      this.isDatabaseValidationExpanded = !this.isDatabaseValidationExpanded;
     }
   }
 };
@@ -678,6 +773,9 @@ export default {
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 20px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
 }
 
 .overall-status.success {
@@ -703,6 +801,14 @@ export default {
 .status-icon {
   font-size: 32px;
   margin-right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .overall-status.success .status-icon {
@@ -733,9 +839,10 @@ export default {
 
 /* Database Visualization Styles */
 .db-visualization {
-  background-color: #f8f9fa;
+  background-color: white;
   border-radius: 8px;
   padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
 }
 
@@ -749,62 +856,15 @@ export default {
 .db-canvas {
   width: 100%;
   height: 100px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
   margin-bottom: 10px;
-}
-
-/* Database Stats Display */
-.db-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.stat-box {
-  flex: 1;
-  min-width: 150px;
-  background-color: #fff;
-  padding: 12px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.stat-box h4 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #666;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-}
-
-.stat-numbers {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 13px;
-  color: #333;
-}
-
-.stat-box.transactions {
-  border-left: 3px solid #4e73df;
-}
-
-.stat-box.queries {
-  border-left: 3px solid #1cc88a;
-}
-
-.stat-box.disk {
-  border-left: 3px solid #f6c23e;
 }
 
 .canvas-legend {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #6c757d;
+  color: #666;
+  margin-top: 10px;
 }
 
 .connection-section, .additional-info-section {
@@ -936,6 +996,122 @@ export default {
   border: 1px dashed #dee2e6;
 }
 
+.db-stats-toggle {
+  margin-top: 15px;
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  color: #333;
+}
+
+.db-stats-toggle:hover {
+  color: #007bff;
+}
+
+.db-stats {
+  margin-top: 15px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.stat-box {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.stat-box h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 14px;
+}
+
+.stat-numbers {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.toggle-icon {
+  font-size: 12px;
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.db-validation-section {
+  margin-top: 15px;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+.db-validation-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 5px 0;
+  font-weight: 500;
+  color: #555;
+}
+
+.db-validation-details {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.validation-status {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.validation-status.success {
+  color: #28a745;
+}
+
+.validation-status.warning {
+  color: #ffc107;
+}
+
+.validation-status.error {
+  color: #dc3545;
+}
+
+.validation-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  margin-top: 5px;
+}
+
+.validation-status.success .validation-indicator {
+  background-color: #28a745;
+}
+
+.validation-status.warning .validation-indicator {
+  background-color: #ffc107;
+}
+
+.validation-status.error .validation-indicator {
+  background-color: #dc3545;
+}
+
+.validation-meta {
+  font-size: 0.85em;
+  color: #6c757d;
+  margin-top: 5px;
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
@@ -956,14 +1132,11 @@ export default {
   
   .canvas-legend {
     flex-direction: column;
+    gap: 5px;
   }
   
   .db-stats {
-    flex-direction: column;
-  }
-  
-  .stat-box {
-    min-width: 100%;
+    grid-template-columns: 1fr;
   }
 }
 </style>

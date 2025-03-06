@@ -21,11 +21,11 @@ from pyerp.monitoring.models import HealthCheckResult
 
 # Import the API clients we'll check
 try:
-    from pyerp.direct_api.client import DirectAPIClient
     from pyerp.direct_api.exceptions import (
         DirectAPIError,
         ServerUnavailableError,
     )
+    from pyerp.direct_api.scripts.getTable import SimpleAPIClient
 
     LEGACY_API_AVAILABLE = True
 except ImportError:
@@ -98,30 +98,18 @@ def check_legacy_erp_connection():
         response_time = 0
     else:
         try:
-            client = DirectAPIClient()
+            # Use SimpleAPIClient instead of DirectAPIClient
+            client = SimpleAPIClient()
             
-            # Try to validate connection using the $info endpoint
-            response = client._make_request(
-                "GET",
-                "$info",
-            )
-
-            if response.status_code != 200:
+            # Use validate_session instead of _make_request to $info endpoint
+            session_valid = client.validate_session()
+            
+            if not session_valid:
                 status = HealthCheckResult.STATUS_WARNING
-                status_code = response.status_code
-                details = (
-                    f"Legacy ERP API returned non-200 status: "
-                    f"{status_code}"
-                )
+                details = "Legacy ERP API session validation failed."
                 logger.warning(
-                    "Legacy ERP health check warning: "
-                    f"{details}"
+                    "Legacy ERP health check warning: Failed to validate session"
                 )
-                if response.text:
-                    text_preview = response.text[:200]
-                    logger.warning(
-                        f"Response text: {text_preview}..."
-                    )
 
         except ServerUnavailableError as e:
             status = HealthCheckResult.STATUS_ERROR
@@ -434,7 +422,7 @@ def run_all_health_checks(as_array=True):
     Run all available health checks.
 
     Args:
-        as_array (bool): If True, returns results as an array; otherwise as a dictionary
+        as_array (bool): If True, returns results as an array; otherwise as a dict
 
     Returns:
         list or dict: Health check results in the specified format
@@ -445,6 +433,10 @@ def run_all_health_checks(as_array=True):
         HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection(),
         HealthCheckResult.COMPONENT_PICTURES_API: check_pictures_api_connection(),
     }
+    
+    # Always add database validation result
+    validation_result = validate_database()
+    results[HealthCheckResult.COMPONENT_DATABASE_VALIDATION] = validation_result
     
     # Return in the requested format
     if as_array:

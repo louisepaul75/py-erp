@@ -96,7 +96,7 @@ const checkHealthStatus = async () => {
   try {
     // First try the basic health check
     const basicHealth = await axios.get('/api/health/', {
-      timeout: 5000, // 5 second timeout
+      timeout: 15000, // 15 second timeout
     });
 
     // Set version from health check response
@@ -110,7 +110,7 @@ const checkHealthStatus = async () => {
     // Then try the detailed health check
     try {
       const detailedHealth = await axios.get<DetailedHealthResponse>('/api/monitoring/health-checks/', {
-        timeout: 5000, // 5 second timeout
+        timeout: 30000, // Increased from 15000 to 30000 ms
       });
 
       if (!detailedHealth.data.success) {
@@ -129,10 +129,15 @@ const checkHealthStatus = async () => {
       } else {
         healthStatus.value = 'unknown';
       }
-    } catch (detailedError) {
+    } catch (detailedError: any) {
       console.warn('Detailed health check failed:', detailedError);
       // If detailed check fails but basic check succeeded, show warning
       healthStatus.value = 'warning';
+      
+      // Add more detailed logging for network errors
+      if (detailedError.code === 'ECONNABORTED') {
+        console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
+      }
     }
   } catch (error) {
     console.error('Health check failed:', error);
