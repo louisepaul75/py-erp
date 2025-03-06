@@ -59,76 +59,7 @@
         <div v-if="Object.keys(healthResults || {}).length === 0" class="no-status">
           No connection status data available
         </div>
-        <div v-else class="status-cards">
-          <!-- Database Card with Stats -->
-          <div v-if="healthResults['database']" 
-               :class="['status-card', healthResults['database'].status]">
-            <div class="status-card-header">
-              <div class="component-name">
-                Database
-              </div>
-              <span :class="['status-indicator', healthResults['database'].status]"></span>
-            </div>
-            <div class="status-details">
-              {{ healthResults['database'].details }}
-              
-              <!-- Database Validation Section -->
-              <div v-if="healthResults['database'] && healthResults['database'].validation" class="db-validation-section">
-                <div class="db-validation-toggle" @click="toggleDatabaseValidation">
-                  <span>Database Validation</span>
-                  <span class="toggle-icon">{{ isDatabaseValidationExpanded ? '▼' : '▶' }}</span>
-                </div>
-                <div class="db-validation-details" v-show="isDatabaseValidationExpanded">
-                  <div :class="['validation-status', healthResults['database'].validation.status]">
-                    <span class="validation-indicator"></span>
-                    <span>{{ healthResults['database'].validation.details }}</span>
-                  </div>
-                  <div class="validation-meta" v-if="healthResults['database'].validation.response_time !== undefined">
-                    Response Time: {{ (Number(healthResults['database'].validation.response_time) || 0).toFixed(2) }} ms
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Database Stats Section -->
-              <div class="db-stats-toggle" @click="toggleDatabaseStats">
-                <span>Database Statistics</span>
-                <span class="toggle-icon">{{ isDatabaseStatsExpanded ? '▼' : '▶' }}</span>
-              </div>
-              <div class="db-stats" v-show="isDatabaseStatsExpanded">
-                <div class="stat-box transactions">
-                  <h4>Transactions</h4>
-                  <div class="stat-numbers">
-                    <div>Active: {{ dbStats?.transactions?.active || 0 }}</div>
-                    <div>Total: {{ getTotalTransactions().toLocaleString() }}</div>
-                  </div>
-                </div>
-                <div class="stat-box queries">
-                  <h4>Queries</h4>
-                  <div class="stat-numbers">
-                    <div>Total: {{ getTotalQueries().toLocaleString() }}</div>
-                    <div>Avg Time: {{ formatNumber(dbStats?.performance?.avg_query_time) }} ms</div>
-                  </div>
-                </div>
-                <div class="stat-box disk">
-                  <h4>Database Size</h4>
-                  <div class="stat-numbers">
-                    <div>{{ formatNumber(dbStats?.disk?.size_mb) }} MB</div>
-                    <div>Hit Ratio: {{ formatNumber(dbStats?.performance?.cache_hit_ratio) }}%</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="status-meta">
-              <div v-if="healthResults['database'].response_time !== undefined">
-                Response Time: {{ (Number(healthResults['database'].response_time) || 0).toFixed(2) }} ms
-              </div>
-              <div v-if="healthResults['database'].timestamp">
-                {{ formatTimestamp(healthResults['database'].timestamp) }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Other Connection Cards -->
+        <div v-if="healthResults && Object.keys(healthResults).length > 0" class="status-cards">
           <div v-for="(result, componentKey) in healthResults" :key="componentKey"
                v-if="componentKey !== 'database'"
                :class="['status-card', result.status]">
