@@ -25,6 +25,7 @@ RUN apt-get update \
         libgdk-pixbuf2.0-dev \
         shared-mime-info \
         libssl-dev \
+        redis-server \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -114,7 +115,8 @@ EXPOSE 80 443
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    REDIS_URL=redis://localhost:6379/0
 
 # Set up entrypoint
 COPY docker/entrypoint.prod.sh /entrypoint.sh
