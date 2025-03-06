@@ -138,7 +138,9 @@ class ImageAPIClient:
         # Create a safe cache key
         if params:
             params_str = json.dumps(params, sort_keys=True)
-            params_hash = hashlib.sha256(params_str.encode(), usedforsecurity=False).hexdigest()
+            params_hash = hashlib.sha256(
+                params_str.encode(), usedforsecurity=False
+            ).hexdigest()
             cache_key = f"image_api_{endpoint}_{params_hash}"
         else:
             cache_key = f"image_api_{endpoint}_none"

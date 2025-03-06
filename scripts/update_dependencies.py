@@ -19,7 +19,7 @@ def run_command(command, cwd=None):
     try:
         # Split the command into a list of arguments if it's a string
         cmd_args = command if isinstance(command, list) else command.split()
-        
+
         result = subprocess.run(
             cmd_args,
             shell=False,

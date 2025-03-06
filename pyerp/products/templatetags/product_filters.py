@@ -42,23 +42,23 @@ def get_primary_image(product):
             image = product.images.filter(
                 image_type__iexact="Produktfoto", is_front=True
             ).first()
-            
+
             if not image:
                 # Second priority: Any Produktfoto
                 image = product.images.filter(image_type__iexact="Produktfoto").first()
-            
+
             if not image:
                 # Third priority: Any front=True image
                 image = product.images.filter(is_front=True).first()
-            
+
             if not image:
                 # Fourth priority: Any image marked as primary
                 image = product.images.filter(is_primary=True).first()
-            
+
             if not image:
                 # Last resort: first image
                 image = product.images.first()
         except Exception:
             pass
-    
+
     return image

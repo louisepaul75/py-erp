@@ -57,7 +57,7 @@ class ProductImportValidator(ImportValidator):
             result: ValidationResult to add errors/warnings to
             row_index: Optional index of the row being validated
         """
-        logger.debug("Validating product data row %s", row_index or 'unknown')
+        logger.debug("Validating product data row %s", row_index or "unknown")
 
         # Check if product has minimal required fields
         if not row_data.get("sku") and not row_data.get("alteNummer"):
