@@ -33,6 +33,25 @@
             <p v-else>Status unknown</p>
           </div>
         </div>
+        
+        <!-- Database Visualization Animation -->
+        <div class="db-visualization">
+          <h3>Database Performance Visualization</h3>
+          <canvas 
+            ref="dbCanvas" 
+            class="db-canvas"
+            width="600" 
+            height="100">
+          </canvas>
+          <div class="canvas-legend">
+            <div class="legend-item">
+              <span>Speed: Database response time</span>
+            </div>
+            <div class="legend-item">
+              <span>Squares: Overall system health</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Connection Status Section -->
@@ -101,7 +120,12 @@ export default {
         environment: '',
         version: ''
       },
-      lastUpdated: null
+      lastUpdated: null,
+      // Animation properties
+      animationFrameId: null,
+      squares: [],
+      canvas: null,
+      ctx: null
     };
   },
   computed: {
@@ -117,6 +141,13 @@ export default {
       } else {
         return 'unknown';
       }
+    },
+    // Get database response time from health results
+    dbResponseTime() {
+      if (this.healthResults && this.healthResults.database && this.healthResults.database.response_time) {
+        return this.healthResults.database.response_time;
+      }
+      return 100; // Default response time if not available
     }
   },
   mounted() {
@@ -125,9 +156,25 @@ export default {
     this.autoRefreshInterval = setInterval(() => {
       this.refreshHealthChecks();
     }, 5 * 60 * 1000);
+    
+    // Initialize canvas animation
+    this.setupCanvas();
   },
   beforeUnmount() {
     clearInterval(this.autoRefreshInterval);
+    // Cancel the animation frame when component is unmounted
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+  },
+  watch: {
+    // Watch for changes in healthResults to update the animation
+    healthResults: {
+      handler() {
+        this.updateAnimation();
+      },
+      deep: true
+    }
   },
   methods: {
     async refreshHealthChecks() {
@@ -243,6 +290,101 @@ export default {
       }
 
       return timestamp.toLocaleString();
+    },
+    
+    // Canvas animation methods
+    setupCanvas() {
+      this.canvas = this.$refs.dbCanvas;
+      if (!this.canvas) return;
+      
+      this.ctx = this.canvas.getContext('2d');
+      this.initializeSquares();
+      this.animate();
+    },
+    
+    initializeSquares() {
+      // Clear existing squares
+      this.squares = [];
+      
+      // Number of squares based on status: success=10, warning=7, error=3, unknown=5
+      let numSquares = 5; // default for unknown
+      if (this.overallStatus === 'success') {
+        numSquares = 10;
+      } else if (this.overallStatus === 'warning') {
+        numSquares = 7;
+      } else if (this.overallStatus === 'error') {
+        numSquares = 3;
+      }
+      
+      // Get colors based on status
+      const colors = this.getStatusColors(this.overallStatus);
+      
+      // Create squares in a line formation
+      const spacing = this.canvas.width / numSquares;
+      const yPosition = this.canvas.height / 2 - 10; // Center vertically
+      
+      for (let i = 0; i < numSquares; i++) {
+        // Distribute squares evenly across the canvas width
+        const xPosition = i * spacing;
+        
+        this.squares.push({
+          x: xPosition,
+          y: yPosition,
+          size: 20,
+          color: colors[i % colors.length]
+        });
+      }
+    },
+    
+    updateAnimation() {
+      // Only recreate squares if the overall status has changed
+      this.initializeSquares();
+    },
+    
+    animate() {
+      // Clear the canvas
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      // Calculate speed factor based on DB response time
+      // Faster response = faster animation
+      let speedFactor = 2;
+      if (this.dbResponseTime > 0) {
+        // Scale to make animation visible: 
+        // - slower at high response times (> 500ms)
+        // - faster at low response times (< 50ms)
+        speedFactor = Math.max(1, Math.min(5, 200 / this.dbResponseTime));
+      }
+      
+      // Update and draw squares
+      this.squares.forEach(square => {
+        // Move square from left to right
+        square.x += speedFactor;
+        
+        // Wrap around when reaching right edge
+        if (square.x > this.canvas.width) {
+          square.x = -square.size;
+        }
+        
+        // Draw square
+        this.ctx.fillStyle = square.color;
+        this.ctx.fillRect(square.x, square.y, square.size, square.size);
+      });
+      
+      // Continue animation loop
+      this.animationFrameId = requestAnimationFrame(this.animate);
+    },
+    
+    getStatusColors(status) {
+      switch (status) {
+        case 'success':
+          return ['rgba(40, 167, 69, 0.7)', 'rgba(40, 167, 69, 0.5)', 'rgba(40, 167, 69, 0.3)'];
+        case 'warning':
+          return ['rgba(255, 193, 7, 0.7)', 'rgba(255, 193, 7, 0.5)', 'rgba(255, 193, 7, 0.3)'];
+        case 'error':
+          return ['rgba(220, 53, 69, 0.7)', 'rgba(220, 53, 69, 0.5)', 'rgba(220, 53, 69, 0.3)'];
+        default:
+          return ['rgba(108, 117, 125, 0.7)', 'rgba(108, 117, 125, 0.5)', 'rgba(108, 117, 125, 0.3)'];
+      }
     }
   }
 };
@@ -339,6 +481,7 @@ export default {
   align-items: center;
   padding: 20px;
   border-radius: 8px;
+  margin-bottom: 20px;
 }
 
 .overall-status.success {
@@ -390,6 +533,37 @@ export default {
 .status-text p {
   margin: 0;
   font-size: 16px;
+}
+
+/* Database Visualization Styles */
+.db-visualization {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.db-visualization h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #333;
+}
+
+.db-canvas {
+  width: 100%;
+  height: 100px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.canvas-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6c757d;
 }
 
 .connection-section, .additional-info-section {
@@ -522,6 +696,14 @@ export default {
 
   .status-cards {
     grid-template-columns: 1fr;
+  }
+  
+  .db-canvas {
+    height: 80px;
+  }
+  
+  .canvas-legend {
+    flex-direction: column;
   }
 }
 </style>
