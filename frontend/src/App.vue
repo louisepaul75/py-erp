@@ -1,20 +1,22 @@
 <template>
-    <div class="app-container">
+    <v-app>
         <!-- Navigation -->
         <Navbar/>
         <!-- Main Content -->
-        <main class="container py-4">
-            <router-view v-slot="{ Component }">
-                <transition name="fade" mode="out-in">
-                    <component :is="Component"/>
-                </transition>
-            </router-view>
-        </main>
+        <v-main>
+            <v-container class="py-4">
+                <router-view v-slot="{ Component }">
+                    <transition name="fade" mode="out-in">
+                        <component :is="Component"/>
+                    </transition>
+                </router-view>
+            </v-container>
+        </v-main>
         <!-- Debug Panel - Place before footer in DOM order -->
         <DebugPanel/>
         <!-- Footer - Must be last to appear at the bottom -->
         <Footer/>
-    </div>
+    </v-app>
 </template>
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
@@ -56,38 +58,6 @@ body {
     /* Ensure proper stacking context */
     position: relative;
     overflow-x: hidden;
-}
-
-.app-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    position: relative;
-    /* Ensure proper stacking context */
-    isolation: isolate;
-}
-
-main {
-    flex: 1 0 auto;
-}
-
-/* Override Bootstrap primary color */
-.btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover, .btn-primary:focus {
-    background-color: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.text-primary {
-    color: var(--primary-color) !important;
-}
-
-.bg-primary {
-    background-color: var(--primary-color) !important;
 }
 
 /* Transition animations */

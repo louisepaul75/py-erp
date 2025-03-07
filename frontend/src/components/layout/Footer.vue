@@ -1,19 +1,23 @@
 <template>
-  <footer class="footer mt-auto py-3 bg-light border-top" :class="{ 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded }">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-6">
-          <p class="mb-0 text-muted">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
-        </div>
-        <div class="col-md-6 text-md-end d-flex justify-content-end align-items-center">
-          <router-link to="/Health" class="health-status me-3" :title="healthStatusText">
+  <v-footer
+    app
+    class="pa-3 bg-grey-lighten-4"
+    :class="{ 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded }"
+  >
+    <v-container>
+      <v-row>
+        <v-col cols="12" md="6">
+          <p class="text-body-2 text-medium-emphasis mb-0">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
+        </v-col>
+        <v-col cols="12" md="6" class="text-md-end d-flex justify-end align-center">
+          <router-link to="/Health" class="health-status mr-3" :title="healthStatusText">
             <span class="status-dot" :class="healthStatusClass"></span>
           </router-link>
-          <p class="mb-0 text-muted">Version {{ appVersion }}</p>
-        </div>
-      </div>
-    </div>
-  </footer>
+          <p class="text-body-2 text-medium-emphasis mb-0">Version {{ appVersion }}</p>
+        </v-col>
+      </v-row>
+    </v-container>
+  </v-footer>
 </template>
 
 <script setup lang="ts">
@@ -160,22 +164,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.footer {
+.v-footer {
   position: relative;
   z-index: 10001; /* Higher z-index than debug panel to ensure it's above */
-  flex-shrink: 0;
-  /* Ensure footer is not positioned over the debug panel */
-  margin-bottom: 0;
-}
-
-/* Remove margin bottom when debug panel is active since we want the footer above it */
-.footer.with-debug-panel {
-  margin-bottom: 0;
-}
-
-/* Remove margin when debug panel is expanded */
-.footer.with-expanded-debug {
-  margin-bottom: 0;
 }
 
 .health-status {
