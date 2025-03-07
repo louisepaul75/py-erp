@@ -831,8 +831,12 @@ def main():
 if __name__ == "__main__":
     # Django setup should only happen when the script is run directly
     import django
+    
     django.setup()
     
+    table = "Artikel_Variante"
+
+
     # First run validation script if no arguments provided
     if len(sys.argv) == 1:
         print("\n=== Running Session Validation ===")
@@ -872,7 +876,7 @@ if __name__ == "__main__":
             # Try to fetch a small sample from a known table
             print("\nTesting table fetch...")
             try:
-                df = client.fetch_table("Kunden", top=1)
+                df = client.fetch_table(table, top=1)
                 print(f"✓ Successfully fetched sample from Kunden ({len(df)} records)")
                 if not df.empty:
                     print("\nSample data:")
