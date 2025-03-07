@@ -46,8 +46,23 @@ This project follows a modified GitFlow workflow:
 ### Version Strategy
 We use Semantic Versioning (SemVer) with phase indicators: `MAJOR.MINOR.PATCH-PHASE`
 
-- Current version: See [VERSION.md](VERSION.md)
+- Current version: See [VERSION.md](docs/VERSION.md)
 - Version lifecycle: alpha → beta → release candidate → final release
+
+#### Automatic Version Bumping
+The project includes an automatic version bumping mechanism:
+
+- When pushing to the `dev` branch, the patch version is automatically incremented
+- When pushing to the `prod` branch, the minor version is automatically incremented
+
+To enable this feature, run the Git hooks installation script:
+```bash
+# Make the script executable
+chmod +x scripts/git-hooks/install-hooks.sh
+
+# Run the installation script
+./scripts/git-hooks/install-hooks.sh
+```
 
 ### Contributing
 For detailed contribution guidelines, including branch naming conventions, commit message formats, and pull request procedures, see [CONTRIBUTING.md](CONTRIBUTING.md).
