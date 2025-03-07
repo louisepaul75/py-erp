@@ -30,7 +30,7 @@ class TestHealthCheckView(TestCase):
         self.assertIn("version", data)
 
 
-class TestUserProfileView(APITestCase):
+class TestUserProfileView(TestCase):
     """Tests for the UserProfileView."""
 
     def setUp(self):
@@ -76,6 +76,18 @@ class TestUserProfileView(APITestCase):
         self.assertEqual(self.user.email, "new@example.com")
         self.assertEqual(self.user.first_name, "Updated")
         self.assertEqual(self.user.last_name, "Name")
+
+    def test_update_profile_invalid(self):
+        """Test updating a user profile with invalid data."""
+        data = {
+            "email": "invalid-email",
+            "profile": {
+                "website": "invalid-url",
+            },
+        }
+        response = self.client.patch("/api/v1/profile/", data, format="json")
+        self.assertEqual(response.status_code, 400)
+        # Add more assertions based on expected response
 
     def test_update_profile_no_changes(self):
         """Test updating a user profile with no valid fields."""

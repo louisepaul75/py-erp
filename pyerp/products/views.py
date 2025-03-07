@@ -11,6 +11,7 @@ from django.views.generic import DetailView, ListView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db.models import Prefetch
 
 from pyerp.products.forms import ProductSearchForm
 from pyerp.products.models import (
@@ -438,19 +439,35 @@ class ProductListAPIView(ProductAPIView):
 
     def get(self, request):
         """Handle GET request for product listing"""
-        products = ParentProduct.objects.all()
+        # Start with an optimized queryset that includes related data
+        products = (
+            ParentProduct.objects.select_related('category')
+            .prefetch_related('images')
+        )
+
+        # Check if we need to include variants early to optimize the query
+        include_variants = request.GET.get("include_variants", "").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+        if include_variants:
+            variant_qs = (
+                VariantProduct.objects.select_related('category')
+                .prefetch_related('images')
+            )
+            products = products.prefetch_related(
+                Prefetch('variantproduct_set', queryset=variant_qs)
+            )
 
         # Apply filters from query parameters
         category_id = request.GET.get("category")
         if category_id:
             try:
                 category_id = int(category_id)
-                category = ProductCategory.objects.get(id=category_id)
-                products = products.filter(category=category)
+                products = products.filter(category_id=category_id)
             except (ValueError, TypeError):
                 print(f"Invalid category_id format: {category_id}")
-            except ProductCategory.DoesNotExist:
-                print(f"Category with id {category_id} does not exist")
 
         search_query = request.GET.get("q")
         if search_query:
@@ -492,17 +509,11 @@ class ProductListAPIView(ProductAPIView):
         for product in products:
             product_data = self.get_product_data(product)
 
-            # Add variants data for each product
-            # Check if include_variants parameter is provided and true
-            include_variants = request.GET.get("include_variants", "").lower() in (
-                "true",
-                "1",
-                "yes",
-            )
+            # Add variants data if requested
             if include_variants:
-                variants = VariantProduct.objects.filter(parent=product)
                 variants_data = []
-                for variant in variants:
+                # This will use the prefetched data
+                for variant in product.variantproduct_set.all():
                     variant_data = self.get_product_data(variant)
                     variants_data.append(variant_data)
                 product_data["variants"] = variants_data

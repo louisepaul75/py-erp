@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Get the git root directory and add it to PYTHONPATH
+export PYTHONPATH="$(git rev-parse --show-toplevel):$PYTHONPATH"
+
+# Get current branch
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "Current branch: $BRANCH"
+
+# Only bump version when pushing to specific branches
+if [ "$BRANCH" = "prod" ]; then
+    echo "Pushing to prod branch, bumping minor version..."
+    python -c "
+from pyerp.version import bump_version
+new_version = bump_version('minor')
+print(f'Bumped to version {new_version}')"
+elif [ "$BRANCH" = "dev" ]; then
+    echo "Pushing to dev branch, bumping patch version..."
+    python -c "
+from pyerp.version import bump_version
+new_version = bump_version('patch')
+print(f'Bumped to version {new_version}')"
+fi
+
+# If we bumped the version, stage and commit the change
+if [ "$BRANCH" = "prod" ] || [ "$BRANCH" = "dev" ]; then
+    # Check if version.py was modified
+    if git diff --name-only | grep -q "pyerp/version.py"; then
+        git add pyerp/version.py
+        git commit -m "chore: Auto-bump version"
+        echo "Committed version bump"
+    fi
+fi 
