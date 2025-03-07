@@ -1,21 +1,4 @@
 <template>
-<<<<<<< HEAD
-  <footer class="footer mt-auto py-3 bg-light border-top" :class="{ 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded }">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-6">
-          <p class="mb-0 text-muted">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
-        </div>
-        <div class="col-md-6 text-md-end d-flex justify-content-end align-items-center gap-3">
-          <p class="mb-0 text-muted">Version {{ appVersion }}</p>
-          <router-link to="/Health" class="health-status" :title="healthStatusText">
-            <span class="status-dot" :class="healthStatusClass"></span>
-          </router-link>
-        </div>
-      </div>
-    </div>
-  </footer>
-=======
   <v-footer
     app
     class="pa-3 bg-grey-lighten-4"
@@ -35,7 +18,6 @@
       </v-row>
     </v-container>
   </v-footer>
->>>>>>> dev-ui
 </template>
 
 <script setup lang="ts">
