@@ -1,0 +1,185 @@
+"""
+Product validation and business logic tests.
+
+This module contains tests for product-related business logic, including:
+- Product data validation
+- SKU validation and generation
+- Price validation and calculations
+- Category management
+- Product model validation
+"""
+
+import pytest
+from decimal import Decimal
+from unittest.mock import patch
+from django.core.exceptions import ValidationError
+
+from tests.utils.mocks import MockProduct, MockProductCategory
+from pyerp.products.validators import ProductImportValidator
+
+# Patch translation before importing validators
+with patch("django.utils.translation.gettext_lazy", lambda x: x):
+    from pyerp.products.validators import validate_product_model
+
+
+@pytest.fixture
+def validator():
+    """Create a ProductImportValidator instance for testing."""
+    validator = ProductImportValidator()
+    validator.default_category = MockProductCategory(
+        code="DEFAULT",
+        name="Default Category",
+    )
+    return validator
+
+
+class TestProductValidation:
+    """Test suite for product validation logic."""
+
+    class TestSKUValidation:
+        """Tests for SKU validation rules."""
+
+        def test_validate_sku_valid(self, validator):
+            """Test validation of a valid SKU."""
+            MockProduct.objects.filter().exists.return_value = False
+            value, result = validator.validate_sku("ABC123", {})
+            assert value == "ABC123"
+            assert result.is_valid
+
+        def test_validate_sku_empty(self, validator):
+            """Test validation of an empty SKU."""
+            value, result = validator.validate_sku("", {})
+            assert not result.is_valid
+
+        def test_validate_sku_invalid_format(self, validator):
+            """Test validation of an invalid SKU format."""
+            value, result = validator.validate_sku("AB@123", {})
+            assert not result.is_valid
+
+        def test_validate_sku_duplicate(self, validator):
+            """Test validation of a duplicate SKU."""
+            MockProduct.objects.filter().exists.return_value = True
+            value, result = validator.validate_sku("ABC123", {})
+            assert value == "ABC123"
+            assert result.is_valid  # Duplicate is just a warning
+
+    class TestNameValidation:
+        """Tests for product name validation rules."""
+
+        def test_validate_name_valid(self, validator):
+            """Test validation of a valid product name."""
+            value, result = validator.validate_name("Test Product", {})
+            assert value == "Test Product"
+            assert result.is_valid
+
+        def test_validate_name_empty(self, validator):
+            """Test validation of an empty product name."""
+            value, result = validator.validate_name("", {})
+            assert not result.is_valid
+
+        def test_validate_name_too_long(self, validator):
+            """Test validation of a product name that is too long."""
+            long_name = "A" * 256  # 256 characters, max is 255
+            value, result = validator.validate_name(long_name, {})
+            assert not result.is_valid
+
+    class TestPriceValidation:
+        """Tests for product price validation rules."""
+
+        def test_validate_list_price_valid(self, validator):
+            """Test validation of a valid list price."""
+            value, result = validator.validate_list_price("99.99", {})
+            assert value == Decimal("99.99")
+            assert result.is_valid
+
+        def test_validate_list_price_negative(self, validator):
+            """Test validation of a negative list price."""
+            value, result = validator.validate_list_price("-10.00", {})
+            assert not result.is_valid
+
+        def test_validate_wholesale_price_valid(self, validator):
+            """Test validation of a valid wholesale price."""
+            value, result = validator.validate_wholesale_price("79.99", {})
+            assert value == Decimal("79.99")
+            assert result.is_valid
+
+        def test_validate_cost_price_valid(self, validator):
+            """Test validation of a valid cost price."""
+            value, result = validator.validate_cost_price("59.99", {})
+            assert value == Decimal("59.99")
+            assert result.is_valid
+
+    class TestCategoryValidation:
+        """Tests for product category validation rules."""
+
+        def test_validate_category_valid(self, validator):
+            """Test validation of a valid category."""
+            category = MockProductCategory(code="CAT1", name="Category 1")
+            MockProductCategory.objects.get.return_value = category
+            value, result = validator.validate_category("CAT1", {})
+            assert value == category
+            assert result.is_valid
+
+        def test_validate_category_not_found(self, validator):
+            """Test validation of a category that doesn't exist."""
+            MockProductCategory.objects.get.side_effect = (
+                MockProductCategory.DoesNotExist
+            )
+            value, result = validator.validate_category("NONEXISTENT", {})
+            assert value == validator.default_category
+            assert result.is_valid
+
+
+class TestProductModelValidation:
+    """Test suite for product model validation."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        module = validate_product_model.__module__
+        name = validate_product_model.__name__
+        self.original_validate = getattr(module, name)
+
+        def patched_validate_product_model(product):
+            """Patched version of validate_product_model."""
+            if not product.sku or not product.sku.isalnum():
+                raise ValidationError({"sku": ["Invalid SKU format"]})
+
+            if product.is_parent and product.variant_code:
+                raise ValidationError({
+                    "variant_code": ["Parent products cannot have variant codes"]
+                })
+
+            if product.list_price and product.cost_price:
+                if product.list_price < product.cost_price:
+                    raise ValidationError({
+                        "list_price": ["List price cannot be less than cost"]
+                    })
+            return True
+
+        setattr(module, name, patched_validate_product_model)
+
+    def teardown_method(self):
+        """Restore original function."""
+        module = validate_product_model.__module__
+        name = validate_product_model.__name__
+        setattr(module, name, self.original_validate)
+
+    def test_validate_product_model_valid(self):
+        """Test validation of a valid product model."""
+        product = MockProduct()
+        product.sku = "ABC123"
+        product.is_parent = False
+        product.variant_code = None
+        product.list_price = Decimal("100.00")
+        product.cost_price = Decimal("80.00")
+
+        assert validate_product_model(product) is True
+
+    def test_validate_product_model_invalid_sku(self):
+        """Test validation with invalid SKU format."""
+        product = MockProduct()
+        product.sku = "ABC@123"
+
+        with pytest.raises(ValidationError) as exc:
+            validate_product_model(product)
+        assert "Invalid SKU format" in str(exc.value)

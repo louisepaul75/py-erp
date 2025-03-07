@@ -1,14 +1,19 @@
-name: Test
+name: Test Suite
 
 on:
   push:
-    branches: [ prod, dev]
+    branches: [ prod, dev ]
   pull_request:
-    branches: [ prod, dev]
+    branches: [ prod, dev ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-group: [ui, backend, database, api, core]
+      fail-fast: false
+
     services:
       postgres:
         image: postgres:15
@@ -47,17 +52,64 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.dev.txt
 
-      - name: Run tests
+      - name: Run ${{ matrix.test-group }} tests
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
           REDIS_URL: redis://localhost:6379/0
+          TEST_GROUP: ${{ matrix.test-group }}
+          PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest --cov=pyerp --cov-report=xml
+          # Create coverage directory
+          mkdir -p coverage
+          
+          # Run tests for specific group from tests directory
+          cd tests && pytest ${{ matrix.test-group }}/ \
+            --cov=../pyerp \
+            --cov-report=xml:../coverage/${{ matrix.test-group }}.xml \
+            --cov-report=html:../coverage/${{ matrix.test-group }}-html \
+            --junitxml=../coverage/${{ matrix.test-group }}-junit.xml
 
-      - name: Upload coverage reports to Codecov
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.test-group }}
+          path: coverage/
+          retention-days: 14
+
+  coverage-report:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          merge-multiple: true
+          path: coverage
+
+      - name: Combine coverage reports
+        run: |
+          python -m pip install coverage
+          coverage combine coverage/*.xml
+          coverage xml
+          coverage html
+          coverage report
+
+      - name: Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Wilhelm-Schweizer/pyERP
-          file: ./coverage.xml
+          files: ./coverage.xml
           fail_ci_if_error: true
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 14
