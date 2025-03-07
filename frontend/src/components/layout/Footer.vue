@@ -64,6 +64,20 @@ const healthStatusClass = computed(() => {
   };
 });
 
+// Fetch version and health status
+const fetchHealthStatus = async () => {
+  try {
+    const response = await axios.get('/api/health/', {
+      timeout: 5000
+    });
+    appVersion.value = response.data.version || 'unknown';
+    healthStatus.value = response.data.status;
+  } catch (error) {
+    console.error('Failed to fetch health status:', error);
+    healthStatus.value = 'error';
+  }
+};
+
 // Define a custom event type
 interface DebugPanelToggleEvent extends CustomEvent {
   detail: {
@@ -91,60 +105,12 @@ interface DetailedHealthResponse {
   results: HealthCheckResult[];
 }
 
-// Check health status
-const checkHealthStatus = async () => {
-  try {
-    // First try the basic health check
-    const basicHealth = await axios.get('/health/', {
-      timeout: 5000
-    });
-
-    // Set version from health check response
-    appVersion.value = basicHealth.data.version || 'unknown';
-
-    // If basic health check shows unhealthy, set error status
-    if (basicHealth.data.status === 'unhealthy') {
-      healthStatus.value = 'error';
-      return;
-    }
-
-    // Then try the detailed health check
-    try {
-      const detailedHealth = await axios.get<DetailedHealthResponse>('/monitoring/health-checks/', {
-        timeout: 5000
-      });
-
-      if (!detailedHealth.data.success) {
-        healthStatus.value = 'warning';
-        return;
-      }
-
-      const statuses = detailedHealth.data.results.map((result: HealthCheckResult) => result.status);
-      if (statuses.includes('error')) {
-        healthStatus.value = 'error';
-      } else if (statuses.includes('warning')) {
-        healthStatus.value = 'warning';
-      } else {
-        healthStatus.value = 'success';
-      }
-    } catch (detailedError) {
-      console.warn('Detailed health check failed:', detailedError);
-      // If detailed check fails but basic check passed, show warning
-      healthStatus.value = 'warning';
-    }
-  } catch (error: any) {
-    console.error('Health check failed:', error);
-    // Set error status for any health check failure
-    healthStatus.value = 'error';
-  }
-};
-
 let healthCheckInterval: number;
 
 onMounted(() => {
   window.addEventListener('debug-panel-toggle', handleDebugPanelToggle);
-  checkHealthStatus();
-  healthCheckInterval = window.setInterval(checkHealthStatus, 60000); // Check every minute
+  fetchHealthStatus();
+  healthCheckInterval = window.setInterval(fetchHealthStatus, 60000); // Check every minute
 });
 
 onUnmounted(() => {
