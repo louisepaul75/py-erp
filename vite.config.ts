@@ -104,11 +104,6 @@ export default defineConfig(({ mode }) => {
           target: apiBaseUrl,
           changeOrigin: true
         },
-        '/v1': {
-          target: apiBaseUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/v1/, '/api/v1')
-        },
         '/products': {
           target: apiBaseUrl,
           changeOrigin: true,

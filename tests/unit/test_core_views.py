@@ -47,7 +47,7 @@ class TestUserProfileView(TestCase):
 
     def test_get_profile(self):
         """Test getting a user profile."""
-        response = self.client.get("/api/v1/profile/")
+        response = self.client.get("/api/profile/")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["username"], "testuser")
@@ -64,7 +64,7 @@ class TestUserProfileView(TestCase):
             "first_name": "Updated",
             "last_name": "Name"
         }
-        response = self.client.patch("/api/v1/profile/", data, format="json")
+        response = self.client.patch("/api/profile/", data, format="json")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["message"], "Profile updated successfully")
         self.assertEqual(response.json()["updated_fields"]["email"], "new@example.com")
@@ -85,7 +85,7 @@ class TestUserProfileView(TestCase):
                 "website": "invalid-url",
             },
         }
-        response = self.client.patch("/api/v1/profile/", data, format="json")
+        response = self.client.patch("/api/profile/", data, format="json")
         self.assertEqual(response.status_code, 400)
         # Add more assertions based on expected response
 
@@ -94,7 +94,7 @@ class TestUserProfileView(TestCase):
         data = {
             "invalid_field": "value"
         }
-        response = self.client.patch("/api/v1/profile/", data, format="json")
+        response = self.client.patch("/api/profile/", data, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["message"], "No valid fields to update")
 
@@ -104,5 +104,5 @@ class TestUserProfileView(TestCase):
         data = {
             "email": "new@example.com"
         }
-        response = self.client.patch("/api/v1/profile/", data, format="json")
+        response = self.client.patch("/api/profile/", data, format="json")
         self.assertEqual(response.status_code, 401)

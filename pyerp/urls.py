@@ -52,7 +52,7 @@ urlpatterns = [
     # Django admin URLs
     path("admin/", admin.site.urls),
     # API URLs
-    path("api/v1/", include("pyerp.core.api_urls")),
+    path("api/", include("pyerp.core.api_urls")),
     path(
         "api/token/",
         TokenObtainPairView.as_view(permission_classes=[]),
@@ -77,7 +77,6 @@ urlpatterns = [
         "api/monitoring/",
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
     ),
-    path("api/", include("pyerp.core.api_urls")),
     # Add products API URLs directly
     path("api/products/", include("pyerp.products.api_urls")),
 ]
