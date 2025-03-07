@@ -64,3 +64,19 @@ whitenoise==6.9.0
 
 # Datadog APM and tracing
 ddtrace==2.0.0
+
+# Frontend Dependencies
+# Note: These are npm packages and should be installed using npm in the frontend directory
+# They are listed here for documentation purposes only
+# To install:
+# cd frontend
+# npm install
+#
+# Main dependencies:
+# - vue (^3.3.8): Progressive JavaScript framework
+# - vue-router (^4.2.5): Official router for Vue.js
+# - pinia (^2.1.7): State management for Vue
+# - vuetify (^3.5.6): Material Design component framework
+# - vue-i18n (^9.8.0): Internationalization plugin for Vue.js
+# - axios (^1.6.2): Promise based HTTP client
+# - @mdi/font (^7.4.47): Material Design Icons

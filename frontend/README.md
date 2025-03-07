@@ -48,16 +48,28 @@ The production build will be output to the `dist` directory, which can be served
 
 ## Architecture
 
-The frontend is organized into the following structure:
+For a comprehensive overview of our frontend architecture decisions, guidelines, and standards, please refer to the [ARCHITECTURE.md](./ARCHITECTURE.md) document. This document outlines our approach to:
 
-- `src/` - Source code
-  - `assets/` - Static assets (images, fonts, etc.)
-  - `components/` - Reusable Vue components
-  - `router/` - Vue Router configuration
-  - `services/` - API and other services
-  - `store/` - Pinia stores for state management
-  - `utils/` - Utility functions
-  - `views/` - Page components
+- Modularization strategy
+- UI/UX and style guide principles
+- Layout and navigation patterns
+- State management and data flow
+- Security and role-based access
+- Performance optimization
+- Internationalization
+- API design and backend integration
+
+All frontend development should adhere to the principles outlined in this document to ensure consistency across the application.
+
+### Key Architecture Decisions
+
+- **Single Vue Application**: We use a single Vue application without complex subdivision
+- **UI Components**: We use Vuetify components with a dedicated style guide
+- **Navigation**: Top bar + sidebar with recently accessed/pinned items
+- **State Management**: Pinia for centralized state management
+- **Authentication**: Session-based authentication with Django's session cookie
+- **API Integration**: Django REST Framework with Swagger/OpenAPI documentation
+- **Internationalization**: Support for English and German through Vue I18n
 
 ## Asset Handling
 
