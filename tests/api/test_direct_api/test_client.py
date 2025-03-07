@@ -2,18 +2,17 @@
 Unit tests for the DirectAPIClient class.
 
 These tests verify that the DirectAPIClient correctly handles API requests,
-session management, and response parsing.  # noqa: E501
+session management, and response parsing.
 """
 
 import unittest
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
 from pyerp.direct_api.client import DirectAPIClient
-from pyerp.direct_api.exceptions import (
-    ResponseError,
-)
+from pyerp.direct_api.exceptions import ResponseError
 
 
 class TestDirectAPIClient(unittest.TestCase):
@@ -68,7 +67,11 @@ class TestDirectAPIClient(unittest.TestCase):
         mock_make_request.assert_called_once_with(
             "GET",
             "Artikel_Familie",
-            params={"$top": 10, "$skip": 0, "new_data_only": "true"},
+            params={
+                "$top": 10,
+                "$skip": 0,
+                "new_data_only": "true"
+            },
         )
 
     @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
@@ -113,18 +116,28 @@ class TestDirectAPIClient(unittest.TestCase):
 
         # Verify both requests were made
         self.assertEqual(mock_make_request.call_count, 2)
-        mock_make_request.assert_has_calls([
-            unittest.mock.call(
-                "GET",
-                "Artikel_Familie",
-                params={"$top": 2, "$skip": 0, "new_data_only": "true"},
-            ),
-            unittest.mock.call(
-                "GET",
-                "Artikel_Familie",
-                params={"$top": 2, "$skip": 2, "new_data_only": "true"},
-            ),
-        ])
+        mock_make_request.assert_has_calls(
+            [
+                unittest.mock.call(
+                    "GET",
+                    "Artikel_Familie",
+                    params={
+                        "$top": 2,
+                        "$skip": 0,
+                        "new_data_only": "true"
+                    },
+                ),
+                unittest.mock.call(
+                    "GET",
+                    "Artikel_Familie",
+                    params={
+                        "$top": 2,
+                        "$skip": 2,
+                        "new_data_only": "true"
+                    },
+                ),
+            ]
+        )
 
     @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
     def test_fetch_table_error_handling(self, mock_make_request):
@@ -136,7 +149,7 @@ class TestDirectAPIClient(unittest.TestCase):
         )
 
         # Verify the exception is propagated
-        with self.assertRaises(ResponseError):
+        with pytest.raises(ResponseError):
             self.client.fetch_table("Artikel_Familie")
 
     @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
@@ -155,7 +168,7 @@ class TestDirectAPIClient(unittest.TestCase):
         )
 
         # Verify the result
-        self.assertTrue(result)
+        assert result is True
 
         # Verify the request was made correctly
         mock_make_request.assert_called_once_with(
@@ -174,7 +187,7 @@ class TestDirectAPIClient(unittest.TestCase):
         )
 
         # Verify the exception is propagated
-        with self.assertRaises(ResponseError):
+        with pytest.raises(ResponseError):
             self.client.push_field(
                 "Artikel_Familie",
                 "invalid_key",

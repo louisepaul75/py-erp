@@ -129,7 +129,8 @@ class Session:
                     self.expires_at = (
                         datetime.datetime.fromisoformat(cookie_data["expires_at"])
                         if "expires_at" in cookie_data
-                        else self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
+                        else self.created_at
+                        + datetime.timedelta(seconds=API_SESSION_EXPIRY)
                     )
                     logger.info(
                         f"Loaded session cookie from file: {self.cookie[:30]}...",
@@ -158,7 +159,10 @@ class Session:
                     "expires_at": (
                         self.expires_at.isoformat()
                         if self.expires_at
-                        else (datetime.datetime.now() + datetime.timedelta(seconds=API_SESSION_EXPIRY)).isoformat()
+                        else (
+                            datetime.datetime.now()
+                            + datetime.timedelta(seconds=API_SESSION_EXPIRY)
+                        ).isoformat()
                     ),
                 }
 
@@ -185,8 +189,10 @@ class Session:
             return False
 
         now = datetime.datetime.now()
-        refresh_threshold = self.expires_at - datetime.timedelta(seconds=API_SESSION_REFRESH_MARGIN)
-        
+        refresh_threshold = self.expires_at - datetime.timedelta(
+            seconds=API_SESSION_REFRESH_MARGIN
+        )
+
         return now < refresh_threshold
 
     def refresh(self) -> None:
@@ -253,7 +259,9 @@ class Session:
                                 f"Stored WASID4D cookie value: {cookie_value[:10]}...",
                             )
                             self.created_at = datetime.datetime.now()
-                            self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
+                            self.expires_at = self.created_at + datetime.timedelta(
+                                seconds=API_SESSION_EXPIRY
+                            )
 
                             # Save the cookie to file for persistence
                             self._save_cookie_to_file()
@@ -281,7 +289,9 @@ class Session:
                         self.cookie = cookie_header
 
                     self.created_at = datetime.datetime.now()
-                    self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
+                    self.expires_at = self.created_at + datetime.timedelta(
+                        seconds=API_SESSION_EXPIRY
+                    )
                     logger.info(
                         f"Successfully obtained session cookie for {self.environment}",
                     )
@@ -302,7 +312,9 @@ class Session:
                             f"Stored WASID4D cookie value: {cookie_value[:10]}...",
                         )
                         self.created_at = datetime.datetime.now()
-                        self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
+                        self.expires_at = self.created_at + datetime.timedelta(
+                            seconds=API_SESSION_EXPIRY
+                        )
 
                         # Save the cookie to file for persistence
                         self._save_cookie_to_file()
@@ -319,7 +331,9 @@ class Session:
                             f"Stored 4DSID_WSZ-DB cookie value as WASID4D: {cookie_value[:10]}...",
                         )
                         self.created_at = datetime.datetime.now()
-                        self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
+                        self.expires_at = self.created_at + datetime.timedelta(
+                            seconds=API_SESSION_EXPIRY
+                        )
 
                         # Save the cookie to file for persistence
                         self._save_cookie_to_file()
@@ -447,9 +461,8 @@ class SessionPool:
                 session = self.cache[environment]
                 if session.is_valid():
                     return session
-                else:
-                    # Remove invalid session from cache
-                    del self.cache[environment]
+                # Remove invalid session from cache
+                del self.cache[environment]
 
             # Create a new session if needed
             if environment not in self._sessions:
@@ -485,6 +498,7 @@ class SessionPool:
                 del self._sessions[environment]
             if environment in self.cache:
                 del self.cache[environment]
+
 
 # Global session pool instance
 _session_pool = SessionPool()

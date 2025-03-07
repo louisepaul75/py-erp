@@ -30,7 +30,9 @@ API_INFO_ENDPOINT = getattr(settings, "LEGACY_API_INFO_ENDPOINT", "$info")
 API_REST_ENDPOINT = getattr(settings, "LEGACY_API_REST_ENDPOINT", "rest")
 
 # Session settings
-API_SESSION_REFRESH_MARGIN = getattr(settings, "LEGACY_API_SESSION_REFRESH_MARGIN", 300)  # 5 minutes in seconds
+API_SESSION_REFRESH_MARGIN = getattr(
+    settings, "LEGACY_API_SESSION_REFRESH_MARGIN", 300
+)  # 5 minutes in seconds
 
 # Environment settings - no credentials needed
 API_ENVIRONMENTS = getattr(

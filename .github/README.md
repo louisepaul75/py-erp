@@ -62,10 +62,7 @@ This project follows a modified GitFlow workflow:
 - **`dev`**: Integration branch for active development
 
 ### Supporting Branches
-- **`feature/*`**: For new features (e.g., `feature/product-bom-creation`)
-- **`bugfix/*`**: For bug fixes in development
-- **`hotfix/*`**: For critical fixes that need to go directly to production
-- **`release/*`**: For preparing version releases (e.g., `release/1.0.0`)
+- **`dev-ui/*`**: Frontend Branch
 
 ### Version Strategy
 We use Semantic Versioning (SemVer) with phase indicators: `MAJOR.MINOR.PATCH-PHASE`

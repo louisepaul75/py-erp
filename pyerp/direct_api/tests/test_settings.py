@@ -2,8 +2,9 @@
 Tests for the direct_api settings module.
 """
 
-from django.test import TestCase, override_settings
 import os
+
+from django.test import TestCase, override_settings
 
 from pyerp.direct_api.settings import (
     API_BASE_URL,

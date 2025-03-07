@@ -22,9 +22,9 @@ def run_health_checks(request):
     """
     try:
         # Check if the client prefers array or dictionary format
-        format_param = request.GET.get('format', 'array').lower()
-        as_array = format_param != 'dict'
-        
+        format_param = request.GET.get("format", "array").lower()
+        as_array = format_param != "dict"
+
         results = run_all_health_checks(as_array=as_array)
         response = JsonResponse(
             {

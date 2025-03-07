@@ -46,12 +46,16 @@ if "debug_toolbar" in INSTALLED_APPS:  # noqa: F405
     INSTALLED_APPS.remove("debug_toolbar")  # noqa: F405
 
 MIDDLEWARE = [  # noqa: F405
-    middleware for middleware in MIDDLEWARE if "debug_toolbar" not in middleware  # noqa: F405
+    middleware
+    for middleware in MIDDLEWARE
+    if "debug_toolbar" not in middleware  # noqa: F405
 ]
 
 # Remove ddtrace middleware if present
 MIDDLEWARE = [  # noqa: F405
-    middleware for middleware in MIDDLEWARE if "ddtrace" not in middleware  # noqa: F405
+    middleware
+    for middleware in MIDDLEWARE
+    if "ddtrace" not in middleware  # noqa: F405
 ]
 
 # Remove ddtrace from INSTALLED_APPS if present
@@ -152,6 +156,7 @@ LOGGING = {
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
+
 # Disable migrations when running tests
 class DisableMigrations:
     def __contains__(self, item):
@@ -159,6 +164,7 @@ class DisableMigrations:
 
     def __getitem__(self, item):
         return None
+
 
 MIGRATION_MODULES = DisableMigrations()
 
@@ -199,4 +205,5 @@ if not isinstance(ArrayField, type(Field)):
 
     # Replace the original ArrayField with our fixed version
     import django.contrib.postgres.fields
+
     django.contrib.postgres.fields.ArrayField = FixedArrayField

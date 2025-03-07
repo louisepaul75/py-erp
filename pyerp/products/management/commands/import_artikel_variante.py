@@ -3,19 +3,18 @@ Management command to import product variants from the legacy Artikel_Variante t
 """
 
 import logging
-import sys
 from decimal import Decimal
 
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from pyerp.direct_api.scripts.getTable import SimpleAPIClient
 from pyerp.products.models import (
     ParentProduct,
     ProductCategory,
     VariantProduct,
 )
-from pyerp.direct_api.scripts.getTable import SimpleAPIClient
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -63,10 +62,10 @@ class Command(BaseCommand):
 
         try:
             self.stdout.write("Fetching data from Artikel_Variante table...")
-            
+
             # Create an instance of the SimpleAPIClient
             client = SimpleAPIClient(environment="live")
-            
+
             # Fetch data using the client
             if limit:
                 # Use direct API call with limit if specified
@@ -74,7 +73,7 @@ class Command(BaseCommand):
                 response = client.session.get(
                     f"{client.base_url}/rest/Artikel_Variante?{limit_param}"
                 )
-                
+
                 # Convert response to DataFrame
                 if response.status_code != 200:
                     self.stdout.write(
@@ -83,7 +82,7 @@ class Command(BaseCommand):
                         )
                     )
                     return
-                    
+
                 data = response.json()
                 if "__ENTITIES" not in data:
                     self.stdout.write(
@@ -91,15 +90,12 @@ class Command(BaseCommand):
                     )
                     self.stdout.write(f"Response: {data}")
                     return
-                    
+
                 df = pd.DataFrame(data["__ENTITIES"])
             else:
                 # Use fetch_table with all_records=True to get all records with pagination
                 self.stdout.write("Fetching all records with pagination...")
-                df = client.fetch_table(
-                    "Artikel_Variante", 
-                    all_records=True
-                )
+                df = client.fetch_table("Artikel_Variante", all_records=True)
                 if df.empty:
                     self.stdout.write(self.style.ERROR("Failed to fetch data"))
                     return
@@ -131,20 +127,14 @@ class Command(BaseCommand):
                     # Skip if variant already exists and skip_existing is True
                     if (
                         skip_existing
-                        and VariantProduct.objects.filter(
-                            legacy_id=legacy_id
-                        ).exists()
+                        and VariantProduct.objects.filter(legacy_id=legacy_id).exists()
                     ):
-                        self.stdout.write(
-                            f"Skipping existing variant: {alte_nummer}"
-                        )
+                        self.stdout.write(f"Skipping existing variant: {alte_nummer}")
                         stats["skipped"] += 1
                         continue
 
                     # Determine the primary SKU
-                    primary_sku = (
-                        str(nummer) if nummer is not None else alte_nummer
-                    )
+                    primary_sku = str(nummer) if nummer is not None else alte_nummer
 
                     # Parse SKU and variant code - split by the last hyphen
                     if "-" in alte_nummer:
@@ -153,7 +143,7 @@ class Command(BaseCommand):
                             :last_hyphen_index
                         ]  # Everything before the last hyphen
                         variant_code = alte_nummer[
-                            last_hyphen_index + 1:
+                            last_hyphen_index + 1 :
                         ]  # Everything after the last hyphen
                     else:
                         base_sku = alte_nummer
@@ -178,7 +168,7 @@ class Command(BaseCommand):
                                         str(price_item.get("Preis", 0))
                                     )
                                     ve_value = int(price_item.get("VE", 1))
-                                    
+
                                     if price_type == "Laden":
                                         list_price = price_value
                                         retail_price = price_value
@@ -190,32 +180,32 @@ class Command(BaseCommand):
                                         cost_price = price_value
                                     elif price_type == "Empf.":
                                         gross_price = price_value
-                    
+
                     # Debug price information if requested
                     if debug_prices:
                         self._debug_prices(
-                            row, 
-                            alte_nummer, 
-                            list_price, 
-                            retail_price, 
-                            wholesale_price, 
-                            cost_price, 
+                            row,
+                            alte_nummer,
+                            list_price,
+                            retail_price,
+                            wholesale_price,
+                            cost_price,
                             gross_price,
                             retail_unit,
-                            wholesale_unit
+                            wholesale_unit,
                         )
 
                     # Find parent product - first try by Familie_ field
                     parent = None
                     familie_ = row.get("Familie_", None)
-                    
+
                     if familie_ and pd.notna(familie_):
                         parent_candidates = ParentProduct.objects.filter(
                             legacy_id=str(familie_),
                         )
                         if parent_candidates.exists():
                             parent = parent_candidates.first()
-                            
+
                     # If parent not found by Familie_, try by ref_old
                     if not parent and ref_old:
                         parent_candidates = ParentProduct.objects.filter(
@@ -223,7 +213,7 @@ class Command(BaseCommand):
                         )
                         if parent_candidates.exists():
                             parent = parent_candidates.first()
-                    
+
                     # As a last resort, try by base_sku
                     if not parent and base_sku:
                         parent_candidates = ParentProduct.objects.filter(
@@ -264,9 +254,7 @@ class Command(BaseCommand):
 
                     # Print variant data in dry run mode
                     if dry_run:
-                        self.stdout.write(
-                            f"Would create variant: {variant_data}"
-                        )
+                        self.stdout.write(f"Would create variant: {variant_data}")
                         stats["created"] += 1
                         continue
 
@@ -278,21 +266,15 @@ class Command(BaseCommand):
                         )
 
                         if created:
-                            self.stdout.write(
-                                f"Created variant: {variant.sku}"
-                            )
+                            self.stdout.write(f"Created variant: {variant.sku}")
                         else:
-                            self.stdout.write(
-                                f"Updated variant: {variant.sku}"
-                            )
+                            self.stdout.write(f"Updated variant: {variant.sku}")
 
                         stats["created"] += 1
 
                 except Exception as e:
                     self.stdout.write(
-                        self.style.ERROR(
-                            f"Error processing variant {index}: {e!s}"
-                        ),
+                        self.style.ERROR(f"Error processing variant {index}: {e!s}"),
                     )
                     stats["errors"] += 1
 
@@ -320,36 +302,34 @@ class Command(BaseCommand):
                 self.style.ERROR(f"Error importing variants: {e!s}"),
             )
             raise
-            
+
     def _debug_prices(
-        self, 
-        row, 
-        alte_nummer, 
-        list_price=None, 
-        retail_price=None, 
-        wholesale_price=None, 
-        cost_price=None, 
+        self,
+        row,
+        alte_nummer,
+        list_price=None,
+        retail_price=None,
+        wholesale_price=None,
+        cost_price=None,
         gross_price=None,
         retail_unit=None,
-        wholesale_unit=None
+        wholesale_unit=None,
     ):
         """Debug helper to print price information for a variant."""
-        self.stdout.write(
-            self.style.NOTICE(f"\n=== Price Debug for {alte_nummer} ===")
-        )
-        
+        self.stdout.write(self.style.NOTICE(f"\n=== Price Debug for {alte_nummer} ==="))
+
         # Show raw price data
         if "Preise" in row and row["Preise"] is not None:
             self.stdout.write("Raw Preise data:")
             prices = row["Preise"]
             if isinstance(prices, dict) and "Coll" in prices:
                 for i, price_item in enumerate(prices["Coll"]):
-                    self.stdout.write(f"  Price {i+1}: {price_item}")
+                    self.stdout.write(f"  Price {i + 1}: {price_item}")
             else:
                 self.stdout.write(f"  {prices}")
         else:
             self.stdout.write("  No Preise data found")
-            
+
         # Show mapped prices if provided
         if list_price is not None:
             self.stdout.write("\nMapped prices:")
@@ -360,5 +340,5 @@ class Command(BaseCommand):
             self.stdout.write(f"  gross_price: {gross_price}")
             self.stdout.write(f"  retail_unit: {retail_unit}")
             self.stdout.write(f"  wholesale_unit: {wholesale_unit}")
-            
+
         self.stdout.write("=" * 50)

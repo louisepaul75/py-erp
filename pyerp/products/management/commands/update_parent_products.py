@@ -7,12 +7,14 @@ fields are correctly mapped to is_hanging and is_one_sided.
 """
 
 import logging
+
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
-from pyerp.products.models import ParentProduct, VariantProduct, ProductCategory
+
 from pyerp.direct_api.scripts.getTable import SimpleAPIClient
+from pyerp.products.models import ParentProduct, ProductCategory, VariantProduct
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -57,7 +59,7 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         debug = options["debug"]
 
-        self.stdout.write(f"Starting parent product update process")
+        self.stdout.write("Starting parent product update process")
         self.stdout.write(f"Environment: {environment}")
         self.stdout.write(f"Update existing: {update_existing}")
         self.stdout.write(f"Dry run: {dry_run}")
@@ -90,13 +92,13 @@ class Command(BaseCommand):
 
             stats["total"] = len(df)
             self.stdout.write(f"Fetched {stats['total']} parent products")
-            
+
             # Print the field names from the first record to help identify the correct field names
             if len(df) > 0:
                 self.stdout.write("\nField names in the first record:")
                 for field_name in sorted(df.iloc[0].keys()):
                     self.stdout.write(f"  - {field_name}")
-                
+
                 # Print the first record for debugging
                 if debug:
                     self.stdout.write("\nFirst record data:")
@@ -135,7 +137,9 @@ class Command(BaseCommand):
                     art_gr = row.get("ArtGr", "")
 
                     # Physical attributes
-                    weight = float(row["Gewicht"]) if pd.notna(row.get("Gewicht")) else 0
+                    weight = (
+                        float(row["Gewicht"]) if pd.notna(row.get("Gewicht")) else 0
+                    )
                     width = (
                         float(row["Masse_Breite"])
                         if pd.notna(row.get("Masse_Breite"))
@@ -249,8 +253,12 @@ class Command(BaseCommand):
                         # Create new parent product
                         if not dry_run:
                             with transaction.atomic():
-                                parent_product = ParentProduct.objects.create(**parent_data)
-                                self.associate_variants(parent_product, familie_id, debug)
+                                parent_product = ParentProduct.objects.create(
+                                    **parent_data
+                                )
+                                self.associate_variants(
+                                    parent_product, familie_id, debug
+                                )
 
                         self.stdout.write(f"Created parent product: {nummer}")
                         stats["created"] += 1
@@ -291,6 +299,4 @@ class Command(BaseCommand):
                 count += 1
 
         if count > 0 and debug:
-            self.stdout.write(
-                f"Associated {count} variants with parent {parent.sku}"
-            ) 
+            self.stdout.write(f"Associated {count} variants with parent {parent.sku}")

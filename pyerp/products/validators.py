@@ -8,8 +8,8 @@ import logging
 from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
-from django.utils.translation import gettext_lazy as translate
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as translate
 
 from pyerp.core.validators import (
     DecimalValidator,
@@ -475,15 +475,15 @@ def validate_product_model(product: Product) -> bool:
 
     # Validate parent/variant relationship
     if product.is_parent and product.variant_code:
-        raise ValidationError({
-            "variant_code": ["Parent products cannot have variant codes"]
-        })
+        raise ValidationError(
+            {"variant_code": ["Parent products cannot have variant codes"]}
+        )
 
     # Validate prices
     if product.list_price is not None and product.cost_price is not None:
         if product.list_price < product.cost_price:
-            raise ValidationError({
-                "list_price": ["List price cannot be less than cost"]
-            })
+            raise ValidationError(
+                {"list_price": ["List price cannot be less than cost"]}
+            )
 
     return True

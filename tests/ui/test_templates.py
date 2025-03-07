@@ -35,7 +35,7 @@ class TestModelExample:
 
     def test_model_save(self, model_instance):
         """Test model save behavior without hitting the database."""
-        with patch.object(model_instance, 'save') as mock_save:
+        with patch.object(model_instance, "save") as mock_save:
             model_instance.save()
             assert mock_save.called
 
@@ -52,16 +52,16 @@ class TestFormExample:
     def valid_form_data(self):
         """Create valid form data."""
         return {
-            'code': 'CAT1',
-            'name': 'Test Category',
+            "code": "CAT1",
+            "name": "Test Category",
         }
 
     @pytest.fixture
     def invalid_form_data(self):
         """Create invalid form data."""
         return {
-            'code': '',  # Required field
-            'name': '',  # Required field
+            "code": "",  # Required field
+            "name": "",  # Required field
         }
 
     def test_form_valid(self, valid_form_data):

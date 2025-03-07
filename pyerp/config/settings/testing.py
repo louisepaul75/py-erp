@@ -25,7 +25,7 @@ if "ddtrace" in sys.modules:
             del sys.modules[module_name]
 
 # Load environment variables using centralized loader
-from pyerp.utils.env_loader import load_environment_variables  # noqa: E402
+from pyerp.utils.env_loader import load_environment_variables
 
 from .base import *  # noqa: F403
 
@@ -45,14 +45,12 @@ DEBUG = True
 if "debug_toolbar" in INSTALLED_APPS:  # noqa: F405
     INSTALLED_APPS.remove("debug_toolbar")  # noqa: F405
 
-MIDDLEWARE = [  # noqa: F405
-    middleware for middleware in MIDDLEWARE if "debug_toolbar" not in middleware  # noqa: F405
+MIDDLEWARE = [
+    middleware for middleware in MIDDLEWARE if "debug_toolbar" not in middleware
 ]
 
 # Remove ddtrace middleware if present
-MIDDLEWARE = [  # noqa: F405
-    middleware for middleware in MIDDLEWARE if "ddtrace" not in middleware  # noqa: F405
-]
+MIDDLEWARE = [middleware for middleware in MIDDLEWARE if "ddtrace" not in middleware]
 
 # Remove ddtrace from INSTALLED_APPS if present
 if "ddtrace.contrib.django" in INSTALLED_APPS:  # noqa: F405

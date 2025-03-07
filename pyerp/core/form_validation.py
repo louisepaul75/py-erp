@@ -68,9 +68,7 @@ class ValidatedFormMixin:
         """
         self.form_validators.append(validator_func)
 
-    def apply_validators(
-        self, field_name: str, value: Any
-    ) -> ValidationResult:
+    def apply_validators(self, field_name: str, value: Any) -> ValidationResult:
         """
         Apply all validators for a field.
 
@@ -95,9 +93,7 @@ class ValidatedFormMixin:
 
         return result
 
-    def apply_form_validators(
-        self, cleaned_data: dict[str, Any]
-    ) -> ValidationResult:
+    def apply_form_validators(self, cleaned_data: dict[str, Any]) -> ValidationResult:
         """
         Apply all form-level validators.
 

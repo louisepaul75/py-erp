@@ -57,10 +57,10 @@ class MockAPIResponse:
     @property
     def content(self):
         """Return raw response content."""
-        return str(self._data).encode('utf-8')
+        return str(self._data).encode("utf-8")
 
 
 def reset_all_mocks():
     """Reset all mock objects to their initial state."""
     MockProduct.objects.reset_mock()
-    MockProductCategory.objects.reset_mock() 
+    MockProductCategory.objects.reset_mock()

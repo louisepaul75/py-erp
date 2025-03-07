@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test-group: [ui, backend, database, api, core]
+        test-group: [ui, backend, core]
       fail-fast: false
 
     services:

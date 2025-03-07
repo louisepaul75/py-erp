@@ -7,7 +7,7 @@ from django.test import TestCase
 from pyerp.direct_api.exceptions import (
     AuthenticationError,
     ConfigurationError,
-    ConnectionError,
+    ConnectionError as APIConnectionError,
     DataError,
     DirectAPIError,
     RateLimitError,
@@ -37,11 +37,14 @@ class TestExceptions(TestCase):
             response_body={"error": "Internal server error"},
         )
         self.assertEqual(error.status_code, 500)
-        self.assertEqual(error.response_body, {"error": "Internal server error"})
+        self.assertEqual(
+            error.response_body,
+            {"error": "Internal server error"}
+        )
 
     def test_connection_error(self):
         """Test the ConnectionError exception."""
-        error = ConnectionError("Connection refused")
+        error = APIConnectionError("Connection refused")
         self.assertEqual(str(error), "Connection refused")
 
         # Check inheritance from DirectAPIError
@@ -91,7 +94,7 @@ class TestExceptions(TestCase):
         """Test the exception inheritance hierarchy."""
         base_error = DirectAPIError("Base error")
         response_error = ResponseError(400, "Response error")
-        connection_error = ConnectionError("Connection error")
+        connection_error = APIConnectionError("Connection error")
         auth_error = AuthenticationError("Auth error")
         data_error = DataError("Data error")
         rate_limit_error = RateLimitError(429, "Rate limit error")

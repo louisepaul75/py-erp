@@ -15,9 +15,7 @@ from pyerp.core.validators import (
     SkipRowException,
     ValidationResult,
 )
-from pyerp.management.commands.importproducts import (
-    Command,
-)
+from pyerp.management.commands.importproducts import Command
 
 
 class TestImportValidator:
@@ -34,7 +32,10 @@ class TestImportValidator:
                 return None, result
 
             if len(value) < 3:
-                result.add_error("name", "Name must be at least 3 characters")
+                result.add_error(
+                    "name",
+                    "Name must be at least 3 characters"
+                )
                 return value, result
 
             if self.transform_data and row_index is not None:
@@ -51,7 +52,8 @@ class TestImportValidator:
                     result.add_error("age", "Age must be at least 18")
                 if age > 100:
                     result.add_warning("age", "Age seems unusually high")
-                return age, result
+                else:
+                    return age, result
             except (ValueError, TypeError):
                 result.add_error("age", "Age must be a valid number")
                 return None, result
@@ -61,7 +63,10 @@ class TestImportValidator:
             result = ValidationResult()
             if not value:
                 if self.strict:
-                    result.add_error("code", "Code is required in strict mode")
+                    result.add_error(
+                        "code",
+                        "Code is required in strict mode"
+                    )
                 else:
                     result.add_warning("code", "Code is recommended")
                 return value, result
@@ -78,7 +83,7 @@ class TestImportValidator:
         def cross_validate_row(self, validated_data):
             """Cross-validate row data."""
             result = ValidationResult()
-            
+
             # Check name-active relationship
             if "name" in validated_data and "active" in validated_data:
                 name = validated_data["name"].lower()
@@ -86,14 +91,22 @@ class TestImportValidator:
                 if "inactive" in name and active:
                     result.add_error(
                         "active",
-                        "Items with 'inactive' in the name must be set as inactive"
+                        (
+                            "Items with 'inactive' in the name "
+                            "must be set as inactive"
+                        )
                     )
 
             # Check age-code relationship
             if "age" in validated_data and "code" in validated_data:
                 age = validated_data.get("age")
                 code = validated_data.get("code")
-                if age is not None and isinstance(age, int) and age < 21 and not code:
+                if (
+                    age is not None
+                    and isinstance(age, int)
+                    and age < 21
+                    and not code
+                ):
                     result.add_error(
                         "code",
                         "Code is required for items with age under 21"
@@ -207,14 +220,20 @@ class TestImportValidator:
         }
 
         # Test with transform_data=True
-        is_valid, validated_data, result = validator.validate_row(row_data, row_index=1)
+        is_valid, validated_data, result = validator.validate_row(
+            row_data,
+            row_index=1
+        )
         assert is_valid
         assert validated_data["name"] == "Test Item (Row 1)"
         assert validated_data["code"] == "TEST123-1"
         assert validated_data["age"] == 25
 
         # Test with transform_data=False
-        is_valid, validated_data, result = no_transform_validator.validate_row(row_data, row_index=1)
+        is_valid, validated_data, result = no_transform_validator.validate_row(
+            row_data,
+            row_index=1
+        )
         assert is_valid
         assert validated_data["name"] == "Test Item"
         assert validated_data["code"] == "TEST123"
@@ -233,7 +252,10 @@ class TestImportValidator:
 
         assert not is_valid
         assert "code" in result.errors
-        assert "Code is required for items with age under 21" in result.errors["code"][0]
+        assert (
+            "Code is required for items with age under 21"
+            in result.errors["code"][0]
+        )
 
     def test_missing_validation_method(self, validator):
         """Test behavior when validation method is missing."""
@@ -255,6 +277,7 @@ class TestImportValidator:
 
     def test_skip_row_exception(self, validator):
         """Test handling of SkipRowException."""
+
         def validate_test(self, value, row_data, row_index=None):
             if value == "skip":
                 raise SkipRowException("Test skip with reason")
@@ -277,6 +300,7 @@ class TestImportValidator:
 
     def test_validation_method_return_values(self, validator):
         """Test different return value scenarios from validation methods."""
+
         def validate_return_none(self, value, row_data, row_index=None):
             return None, ValidationResult()
 
@@ -289,21 +313,30 @@ class TestImportValidator:
             return "modified_" + str(value), ValidationResult()
 
         # Test method returning None
-        validator.validate_test1 = types.MethodType(validate_return_none, validator)
+        validator.validate_test1 = types.MethodType(
+            validate_return_none,
+            validator
+        )
         row_data = {"test1": "value"}
         is_valid, validated_data, result = validator.validate_row(row_data)
         assert is_valid
         assert validated_data["test1"] is None
 
         # Test method returning only result
-        validator.validate_test2 = types.MethodType(validate_return_only_result, validator)
+        validator.validate_test2 = types.MethodType(
+            validate_return_only_result,
+            validator
+        )
         row_data = {"test2": "value"}
         is_valid, validated_data, result = validator.validate_row(row_data)
         assert not is_valid
         assert "field" in result.errors
 
         # Test method returning modified value
-        validator.validate_test3 = types.MethodType(validate_return_modified, validator)
+        validator.validate_test3 = types.MethodType(
+            validate_return_modified,
+            validator
+        )
         row_data = {"test3": "value"}
         is_valid, validated_data, result = validator.validate_row(row_data)
         assert is_valid
@@ -346,18 +379,25 @@ class TestProductImportCommand:
         """Test product validation."""
         # Mock validator
         mock_validator = MagicMock()
-        command.create_product_validator = MagicMock(return_value=mock_validator)
+        mock_validator.validate_row.side_effect = [
+            (
+                True,
+                {
+                    "sku": "TEST-1",
+                    "name": "Test Product 1"
+                },
+                ValidationResult()
+            ),
+            (False, {}, ValidationResult()),
+        ]
+        command.create_product_validator = MagicMock(
+            return_value=mock_validator
+        )
 
         # Test data
         products = [
             {"sku": "TEST-1", "name": "Test Product 1"},
             {"sku": "TEST-2", "name": "Test Product 2"},
-        ]
-
-        # Mock validation results
-        mock_validator.validate_row.side_effect = [
-            (True, {"sku": "TEST-1", "name": "Test Product 1"}, ValidationResult()),
-            (False, {}, ValidationResult()),
         ]
 
         # Validate products
@@ -385,7 +425,9 @@ class TestProductImportCommand:
         command.create_or_update_product = MagicMock()
 
         # Call handle with options
-        with patch("pyerp.products.models.ProductCategory.objects.get") as mock_get:
+        with patch(
+            "pyerp.products.models.ProductCategory.objects.get"
+        ) as mock_get:
             default_category = MagicMock()
             mock_get.return_value = default_category
 
@@ -403,8 +445,8 @@ class TestProductImportCommand:
 
             # Check product creation
             command.create_or_update_product.assert_called_once_with(
-                {"sku": "TEST-1", "name": "Test Product 1"},
-                default_category=default_category,
+                sku="TEST-1",
+                name="Test Product 1"
             )
 
             assert result is True
@@ -428,10 +470,14 @@ class TestProductImportCommand:
                 {"sku": "TEST-2", "name": "Test Product 2"},
             ],
         )
-        command.validate_products = MagicMock(return_value=[])  # All products invalid
+        command.validate_products = MagicMock(
+            return_value=[]  # All products invalid
+        )
         command.create_or_update_product = MagicMock()
 
-        with patch("pyerp.products.models.ProductCategory.objects.get") as mock_get:
+        with patch(
+            "pyerp.products.models.ProductCategory.objects.get"
+        ) as mock_get:
             default_category = MagicMock()
             mock_get.return_value = default_category
 

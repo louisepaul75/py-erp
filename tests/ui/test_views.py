@@ -59,12 +59,9 @@ class TestHealthCheck:
         # Configure the mock
         response_data = {
             "status": "healthy",
-            "database": {
-                "status": "connected",
-                "message": "Database is connected"
-            },
+            "database": {"status": "connected", "message": "Database is connected"},
             "environment": "development",
-            "version": "1.0.0"
+            "version": "1.0.0",
         }
         mock_response = JsonResponse(response_data)
         pyerp_core_views.health_check.return_value = mock_response
@@ -90,12 +87,9 @@ class TestHealthCheck:
         # Configure the mock
         response_data = {
             "status": "unhealthy",
-            "database": {
-                "status": "error",
-                "message": "Database connection failed"
-            },
+            "database": {"status": "error", "message": "Database connection failed"},
             "environment": "development",
-            "version": "1.0.0"
+            "version": "1.0.0",
         }
         mock_response = JsonResponse(response_data, status=503)
         pyerp_core_views.health_check.return_value = mock_response
@@ -319,10 +313,7 @@ class TestSystemSettingsView:
         # Assertions
         assert response.status_code == 403
         assert "error" in response.data
-        assert (
-            response.data["error"]
-            == "You do not have permission to view settings"
-        )
+        assert response.data["error"] == "You do not have permission to view settings"
 
     def test_update_system_settings_superuser(self, request_factory, mock_user):
         """Test updating system settings as superuser."""

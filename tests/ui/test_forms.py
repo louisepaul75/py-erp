@@ -96,6 +96,7 @@ class TestValidatedForm:
 
     def setup_method(self):
         """Set up test cases."""
+
         class TestForm(ValidatedForm):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
@@ -143,7 +144,7 @@ class TestValidatedForm:
     def test_is_valid_with_field_validator_failing(self):
         """Test is_valid with a failing field validator."""
         form = self.form_class({"field": "value"})
-        
+
         def failing_validator(value, field_name=None):
             result = ValidationResult()
             result.add_error(field_name or "field", "Error message")

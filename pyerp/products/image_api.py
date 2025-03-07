@@ -9,7 +9,7 @@ and parsing of API responses.
 import hashlib
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 import urllib3
@@ -51,13 +51,10 @@ class ImageAPIClient:
             "BASE_URL",
             "http://webapp.zinnfiguren.de/api/",
         )
-        
+
         # Log the base URL for debugging
-        logger.debug(
-            "Initializing ImageAPIClient with base URL: %s",
-            self.base_url
-        )
-        
+        logger.debug("Initializing ImageAPIClient with base URL: %s", self.base_url)
+
         self.username = settings.IMAGE_API.get("USERNAME")
         self.password = settings.IMAGE_API.get("PASSWORD")
         self.timeout = settings.IMAGE_API.get(
@@ -96,7 +93,7 @@ class ImageAPIClient:
         # Disable SSL verification warnings if verify_ssl is False
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            
+
         logger.debug("ImageAPIClient initialized with username: %s", self.username)
 
     def get_appropriate_article_number(self, product: Product) -> str:
@@ -109,10 +106,7 @@ class ImageAPIClient:
         Returns:
             str: The article number to use for image search
         """
-        logger.debug(
-            "Getting article number for %s",
-            product.sku
-        )
+        logger.debug("Getting article number for %s", product.sku)
 
         # For parent products (ParentProduct model)
         if isinstance(product, ParentProduct):
@@ -146,8 +140,8 @@ class ImageAPIClient:
     def _make_request(
         self,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
         """
         Make a request to the API endpoint with authentication.
 
@@ -159,18 +153,13 @@ class ImageAPIClient:
             JSON response from the API or None if the request failed
         """
         url = f"{self.base_url}{endpoint}"
-        logger.debug(
-            "Constructed URL: %s from base: %s",
-            url,
-            self.base_url
-        )
+        logger.debug("Constructed URL: %s from base: %s", url, self.base_url)
 
         # Create a safe cache key
         if params:
             params_str = json.dumps(params, sort_keys=True)
             params_hash = hashlib.sha256(
-                params_str.encode(),
-                usedforsecurity=False
+                params_str.encode(), usedforsecurity=False
             ).hexdigest()
             cache_key = f"image_api_{endpoint}_{params_hash}"
         else:
@@ -185,40 +174,27 @@ class ImageAPIClient:
 
         try:
             logger.debug("Making request to %s with params %s", url, params)
+            logger.debug("Request auth: %s:%s", self.username, "*" * len(self.password))
             logger.debug(
-                "Request auth: %s:%s",
-                self.username,
-                '*' * len(self.password)
+                "Request timeout: %ss, verify_ssl: %s", self.timeout, self.verify_ssl
             )
-            logger.debug(
-                "Request timeout: %ss, verify_ssl: %s",
-                self.timeout,
-                self.verify_ssl
-            )
-            
+
             response = self.session.get(
-                url,
-                params=params,
-                timeout=self.timeout,
-                verify=self.verify_ssl
+                url, params=params, timeout=self.timeout, verify=self.verify_ssl
             )
 
             if response.status_code == HTTP_OK:
                 data = response.json()
-                logger.debug(
-                    "Request successful, received %d bytes of data",
-                    len(data)
-                )
+                logger.debug("Request successful, received %d bytes of data", len(data))
 
                 # Cache the response if caching is enabled
                 if self.cache_enabled:
                     cache.set(cache_key, data, self.cache_timeout)
 
                 return data
-            
+
             logger.error(
-                "API request failed with status code: %s",
-                response.status_code
+                "API request failed with status code: %s", response.status_code
             )
             logger.error("Response: %s", response.text)
             return None
@@ -247,13 +223,12 @@ class ImageAPIClient:
             dict: API response with image data
         """
         return self._make_request(
-            "all-files-and-articles/",
-            params={"page": page, "page_size": page_size}
+            "all-files-and-articles/", params={"page": page, "page_size": page_size}
         )
 
     def search_product_images(self, article_number):
         """
-        Search for images associated with a specific product by article 
+        Search for images associated with a specific product by article
         number.
 
         Args:
@@ -266,10 +241,7 @@ class ImageAPIClient:
         if self.cache_enabled:
             cached_images = cache.get(product_cache_key)
             if cached_images:
-                logger.debug(
-                    "Using cached images for %s",
-                    article_number
-                )
+                logger.debug("Using cached images for %s", article_number)
                 return cached_images
 
         # This could be optimized if the API supports direct filtering
@@ -289,9 +261,7 @@ class ImageAPIClient:
                 count = data.get("count", 0)
                 total_pages = (count + page_size - 1) // page_size
                 logger.info(
-                    "Found %d total records across %d pages",
-                    count,
-                    total_pages
+                    "Found %d total records across %d pages", count, total_pages
                 )
 
             # Filter results for the specific article number
@@ -311,11 +281,7 @@ class ImageAPIClient:
 
         # Log how many images were found total
         if product_images:
-            logger.info(
-                "Found %d images for %s",
-                len(product_images),
-                article_number
-            )
+            logger.info("Found %d images for %s", len(product_images), article_number)
 
         # Cache the results for this product
         if self.cache_enabled and product_images:
@@ -325,7 +291,7 @@ class ImageAPIClient:
 
     def parse_image(self, image_data):
         """
-        Parse the image data from the API response into a more usable 
+        Parse the image data from the API response into a more usable
         format.
 
         Args:
@@ -336,9 +302,7 @@ class ImageAPIClient:
         """
         result = {
             "external_id": image_data.get("id", ""),
-            "image_type": (
-                image_data.get("original_file", {}).get("type", "")
-            ),
+            "image_type": (image_data.get("original_file", {}).get("type", "")),
             "images": [],
             "metadata": image_data,
         }
@@ -354,9 +318,7 @@ class ImageAPIClient:
             and "file_url" in image_data["original_file"]
         ):
             original_url = image_data["original_file"]["file_url"]
-            original_format = (
-                image_data["original_file"].get("format", "").lower()
-            )
+            original_format = image_data["original_file"].get("format", "").lower()
 
             result["images"].append(
                 {
@@ -407,18 +369,13 @@ class ImageAPIClient:
                 # Track highest resolution PNG and JPEG for primary image selection
                 if img_format == "png" and resolution:
                     total_pixels = (
-                        resolution[0] * resolution[1] 
-                        if len(resolution) >= 2 else 0
+                        resolution[0] * resolution[1] if len(resolution) >= 2 else 0
                     )
                     if total_pixels > highest_res_png[0]:
                         highest_res_png = (total_pixels, img_url)
-                elif (
-                    img_format in ("jpg", "jpg_k", "jpg_g", "jpeg") 
-                    and resolution
-                ):
+                elif img_format in ("jpg", "jpg_k", "jpg_g", "jpeg") and resolution:
                     total_pixels = (
-                        resolution[0] * resolution[1] 
-                        if len(resolution) >= 2 else 0
+                        resolution[0] * resolution[1] if len(resolution) >= 2 else 0
                     )
                     if total_pixels > highest_res_jpeg[0]:
                         highest_res_jpeg = (total_pixels, img_url)
@@ -453,8 +410,7 @@ class ImageAPIClient:
 
         # Set is_front flag based on any article being marked as front
         result["is_front"] = any(
-            a.get("front", False) 
-            for a in image_data.get("articles", [])
+            a.get("front", False) for a in image_data.get("articles", [])
         )
 
         return result
@@ -559,33 +515,22 @@ class ImageAPIClient:
             return result
 
         # Fetch images for products that aren't cached yet
-        logger.info(
-            "Preloading images for %d products",
-            len(uncached_articles)
-        )
+        logger.info("Preloading images for %d products", len(uncached_articles))
 
         # Process each uncached article
         for article_number in uncached_articles:
-            logger.info(
-                "Searching for images with article number: %s",
-                article_number
-            )
+            logger.info("Searching for images with article number: %s", article_number)
             images = self.search_product_images(article_number)
 
             if images:
                 logger.info(
-                    "Found %d images for article %s",
-                    len(images),
-                    article_number
+                    "Found %d images for article %s", len(images), article_number
                 )
                 sorted_images = self.sort_images_by_priority(images)
                 if sorted_images:
                     result[article_number] = self.parse_image(sorted_images[0])
             else:
-                logger.warning(
-                    "No images found for article %s",
-                    article_number
-                )
+                logger.warning("No images found for article %s", article_number)
 
         return result
 
@@ -593,7 +538,7 @@ class ImageAPIClient:
         """
         Get images for a product, trying multiple article number formats.
 
-        This method implements a fallback strategy to find images for a 
+        This method implements a fallback strategy to find images for a
         product:
         1. First tries with the appropriate article number based on type
         2. If no images found, tries with the product's own SKU
@@ -608,32 +553,24 @@ class ImageAPIClient:
         """
         article_number = self.get_appropriate_article_number(product)
         logger.info(
-            "Searching for images with primary article number: %s",
-            article_number
+            "Searching for images with primary article number: %s", article_number
         )
         images = self.search_product_images(article_number)
 
         if images:
-            logger.info(
-                "Found %d images using primary article number",
-                len(images)
-            )
+            logger.info("Found %d images using primary article number", len(images))
             return images
 
         # Try with product SKU if different from article number
         if article_number != product.sku:
             logger.info(
-                "No images found with primary article number, "
-                "trying product SKU: %s",
-                product.sku
+                "No images found with primary article number, trying product SKU: %s",
+                product.sku,
             )
             images = self.search_product_images(product.sku)
 
             if images:
-                logger.info(
-                    "Found %d images using product SKU",
-                    len(images)
-                )
+                logger.info("Found %d images using product SKU", len(images))
                 return images
 
         # If still no images and it's a variant with a base_sku different
@@ -648,10 +585,7 @@ class ImageAPIClient:
             images = self.search_product_images(product.base_sku)
 
             if images:
-                logger.info(
-                    "Found %d images using base SKU",
-                    len(images)
-                )
+                logger.info("Found %d images using base SKU", len(images))
                 return images
 
         # If still no images and it has a parent that we haven't tried yet
@@ -664,55 +598,50 @@ class ImageAPIClient:
             images = self.search_product_images(product.parent.sku)
 
             if images:
-                logger.info(
-                    "Found %d images using parent SKU",
-                    len(images)
-                )
+                logger.info("Found %d images using parent SKU", len(images))
                 return images
 
         # If we've tried everything and found nothing
         logger.warning(
-            "No images found for product %s after trying all fallback "
-            "options",
-            product.sku
+            "No images found for product %s after trying all fallback options",
+            product.sku,
         )
         return []
 
     def check_connection(self) -> bool:
         """
         Test the connection to the image API by making a simple request.
-        
-        This method attempts to fetch a single image record from the API 
-        to verify that the connection, authentication, and basic API 
+
+        This method attempts to fetch a single image record from the API
+        to verify that the connection, authentication, and basic API
         functionality are working.
-        
+
         Returns:
             bool: True if connection is successful, False otherwise
-        
+
         Raises:
             Exception: If there is a connection error or API response error
         """
         try:
             # Try to fetch a single record to test the connection
             response = self._make_request(
-                "all-files-and-articles/",
-                params={"page": 1, "page_size": 1}
+                "all-files-and-articles/", params={"page": 1, "page_size": 1}
             )
-            
+
             if response is None:
                 raise Exception("No response received from API")
-                
+
             # Verify we got a valid response with the expected structure
             if not isinstance(response, dict):
                 raise Exception("Invalid response format from API")
-                
+
             # Check for required fields in response
-            if 'count' not in response or 'results' not in response:
+            if "count" not in response or "results" not in response:
                 raise Exception("Missing required fields in API response")
-                
+
             logger.info("Successfully connected to Images API")
             return True
-            
+
         except Exception as e:
             logger.error("Failed to connect to Images API: %s", str(e))
             raise

@@ -47,6 +47,7 @@ HEALTH_CHECK_TIMEOUT = 120  # Increased to 2 minutes
 # Maximum time to wait for individual component checks
 COMPONENT_CHECK_TIMEOUT = 60  # Individual components get 1 minute
 
+
 def check_database_connection():
     """
     Check if the database connection is working properly.
@@ -86,6 +87,7 @@ def check_database_connection():
         "timestamp": timezone.now(),
     }
 
+
 def check_legacy_erp_connection():
     """
     Check if the connection to the legacy ERP API is working properly.
@@ -105,10 +107,10 @@ def check_legacy_erp_connection():
         try:
             # Use SimpleAPIClient instead of DirectAPIClient
             client = SimpleAPIClient()
-            
+
             # Use validate_session instead of _make_request to $info endpoint
             session_valid = client.validate_session()
-            
+
             if not session_valid:
                 status = HealthCheckResult.STATUS_WARNING
                 details = "Legacy ERP API session validation failed."
@@ -143,6 +145,7 @@ def check_legacy_erp_connection():
         "timestamp": timezone.now(),
     }
 
+
 def check_pictures_api_connection():
     """
     Check if the connection to the pictures API is working properly.
@@ -164,7 +167,7 @@ def check_pictures_api_connection():
             logger.debug(
                 f"Pictures API URL from settings: {settings.IMAGE_API.get('BASE_URL')}",
             )
-            
+
             # Create client and check connection
             client = ImageAPIClient()
             client.check_connection()
@@ -184,6 +187,7 @@ def check_pictures_api_connection():
         "response_time": response_time,
         "timestamp": timezone.now(),
     }
+
 
 def validate_database():
     """
@@ -275,42 +279,28 @@ def validate_database():
         "timestamp": result.timestamp,
     }
 
+
 def get_database_statistics():
     """
     Get detailed statistics about database performance and usage.
-    
+
     Returns:
         dict: Detailed database statistics including connections, transactions, and performance metrics
     """
     stats = {
-        "connections": {
-            "active": 0,
-            "idle": 0,
-            "total": 0
-        },
-        "transactions": {
-            "committed": 0,
-            "rolled_back": 0,
-            "active": 0
-        },
-        "performance": {
-            "slow_queries": 0,
-            "cache_hit_ratio": 0,
-            "avg_query_time": 0
-        },
-        "disk": {
-            "size_mb": 0,
-            "index_size_mb": 0
-        },
+        "connections": {"active": 0, "idle": 0, "total": 0},
+        "transactions": {"committed": 0, "rolled_back": 0, "active": 0},
+        "performance": {"slow_queries": 0, "cache_hit_ratio": 0, "avg_query_time": 0},
+        "disk": {"size_mb": 0, "index_size_mb": 0},
         "queries": {
             "select_count": 0,
             "insert_count": 0,
             "update_count": 0,
-            "delete_count": 0
+            "delete_count": 0,
         },
-        "timestamp": timezone.now()
+        "timestamp": timezone.now(),
     }
-    
+
     try:
         with connections["default"].cursor() as cursor:
             if connections["default"].vendor == "postgresql":
@@ -321,13 +311,15 @@ def get_database_statistics():
                     GROUP BY state
                 """)
                 for state, count in cursor.fetchall():
-                    if state == 'active':
+                    if state == "active":
                         stats["connections"]["active"] = count
-                    elif state == 'idle':
+                    elif state == "idle":
                         stats["connections"]["idle"] = count
-                    
-                stats["connections"]["total"] = stats["connections"]["active"] + stats["connections"]["idle"]
-                
+
+                stats["connections"]["total"] = (
+                    stats["connections"]["active"] + stats["connections"]["idle"]
+                )
+
                 # Get transaction statistics
                 cursor.execute("""
                     SELECT 
@@ -339,7 +331,7 @@ def get_database_statistics():
                 if result:
                     stats["transactions"]["committed"] = result[0] or 0
                     stats["transactions"]["rolled_back"] = result[1] or 0
-                
+
                 # Get active transactions
                 cursor.execute("""
                     SELECT count(*) 
@@ -347,7 +339,7 @@ def get_database_statistics():
                     WHERE state = 'active' AND xact_start IS NOT NULL
                 """)
                 stats["transactions"]["active"] = cursor.fetchone()[0] or 0
-                
+
                 # Get slow queries count (queries taking more than 1 second)
                 cursor.execute("""
                     SELECT count(*) 
@@ -356,15 +348,17 @@ def get_database_statistics():
                     AND NOW() - query_start > interval '1 second'
                 """)
                 stats["performance"]["slow_queries"] = cursor.fetchone()[0] or 0
-                
+
                 # Get cache hit ratio
                 cursor.execute("""
                     SELECT 
                         sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read) + 0.001) * 100 as hit_ratio
                     FROM pg_statio_user_tables
                 """)
-                stats["performance"]["cache_hit_ratio"] = round(cursor.fetchone()[0] or 0, 2)
-                
+                stats["performance"]["cache_hit_ratio"] = round(
+                    cursor.fetchone()[0] or 0, 2
+                )
+
                 # Get database and index size
                 cursor.execute("""
                     SELECT 
@@ -376,7 +370,7 @@ def get_database_statistics():
                 if result:
                     stats["disk"]["size_mb"] = round(result[0] or 0, 2)
                     stats["disk"]["index_size_mb"] = round(result[1] or 0, 2)
-                
+
                 # Get query counts by type (since database start)
                 cursor.execute("""
                     SELECT 
@@ -391,14 +385,14 @@ def get_database_statistics():
                     stats["queries"]["insert_count"] = result[0] or 0
                     stats["queries"]["update_count"] = result[1] or 0
                     stats["queries"]["delete_count"] = result[2] or 0
-                    
+
                 # Get select query count (approximation)
                 cursor.execute("""
                     SELECT sum(seq_scan + idx_scan) as selects
                     FROM pg_stat_user_tables
                 """)
                 stats["queries"]["select_count"] = cursor.fetchone()[0] or 0
-                
+
                 # Calculate average query time
                 cursor.execute("""
                     SELECT extract(epoch from avg(now() - query_start)) as avg_time
@@ -406,17 +400,20 @@ def get_database_statistics():
                     WHERE state = 'active' AND query_start IS NOT NULL
                 """)
                 avg_time = cursor.fetchone()[0]
-                stats["performance"]["avg_query_time"] = round(avg_time * 1000 if avg_time else 0, 2)  # in ms
-                
+                stats["performance"]["avg_query_time"] = round(
+                    avg_time * 1000 if avg_time else 0, 2
+                )  # in ms
+
             else:
                 # For non-PostgreSQL databases, provide limited stats
                 stats["connections"]["total"] = 1
                 stats["connections"]["active"] = 1
-    
+
     except Exception as e:
         logger.error(f"Error fetching database statistics: {e!s}")
-    
+
     return stats
+
 
 def run_all_health_checks(as_array=True):
     """
@@ -437,9 +434,9 @@ def run_all_health_checks(as_array=True):
         HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection,
         HealthCheckResult.COMPONENT_PICTURES_API: check_pictures_api_connection,
     }
-    
+
     results = {}
-    
+
     # Run health checks concurrently with timeout
     with ThreadPoolExecutor() as executor:
         # Submit all health checks
@@ -447,7 +444,7 @@ def run_all_health_checks(as_array=True):
             executor.submit(check_func): component
             for component, check_func in health_checks.items()
         }
-        
+
         # Wait for results with timeout
         try:
             futures = as_completed(future_to_component, timeout=HEALTH_CHECK_TIMEOUT)
@@ -459,7 +456,7 @@ def run_all_health_checks(as_array=True):
                     msg = f"Health check completed for {component}"
                     logger.debug(f"{msg}: {result['status']}")
                 except Exception as e:
-                    error_msg = f"Health check failed for {component}: {str(e)}"
+                    error_msg = f"Health check failed for {component}: {e!s}"
                     logger.error(error_msg)
                     results[component] = {
                         "status": HealthCheckResult.STATUS_ERROR,
@@ -478,7 +475,7 @@ def run_all_health_checks(as_array=True):
                     "response_time": HEALTH_CHECK_TIMEOUT * 1000,  # ms
                     "timestamp": timezone.now(),
                 }
-    
+
     total_time = time.time() - start_time
     logger.info(f"All health checks completed in {total_time:.2f} seconds")
 
@@ -486,8 +483,7 @@ def run_all_health_checks(as_array=True):
     if as_array:
         # Convert to array format with component included in each result
         return [
-            {"component": component, **result}
-            for component, result in results.items()
+            {"component": component, **result} for component, result in results.items()
         ]
-    
+
     return results

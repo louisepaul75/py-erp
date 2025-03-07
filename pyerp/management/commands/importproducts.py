@@ -90,48 +90,46 @@ class Command(BaseCommand):
     def create_or_update_product(self, product_data, default_category=None):
         """Create or update a product."""
         # This would be implemented to create/update the product
-        pass
 
     def handle(self, *args, **options):
         """Execute the command."""
-        if not options.get('file_path'):
+        if not options.get("file_path"):
             self.stderr.write("No file path provided")
             return False
-            
+
         try:
-            data = self.get_products_from_file(options['file_path'])
+            data = self.get_products_from_file(options["file_path"])
             default_category = None
-            if 'default_category' in options:
+            if "default_category" in options:
                 from pyerp.products.models import ProductCategory
+
                 default_category = ProductCategory.objects.get(
-                    code=options['default_category']
+                    code=options["default_category"]
                 )
-                
+
             validator = self.create_product_validator(
-                strict=options.get('strict', False),
+                strict=options.get("strict", False),
                 default_category=default_category,
             )
-            
+
             valid_products = self.validate_products(data, validator)
-                    
+
             if not valid_products:
                 self.stderr.write("No valid products found")
                 return False
-                
+
             for product_data in valid_products:
                 self.create_or_update_product(
                     product_data,
                     default_category=default_category,
                 )
-                
+
             self.stdout.write("Import products command executed successfully")
             return True
-            
+
         except FileNotFoundError as e:
             self.stderr.write(str(e))
             raise
         except Exception as e:
-            self.stderr.write(
-                f"Error during import: {str(e)}"
-            )
+            self.stderr.write(f"Error during import: {e!s}")
             return False

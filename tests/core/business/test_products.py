@@ -9,16 +9,17 @@ This module contains tests for product-related business logic, including:
 - Product model validation
 """
 
-import pytest
 from decimal import Decimal
 from unittest.mock import patch
+
+import pytest
 from django.core.exceptions import ValidationError
 
-from tests.utils.mocks import MockProduct, MockProductCategory
 from pyerp.products.validators import (
     ProductImportValidator,
     validate_product_model,
 )
+from tests.utils.mocks import MockProduct, MockProductCategory
 
 # Patch translation before importing validators
 with patch("django.utils.translation.gettext_lazy", lambda x: x):
@@ -125,7 +126,7 @@ class TestProductValidation:
             category = MockProductCategory(code="CAT1", name="Category 1")
             # Set up the mock to return our category when get() is called
             with patch(
-                'pyerp.products.validators.ProductCategory',
+                "pyerp.products.validators.ProductCategory",
                 MockProductCategory,
             ):
                 MockProductCategory.objects.get.return_value = category
@@ -142,7 +143,7 @@ class TestProductValidation:
             """Test validation of a category that doesn't exist."""
             # Set up the mock to raise DoesNotExist
             with patch(
-                'pyerp.products.validators.ProductCategory',
+                "pyerp.products.validators.ProductCategory",
                 MockProductCategory,
             ):
                 MockProductCategory.objects.get.side_effect = (
@@ -168,31 +169,25 @@ class TestProductModelValidation:
         def patched_validate_product_model(product):
             """Patched version of validate_product_model."""
             if not product.sku or not product.sku.isalnum():
-                raise ValidationError({
-                    "sku": ["Invalid SKU format"]
-                })
+                raise ValidationError({"sku": ["Invalid SKU format"]})
 
             if product.is_parent and product.variant_code:
-                raise ValidationError({
-                    "variant_code": [
-                        "Parent products cannot have variant codes"
-                    ]
-                })
+                raise ValidationError(
+                    {"variant_code": ["Parent products cannot have variant codes"]}
+                )
 
             if product.list_price and product.cost_price:
                 if product.list_price < product.cost_price:
-                    raise ValidationError({
-                        "list_price": ["List price cannot be less than cost"]
-                    })
+                    raise ValidationError(
+                        {"list_price": ["List price cannot be less than cost"]}
+                    )
             return True
 
-        validators_module.validate_product_model = (
-            patched_validate_product_model
-        )
+        validators_module.validate_product_model = patched_validate_product_model
 
     def teardown_method(self):
         """Restore original function."""
-        setattr(validators_module, 'validate_product_model', self.original_validate)
+        validators_module.validate_product_model = self.original_validate
 
     @pytest.mark.django_db
     def test_validate_product_model_valid(self):

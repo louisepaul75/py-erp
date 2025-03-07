@@ -4,6 +4,7 @@ Views for the products app.
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
@@ -11,7 +12,6 @@ from django.views.generic import DetailView, ListView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Prefetch
 
 from pyerp.products.forms import ProductSearchForm
 from pyerp.products.models import (
@@ -440,7 +440,7 @@ class ProductListAPIView(ProductAPIView):
     def get(self, request):
         """Handle GET request for product listing"""
         # Start with an optimized queryset that includes related data
-        products = ParentProduct.objects.select_related('category')
+        products = ParentProduct.objects.select_related("category")
 
         # Check if we need to include variants early to optimize the query
         include_variants = request.GET.get("include_variants", "").lower() in (
@@ -449,12 +449,11 @@ class ProductListAPIView(ProductAPIView):
             "yes",
         )
         if include_variants:
-            variant_qs = (
-                VariantProduct.objects.select_related('category')
-                .prefetch_related('images')
-            )
+            variant_qs = VariantProduct.objects.select_related(
+                "category"
+            ).prefetch_related("images")
             products = products.prefetch_related(
-                Prefetch('variants', queryset=variant_qs)
+                Prefetch("variants", queryset=variant_qs)
             )
 
         # Apply filters from query parameters
