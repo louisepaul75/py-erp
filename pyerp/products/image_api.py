@@ -20,6 +20,16 @@ from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
 from pyerp.products.models import ParentProduct, Product
+from .constants import (
+    MIN_THUMBNAIL_RESOLUTION,
+    MAX_THUMBNAIL_RESOLUTION,
+    MIN_RESOLUTION_ARRAY_LENGTH,
+)
+from .exceptions import (
+    NoResponseError,
+    InvalidResponseFormatError,
+    MissingFieldsError,
+)
 
 # Constants
 DEFAULT_TIMEOUT = 60
@@ -360,22 +370,28 @@ class ImageAPIClient:
                 )
 
                 # Find a suitable thumbnail (prefer PNG around 200px)
-                if img_format == "png" and resolution and resolution[0] <= 300:
+                if img_format == "png" and resolution and resolution[0] <= MAX_THUMBNAIL_RESOLUTION:
                     if thumbnail_url is None or (
-                        resolution[0] <= 300 and resolution[0] > 150
+                        resolution[0] <= MAX_THUMBNAIL_RESOLUTION
+                        and resolution[0] > MIN_THUMBNAIL_RESOLUTION
                     ):
                         thumbnail_url = img_url
 
                 # Track highest resolution PNG and JPEG for primary image selection
                 if img_format == "png" and resolution:
                     total_pixels = (
-                        resolution[0] * resolution[1] if len(resolution) >= 2 else 0
+                        resolution[0] * resolution[1]
+                        if len(resolution) >= MIN_RESOLUTION_ARRAY_LENGTH
+                        else 0
                     )
                     if total_pixels > highest_res_png[0]:
                         highest_res_png = (total_pixels, img_url)
+
                 elif img_format in ("jpg", "jpg_k", "jpg_g", "jpeg") and resolution:
                     total_pixels = (
-                        resolution[0] * resolution[1] if len(resolution) >= 2 else 0
+                        resolution[0] * resolution[1]
+                        if len(resolution) >= MIN_RESOLUTION_ARRAY_LENGTH
+                        else 0
                     )
                     if total_pixels > highest_res_jpeg[0]:
                         highest_res_jpeg = (total_pixels, img_url)
@@ -629,19 +645,20 @@ class ImageAPIClient:
             )
 
             if response is None:
-                raise Exception("No response received from API")
+                raise NoResponseError()
 
             # Verify we got a valid response with the expected structure
             if not isinstance(response, dict):
-                raise Exception("Invalid response format from API")
+                raise InvalidResponseFormatError()
 
             # Check for required fields in response
-            if "count" not in response or "results" not in response:
-                raise Exception("Missing required fields in API response")
+            required_fields = {"count", "results"}
+            if not all(field in response for field in required_fields):
+                raise MissingFieldsError()
 
             logger.info("Successfully connected to Images API")
             return True
 
         except Exception as e:
-            logger.error("Failed to connect to Images API: %s", str(e))
+            logger.exception("Failed to connect to Images API")
             raise
