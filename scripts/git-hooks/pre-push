@@ -7,6 +7,13 @@ export PYTHONPATH="$(git rev-parse --show-toplevel):$PYTHONPATH"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch: $BRANCH"
 
+# Check if the last commit is already a version bump
+LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
+if [[ "$LAST_COMMIT_MSG" == "chore: Auto-bump version" ]]; then
+    echo "Last commit is already a version bump, skipping version bump"
+    exit 0
+fi
+
 # Only bump version when pushing to specific branches
 if [ "$BRANCH" = "prod" ]; then
     echo "Pushing to prod branch, bumping minor version..."
