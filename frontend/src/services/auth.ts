@@ -65,7 +65,22 @@ const authService = {
 
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    if (!token) return false;
+
+    try {
+      // Decode the JWT token
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+
+      // Check if token is expired
+      const now = Date.now() / 1000;
+      return payload.exp > now;
+    } catch (error) {
+      console.error('Error checking token validity:', error);
+      return false;
+    }
   },
 
   // Get current user profile
