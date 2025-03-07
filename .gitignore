@@ -116,3 +116,6 @@ _pgexport/
 logs/
 logs/*
 django-err.log*
+
+# Session cookies
+pyerp/direct_api/.global_session_cookie
