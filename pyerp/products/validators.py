@@ -6,9 +6,10 @@ This module provides validators specific to product data, including import valid
 
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any, Optional
 
 from django.utils.translation import gettext_lazy as translate
+from django.core.exceptions import ValidationError
 
 from pyerp.core.validators import (
     DecimalValidator,
@@ -19,10 +20,7 @@ from pyerp.core.validators import (
     SkuValidator,
     ValidationResult,
 )
-
-# Use TYPE_CHECKING to avoid circular imports
-if TYPE_CHECKING:
-    from pyerp.products.models import Product, ProductCategory
+from pyerp.products.models import Product, ProductCategory
 
 logger = logging.getLogger(__name__)
 
@@ -461,46 +459,31 @@ class ProductImportValidator(ImportValidator):
 # Model-level validation methods that can be used in clean() methods
 
 
-def validate_product_model(product):
+def validate_product_model(product: Product) -> bool:
     """
-    Validate a product model instance beyond field-level validation.
+    Validate a product model instance.
 
     Args:
-        product: The Product instance to validate
+        product: The product instance to validate
 
-    Raises:
-        ValidationError: If the product fails validation
+    Returns:
+        bool: True if validation passes, raises ValidationError otherwise
     """
-    errors = {}
+    # Validate SKU
+    if not product.sku or not product.sku.isalnum():
+        raise ValidationError({"sku": ["Invalid SKU format"]})
 
-    # Check SKU format
-    sku_validator = SkuValidator()
-    sku_result = sku_validator(product.sku, field_name="sku")
-    if not sku_result.is_valid:
-        errors["sku"] = sku_result.errors["sku"]
-
-    # Check parent-variant relationship
+    # Validate parent/variant relationship
     if product.is_parent and product.variant_code:
-        errors.setdefault("is_parent", []).append(
-            translate("Parent products should not have variant codes"),
-        )
+        raise ValidationError({
+            "variant_code": ["Parent products cannot have variant codes"]
+        })
 
-    # Ensure base_sku is set
-    if not product.base_sku:
-        if "-" in product.sku:
-            base_sku, _ = product.sku.split("-", 1)
-            product.base_sku = base_sku
-        else:
-            product.base_sku = product.sku
+    # Validate prices
+    if product.list_price is not None and product.cost_price is not None:
+        if product.list_price < product.cost_price:
+            raise ValidationError({
+                "list_price": ["List price cannot be less than cost"]
+            })
 
-    # Check prices
-    if product.list_price < product.cost_price:
-        errors.setdefault("list_price", []).append(
-            translate("List price should not be less than cost price"),
-        )
-
-    # Raise ValidationError if there are any errors
-    if errors:
-        from django.core.exceptions import ValidationError
-
-        raise ValidationError(errors)
+    return True

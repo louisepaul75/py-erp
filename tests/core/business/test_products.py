@@ -14,12 +14,13 @@ from decimal import Decimal
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
 
+from pyerp.products.models import ProductCategory
 from tests.utils.mocks import MockProduct, MockProductCategory
-from pyerp.products.validators import ProductImportValidator
+from pyerp.products.validators import ProductImportValidator, validate_product_model
 
 # Patch translation before importing validators
 with patch("django.utils.translation.gettext_lazy", lambda x: x):
-    from pyerp.products.validators import validate_product_model
+    import pyerp.products.validators as validators_module
 
 
 @pytest.fixture
@@ -112,6 +113,7 @@ class TestProductValidation:
     class TestCategoryValidation:
         """Tests for product category validation rules."""
 
+        @pytest.mark.django_db
         def test_validate_category_valid(self, validator):
             """Test validation of a valid category."""
             category = MockProductCategory(code="CAT1", name="Category 1")
@@ -120,6 +122,7 @@ class TestProductValidation:
             assert value == category
             assert result.is_valid
 
+        @pytest.mark.django_db
         def test_validate_category_not_found(self, validator):
             """Test validation of a category that doesn't exist."""
             MockProductCategory.objects.get.side_effect = (
@@ -135,9 +138,7 @@ class TestProductModelValidation:
 
     def setup_method(self):
         """Set up test fixtures."""
-        module = validate_product_model.__module__
-        name = validate_product_model.__name__
-        self.original_validate = getattr(module, name)
+        self.original_validate = validators_module.validate_product_model
 
         def patched_validate_product_model(product):
             """Patched version of validate_product_model."""
@@ -156,14 +157,13 @@ class TestProductModelValidation:
                     })
             return True
 
-        setattr(module, name, patched_validate_product_model)
+        setattr(validators_module, 'validate_product_model', patched_validate_product_model)
 
     def teardown_method(self):
         """Restore original function."""
-        module = validate_product_model.__module__
-        name = validate_product_model.__name__
-        setattr(module, name, self.original_validate)
+        setattr(validators_module, 'validate_product_model', self.original_validate)
 
+    @pytest.mark.django_db
     def test_validate_product_model_valid(self):
         """Test validation of a valid product model."""
         product = MockProduct()
@@ -175,6 +175,7 @@ class TestProductModelValidation:
 
         assert validate_product_model(product) is True
 
+    @pytest.mark.django_db
     def test_validate_product_model_invalid_sku(self):
         """Test validation with invalid SKU format."""
         product = MockProduct()

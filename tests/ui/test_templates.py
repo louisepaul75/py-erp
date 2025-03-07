@@ -9,10 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-# Import the module you're testing
-# from pyerp.core.models import YourModel
-# from pyerp.core.views import YourView
-# from pyerp.core.utils import your_function
+from pyerp.products.models import ProductCategory
 
 ###############################################################################
 # 1. Model Test Example
@@ -25,28 +22,23 @@ class TestModelExample:
     @pytest.fixture
     def model_instance(self):
         """Create a test instance of your model."""
-        # Example:
-        # return YourModel(name="Test", value=42)
+        return ProductCategory(code="TEST", name="Test Category")
 
     def test_model_creation(self, model_instance):
         """Test that a model can be created with expected values."""
-        # Example:
-        # assert model_instance.name == "Test"
-        # assert model_instance.value == 42
+        assert model_instance.code == "TEST"
+        assert model_instance.name == "Test Category"
 
     def test_model_methods(self, model_instance):
         """Test model methods."""
-        # Example:
-        # resultt = model_instance.calculate_something()
-        # assert resultt == expected_value
+        assert str(model_instance) == "Test Category"
 
+    @pytest.mark.django_db
     @patch("django.db.models.Model.save")
     def test_model_save(self, mock_save, model_instance):
         """Test model save behavior without hitting the database."""
-        # Example:
-        # model_instance.save()
-        # assert mock_save.called
-        # assert model_instance.modified_date is not None
+        model_instance.save()
+        assert mock_save.called
 
 
 ###############################################################################
@@ -60,20 +52,18 @@ class TestFormExample:
     @pytest.fixture
     def valid_form_data(self):
         """Create valid form data."""
-        # Example:
-        # return {
-        #     'field1': 'valid_value',
-        #     'field2': 42,
-        # }
+        return {
+            'code': 'CAT1',
+            'name': 'Test Category',
+        }
 
     @pytest.fixture
     def invalid_form_data(self):
         """Create invalid form data."""
-        # Example:
-        # return {
-        #     'field1': '',  # Required field
-        #     'field2': -1,  # Must be positive
-        # }
+        return {
+            'code': '',  # Required field
+            'name': '',  # Required field
+        }
 
     def test_form_valid(self, valid_form_data):
         """Test form with valid data."""
@@ -86,8 +76,8 @@ class TestFormExample:
         # Example:
         # form = YourForm(data=invalid_form_data)
         # assert form.is_valid() is False
-        # assert 'field1' in form.errors
-        # assert 'field2' in form.errors
+        # assert 'code' in form.errors
+        # assert 'name' in form.errors
 
 
 ###############################################################################
@@ -108,7 +98,7 @@ class TestViewExample:
         # request.method = 'GET'
         # return request
 
-    @patch("pyerp.core.models.YourModel.objects.filter")
+    @patch("pyerp.products.models.ProductCategory.objects.filter")
     def test_list_view(self, mock_filter, mock_request):
         """Test that a list view returns expected objects."""
         # Example:
@@ -121,12 +111,12 @@ class TestViewExample:
         # assert response.status_code == 200
         # assert mock_filter.called
 
-    @patch("pyerp.core.models.YourModel.objects.get")
+    @patch("pyerp.products.models.ProductCategory.objects.get")
     def test_detail_view(self, mock_get, mock_request):
         """Test that a detail view returns the expected object."""
         # Example:
         # mock_obj = MagicMock()
-        # mock_obj.name = "Test Object"
+        # mock_obj.name = "Test Category"
         # mock_get.return_value = mock_obj
         #
         # response = YourDetailView.as_view()(mock_request, pk=1)
@@ -149,36 +139,37 @@ class TestApiExample:
         # from rest_framework.test import APIClient
         # return APIClient()
 
-    @patch("pyerp.core.models.YourModel.objects.all")
+    @patch("pyerp.products.models.ProductCategory.objects.all")
     def test_list_api(self, mock_all, api_client):
         """Test API list endpoint."""
         # Example:
         # mock_queryset = MagicMock()
         # mock_all.return_value = mock_queryset
         # mock_queryset.values.return_value = [
-        #     {'id': 1, 'name': 'Test 1'},
-        #     {'id': 2, 'name': 'Test 2'},
+        #     {'id': 1, 'code': 'CAT1', 'name': 'Category 1'},
+        #     {'id': 2, 'code': 'CAT2', 'name': 'Category 2'},
         # ]
         #
-        # response = api_client.get('/api/your-models/')
+        # response = api_client.get('/api/categories/')
         #
         # assert response.status_code == 200
         # assert len(response.json()) == 2
 
-    @patch("pyerp.core.models.YourModel.objects.create")
+    @patch("pyerp.products.models.ProductCategory.objects.create")
     def test_create_api(self, mock_create, api_client):
         """Test API create endpoint."""
         # Example:
         # mock_obj = MagicMock()
         # mock_obj.id = 1
-        # mock_obj.name = "New Object"
+        # mock_obj.code = "CAT1"
+        # mock_obj.name = "New Category"
         # mock_create.return_value = mock_obj
         #
-        # data = {'name': 'New Object'}
-        # response = api_client.post('/api/your-models/', data, format='json')
+        # data = {'code': 'CAT1', 'name': 'New Category'}
+        # response = api_client.post('/api/categories/', data, format='json')
         #
         # assert response.status_code == 201
-        # assert response.json()['name'] == 'New Object'
+        # assert response.json()['name'] == 'New Category'
 
 
 ###############################################################################
@@ -201,10 +192,10 @@ def test_utility_function():
 class TestCommandExample:
     """Example of how to test management commands."""
 
-    @patch("pyerp.core.management.commands.your_command.Command.handle")
+    @patch("pyerp.core.management.commands.import_products.Command.handle")
     def test_command(self, mock_handle):
         """Test that a management command can be called."""
         # Example:
         # from django.core.management import call_command
-        # call_command('your_command', arg1='value1', arg2='value2')
+        # call_command('import_products', file_path='test.csv')
         # mock_handle.assert_called_once()
