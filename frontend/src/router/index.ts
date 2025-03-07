@@ -112,10 +112,10 @@ router.beforeEach(async (to, from, next) => {
   // Check if the route requires authentication
   if (to.matched.some(record => record.meta.requiresAuth)) {
     // Apply the auth guard
-    authGuard(to, from, next);
+    return authGuard(to, from, next);
   } else {
     // No auth required, proceed
-    next();
+    return next();
   }
 });
 
