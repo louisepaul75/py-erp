@@ -2,9 +2,9 @@
 
 A modern Django-based ERP system designed to replace a legacy 4D-based ERP, focusing on manufacturing operations with both B2B and B2C sales channels.
 
-[![Lint](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=lint)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
-[![Tests](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=tests)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
-[![Build](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml/badge.svg?job=build)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/docker-build.yml)
+[![Lint](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=lint)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml)
+[![Tests](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=tests)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml)
+[![Build](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=build)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml)
 [![Deploy](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/deploy.yml/badge.svg)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/deploy.yml)
 [![codecov](https://codecov.io/gh/Wilhelm-Schweizer/pyERP/branch/main/graph/badge.svg)](https://codecov.io/gh/Wilhelm-Schweizer/pyERP)
 

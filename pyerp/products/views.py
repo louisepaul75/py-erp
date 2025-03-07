@@ -440,10 +440,7 @@ class ProductListAPIView(ProductAPIView):
     def get(self, request):
         """Handle GET request for product listing"""
         # Start with an optimized queryset that includes related data
-        products = (
-            ParentProduct.objects.select_related('category')
-            .prefetch_related('images')
-        )
+        products = ParentProduct.objects.select_related('category')
 
         # Check if we need to include variants early to optimize the query
         include_variants = request.GET.get("include_variants", "").lower() in (
@@ -457,7 +454,7 @@ class ProductListAPIView(ProductAPIView):
                 .prefetch_related('images')
             )
             products = products.prefetch_related(
-                Prefetch('variantproduct_set', queryset=variant_qs)
+                Prefetch('variants', queryset=variant_qs)
             )
 
         # Apply filters from query parameters
@@ -513,7 +510,7 @@ class ProductListAPIView(ProductAPIView):
             if include_variants:
                 variants_data = []
                 # This will use the prefetched data
-                for variant in product.variantproduct_set.all():
+                for variant in product.variants.all():
                     variant_data = self.get_product_data(variant)
                     variants_data.append(variant_data)
                 product_data["variants"] = variants_data

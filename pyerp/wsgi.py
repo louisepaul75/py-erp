@@ -16,8 +16,8 @@ from pyerp.utils.env_loader import load_environment_variables
 
 load_environment_variables()
 
-# Set the Django settings module based on environment or default to development
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.development")
+# Set the default Django settings module if not defined
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
 
 # Get the WSGI application
 application = get_wsgi_application()

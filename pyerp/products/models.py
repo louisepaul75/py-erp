@@ -252,13 +252,6 @@ class ParentProduct(BaseProduct):
         help_text=_("Base SKU for variants"),
     )
 
-    is_placeholder = models.BooleanField(
-        default=False,
-        help_text=_(
-            "Indicates if this is a placeholder parent created for orphaned variants",
-        ),
-    )
-
     class Meta:
         verbose_name = _("Parent Product")
         verbose_name_plural = _("Parent Products")

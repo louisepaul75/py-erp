@@ -95,8 +95,8 @@ interface DetailedHealthResponse {
 const checkHealthStatus = async () => {
   try {
     // First try the basic health check
-    const basicHealth = await axios.get('/api/health/', {
-      timeout: 60000, // Increased from 15000 to 60000 ms (60 seconds)
+    const basicHealth = await axios.get('/health/', {
+      timeout: 5000
     });
 
     // Set version from health check response
@@ -109,8 +109,8 @@ const checkHealthStatus = async () => {
 
     // Then try the detailed health check
     try {
-      const detailedHealth = await axios.get<DetailedHealthResponse>('/api/monitoring/health-checks/', {
-        timeout: 60000, // Increased from 30000 to 60000 ms (60 seconds)
+      const detailedHealth = await axios.get<DetailedHealthResponse>('/monitoring/health-checks/', {
+        timeout: 5000
       });
 
       if (!detailedHealth.data.success) {
@@ -119,28 +119,24 @@ const checkHealthStatus = async () => {
       }
 
       const statuses = detailedHealth.data.results.map((result: HealthCheckResult) => result.status);
-
       if (statuses.includes('error')) {
         healthStatus.value = 'error';
       } else if (statuses.includes('warning')) {
         healthStatus.value = 'warning';
-      } else if (statuses.every((status: string) => status === 'success')) {
-        healthStatus.value = 'success';
       } else {
-        healthStatus.value = 'unknown';
+        healthStatus.value = 'success';
       }
-    } catch (detailedError: any) {
+    } catch (detailedError) {
       console.warn('Detailed health check failed:', detailedError);
-      // If detailed check fails but basic check succeeded, show warning
+      // If detailed check fails but basic check passed, show warning
       healthStatus.value = 'warning';
-      
-      // Add more detailed logging for network errors
-      if (detailedError.code === 'ECONNABORTED') {
-        console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
-      }
     }
-  } catch (error) {
-    console.error('Health check failed:', error);
+  } catch (error: any) {
+    if (error?.code === 'ECONNABORTED') {
+      console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
+    } else {
+      console.error('Health check failed:', error);
+    }
     healthStatus.value = 'error';
   }
 };

@@ -99,10 +99,13 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
+      port: 5173,
+      host: '0.0.0.0', // Listen on all interfaces
+      strictPort: true, // Don't try other ports if 5173 is taken
       proxy: {
         // Proxy API requests to Django backend
         '/api': {
-          target: apiUrl,
+          target: apiBaseUrl,
           changeOrigin: true,
           secure: false,
           ws: true,
@@ -119,7 +122,6 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      host: true,
     }
   };
 });

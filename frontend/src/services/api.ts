@@ -10,8 +10,7 @@ export const determineBaseUrl = () => {
   const isSpecificIP = window.location.hostname === '192.168.73.65';
   if (isSpecificIP) {
     // Use HTTPS instead of HTTP to avoid Mixed Content errors
-    // Remove the /api suffix to prevent double prefixing
-    return 'https://192.168.73.65';
+    return 'https://192.168.73.65/api/v1';
   }
 
   // Then check if we're running locally
@@ -21,15 +20,16 @@ export const determineBaseUrl = () => {
 
   // If we're running locally, use localhost URL
   if (isLocalhost) {
-    return 'http://localhost:8050';
+    return 'http://localhost:8050/api/v1';
   }
 
   // Otherwise use the configured network URL or fallback to window.location.origin
-  return import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  const baseUrl = import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  return `${baseUrl}/api/v1`;
 };
 
 const baseUrl = determineBaseUrl();
-// Don't add /api to the base URL since the Vite proxy handles that
+// Don't add /api to the base URL since it's already included
 const apiBaseUrl = baseUrl;
 
 // Log the API base URL being used
@@ -116,9 +116,26 @@ api.interceptors.response.use(
 );
 
 // Product API endpoints
+interface ProductListParams {
+  _ude_variants?: boolean;
+  include_variants?: boolean;
+  page?: number;
+  page_size?: number;
+  q?: string;
+  category?: number;
+  in_stock?: boolean;
+  is_active?: boolean;
+  [key: string]: any;
+}
+
 export const productApi = {
   // Get all products with optional filters
-  getProducts: async (params = {}) => {
+  getProducts: async (params: ProductListParams = {}) => {
+    // Convert _ude_variants to include_variants if present
+    if (params._ude_variants !== undefined) {
+      params.include_variants = params._ude_variants;
+      delete params._ude_variants;
+    }
     return api.get('/api/products/', { params });
   },
 

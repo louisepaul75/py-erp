@@ -7,8 +7,8 @@ from pyerp.utils.env_loader import load_environment_variables
 
 load_environment_variables()
 
-# Set default Django settings module
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.development")
+# Set the default Django settings module for the 'celery' program.
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
 
 # Create Celery instance
 app = Celery("pyerp")

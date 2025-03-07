@@ -225,138 +225,133 @@ export default {
 
       try {
         // Try to get basic health check
-        try {
-          const basicHealthResponse = await api.get('/api/health/', {
-            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
-          });
-          this.systemInfo = {
-            environment: basicHealthResponse.data?.environment || 'development',
-            version: basicHealthResponse.data?.version || 'unknown'
-          };
-        } catch (error) {
-          console.error('Basic health check error:', error);
-          // Add specific logging for timeout errors
-          if (error.code === 'ECONNABORTED') {
-            console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
-          }
-          this.systemInfo = {
-            environment: 'Unknown (API Unavailable)',
-            version: 'Unknown'
-          };
+        this.loading = true;
+        const basicHealthResponse = await api.get('/health/', {
+          timeout: 5000
+        });
+
+        this.systemInfo = {
+          environment: basicHealthResponse.data?.environment || 'development',
+          version: basicHealthResponse.data?.version || 'unknown'
+        };
+      } catch (error) {
+        console.error('Basic health check error:', error);
+        this.message = 'Failed to fetch basic health status';
+        if (error.code === 'ECONNABORTED') {
+          console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
+          this.message = 'Health check request timed out';
         }
+        this.loading = false;
+        return;
+      }
 
+      try {
         // Try to get detailed health checks
-        try {
-          const response = await api.get('/api/monitoring/health-checks/', {
-            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
-          });
+        const response = await api.get('/monitoring/health-checks/', {
+          timeout: 5000
+        });
 
-          if (response.data && response.data.success) {
-            // Create a new object to avoid reference issues
-            const newHealthResults = {};
+        if (response.data && response.data.success) {
+          // Create a new object to avoid reference issues
+          const newHealthResults = {};
 
-            // Process the results - always expect an array format
-            const results = response.data.results;
-            if (Array.isArray(results)) {
-              // First, find the main database result and validation result
-              const dbResult = results.find(result => result.component === 'database');
-              const dbValidationResult = results.find(result => result.component === 'database_validation');
-              
-              // If we have a database result, add it first with validation as a nested property
-              if (dbResult) {
-                newHealthResults['database'] = {
-                  status: dbResult.status,
-                  details: dbResult.details,
-                  response_time: dbResult.response_time,
-                  timestamp: dbResult.timestamp,
-                  // Add validation as a nested property if it exists
-                  validation: dbValidationResult ? {
-                    status: dbValidationResult.status,
-                    details: dbValidationResult.details,
-                    response_time: dbValidationResult.response_time,
-                    timestamp: dbValidationResult.timestamp
-                  } : null
+          // Process the results - always expect an array format
+          const results = response.data.results;
+          if (Array.isArray(results)) {
+            // First, find the main database result and validation result
+            const dbResult = results.find(result => result.component === 'database');
+            const dbValidationResult = results.find(result => result.component === 'database_validation');
+            
+            // If we have a database result, add it first with validation as a nested property
+            if (dbResult) {
+              newHealthResults['database'] = {
+                status: dbResult.status,
+                details: dbResult.details,
+                response_time: dbResult.response_time,
+                timestamp: dbResult.timestamp,
+                // Add validation as a nested property if it exists
+                validation: dbValidationResult ? {
+                  status: dbValidationResult.status,
+                  details: dbValidationResult.details,
+                  response_time: dbValidationResult.response_time,
+                  timestamp: dbValidationResult.timestamp
+                } : null
+              };
+            }
+
+            // Then add all other non-database results
+            results.forEach(result => {
+              if (result && result.component && 
+                  !['database', 'database_validation'].includes(result.component)) {
+                const componentKey = result.component;
+                newHealthResults[componentKey] = {
+                  status: result.status,
+                  details: result.details,
+                  response_time: result.response_time,
+                  timestamp: result.timestamp,
+                  // Store the original component name as a type property to avoid 'component' naming conflict
+                  type: componentKey
                 };
               }
+            });
 
-              // Then add all other non-database results
-              results.forEach(result => {
-                if (result && result.component && 
-                    !['database', 'database_validation'].includes(result.component)) {
-                  const componentKey = result.component;
-                  newHealthResults[componentKey] = {
-                    status: result.status,
-                    details: result.details,
-                    response_time: result.response_time,
-                    timestamp: result.timestamp,
-                    // Store the original component name as a type property to avoid 'component' naming conflict
-                    type: componentKey
-                  };
-                }
-              });
+            // Replace healthResults with the new object
+            this.healthResults = newHealthResults;
+            this.lastUpdated = new Date();
+            this.message = 'Status updated successfully';
+            this.messageType = 'success';
 
-              // Replace healthResults with the new object
-              this.healthResults = newHealthResults;
-              this.lastUpdated = new Date();
-              this.message = 'Status updated successfully';
-              this.messageType = 'success';
-
-              // Hide success message after 3 seconds
-              setTimeout(() => {
-                if (this.messageType === 'success') {
-                  this.message = '';
-                }
-              }, 3000);
-            } else {
-              throw new Error('Invalid response format: results must be an array');
-            }
-          } else {
-            throw new Error(response.data?.error || 'Unknown error');
-          }
-        } catch (error) {
-          console.error('Health checks error:', error);
-          
-          // Add specific logging for timeout errors
-          if (error.code === 'ECONNABORTED') {
-            console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
-          }
-          
-          // Show error in UI
-          this.message = `Failed to update status: ${error.message}`;
-          this.messageType = 'error';
-          
-          // Set mock data for testing UI
-          this.healthResults = {
-            'database': {
-              status: 'error',
-              details: 'Database connection failed',
-              response_time: 0,
-              timestamp: new Date(),
-              validation: {
-                status: 'error',
-                details: 'Database validation not available',
-                response_time: 0,
-                timestamp: new Date()
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+              if (this.messageType === 'success') {
+                this.message = '';
               }
-            },
-            'legacy_erp': {
-              status: 'warning',
-              details: 'Cannot verify Legacy ERP status',
-              response_time: 0,
-              timestamp: new Date()
-            },
-            'pictures_api': {
-              status: 'warning',
-              details: 'Cannot verify Pictures API status',
-              response_time: 0,
-              timestamp: new Date()
-            }
-          };
+            }, 3000);
+          } else {
+            throw new Error('Invalid response format: results must be an array');
+          }
+        } else {
+          throw new Error(response.data?.error || 'Unknown error');
         }
       } catch (error) {
-        console.error('Unexpected error in health check:', error);
-        this.message = 'Failed to update status: ' + (error?.message || 'Unknown error');
+        console.error('Health checks error:', error);
+        
+        // Add specific logging for timeout errors
+        if (error.code === 'ECONNABORTED') {
+          console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
+        }
+        
+        // Show error in UI
+        this.message = `Failed to update status: ${error.message}`;
         this.messageType = 'error';
+        
+        // Set mock data for testing UI
+        this.healthResults = {
+          'database': {
+            status: 'error',
+            details: 'Database connection failed',
+            response_time: 0,
+            timestamp: new Date(),
+            validation: {
+              status: 'error',
+              details: 'Database validation not available',
+              response_time: 0,
+              timestamp: new Date()
+            }
+          },
+          'legacy_erp': {
+            status: 'warning',
+            details: 'Cannot verify Legacy ERP status',
+            response_time: 0,
+            timestamp: new Date()
+          },
+          'pictures_api': {
+            status: 'warning',
+            details: 'Cannot verify Pictures API status',
+            response_time: 0,
+            timestamp: new Date()
+          }
+        };
       } finally {
         this.loading = false;
       }
