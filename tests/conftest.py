@@ -14,8 +14,16 @@ import os
 import sys
 from unittest.mock import MagicMock
 
-import pytest
+import django
 from django.conf import settings
+
+# Set up environment variables
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.test")
+
+# Configure Django settings
+django.setup()
+
+import pytest
 from django.test import Client
 from rest_framework.test import APIClient
 
@@ -25,9 +33,6 @@ sys.modules["django.db.models.base"] = MagicMock()
 sys.modules["django.db.models"] = MagicMock()
 sys.modules["django.core.validators"] = MagicMock()
 
-# Set up environment variables
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.testing")
-os.environ.setdefault("PYTEST_RUNNING", "1")
 
 # Test database configuration
 @pytest.fixture(scope='session')
@@ -37,16 +42,19 @@ def django_db_setup():
         'NAME': ':memory:',
     }
 
+
 # UI Testing Fixtures
 @pytest.fixture
 def client():
     """A Django test client instance."""
     return Client()
 
+
 @pytest.fixture
 def api_client():
     """A Django REST framework API test client instance."""
     return APIClient()
+
 
 # Database Fixtures
 @pytest.fixture
@@ -55,6 +63,7 @@ def sample_db(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         # Add any initial data setup here
         yield
+
 
 # API Testing Fixtures
 @pytest.fixture
@@ -68,6 +77,7 @@ def mock_api_response():
         }
     }
 
+
 # Business Logic Fixtures
 @pytest.fixture
 def sample_product_data():
@@ -79,8 +89,9 @@ def sample_product_data():
         'category': 'Test Category'
     }
 
+
 # Test Environment Setup
 def pytest_configure(config):
     """Configure test environment."""
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'pyerp.settings.test'
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'pyerp.config.settings.test'
     settings.DEBUG = False

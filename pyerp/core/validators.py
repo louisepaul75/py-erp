@@ -74,6 +74,15 @@ class ValidationResult:
         # Merge context
         self.context.update(other_result.context)
 
+    def has_errors(self) -> bool:
+        """
+        Check if there are any validation errors.
+
+        Returns:
+            bool: True if there are any errors, False otherwise
+        """
+        return bool(self.errors)
+
     def __str__(self):
         """Return a string representation of the validation result."""
         if self.is_valid:
