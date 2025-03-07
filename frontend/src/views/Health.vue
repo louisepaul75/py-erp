@@ -234,13 +234,42 @@ export default {
           environment: basicHealthResponse.data?.environment || 'development',
           version: basicHealthResponse.data?.version || 'unknown'
         };
+
+        // Set initial health status based on basic health check
+        if (basicHealthResponse.data?.status === 'unhealthy') {
+          this.healthResults = {
+            'database': {
+              status: 'error',
+              details: basicHealthResponse.data?.database?.message || 'Database connection failed',
+              response_time: 0,
+              timestamp: new Date()
+            }
+          };
+          this.message = 'System is unhealthy';
+          this.messageType = 'error';
+          this.loading = false;
+          return;
+        }
+
       } catch (error) {
         console.error('Basic health check error:', error);
         this.message = 'Failed to fetch basic health status';
+        this.messageType = 'error';
         if (error.code === 'ECONNABORTED') {
           console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
           this.message = 'Health check request timed out';
         }
+        
+        // Set error state for health results
+        this.healthResults = {
+          'database': {
+            status: 'error',
+            details: error.response?.data?.database?.message || 'Failed to connect to health check endpoint',
+            response_time: 0,
+            timestamp: new Date()
+          }
+        };
+        
         this.loading = false;
         return;
       }
@@ -325,33 +354,17 @@ export default {
         this.message = `Failed to update status: ${error.message}`;
         this.messageType = 'error';
         
-        // Set mock data for testing UI
-        this.healthResults = {
-          'database': {
-            status: 'error',
-            details: 'Database connection failed',
-            response_time: 0,
-            timestamp: new Date(),
-            validation: {
+        // Set error state for health results if not already set
+        if (!this.healthResults || Object.keys(this.healthResults).length === 0) {
+          this.healthResults = {
+            'database': {
               status: 'error',
-              details: 'Database validation not available',
+              details: 'Failed to fetch detailed health status',
               response_time: 0,
               timestamp: new Date()
             }
-          },
-          'legacy_erp': {
-            status: 'warning',
-            details: 'Cannot verify Legacy ERP status',
-            response_time: 0,
-            timestamp: new Date()
-          },
-          'pictures_api': {
-            status: 'warning',
-            details: 'Cannot verify Pictures API status',
-            response_time: 0,
-            timestamp: new Date()
-          }
-        };
+          };
+        }
       } finally {
         this.loading = false;
       }

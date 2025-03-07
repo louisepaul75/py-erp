@@ -102,6 +102,7 @@ const checkHealthStatus = async () => {
     // Set version from health check response
     appVersion.value = basicHealth.data.version || 'unknown';
 
+    // If basic health check shows unhealthy, set error status
     if (basicHealth.data.status === 'unhealthy') {
       healthStatus.value = 'error';
       return;
@@ -132,11 +133,8 @@ const checkHealthStatus = async () => {
       healthStatus.value = 'warning';
     }
   } catch (error: any) {
-    if (error?.code === 'ECONNABORTED') {
-      console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
-    } else {
-      console.error('Health check failed:', error);
-    }
+    console.error('Health check failed:', error);
+    // Set error status for any health check failure
     healthStatus.value = 'error';
   }
 };

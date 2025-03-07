@@ -58,19 +58,40 @@ def health_check(request):
         }
         status_code = status.HTTP_200_OK
 
-    except Exception as e:
-        msg = "Database health check failed: {}"
-        logger.error(msg.format(e))
+    except OperationalError as e:
+        # Specific handling for database connection errors
+        msg = (
+            f"Database connection error: "
+            f"{str(e)}"
+        )
+        logger.error(msg)
         response_data = {
             "status": "unhealthy",
             "database": {
                 "status": "error",
-                "message": str(e)
+                "message": msg
             },
             "environment": environment,
             "version": version
         }
-        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        status_code = status.HTTP_200_OK  # Still return 200 for monitoring systems
+
+    except Exception as e:
+        msg = (
+            f"Unexpected error during health check: "
+            f"{str(e)}"
+        )
+        logger.error(msg)
+        response_data = {
+            "status": "unhealthy",
+            "database": {
+                "status": "error",
+                "message": msg
+            },
+            "environment": environment,
+            "version": version
+        }
+        status_code = status.HTTP_200_OK  # Still return 200 for monitoring systems
 
     # Create response with explicit content type
     response = JsonResponse(response_data, status=status_code)
