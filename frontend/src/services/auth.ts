@@ -34,7 +34,7 @@ const authService = {
   // Login with username and password
   login: async (credentials: LoginCredentials): Promise<User> => {
     try {
-      // Get JWT tokens
+      // Get JWT tokens using the correct endpoint
       const tokenResponse = await api.post<TokenResponse>('/api/token/', credentials);
 
       // Store tokens in localStorage

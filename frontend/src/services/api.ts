@@ -10,7 +10,7 @@ export const determineBaseUrl = () => {
   const isSpecificIP = window.location.hostname === '192.168.73.65';
   if (isSpecificIP) {
     // Use HTTPS instead of HTTP to avoid Mixed Content errors
-    return 'https://192.168.73.65/api/v1';
+    return 'https://192.168.73.65';
   }
 
   // Then check if we're running locally
@@ -20,16 +20,14 @@ export const determineBaseUrl = () => {
 
   // If we're running locally, use localhost URL
   if (isLocalhost) {
-    return 'http://localhost:8050/api/v1';
+    return 'http://localhost:8050';
   }
 
   // Otherwise use the configured network URL or fallback to window.location.origin
-  const baseUrl = import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
-  return `${baseUrl}/api/v1`;
+  return import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
 };
 
 const baseUrl = determineBaseUrl();
-// Don't add /api to the base URL since it's already included
 const apiBaseUrl = baseUrl;
 
 // Log the API base URL being used
