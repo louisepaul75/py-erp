@@ -101,7 +101,6 @@ docs/_build/
 # Backup files
 backups/
 
-
 *dump.rdb
 */.global_session_cookie
 

@@ -1,9 +1,13 @@
 <template>
-  <div class="hello-world">
-    <h2>{{ title }}</h2>
-    <p>{{ message }}</p>
-    <button @click="incrementCount" class="btn">Count: {{ count }}</button>
-  </div>
+  <v-card class="mx-auto my-5" max-width="600">
+    <v-card-text class="pa-4">
+      <h2 class="text-h4 text-primary mb-2">{{ title }}</h2>
+      <p class="text-body-1 mb-4">{{ message }}</p>
+      <v-btn color="primary" @click="incrementCount">
+        Count: {{ count }}
+      </v-btn>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup lang="ts">

@@ -1,125 +1,150 @@
 <template>
   <div class="sales-list">
-    <h1>Sales Orders</h1>
+    <h1 class="text-h4 mb-4">Sales Orders</h1>
 
     <!-- Search and filter form -->
-    <div class="filters">
-      <div class="search-box">
-        <input
-          type="text"
-          v-model="searchQuery"
-          placeholder="Search orders..."
-          @input="debounceSearch"
-        />
-      </div>
-
-      <div class="filter-options">
-        <select v-model="selectedStatus" @change="loadSalesOrders">
-          <option value="">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="invoiced">Invoiced</option>
-          <option value="completed">Completed</option>
-          <option value="canceled">Canceled</option>
-        </select>
-
-        <div class="date-filter">
-          <label>From:</label>
-          <input
-            type="date"
-            v-model="dateFrom"
-            @change="loadSalesOrders"
-          />
-
-          <label>To:</label>
-          <input
-            type="date"
-            v-model="dateTo"
-            @change="loadSalesOrders"
-          />
-        </div>
-      </div>
-    </div>
+    <v-card class="mb-6">
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="searchQuery"
+              label="Search orders..."
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-magnify"
+              @input="debounceSearch"
+              hide-details
+            ></v-text-field>
+          </v-col>
+          
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="selectedStatus"
+              :items="statusOptions"
+              label="Status"
+              variant="outlined"
+              density="comfortable"
+              @update:model-value="loadSalesOrders"
+              hide-details
+            ></v-select>
+          </v-col>
+          
+          <v-col cols="12" md="2">
+            <v-text-field
+              v-model="dateFrom"
+              label="From"
+              type="date"
+              variant="outlined"
+              density="comfortable"
+              @update:model-value="loadSalesOrders"
+              hide-details
+            ></v-text-field>
+          </v-col>
+          
+          <v-col cols="12" md="2">
+            <v-text-field
+              v-model="dateTo"
+              label="To"
+              type="date"
+              variant="outlined"
+              density="comfortable"
+              @update:model-value="loadSalesOrders"
+              hide-details
+            ></v-text-field>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
 
     <!-- Loading indicator -->
-    <div v-if="loading" class="loading">
-      <p>Loading sales orders...</p>
+    <div v-if="loading" class="d-flex justify-center my-6">
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="64"
+      ></v-progress-circular>
     </div>
 
     <!-- Error message -->
-    <div v-else-if="error" class="error">
-      <p>{{ error }}</p>
-    </div>
+    <v-alert
+      v-else-if="error"
+      type="error"
+      variant="tonal"
+      class="mb-6"
+    >
+      {{ error }}
+    </v-alert>
 
     <!-- Sales orders table -->
-    <div v-else class="sales-table-container">
-      <table class="sales-table">
-        <thead>
-          <tr>
-            <th>Order #</th>
-            <th>Date</th>
-            <th>Customer</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="order in salesOrders"
-            :key="order.id"
-            :class="{ 'highlight': order.status === 'draft' }"
+    <v-card v-else>
+      <v-data-table
+        :headers="headers"
+        :items="salesOrders"
+        :items-per-page="pageSize"
+        class="elevation-1"
+        :loading="loading"
+      >
+        <template v-slot:item.order_date="{ item }">
+          {{ formatDate(item.order_date) }}
+        </template>
+        
+        <template v-slot:item.total_amount="{ item }">
+          {{ formatCurrency(item.total_amount) }}
+        </template>
+        
+        <template v-slot:item.status="{ item }">
+          <v-chip
+            :color="getStatusColor(item.status)"
+            text-color="white"
+            size="small"
           >
-            <td>{{ order.order_number }}</td>
-            <td>{{ formatDate(order.order_date) }}</td>
-            <td>{{ order.customer_name }}</td>
-            <td>{{ formatCurrency(order.total_amount) }}</td>
-            <td>
-              <span :class="'status-badge ' + order.status">
-                {{ capitalizeFirst(order.status) }}
-              </span>
-            </td>
-            <td class="actions">
-              <button
-                class="btn-view"
-                @click="viewOrderDetails(order.id)"
-              >
-                View
-              </button>
-              <button
-                v-if="order.status === 'draft'"
-                class="btn-edit"
-                @click="editOrder(order.id)"
-              >
-                Edit
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+            {{ capitalizeFirst(item.status) }}
+          </v-chip>
+        </template>
+        
+        <template v-slot:item.actions="{ item }">
+          <v-btn
+            size="small"
+            color="primary"
+            variant="text"
+            @click="viewOrderDetails(item.id)"
+          >
+            View
+          </v-btn>
+          
+          <v-btn
+            v-if="item.status === 'draft'"
+            size="small"
+            color="secondary"
+            variant="text"
+            @click="editOrder(item.id)"
+          >
+            Edit
+          </v-btn>
+        </template>
+      </v-data-table>
+      
+      <!-- Pagination -->
+      <v-card-actions v-if="salesOrders.length > 0" class="justify-center">
+        <v-pagination
+          v-model="currentPage"
+          :length="totalPages"
+          @update:model-value="changePage"
+          rounded="circle"
+        ></v-pagination>
+      </v-card-actions>
+    </v-card>
 
     <!-- No results message -->
-    <div v-if="salesOrders.length === 0 && !loading" class="no-results">
-      <p>No sales orders found matching your criteria.</p>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="salesOrders.length > 0" class="pagination">
-      <button
-        :disabled="currentPage === 1"
-        @click="changePage(currentPage - 1)"
-      >
-        Previous
-      </button>
-      <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button
-        :disabled="currentPage === totalPages"
-        @click="changePage(currentPage + 1)"
-      >
-        Next
-      </button>
-    </div>
+    <v-alert
+      v-if="salesOrders.length === 0 && !loading && !error"
+      type="info"
+      variant="tonal"
+      class="mt-6"
+    >
+      No sales orders found matching your criteria.
+    </v-alert>
   </div>
 </template>
 
@@ -140,6 +165,26 @@ interface SalesOrder {
 
 // Router
 const router = useRouter();
+
+// Table headers
+const headers = [
+  { title: 'Order #', key: 'order_number' },
+  { title: 'Date', key: 'order_date' },
+  { title: 'Customer', key: 'customer_name' },
+  { title: 'Total', key: 'total_amount' },
+  { title: 'Status', key: 'status' },
+  { title: 'Actions', key: 'actions', sortable: false }
+];
+
+// Status options
+const statusOptions = [
+  { title: 'All Statuses', value: '' },
+  { title: 'Draft', value: 'draft' },
+  { title: 'Confirmed', value: 'confirmed' },
+  { title: 'Invoiced', value: 'invoiced' },
+  { title: 'Completed', value: 'completed' },
+  { title: 'Canceled', value: 'canceled' }
+];
 
 // State
 const salesOrders = ref<SalesOrder[]>([]);
@@ -210,6 +255,18 @@ const editOrder = (id: number) => {
   router.push({ name: 'SalesOrderEdit', params: { id } });
 };
 
+// Get status color
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'draft': return 'grey';
+    case 'confirmed': return 'blue';
+    case 'invoiced': return 'orange';
+    case 'completed': return 'green';
+    case 'canceled': return 'red';
+    default: return 'grey';
+  }
+};
+
 // Format date
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -242,187 +299,5 @@ onMounted(() => {
 <style scoped>
 .sales-list {
   padding: 20px 0;
-}
-
-h1 {
-  margin-bottom: 20px;
-}
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  margin-bottom: 30px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.search-box {
-  flex: 1;
-  min-width: 250px;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.filter-options {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-}
-
-.filter-options select {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-}
-
-.date-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.date-filter input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-.loading, .error, .no-results {
-  text-align: center;
-  padding: 30px;
-}
-
-.error {
-  color: #dc3545;
-}
-
-.sales-table-container {
-  overflow-x: auto;
-  margin-bottom: 30px;
-}
-
-.sales-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #eaeaea;
-}
-
-.sales-table th,
-.sales-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.sales-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.sales-table tr:hover {
-  background-color: #f5f5f5;
-}
-
-.sales-table tr.highlight {
-  background-color: #fff8e1;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.status-badge.draft {
-  background-color: #e3f2fd;
-  color: #0d47a1;
-}
-
-.status-badge.confirmed {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-}
-
-.status-badge.invoiced {
-  background-color: #ede7f6;
-  color: #4527a0;
-}
-
-.status-badge.completed {
-  background-color: #e0f2f1;
-  color: #004d40;
-}
-
-.status-badge.canceled {
-  background-color: #ffebee;
-  color: #b71c1c;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.actions button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.btn-view {
-  background-color: #e3f2fd;
-  color: #0d47a1;
-}
-
-.btn-view:hover {
-  background-color: #bbdefb;
-}
-
-.btn-edit {
-  background-color: #fff8e1;
-  color: #f57f17;
-}
-
-.btn-edit:hover {
-  background-color: #ffecb3;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.pagination button {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  background-color: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.pagination button:hover:not(:disabled) {
-  background-color: #f5f5f5;
-}
-
-.pagination button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

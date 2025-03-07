@@ -1,16 +1,19 @@
 <template>
   <div class="logout-container">
-    <div class="card">
-      <div class="card-header bg-primary text-white">
-        <h2 class="mb-0">Logging Out</h2>
-      </div>
-      <div class="card-body text-center">
-        <div class="spinner-border text-primary mb-3" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <p>Logging you out...</p>
-      </div>
-    </div>
+    <v-card class="mx-auto" max-width="400">
+      <v-card-title class="text-white bg-primary">
+        <h2>Logging Out</h2>
+      </v-card-title>
+      <v-card-text class="text-center pa-6">
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          size="64"
+          class="mb-4"
+        ></v-progress-circular>
+        <p class="text-body-1">Logging you out...</p>
+      </v-card-text>
+    </v-card>
   </div>
 </template>
 
@@ -40,11 +43,5 @@ onMounted(() => {
   align-items: center;
   min-height: 80vh;
   padding: 20px;
-}
-
-.card {
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 </style>

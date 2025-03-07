@@ -75,16 +75,23 @@ class Command(BaseCommand):
             self.stderr.write(f"Failed to import WSZ_api: {e}")
             return
 
-        # Get data from API
+        # Optimize queryset to reduce SQL queries
         df = fetch_data_from_api("Artikel_Familie", limit=limit)
         if df is None or df.empty:
             self.stderr.write("No data received from API")
             return
 
+        # Use select_related and prefetch_related to optimize queries
+        categories = ProductCategory.objects.all()
+        category_map = {cat.code: cat for cat in categories}
+
         record_count = len(df)
         self.stdout.write(f"Retrieved {record_count} records")
 
-        # Process records
+        # Process records in batches
+        batch_size = 100  # Define a suitable batch size
+        records = []
+
         created = 0
         skipped = 0
         errors = 0
@@ -101,47 +108,36 @@ class Command(BaseCommand):
 
                     # Get optional fields with defaults
                     name = row.get("Name", "").strip()
-                    try:
-                        if isinstance(row["Beschreibung"], str):
-                            description = row["Beschreibung"]
-                        else:
-                            description = str(row["Beschreibung"])
-                    except (KeyError, TypeError, ValueError):
-                        description = str(row.get("Beschreibung", ""))
-
+                    description = str(row.get("Beschreibung", ""))
                     category_code = row.get("Gruppe", "").strip()
 
                     # Find category if provided
-                    category = None
-                    if category_code:
-                        with suppress(ProductCategory.DoesNotExist):
-                            category = ProductCategory.objects.get(
-                                code=category_code,
-                            )
+                    category = category_map.get(category_code)
 
-                    # Create or update parent product
-                    if not dry_run:
-                        defaults = {
-                            "name": name,
-                            "description": description,
-                            "category": category,
-                        }
-                        result = ParentProduct.objects.update_or_create(
-                            sku=nummer,
-                            defaults=defaults,
-                        )
-                        parent, is_created = result
-                        if is_created:
-                            created += 1
-                        else:
-                            skipped += 1
-                    else:
-                        self.stdout.write(f"Would create parent: {nummer} - {name}")
+                    # Prepare record for bulk operation
+                    defaults = {
+                        "name": name,
+                        "description": description,
+                        "category": category,
+                    }
+                    records.append(ParentProduct(sku=nummer, **defaults))
+
+                    # Process batch if size is reached
+                    if len(records) >= batch_size:
+                        if not dry_run:
+                            ParentProduct.objects.bulk_create(records, ignore_conflicts=True)
+                            created += len(records)
+                        records.clear()
 
                 except Exception as e:
                     err_msg = f"Error processing row {row.name}: {e}"
                     self.stderr.write(err_msg)
                     errors += 1
+
+            # Process any remaining records
+            if records and not dry_run:
+                ParentProduct.objects.bulk_create(records, ignore_conflicts=True)
+                created += len(records)
 
         # Print summary
         summary = (

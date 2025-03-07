@@ -15,12 +15,13 @@ class ProductCategory(models.Model):
     """
 
     code = models.CharField(
-        max_length=50,
+        max_length=255,
+        db_index=True,
         unique=True,
         help_text=_("Unique category code"),
     )
     name = models.CharField(
-        max_length=100,
+        max_length=255,
         help_text=_("Category name"),
     )
     description = models.TextField(
@@ -247,7 +248,7 @@ class ParentProduct(BaseProduct):
     """
 
     base_sku = models.CharField(
-        max_length=50,
+        max_length=255,
         db_index=True,
         help_text=_("Base SKU for variants"),
     )

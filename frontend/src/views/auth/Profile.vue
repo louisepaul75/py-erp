@@ -1,143 +1,145 @@
 <template>
   <div class="profile-container">
-    <div class="row">
-      <div class="col-md-8 offset-md-2">
-        <div class="card">
-          <div class="card-header bg-primary text-white">
-            <h2 class="mb-0">User Profile</h2>
-          </div>
-          <div class="card-body">
+    <v-row justify="center">
+      <v-col cols="12" md="8">
+        <v-card>
+          <v-card-title class="text-white bg-primary">
+            <h2>User Profile</h2>
+          </v-card-title>
+          
+          <v-card-text>
             <div v-if="authStore.isLoading" class="text-center py-4">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
+              <v-progress-circular
+                indeterminate
+                color="primary"
+                size="64"
+              ></v-progress-circular>
             </div>
 
             <div v-else-if="authStore.user">
               <!-- Profile Information Form -->
-              <form @submit.prevent="updateProfile">
-                <div v-if="message" :class="['alert', messageType === 'success' ? 'alert-success' : 'alert-danger']">
+              <v-form @submit.prevent="updateProfile" class="mt-4">
+                <v-alert
+                  v-if="message"
+                  :type="messageType === 'success' ? 'success' : 'error'"
+                  variant="tonal"
+                  class="mb-4"
+                >
                   {{ message }}
-                </div>
+                </v-alert>
 
-                <div class="mb-3">
-                  <label for="username" class="form-label">Username</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="username"
-                    :value="authStore.user.username"
-                    disabled
-                  >
-                </div>
+                <v-text-field
+                  v-model="authStore.user.username"
+                  label="Username"
+                  disabled
+                  variant="outlined"
+                  class="mb-2"
+                ></v-text-field>
 
-                <div class="mb-3">
-                  <label for="email" class="form-label">Email</label>
-                  <input
-                    type="email"
-                    class="form-control"
-                    id="email"
-                    v-model="profileData.email"
-                    required
-                  >
-                </div>
+                <v-text-field
+                  v-model="profileData.email"
+                  label="Email"
+                  type="email"
+                  required
+                  variant="outlined"
+                  class="mb-2"
+                ></v-text-field>
 
-                <div class="row">
-                  <div class="col-md-6 mb-3">
-                    <label for="first_name" class="form-label">First Name</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      id="first_name"
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <v-text-field
                       v-model="profileData.first_name"
-                    >
-                  </div>
+                      label="First Name"
+                      variant="outlined"
+                    ></v-text-field>
+                  </v-col>
 
-                  <div class="col-md-6 mb-3">
-                    <label for="last_name" class="form-label">Last Name</label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      id="last_name"
+                  <v-col cols="12" md="6">
+                    <v-text-field
                       v-model="profileData.last_name"
-                    >
-                  </div>
-                </div>
+                      label="Last Name"
+                      variant="outlined"
+                    ></v-text-field>
+                  </v-col>
+                </v-row>
 
-                <div class="d-grid gap-2">
-                  <button
-                    type="submit"
-                    class="btn btn-primary"
-                    :disabled="isUpdating"
-                  >
-                    <span v-if="isUpdating" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Update Profile
-                  </button>
-                </div>
-              </form>
+                <v-btn
+                  type="submit"
+                  color="primary"
+                  block
+                  :loading="isUpdating"
+                  :disabled="isUpdating"
+                  class="mt-4"
+                >
+                  Update Profile
+                </v-btn>
+              </v-form>
 
               <!-- Password Change Form -->
-              <hr class="my-4">
-              <h3>Change Password</h3>
+              <v-divider class="my-6"></v-divider>
+              <h3 class="text-h5 mb-4">Change Password</h3>
 
-              <form @submit.prevent="changePassword">
-                <div v-if="passwordMessage" :class="['alert', passwordMessageType === 'success' ? 'alert-success' : 'alert-danger']">
+              <v-form @submit.prevent="changePassword">
+                <v-alert
+                  v-if="passwordMessage"
+                  :type="passwordMessageType === 'success' ? 'success' : 'error'"
+                  variant="tonal"
+                  class="mb-4"
+                >
                   {{ passwordMessage }}
-                </div>
+                </v-alert>
 
-                <div class="mb-3">
-                  <label for="old_password" class="form-label">Current Password</label>
-                  <input
-                    type="password"
-                    class="form-control"
-                    id="old_password"
-                    v-model="passwordData.oldPassword"
-                    required
-                  >
-                </div>
+                <v-text-field
+                  v-model="passwordData.oldPassword"
+                  label="Current Password"
+                  type="password"
+                  required
+                  variant="outlined"
+                  class="mb-2"
+                ></v-text-field>
 
-                <div class="mb-3">
-                  <label for="new_password" class="form-label">New Password</label>
-                  <input
-                    type="password"
-                    class="form-control"
-                    id="new_password"
-                    v-model="passwordData.newPassword"
-                    required
-                  >
-                </div>
+                <v-text-field
+                  v-model="passwordData.newPassword"
+                  label="New Password"
+                  type="password"
+                  required
+                  variant="outlined"
+                  class="mb-2"
+                ></v-text-field>
 
-                <div class="mb-3">
-                  <label for="confirm_password" class="form-label">Confirm New Password</label>
-                  <input
-                    type="password"
-                    class="form-control"
-                    id="confirm_password"
-                    v-model="passwordData.confirmPassword"
-                    required
-                  >
-                </div>
+                <v-text-field
+                  v-model="passwordData.confirmPassword"
+                  label="Confirm New Password"
+                  type="password"
+                  required
+                  variant="outlined"
+                  class="mb-4"
+                ></v-text-field>
 
-                <div class="d-grid gap-2">
-                  <button
-                    type="submit"
-                    class="btn btn-primary"
-                    :disabled="isChangingPassword"
-                  >
-                    <span v-if="isChangingPassword" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Change Password
-                  </button>
-                </div>
-              </form>
+                <v-btn
+                  type="submit"
+                  color="primary"
+                  block
+                  :loading="isChangingPassword"
+                  :disabled="isChangingPassword"
+                >
+                  Change Password
+                </v-btn>
+              </v-form>
             </div>
 
-            <div v-else class="alert alert-warning">
+            <v-alert
+              v-else
+              type="warning"
+              variant="tonal"
+              class="mt-4"
+            >
               You need to be logged in to view your profile.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            </v-alert>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
   </div>
 </template>
 

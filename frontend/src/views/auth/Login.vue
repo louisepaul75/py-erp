@@ -1,56 +1,65 @@
 <template>
   <div class="login-container">
-    <div class="card login-card">
-      <div class="card-header bg-primary text-white">
-        <h2 class="mb-0">Login</h2>
-      </div>
-      <div class="card-body">
-        <div v-if="authStore.error" class="alert alert-danger">
+    <v-card class="login-card mx-auto" max-width="400">
+      <v-card-title class="text-white bg-primary">
+        <h2>Login</h2>
+      </v-card-title>
+      
+      <v-card-text>
+        <v-alert
+          v-if="authStore.error"
+          type="error"
+          class="mt-4"
+          variant="tonal"
+        >
           {{ authStore.error }}
+        </v-alert>
+
+        <v-form @submit.prevent="handleLogin" class="mt-4">
+          <v-text-field
+            v-model="credentials.username"
+            label="Username"
+            id="username"
+            required
+            autocomplete="username"
+            variant="outlined"
+            class="mb-4"
+          ></v-text-field>
+
+          <v-text-field
+            v-model="credentials.password"
+            label="Password"
+            id="password"
+            type="password"
+            required
+            autocomplete="current-password"
+            variant="outlined"
+            class="mb-6"
+          ></v-text-field>
+
+          <v-btn
+            type="submit"
+            color="primary"
+            block
+            :loading="authStore.isLoading"
+            :disabled="authStore.isLoading"
+          >
+            Login
+          </v-btn>
+        </v-form>
+
+        <div class="text-center mt-4">
+          <v-btn
+            variant="text"
+            color="primary"
+            href="/accounts/password_reset/"
+            size="small"
+          >
+            Forgot password?
+          </v-btn>
         </div>
-
-        <form @submit.prevent="handleLogin">
-          <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
-            <input
-              type="text"
-              class="form-control"
-              id="username"
-              v-model="credentials.username"
-              required
-              autocomplete="username"
-            >
-          </div>
-
-          <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input
-              type="password"
-              class="form-control"
-              id="password"
-              v-model="credentials.password"
-              required
-              autocomplete="current-password"
-            >
-          </div>
-
-          <div class="d-grid gap-2">
-            <button
-              type="submit"
-              class="btn btn-primary"
-              :disabled="authStore.isLoading"
-            >
-              <span v-if="authStore.isLoading" class="spinner-border spinner-border-sm me-2" role="status"></span>
-              Login
-            </button>
-          </div>
-        </form>
-
-        <div class="mt-3 text-center">
-          <a href="/accounts/password_reset/">Forgot password?</a>
-        </div>
-      </div>
-    </div>
+      </v-card-text>
+    </v-card>
   </div>
 </template>
 
@@ -97,11 +106,5 @@ onMounted(() => {
   align-items: center;
   min-height: 80vh;
   padding: 20px;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 </style>
