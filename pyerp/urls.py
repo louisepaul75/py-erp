@@ -116,6 +116,11 @@ for url_prefix, module_path in OPTIONAL_API_MODULES:
         print(f"WARNING: Could not import {module_path}: {e}")
         print(f"URL patterns for api/{url_prefix}/ will not be available")
 
+# Include core URLs at root level (for health check and other core functionality)
+urlpatterns += [
+    path("", include("pyerp.core.urls")),
+]
+
 # Vue.js application route - now as the root URL
 urlpatterns += [
     path("", VueAppView.as_view(), name="vue_app"),

@@ -11,6 +11,7 @@ import logging
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from django.conf import settings
@@ -40,6 +41,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Maximum time to wait for each health check (in seconds)
+HEALTH_CHECK_TIMEOUT = 120  # Increased to 2 minutes
+
+# Maximum time to wait for individual component checks
+COMPONENT_CHECK_TIMEOUT = 60  # Individual components get 1 minute
 
 def check_database_connection():
     """
@@ -79,7 +85,6 @@ def check_database_connection():
         "response_time": response_time,
         "timestamp": timezone.now(),
     }
-
 
 def check_legacy_erp_connection():
     """
@@ -138,7 +143,6 @@ def check_legacy_erp_connection():
         "timestamp": timezone.now(),
     }
 
-
 def check_pictures_api_connection():
     """
     Check if the connection to the pictures API is working properly.
@@ -161,29 +165,14 @@ def check_pictures_api_connection():
                 f"Pictures API URL from settings: {settings.IMAGE_API.get('BASE_URL')}",
             )
             
-            # Create client with explicit settings to ensure it uses the correct URL
+            # Create client and check connection
             client = ImageAPIClient()
-            
-            # Log the actual URL being used by the client
-            logger.debug(f"Pictures API client using base URL: {client.base_url}")
-
-            # Try to fetch a small amount of data to verify connection
-            response = client.get_all_images(page=1, page_size=1)
-
-            if not response or "results" not in response:
-                status = HealthCheckResult.STATUS_WARNING
-                details = "Pictures API returned unexpected response format."
+            client.check_connection()
 
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
-            details = f"Pictures API connection error: {e!s}"
+            details = f"Pictures API error: {e!s}"
             logger.error(f"Pictures API health check failed: {e!s}")
-            # Add more detailed error logging
-            logger.error(
-                f"Pictures API connection error details: {type(e).__name__}: {e}",
-            )
-            if hasattr(e, '__cause__') and e.__cause__:
-                logger.error(f"Caused by: {e.__cause__}")
 
     response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
 
@@ -195,7 +184,6 @@ def check_pictures_api_connection():
         "response_time": response_time,
         "timestamp": timezone.now(),
     }
-
 
 def validate_database():
     """
@@ -286,7 +274,6 @@ def validate_database():
         "response_time": response_time,
         "timestamp": result.timestamp,
     }
-
 
 def get_database_statistics():
     """
@@ -431,36 +418,75 @@ def get_database_statistics():
     
     return stats
 
-
 def run_all_health_checks(as_array=True):
     """
-    Run all available health checks.
+    Run all health checks concurrently.
 
     Args:
-        as_array (bool): If True, returns results as an array; otherwise as a dict
+        as_array (bool): If True, returns results as an array; otherwise as dict
 
     Returns:
         list or dict: Health check results in the specified format
     """
-    # Run all health checks
-    results = {
-        HealthCheckResult.COMPONENT_DATABASE: check_database_connection(),
-        HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection(),
-        HealthCheckResult.COMPONENT_PICTURES_API: check_pictures_api_connection(),
+    logger.info("Starting health checks")
+    start_time = time.time()
+
+    # Define health check functions to run
+    health_checks = {
+        HealthCheckResult.COMPONENT_DATABASE: check_database_connection,
+        HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection,
+        HealthCheckResult.COMPONENT_PICTURES_API: check_pictures_api_connection,
     }
     
-    # Always add database validation result
-    validation_result = validate_database()
-    results[HealthCheckResult.COMPONENT_DATABASE_VALIDATION] = validation_result
+    results = {}
     
+    # Run health checks concurrently with timeout
+    with ThreadPoolExecutor() as executor:
+        # Submit all health checks
+        future_to_component = {
+            executor.submit(check_func): component
+            for component, check_func in health_checks.items()
+        }
+        
+        # Wait for results with timeout
+        try:
+            futures = as_completed(future_to_component, timeout=HEALTH_CHECK_TIMEOUT)
+            for future in futures:
+                component = future_to_component[future]
+                try:
+                    result = future.result(timeout=COMPONENT_CHECK_TIMEOUT)
+                    results[component] = result
+                    msg = f"Health check completed for {component}"
+                    logger.debug(f"{msg}: {result['status']}")
+                except Exception as e:
+                    error_msg = f"Health check failed for {component}: {str(e)}"
+                    logger.error(error_msg)
+                    results[component] = {
+                        "status": HealthCheckResult.STATUS_ERROR,
+                        "details": error_msg,
+                        "response_time": 0,
+                        "timestamp": timezone.now(),
+                    }
+        except TimeoutError:
+            remaining = set(health_checks.keys()) - set(results.keys())
+            msg = f"Health checks timed out for components: {remaining}"
+            logger.error(msg)
+            for component in remaining:
+                results[component] = {
+                    "status": HealthCheckResult.STATUS_ERROR,
+                    "details": "Health check timed out",
+                    "response_time": HEALTH_CHECK_TIMEOUT * 1000,  # ms
+                    "timestamp": timezone.now(),
+                }
+    
+    total_time = time.time() - start_time
+    logger.info(f"All health checks completed in {total_time:.2f} seconds")
+
     # Return in the requested format
     if as_array:
         # Convert to array format with component included in each result
         return [
-            {
-                "component": component,
-                **result
-            } 
+            {"component": component, **result}
             for component, result in results.items()
         ]
     

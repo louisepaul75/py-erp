@@ -117,6 +117,7 @@ class DatabaseConnectionMiddleware:
             "/login/",
             "/static/",
             "/monitoring/health-check/public/",
+            "/monitoring/health-checks/",
         ]
 
         # Check if path is in optional paths list
@@ -156,6 +157,7 @@ class AuthExemptMiddleware(MiddlewareMixin):
             "/health/",
             "/api/health/",
             "/monitoring/health-check/public/",
+            "/monitoring/health-checks/",
         ]
 
         # Check if current path should be exempt from authentication

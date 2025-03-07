@@ -277,7 +277,7 @@ export default {
       try {
         // Try to get detailed health checks
         const response = await api.get('/monitoring/health-checks/', {
-          timeout: 5000
+          timeout: 120000  // Increased to 2 minutes (120,000 ms)
         });
 
         if (response.data && response.data.success) {
