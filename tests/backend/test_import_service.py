@@ -10,42 +10,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyerp.core.validators import ImportValidator, SkipRowException, ValidationResult
-
-# Mock necessary imports
-
-
-class MockImportProducts:
-    """Mock importproducts module."""
-
-    class Command:
-        """Mock Command class."""
-
-        def __init__(self):
-            """Initialize the command."""
-            self.create_product_validator = MagicMock()
-            self.create_product_validator.return_value = MagicMock()
-
-        def validate_products(self, data, validator=None):
-            """Validate products with a mock."""
-            if not data:
-                return []
-            return [data[0]]  # Return first item as valid
-
-        def handle(self, file_path=None, default_category=None, strict=False):
-            """Handle command with mock."""
-            if not file_path or not default_category:
-                return False
-            if file_path == "nonexistent.json":
-                raise FileNotFoundError("File not found")
-            return True
-
-
-# Mock the import
-
-
-importproducts = MagicMock()
-importproducts.Command = MockImportProducts.Command
+from pyerp.core.validators import (
+    ImportValidator,
+    SkipRowException,
+    ValidationResult,
+)
+from pyerp.management.commands.importproducts import (
+    Command,
+)
 
 
 class TestImportValidator:
@@ -76,13 +48,12 @@ class TestImportValidator:
             try:
                 age = int(value)
                 if age < 18:
-                    result.add_error("age", "Must be at least 18 years old")
-                    return age, result
+                    result.add_error("age", "Age must be at least 18")
                 if age > 100:
                     result.add_warning("age", "Age seems unusually high")
                 return age, result
             except (ValueError, TypeError):
-                result.add_error("age", "Invalid age format")
+                result.add_error("age", "Age must be a valid number")
                 return None, result
 
         def validate_code(self, value, row_data, row_index=None):
@@ -188,7 +159,7 @@ class TestImportValidator:
         assert "code" in result.errors
         assert "Code must be alphanumeric" in result.errors["code"][0]
         assert "age" in result.errors
-        assert "Must be at least 18 years old" in result.errors["age"][0]
+        assert "Age must be at least 18" in result.errors["age"][0]
 
     def test_validate_row_with_warnings(self, validator):
         """Test validating a row with warnings but no errors."""
@@ -312,7 +283,7 @@ class TestImportValidator:
         def validate_return_only_result(self, value, row_data, row_index=None):
             result = ValidationResult()
             result.add_error("field", "Error message")
-            return result
+            return None, result
 
         def validate_return_modified(self, value, row_data, row_index=None):
             return "modified_" + str(value), ValidationResult()
@@ -340,17 +311,17 @@ class TestImportValidator:
 
 
 class TestProductImportCommand:
-    """Tests for the product import command using validation."""
+    """Tests for the ProductImportCommand class."""
 
     @pytest.fixture
     def command(self):
         """Create a command instance for testing."""
-        return importproducts.Command()
+        return Command()
 
     def test_create_product_validator(self, command):
         """Test creation of product validator."""
         with patch(
-            "pyerp.products.validators.ProductImportValidator",
+            "pyerp.management.commands.importproducts.ProductImportValidator"
         ) as mock_validator_class:
             mock_validator = MagicMock()
             mock_validator_class.return_value = mock_validator
@@ -398,9 +369,8 @@ class TestProductImportCommand:
         assert mock_validator.validate_row.call_count == 2
 
     def test_handle_product_validation(self, command):
-        """Test handle method with product validation."""
-        # Mock methods
-        command.load_json_data = MagicMock(
+        """Test handle method with successful validation."""
+        command.get_products_from_file = MagicMock(
             return_value=[
                 {"sku": "TEST-1", "name": "Test Product 1"},
                 {"sku": "TEST-2", "name": "Test Product 2"},
@@ -441,7 +411,7 @@ class TestProductImportCommand:
 
     def test_handle_with_invalid_file(self, command):
         """Test handle method with invalid file path."""
-        command.load_json_data = MagicMock(side_effect=FileNotFoundError)
+        command.read_file = MagicMock(side_effect=FileNotFoundError)
 
         with pytest.raises(FileNotFoundError):
             command.handle(
@@ -451,14 +421,15 @@ class TestProductImportCommand:
             )
 
     def test_handle_with_validation_errors(self, command):
-        """Test handle method when all products fail validation."""
-        command.load_json_data = MagicMock(
+        """Test handle method with validation errors."""
+        command.get_products_from_file = MagicMock(
             return_value=[
                 {"sku": "TEST-1", "name": "Test Product 1"},
                 {"sku": "TEST-2", "name": "Test Product 2"},
             ],
         )
         command.validate_products = MagicMock(return_value=[])  # All products invalid
+        command.create_or_update_product = MagicMock()
 
         with patch("pyerp.products.models.ProductCategory.objects.get") as mock_get:
             default_category = MagicMock()

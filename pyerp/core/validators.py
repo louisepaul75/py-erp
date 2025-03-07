@@ -593,10 +593,7 @@ class ImportValidator:
 
                     # Handle validation result
                     if field_result.is_valid:
-                        if self.transform_data:
-                            validated_data[field_name] = transformed_value
-                        else:
-                            validated_data[field_name] = value
+                        validated_data[field_name] = transformed_value
 
                     # Handle field errors and warnings
                     for msg_type, messages_dict in [

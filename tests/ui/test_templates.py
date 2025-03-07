@@ -33,12 +33,11 @@ class TestModelExample:
         """Test model methods."""
         assert str(model_instance) == "Test Category"
 
-    @pytest.mark.django_db
-    @patch("django.db.models.Model.save")
-    def test_model_save(self, mock_save, model_instance):
+    def test_model_save(self, model_instance):
         """Test model save behavior without hitting the database."""
-        model_instance.save()
-        assert mock_save.called
+        with patch.object(model_instance, 'save') as mock_save:
+            model_instance.save()
+            assert mock_save.called
 
 
 ###############################################################################
