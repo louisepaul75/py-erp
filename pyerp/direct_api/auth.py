@@ -24,6 +24,8 @@ from pyerp.direct_api.settings import (
     API_MAX_RETRIES,
     API_REQUEST_TIMEOUT,
     API_RETRY_BACKOFF_FACTOR,
+    API_SESSION_EXPIRY,
+    API_SESSION_REFRESH_MARGIN,
 )
 
 # Configure logging
@@ -87,6 +89,7 @@ class Session:
         self.environment = environment
         self.cookie = None
         self.created_at = None
+        self.expires_at = None
 
         # Load environment configuration
         try:
@@ -123,6 +126,11 @@ class Session:
                         if "created_at" in cookie_data
                         else datetime.datetime.now()
                     )
+                    self.expires_at = (
+                        datetime.datetime.fromisoformat(cookie_data["expires_at"])
+                        if "expires_at" in cookie_data
+                        else self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
+                    )
                     logger.info(
                         f"Loaded session cookie from file: {self.cookie[:30]}...",
                     )
@@ -147,6 +155,11 @@ class Session:
                         if self.created_at
                         else datetime.datetime.now().isoformat()
                     ),
+                    "expires_at": (
+                        self.expires_at.isoformat()
+                        if self.expires_at
+                        else (datetime.datetime.now() + datetime.timedelta(seconds=API_SESSION_EXPIRY)).isoformat()
+                    ),
                 }
 
                 with open(COOKIE_FILE, "w") as f:
@@ -160,12 +173,21 @@ class Session:
 
     def is_valid(self) -> bool:
         """
-        Check if the current session has a cookie.
+        Check if the current session is valid and not expired.
 
         Returns:
-            bool: True if the session has a cookie, False otherwise
+            bool: True if the session has a valid cookie and is not expired
         """
-        return self.cookie is not None
+        if not self.cookie:
+            return False
+
+        if not self.expires_at:
+            return False
+
+        now = datetime.datetime.now()
+        refresh_threshold = self.expires_at - datetime.timedelta(seconds=API_SESSION_REFRESH_MARGIN)
+        
+        return now < refresh_threshold
 
     def refresh(self) -> None:
         """
@@ -225,12 +247,13 @@ class Session:
                             cookie_value = cookie_header[start_index:end_index].strip()
                             logger.info("Found WASID4D in Set-Cookie header")
 
-                            # Store just the value
-                            self.cookie = cookie_value
+                            # Store with cookie name
+                            self.cookie = f"WASID4D={cookie_value}"
                             logger.info(
                                 f"Stored WASID4D cookie value: {cookie_value[:10]}...",
                             )
                             self.created_at = datetime.datetime.now()
+                            self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
 
                             # Save the cookie to file for persistence
                             self._save_cookie_to_file()
@@ -243,7 +266,8 @@ class Session:
                             cookie_value = cookie_parts[1].strip()
                             logger.info(f"Extracted cookie name: {cookie_name}")
 
-                            self.cookie = cookie_value
+                            # Store with cookie name
+                            self.cookie = f"{cookie_name}={cookie_value}"
                             logger.info(f"Stored cookie value: {cookie_value[:10]}...")
                         else:
                             logger.warning(
@@ -257,6 +281,7 @@ class Session:
                         self.cookie = cookie_header
 
                     self.created_at = datetime.datetime.now()
+                    self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
                     logger.info(
                         f"Successfully obtained session cookie for {self.environment}",
                     )
@@ -271,12 +296,13 @@ class Session:
                         cookie_value = response.cookies["WASID4D"]
                         logger.info("Found WASID4D cookie in response.cookies")
 
-                        # Store just the value
-                        self.cookie = cookie_value
+                        # Store with cookie name
+                        self.cookie = f"WASID4D={cookie_value}"
                         logger.info(
                             f"Stored WASID4D cookie value: {cookie_value[:10]}...",
                         )
                         self.created_at = datetime.datetime.now()
+                        self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
 
                         # Save the cookie to file for persistence
                         self._save_cookie_to_file()
@@ -287,12 +313,13 @@ class Session:
                             "Found 4DSID_WSZ-DB cookie in response.cookies (will use as WASID4D)",
                         )
 
-                        # Store just the value
-                        self.cookie = cookie_value
+                        # Store with cookie name
+                        self.cookie = f"4DSID_WSZ-DB={cookie_value}"
                         logger.info(
                             f"Stored 4DSID_WSZ-DB cookie value as WASID4D: {cookie_value[:10]}...",
                         )
                         self.created_at = datetime.datetime.now()
+                        self.expires_at = self.created_at + datetime.timedelta(seconds=API_SESSION_EXPIRY)
 
                         # Save the cookie to file for persistence
                         self._save_cookie_to_file()
@@ -375,6 +402,7 @@ class Session:
         """
         self.cookie = None
         self.created_at = None
+        self.expires_at = None
 
         # Remove the cookie file if it exists
         with file_lock:
@@ -386,26 +414,96 @@ class Session:
                     logger.warning(f"Failed to remove session cookie file: {e}")
 
 
-# Session pool for reusing sessions
-_session_pool = {}
-_session_pool_lock = threading.RLock()
+class SessionPool:
+    """
+    A pool of API sessions.
+
+    This class manages a pool of sessions for different environments,
+    ensuring we reuse sessions when possible and create new ones when needed.
+    """
+
+    def __init__(self):
+        """Initialize an empty session pool."""
+        self._sessions = {}
+        self._lock = threading.RLock()
+        self.cache = {}  # Simple in-memory cache for session data
+
+    def get_session(self, environment: str = "live") -> Session:
+        """
+        Get a session for the specified environment.
+
+        Args:
+            environment: The environment to get a session for
+
+        Returns:
+            Session: A session for the specified environment
+
+        Raises:
+            ValueError: If the environment is not configured
+        """
+        with self._lock:
+            # Check if we have a cached session
+            if environment in self.cache:
+                session = self.cache[environment]
+                if session.is_valid():
+                    return session
+                else:
+                    # Remove invalid session from cache
+                    del self.cache[environment]
+
+            # Create a new session if needed
+            if environment not in self._sessions:
+                self._sessions[environment] = Session(environment)
+
+            session = self._sessions[environment]
+            session.ensure_valid()
+
+            # Cache the valid session
+            self.cache[environment] = session
+            return session
+
+    def clear_sessions(self):
+        """
+        Clear all sessions from the pool.
+        """
+        with self._lock:
+            for session in self._sessions.values():
+                session.invalidate()
+            self._sessions.clear()
+            self.cache.clear()
+
+    def invalidate_session(self, environment: str):
+        """
+        Invalidate the session for the specified environment.
+
+        Args:
+            environment: The environment to invalidate the session for
+        """
+        with self._lock:
+            if environment in self._sessions:
+                self._sessions[environment].invalidate()
+                del self._sessions[environment]
+            if environment in self.cache:
+                del self.cache[environment]
+
+# Global session pool instance
+_session_pool = SessionPool()
 
 
 def get_session(environment: str = "live") -> Session:
     """
-    Get a session for the specified environment.
+    Get a session for the specified environment from the global session pool.
 
     Args:
-        environment: The environment to use ('live', 'test', etc.)
+        environment: The environment to get a session for
 
     Returns:
         Session: A session for the specified environment
-    """
-    with _session_pool_lock:
-        if environment not in _session_pool:
-            _session_pool[environment] = Session(environment)
 
-        return _session_pool[environment]
+    Raises:
+        ValueError: If the environment is not configured
+    """
+    return _session_pool.get_session(environment)
 
 
 def invalidate_session(environment: str = "live") -> None:

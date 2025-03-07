@@ -38,8 +38,7 @@ def health_check(request):
     logger.debug("Health check requested")
 
     # Get environment and version info
-    env_module = settings.DJANGO_SETTINGS_MODULE
-    environment = env_module.split(".")[-1]
+    environment = os.environ.get('DJANGO_ENV', 'development')
     version = getattr(settings, "APP_VERSION", "unknown")
 
     try:
@@ -101,7 +100,7 @@ class UserProfileView(APIView):
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "is_sta": user.is_staff,
+            "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
             "date_joined": user.date_joined,
         }

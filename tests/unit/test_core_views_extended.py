@@ -59,9 +59,12 @@ class TestHealthCheck:
         # Configure the mock
         response_data = {
             "status": "healthy",
-            "database": "ok",
+            "database": {
+                "status": "connected",
+                "message": "Database is connected"
+            },
             "environment": "development",
-            "version": "1.0.0",
+            "version": "1.0.0"
         }
         mock_response = JsonResponse(response_data)
         pyerp_core_views.health_check.return_value = mock_response
@@ -77,16 +80,22 @@ class TestHealthCheck:
         # Get content from JsonResponse
         content = json.loads(response.content.decode("utf-8"))
         assert content["status"] == "healthy"
-        assert content["database"] == "ok"
+        assert content["database"]["status"] == "connected"
+        assert content["database"]["message"] == "Database is connected"
+        assert "environment" in content
+        assert "version" in content
 
     def test_health_check_db_failure(self, request_factory):
         """Test health check with database connection failure."""
         # Configure the mock
         response_data = {
             "status": "unhealthy",
-            "database": "error",
+            "database": {
+                "status": "error",
+                "message": "Database connection failed"
+            },
             "environment": "development",
-            "version": "1.0.0",
+            "version": "1.0.0"
         }
         mock_response = JsonResponse(response_data, status=503)
         pyerp_core_views.health_check.return_value = mock_response
@@ -102,7 +111,10 @@ class TestHealthCheck:
         # Get content from JsonResponse
         content = json.loads(response.content.decode("utf-8"))
         assert content["status"] == "unhealthy"
-        assert content["database"] == "error"
+        assert content["database"]["status"] == "error"
+        assert content["database"]["message"] == "Database connection failed"
+        assert "environment" in content
+        assert "version" in content
 
 
 class TestUserProfileView:
@@ -131,7 +143,7 @@ class TestUserProfileView:
         view_instance.return_value = mock_response
 
         # Create request
-        request = request_factory.get("/api/user/profile/")
+        request = request_factory.get("/profile/")
         request.user = mock_user
 
         # Call the view
@@ -143,6 +155,8 @@ class TestUserProfileView:
         assert response.data["email"] == "test@example.com"
         assert response.data["first_name"] == "Test"
         assert response.data["last_name"] == "User"
+        assert not response.data["is_staff"]
+        assert not response.data["is_superuser"]
 
     def test_update_user_profile(self, request_factory, mock_user):
         """Test updating user profile."""
@@ -171,7 +185,7 @@ class TestUserProfileView:
             "email": "updated@example.com",
         }
         request = request_factory.patch(
-            "/api/user/profile/",
+            "/profile/",
             data=json.dumps(update_data),
             content_type="application/json",
         )
@@ -215,7 +229,7 @@ class TestDashboardSummaryView:
         view_instance.return_value = mock_response
 
         # Create request
-        request = request_factory.get("/api/dashboard/summary/")
+        request = request_factory.get("/")
         request.user = mock_user
 
         # Call the view
@@ -260,7 +274,7 @@ class TestSystemSettingsView:
         view_instance.return_value = mock_response
 
         # Create request
-        request = request_factory.get("/api/system/settings/")
+        request = request_factory.get("/settings/")
         request.user = mock_user
 
         # Call the view
@@ -288,7 +302,7 @@ class TestSystemSettingsView:
 
         # Configure the response
         response_data = {
-            "error": "You do not have permission to view system settings",
+            "error": "You do not have permission to view settings",
         }
         mock_response = MagicMock()
         mock_response.status_code = 403
@@ -296,7 +310,7 @@ class TestSystemSettingsView:
         view_instance.return_value = mock_response
 
         # Create request
-        request = request_factory.get("/api/system/settings/")
+        request = request_factory.get("/settings/")
         request.user = mock_user
 
         # Call the view
@@ -307,7 +321,7 @@ class TestSystemSettingsView:
         assert "error" in response.data
         assert (
             response.data["error"]
-            == "You do not have permission to view system settings"
+            == "You do not have permission to view settings"
         )
 
     def test_update_system_settings_superuser(self, request_factory, mock_user):
@@ -334,7 +348,7 @@ class TestSystemSettingsView:
             "timezone": "America/New_York",
         }
         request = request_factory.patch(
-            "/api/system/settings/",
+            "/settings/",
             data=json.dumps(update_data),
             content_type="application/json",
         )

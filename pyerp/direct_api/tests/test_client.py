@@ -113,16 +113,18 @@ class TestDirectAPIClient(unittest.TestCase):
 
         # Verify both requests were made
         self.assertEqual(mock_make_request.call_count, 2)
-        mock_make_request.assert_any_call(
-            "GET",
-            "Artikel_Familie",
-            params={"$top": 2, "$skip": 0, "new_data_only": "true"},
-        )
-        mock_make_request.assert_any_call(
-            "GET",
-            "Artikel_Familie",
-            params={"$top": 2, "$skip": 2, "new_data_only": "true"},
-        )
+        mock_make_request.assert_has_calls([
+            unittest.mock.call(
+                "GET",
+                "Artikel_Familie",
+                params={"$top": 2, "$skip": 0, "new_data_only": "true"},
+            ),
+            unittest.mock.call(
+                "GET",
+                "Artikel_Familie",
+                params={"$top": 2, "$skip": 2, "new_data_only": "true"},
+            ),
+        ])
 
     @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
     def test_fetch_table_error_handling(self, mock_make_request):
