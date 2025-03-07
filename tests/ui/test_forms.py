@@ -20,6 +20,7 @@ class MockField:
         self.widget = kwargs.get("widget")
         self.validators = []
         self.error_messages = kwargs.get("error_messages", {})
+        self.disabled = kwargs.get("disabled", False)
 
     def get_bound_field(self, form, field_name):
         """Mock implementation of get_bound_field."""
@@ -49,6 +50,8 @@ class MockBoundField:
         self.html_initial_id = f"initial_id_{name}"
         self.label = field.label or name.title()
         self.help_text = field.help_text or ""
+        self.data = form.data.get(name) if form.data else None
+        self.initial = field.initial
 
 
 class MockModelForm(ValidatedForm):

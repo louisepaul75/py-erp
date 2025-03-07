@@ -172,15 +172,15 @@ class TestProductModelValidation:
                 raise ValidationError({"sku": ["Invalid SKU format"]})
 
             if product.is_parent and product.variant_code:
-                raise ValidationError(
-                    {"variant_code": ["Parent products cannot have variant codes"]}
-                )
+                raise ValidationError({
+                    "variant_code": ["Parent products cannot have variant codes"]
+                })
 
             if product.list_price and product.cost_price:
                 if product.list_price < product.cost_price:
-                    raise ValidationError(
-                        {"list_price": ["List price cannot be less than cost"]}
-                    )
+                    raise ValidationError({
+                        "list_price": ["List price cannot be less than cost"]
+                    })
             return True
 
         validators_module.validate_product_model = patched_validate_product_model
@@ -189,7 +189,6 @@ class TestProductModelValidation:
         """Restore original function."""
         validators_module.validate_product_model = self.original_validate
 
-    @pytest.mark.django_db
     def test_validate_product_model_valid(self):
         """Test validation of a valid product model."""
         product = MockProduct()
@@ -198,35 +197,32 @@ class TestProductModelValidation:
         product.variant_code = None
         product.list_price = Decimal("100.00")
         product.cost_price = Decimal("80.00")
-
         assert validate_product_model(product) is True
 
-    @pytest.mark.django_db
     def test_validate_product_model_invalid_sku(self):
-        """Test validation of a product with an invalid SKU."""
+        """Test validation with invalid SKU."""
         product = MockProduct()
-        product.sku = "ABC@123"  # Invalid SKU format
-        product.name = "Test Product"
-        product.is_parent = False
-        product.variant_code = None
-
+        product.sku = "ABC 123"  # Invalid SKU with space
         with pytest.raises(ValidationError) as exc_info:
             validate_product_model(product)
-
-        error_msg = str(exc_info.value)
-        assert "Invalid SKU format" in error_msg
+        assert "sku" in exc_info.value.error_dict
+        error_list = exc_info.value.error_dict["sku"]
+        assert any(
+            "Invalid SKU format" in str(error)
+            for error in error_list
+        )
 
     def test_validate_product_model_parent_with_variant(self):
-        """Test validation of a parent product with variant code."""
+        """Test validation of parent product with variant code."""
         product = MockProduct()
         product.sku = "ABC123"
-        product.name = "Test Product"
         product.is_parent = True
         product.variant_code = "V1"
-
         with pytest.raises(ValidationError) as exc_info:
             validate_product_model(product)
-
-        error_msg = str(exc_info.value)
-        msg = "Parent products cannot have variant codes"
-        assert msg in error_msg
+        assert "variant_code" in exc_info.value.error_dict
+        error_list = exc_info.value.error_dict["variant_code"]
+        assert any(
+            "Parent products cannot have variant codes" in str(error)
+            for error in error_list
+        )
