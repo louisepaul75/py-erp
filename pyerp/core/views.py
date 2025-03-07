@@ -5,6 +5,7 @@ Views for the Core app.
 import json
 import logging
 import os
+import subprocess
 
 from django.conf import settings
 from django.db import connection
@@ -103,6 +104,35 @@ def health_check(request):
         request._auth_exempt_response = response
 
     return response
+
+
+@require_GET
+@csrf_exempt
+def git_branch(request):
+    """
+    Get the current git branch name.
+    Only available in development mode.
+    """
+    if not settings.DEBUG:
+        return JsonResponse(
+            {"error": "Not available in production"},
+            status=403,
+        )
+    
+    try:
+        result = subprocess.run(
+            ['git', 'branch', '--show-current'],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        branch = result.stdout.strip()
+        return JsonResponse({"branch": branch})
+    except subprocess.CalledProcessError:
+        return JsonResponse(
+            {"error": "Could not get branch name"},
+            status=500,
+        )
 
 
 class UserProfileView(APIView):

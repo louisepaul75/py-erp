@@ -5,11 +5,11 @@
         <div class="col-md-6">
           <p class="mb-0 text-muted">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
         </div>
-        <div class="col-md-6 text-md-end d-flex justify-content-end align-items-center">
-          <router-link to="/Health" class="health-status me-3" :title="healthStatusText">
+        <div class="col-md-6 text-md-end d-flex justify-content-end align-items-center gap-3">
+          <p class="mb-0 text-muted">Version {{ appVersion }}</p>
+          <router-link to="/Health" class="health-status" :title="healthStatusText">
             <span class="status-dot" :class="healthStatusClass"></span>
           </router-link>
-          <p class="mb-0 text-muted">Version {{ appVersion }}</p>
         </div>
       </div>
     </div>
@@ -71,21 +71,19 @@ const fetchHealthStatus = async () => {
       timeout: 5000
     });
     appVersion.value = response.data.version || 'unknown';
-    healthStatus.value = response.data.status;
+    healthStatus.value = response.data.status === 'healthy' ? 'success' : response.data.status;
   } catch (error) {
     console.error('Failed to fetch health status:', error);
     healthStatus.value = 'error';
   }
 };
 
-// Define a custom event type
 interface DebugPanelToggleEvent extends CustomEvent {
   detail: {
     expanded: boolean;
   };
 }
 
-// Event listener for debug panel expansion
 const handleDebugPanelToggle = (event: Event) => {
   const customEvent = event as DebugPanelToggleEvent;
   if (customEvent.detail && typeof customEvent.detail.expanded === 'boolean') {
