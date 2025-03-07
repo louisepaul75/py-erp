@@ -4,8 +4,10 @@ Unit tests for core views.
 This file demonstrates how to test views in the core module.
 """
 
-from django.test import TestCase
-from rest_framework.test import APIClient, APITestCase
+from django.test import Client, TestCase
+
+# Avoid importing from rest_framework.test which causes metaclass conflicts
+# from rest_framework.test import APIClient, APITestCase
 
 
 class TestHealthCheckView(TestCase):
@@ -13,7 +15,7 @@ class TestHealthCheckView(TestCase):
 
     def setUp(self):
         """Set up test client."""
-        self.client = APIClient()
+        self.client = Client()
 
     def test_health_check_healthy(self):
         """Test the health check view when everything is healthy."""
@@ -24,12 +26,12 @@ class TestHealthCheckView(TestCase):
         self.assertEqual(response.json()["database"]["status"], "connected")
 
 
-class TestUserProfileView(APITestCase):
+class TestUserProfileView(TestCase):
     """Tests for the UserProfileView."""
 
     def setUp(self):
         """Set up test client and user."""
-        self.client = APIClient()
+        self.client = Client()
         # Add any necessary user setup here
 
     def test_get_profile(self):
@@ -48,7 +50,11 @@ class TestUserProfileView(APITestCase):
                 "website": "https://new-example.com",
             },
         }
-        response = self.client.put("/api/profile/", data)
+        response = self.client.put(
+            "/api/profile/", 
+            data=data, 
+            content_type="application/json"
+        )
         self.assertEqual(response.status_code, 200)
         # Add more assertions based on expected response
 
@@ -60,7 +66,11 @@ class TestUserProfileView(APITestCase):
                 "website": "invalid-url",
             },
         }
-        response = self.client.put("/api/profile/", data)
+        response = self.client.put(
+            "/api/profile/", 
+            data=data, 
+            content_type="application/json"
+        )
         self.assertEqual(response.status_code, 400)
         # Add more assertions based on expected response
 
@@ -73,6 +83,10 @@ class TestUserProfileView(APITestCase):
                 "website": "invalid-url",  # Invalid
             },
         }
-        response = self.client.put("/api/profile/", data)
+        response = self.client.put(
+            "/api/profile/", 
+            data=data, 
+            content_type="application/json"
+        )
         self.assertEqual(response.status_code, 400)
         # Add more assertions based on expected response
