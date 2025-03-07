@@ -131,11 +131,13 @@ def update_parent_products(
                 name_en = row.get("Bezeichnung_ENG", "")
                 description = row.get("Beschreibung", "")
                 description_en = row.get("Beschreibung_ENG", "")
-                short_description = row.get("Bez_kurz", "")
+                short_description = row.get("Beschreibung_kurz", "")
                 art_gr = row.get("ArtGr", "")
                 
                 # Physical attributes
                 weight = float(row["Gewicht"]) if pd.notna(row.get("Gewicht")) else 0
+                
+                # Extract dimensions for future use (not currently in the model)
                 width = (
                     float(row["Masse_Breite"]) 
                     if pd.notna(row.get("Masse_Breite")) 
@@ -151,6 +153,10 @@ def update_parent_products(
                     if pd.notna(row.get("Masse_Tiefe")) 
                     else None
                 )
+                
+                # Log dimensions for reference
+                if debug and (width is not None or height is not None or depth is not None):
+                    logger.info(f"Product {nummer} dimensions - width: {width}, height: {height}, depth: {depth}")
                 
                 # Boolean flags
                 is_active = True  # Default to active
@@ -187,6 +193,11 @@ def update_parent_products(
                 # Check if parent product exists
                 existing_parent = ParentProduct.objects.filter(
                     Q(sku=nummer) | Q(legacy_id=familie_id)
+                ).only(
+                    'id', 'sku', 'base_sku', 'legacy_id', 'name', 'name_en', 
+                    'description', 'description_en', 'short_description', 
+                    'short_description_en', 'weight', 'is_active', 
+                    'is_hanging', 'is_one_sided', 'category'
                 ).first()
                 
                 # Prepare parent product data
@@ -194,33 +205,22 @@ def update_parent_products(
                     "sku": nummer,
                     "base_sku": nummer,  # For a parent, sku and base_sku are the same
                     "legacy_id": familie_id,
-                    "name": name,
-                    "name_en": name_en,
-                    "description": description,
-                    "description_en": description_en,
-                    "short_description": short_description,
-                    "weight": weight,
-                    "width": width,
-                    "height": height,
-                    "depth": depth,
+                    "name": name or '',
+                    "name_en": name_en or '',
+                    "description": description or 'No description available',
+                    "description_en": description_en or 'No English description available',
+                    "short_description": short_description or 'No short description available',
+                    "short_description_en": short_description or 'No English short description available',
+                    "weight": weight or 0,
                     "is_active": is_active,
                     "is_hanging": is_hanging,
                     "is_one_sided": is_one_sided,
                     "category": category,  # Make sure category is properly set
-                    "is_placeholder": 0,  # Use integer 0 instead of boolean False
                 }
                 
                 if debug:
                     logger.info(f"Parent data: {parent_data}")
                     logger.info(f"Category: {category.code} (ID: {category.id})")
-                
-                # Add dimensions if available
-                if width is not None:
-                    parent_data["width"] = width
-                if height is not None:
-                    parent_data["height"] = height
-                if depth is not None:
-                    parent_data["depth"] = depth
                 
                 # Create or update parent product
                 if existing_parent:
@@ -234,8 +234,21 @@ def update_parent_products(
                     
                     # Update existing parent product
                     if not dry_run:
-                        for key, value in parent_data.items():
-                            setattr(existing_parent, key, value)
+                        # Update fields individually to avoid is_placeholder issues
+                        existing_parent.sku = parent_data.get('sku')
+                        existing_parent.base_sku = parent_data.get('base_sku')
+                        existing_parent.legacy_id = parent_data.get('legacy_id')
+                        existing_parent.name = parent_data.get('name')
+                        existing_parent.name_en = parent_data.get('name_en')
+                        existing_parent.description = parent_data.get('description')
+                        existing_parent.description_en = parent_data.get('description_en')
+                        existing_parent.short_description = parent_data.get('short_description')
+                        existing_parent.short_description_en = parent_data.get('short_description_en')
+                        existing_parent.weight = parent_data.get('weight')
+                        existing_parent.is_active = parent_data.get('is_active')
+                        existing_parent.is_hanging = parent_data.get('is_hanging')
+                        existing_parent.is_one_sided = parent_data.get('is_one_sided')
+                        existing_parent.category = parent_data.get('category')
                         existing_parent.save()
                     
                     logger.info(f"Updated parent product: {nummer}")
@@ -248,7 +261,24 @@ def update_parent_products(
                     # Create new parent product
                     if not dry_run:
                         with transaction.atomic():
-                            parent_product = ParentProduct.objects.create(**parent_data)
+                            # Create parent product without using **parent_data to avoid is_placeholder issues
+                            parent_product = ParentProduct(
+                                sku=parent_data.get('sku'),
+                                base_sku=parent_data.get('base_sku'),
+                                legacy_id=parent_data.get('legacy_id'),
+                                name=parent_data.get('name'),
+                                name_en=parent_data.get('name_en'),
+                                description=parent_data.get('description'),
+                                description_en=parent_data.get('description_en'),
+                                short_description=parent_data.get('short_description'),
+                                short_description_en=parent_data.get('short_description_en'),
+                                weight=parent_data.get('weight'),
+                                is_active=parent_data.get('is_active'),
+                                is_hanging=parent_data.get('is_hanging'),
+                                is_one_sided=parent_data.get('is_one_sided'),
+                                category=parent_data.get('category')
+                            )
+                            parent_product.save()
                             associate_variants(parent_product, familie_id, debug)
                     
                     logger.info(f"Created parent product: {nummer}")
@@ -281,7 +311,7 @@ def associate_variants(parent, familie_id, debug=False):
         debug: If True, print additional debug information
     """
     # Find variants that reference this parent in the legacy system
-    variants = VariantProduct.objects.filter(legacy_parent_id=familie_id)
+    variants = VariantProduct.objects.filter(legacy_id=familie_id)
     
     count = 0
     for variant in variants:
