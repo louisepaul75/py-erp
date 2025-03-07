@@ -14,9 +14,11 @@ from decimal import Decimal
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
 
-from pyerp.products.models import ProductCategory
 from tests.utils.mocks import MockProduct, MockProductCategory
-from pyerp.products.validators import ProductImportValidator, validate_product_model
+from pyerp.products.validators import (
+    ProductImportValidator,
+    validate_product_model,
+)
 
 # Patch translation before importing validators
 with patch("django.utils.translation.gettext_lazy", lambda x: x):
@@ -113,24 +115,47 @@ class TestProductValidation:
     class TestCategoryValidation:
         """Tests for product category validation rules."""
 
-        @pytest.mark.django_db
+        def setup_method(self):
+            """Reset mocks before each test."""
+            MockProductCategory.objects.reset_mock()
+
         def test_validate_category_valid(self, validator):
             """Test validation of a valid category."""
+            # Create a mock category
             category = MockProductCategory(code="CAT1", name="Category 1")
-            MockProductCategory.objects.get.return_value = category
-            value, result = validator.validate_category("CAT1", {})
-            assert value == category
-            assert result.is_valid
+            # Set up the mock to return our category when get() is called
+            with patch(
+                'pyerp.products.validators.ProductCategory',
+                MockProductCategory,
+            ):
+                MockProductCategory.objects.get.return_value = category
+                # Call the validate_category method
+                value, result = validator.validate_category("CAT1", {})
+                # Verify the mock was called correctly
+                MockProductCategory.objects.get.assert_called_once_with(
+                    code="CAT1",
+                )
+                assert value == category
+                assert result.is_valid
 
-        @pytest.mark.django_db
         def test_validate_category_not_found(self, validator):
             """Test validation of a category that doesn't exist."""
-            MockProductCategory.objects.get.side_effect = (
-                MockProductCategory.DoesNotExist
-            )
-            value, result = validator.validate_category("NONEXISTENT", {})
-            assert value == validator.default_category
-            assert result.is_valid
+            # Set up the mock to raise DoesNotExist
+            with patch(
+                'pyerp.products.validators.ProductCategory',
+                MockProductCategory,
+            ):
+                MockProductCategory.objects.get.side_effect = (
+                    MockProductCategory.DoesNotExist()
+                )
+                # Call the validate_category method
+                value, result = validator.validate_category("NONEXISTENT", {})
+                # Verify the mock was called correctly
+                MockProductCategory.objects.get.assert_called_once_with(
+                    code="NONEXISTENT",
+                )
+                assert value == validator.default_category
+                assert result.is_valid
 
 
 class TestProductModelValidation:
@@ -143,11 +168,15 @@ class TestProductModelValidation:
         def patched_validate_product_model(product):
             """Patched version of validate_product_model."""
             if not product.sku or not product.sku.isalnum():
-                raise ValidationError({"sku": ["Invalid SKU format"]})
+                raise ValidationError({
+                    "sku": ["Invalid SKU format"]
+                })
 
             if product.is_parent and product.variant_code:
                 raise ValidationError({
-                    "variant_code": ["Parent products cannot have variant codes"]
+                    "variant_code": [
+                        "Parent products cannot have variant codes"
+                    ]
                 })
 
             if product.list_price and product.cost_price:
@@ -157,7 +186,9 @@ class TestProductModelValidation:
                     })
             return True
 
-        setattr(validators_module, 'validate_product_model', patched_validate_product_model)
+        validators_module.validate_product_model = (
+            patched_validate_product_model
+        )
 
     def teardown_method(self):
         """Restore original function."""
@@ -177,10 +208,30 @@ class TestProductModelValidation:
 
     @pytest.mark.django_db
     def test_validate_product_model_invalid_sku(self):
-        """Test validation with invalid SKU format."""
+        """Test validation of a product with an invalid SKU."""
         product = MockProduct()
-        product.sku = "ABC@123"
+        product.sku = "ABC@123"  # Invalid SKU format
+        product.name = "Test Product"
+        product.is_parent = False
+        product.variant_code = None
 
-        with pytest.raises(ValidationError) as exc:
+        with pytest.raises(ValidationError) as exc_info:
             validate_product_model(product)
-        assert "Invalid SKU format" in str(exc.value)
+
+        error_msg = str(exc_info.value)
+        assert "Invalid SKU format" in error_msg
+
+    def test_validate_product_model_parent_with_variant(self):
+        """Test validation of a parent product with variant code."""
+        product = MockProduct()
+        product.sku = "ABC123"
+        product.name = "Test Product"
+        product.is_parent = True
+        product.variant_code = "V1"
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_product_model(product)
+
+        error_msg = str(exc_info.value)
+        msg = "Parent products cannot have variant codes"
+        assert msg in error_msg

@@ -2,12 +2,6 @@
 
 A modern Django-based ERP system designed to replace a legacy 4D-based ERP, focusing on manufacturing operations with both B2B and B2C sales channels.
 
-[![Lint](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=lint)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml)
-[![Tests](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=tests)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml)
-[![Build](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=build)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml)
-[![Deploy](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/deploy.yml/badge.svg)](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/deploy.yml)
-[![codecov](https://codecov.io/gh/Wilhelm-Schweizer/pyERP/branch/main/graph/badge.svg)](https://codecov.io/gh/Wilhelm-Schweizer/pyERP)
-
 ## Project Overview
 
 pyERP is a monolithic Django application organized into modular Django apps representing key business domains. The system manages:
@@ -17,6 +11,36 @@ pyERP is a monolithic Django application organized into modular Django apps repr
 - Production Management
 - Warehouse/Inventory Management
 - Integration with POS and eCommerce systems
+
+## Build Status
+
+The project uses GitHub Actions for continuous integration and deployment. The status of each workflow is shown by the badges at the top of this README:
+
+- **Lint**: ![Lint](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=lint)
+  - Runs Flake8 for Python syntax and style validation
+  - Performs MyPy static type checking
+  - Ensures code formatting meets project standards
+
+- **Tests**: ![Tests](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=tests)
+  - Executes the full test suite using pytest
+  - Validates functionality across all modules
+  - Generates and uploads test coverage reports
+  - Enforces minimum code coverage threshold of 80%
+
+- **Build**: ![Build](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/build.yml/badge.svg?job=build)
+  - Creates Docker container images
+  - Validates build configuration
+  - Ensures all dependencies are properly resolved
+
+- **Deploy**: ![Deploy](https://github.com/Wilhelm-Schweizer/pyERP/actions/workflows/deploy.yml/badge.svg)
+  - Manages automated deployments to different environments
+  - Validates deployment configurations
+  - Ensures successful application startup
+
+- **Code Coverage**: ![codecov](https://codecov.io/gh/Wilhelm-Schweizer/pyERP/branch/main/graph/badge.svg)
+  - Shows percentage of code covered by tests
+  - Tracks coverage trends over time
+  - Detailed reports available on [Codecov](https://codecov.io/gh/Wilhelm-Schweizer/pyERP)
 
 ## Development Approach
 
