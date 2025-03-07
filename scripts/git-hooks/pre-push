@@ -12,14 +12,48 @@ if [ "$BRANCH" = "prod" ]; then
     echo "Pushing to prod branch, bumping minor version..."
     python -c "
 from pyerp.version import bump_version
+import re
+
+# Bump version in memory
 new_version = bump_version('minor')
-print(f'Bumped to version {new_version}')"
+print(f'Bumped to version {new_version}')
+
+# Update the version file
+version_file = 'pyerp/version.py'
+with open(version_file, 'r') as f:
+    content = f.read()
+
+# Replace the version string in the file
+updated_content = re.sub(r'__version__ = \"[0-9]+\.[0-9]+\.[0-9]+\"', 
+                        f'__version__ = \"{new_version}\"', 
+                        content)
+
+with open(version_file, 'w') as f:
+    f.write(updated_content)
+"
 elif [ "$BRANCH" = "dev" ]; then
     echo "Pushing to dev branch, bumping patch version..."
     python -c "
 from pyerp.version import bump_version
+import re
+
+# Bump version in memory
 new_version = bump_version('patch')
-print(f'Bumped to version {new_version}')"
+print(f'Bumped to version {new_version}')
+
+# Update the version file
+version_file = 'pyerp/version.py'
+with open(version_file, 'r') as f:
+    content = f.read()
+
+# Replace the version string in the file
+updated_content = re.sub(r'__version__ = \"[0-9]+\.[0-9]+\.[0-9]+\"', 
+                        f'__version__ = \"{new_version}\"', 
+                        content)
+
+with open(version_file, 'w') as f:
+    f.write(updated_content)
+"
 fi
 
 # If we bumped the version, stage and commit the change
