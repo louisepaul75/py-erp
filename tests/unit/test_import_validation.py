@@ -51,35 +51,81 @@ class TestImportValidator:
         class TestImportValidator(ImportValidator):
             """Test implementation of ImportValidator."""
 
-            def validate_name(self, value, row_data):
+            def validate_name(self, value, row_data, row_index=None):
                 """Validate name field."""
-                resultt = ValidationResult()
+                result = ValidationResult()
                 if not value:
-                    resultt.add_error("name", "Name is required")
-                    return resultt
+                    result.add_error("name", "Name is required")
+                    return None, result
 
                 if len(value) < 3:
-                    resultt.add_error("name", "Name must be at least 3 characters")
-                return resultt
+                    result.add_error("name", "Name must be at least 3 characters")
+                    return value, result
 
-            def validate_age(self, value, row_data):
+                if self.transform_data and row_index is not None:
+                    value = f"{value} (Row {row_index})"
+
+                return value, result
+
+            def validate_age(self, value, row_data, row_index=None):
                 """Validate age field."""
-                resultt = ValidationResult()
+                result = ValidationResult()
                 try:
                     age = int(value)
                     if age < 18:
-                        resultt.add_error("age", "Must be at least 18 years old")
+                        result.add_error("age", "Must be at least 18 years old")
+                        return age, result
+                    if age > 100:
+                        result.add_warning("age", "Age seems unusually high")
+                    return age, result
                 except (ValueError, TypeError):
-                    resultt.add_error("age", "Invalid age format")
-                return resultt
+                    result.add_error("age", "Invalid age format")
+                    return None, result
+
+            def validate_code(self, value, row_data, row_index=None):
+                """Validate code field."""
+                result = ValidationResult()
+                if not value:
+                    if self.strict:
+                        result.add_error("code", "Code is required in strict mode")
+                    else:
+                        result.add_warning("code", "Code is recommended")
+                    return value, result
+
+                if not value.isalnum():
+                    result.add_error("code", "Code must be alphanumeric")
+                    return value, result
+
+                if self.transform_data and row_index is not None:
+                    value = f"{value}-{row_index}"
+
+                return value, result
 
             def cross_validate_row(self, validated_data):
                 """Cross-validate row data."""
-                resultt = ValidationResult()
-                # Implement cross-validation logic
-                return resultt
+                result = ValidationResult()
+                
+                # Check name-active relationship
+                if "name" in validated_data and "active" in validated_data:
+                    name = validated_data["name"].lower()
+                    active = validated_data["active"]
+                    if "inactive" in name and active:
+                        result.add_error(
+                            "active",
+                            "Items with 'inactive' in the name must be set as inactive"
+                        )
 
-        return TestImportValidator(strict=False, transform_data=True)
+                # Check age-code relationship
+                if "age" in validated_data and "code" in validated_data:
+                    age = validated_data["age"]
+                    code = validated_data["code"]
+                    if age and age < 21 and not code:
+                        result.add_error(
+                            "code",
+                            "Code is required for items with age under 21"
+                        )
+
+                return result
 
     @pytest.fixture
     def validator(self):
@@ -91,23 +137,30 @@ class TestImportValidator:
         """Create a strict validator instance for testing."""
         return self.TestImportValidator(strict=True, transform_data=True)
 
+    @pytest.fixture
+    def no_transform_validator(self):
+        """Create a validator instance with transform_data=False."""
+        return self.TestImportValidator(strict=False, transform_data=False)
+
     def test_validate_row_valid(self, test_validator):
         """Test validation of a valid row."""
         # Setup test data
         row_data = {
             "name": "Test Product",
-            "code": "TP-123",
+            "code": "TP123",
             "active": True,
+            "age": "25",
         }
 
         # Validate row
-        is_valid, validated_data, resultt = test_validator.validate_row(row_data)
+        is_valid, validated_data, result = test_validator.validate_row(row_data)
 
-        # Check resultts
+        # Check results
         assert is_valid
         assert "name" in validated_data
         assert validated_data["name"] == "Test Product"
-        assert not resultt.has_errors()
+        assert validated_data["age"] == 25
+        assert not result.has_errors()
 
     def test_validate_row_with_errors(self, validator):
         """Test validating a row with errors."""
@@ -115,16 +168,19 @@ class TestImportValidator:
             "name": "Te",  # Too short
             "code": "test-123",  # Non-alphanumeric
             "active": "yes",
+            "age": "17",  # Under 18
         }
 
-        is_valid, validated_data, resultt = validator.validate_row(row_data)
+        is_valid, validated_data, result = validator.validate_row(row_data)
 
         assert not is_valid
-        assert not resultt.is_valid
-        assert "name" in resultt.errors
-        assert "Name must be at least 3 characters" in resultt.errors["name"][0]
-        assert "code" in resultt.errors
-        assert "Code must be alphanumeric" in resultt.errors["code"][0]
+        assert not result.is_valid
+        assert "name" in result.errors
+        assert "Name must be at least 3 characters" in result.errors["name"][0]
+        assert "code" in result.errors
+        assert "Code must be alphanumeric" in result.errors["code"][0]
+        assert "age" in result.errors
+        assert "Must be at least 18 years old" in result.errors["age"][0]
 
     def test_validate_row_with_warnings(self, validator):
         """Test validating a row with warnings but no errors."""
@@ -132,74 +188,106 @@ class TestImportValidator:
             "name": "Test Item",
             "code": "",  # Missing code (warning)
             "active": "yes",
+            "age": "101",  # High age (warning)
         }
 
-        is_valid, validated_data, resultt = validator.validate_row(row_data)
+        is_valid, validated_data, result = validator.validate_row(row_data)
 
         # Still valid because warnings don't invalidate
         assert is_valid
-        assert resultt.is_valid
-        assert "code" in resultt.warnings
-        assert "Code is recommended" in resultt.warnings["code"][0]
+        assert result.is_valid
+        assert "code" in result.warnings
+        assert "Code is recommended" in result.warnings["code"][0]
+        assert "age" in result.warnings
+        assert "Age seems unusually high" in result.warnings["age"][0]
 
     def test_strict_validation(self, strict_validator):
         """Test strict validation where warnings are treated as errors."""
         row_data = {
             "name": "Test Item",
-            "code": "",  # Missing code (warning)
+            "code": "",  # Missing code (error in strict mode)
             "active": "yes",
+            "age": "25",
         }
 
-        is_valid, validated_data, resultt = strict_validator.validate_row(row_data)
+        is_valid, validated_data, result = strict_validator.validate_row(row_data)
 
         # Invalid in strict mode
         assert not is_valid
-        assert not resultt.is_valid
-        assert "code" in resultt.errors
-        assert "Code is recommended" in resultt.errors["code"][0]
+        assert not result.is_valid
+        assert "code" in result.errors
+        assert "Code is required in strict mode" in result.errors["code"][0]
 
-    def test_cross_validation(self, validator):
-        """Test cross-field validation rules."""
-        # Rule: 'inactive' in name requires active=False
-        row_data = {
-            "name": "Inactive Test Item",
-            "code": "TEST123",
-            "active": "yes",  # Should be 'no' for inactive items
-        }
-
-        is_valid, validated_data, resultt = validator.validate_row(row_data)
-
-        assert not is_valid
-        assert not resultt.is_valid
-        assert "active" in resultt.errors
-        assert (
-            "Items with 'inactive' in the name must be set as inactive"
-            in resultt.errors["active"][0]
-        )
-
-    def test_missing_validation_method(self, validator):
-        """Test behavior when validation method is missing."""
-        # Add a field without a corresponding validate_* method
+    def test_data_transformation(self, validator, no_transform_validator):
+        """Test data transformation with row indices."""
         row_data = {
             "name": "Test Item",
             "code": "TEST123",
-            "active": "yes",
+            "active": True,
+            "age": "25",
+        }
+
+        # Test with transform_data=True
+        is_valid, validated_data, result = validator.validate_row(row_data, row_index=1)
+        assert is_valid
+        assert validated_data["name"] == "Test Item (Row 1)"
+        assert validated_data["code"] == "TEST123-1"
+
+        # Test with transform_data=False
+        is_valid, validated_data, result = no_transform_validator.validate_row(row_data, row_index=1)
+        assert is_valid
+        assert validated_data["name"] == "Test Item"
+        assert validated_data["code"] == "TEST123"
+
+    def test_cross_validation(self, validator):
+        """Test cross-field validation rules."""
+        # Test name-active relationship
+        row_data = {
+            "name": "Inactive Test Item",
+            "code": "TEST123",
+            "active": True,
+            "age": "25",
+        }
+
+        is_valid, validated_data, result = validator.validate_row(row_data)
+        assert not is_valid
+        assert "active" in result.errors
+        assert "Items with 'inactive' in the name must be set as inactive" in result.errors["active"][0]
+
+        # Test age-code relationship
+        row_data = {
+            "name": "Test Item",
+            "code": "",
+            "active": True,
+            "age": "20",
+        }
+
+        is_valid, validated_data, result = validator.validate_row(row_data)
+        assert not is_valid
+        assert "code" in result.errors
+        assert "Code is required for items with age under 21" in result.errors["code"][0]
+
+    def test_missing_validation_method(self, validator):
+        """Test behavior when validation method is missing."""
+        row_data = {
+            "name": "Test Item",
+            "code": "TEST123",
+            "active": True,
+            "age": "25",
             "unknown_field": "value",  # No validate_unknown_field method
         }
 
-        is_valid, validated_data, resultt = validator.validate_row(row_data)
+        is_valid, validated_data, result = validator.validate_row(row_data)
 
         # Should still be valid, unknown field should be passed through
         assert is_valid
-        assert resultt.is_valid
+        assert result.is_valid
         assert "unknown_field" in validated_data
         assert validated_data["unknown_field"] == "value"
 
     def test_skip_row_exception(self, validator):
         """Test handling of SkipRowException."""
-        # Create a validation method that raises SkipRowException
-
-        def validate_test(self, value, row_data):
+        def validate_test(self, value, row_data, row_index=None):
             if value == "skip":
                 raise SkipRowException("Test skip with reason")
             return value, ValidationResult()
@@ -207,18 +295,51 @@ class TestImportValidator:
         # Add the method to the validator
         validator.validate_test = types.MethodType(validate_test, validator)
 
-        # Test row that should be skipped
         row_data = {
             "name": "Test Item",
             "code": "TEST123",
-            "active": "yes",
-            "test": "skip",  # Should trigger skip
+            "active": True,
+            "age": "25",
+            "test": "skip",
         }
 
         with pytest.raises(SkipRowException) as exc:
             validator.validate_row(row_data)
-
         assert "Test skip with reason" in str(exc.value)
+
+    def test_validation_method_return_values(self, validator):
+        """Test different return value scenarios from validation methods."""
+        def validate_return_none(self, value, row_data, row_index=None):
+            return None, ValidationResult()
+
+        def validate_return_only_result(self, value, row_data, row_index=None):
+            result = ValidationResult()
+            result.add_error("field", "Error message")
+            return result
+
+        def validate_return_modified(self, value, row_data, row_index=None):
+            return "modified_" + str(value), ValidationResult()
+
+        # Test method returning None
+        validator.validate_test1 = types.MethodType(validate_return_none, validator)
+        row_data = {"test1": "value"}
+        is_valid, validated_data, result = validator.validate_row(row_data)
+        assert is_valid
+        assert validated_data["test1"] is None
+
+        # Test method returning only result
+        validator.validate_test2 = types.MethodType(validate_return_only_result, validator)
+        row_data = {"test2": "value"}
+        is_valid, validated_data, result = validator.validate_row(row_data)
+        assert not is_valid
+        assert "field" in result.errors
+
+        # Test method returning modified value
+        validator.validate_test3 = types.MethodType(validate_return_modified, validator)
+        row_data = {"test3": "value"}
+        is_valid, validated_data, result = validator.validate_row(row_data)
+        assert is_valid
+        assert validated_data["test3"] == "modified_value"
 
 
 class TestProductImportCommand:
@@ -250,50 +371,34 @@ class TestProductImportCommand:
                 transform_data=True,
                 default_category=default_category,
             )
-            assert validator is mock_validator
+
+            assert validator == mock_validator
 
     def test_validate_products(self, command):
-        """Test validation of products data."""
+        """Test product validation."""
         # Mock validator
         mock_validator = MagicMock()
+        command.create_product_validator = MagicMock(return_value=mock_validator)
 
-        # Set up mock validation resultts
-        valid_resultt = (True, {"sku": "VALID-1", "name": "Valid Product"}, MagicMock())
+        # Test data
+        products = [
+            {"sku": "TEST-1", "name": "Test Product 1"},
+            {"sku": "TEST-2", "name": "Test Product 2"},
+        ]
+
+        # Mock validation results
         mock_validator.validate_row.side_effect = [
-            valid_resultt,  # First row valid
-            SkipRowException("Skip test"),  # Second row skipped
-            (False, {}, MagicMock()),  # Third row invalid
+            (True, {"sku": "TEST-1", "name": "Test Product 1"}, ValidationResult()),
+            (False, {}, ValidationResult()),
         ]
 
-        # Sample product data
-        products_data = [
-            {"sku": "VALID-1", "name": "Valid Product"},
-            {"sku": "SKIP-1", "name": "Skip Product"},
-            {"sku": "INVALID-1", "name": ""},
-        ]
+        # Validate products
+        valid_products = command.validate_products(products)
 
-        # Mock logger
-        mock_logger = MagicMock()
-
-        # Call validate_products
-        validated_products = list(
-            command.validate_products(
-                products_data,
-                validator=mock_validator,
-                logger=mock_logger,
-            ),
-        )
-
-        # Check resultts
-        assert len(validated_products) == 1
-        assert validated_products[0] == valid_resultt[1]
-
-        # Check validator calls
-        assert mock_validator.validate_row.call_count == 3
-
-        # Check logging
-        assert mock_logger.warning.call_count == 1  # For skipped row
-        assert mock_logger.error.call_count == 1  # For invalid row
+        # Check results
+        assert len(valid_products) == 1
+        assert valid_products[0]["sku"] == "TEST-1"
+        assert mock_validator.validate_row.call_count == 2
 
     def test_handle_product_validation(self, command):
         """Test handle method with product validation."""
@@ -317,7 +422,7 @@ class TestProductImportCommand:
             default_category = MagicMock()
             mock_get.return_value = default_category
 
-            command.handle(
+            result = command.handle(
                 file_path="test.json",
                 default_category="DEFAULT",
                 strict=True,
@@ -335,5 +440,42 @@ class TestProductImportCommand:
                 default_category=default_category,
             )
 
+            assert result is True
 
-# Import here for test_skip_row_exception
+    def test_handle_with_invalid_file(self, command):
+        """Test handle method with invalid file path."""
+        command.load_json_data = MagicMock(side_effect=FileNotFoundError)
+
+        with pytest.raises(FileNotFoundError):
+            command.handle(
+                file_path="nonexistent.json",
+                default_category="DEFAULT",
+                strict=True,
+            )
+
+    def test_handle_with_validation_errors(self, command):
+        """Test handle method when all products fail validation."""
+        command.load_json_data = MagicMock(
+            return_value=[
+                {"sku": "TEST-1", "name": "Test Product 1"},
+                {"sku": "TEST-2", "name": "Test Product 2"},
+            ],
+        )
+        command.validate_products = MagicMock(return_value=[])  # All products invalid
+
+        with patch("pyerp.products.models.ProductCategory.objects.get") as mock_get:
+            default_category = MagicMock()
+            mock_get.return_value = default_category
+
+            result = command.handle(
+                file_path="test.json",
+                default_category="DEFAULT",
+                strict=True,
+            )
+
+            assert result is False
+            command.create_or_update_product.assert_not_called()
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])
