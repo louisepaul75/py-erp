@@ -118,6 +118,7 @@ django-err.log*
 
 # Test database
 test_db.sqlite3
+*.sqlite3
 
 # Session cookies
 pyerp/direct_api/.global_session_cookie

@@ -142,6 +142,11 @@ export const productApi = {
     return api.get(`/api/products/${id}/`);
   },
 
+  // Update product by ID
+  updateProduct: async (id: number, data: any) => {
+    return api.patch(`/api/products/${id}/`, data);
+  },
+
   // Get product variant details
   getVariant: async (id: number) => {
     return api.get(`/api/products/variant/${id}/`);

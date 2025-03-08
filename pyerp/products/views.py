@@ -318,6 +318,8 @@ class ProductAPIView(APIView):
                 "description": getattr(product, "description", ""),
                 "list_price": float(product.list_price) if product.list_price else None,
                 "stock_quantity": product.stock_quantity,
+                "is_hanging": getattr(product, "is_hanging", False),
+                "is_one_sided": getattr(product, "is_one_sided", False),
             }
 
             # Initialize images as empty to avoid undefined
@@ -553,6 +555,31 @@ class ProductDetailAPIView(ProductAPIView):
 
         # Return JSON response
         return Response(product_data)
+
+    def patch(self, request, pk=None, slug=None):
+        """Handle PATCH request for product update"""
+        if pk:
+            product = get_object_or_404(ParentProduct, pk=pk)
+        elif slug:
+            product = get_object_or_404(ParentProduct, slug=slug)
+        else:
+            return Response({"error": "Product not found"}, status=404)
+
+        # Update fields
+        if "name" in request.data:
+            product.name = request.data["name"]
+        if "description" in request.data:
+            product.description = request.data["description"]
+        if "is_hanging" in request.data:
+            product.is_hanging = request.data["is_hanging"]
+        if "is_one_sided" in request.data:
+            product.is_one_sided = request.data["is_one_sided"]
+
+        # Save changes
+        product.save()
+
+        # Return updated product data
+        return Response(self.get_product_data(product))
 
 
 class VariantDetailAPIView(ProductAPIView):
