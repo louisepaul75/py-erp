@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import axios from 'axios';
+import api from '@/services/api';
 
 // Get current year for copyright
 const currentYear = computed(() => new Date().getFullYear());
@@ -71,7 +71,7 @@ const healthStatusClass = computed(() => {
 // Fetch version and health status
 const fetchHealthStatus = async () => {
   try {
-    const response = await axios.get('/api/monitoring/health-checks/', {
+    const response = await api.get('/monitoring/health-checks/', {
       timeout: 5000
     });
     

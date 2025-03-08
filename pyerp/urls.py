@@ -78,7 +78,7 @@ urlpatterns = [
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
     ),
     # Add products API URLs directly
-    path("api/products/", include("pyerp.products.api_urls")),
+    path("api/products/", include("pyerp.business_modules.products.api_urls")),
 ]
 
 # Add API documentation URLs if available

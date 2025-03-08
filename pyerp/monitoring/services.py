@@ -20,12 +20,18 @@ from django.utils import timezone
 
 from pyerp.monitoring.models import HealthCheckResult
 
-# Import the API clients we'll check
+# Import the API clients from the new structure
 try:
-    from pyerp.products.image_api import ImageAPIClient
-    PICTURES_API_AVAILABLE = True
+    from pyerp.external_api.images_cms import ImageAPIClient
+    IMAGES_CMS_AVAILABLE = True
 except ImportError:
-    PICTURES_API_AVAILABLE = False
+    IMAGES_CMS_AVAILABLE = False
+
+try:
+    from pyerp.external_api.legacy_erp import LegacyERPClient
+    LEGACY_ERP_AVAILABLE = True
+except ImportError:
+    LEGACY_ERP_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -102,9 +108,27 @@ def check_legacy_erp_connection():
     status = HealthCheckResult.STATUS_ERROR
     details = "Legacy ERP API connection is not available"
 
-    # Since we know Legacy ERP is not available, we don't need to attempt connection
-    logger.error("Legacy ERP health check: Connection not available")
+    if not LEGACY_ERP_AVAILABLE:
+        status = HealthCheckResult.STATUS_WARNING
+        details = "Legacy ERP API module is not available"
+        logger.warning(
+            "Legacy ERP health check: Module not available",
+        )
+    else:
+        try:
+            # Create client and check connection
+            client = LegacyERPClient()
+            client.check_connection()
+            status = HealthCheckResult.STATUS_SUCCESS
+            details = "Legacy ERP API connection is healthy"
+        except Exception as e:
+            status = HealthCheckResult.STATUS_ERROR
+            details = f"Legacy ERP API error: {e!s}"
+            logger.error(
+                f"Legacy ERP health check failed: {e!s}",
+            )
 
+    # Convert to milliseconds
     response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
@@ -117,42 +141,51 @@ def check_legacy_erp_connection():
     }
 
 
-def check_pictures_api_connection():
+def check_images_cms_connection():
     """
-    Check if the connection to the pictures API is working properly.
+    Check if the connection to the images CMS API is working properly.
 
     Returns:
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
     status = HealthCheckResult.STATUS_SUCCESS
-    details = "Pictures API connection is healthy."
+    details = "Images CMS API connection is healthy"
 
-    if not PICTURES_API_AVAILABLE:
+    if not IMAGES_CMS_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
-        details = "Pictures API module is not available."
+        details = "Images CMS API module is not available"
         response_time = 0
+        logger.warning(
+            "Images CMS health check: Module not available",
+        )
     else:
         try:
             # Log the API URL being used for debugging
+            api_url = settings.IMAGES_CMS_API.get('BASE_URL')
             logger.debug(
-                f"Pictures API URL from settings: {settings.IMAGE_API.get('BASE_URL')}",
+                f"Images CMS API URL from settings: {api_url}",
             )
 
             # Create client and check connection
             client = ImageAPIClient()
             client.check_connection()
+            status = HealthCheckResult.STATUS_SUCCESS
+            details = "Images CMS API connection is healthy"
 
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
-            details = f"Pictures API error: {e!s}"
-            logger.error(f"Pictures API health check failed: {e!s}")
+            details = f"Images CMS API error: {e!s}"
+            logger.error(
+                f"Images CMS API health check failed: {e!s}",
+            )
 
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+    # Convert to milliseconds
+    response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
     return {
-        "component": HealthCheckResult.COMPONENT_PICTURES_API,
+        "component": HealthCheckResult.COMPONENT_IMAGES_CMS,
         "status": status,
         "details": details,
         "response_time": response_time,
@@ -403,7 +436,7 @@ def run_all_health_checks(as_array=True):
     health_checks = {
         HealthCheckResult.COMPONENT_DATABASE: check_database_connection,
         HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection,
-        HealthCheckResult.COMPONENT_PICTURES_API: check_pictures_api_connection,
+        HealthCheckResult.COMPONENT_IMAGES_CMS: check_images_cms_connection,
     }
 
     results = {}

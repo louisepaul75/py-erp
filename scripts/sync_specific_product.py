@@ -21,8 +21,9 @@ django.setup()
 
 # Import the necessary models and the ImageAPIClient
 from django.db import transaction
+from django.core.management.base import BaseCommand
 
-from pyerp.products.image_api import ImageAPIClient
+from pyerp.external_api.images_cms.client import ImageAPIClient
 from pyerp.products.models import ProductImage, VariantProduct
 
 

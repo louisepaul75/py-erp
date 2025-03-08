@@ -48,14 +48,13 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "pyerp.core",
-    "pyerp.products",
-    "pyerp.sales",
-    "pyerp.inventory",
-    "pyerp.production",
-    "pyerp.legacy_sync",
-    "pyerp.direct_api",
+    "pyerp.business_modules.products",
+    "pyerp.business_modules.sales",
+    "pyerp.business_modules.inventory",
+    "pyerp.business_modules.production",
     "pyerp.monitoring",
     "pyerp.sync",
+    "pyerp.external_api",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -314,7 +313,7 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
-        "pyerp.legacy_sync": {
+        "pyerp.sync": {
             "handlers": ["console", "data_sync_file"],
             "level": LOG_LEVEL,
             "propagate": False,
@@ -324,7 +323,7 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-        "pyerp.products.image_api": {
+        "pyerp.external_api.images_cms": {
             "handlers": ["console", "data_sync_file"],
             "level": LOG_LEVEL,
             "propagate": False,
@@ -348,7 +347,7 @@ IMAGE_API = {
 }
 
 # Update loggers for image API
-LOGGING["loggers"]["pyerp.products.image_api"] = {
+LOGGING["loggers"]["pyerp.external_api.images_cms"] = {
     "handlers": ["console", "data_sync_file"],
     "level": LOG_LEVEL,
     "propagate": False,

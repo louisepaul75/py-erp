@@ -5,14 +5,14 @@ Script to check for articles in the API response.
 
 import json
 import os
-
+import sys
 import django
 
 # Set up Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
 django.setup()
 
-from pyerp.products.image_api import ImageAPIClient
+from pyerp.external_api.images_cms.client import ImageAPIClient
 
 
 def main():
