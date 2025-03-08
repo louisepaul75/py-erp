@@ -22,19 +22,7 @@ from pyerp.monitoring.models import HealthCheckResult
 
 # Import the API clients we'll check
 try:
-    from pyerp.direct_api.exceptions import (
-        DirectAPIError,
-        ServerUnavailableError,
-    )
-    from pyerp.direct_api.scripts.getTable import SimpleAPIClient
-
-    LEGACY_API_AVAILABLE = True
-except ImportError:
-    LEGACY_API_AVAILABLE = False
-
-try:
     from pyerp.products.image_api import ImageAPIClient
-
     PICTURES_API_AVAILABLE = True
 except ImportError:
     PICTURES_API_AVAILABLE = False
@@ -45,7 +33,7 @@ logger = logging.getLogger(__name__)
 HEALTH_CHECK_TIMEOUT = 120  # Increased to 2 minutes
 
 # Maximum time to wait for individual component checks
-COMPONENT_CHECK_TIMEOUT = 60  # Individual components get 1 minute
+COMPONENT_CHECK_TIMEOUT = 60
 
 
 def check_database_connection():
@@ -56,14 +44,29 @@ def check_database_connection():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_SUCCESS
-    details = "Database connection is healthy."
+    # Default to error since we're using SQLite fallback
+    status = HealthCheckResult.STATUS_ERROR
+    details = (
+        "Using SQLite fallback - primary database connection is not available"
+    )
 
     try:
-        connections["default"].ensure_connection()
-        with connections["default"].cursor() as cursor:
-            cursor.execute("SELECT 1")
-            cursor.fetchone()
+        db_engine = connections["default"].vendor
+        if db_engine == "sqlite":
+            # We're using SQLite fallback, which means primary DB is not available
+            status = HealthCheckResult.STATUS_ERROR
+            details = (
+                "Using SQLite fallback - primary database connection is not available"
+            )
+            logger.error("Database health check: Using SQLite fallback")
+        else:
+            # Check the actual database connection
+            connections["default"].ensure_connection()
+            with connections["default"].cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+            status = HealthCheckResult.STATUS_SUCCESS
+            details = "Database connection is healthy."
     except OperationalError as e:
         status = HealthCheckResult.STATUS_ERROR
         details = f"Failed to connect to database: {e!s}"
@@ -96,45 +99,13 @@ def check_legacy_erp_connection():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_SUCCESS
-    details = "Legacy ERP connection is healthy."
+    status = HealthCheckResult.STATUS_ERROR
+    details = "Legacy ERP API connection is not available"
 
-    if not LEGACY_API_AVAILABLE:
-        status = HealthCheckResult.STATUS_WARNING
-        details = "Legacy ERP API module is not available."
-        response_time = 0
-    else:
-        try:
-            # Use SimpleAPIClient instead of DirectAPIClient
-            client = SimpleAPIClient()
+    # Since we know Legacy ERP is not available, we don't need to attempt connection
+    logger.error("Legacy ERP health check: Connection not available")
 
-            # Use validate_session instead of _make_request to $info endpoint
-            session_valid = client.validate_session()
-
-            if not session_valid:
-                status = HealthCheckResult.STATUS_WARNING
-                details = "Legacy ERP API session validation failed."
-                logger.warning(
-                    "Legacy ERP health check warning: Failed to validate session"
-                )
-
-        except ServerUnavailableError as e:
-            status = HealthCheckResult.STATUS_ERROR
-            details = f"Legacy ERP server is unavailable: {e!s}"
-            msg = "Legacy ERP health check failed - server unavailable: "
-            logger.error(f"{msg}{e!s}")
-        except DirectAPIError as e:
-            status = HealthCheckResult.STATUS_ERROR
-            details = f"Legacy ERP API error: {e!s}"
-            msg = "Legacy ERP health check failed: "
-            logger.error(f"{msg}{e!s}")
-        except Exception as e:
-            status = HealthCheckResult.STATUS_ERROR
-            details = f"Unexpected error during Legacy ERP check: {e!s}"
-            msg = "Legacy ERP health check failed with unexpected error: "
-            logger.error(f"{msg}{e!s}")
-
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+    response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
     return {
