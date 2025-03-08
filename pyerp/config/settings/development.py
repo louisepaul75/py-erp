@@ -5,12 +5,15 @@ These settings extend the base settings with development-specific configurations
 """
 
 import os
+import sys
 from datetime import timedelta
+from pathlib import Path
 
 import dj_database_url  # noqa: F401
+import psycopg2
 
 from .base import *  # noqa
-from .base import SIMPLE_JWT
+from .base import BASE_DIR, SIMPLE_JWT
 
 # Import HTTPS settings
 try:
@@ -27,23 +30,54 @@ ALLOWED_HOSTS = os.environ.get(
     "localhost,127.0.0.1",
 ).split(",")
 
-# Database configuration
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "pyerp_testing"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-        "OPTIONS": {
-            "connect_timeout": 10,  # Connection timeout in seconds
-            "client_encoding": "UTF8",
-            "sslmode": "prefer",
-            "gssencmode": "disable",  # Disable GSSAPI/Kerberos encryption
-        },
-    }
+# Database configuration with SQLite fallback
+# Define PostgreSQL connection parameters
+PG_PARAMS = {
+    "ENGINE": "django.db.backends.postgresql",
+    "NAME": os.environ.get("DB_NAME", "pyerp_testing"),
+    "USER": os.environ.get("DB_USER", "postgres"),
+    "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+    "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
+    "PORT": os.environ.get("DB_PORT", "5432"),
+    "OPTIONS": {
+        "connect_timeout": 10,  # Connection timeout in seconds
+        "client_encoding": "UTF8",
+        "sslmode": "prefer",
+        "gssencmode": "disable",  # Disable GSSAPI/Kerberos encryption
+    },
 }
+
+# Define SQLite connection parameters as fallback
+SQLITE_PARAMS = {
+    "ENGINE": "django.db.backends.sqlite3",
+    "NAME": os.path.join(BASE_DIR, "development_db.sqlite3"),
+}
+
+# Try to connect to PostgreSQL, use SQLite if it fails
+try:
+    sys.stderr.write(
+        "Attempting to connect to PostgreSQL at "
+        f"{PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n",
+    )
+
+    conn = psycopg2.connect(
+        dbname=PG_PARAMS["NAME"],
+        user=PG_PARAMS["USER"],
+        password=PG_PARAMS["PASSWORD"],
+        host=PG_PARAMS["HOST"],
+        port=PG_PARAMS["PORT"],
+        connect_timeout=5,
+    )
+    conn.close()
+    DATABASES = {"default": PG_PARAMS}
+    sys.stderr.write(
+        "SUCCESS: Using PostgreSQL database at "
+        f"{PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n",
+    )
+except (OSError, psycopg2.OperationalError) as e:
+    sys.stderr.write(f"ERROR: Could not connect to PostgreSQL: {e!s}\n")
+    sys.stderr.write("FALLBACK: Using SQLite for development\n")
+    DATABASES = {"default": SQLITE_PARAMS}
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = (
