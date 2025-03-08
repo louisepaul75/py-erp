@@ -40,7 +40,7 @@ console.log('Is localhost:', window.location.hostname === 'localhost' ||
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: apiBaseUrl + '/api',  // Add /api prefix to all requests
   headers: {
     'Content-Type': 'application/json',
   },
@@ -56,9 +56,9 @@ api.interceptors.request.use(
       config.headers['X-CSRFToken'] = csrfToken;
     }
 
-    // Add JWT token if available
+    // Only add Authorization header for authenticated endpoints
     const token = localStorage.getItem('access_token');
-    if (token) {
+    if (token && !config.url?.includes('token/')) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -86,7 +86,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await api.post('/api/token/refresh/', {
+        const response = await api.post('/token/refresh/', {
           refresh: refreshToken
         });
 
@@ -134,22 +134,22 @@ export const productApi = {
       params.include_variants = params._ude_variants;
       delete params._ude_variants;
     }
-    return api.get('/api/products/', { params });
+    return api.get('/products/', { params });
   },
 
   // Get product details by ID
   getProduct: async (id: number) => {
-    return api.get(`/api/products/${id}/`);
+    return api.get(`/products/${id}/`);
   },
 
   // Get product variant details
   getVariant: async (id: number) => {
-    return api.get(`/api/products/variant/${id}/`);
+    return api.get(`/products/variant/${id}/`);
   },
 
   // Get all product categories
   getCategories: async () => {
-    return api.get('/api/products/categories/');
+    return api.get('/products/categories/');
   }
 };
 
@@ -157,32 +157,32 @@ export const productApi = {
 export const salesApi = {
   // Get all sales orders with optional filters
   getSalesOrders: async (params = {}) => {
-    return api.get('/api/sales/orders/', { params });
+    return api.get('/sales/orders/', { params });
   },
 
   // Get sales order details by ID
   getSalesOrder: async (id: number) => {
-    return api.get(`/api/sales/orders/${id}/`);
+    return api.get(`/sales/orders/${id}/`);
   },
 
   // Create a new sales order
   createSalesOrder: async (data: any) => {
-    return api.post('/api/sales/orders/', data);
+    return api.post('/sales/orders/', data);
   },
 
   // Update an existing sales order
   updateSalesOrder: async (id: number, data: any) => {
-    return api.put(`/api/sales/orders/${id}/`, data);
+    return api.put(`/sales/orders/${id}/`, data);
   },
 
   // Delete a sales order
   deleteSalesOrder: async (id: number) => {
-    return api.delete(`/api/sales/orders/${id}/`);
+    return api.delete(`/sales/orders/${id}/`);
   },
 
   // Get all customers
   getCustomers: async (params = {}) => {
-    return api.get('/api/sales/customers/', { params });
+    return api.get('/sales/customers/', { params });
   }
 };
 

@@ -17,30 +17,35 @@ echo "PYERP_ENV set to: $PYERP_ENV"
 # Create log directories
 mkdir -p /app/logs
 
-# Check PostgreSQL connection but don't wait indefinitely
-echo "Checking PostgreSQL connection..."
-export PGPASSWORD="${DB_PASSWORD:-postgres}"
+# Check if PostgreSQL environment variables are set
+if [ -n "${DB_HOST:-}" ] && [ -n "${DB_USER:-}" ]; then
+    echo "PostgreSQL environment variables found, checking connection..."
+    export PGPASSWORD="${DB_PASSWORD:-postgres}"
 
-# Try to connect to PostgreSQL but don't fail if unavailable
-MAX_TRIES=3
-CURRENT_TRY=0
-PG_AVAILABLE=false
+    # Try to connect to PostgreSQL but don't fail if unavailable
+    MAX_TRIES=3
+    CURRENT_TRY=0
+    PG_AVAILABLE=false
 
-while [ $CURRENT_TRY -lt $MAX_TRIES ]; do
-  if pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" > /dev/null 2>&1; then
-    PG_AVAILABLE=true
-    echo >&2 "PostgreSQL is up - continuing..."
-    break
-  else
-    CURRENT_TRY=$((CURRENT_TRY+1))
-    echo >&2 "PostgreSQL is unavailable (attempt $CURRENT_TRY of $MAX_TRIES)"
-    if [ $CURRENT_TRY -eq $MAX_TRIES ]; then
-      echo >&2 "PostgreSQL unavailable after $MAX_TRIES attempts - will use SQLite fallback"
-    else
-      sleep 1
-    fi
-  fi
-done
+    while [ $CURRENT_TRY -lt $MAX_TRIES ]; do
+        if pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" > /dev/null 2>&1; then
+            PG_AVAILABLE=true
+            echo >&2 "PostgreSQL is up - continuing..."
+            break
+        else
+            CURRENT_TRY=$((CURRENT_TRY+1))
+            echo >&2 "PostgreSQL is unavailable (attempt $CURRENT_TRY of $MAX_TRIES)"
+            if [ $CURRENT_TRY -eq $MAX_TRIES ]; then
+                echo >&2 "PostgreSQL unavailable after $MAX_TRIES attempts - will use SQLite fallback"
+            else
+                sleep 1
+            fi
+        fi
+    done
+else
+    echo "No PostgreSQL environment variables found - will use SQLite"
+    PG_AVAILABLE=false
+fi
 
 # Create and ensure all required directories exist with proper permissions
 mkdir -p /app/media /app/static /app/data /app/pyerp/static
