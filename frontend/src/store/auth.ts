@@ -35,6 +35,15 @@ export const useAuthStore = defineStore('auth', {
     async init() {
       this.isLoading = true;
       try {
+        // Check if we have both tokens before attempting any auth operations
+        const accessToken = localStorage.getItem('access_token');
+        const refreshToken = localStorage.getItem('refresh_token');
+        
+        if (!accessToken && !refreshToken) {
+          // No tokens available, just return without attempting refresh
+          return;
+        }
+
         // Check if we have a token and it's not expired
         if (authService.isAuthenticated()) {
           // Try to get the current user with the existing token
@@ -42,35 +51,32 @@ export const useAuthStore = defineStore('auth', {
           if (user) {
             this.user = user;
             this.isAuthenticated = true;
-          } else {
+          } else if (refreshToken) {
             // If we couldn't get the user but have a refresh token, try to refresh
-            const refreshToken = localStorage.getItem('refresh_token');
-            if (refreshToken) {
-              try {
-                const response = await api.post('/api/token/refresh/', {
-                  refresh: refreshToken
-                });
-                
-                // Store the new access token
-                localStorage.setItem('access_token', response.data.access);
-                api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-                
-                // Try to get user again with new token
-                const userAfterRefresh = await authService.getCurrentUser();
-                if (userAfterRefresh) {
-                  this.user = userAfterRefresh;
-                  this.isAuthenticated = true;
-                } else {
-                  this.logout();
-                }
-              } catch (refreshError) {
-                // If refresh fails, clear the auth state
+            try {
+              const response = await api.post('/token/refresh/', {
+                refresh: refreshToken
+              });
+              
+              // Store the new access token
+              localStorage.setItem('access_token', response.data.access);
+              api.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+              
+              // Try to get user again with new token
+              const userAfterRefresh = await authService.getCurrentUser();
+              if (userAfterRefresh) {
+                this.user = userAfterRefresh;
+                this.isAuthenticated = true;
+              } else {
                 this.logout();
               }
-            } else {
-              // No refresh token available, clear the auth state
+            } catch (refreshError) {
+              // If refresh fails, clear the auth state
               this.logout();
             }
+          } else {
+            // No refresh token available, clear the auth state
+            this.logout();
           }
         }
       } catch (error) {

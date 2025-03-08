@@ -10,10 +10,10 @@
           <p class="text-body-2 text-medium-emphasis mb-0">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
         </v-col>
         <v-col cols="12" md="6" class="text-md-end d-flex justify-end align-center">
-          <router-link to="/Health" class="health-status mr-3" :title="healthStatusText">
+          <p class="text-body-2 text-medium-emphasis mb-0 mr-3">Version {{ appVersion }}</p>
+          <router-link to="/Health" class="health-status" :title="healthStatusText">
             <span class="status-dot" :class="healthStatusClass"></span>
           </router-link>
-          <p class="text-body-2 text-medium-emphasis mb-0">Version {{ appVersion }}</p>
         </v-col>
       </v-row>
     </v-container>
@@ -71,11 +71,29 @@ const healthStatusClass = computed(() => {
 // Fetch version and health status
 const fetchHealthStatus = async () => {
   try {
-    const response = await axios.get('/api/health/', {
+    const response = await axios.get('/api/monitoring/health-checks/', {
       timeout: 5000
     });
-    appVersion.value = response.data.version || 'unknown';
-    healthStatus.value = response.data.status === 'healthy' ? 'success' : response.data.status;
+    
+    if (response.data && response.data.success) {
+      // Get version from first result that has it
+      const firstResult = response.data.results[0] as HealthCheckResult;
+      appVersion.value = firstResult?.version || 'unknown';
+
+      // Determine overall status from all components
+      const statuses = response.data.results.map((result: HealthCheckResult) => result.status);
+      if (statuses.includes('error')) {
+        healthStatus.value = 'error';
+      } else if (statuses.includes('warning')) {
+        healthStatus.value = 'warning';
+      } else if (statuses.every((status: string) => status === 'success')) {
+        healthStatus.value = 'success';
+      } else {
+        healthStatus.value = 'unknown';
+      }
+    } else {
+      throw new Error('Invalid response format');
+    }
   } catch (error) {
     console.error('Failed to fetch health status:', error);
     healthStatus.value = 'error';
@@ -100,6 +118,8 @@ interface HealthCheckResult {
   details?: string;
   response_time?: number;
   timestamp?: string;
+  version?: string;
+  component?: string;
 }
 
 interface DetailedHealthResponse {
@@ -129,6 +149,8 @@ onUnmounted(() => {
 
 .health-status {
   text-decoration: none;
+  display: flex;
+  align-items: center;
 }
 
 .status-dot {
