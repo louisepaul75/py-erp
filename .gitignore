@@ -91,7 +91,7 @@ ENV/
 
 # pip-tools
 pip-wheel-metadata/
-
+*venv*
 # Python installers
 python-*.exe
 

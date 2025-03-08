@@ -1,15 +1,10 @@
-"""
-Tests for the auth.py module.
-
-This module tests the Session and SessionPool classes, ensuring that
-authentication and session management work correctly.
-"""
-
-import datetime
-from unittest.mock import MagicMock, call, patch
-
+"""Tests for authentication module."""
+from datetime import datetime
+from unittest.mock import MagicMock, patch, call
 import requests
-from django.test import TestCase
+from urllib.parse import urljoin
+
+from django.test import TestCase, override_settings
 
 from pyerp.direct_api.auth import (
     Session,
@@ -17,19 +12,33 @@ from pyerp.direct_api.auth import (
     get_session,
     get_session_cookie,
 )
-from pyerp.direct_api.exceptions import (
-    AuthenticationError,
-    ConnectionError,
-    ResponseError,
-)
+from pyerp.direct_api.exceptions import AuthenticationError, ConnectionError
 from pyerp.direct_api.settings import (
     API_SESSION_EXPIRY,
     API_SESSION_REFRESH_MARGIN,
+    API_MAX_RETRIES,
+    API_REQUEST_TIMEOUT,
+    API_INFO_ENDPOINT,
 )
 
 
+TEST_API_ENVIRONMENTS = {
+    "test": {
+        "base_url": "http://192.168.73.26:8090",
+        "username": "test",
+        "password": "test",
+    },
+    "live": {
+        "base_url": "http://192.168.73.26:8090",
+        "username": "live",
+        "password": "live",
+    },
+}
+
+
+@override_settings(LEGACY_API_ENVIRONMENTS=TEST_API_ENVIRONMENTS)
 class TestSession(TestCase):
-    """Tests for the Session class."""
+    """Test cases for Session class."""
 
     def setUp(self):
         """Set up test environment."""
@@ -117,7 +126,7 @@ class TestSession(TestCase):
 
         # Verify the call
         mock_get.assert_called_once_with(
-            "http://localhost:8080/$info",
+            "http://192.168.73.26:8090/$info",
             timeout=30,
         )
 
@@ -142,12 +151,12 @@ class TestSession(TestCase):
         mock_get.return_value = mock_response
 
         # Call refresh and expect an exception
-        with self.assertRaises(ResponseError):
+        with self.assertRaises(AuthenticationError):
             self.session.refresh()
 
         # Verify the call
         mock_get.assert_called_once_with(
-            "http://localhost:8080/$info",
+            "http://192.168.73.26:8090/$info",
             timeout=30,
         )
 
@@ -177,17 +186,67 @@ class TestSession(TestCase):
 
     @patch("pyerp.direct_api.auth.requests.get")
     @patch("pyerp.direct_api.auth.time.sleep")
+    @override_settings(LEGACY_API_MAX_RETRIES=3)
     def test_refresh_connection_error_max_retries(self, mock_sleep, mock_get):
-        """Test refresh with connection error that fails even after retries."""
-        mock_get.side_effect = requests.RequestException("Connection error")
+        """Test refresh with connection error that fails even after retries.
+        
+        This test verifies that:
+        1. The session attempts to connect 4 times (1 initial + 3 retries)
+        2. Each retry uses exponential backoff for delays
+        3. After all retries fail, a ConnectionError is raised
+        """
+        # Ensure we're using the correct number of retries
+        self.assertEqual(
+            API_MAX_RETRIES,
+            3,
+            "API_MAX_RETRIES should be 3",
+        )
+        
+        # Set up mock to consistently raise RequestException
+        mock_get.side_effect = requests.RequestException(
+            "Connection error",
+        )
 
-        # Call refresh and expect an exception
-        with self.assertRaises(ConnectionError):
+        # Verify that refresh() raises ConnectionError with correct message
+        expected_msg = "Unable to connect to the API after 3 retries"
+        with self.assertRaisesRegex(ConnectionError, expected_msg):
             self.session.refresh()
 
-        # Verify multiple calls were made (1 initial + retries)
-        self.assertTrue(mock_get.call_count > 1)
-        self.assertEqual(mock_sleep.call_count, mock_get.call_count - 1)
+        # Verify exactly 4 calls were made (1 initial + 3 retries)
+        self.assertEqual(
+            mock_get.call_count,
+            4,
+            "Expected 4 connection attempts (1 initial + 3 retries)",
+        )
+
+        # Verify sleep was called 3 times with exponential backoff
+        expected_sleep_calls = [
+            call(0.5),  # First retry
+            call(1.0),  # Second retry
+            call(2.0),  # Third retry
+        ]
+        mock_sleep.assert_has_calls(expected_sleep_calls)
+        self.assertEqual(
+            mock_sleep.call_count,
+            3,
+            "Expected 3 sleep calls",
+        )
+
+        # Verify all calls were made with correct URL and timeout
+        base_url = TEST_API_ENVIRONMENTS["test"]["base_url"]
+        expected_url = urljoin(base_url, API_INFO_ENDPOINT)
+        for call_args in mock_get.call_args_list:
+            args, kwargs = call_args
+            self.assertEqual(
+                args[0],
+                expected_url,
+                "Incorrect URL used for refresh",
+            )
+            self.assertEqual(
+                kwargs.get("timeout"),
+                API_REQUEST_TIMEOUT,
+                "Incorrect timeout used for refresh",
+            )
 
     @patch("pyerp.direct_api.auth.Session.refresh")
     def test_get_cookie_valid(self, mock_refresh):
@@ -208,7 +267,7 @@ class TestSession(TestCase):
     @patch("pyerp.direct_api.auth.Session.refresh")
     def test_get_cookie_invalid(self, mock_refresh):
         """Test get_cookie with invalid session."""
-        cookie = self.session.get_cookie()
+        self.session.get_cookie()
 
         # Verify refresh was called
         mock_refresh.assert_called_once()
@@ -237,7 +296,8 @@ class TestSessionPool(TestCase):
 
         # Verify a new session was created and refreshed
         mock_session_class.assert_called_once_with("test")
-        mock_session.refresh.assert_called_once()
+        self.assertEqual(session, mock_session)
+        mock_session.ensure_valid.assert_called_once()
 
         # Clear any sessions from cache
         self.pool.clear_sessions()
@@ -249,24 +309,15 @@ class TestSessionPool(TestCase):
         mock_session.is_valid.return_value = True
         mock_session_class.return_value = mock_session
 
-        # Create a session in cache
-        now = datetime.datetime.now()
-        self.pool.cache.set(
-            "legacy_api_session_test",
-            {
-                "cookie": "test-cookie",
-                "created_at": now,
-                "expires_at": now + datetime.timedelta(seconds=API_SESSION_EXPIRY),
-            },
-            API_SESSION_EXPIRY,
-        )
+        # Store session in cache dictionary
+        self.pool.cache["test"] = mock_session
 
         # Call get_session
         session = self.pool.get_session("test")
 
-        # Verify a session was created from cache and not refreshed
-        mock_session_class.assert_called_once_with("test")
-        mock_session.refresh.assert_not_called()
+        # Verify cached session was returned
+        self.assertEqual(session, mock_session)
+        mock_session_class.assert_not_called()
 
         # Clear any sessions from cache
         self.pool.clear_sessions()
@@ -278,56 +329,38 @@ class TestSessionPool(TestCase):
         mock_session.is_valid.return_value = False
         mock_session_class.return_value = mock_session
 
-        # Create an expired session in cache
-        now = datetime.datetime.now()
-        self.pool.cache.set(
-            "legacy_api_session_test",
-            {
-                "cookie": "test-cookie",
-                "created_at": now - datetime.timedelta(seconds=API_SESSION_EXPIRY + 1),
-                "expires_at": now - datetime.timedelta(seconds=1),
-            },
-            API_SESSION_EXPIRY,
-        )
+        # Store invalid session in cache dictionary
+        self.pool.cache["test"] = mock_session
 
         # Call get_session
         session = self.pool.get_session("test")
 
-        # Verify a session was created from cache but then refreshed
-        # Session is called twice because cache miss creates a new session
-        self.assertEqual(mock_session_class.call_count, 2)
-        self.assertEqual(mock_session_class.call_args_list[0], call("test"))
-        mock_session.refresh.assert_called_once()
+        # Verify new session was created
+        mock_session_class.assert_called_once_with("test")
+        self.assertEqual(session, mock_session)
+        mock_session.ensure_valid.assert_called_once()
 
         # Clear any sessions from cache
         self.pool.clear_sessions()
 
     def test_clear_sessions(self):
         """Test clear_sessions method."""
-        now = datetime.datetime.now()
-        for env in ["live", "test"]:
-            self.pool.cache.set(
-                f"legacy_api_session_{env}",
-                {
-                    "cookie": f"{env}-cookie",
-                    "created_at": now,
-                    "expires_at": now + datetime.timedelta(seconds=API_SESSION_EXPIRY),
-                },
-                API_SESSION_EXPIRY,
-            )
+        # Add some sessions to the cache dictionary
+        self.pool.cache["live"] = MagicMock()
+        self.pool.cache["test"] = MagicMock()
 
         # Call clear_sessions
         self.pool.clear_sessions()
 
         # Verify sessions were cleared
-        for env in ["live", "test"]:
-            self.assertIsNone(self.pool.cache.get(f"legacy_api_session_{env}"))
+        self.assertEqual(len(self.pool.cache), 0)
+        self.assertEqual(len(self.pool._sessions), 0)
 
 
 class TestGlobalFunctions(TestCase):
     """Tests for the global functions in auth.py."""
 
-    @patch("pyerp.direct_api.auth.session_pool.get_session")
+    @patch("pyerp.direct_api.auth._session_pool.get_session")
     def test_get_session(self, mock_get_session):
         """Test get_session global function."""
         mock_session = MagicMock()
@@ -336,8 +369,7 @@ class TestGlobalFunctions(TestCase):
         # Call get_session
         session = get_session("test")
 
-        # Verify the pool's get_session was called and the result passed
-        # through
+        # Verify the pool's get_session was called and result passed through
         mock_get_session.assert_called_once_with("test")
         self.assertEqual(session, mock_session)
 
@@ -348,10 +380,9 @@ class TestGlobalFunctions(TestCase):
         mock_session.get_cookie.return_value = "test-cookie"
         mock_get_session.return_value = mock_session
 
-        # Call get_session_cookie
-        cookie = get_session_cookie("test")
+        # Call get_session_cookie and verify result
+        self.assertEqual(get_session_cookie("test"), "test-cookie")
 
         # Verify get_session was called and the cookie was retrieved
         mock_get_session.assert_called_once_with("test")
         mock_session.get_cookie.assert_called_once()
-        self.assertEqual(cookie, "test-cookie")

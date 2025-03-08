@@ -45,7 +45,13 @@ class Command(BaseCommand):
         # Otherwise, output in a human-readable format
         self.stdout.write("\n")
 
-        for component, result in results.items():
+        # Convert array format to dictionary if needed
+        if isinstance(results, list):
+            results_dict = {result["component"]: result for result in results}
+        else:
+            results_dict = results
+
+        for component, result in results_dict.items():
             status = result["status"]
 
             # Format the output with colors
@@ -71,9 +77,9 @@ class Command(BaseCommand):
             self.stdout.write("\n")
 
         # Print a summary
-        success_count = sum(1 for r in results.values() if r["status"] == "success")
-        warning_count = sum(1 for r in results.values() if r["status"] == "warning")
-        error_count = sum(1 for r in results.values() if r["status"] == "error")
+        success_count = sum(1 for r in results_dict.values() if r["status"] == "success")
+        warning_count = sum(1 for r in results_dict.values() if r["status"] == "warning")
+        error_count = sum(1 for r in results_dict.values() if r["status"] == "error")
 
         self.stdout.write(_("Summary:"))
         self.stdout.write(f"  {self.style.SUCCESS(_('Success'))}: {success_count}")

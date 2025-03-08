@@ -1,21 +1,22 @@
 #!/usr/bin/env python
 import os
 import sys
-from pathlib import Path
-
-import django
-from dotenv import load_dotenv
 
 # Add the project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(project_root)
+sys.path.insert(0, project_root)  # noqa: E402
 
-# Load environment variables from .env file
-env_path = Path(project_root) / "config" / "env" / ".env"
-load_dotenv(env_path)
+from pyerp.utils.env_loader import load_environment_variables  # noqa: E402
+import django  # noqa: E402
+
+# Load environment variables using env_loader (will load if .env file exists)
+load_environment_variables(verbose=True)
 
 # Set up Django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    "pyerp.config.settings.development"
+)
 django.setup()
 
 # Import the necessary models and the ImageAPIClient

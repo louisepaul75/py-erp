@@ -28,37 +28,45 @@ DEBUG_TOOLBAR_CONFIG = {
     "IS_RUNNING_TESTS": True,
 }
 
-# Use SQLite for testing by default
+# Configure model field types for Django 5.x and Python 3.12
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Configure database for tests - use file-based SQLite for better compatibility
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "file:memorydb_default?mode=memory&cache=shared",
-        "TEST": {
-            "NAME": "file:memorydb_default?mode=memory&cache=shared",
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'test_db.sqlite3',
+        'TEST': {
+            'NAME': BASE_DIR / 'test_db.sqlite3',
         },
     }
 }
 
+# Disable migrations during tests to avoid field type issues
+MIGRATION_MODULES = None  # This tells Django to create the tables directly
+
+# Configure test-specific model settings
+DATABASE_ROUTERS = []
+TEST_NON_SERIALIZED_APPS = []
+
 # Disable password hashing for faster tests
 PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.MD5PasswordHasher",
+    'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# Disable logging during tests
+# Configure logging for tests
 LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "stream": sys.stdout,
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
         },
     },
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "WARNING",
-        },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
     },
 }
 
@@ -76,3 +84,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
 }
+
+# Ensure models are created without migrations
+DJANGO_MIGRATION_MODULES = {}
+

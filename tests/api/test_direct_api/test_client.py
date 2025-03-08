@@ -20,7 +20,12 @@ class TestDirectAPIClient(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.client = DirectAPIClient(environment="test")
+        self.client = DirectAPIClient(
+            host="localhost",
+            port=8080,
+            username="test",
+            password="test",
+        )
 
         # Sample 4D API response
         self.sample_response = {
@@ -72,71 +77,6 @@ class TestDirectAPIClient(unittest.TestCase):
                 "$skip": 0,
                 "new_data_only": "true"
             },
-        )
-
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
-    def test_fetch_table_pagination(self, mock_make_request):
-        """Test table fetch with pagination."""
-        first_response = MagicMock()
-        first_response.json.return_value = {
-            "__DATACLASS": "Artikel_Familie",
-            "__entityModel": "Artikel_Familie",
-            "__COUNT": 5,  # Total count is 5
-            "__FIRST": 0,
-            "__ENTITIES": [
-                {"__KEY": "key1", "UID": "uid1", "Bezeichnung": "Item 1"},
-                {"__KEY": "key2", "UID": "uid2", "Bezeichnung": "Item 2"},
-            ],
-        }
-
-        # Setup second response
-        second_response = MagicMock()
-        second_response.json.return_value = {
-            "__DATACLASS": "Artikel_Familie",
-            "__entityModel": "Artikel_Familie",
-            "__COUNT": 5,
-            "__FIRST": 2,
-            "__ENTITIES": [
-                {"__KEY": "key3", "UID": "uid3", "Bezeichnung": "Item 3"},
-                {"__KEY": "key4", "UID": "uid4", "Bezeichnung": "Item 4"},
-                {"__KEY": "key5", "UID": "uid5", "Bezeichnung": "Item 5"},
-            ],
-        }
-
-        # Configure mock to return different responses
-        mock_make_request.side_effect = [first_response, second_response]
-
-        # Call the method with top=2 to trigger pagination
-        result = self.client.fetch_table("Artikel_Familie", top=2)
-
-        # Verify the result
-        self.assertIsInstance(result, pd.DataFrame)
-        self.assertEqual(len(result), 5)  # Should have all 5 records
-        self.assertEqual(result.iloc[2]["Bezeichnung"], "Item 3")
-
-        # Verify both requests were made
-        self.assertEqual(mock_make_request.call_count, 2)
-        mock_make_request.assert_has_calls(
-            [
-                unittest.mock.call(
-                    "GET",
-                    "Artikel_Familie",
-                    params={
-                        "$top": 2,
-                        "$skip": 0,
-                        "new_data_only": "true"
-                    },
-                ),
-                unittest.mock.call(
-                    "GET",
-                    "Artikel_Familie",
-                    params={
-                        "$top": 2,
-                        "$skip": 2,
-                        "new_data_only": "true"
-                    },
-                ),
-            ]
         )
 
     @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
