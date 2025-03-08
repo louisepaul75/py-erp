@@ -33,7 +33,7 @@ from django.db.models import Q  # noqa: E402
 from pyerp.products.models import (  # noqa: E402
     ParentProduct, VariantProduct, ProductCategory
 )
-from pyerp.direct_api.scripts.getTable import SimpleAPIClient  # noqa: E402
+from pyerp.external_api.legacy_erp.client import SimpleAPIClient  # noqa: E402
 
 # Configure logging
 logging.basicConfig(

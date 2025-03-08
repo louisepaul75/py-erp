@@ -13,7 +13,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Q
 
-from pyerp.direct_api.scripts.getTable import SimpleAPIClient
+from pyerp.external_api.legacy_erp.client import SimpleAPIClient
 from pyerp.products.models import ParentProduct, ProductCategory, VariantProduct
 
 # Configure logging

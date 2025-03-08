@@ -101,7 +101,7 @@ OPTIONAL_API_MODULES = [
     ("sales", "pyerp.sales.urls"),
     ("inventory", "pyerp.inventory.urls"),
     ("production", "pyerp.production.urls"),
-    ("legacy-sync", "pyerp.legacy_sync.urls"),
+    ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),
 ]
 
 # Add optional API modules if available

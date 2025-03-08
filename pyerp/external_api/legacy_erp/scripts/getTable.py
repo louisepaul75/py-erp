@@ -29,6 +29,7 @@ from pathlib import Path
 import django
 import pandas as pd
 import requests
+from pyerp.external_api.legacy_erp.settings import API_ENVIRONMENTS
 
 # Add the parent directory to the path so we can import the direct_api module
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
@@ -51,8 +52,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
 # Import after Django setup (no need to setup Django when imported
 # since it will already be set up)
 try:
-    from pyerp.direct_api.settings import API_ENVIRONMENTS
-
     logger.info(f"Available environments: {list(API_ENVIRONMENTS.keys())}")
 except ImportError as e:
     logger.error(f"Failed to import API_ENVIRONMENTS: {e}")
@@ -443,31 +442,42 @@ class SimpleAPIClient:
                 new_data_only,
                 date_created_start,
             )
-        params = {"$top": top, "$skip": skip}
 
-        # Handle filter query with the correct syntax (quoted filter expression)
+        # Build base URL with pagination
+        url = f"{url}?$top={top}&$skip={skip}"
+
+        # Handle filter query with the correct syntax
         if filter_query:
-            params["$filter"] = f'"{filter_query}"'
+            # If filter query is already in the correct format (starts with &$filter=), use as is
+            if not filter_query.startswith("&$filter="):
+                # Extract the field name and value from the filter query
+                parts = filter_query.split(' ')
+                if len(parts) >= 3:
+                    field = parts[0]
+                    operator = parts[1]
+                    value = parts[2]
+                    # Construct the filter in the exact format required
+                    filter_query = f"&$filter='{field} {operator} '{value}''"
+            url = f"{url}{filter_query}"
             logger.info(f"Using filter query: {filter_query}")
 
         # Handle date filtering
         if new_data_only and date_created_start:
             date_filter = f"CREATIONDATE ge '{date_created_start}'"
             if filter_query:
-                params["$filter"] = f'"{filter_query} AND {date_filter}"'
+                url = f"{url} AND {date_filter}"
             else:
-                params["$filter"] = f'"{date_filter}"'
+                url = f"{url}&$filter='{date_filter}'"
             logger.info(f"Using date filter: {date_filter}")
 
-        logger.info(f"Fetching up to {top} records from {table_name} (skip: {skip})")
-        logger.info(f"Full request URL: {url} with params: {params}")
+        logger.info(f"Full request URL: {url}")
 
         # Make the request with error handling for filter failures
         try:
-            response = self.session.get(url, params=params)
+            response = self.session.get(url)
 
             # Check for filter-related errors
-            if response.status_code != 200 and "$filter" in params:
+            if response.status_code != 200 and "$filter" in url:
                 logger.warning(
                     f"Request failed with status code {response.status_code}. This might be a filter error.",
                 )
@@ -475,12 +485,11 @@ class SimpleAPIClient:
                 logger.warning("Attempting to retry without filter...")
 
                 # Remove the filter and try again
-                params_without_filter = params.copy()
-                params_without_filter.pop("$filter", None)
+                base_url = url.split("&$filter=")[0]
                 logger.info(
-                    f"Retrying request without filter: {url} with params: {params_without_filter}",
+                    f"Retrying request without filter: {base_url}",
                 )
-                response = self.session.get(url, params=params_without_filter)
+                response = self.session.get(base_url)
         except Exception as e:
             logger.error(f"API request failed: {e!s}")
             raise
@@ -535,9 +544,19 @@ class SimpleAPIClient:
         """Fetch all records from a table using pagination."""
         params = {"$top": 1000, "$skip": 0}
 
-        # Handle filter query with the correct syntax (quoted filter expression)
+        # Handle filter query with the correct syntax
         if filter_query:
-            params["$filter"] = f'"{filter_query}"'
+            # If filter query is already in the correct format (starts with &$filter=), use as is
+            if not filter_query.startswith("&$filter="):
+                # Extract the field name and value from the filter query
+                parts = filter_query.split(' ')
+                if len(parts) >= 3:
+                    field = parts[0]
+                    operator = parts[1]
+                    value = parts[2]
+                    # Construct the filter in the exact format required
+                    filter_query = f"&$filter='{field} {operator} '{value}''"
+            url = f"{url}{filter_query}"
             logger.info(f"Using filter query: {filter_query}")
 
         # Handle date filtering
@@ -825,7 +844,7 @@ if __name__ == "__main__":
 
     django.setup()
 
-    table = "Artikel_Variante"
+    table = "Kunden"
 
     # First run validation script if no arguments provided
     if len(sys.argv) == 1:
@@ -870,11 +889,15 @@ if __name__ == "__main__":
             # Try to fetch a small sample from a known table
             print("\nTesting table fetch...")
             try:
-                df = client.fetch_table(table, top=1)
+                # Construct the filter query in the exact format the API expects
+                filter_query = "&$filter='modified_date > '2025-03-01''"
+                df = client.fetch_table(table, top=1000, filter_query=filter_query)
+
                 print(f"✓ Successfully fetched sample from Kunden ({len(df)} records)")
                 if not df.empty:
+                    pd.set_option('display.max_columns', None)
                     print("\nSample data:")
-                    print(df.head())
+                    print(df)
             except Exception as e:
                 print(f"✗ Failed to fetch sample table: {e}")
 

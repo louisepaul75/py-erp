@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from pyerp.direct_api.client import DirectAPIClient
-from pyerp.direct_api.exceptions import ResponseError
+from pyerp.external_api.legacy_erp.client import DirectAPIClient
+from pyerp.external_api.legacy_erp.exceptions import ResponseError
 
 
 class TestDirectAPIClient(unittest.TestCase):
@@ -48,7 +48,7 @@ class TestDirectAPIClient(unittest.TestCase):
             ],
         }
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
+    @patch("pyerp.external_api.legacy_erp.client.DirectAPIClient._make_request")
     def test_fetch_table_success(self, mock_make_request):
         """Test successful table fetch."""
         mock_response = MagicMock()
@@ -74,7 +74,7 @@ class TestDirectAPIClient(unittest.TestCase):
             },
         )
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
+    @patch("pyerp.external_api.legacy_erp.client.DirectAPIClient._make_request")
     def test_fetch_table_pagination(self, mock_make_request):
         """Test table fetch with pagination."""
         first_response = MagicMock()
@@ -139,7 +139,7 @@ class TestDirectAPIClient(unittest.TestCase):
             ]
         )
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
+    @patch("pyerp.external_api.legacy_erp.client.DirectAPIClient._make_request")
     def test_fetch_table_error_handling(self, mock_make_request):
         """Test error handling during table fetch."""
         mock_make_request.side_effect = ResponseError(
@@ -152,7 +152,7 @@ class TestDirectAPIClient(unittest.TestCase):
         with pytest.raises(ResponseError):
             self.client.fetch_table("Artikel_Familie")
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
+    @patch("pyerp.external_api.legacy_erp.client.DirectAPIClient._make_request")
     def test_push_field_success(self, mock_make_request):
         """Test successful field update."""
         mock_response = MagicMock()
@@ -177,7 +177,7 @@ class TestDirectAPIClient(unittest.TestCase):
             data={"value": "New Name"},
         )
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
+    @patch("pyerp.external_api.legacy_erp.client.DirectAPIClient._make_request")
     def test_push_field_error(self, mock_make_request):
         """Test error handling during field update."""
         mock_make_request.side_effect = ResponseError(

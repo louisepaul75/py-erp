@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '../store/auth';
 
 // Determine the appropriate base URL based on the environment
 export const determineBaseUrl = () => {
@@ -27,8 +28,7 @@ export const determineBaseUrl = () => {
   return import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
 };
 
-const baseUrl = determineBaseUrl();
-const apiBaseUrl = baseUrl;
+const apiBaseUrl = determineBaseUrl();
 
 // Log the API base URL being used
 console.log('API Base URL:', apiBaseUrl);
@@ -46,6 +46,22 @@ const api = axios.create({
   },
   withCredentials: true, // Required for cookies/CORS
 });
+
+// Flag to prevent multiple simultaneous token refreshes
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -75,9 +91,32 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Log the error for debugging
+    console.debug('API Error:', {
+      status: error.response?.status,
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      isRetry: originalRequest?._retry,
+    });
+
     // If error is 401 and we haven't tried refreshing token yet
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If a token refresh is already in progress, add this request to the queue
+        try {
+          const token = await new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          });
+          originalRequest.headers['Authorization'] = `Bearer ${token}`;
+          return api(originalRequest);
+        } catch (err) {
+          console.error('Failed to process queued request:', err);
+          return Promise.reject(err);
+        }
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         // Try to refresh the token
@@ -86,11 +125,13 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
+        console.debug('Attempting to refresh token...');
         const response = await api.post('/token/refresh/', {
           refresh: refreshToken
         });
 
         const newAccessToken = response.data.access;
+        console.debug('Token refresh successful');
 
         // Store the new token
         localStorage.setItem('access_token', newAccessToken);
@@ -99,16 +140,29 @@ api.interceptors.response.use(
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
         api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 
+        // Process any queued requests
+        processQueue(null, newAccessToken);
+
         // Retry the original request
         return api(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, clear tokens and reject
+        console.error('Token refresh failed:', refreshError);
+        // If refresh fails, clear tokens and reject all queued requests
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        processQueue(refreshError, null);
+        
+        // Get auth store and logout
+        const authStore = useAuthStore();
+        await authStore.logout();
+        
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
+    // For other errors or if refresh failed, reject the promise
     return Promise.reject(error);
   }
 );

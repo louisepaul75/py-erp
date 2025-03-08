@@ -4,7 +4,7 @@ Tests for the direct_api exceptions module.
 
 from django.test import TestCase
 
-from pyerp.direct_api.exceptions import (
+from pyerp.external_api.legacy_erp.exceptions import (
     AuthenticationError,
     ConfigurationError,
     ConnectionError as APIConnectionError,

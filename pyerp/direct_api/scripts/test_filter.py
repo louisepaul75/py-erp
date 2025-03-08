@@ -20,7 +20,7 @@ import os
 import sys
 from pathlib import Path
 
-from pyerp.direct_api.scripts.getTable import SimpleAPIClient
+from pyerp.external_api.legacy_erp.scripts.getTable import SimpleAPIClient
 
 # Add the parent directory to the path so we can import the getTable module
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))

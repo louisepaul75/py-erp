@@ -1,0 +1,150 @@
+"""Celery tasks for scheduled synchronization operations."""
+
+import logging
+from typing import Dict, List, Optional, Union
+
+from celery import shared_task
+
+from .models import SyncMapping, SyncLog
+from .pipeline import PipelineFactory
+
+
+logger = logging.getLogger(__name__)
+
+
+@shared_task(
+    bind=True,
+    name="sync.run_entity_sync",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def run_entity_sync(
+    self,
+    mapping_id: int, 
+    incremental: bool = True, 
+    batch_size: int = 100,
+    query_params: Optional[Dict] = None
+) -> Dict:
+    """Run sync for a specific entity mapping.
+    
+    Args:
+        mapping_id: ID of the SyncMapping to process
+        incremental: If True, only sync records modified since last sync
+        batch_size: Number of records to process in each batch
+        query_params: Optional additional query parameters
+        
+    Returns:
+        Dict with sync results
+    """
+    try:
+        mapping = SyncMapping.objects.get(id=mapping_id, active=True)
+        
+        # Create pipeline and run sync
+        pipeline = PipelineFactory.create_pipeline(mapping)
+        sync_log = pipeline.run(
+            incremental=incremental,
+            batch_size=batch_size,
+            query_params=query_params
+        )
+        
+        return {
+            'status': sync_log.status,
+            'records_processed': sync_log.records_processed,
+            'records_succeeded': sync_log.records_succeeded,
+            'records_failed': sync_log.records_failed,
+            'sync_log_id': sync_log.id
+        }
+        
+    except SyncMapping.DoesNotExist:
+        logger.error(f"Sync mapping with ID {mapping_id} not found or not active")
+        return {
+            'status': 'failed',
+            'error': f"Sync mapping with ID {mapping_id} not found or not active"
+        }
+    except Exception as e:
+        logger.exception(f"Error in run_entity_sync task: {str(e)}")
+        raise  # This will trigger retry mechanism
+
+
+@shared_task(
+    name="sync.run_all_mappings",
+    max_retries=1,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def run_all_mappings(
+    incremental: bool = True, 
+    source_name: Optional[str] = None
+) -> List[Dict]:
+    """Run sync for all active mappings, optionally filtered by source.
+    
+    Args:
+        incremental: If True, only sync records modified since last sync
+        source_name: Optional source name to filter mappings
+        
+    Returns:
+        List of dicts with sync results
+    """
+    # Get all active mappings
+    mappings = SyncMapping.objects.filter(active=True)
+    
+    # Filter by source if specified
+    if source_name:
+        mappings = mappings.filter(source__name=source_name)
+    
+    # Launch a task for each mapping
+    results = []
+    for mapping in mappings:
+        task_result = run_entity_sync.delay(
+            mapping.id, 
+            incremental=incremental
+        )
+        results.append({
+            'mapping_id': mapping.id,
+            'entity_type': mapping.entity_type,
+            'task_id': task_result.id
+        })
+    
+    return results
+
+
+@shared_task(name="sync.run_incremental_sync")
+def run_incremental_sync() -> List[Dict]:
+    """Run incremental sync for all active mappings.
+    
+    This task is intended to be scheduled to run every 5 minutes.
+    
+    Returns:
+        List of dicts with sync results
+    """
+    logger.info("Starting scheduled incremental sync")
+    return run_all_mappings(incremental=True)
+
+
+@shared_task(name="sync.run_full_sync")
+def run_full_sync() -> List[Dict]:
+    """Run full sync for all active mappings.
+    
+    This task is intended to be scheduled to run nightly.
+    
+    Returns:
+        List of dicts with sync results
+    """
+    logger.info("Starting scheduled full sync")
+    return run_all_mappings(incremental=False)
+
+
+# Add periodic task registration for Celery Beat
+# This will be picked up by Celery Beat scheduler
+run_incremental_sync.periodic_task = {
+    'name': 'sync.scheduled_incremental_sync',
+    'schedule': 300.0,  # Every 5 minutes
+    'options': {'expires': 290.0}  # Expire if not executed within 290 seconds
+}
+
+run_full_sync.periodic_task = {
+    'name': 'sync.scheduled_full_sync',
+    'schedule': {'cron': {'hour': 2, 'minute': 0}},  # Run at 2:00 AM
+    'options': {'expires': 3600.0}  # Expire if not executed within 1 hour
+} 
