@@ -28,15 +28,12 @@ DEBUG_TOOLBAR_CONFIG = {
     "IS_RUNNING_TESTS": True,
 }
 
-# Use SQLite for testing by default
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "file:memorydb_default?mode=memory&cache=shared",
-        "TEST": {
-            "NAME": "file:memorydb_default?mode=memory&cache=shared",
-        },
-    }
+# Configure model field types for Python 3.12
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+FIELD_TYPES = {
+    "AutoField": "django.db.models.BigAutoField",
+    "BigAutoField": "django.db.models.BigAutoField",
+    "SmallAutoField": "django.db.models.SmallAutoField",
 }
 
 # Disable password hashing for faster tests

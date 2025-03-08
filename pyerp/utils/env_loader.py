@@ -18,7 +18,7 @@ def get_project_root():
 
 
 def get_environment():
-    """Get the current environment (dev, prod, test)."""
+    """Get the current environment (dev, prod)."""
     pyerp_env = os.environ.get("PYERP_ENV")
     if pyerp_env:
         return pyerp_env
@@ -27,8 +27,6 @@ def get_environment():
     settings_module = os.environ.get("DJANGO_SETTINGS_MODULE", "")
     if "production" in settings_module:
         return "prod"
-    if "testing" in settings_module or "test" in settings_module:
-        return "test"
     return "dev"  # Default to development
 
 
@@ -48,7 +46,7 @@ def get_settings_module(env_name=None):
 
     settings_mapping = {
         "prod": "pyerp.config.settings.production",
-        "test": "pyerp.config.settings.testing",
+        "test": "pyerp.config.settings.test",
         "dev": "pyerp.config.settings.development",
     }
 
@@ -69,6 +67,10 @@ def load_environment_variables(verbose=False):
     """
     env_name = get_environment()
     project_root = get_project_root()
+
+    # Always use .env.dev for tests and development
+    if env_name in ["test", "dev"]:
+        env_name = "dev"
 
     # Define environment file paths with priority
     env_paths = [
