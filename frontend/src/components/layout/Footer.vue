@@ -1,8 +1,11 @@
 <template>
   <v-footer
     app
-    class="pa-3 bg-grey-lighten-4"
-    :class="{ 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded }"
+    :class="[
+      'pa-3', 
+      { 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded },
+      themeStore.isDark ? 'bg-surface' : 'bg-grey-lighten-4'
+    ]"
   >
     <v-container>
       <v-row>
@@ -22,7 +25,11 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { useThemeStore } from '../../store/theme';
 import axios from 'axios';
+
+// Get theme store
+const themeStore = useThemeStore();
 
 // Get current year for copyright
 const currentYear = computed(() => new Date().getFullYear());
@@ -175,5 +182,10 @@ onUnmounted(() => {
 
 .status-dot.unknown {
   background-color: #6c757d;
+}
+
+/* Dark mode specific styles */
+:deep(.v-theme--dark) .text-medium-emphasis {
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 </style>
