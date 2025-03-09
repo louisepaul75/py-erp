@@ -2,9 +2,13 @@
 
 import logging
 from typing import Any, Dict, List
+import pandas as pd
 
 from .base import BaseTransformer, ValidationError
 
+# Configure database logging to ERROR level
+db_logger = logging.getLogger('django.db.backends')
+db_logger.setLevel(logging.ERROR)
 
 # Configure logger
 logger = logging.getLogger("pyerp.sync.transformers.product")
@@ -49,6 +53,25 @@ class ProductTransformer(BaseTransformer):
                 # Apply base field mappings
                 transformed = self.apply_field_mappings(record)
                 logger.info(f"After field mappings: {transformed}")
+                
+                # Handle modified_time field - ensure it's a valid datetime or None
+                if 'modified_time' in transformed:
+                    try:
+                        if pd.isna(transformed['modified_time']):
+                            transformed['modified_time'] = None
+                        else:
+                            # Try to parse as datetime if it's a string
+                            if isinstance(
+                                transformed['modified_time'], str
+                            ):
+                                transformed['modified_time'] = pd.to_datetime(
+                                    transformed['modified_time']
+                                )
+                    except Exception as e:
+                        logger.warning(
+                            f"Error processing modified_time: {e}"
+                        )
+                        transformed['modified_time'] = None
                 
                 # Handle empty or null name field
                 if not transformed.get('name'):

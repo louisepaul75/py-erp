@@ -21,16 +21,19 @@ from .models import (
 
 # Configure logger
 logger = logging.getLogger("pyerp.sync.pipeline")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
-# Add console handler if not already present
-if not logger.handlers:
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-    logger.propagate = False
+# Remove existing handlers
+for handler in logger.handlers[:]:
+    logger.removeHandler(handler)
+
+# Add console handler with custom formatter
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(levelname)s: %(message)s')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+logger.propagate = False
 
 
 class SyncPipeline:
@@ -250,6 +253,9 @@ class SyncPipeline:
         elif isinstance(data, (datetime, timezone.datetime)):
             return data.isoformat()
         elif isinstance(data, (int, float, str, bool, type(None))):
+            # Handle NaN values
+            if isinstance(data, float) and math.isnan(data):
+                return None
             return data
         else:
             return str(data)
