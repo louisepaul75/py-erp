@@ -315,9 +315,8 @@ class VariantProduct(BaseProduct):
     # HIGH PRIORITY - Core product data from legacy system
     is_verkaufsartikel = models.BooleanField(
         default=False,
-        help_text=_(
-            "Whether this is a sales article (maps to Verkaufsartikel in Artikel_Variante)",
-        ),
+        help_text=_("Whether this is a sales article (maps to Verkaufsartikel in Artikel_Variante)"),
+        db_column="is_verkaufsartikel",  # Explicit column name
     )
     release_date = models.DateTimeField(
         null=True,

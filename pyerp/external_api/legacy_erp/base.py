@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any
 
 import pandas as pd
 import requests
+from requests.auth import HTTPBasicAuth
 
 from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
@@ -60,6 +61,13 @@ class BaseAPIClient:
             )
 
         self.base_url = env_config["base_url"]
+        self.username = env_config.get("username")
+        self.password = env_config.get("password")
+        
+        if not self.username or not self.password:
+            raise ValueError(
+                f"Missing credentials for environment '{environment}'"
+            )
         
         logger.debug(
             "Initialized %s for environment: %s",
@@ -257,8 +265,9 @@ class BaseAPIClient:
             url = f"{self.base_url}/rest/$info"
             logger.info(f"Login request URL: {url}")
 
-            # Make the request
-            response = self.session.get(url)
+            # Make the request with basic auth
+            auth = HTTPBasicAuth(self.username, self.password)
+            response = self.session.get(url, auth=auth)
 
             # Log response details
             logger.info(f"Login response status: {response.status_code}")
