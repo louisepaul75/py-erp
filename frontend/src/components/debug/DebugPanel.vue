@@ -2,7 +2,7 @@
 <template>
   <div class="debug-panel" v-if="isDev">
     <div class="debug-header" @click="toggleExpanded">
-      <div class="debug-badge">DEV MODE (Port: {{ currentPort }})</div>
+      <div class="debug-badge">DEV MODE (Port: {{ currentPort }}) - {{ currentBranch || 'Unknown Branch' }}</div>
       <div class="debug-chevron" :class="{ 'expanded': isExpanded }">▼</div>
     </div>
     <div class="debug-content" v-if="isExpanded">
@@ -14,6 +14,7 @@
           <p>Node Env: {{ nodeEnv }}</p>
           <p>Dev Server: {{ isDevServer ? 'Yes' : 'No' }}</p>
           <p>Docker: {{ isDocker ? 'Yes' : 'No' }}</p>
+          <p>Branch: {{ currentBranch || 'Unknown' }}</p>
         </div>
         <div class="debug-section">
           <h4>Performance</h4>
@@ -32,10 +33,11 @@ import { version as vueVersion } from 'vue';
 const isExpanded = ref(false);
 const pageLoadTime = ref(0);
 const memoryUsage = ref('');
+const currentBranch = ref('');
 
 // Get current port
 const currentPort = computed(() => typeof window !== 'undefined' ? window.location.port : '');
-const isDevServer = computed(() => currentPort.value === '3000');
+const isDevServer = computed(() => currentPort.value === '5173');
 
 // Check if running in Docker
 const isDocker = computed(() => {
@@ -78,6 +80,18 @@ const toggleExpanded = () => {
   }));
 };
 
+// Get current branch name
+const fetchBranchName = async () => {
+  try {
+    const response = await fetch('http://localhost:8050/api/git/branch');
+    const data = await response.json();
+    currentBranch.value = data.branch;
+  } catch (error) {
+    console.error('Failed to fetch branch name:', error);
+    currentBranch.value = 'Unknown';
+  }
+};
+
 onMounted(() => {
   console.log('Debug Panel mounted. Development mode:', isDev.value);
 
@@ -94,6 +108,9 @@ onMounted(() => {
   } else {
     memoryUsage.value = 'Not available';
   }
+
+  // Fetch branch name
+  fetchBranchName();
 });
 </script>
 

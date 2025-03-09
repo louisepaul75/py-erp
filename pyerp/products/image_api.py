@@ -9,7 +9,7 @@ and parsing of API responses.
 import hashlib
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 import urllib3
@@ -20,6 +20,16 @@ from requests.auth import HTTPBasicAuth
 from urllib3.util.retry import Retry
 
 from pyerp.products.models import ParentProduct, Product
+from .constants import (
+    MIN_THUMBNAIL_RESOLUTION,
+    MAX_THUMBNAIL_RESOLUTION,
+    MIN_RESOLUTION_ARRAY_LENGTH,
+)
+from .exceptions import (
+    NoResponseError,
+    InvalidResponseFormatError,
+    MissingFieldsError,
+)
 
 # Constants
 DEFAULT_TIMEOUT = 60
@@ -51,10 +61,10 @@ class ImageAPIClient:
             "BASE_URL",
             "http://webapp.zinnfiguren.de/api/",
         )
-        
+
         # Log the base URL for debugging
-        logger.debug(f"Initializing ImageAPIClient with base URL: {self.base_url}")
-        
+        logger.debug("Initializing ImageAPIClient with base URL: %s", self.base_url)
+
         self.username = settings.IMAGE_API.get("USERNAME")
         self.password = settings.IMAGE_API.get("PASSWORD")
         self.timeout = settings.IMAGE_API.get(
@@ -74,7 +84,7 @@ class ImageAPIClient:
         # Ensure the base URL ends with a slash
         if not self.base_url.endswith("/"):
             self.base_url += "/"
-            logger.debug(f"Added trailing slash to base URL: {self.base_url}")
+            logger.debug("Added trailing slash to base URL: %s", self.base_url)
 
         # Set up retry strategy
         retry_strategy = Retry(
@@ -93,13 +103,12 @@ class ImageAPIClient:
         # Disable SSL verification warnings if verify_ssl is False
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            
-        logger.debug(f"ImageAPIClient initialized with username: {self.username}")
+
+        logger.debug("ImageAPIClient initialized with username: %s", self.username)
 
     def get_appropriate_article_number(self, product: Product) -> str:
         """
-        Determine the appropriate article number to use for image search
-        based on whether the product is a parent or variant.
+        Get the appropriate article number for image search.
 
         Args:
             product: The Product model instance
@@ -107,10 +116,7 @@ class ImageAPIClient:
         Returns:
             str: The article number to use for image search
         """
-        logger.debug(
-            "Determining appropriate article number for product %s",
-            product.sku,
-        )
+        logger.debug("Getting article number for %s", product.sku)
 
         # For parent products (ParentProduct model)
         if isinstance(product, ParentProduct):
@@ -144,8 +150,8 @@ class ImageAPIClient:
     def _make_request(
         self,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
         """
         Make a request to the API endpoint with authentication.
 
@@ -157,14 +163,13 @@ class ImageAPIClient:
             JSON response from the API or None if the request failed
         """
         url = f"{self.base_url}{endpoint}"
-        logger.debug(f"Constructed full URL: {url} from base_url: {self.base_url}")
+        logger.debug("Constructed URL: %s from base: %s", url, self.base_url)
 
         # Create a safe cache key
         if params:
             params_str = json.dumps(params, sort_keys=True)
             params_hash = hashlib.sha256(
-                params_str.encode(),
-                usedforsecurity=False,
+                params_str.encode(), usedforsecurity=False
             ).hexdigest()
             cache_key = f"image_api_{endpoint}_{params_hash}"
         else:
@@ -179,29 +184,27 @@ class ImageAPIClient:
 
         try:
             logger.debug("Making request to %s with params %s", url, params)
-            logger.debug(f"Request auth: {self.username}:{'*' * len(self.password)}")
-            logger.debug(f"Request timeout: {self.timeout}s, verify_ssl: {self.verify_ssl}")
-            
+            logger.debug("Request auth: %s:%s", self.username, "*" * len(self.password))
+            logger.debug(
+                "Request timeout: %ss, verify_ssl: %s", self.timeout, self.verify_ssl
+            )
+
             response = self.session.get(
-                url,
-                params=params,
-                timeout=self.timeout,
-                verify=self.verify_ssl,
+                url, params=params, timeout=self.timeout, verify=self.verify_ssl
             )
 
             if response.status_code == HTTP_OK:
                 data = response.json()
-                logger.debug(f"Request successful, received {len(data)} bytes of data")
+                logger.debug("Request successful, received %d bytes of data", len(data))
 
                 # Cache the response if caching is enabled
                 if self.cache_enabled:
                     cache.set(cache_key, data, self.cache_timeout)
 
                 return data
-            
+
             logger.error(
-                "API request failed with status code: %s",
-                response.status_code,
+                "API request failed with status code: %s", response.status_code
             )
             logger.error("Response: %s", response.text)
             return None
@@ -211,7 +214,7 @@ class ImageAPIClient:
             if self.verify_ssl:
                 logger.warning(
                     "Consider setting VERIFY_SSL=False in settings "
-                    "if the certificate is self-signed",
+                    "if the certificate is self-signed"
                 )
             return None
         except requests.exceptions.RequestException as e:
@@ -230,13 +233,13 @@ class ImageAPIClient:
             dict: API response with image data
         """
         return self._make_request(
-            "all-files-and-articles/",
-            params={"page": page, "page_size": page_size},
+            "all-files-and-articles/", params={"page": page, "page_size": page_size}
         )
 
     def search_product_images(self, article_number):
         """
-        Search for images associated with a specific product by article number.
+        Search for images associated with a specific product by article
+        number.
 
         Args:
             article_number (str): The product article number to search for
@@ -248,7 +251,7 @@ class ImageAPIClient:
         if self.cache_enabled:
             cached_images = cache.get(product_cache_key)
             if cached_images:
-                logger.debug(f"Using cached images for product {article_number}")
+                logger.debug("Using cached images for %s", article_number)
                 return cached_images
 
         # This could be optimized if the API supports direct filtering
@@ -267,7 +270,9 @@ class ImageAPIClient:
             if total_pages is None:
                 count = data.get("count", 0)
                 total_pages = (count + page_size - 1) // page_size
-                logger.info(f"Found {count} total records across {total_pages} pages")
+                logger.info(
+                    "Found %d total records across %d pages", count, total_pages
+                )
 
             # Filter results for the specific article number
             for item in data.get("results", []):
@@ -286,9 +291,7 @@ class ImageAPIClient:
 
         # Log how many images were found total
         if product_images:
-            logger.info(
-                f"Found {len(product_images)} images for article {article_number}",
-            )
+            logger.info("Found %d images for %s", len(product_images), article_number)
 
         # Cache the results for this product
         if self.cache_enabled and product_images:
@@ -298,7 +301,8 @@ class ImageAPIClient:
 
     def parse_image(self, image_data):
         """
-        Parse the image data from the API response into a more usable format.
+        Parse the image data from the API response into a more usable
+        format.
 
         Args:
             image_data (dict): Raw image data from the API
@@ -308,7 +312,7 @@ class ImageAPIClient:
         """
         result = {
             "external_id": image_data.get("id", ""),
-            "image_type": image_data.get("original_file", {}).get("type", ""),
+            "image_type": (image_data.get("original_file", {}).get("type", "")),
             "images": [],
             "metadata": image_data,
         }
@@ -366,22 +370,28 @@ class ImageAPIClient:
                 )
 
                 # Find a suitable thumbnail (prefer PNG around 200px)
-                if img_format == "png" and resolution and resolution[0] <= 300:
+                if img_format == "png" and resolution and resolution[0] <= MAX_THUMBNAIL_RESOLUTION:
                     if thumbnail_url is None or (
-                        resolution[0] <= 300 and resolution[0] > 150
+                        resolution[0] <= MAX_THUMBNAIL_RESOLUTION
+                        and resolution[0] > MIN_THUMBNAIL_RESOLUTION
                     ):
                         thumbnail_url = img_url
 
                 # Track highest resolution PNG and JPEG for primary image selection
                 if img_format == "png" and resolution:
                     total_pixels = (
-                        resolution[0] * resolution[1] if len(resolution) >= 2 else 0
+                        resolution[0] * resolution[1]
+                        if len(resolution) >= MIN_RESOLUTION_ARRAY_LENGTH
+                        else 0
                     )
                     if total_pixels > highest_res_png[0]:
                         highest_res_png = (total_pixels, img_url)
+
                 elif img_format in ("jpg", "jpg_k", "jpg_g", "jpeg") and resolution:
                     total_pixels = (
-                        resolution[0] * resolution[1] if len(resolution) >= 2 else 0
+                        resolution[0] * resolution[1]
+                        if len(resolution) >= MIN_RESOLUTION_ARRAY_LENGTH
+                        else 0
                     )
                     if total_pixels > highest_res_jpeg[0]:
                         highest_res_jpeg = (total_pixels, img_url)
@@ -472,7 +482,7 @@ class ImageAPIClient:
             article_number (str): The product article number
 
         Returns:
-            dict: Parsed image data for the best image, or None if no images found  # noqa: E501
+            dict: Best image data, or None if no images found
         """
         images = self.search_product_images(article_number)
 
@@ -523,11 +533,43 @@ class ImageAPIClient:
         # Fetch images for products that aren't cached yet
         logger.info("Preloading images for %d products", len(uncached_articles))
 
-        # Process in batches to avoid excessive API calls
+        # Process each uncached article
+        for article_number in uncached_articles:
+            logger.info("Searching for images with article number: %s", article_number)
+            images = self.search_product_images(article_number)
+
+            if images:
+                logger.info(
+                    "Found %d images for article %s", len(images), article_number
+                )
+                sorted_images = self.sort_images_by_priority(images)
+                if sorted_images:
+                    result[article_number] = self.parse_image(sorted_images[0])
+            else:
+                logger.warning("No images found for article %s", article_number)
+
+        return result
+
+    def get_product_images(self, product):
+        """
+        Get images for a product, trying multiple article number formats.
+
+        This method implements a fallback strategy to find images for a
+        product:
+        1. First tries with the appropriate article number based on type
+        2. If no images found, tries with the product's own SKU
+        3. If still no images and it's a variant, tries with base_sku
+        4. If still no images and it has a parent, tries with parent's SKU
+
+        Args:
+            product: The Product model instance
+
+        Returns:
+            list: List of image data for the product
+        """
         article_number = self.get_appropriate_article_number(product)
         logger.info(
-            "Searching for images with primary article number: %s",
-            article_number,
+            "Searching for images with primary article number: %s", article_number
         )
         images = self.search_product_images(article_number)
 
@@ -547,7 +589,8 @@ class ImageAPIClient:
                 logger.info("Found %d images using product SKU", len(images))
                 return images
 
-        # If still no images and it's a variant with a base_sku different from what we've tried
+        # If still no images and it's a variant with a base_sku different
+        # from what we've tried
         if (
             not product.is_parent
             and product.base_sku
@@ -581,72 +624,41 @@ class ImageAPIClient:
         )
         return []
 
-    def get_product_images(self, product):
+    def check_connection(self) -> bool:
         """
-        Get images for a product, trying multiple article number formats if needed.  # noqa: E501
+        Test the connection to the image API by making a simple request.
 
-        This method implements a fallback strategy to find images for a product:  # noqa: E501
-        1. First tries with the appropriate article number based on product type  # noqa: E501
-        2. If no images found, tries with the product's own SKU
-        3. If still no images and it's a variant, tries with base_sku
-        4. If still no images and it has a parent, tries with parent's SKU
-
-        Args:
-            product: The Product model instance
+        This method attempts to fetch a single image record from the API
+        to verify that the connection, authentication, and basic API
+        functionality are working.
 
         Returns:
-            list: List of image data for the product
+            bool: True if connection is successful, False otherwise
+
+        Raises:
+            Exception: If there is a connection error or API response error
         """
-        article_number = self.get_appropriate_article_number(product)
-        logger.info(
-            f"Searching for images with primary article number: {article_number}",
-        )
-        images = self.search_product_images(article_number)
-
-        if images:
-            logger.info(f"Found {len(images)} images using primary article number")
-            return images
-
-        # If no images found and the article number wasn't the product's own SKU, try that
-        if article_number != product.sku:
-            logger.info(
-                f"No images found with primary article number, trying product SKU: {product.sku}",
+        try:
+            # Try to fetch a single record to test the connection
+            response = self._make_request(
+                "all-files-and-articles/", params={"page": 1, "page_size": 1}
             )
-            images = self.search_product_images(product.sku)
 
-            if images:
-                logger.info(f"Found {len(images)} images using product SKU")
-                return images
+            if response is None:
+                raise NoResponseError()
 
-        # If still no images and it's a variant with a base_sku different from what we've tried
-        if (
-            not product.is_parent
-            and product.base_sku
-            and product.base_sku != article_number
-            and product.base_sku != product.sku
-        ):
-            logger.info(f"Trying base SKU: {product.base_sku}")
-            images = self.search_product_images(product.base_sku)
+            # Verify we got a valid response with the expected structure
+            if not isinstance(response, dict):
+                raise InvalidResponseFormatError()
 
-            if images:
-                logger.info(f"Found {len(images)} images using base SKU")
-                return images
+            # Check for required fields in response
+            required_fields = {"count", "results"}
+            if not all(field in response for field in required_fields):
+                raise MissingFieldsError()
 
-        # If still no images and it has a parent that we haven't tried yet
-        if (
-            product.parent
-            and product.parent.sku != article_number
-            and product.parent.sku != product.sku
-        ):
-            logger.info(f"Trying parent SKU: {product.parent.sku}")
-            images = self.search_product_images(product.parent.sku)
+            logger.info("Successfully connected to Images API")
+            return True
 
-            if images:
-                logger.info(f"Found {len(images)} images using parent SKU")
-                return images
-
-        # If we've tried everything and found nothing
-        logger.warning(
-            f"No images found for product {product.sku} after trying all fallback options",
-        )
-        return []
+        except Exception as e:
+            logger.exception("Failed to connect to Images API")
+            raise

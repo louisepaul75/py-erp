@@ -35,7 +35,7 @@ class DatabaseConnectionMiddleware:
                 # Return if we already have a JsonResponse
                 if isinstance(response, JsonResponse):
                     return response
-                
+
                 # Generate our own response for non-JSON responses
                 try:
                     env_module = settings.DJANGO_SETTINGS_MODULE
@@ -43,13 +43,13 @@ class DatabaseConnectionMiddleware:
                 except AttributeError:
                     # Handle missing DJANGO_SETTINGS_MODULE
                     django_settings = os.environ.get(
-                        "DJANGO_SETTINGS_MODULE", 
-                        "unknown"
+                        "DJANGO_SETTINGS_MODULE", "unknown"
                     )
                     env = django_settings.split(".")[-1]
-                
+
                 try:
                     from django.db import connection
+
                     with connection.cursor() as cursor:
                         cursor.execute("SELECT 1")
                         cursor.fetchone()
@@ -62,13 +62,12 @@ class DatabaseConnectionMiddleware:
                     logger.error(msg.format(e))
 
                 status_code = (
-                    status.HTTP_200_OK if db_status == "ok"
+                    status.HTTP_200_OK
+                    if db_status == "ok"
                     else status.HTTP_503_SERVICE_UNAVAILABLE
                 )
 
-                health_status = (
-                    "healthy" if db_status == "ok" else "unhealthy"
-                )
+                health_status = "healthy" if db_status == "ok" else "unhealthy"
                 db_conn_status = "connected" if db_status == "ok" else "error"
                 msg = error_msg if error_msg else "Database is connected"
 
@@ -82,7 +81,7 @@ class DatabaseConnectionMiddleware:
                         "environment": env,
                         "version": getattr(settings, "APP_VERSION", "unknown"),
                     },
-                    status=status_code
+                    status=status_code,
                 )
             except Exception as e:
                 try:
@@ -91,11 +90,10 @@ class DatabaseConnectionMiddleware:
                 except AttributeError:
                     # Handle missing DJANGO_SETTINGS_MODULE
                     django_settings = os.environ.get(
-                        "DJANGO_SETTINGS_MODULE", 
-                        "unknown"
+                        "DJANGO_SETTINGS_MODULE", "unknown"
                     )
                     env = django_settings.split(".")[-1]
-                
+
                 return JsonResponse(
                     {
                         "status": "unhealthy",
@@ -116,14 +114,34 @@ class DatabaseConnectionMiddleware:
             "/admin/login/",
             "/login/",
             "/static/",
+            "/media/",
+            "/staticfiles/",
+            "/assets/",
+            "/favicon.ico",
+            "/robots.txt",
+            "/manifest.json",
+            "/service-worker.js",
+            "/.well-known/",
+            "/sitemap.xml",
             "/monitoring/health-check/public/",
+            "/monitoring/health-checks/",
         ]
 
-        # Check if path is in optional paths list
+        # Check for static file extensions that don't need database access
+        static_extensions = [
+            '.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg',
+            '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map'
+        ]
+        
+        # Check if path is optional or has a static extension
         is_optional = any(
             request.path.startswith(path) for path in db_optional_paths
         )
-        if is_optional:
+        has_static_extension = any(
+            request.path.endswith(ext) for ext in static_extensions
+        )
+        
+        if is_optional or has_static_extension:
             return self.get_response(request)
 
         # Handle database errors for all other paths
@@ -156,6 +174,7 @@ class AuthExemptMiddleware(MiddlewareMixin):
             "/health/",
             "/api/health/",
             "/monitoring/health-check/public/",
+            "/monitoring/health-checks/",
         ]
 
         # Check if current path should be exempt from authentication

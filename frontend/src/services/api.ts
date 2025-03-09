@@ -10,7 +10,6 @@ export const determineBaseUrl = () => {
   const isSpecificIP = window.location.hostname === '192.168.73.65';
   if (isSpecificIP) {
     // Use HTTPS instead of HTTP to avoid Mixed Content errors
-    // Remove the /api suffix to prevent double prefixing
     return 'https://192.168.73.65';
   }
 
@@ -29,7 +28,6 @@ export const determineBaseUrl = () => {
 };
 
 const baseUrl = determineBaseUrl();
-// Don't add /api to the base URL since the Vite proxy handles that
 const apiBaseUrl = baseUrl;
 
 // Log the API base URL being used
@@ -42,7 +40,7 @@ console.log('Is localhost:', window.location.hostname === 'localhost' ||
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: apiBaseUrl + '/api',  // Add /api prefix to all requests
   headers: {
     'Content-Type': 'application/json',
   },
@@ -58,9 +56,9 @@ api.interceptors.request.use(
       config.headers['X-CSRFToken'] = csrfToken;
     }
 
-    // Add JWT token if available
+    // Only add Authorization header for authenticated endpoints
     const token = localStorage.getItem('access_token');
-    if (token) {
+    if (token && !config.url?.includes('token/')) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -88,7 +86,7 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await api.post('/api/token/refresh/', {
+        const response = await api.post('/token/refresh/', {
           refresh: refreshToken
         });
 
@@ -116,25 +114,47 @@ api.interceptors.response.use(
 );
 
 // Product API endpoints
+interface ProductListParams {
+  _ude_variants?: boolean;
+  include_variants?: boolean;
+  page?: number;
+  page_size?: number;
+  q?: string;
+  category?: number;
+  in_stock?: boolean;
+  is_active?: boolean;
+  [key: string]: any;
+}
+
 export const productApi = {
   // Get all products with optional filters
-  getProducts: async (params = {}) => {
-    return api.get('/api/products/', { params });
+  getProducts: async (params: ProductListParams = {}) => {
+    // Convert _ude_variants to include_variants if present
+    if (params._ude_variants !== undefined) {
+      params.include_variants = params._ude_variants;
+      delete params._ude_variants;
+    }
+    return api.get('/products/', { params });
   },
 
   // Get product details by ID
   getProduct: async (id: number) => {
-    return api.get(`/api/products/${id}/`);
+    return api.get(`/products/${id}/`);
+  },
+
+  // Update product by ID
+  updateProduct: async (id: number, data: any) => {
+    return api.patch(`/api/products/${id}/`, data);
   },
 
   // Get product variant details
   getVariant: async (id: number) => {
-    return api.get(`/api/products/variant/${id}/`);
+    return api.get(`/products/variant/${id}/`);
   },
 
   // Get all product categories
   getCategories: async () => {
-    return api.get('/api/products/categories/');
+    return api.get('/products/categories/');
   }
 };
 
@@ -142,32 +162,32 @@ export const productApi = {
 export const salesApi = {
   // Get all sales orders with optional filters
   getSalesOrders: async (params = {}) => {
-    return api.get('/api/sales/orders/', { params });
+    return api.get('/sales/orders/', { params });
   },
 
   // Get sales order details by ID
   getSalesOrder: async (id: number) => {
-    return api.get(`/api/sales/orders/${id}/`);
+    return api.get(`/sales/orders/${id}/`);
   },
 
   // Create a new sales order
   createSalesOrder: async (data: any) => {
-    return api.post('/api/sales/orders/', data);
+    return api.post('/sales/orders/', data);
   },
 
   // Update an existing sales order
   updateSalesOrder: async (id: number, data: any) => {
-    return api.put(`/api/sales/orders/${id}/`, data);
+    return api.put(`/sales/orders/${id}/`, data);
   },
 
   // Delete a sales order
   deleteSalesOrder: async (id: number) => {
-    return api.delete(`/api/sales/orders/${id}/`);
+    return api.delete(`/sales/orders/${id}/`);
   },
 
   // Get all customers
   getCustomers: async (params = {}) => {
-    return api.get('/api/sales/customers/', { params });
+    return api.get('/sales/customers/', { params });
   }
 };
 

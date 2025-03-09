@@ -52,7 +52,7 @@ urlpatterns = [
     # Django admin URLs
     path("admin/", admin.site.urls),
     # API URLs
-    path("api/v1/", include("pyerp.core.api_urls")),
+    path("api/", include("pyerp.core.api_urls")),
     path(
         "api/token/",
         TokenObtainPairView.as_view(permission_classes=[]),
@@ -77,7 +77,6 @@ urlpatterns = [
         "api/monitoring/",
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
     ),
-    path("api/", include("pyerp.core.api_urls")),
     # Add products API URLs directly
     path("api/products/", include("pyerp.products.api_urls")),
 ]
@@ -116,6 +115,11 @@ for url_prefix, module_path in OPTIONAL_API_MODULES:
     except ImportError as e:
         print(f"WARNING: Could not import {module_path}: {e}")
         print(f"URL patterns for api/{url_prefix}/ will not be available")
+
+# Include core URLs at root level (for health check and other core functionality)
+urlpatterns += [
+    path("", include("pyerp.core.urls")),
+]
 
 # Vue.js application route - now as the root URL
 urlpatterns += [

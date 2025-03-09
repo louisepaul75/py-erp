@@ -4,28 +4,28 @@ Test script to verify the new product model structure.
 
 import os
 import sys
+from pathlib import Path
+
+# Set the project root and update sys.path
+project_root = str(Path(__file__).resolve().parent.parent.parent)
+sys.path.insert(0, project_root)
 
 import django
 import pytest
 from django.db import connection
 from django.db.models import Count
-from dotenv import load_dotenv
 
+from pyerp.utils.env_loader import load_environment_variables
 from pyerp.products.models import (
     ParentProduct,
     VariantProduct,
 )
 
-# Add the project root directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-# Load environment variables from .env file in config/env folder
-env_path = os.path.join(os.path.dirname(__file__), "../../config/env/.env")
-
-load_dotenv(env_path)
+# Load environment variables using env_loader (will load if .env exists)
+load_environment_variables(verbose=True)
 
 # Set up Django environment
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.development")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
 django.setup()
 
 # Import Django models

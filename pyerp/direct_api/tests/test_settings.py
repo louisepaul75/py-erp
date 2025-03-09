@@ -2,6 +2,8 @@
 Tests for the direct_api settings module.
 """
 
+import os
+
 from django.test import TestCase, override_settings
 
 from pyerp.direct_api.settings import (
@@ -40,6 +42,10 @@ class TestSettings(TestCase):
         import importlib
 
         from pyerp.direct_api import settings as api_settings
+
+        # Clear any environment variables that might override settings
+        if "LEGACY_ERP_API_LIVE" in os.environ:
+            del os.environ["LEGACY_ERP_API_LIVE"]
 
         importlib.reload(api_settings)
 

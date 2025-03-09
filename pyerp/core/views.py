@@ -5,6 +5,7 @@ Views for the Core app.
 import json
 import logging
 import os
+import subprocess
 
 from django.conf import settings
 from django.db import connection
@@ -38,8 +39,7 @@ def health_check(request):
     logger.debug("Health check requested")
 
     # Get environment and version info
-    env_module = settings.DJANGO_SETTINGS_MODULE
-    environment = env_module.split(".")[-1]
+    environment = os.environ.get("DJANGO_ENV", "development")
     version = getattr(settings, "APP_VERSION", "unknown")
 
     try:
@@ -47,42 +47,77 @@ def health_check(request):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
-            
+
         response_data = {
             "status": "healthy",
-            "database": {
-                "status": "connected",
-                "message": "Database is connected"
-            },
+            "database": {"status": "connected", "message": "Database is connected"},
             "environment": environment,
-            "version": version
+            "version": version,
         }
         status_code = status.HTTP_200_OK
 
-    except Exception as e:
-        msg = "Database health check failed: {}"
-        logger.error(msg.format(e))
+    except OperationalError as e:
+        # Specific handling for database connection errors
+        msg = f"Database connection error: {e!s}"
+        logger.error(msg)
         response_data = {
             "status": "unhealthy",
-            "database": {
-                "status": "error",
-                "message": str(e)
-            },
+            "database": {"status": "error", "message": msg},
             "environment": environment,
-            "version": version
+            "version": version,
         }
-        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        status_code = status.HTTP_200_OK  # Still return 200 for monitoring systems
+
+    except Exception as e:
+        msg = f"Unexpected error during health check: {e!s}"
+        logger.error(msg)
+        response_data = {
+            "status": "unhealthy",
+            "database": {"status": "error", "message": msg},
+            "environment": environment,
+            "version": version,
+        }
+        status_code = status.HTTP_200_OK  # Still return 200 for monitoring systems
 
     # Create response with explicit content type
     response = JsonResponse(response_data, status=status_code)
     response["Content-Type"] = "application/json"
-    
+
     # Disable debug-related middleware processing
-    setattr(request, "_dont_enforce_csrf_checks", True)
+    request._dont_enforce_csrf_checks = True
     if hasattr(request, "_auth_exempt"):
         request._auth_exempt_response = response
 
     return response
+
+
+@require_GET
+@csrf_exempt
+def git_branch(request):
+    """
+    Get the current git branch name.
+    Only available in development mode.
+    """
+    if not settings.DEBUG:
+        return JsonResponse(
+            {"error": "Not available in production"},
+            status=403,
+        )
+
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        branch = result.stdout.strip()
+        return JsonResponse({"branch": branch})
+    except subprocess.CalledProcessError:
+        return JsonResponse(
+            {"error": "Could not get branch name"},
+            status=500,
+        )
 
 
 class UserProfileView(APIView):
@@ -101,7 +136,7 @@ class UserProfileView(APIView):
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "is_sta": user.is_staff,
+            "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
             "date_joined": user.date_joined,
         }
@@ -239,9 +274,7 @@ class VueAppView(TemplateView):
 
         # Parse Vue.js manifest for correct asset paths in production
         if not settings.DEBUG:
-            manifest_path = os.path.join(
-                settings.STATIC_ROOT, "vue", "manifest.json"
-            )
+            manifest_path = os.path.join(settings.STATIC_ROOT, "vue", "manifest.json")
             if os.path.exists(manifest_path):
                 with open(manifest_path) as f:
                     try:

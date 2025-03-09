@@ -34,8 +34,8 @@ const authService = {
   // Login with username and password
   login: async (credentials: LoginCredentials): Promise<User> => {
     try {
-      // Get JWT tokens
-      const tokenResponse = await api.post<TokenResponse>('/api/token/', credentials);
+      // Get JWT tokens using the correct endpoint
+      const tokenResponse = await api.post<TokenResponse>('/token/', credentials);
 
       // Store tokens in localStorage
       localStorage.setItem('access_token', tokenResponse.data.access);
@@ -45,7 +45,7 @@ const authService = {
       api.defaults.headers.common['Authorization'] = `Bearer ${tokenResponse.data.access}`;
 
       // Get user profile
-      const userResponse = await api.get<User>('/api/v1/profile/');
+      const userResponse = await api.get<User>('/profile/');
       return userResponse.data;
     } catch (error) {
       console.error('Login failed:', error);
@@ -65,7 +65,22 @@ const authService = {
 
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    if (!token) return false;
+
+    try {
+      // Decode the JWT token
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+
+      // Check if token is expired
+      const now = Date.now() / 1000;
+      return payload.exp > now;
+    } catch (error) {
+      console.error('Error checking token validity:', error);
+      return false;
+    }
   },
 
   // Get current user profile
@@ -81,7 +96,7 @@ const authService = {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Get user profile
-      const response = await api.get<User>('/api/v1/profile/');
+      const response = await api.get<User>('/profile/');
       return response.data;
     } catch (error) {
       console.error('Failed to get current user:', error);
@@ -97,7 +112,7 @@ const authService = {
         return null;
       }
 
-      const response = await api.post<{ access: string }>('/api/token/refresh/', {
+      const response = await api.post<{ access: string }>('/token/refresh/', {
         refresh: refreshToken
       });
 
@@ -116,7 +131,7 @@ const authService = {
 
   // Update the user's profile
   updateProfile: async (userData: Partial<User>): Promise<User> => {
-    const response = await api.patch<User>('/api/v1/profile/', userData);
+    const response = await api.patch<User>('/profile/', userData);
     return response.data;
   },
 

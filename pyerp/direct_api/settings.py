@@ -29,6 +29,11 @@ API_BASE_URL = get_env_or_setting(
 API_INFO_ENDPOINT = getattr(settings, "LEGACY_API_INFO_ENDPOINT", "$info")
 API_REST_ENDPOINT = getattr(settings, "LEGACY_API_REST_ENDPOINT", "rest")
 
+# Session settings
+API_SESSION_REFRESH_MARGIN = getattr(
+    settings, "LEGACY_API_SESSION_REFRESH_MARGIN", 300
+)  # 5 minutes in seconds
+
 # Environment settings - no credentials needed
 API_ENVIRONMENTS = getattr(
     settings,
@@ -40,12 +45,32 @@ API_ENVIRONMENTS = getattr(
                 "LEGACY_API_BASE_URL",
                 API_BASE_URL,
             ),
+            "username": get_env_or_setting(
+                "LEGACY_ERP_API_LIVE_USER",
+                "LEGACY_API_USERNAME",
+                "",
+            ),
+            "password": get_env_or_setting(
+                "LEGACY_ERP_API_LIVE_PASS",
+                "LEGACY_API_PASSWORD",
+                "",
+            ),
         },
         "test": {
             "base_url": get_env_or_setting(
                 "LEGACY_ERP_API_TEST",
                 "LEGACY_API_TEST_BASE_URL",
                 API_BASE_URL,
+            ),
+            "username": get_env_or_setting(
+                "LEGACY_ERP_API_TEST_USER",
+                "LEGACY_API_TEST_USERNAME",
+                "",
+            ),
+            "password": get_env_or_setting(
+                "LEGACY_ERP_API_TEST_PASS",
+                "LEGACY_API_TEST_PASSWORD",
+                "",
             ),
         },
     },

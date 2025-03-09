@@ -75,6 +75,7 @@ class HealthCheckResult(models.Model):
         indexes = [
             models.Index(fields=["component", "-timestamp"]),
         ]
+        app_label = "monitoring"
 
     def __str__(self):
         return f"{self.get_component_display()} - {self.get_status_display()} - {self.timestamp}"

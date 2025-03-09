@@ -37,9 +37,12 @@
             <button class="toolbar-button">
                 <FileTextIcon class="icon-small"/>
             </button>
+            <button class="artikel-button" @click="saveProduct">
+                Speichern
+            </button>
             <button class="artikel-button">
                 Artikel übernehmen
-</button>
+            </button>
             <div class="toolbar-right">
                 <button class="toolbar-button">
                     <RotateCcwIcon class="icon-small"/>
@@ -497,6 +500,8 @@ const loadProductDetails = async (productId: number) => {
       
       selectedProductData.bezeichnung = product.name || '';
       selectedProductData.beschreibung = product.description || '';
+      selectedProductData.hangend = product.is_hanging || false;
+      selectedProductData.einseitig = product.is_one_sided || false;
       
       // Map additional fields if they exist
       if (product.attributes) {
@@ -515,10 +520,6 @@ const loadProductDetails = async (productId: number) => {
             selectedProductData.gewicht = value;
           } else if (name === 'boxgröße' || name === 'box size') {
             selectedProductData.boxgrosse = value;
-          } else if (name === 'hängend' && (value === 'true' || value === 'yes')) {
-            selectedProductData.hangend = true;
-          } else if (name === 'einseitig' && (value === 'true' || value === 'yes')) {
-            selectedProductData.einseitig = true;
           }
         });
       }
@@ -557,6 +558,8 @@ const loadProductFromApi = async (productId: string | number) => {
       
       selectedProductData.bezeichnung = product.name || '';
       selectedProductData.beschreibung = product.description || '';
+      selectedProductData.hangend = product.is_hanging || false;
+      selectedProductData.einseitig = product.is_one_sided || false;
       
       // Map additional fields if they exist
       if (product.attributes) {
@@ -575,10 +578,6 @@ const loadProductFromApi = async (productId: string | number) => {
             selectedProductData.gewicht = value;
           } else if (name === 'boxgröße' || name === 'box size') {
             selectedProductData.boxgrosse = value;
-          } else if (name === 'hängend' && (value === 'true' || value === 'yes')) {
-            selectedProductData.hangend = true;
-          } else if (name === 'einseitig' && (value === 'true' || value === 'yes')) {
-            selectedProductData.einseitig = true;
           }
         });
       }
@@ -626,6 +625,38 @@ const closeWindow = () => {
   }
 };
 
+// Save product changes
+const saveProduct = async () => {
+  try {
+    // Get the currently selected product from the list
+    const selectedProduct = productData.value.find(p => p.selected);
+    if (!selectedProduct?.id) {
+      console.error('No product selected');
+      return;
+    }
+
+    // Prepare data for update
+    const updateData = {
+      name: selectedProductData.bezeichnung,
+      description: selectedProductData.beschreibung,
+      is_hanging: selectedProductData.hangend,
+      is_one_sided: selectedProductData.einseitig,
+    };
+
+    // Update the product
+    const response = await productApi.updateProduct(selectedProduct.id, updateData);
+    console.log('Product updated:', response.data);
+
+    // Update the product in the list
+    selectedProduct.bezeichnung = selectedProductData.bezeichnung;
+    selectedProduct.product = response.data;
+
+  } catch (err: any) {
+    console.error('Error saving product:', err);
+    productLoadError.value = `Failed to save product: ${err.message || 'Unknown error'}`;
+  }
+};
+
 // Watch for product prop changes
 watch(() => props.product, (newProduct) => {
   if (newProduct) {
@@ -634,6 +665,8 @@ watch(() => props.product, (newProduct) => {
     // Map the product data to the ArtikelManagement format
     selectedProductData.bezeichnung = newProduct.name || '';
     selectedProductData.beschreibung = newProduct.description || '';
+    selectedProductData.hangend = newProduct.is_hanging || false;
+    selectedProductData.einseitig = newProduct.is_one_sided || false;
     
     // Map additional fields if they exist
     if (newProduct.attributes) {
@@ -652,10 +685,6 @@ watch(() => props.product, (newProduct) => {
           selectedProductData.gewicht = value;
         } else if (name === 'boxgröße' || name === 'box size') {
           selectedProductData.boxgrosse = value;
-        } else if (name === 'hängend' && (value === 'true' || value === 'yes')) {
-          selectedProductData.hangend = true;
-        } else if (name === 'einseitig' && (value === 'true' || value === 'yes')) {
-          selectedProductData.einseitig = true;
         }
       });
     }

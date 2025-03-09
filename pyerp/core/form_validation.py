@@ -27,8 +27,8 @@ class ValidatedFormMixin:
         super().__init__(*args, **kwargs)
 
         # Initialize validator containers
-        self.field_validators = {}
-        self.form_validators = []
+        self.validators = {}  # Field validators
+        self.form_validators = []  # Form-level validators
 
         # Set up validators
         self.setup_validators()
@@ -48,14 +48,17 @@ class ValidatedFormMixin:
             field_name: Name of the field to validate
             validator: Validator instance to apply
         """
-        if field_name not in self.field_validators:
-            self.field_validators[field_name] = []
+        if field_name not in self.validators:
+            self.validators[field_name] = []
 
-        self.field_validators[field_name].append(validator)
+        self.validators[field_name].append(validator)
 
     def add_form_validator(
         self,
-        validator_func: Callable[[dict[str, Any]], ValidationResult],
+        validator_func: Callable[
+            [dict[str, Any]],
+            ValidationResult | dict[str, list[str]] | None,
+        ],
     ):
         """
         Add a form-level validator function.
@@ -79,13 +82,14 @@ class ValidatedFormMixin:
         result = ValidationResult()
 
         # Skip if no validators defined for this field
-        if field_name not in self.field_validators:
+        if field_name not in self.validators:
             return result
 
         # Apply each validator
-        for validator in self.field_validators[field_name]:
+        for validator in self.validators[field_name]:
             validator_result = validator(value, field_name=field_name)
-            result.merge(validator_result)
+            if validator_result:
+                result.merge(validator_result)
 
         return result
 
@@ -101,137 +105,127 @@ class ValidatedFormMixin:
         """
         result = ValidationResult()
 
-        # Apply each form validator
-        for validator_func in self.form_validators:
-            validator_result = validator_func(cleaned_data)
-            result.merge(validator_result)
+        for validator in self.form_validators:
+            validator_result = validator(cleaned_data)
+            if validator_result:
+                if isinstance(validator_result, dict):
+                    for field_name, messages in validator_result.items():
+                        for message in messages:
+                            result.add_error(field_name, message)
+                elif isinstance(validator_result, ValidationResult):
+                    result.merge(validator_result)
 
         return result
 
     def clean(self):
         """
-        Clean the form data and apply validators.
+        Clean and validate the form data.
 
-        This extends Django's form cleaning process to use our validators.
+        This method is called by Django's form validation process.
+        It applies field-level and form-level validators.
 
         Returns:
-            Dictionary of cleaned data
+            Cleaned form data
 
         Raises:
             ValidationError: If validation fails
         """
         cleaned_data = super().clean()
 
-        # Apply field validators through clean_<field> methods
-        for field_name in list(cleaned_data.keys()):
-            if field_name in self.field_validators:
-                pass
-
         # Apply form-level validators
         form_result = self.apply_form_validators(cleaned_data)
 
-        # If form validation failed, add errors
-        if not form_result.is_valid:
-            for field_name, error_messages in form_result.errors.items():
-                for message in error_messages:
-                    self.add_error(field_name, message)
+        # Add any validation errors to the form
+        for field_name, messages in form_result.errors.items():
+            for message in messages:
+                self.add_error(field_name, message)
 
         return cleaned_data
 
     def __getattribute__(self, name):
         """
-        Custom attribute getter to handle dynamic clean_<field> methods.
+        Override attribute access to handle dynamic field cleaning methods.
 
-        This allows validators to be called automatically during form cleaning.
+        This allows field validators to be called during Django's form
+        validation.
         """
-        if name.startswith("clean_") and not name == "clean":
-            field_name = name[6:]  # Remove 'clean_' prefix
+        try:
+            return super().__getattribute__(name)
+        except AttributeError as e:
+            if name.startswith("clean_") and name[6:] in self.validators:
+                field_name = name[6:]
 
-            # Check if we have validators for this field
-            try:
-                field_validators = object.__getattribute__(self, "field_validators")
-                if field_name in field_validators:
+                def clean_field():
+                    value = self.cleaned_data.get(field_name)
+                    result = self.apply_validators(field_name, value)
+                    if result.has_errors():
+                        raise ValidationError(result.errors[field_name])
+                    return value
 
-                    def clean_field():
-                        value = self.cleaned_data.get(field_name)
-
-                        # Apply validators
-                        validation_result = self.apply_validators(field_name, value)
-
-                        # If validation failed, raise ValidationError
-                        if not validation_result.is_valid:
-                            errors = []
-                            for field, messages in validation_result.errors.items():
-                                errors.extend(messages)
-                            raise ValidationError(errors)
-
-                        return value
-
-                    # Return the dynamic method
-                    return clean_field
-            except (AttributeError, KeyError):
-                pass
-
-        # Fall back to normal attribute lookup
-        return object.__getattribute__(self, name)
+                return clean_field
+            raise e
 
 
 class ValidatedModelForm(ValidatedFormMixin, forms.ModelForm):
     """
-    Model form with validation framework integration.
+    Base class for validated model forms.
 
-    This class extends Django's ModelForm with the validation framework,
-    allowing validators to be applied to model form fields.
+    This class combines Django's ModelForm with our validation framework.
     """
 
     def clean(self):
         """
-        Clean the form and validate the associated model.
+        Clean and validate the form data.
 
-        This extends the validation to include model instance validation.
+        This method is called by Django's form validation process.
+        It applies field-level and form-level validators.
 
         Returns:
-            Dictionary of cleaned data
+            Cleaned form data
 
         Raises:
             ValidationError: If validation fails
         """
         cleaned_data = super().clean()
 
-        # Additional model-specific validation can be added here
+        # Apply form-level validators
+        form_result = self.apply_form_validators(cleaned_data)
+
+        # Add any validation errors to the form
+        for field_name, messages in form_result.errors.items():
+            for message in messages:
+                self.add_error(field_name, message)
 
         return cleaned_data
 
 
 class ValidatedForm(ValidatedFormMixin, forms.Form):
     """
-    Form with validation framework integration.
+    Base class for validated forms.
 
-    This class extends Django's Form with the validation framework,
-    allowing validators to be applied to form fields.
+    This class combines Django's Form with our validation framework.
     """
 
     def is_valid(self):
         """
         Check if the form is valid.
 
-        This extends Django's is_valid method to ensure proper validation.
+        This method is called to validate the form data.
+        It applies field-level and form-level validators.
 
         Returns:
-            Boolean indicating if the form is valid
+            bool: True if the form is valid, False otherwise
         """
         is_valid = super().is_valid()
+        if not is_valid:
+            return False
 
-        # Add form-level validation
-        if is_valid and self.form_validators:
-            form_result = self.apply_form_validators(self.cleaned_data)
+        # Apply form-level validators
+        form_result = self.apply_form_validators(self.cleaned_data)
 
-            if not form_result.is_valid:
-                for field_name, error_messages in form_result.errors.items():
-                    for message in error_messages:
-                        self.add_error(field_name, message)
+        # Add any validation errors to the form
+        for field_name, messages in form_result.errors.items():
+            for message in messages:
+                self.add_error(field_name, message)
 
-                # Form is invalid if form validators failed
-                is_valid = False
-
-        return is_valid
+        return not form_result.has_errors()

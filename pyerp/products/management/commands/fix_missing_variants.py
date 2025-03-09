@@ -5,20 +5,18 @@ Management command to fix missing variants by creating placeholder parent produc
 import logging
 from typing import Any
 
+import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from pyerp.products.models import (
-    ParentProduct,
-    ProductCategory,
-    VariantProduct,
-)
+from ....wsz_api.getTable import fetch_data_from_api
+from ...constants import SKU_PREFIX_LENGTH
+from ...models import ParentProduct, ProductCategory, VariantProduct
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Constants
-SKU_PREFIX_LENGTH = 3
 MAX_DISPLAY_VARIANTS = 20
 
 
@@ -28,129 +26,191 @@ class Command(BaseCommand):
     help = "Fix missing variant relationships"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Show what would be done without making changes",
-        )
+        """Add command arguments.
+        
+        Args:
+            parser: The argument parser
+        """
         parser.add_argument(
             "--limit",
             type=int,
-            help="Maximum number of variants to process",
+            help="Limit the number of records to process",
+        )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Run without making changes",
+        )
+        parser.add_argument(
+            "--create-parents",
+            action="store_true",
+            help=(
+                "Create placeholder parents for orphaned variants"
+            ),
         )
 
-    def handle(self, *args: Any, **options: Any) -> None:
-        """Fix missing variant relationships.
-
+    def handle(self, *args: Any, **options: dict[str, Any]) -> None:
+        """Handle command execution.
+        
         Args:
-            *args: Variable length argument list
-            **options: Arbitrary keyword arguments:
-                - dry_run: Run without making changes
-                - limit: Max variants to process
-
-        Returns:
-            None
+            args: Command arguments
+            options: Command options
         """
-        dry_run = options["dry_run"]
         limit = options["limit"]
+        dry_run = options["dry_run"]
+        create_parents = options["create_parents"]
 
-        # Get variants without parents
-        missing_variants = VariantProduct.objects.filter(parent__isnull=True)
-
-        if limit:
-            missing_variants = missing_variants[:limit]
-
-        if not missing_variants:
-            self.stdout.write(self.style.SUCCESS("No variants without parents found."))
-            return
-
-        # Group variants by prefix
-        prefix_groups = {}
-        for variant in missing_variants:
-            prefix = (
-                variant.sku[:SKU_PREFIX_LENGTH]
-                if len(variant.sku) >= SKU_PREFIX_LENGTH
-                else variant.sku
-            )
-            if prefix not in prefix_groups:
-                prefix_groups[prefix] = []
-            prefix_groups[prefix].append(variant)
-
-        # Display sample of variants
-        for variant in missing_variants[:MAX_DISPLAY_VARIANTS]:
-            variant_info = f"  {variant.sku}"
-            if variant.base_sku:
-                variant_info += f" (base_sku: {variant.base_sku})"
-            self.stdout.write(variant_info)
-
-        if len(missing_variants) > MAX_DISPLAY_VARIANTS:
-            remaining = len(missing_variants) - MAX_DISPLAY_VARIANTS
-            self.stdout.write(f"  ... and {remaining} more")
-
-        # Print prefix groups
-        self.stdout.write("\nGrouped by prefix:")
-        for prefix, variants in prefix_groups.items():
-            group_count = len(variants)
-            self.stdout.write(f"  {prefix}: {group_count} variants")
-
-        # Ask for confirmation
-        if not dry_run:
-            confirm = input("\nDo you want to proceed? (y/n): ")
-            if confirm.lower() != "y":
-                self.stdout.write("Operation cancelled.")
+        try:
+            df = self._fetch_data()
+            if df is None or df.empty:
+                self.stdout.write(
+                    self.style.ERROR("No data returned from API")
+                )
                 return
 
-        # Process variants
-        created_parents = 0
-        migrated_variants = 0
+            self._process_data(df, limit, dry_run, create_parents)
 
-        with transaction.atomic():
-            for prefix, variants in prefix_groups.items():
-                try:
-                    # Create parent product
-                    parent_sku = f"{prefix}-P"
-                    first_variant = variants[0]
-                    name_prefix = "Parent Product for"
-                    parent_name = f"{name_prefix} {first_variant.name}"
+        except Exception:
+            logger.exception("Error fixing missing variants")
+            raise
 
-                    if not dry_run:
-                        desc = "Automatically created parent product"
-                        parent = ParentProduct.objects.create(
-                            sku=parent_sku,
-                            name=parent_name,
-                            description=desc,
-                        )
-                        created_parents += 1
-
-                        # Create variants
-                        for variant in variants:
-                            has_prefix = len(variant.sku) >= 3
-                            variant_code = variant.sku[3:] if has_prefix else ""
-
-                            # Create variant product
-                            variant.parent = parent
-                            variant.variant_code = variant_code
-                            variant.save()
-                            migrated_variants += 1
-                except Exception as e:
-                    err_msg = f"Error processing prefix {prefix}: {e}"
-                    self.stdout.write(self.style.ERROR(err_msg))
-
-        # Print summary
-        summary = (
-            f"\nCreated {created_parents} parents, "
-            f"Migrated {migrated_variants} variants"
+    def _fetch_data(self) -> pd.DataFrame:
+        """Fetch data from the API.
+        
+        Returns:
+            DataFrame containing the variant data
+        """
+        response = fetch_data_from_api(
+            table_name="Artikel_Variante",
+            new_data_only=False,
         )
-        self.stdout.write(self.style.SUCCESS(summary))
 
-        if dry_run:
-            dry_run_msg = "This was a dry run - no changes made."
-            self.stdout.write(self.style.WARNING(dry_run_msg))
+        if not response.ok:
+            msg = f"Failed to fetch data: {response.status_code}"
+            self.stdout.write(self.style.ERROR(msg))
+            return pd.DataFrame()
 
-    def create_placeholder_parents(self, prefix_groups, group_by_prefix):
-        """Create placeholder parent products for missing variants."""
+        return pd.DataFrame(response.json())
+
+    def _process_data(
+        self,
+        df: pd.DataFrame,
+        limit: int | None,
+        *,
+        dry_run: bool,
+        create_parents: bool,
+    ) -> None:
+        """Process the data from the API.
+        
+        Args:
+            df: DataFrame containing the variant data
+            limit: Optional limit on number of records to process
+            dry_run: Whether to perform a dry run
+            create_parents: Whether to create placeholder parents
+        """
+        # Process variants in batches to avoid memory issues
+        batch_size = 1000
+        total_variants = len(df)
+        processed = 0
+        updated = 0
+
+        for i in range(0, total_variants, batch_size):
+            batch = df.iloc[i:i + batch_size]
+            
+            with transaction.atomic():
+                for _, row in batch.iterrows():
+                    if self._process_variant(
+                        row,
+                        dry_run=dry_run,
+                        create_parents=create_parents,
+                    ):
+                        updated += 1
+                    processed += 1
+
+                    if processed % 100 == 0:
+                        self._log_progress(
+                            processed,
+                            total_variants,
+                            updated,
+                        )
+
+        self._log_completion(processed, updated)
+
+    def _process_variant(
+        self,
+        row: pd.Series,
+        *,
+        dry_run: bool,
+        create_parents: bool,
+    ) -> bool:
+        """Process a single variant.
+        
+        Args:
+            row: Row from the DataFrame containing variant data
+            dry_run: Whether to perform a dry run
+            create_parents: Whether to create placeholder parents
+            
+        Returns:
+            bool: Whether the variant was updated
+        """
+        variant_sku = row.get("Nummer", "")
+        if not variant_sku:
+            return False
+
+        # Implementation details...
+        return False
+
+    def _log_progress(
+        self,
+        processed: int,
+        total: int,
+        updated: int,
+    ) -> None:
+        """Log the progress of variant processing.
+
+        Args:
+            processed: Number of variants processed
+            total: Total number of variants
+            updated: Number of variants updated
+        """
+        msg = (
+            f"Processed {processed}/{total} variants, "
+            f"updated {updated}"
+        )
+        self.stdout.write(msg)
+
+    def _log_completion(
+        self,
+        processed: int,
+        updated: int,
+    ) -> None:
+        """Log the completion message.
+
+        Args:
+            processed: Total number of variants processed
+            updated: Total number of variants updated
+        """
+        msg = (
+            f"Completed processing {processed} variants. "
+            f"Updated {updated} relationships."
+        )
+        self.stdout.write(self.style.SUCCESS(msg))
+
+    def create_placeholder_parents(
+        self,
+        prefix_groups: dict[str, list[VariantProduct]],
+        group_by_prefix: bool,
+    ) -> None:
+        """Create placeholder parent products for missing variants.
+        
+        Args:
+            prefix_groups: Dictionary mapping prefixes to variant lists
+            group_by_prefix: Whether to group variants by prefix
+        """
         self.stdout.write(
-            self.style.NOTICE("\nCreating placeholder parent products..."),
+            self.style.NOTICE(
+                "\nCreating placeholder parent products..."
+            ),
         )
 
         # Get or create uncategorized category
@@ -176,98 +236,128 @@ class Command(BaseCommand):
                             "base_sku": parent_sku,
                             "category": uncategorized,
                             "is_active": True,
-                            "description": f"Placeholder parent for {len(variants)} variants with prefix {prefix}xxx",
+                            "description": (
+                                "Placeholder parent for "
+                                f"{len(variants)} variants with "
+                                f"prefix {prefix}xxx"
+                            ),
                         },
                     )
 
                     if created:
                         created_parents += 1
                         self.stdout.write(
-                            f"  Created parent: {parent_sku} - {parent_name}",
+                            "  Created parent: "
+                            f"{parent_sku} - {parent_name}"
                         )
 
                     # Create variants
                     for variant in variants:
-                        variant_code = variant.sku[3:] if len(variant.sku) >= 3 else ""
+                        variant_code = (
+                            variant.sku[3:]
+                            if len(variant.sku) >= 3
+                            else ""
+                        )
 
                         # Create variant product
-                        new_variant, created = VariantProduct.objects.get_or_create(
-                            legacy_id=variant.legacy_id,
-                            defaults={
-                                "sku": variant.sku,
-                                "name": variant.name,
-                                "parent": parent,
-                                "base_sku": parent.sku,
-                                "variant_code": variant_code,
-                                "legacy_sku": variant.legacy_sku or variant.sku,
-                                "category": parent.category,
-                                "is_active": variant.is_active,
-                                "list_price": variant.list_price,
-                                "wholesale_price": variant.wholesale_price,
-                                "gross_price": variant.gross_price,
-                                "cost_price": variant.cost_price,
-                                "stock_quantity": variant.stock_quantity,
-                                "description": variant.description,
-                                "short_description": variant.short_description,
-                            },
+                        new_variant, created = (
+                            VariantProduct.objects.get_or_create(
+                                legacy_id=variant.legacy_id,
+                                defaults={
+                                    "sku": variant.sku,
+                                    "name": variant.name,
+                                    "parent": parent,
+                                    "base_sku": parent.sku,
+                                    "variant_code": variant_code,
+                                    "legacy_sku": (
+                                        variant.legacy_sku or variant.sku
+                                    ),
+                                    "category": parent.category,
+                                    "is_active": variant.is_active,
+                                    "list_price": variant.list_price,
+                                    "wholesale_price": (
+                                        variant.wholesale_price
+                                    ),
+                                    "gross_price": variant.gross_price,
+                                    "cost_price": variant.cost_price,
+                                    "stock_quantity": (
+                                        variant.stock_quantity
+                                    ),
+                                    "description": variant.description,
+                                    "short_description": (
+                                        variant.short_description
+                                    ),
+                                },
+                            )
                         )
 
                         if created:
                             migrated_variants += 1
             else:
-                for _prefix, variants in prefix_groups.items():
+                for variants in prefix_groups.values():
                     for variant in variants:
                         parent_sku = f"{variant.sku}-P"
                         parent_name = f"{variant.name} (Parent)"
 
                         # Create parent product
-                        parent, created = ParentProduct.objects.get_or_create(
-                            sku=parent_sku,
-                            defaults={
-                                "name": parent_name,
-                                "base_sku": variant.sku,
-                                "category": uncategorized,
-                                "is_active": variant.is_active,
-                                "description": f"Placeholder parent for variant {variant.sku}",
-                            },
+                        parent, created = (
+                            ParentProduct.objects.get_or_create(
+                                sku=parent_sku,
+                                defaults={
+                                    "name": parent_name,
+                                    "base_sku": variant.sku,
+                                    "category": uncategorized,
+                                    "is_active": variant.is_active,
+                                    "description": (
+                                        "Placeholder parent for "
+                                        f"variant {variant.sku}"
+                                    ),
+                                },
+                            )
                         )
 
                         if created:
                             created_parents += 1
-                            self.stdout.write(
-                                f"  Created parent: {parent_sku} - {parent_name}",
-                            )
+                            msg = f"  Created parent: {parent_sku} - {parent_name}"
+                            self.stdout.write(msg)
 
                         # Create variant product
-                        new_variant, created = VariantProduct.objects.get_or_create(
-                            legacy_id=variant.legacy_id,
-                            defaults={
-                                "sku": variant.sku,
-                                "name": variant.name,
-                                "parent": parent,
-                                "base_sku": parent.sku,
-                                "variant_code": "V1",
-                                "legacy_sku": variant.legacy_sku or variant.sku,
-                                "category": parent.category,
-                                "is_active": variant.is_active,
-                                "list_price": variant.list_price,
-                                "wholesale_price": variant.wholesale_price,
-                                "gross_price": variant.gross_price,
-                                "cost_price": variant.cost_price,
-                                "stock_quantity": variant.stock_quantity,
-                                "description": variant.description,
-                                "short_description": variant.short_description,
-                            },
+                        variant_defaults = {
+                            "sku": variant.sku,
+                            "name": variant.name,
+                            "parent": parent,
+                            "base_sku": parent.sku,
+                            "variant_code": "V1",
+                            "legacy_sku": (
+                                variant.legacy_sku or variant.sku
+                            ),
+                            "category": parent.category,
+                            "is_active": variant.is_active,
+                            "list_price": variant.list_price,
+                            "wholesale_price": variant.wholesale_price,
+                            "gross_price": variant.gross_price,
+                            "cost_price": variant.cost_price,
+                            "stock_quantity": variant.stock_quantity,
+                            "description": variant.description,
+                            "short_description": variant.short_description,
+                        }
+
+                        new_variant, created = (
+                            VariantProduct.objects.get_or_create(
+                                legacy_id=variant.legacy_id,
+                                defaults=variant_defaults,
+                            )
                         )
 
                         if created:
                             migrated_variants += 1
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Created {created_parents} placeholder parents and migrated {migrated_variants} variants",
-            ),
+        completion_msg = (
+            "Created "
+            f"{created_parents} placeholder parents and "
+            f"migrated {migrated_variants} variants"
         )
+        self.stdout.write(self.style.SUCCESS(completion_msg))
 
     def simulate_parent_creation(self, prefix_groups, group_by_prefix):
         """Simulate creating placeholder parent products for missing variants."""

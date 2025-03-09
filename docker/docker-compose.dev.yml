@@ -19,7 +19,7 @@ services:
     env_file:
       - ../config/env/.env.dev
     environment:
-      - DJANGO_SETTINGS_MODULE=pyerp.settings.development
+      - DJANGO_SETTINGS_MODULE=pyerp.config.settings.development
       - REDIS_URL=redis://127.0.0.1:6379/0
       - DJANGO_DEBUG=True
       - PYTHONPATH=/app

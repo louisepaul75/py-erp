@@ -225,138 +225,146 @@ export default {
 
       try {
         // Try to get basic health check
-        try {
-          const basicHealthResponse = await api.get('/api/health/', {
-            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
-          });
-          this.systemInfo = {
-            environment: basicHealthResponse.data?.environment || 'development',
-            version: basicHealthResponse.data?.version || 'unknown'
-          };
-        } catch (error) {
-          console.error('Basic health check error:', error);
-          // Add specific logging for timeout errors
-          if (error.code === 'ECONNABORTED') {
-            console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
-          }
-          this.systemInfo = {
-            environment: 'Unknown (API Unavailable)',
-            version: 'Unknown'
-          };
-        }
+        this.loading = true;
+        const basicHealthResponse = await api.get('/health/', {
+          timeout: 5000
+        });
 
-        // Try to get detailed health checks
-        try {
-          const response = await api.get('/api/monitoring/health-checks/', {
-            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
-          });
+        this.systemInfo = {
+          environment: basicHealthResponse.data?.environment || 'development',
+          version: basicHealthResponse.data?.version || 'unknown'
+        };
 
-          if (response.data && response.data.success) {
-            // Create a new object to avoid reference issues
-            const newHealthResults = {};
-
-            // Process the results - always expect an array format
-            const results = response.data.results;
-            if (Array.isArray(results)) {
-              // First, find the main database result and validation result
-              const dbResult = results.find(result => result.component === 'database');
-              const dbValidationResult = results.find(result => result.component === 'database_validation');
-              
-              // If we have a database result, add it first with validation as a nested property
-              if (dbResult) {
-                newHealthResults['database'] = {
-                  status: dbResult.status,
-                  details: dbResult.details,
-                  response_time: dbResult.response_time,
-                  timestamp: dbResult.timestamp,
-                  // Add validation as a nested property if it exists
-                  validation: dbValidationResult ? {
-                    status: dbValidationResult.status,
-                    details: dbValidationResult.details,
-                    response_time: dbValidationResult.response_time,
-                    timestamp: dbValidationResult.timestamp
-                  } : null
-                };
-              }
-
-              // Then add all other non-database results
-              results.forEach(result => {
-                if (result && result.component && 
-                    !['database', 'database_validation'].includes(result.component)) {
-                  const componentKey = result.component;
-                  newHealthResults[componentKey] = {
-                    status: result.status,
-                    details: result.details,
-                    response_time: result.response_time,
-                    timestamp: result.timestamp,
-                    // Store the original component name as a type property to avoid 'component' naming conflict
-                    type: componentKey
-                  };
-                }
-              });
-
-              // Replace healthResults with the new object
-              this.healthResults = newHealthResults;
-              this.lastUpdated = new Date();
-              this.message = 'Status updated successfully';
-              this.messageType = 'success';
-
-              // Hide success message after 3 seconds
-              setTimeout(() => {
-                if (this.messageType === 'success') {
-                  this.message = '';
-                }
-              }, 3000);
-            } else {
-              throw new Error('Invalid response format: results must be an array');
-            }
-          } else {
-            throw new Error(response.data?.error || 'Unknown error');
-          }
-        } catch (error) {
-          console.error('Health checks error:', error);
-          
-          // Add specific logging for timeout errors
-          if (error.code === 'ECONNABORTED') {
-            console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
-          }
-          
-          // Show error in UI
-          this.message = `Failed to update status: ${error.message}`;
-          this.messageType = 'error';
-          
-          // Set mock data for testing UI
+        // Set initial health status based on basic health check
+        if (basicHealthResponse.data?.status === 'unhealthy') {
           this.healthResults = {
             'database': {
               status: 'error',
-              details: 'Database connection failed',
-              response_time: 0,
-              timestamp: new Date(),
-              validation: {
-                status: 'error',
-                details: 'Database validation not available',
-                response_time: 0,
-                timestamp: new Date()
-              }
-            },
-            'legacy_erp': {
-              status: 'warning',
-              details: 'Cannot verify Legacy ERP status',
+              details: basicHealthResponse.data?.database?.message || 'Database connection failed',
               response_time: 0,
               timestamp: new Date()
-            },
-            'pictures_api': {
-              status: 'warning',
-              details: 'Cannot verify Pictures API status',
+            }
+          };
+          this.message = 'System is unhealthy';
+          this.messageType = 'error';
+          this.loading = false;
+          return;
+        }
+
+      } catch (error) {
+        console.error('Basic health check error:', error);
+        this.message = 'Failed to fetch basic health status';
+        this.messageType = 'error';
+        if (error.code === 'ECONNABORTED') {
+          console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
+          this.message = 'Health check request timed out';
+        }
+        
+        // Set error state for health results
+        this.healthResults = {
+          'database': {
+            status: 'error',
+            details: error.response?.data?.database?.message || 'Failed to connect to health check endpoint',
+            response_time: 0,
+            timestamp: new Date()
+          }
+        };
+        
+        this.loading = false;
+        return;
+      }
+
+      try {
+        // Try to get detailed health checks
+        const response = await api.get('/monitoring/health-checks/', {
+          timeout: 120000  // Increased to 2 minutes (120,000 ms)
+        });
+
+        if (response.data && response.data.success) {
+          // Create a new object to avoid reference issues
+          const newHealthResults = {};
+
+          // Process the results - always expect an array format
+          const results = response.data.results;
+          if (Array.isArray(results)) {
+            // First, find the main database result and validation result
+            const dbResult = results.find(result => result.component === 'database');
+            const dbValidationResult = results.find(result => result.component === 'database_validation');
+            
+            // If we have a database result, add it first with validation as a nested property
+            if (dbResult) {
+              newHealthResults['database'] = {
+                status: dbResult.status,
+                details: dbResult.details,
+                response_time: dbResult.response_time,
+                timestamp: dbResult.timestamp,
+                // Add validation as a nested property if it exists
+                validation: dbValidationResult ? {
+                  status: dbValidationResult.status,
+                  details: dbValidationResult.details,
+                  response_time: dbValidationResult.response_time,
+                  timestamp: dbValidationResult.timestamp
+                } : null
+              };
+            }
+
+            // Then add all other non-database results
+            results.forEach(result => {
+              if (result && result.component && 
+                  !['database', 'database_validation'].includes(result.component)) {
+                const componentKey = result.component;
+                newHealthResults[componentKey] = {
+                  status: result.status,
+                  details: result.details,
+                  response_time: result.response_time,
+                  timestamp: result.timestamp,
+                  // Store the original component name as a type property to avoid 'component' naming conflict
+                  type: componentKey
+                };
+              }
+            });
+
+            // Replace healthResults with the new object
+            this.healthResults = newHealthResults;
+            this.lastUpdated = new Date();
+            this.message = 'Status updated successfully';
+            this.messageType = 'success';
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+              if (this.messageType === 'success') {
+                this.message = '';
+              }
+            }, 3000);
+          } else {
+            throw new Error('Invalid response format: results must be an array');
+          }
+        } else {
+          throw new Error(response.data?.error || 'Unknown error');
+        }
+      } catch (error) {
+        console.error('Health checks error:', error);
+        
+        // Add specific logging for timeout errors
+        if (error.code === 'ECONNABORTED') {
+          console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
+        }
+        
+        // Show error in UI
+        this.message = `Failed to update status: ${error.message}`;
+        this.messageType = 'error';
+        
+        // Set error state for health results if not already set
+        if (!this.healthResults || Object.keys(this.healthResults).length === 0) {
+          this.healthResults = {
+            'database': {
+              status: 'error',
+              details: 'Failed to fetch detailed health status',
               response_time: 0,
               timestamp: new Date()
             }
           };
         }
-      } catch (error) {
-        console.error('Unexpected error in health check:', error);
-        this.message = 'Failed to update status: ' + (error?.message || 'Unknown error');
-        this.messageType = 'error';
       } finally {
         this.loading = false;
       }

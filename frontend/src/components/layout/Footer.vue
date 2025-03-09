@@ -10,10 +10,10 @@
           <p class="text-body-2 text-medium-emphasis mb-0">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
         </v-col>
         <v-col cols="12" md="6" class="text-md-end d-flex justify-end align-center">
-          <router-link to="/Health" class="health-status mr-3" :title="healthStatusText">
+          <p class="text-body-2 text-medium-emphasis mb-0 mr-3">Version {{ appVersion }}</p>
+          <router-link to="/Health" class="health-status" :title="healthStatusText">
             <span class="status-dot" :class="healthStatusClass"></span>
           </router-link>
-          <p class="text-body-2 text-medium-emphasis mb-0">Version {{ appVersion }}</p>
         </v-col>
       </v-row>
     </v-container>
@@ -68,14 +68,44 @@ const healthStatusClass = computed(() => {
   };
 });
 
-// Define a custom event type
+// Fetch version and health status
+const fetchHealthStatus = async () => {
+  try {
+    const response = await axios.get('/api/monitoring/health-checks/', {
+      timeout: 5000
+    });
+    
+    if (response.data && response.data.success) {
+      // Get version from first result that has it
+      const firstResult = response.data.results[0] as HealthCheckResult;
+      appVersion.value = firstResult?.version || 'unknown';
+
+      // Determine overall status from all components
+      const statuses = response.data.results.map((result: HealthCheckResult) => result.status);
+      if (statuses.includes('error')) {
+        healthStatus.value = 'error';
+      } else if (statuses.includes('warning')) {
+        healthStatus.value = 'warning';
+      } else if (statuses.every((status: string) => status === 'success')) {
+        healthStatus.value = 'success';
+      } else {
+        healthStatus.value = 'unknown';
+      }
+    } else {
+      throw new Error('Invalid response format');
+    }
+  } catch (error) {
+    console.error('Failed to fetch health status:', error);
+    healthStatus.value = 'error';
+  }
+};
+
 interface DebugPanelToggleEvent extends CustomEvent {
   detail: {
     expanded: boolean;
   };
 }
 
-// Event listener for debug panel expansion
 const handleDebugPanelToggle = (event: Event) => {
   const customEvent = event as DebugPanelToggleEvent;
   if (customEvent.detail && typeof customEvent.detail.expanded === 'boolean') {
@@ -88,6 +118,8 @@ interface HealthCheckResult {
   details?: string;
   response_time?: number;
   timestamp?: string;
+  version?: string;
+  component?: string;
 }
 
 interface DetailedHealthResponse {
@@ -95,66 +127,12 @@ interface DetailedHealthResponse {
   results: HealthCheckResult[];
 }
 
-// Check health status
-const checkHealthStatus = async () => {
-  try {
-    // First try the basic health check
-    const basicHealth = await axios.get('/api/health/', {
-      timeout: 60000, // Increased from 15000 to 60000 ms (60 seconds)
-    });
-
-    // Set version from health check response
-    appVersion.value = basicHealth.data.version || 'unknown';
-
-    if (basicHealth.data.status === 'unhealthy') {
-      healthStatus.value = 'error';
-      return;
-    }
-
-    // Then try the detailed health check
-    try {
-      const detailedHealth = await axios.get<DetailedHealthResponse>('/api/monitoring/health-checks/', {
-        timeout: 60000, // Increased from 30000 to 60000 ms (60 seconds)
-      });
-
-      if (!detailedHealth.data.success) {
-        healthStatus.value = 'warning';
-        return;
-      }
-
-      const statuses = detailedHealth.data.results.map((result: HealthCheckResult) => result.status);
-
-      if (statuses.includes('error')) {
-        healthStatus.value = 'error';
-      } else if (statuses.includes('warning')) {
-        healthStatus.value = 'warning';
-      } else if (statuses.every((status: string) => status === 'success')) {
-        healthStatus.value = 'success';
-      } else {
-        healthStatus.value = 'unknown';
-      }
-    } catch (detailedError: any) {
-      console.warn('Detailed health check failed:', detailedError);
-      // If detailed check fails but basic check succeeded, show warning
-      healthStatus.value = 'warning';
-      
-      // Add more detailed logging for network errors
-      if (detailedError.code === 'ECONNABORTED') {
-        console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
-      }
-    }
-  } catch (error) {
-    console.error('Health check failed:', error);
-    healthStatus.value = 'error';
-  }
-};
-
 let healthCheckInterval: number;
 
 onMounted(() => {
   window.addEventListener('debug-panel-toggle', handleDebugPanelToggle);
-  checkHealthStatus();
-  healthCheckInterval = window.setInterval(checkHealthStatus, 60000); // Check every minute
+  fetchHealthStatus();
+  healthCheckInterval = window.setInterval(fetchHealthStatus, 60000); // Check every minute
 });
 
 onUnmounted(() => {
@@ -171,6 +149,8 @@ onUnmounted(() => {
 
 .health-status {
   text-decoration: none;
+  display: flex;
+  align-items: center;
 }
 
 .status-dot {

@@ -74,6 +74,15 @@ class ValidationResult:
         # Merge context
         self.context.update(other_result.context)
 
+    def has_errors(self) -> bool:
+        """
+        Check if there are any validation errors.
+
+        Returns:
+            bool: True if there are any errors, False otherwise
+        """
+        return bool(self.errors)
+
     def __str__(self):
         """Return a string representation of the validation result."""
         if self.is_valid:
@@ -584,10 +593,7 @@ class ImportValidator:
 
                     # Handle validation result
                     if field_result.is_valid:
-                        if self.transform_data:
-                            validated_data[field_name] = transformed_value
-                        else:
-                            validated_data[field_name] = value
+                        validated_data[field_name] = transformed_value
 
                     # Handle field errors and warnings
                     for msg_type, messages_dict in [

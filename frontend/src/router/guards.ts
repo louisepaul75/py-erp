@@ -12,17 +12,46 @@ export async function authGuard(
 ) {
   const authStore = useAuthStore();
 
-  // If auth store is not initialized yet, initialize it
-  if (!authStore.isAuthenticated && !authStore.isLoading) {
-    await authStore.init();
-  }
+  try {
+    // If auth store is loading, wait for it to finish
+    if (authStore.isLoading) {
+      await new Promise<void>((resolve) => {
+        const checkLoading = setInterval(() => {
+          if (!authStore.isLoading) {
+            clearInterval(checkLoading);
+            resolve();
+          }
+        }, 100);
+      });
+    }
 
-  // If user is authenticated, allow access
-  if (authStore.isAuthenticated) {
-    next();
-  } else {
-    // Redirect to login page with the intended destination
-    next({
+    // If not initialized and not loading, initialize
+    if (!authStore.isAuthenticated && !authStore.isLoading) {
+      await authStore.init();
+    }
+
+    // After initialization, check authentication
+    if (authStore.isAuthenticated) {
+      // If we're already on the login page and authenticated, redirect to home
+      if (to.name === 'Login') {
+        return next({ name: 'Home' });
+      }
+      return next();
+    } else {
+      // If we're already on the login page, don't redirect again
+      if (to.name === 'Login') {
+        return next();
+      }
+      // Store the full path including query parameters for other routes
+      return next({
+        name: 'Login',
+        query: { redirect: to.fullPath }
+      });
+    }
+  } catch (error) {
+    console.error('Auth guard error:', error);
+    // In case of error, redirect to login
+    return next({
       name: 'Login',
       query: { redirect: to.fullPath }
     });

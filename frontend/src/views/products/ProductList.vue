@@ -367,27 +367,43 @@ const loadProducts = async () => {
     }
   } catch (err: any) {
     console.error('Error loading products:', err);
-    error.value = `Failed to load products: ${err.message || 'Unknown error'}`;
+    
+    // Clear products list and total on error
+    products.value = [];
+    totalProducts.value = 0;
 
+    // Handle different error cases
     if (err.response) {
       console.error('API error details:', err.response);
 
       // Handle authentication errors
       if (err.response.status === 401) {
-        error.value = 'Please log in to view products';
+        error.value = 'Your session has expired. Please log in again.';
+        authStore.logout(); // Clear the invalid token
         router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } });
         return;
       }
 
-      error.value += ` (Status: ${err.response.status})`;
-
-      if (err.response.data && err.response.data.detail) {
-        error.value += ` - ${err.response.data.detail}`;
+      // Handle server errors
+      if (err.response.status === 500) {
+        error.value = 'The server encountered an error. Our team has been notified.';
+        // Log additional details for debugging
+        console.error('Server error details:', {
+          status: err.response.status,
+          headers: err.response.headers,
+          data: err.response.data
+        });
+      } else {
+        // Handle other error cases
+        error.value = `Failed to load products: ${err.response.data?.detail || err.message || 'Unknown error'} (Status: ${err.response.status})`;
       }
+    } else if (err.request) {
+      // Handle network errors
+      error.value = 'Unable to connect to the server. Please check your internet connection.';
+    } else {
+      // Handle other errors
+      error.value = `An unexpected error occurred: ${err.message}`;
     }
-
-    products.value = [];
-    totalProducts.value = 0;
   } finally {
     loading.value = false;
   }

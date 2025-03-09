@@ -5,7 +5,7 @@ These settings extend the production settings but with some modifications
 to allow easier debugging in a production-like environment.
 """
 
-from .production import *
+from .production import *  # noqa
 
 # Allow limited debugging in staging
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
@@ -15,8 +15,8 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
 
 # Optional: Enable Django Debug Toolbar in staging if needed
 if DEBUG and os.environ.get("ENABLE_DEBUG_TOOLBAR", "False").lower() == "true":
-    INSTALLED_APPS += ["debug_toolbar"]
-    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
+    INSTALLED_APPS += ["debug_toolbar"]  # noqa
+    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa
     INTERNAL_IPS = ["127.0.0.1"]
     DEBUG_TOOLBAR_CONFIG = {
         "SHOW_TOOLBAR_CALLBACK": lambda request: True,
@@ -39,8 +39,8 @@ SERVER_EMAIL = os.environ.get("SERVER_EMAIL", "staging@example.com")
 
 # Adjust logging for more verbosity in staging
 if DEBUG:
-    LOGGING["loggers"]["django"]["level"] = "DEBUG"
-    LOGGING["loggers"]["pyerp"]["level"] = "DEBUG"
+    LOGGING["loggers"]["django"]["level"] = "DEBUG"  # noqa
+    LOGGING["loggers"]["pyerp"]["level"] = "DEBUG"  # noqa
 
 # Celery settings - make tasks execute immediately if needed for debugging
 CELERY_TASK_ALWAYS_EAGER = (
