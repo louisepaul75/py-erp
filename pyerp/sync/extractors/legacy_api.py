@@ -107,10 +107,6 @@ class LegacyAPIExtractor(BaseExtractor):
                     page_records = records_df.to_dict('records')
                     record_count = len(page_records)
                     
-                    # Debug log first record
-                    if page == 0 and record_count > 0:
-                        logger.info(f"First record sample: {page_records[0]}")
-                    
                     all_records.extend(page_records)
                     logger.info(
                         f"Fetched {record_count} records on page {page+1}"
@@ -129,13 +125,6 @@ class LegacyAPIExtractor(BaseExtractor):
                 f"Extracted {len(all_records)} records from "
                 f"{self.config['table_name']}"
             )
-            
-            # Debug log first few records
-            if all_records:
-                logger.info(f"Sample of first record: {all_records[0]}")
-                logger.info(
-                    f"Fields in first record: {list(all_records[0].keys())}"
-                )
                 
             return all_records
 

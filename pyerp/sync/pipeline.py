@@ -107,8 +107,6 @@ class SyncPipeline:
                     source_data = self.extractor.extract(query_params=params)
                     
                 logger.info(f"Extracted {len(source_data)} records")
-                if source_data:
-                    logger.info(f"First record sample: {source_data[0]}")
                 
                 # Process data in batches
                 total_processed = 0
@@ -248,13 +246,13 @@ class SyncPipeline:
         if isinstance(data, dict):
             return {k: self._clean_for_json(v) for k, v in data.items()}
         elif isinstance(data, list):
-            return [self._clean_for_json(item) for item in data]
-        elif isinstance(data, float) and math.isnan(data):
-            return None  # Replace NaN with None
+            return [self._clean_for_json(v) for v in data]
         elif isinstance(data, (datetime, timezone.datetime)):
-            return data.isoformat()  # Convert datetimes to strings
-        else:
+            return data.isoformat()
+        elif isinstance(data, (int, float, str, bool, type(None))):
             return data
+        else:
+            return str(data)
 
 
 class PipelineFactory:

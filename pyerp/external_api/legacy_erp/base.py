@@ -93,9 +93,6 @@ class BaseAPIClient:
             return
 
         logger.info(f"{prefix}: {len(cookies)} cookie(s)")
-        for name, value in cookies.items():
-            safe_value = f"{value[:5]}...{value[-5:]}" if len(value) > 10 else value
-            logger.info(f"  - {name}={safe_value}")
 
     def _log_response_cookies(self, response, prefix="Response cookies"):
         """Log cookies received in a response."""
@@ -105,9 +102,6 @@ class BaseAPIClient:
 
         cookies = response.cookies.get_dict()
         logger.info(f"{prefix}: {len(cookies)} cookie(s)")
-        for name, value in cookies.items():
-            safe_value = f"{value[:5]}...{value[-5:]}" if len(value) > 10 else value
-            logger.info(f"  - {name}={safe_value}")
 
     def load_session_cookie(self):
         """Load session cookie value from file if it exists."""
@@ -129,14 +123,7 @@ class BaseAPIClient:
                     # Set the WASID4D cookie with the loaded value
                     self.session.cookies.set("WASID4D", self.session_id)
 
-                    # Provide safe version of cookie for logging
-                    safe_id = (
-                        f"{self.session_id[:5]}...{self.session_id[-5:]}"
-                        if len(self.session_id) > 10
-                        else self.session_id
-                    )
                     logger.info(f"Loaded session ID from {COOKIE_FILE_PATH}")
-                    logger.info(f"Set cookie: WASID4D={safe_id}")
                     return True
                 logger.warning("Cookie file has invalid format (missing 'value' field)")
                 return False
@@ -232,9 +219,7 @@ class BaseAPIClient:
                 for cookie in response.cookies:
                     if cookie.name == "WASID4D":
                         wasid_cookie = cookie.value
-                        logger.info(
-                            f"Found new session cookie in response: {cookie.name}",
-                        )
+                        logger.info("Found new session cookie in response")
                         break
 
                 # If we received a new cookie, update our session
@@ -246,26 +231,19 @@ class BaseAPIClient:
                     # Set the new cookie value
                     self.session_id = wasid_cookie
                     self.session.cookies.set("WASID4D", wasid_cookie)
-                    logger.info(
-                        "Set single new cookie WASID4D with value from response",
-                    )
-
-                    # Save the updated cookie
-                    self.save_session_cookie()
+                    logger.info("Set single new cookie WASID4D")
+                    return True
                 else:
-                    logger.info("No new session cookie received, keeping existing one")
-                    if self.session_id and not self.session.cookies.get("WASID4D"):
-                        logger.info("Re-adding existing session cookie")
-                        self.session.cookies.clear()
-                        self.session.cookies.set("WASID4D", self.session_id)
+                    logger.info("No new session cookie in response")
+                    return True
+            else:
+                logger.warning(
+                    f"Session validation failed with status {response.status_code}"
+                )
+                return False
 
-                return True
-            logger.warning(f"Session validation failed: {response.status_code}")
-            if response.text:
-                logger.warning(f"Response text: {response.text[:200]}...")
-            return False
         except Exception as e:
-            logger.warning(f"Session validation failed with exception: {e}")
+            logger.error(f"Error validating session: {e}")
             return False
 
     def login(self):
