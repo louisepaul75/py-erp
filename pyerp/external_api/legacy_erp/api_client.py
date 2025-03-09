@@ -6,24 +6,19 @@ using the API client from direct_api, adapted for the legacy_sync package.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
 
 from django.conf import settings
 
 from pyerp.external_api.legacy_erp.client import LegacyERPClient
-from pyerp.external_api.legacy_erp.exceptions import (
-    ConnectionError,
-    DataError,
-    LegacyERPError,
-    ResponseError,
-    ServerUnavailableError,
-)
+from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Default API environment
-DEFAULT_ENVIRONMENT = getattr(settings, "LEGACY_API_DEFAULT_ENVIRONMENT", "live")
+DEFAULT_ENVIRONMENT = getattr(
+    settings, "LEGACY_API_DEFAULT_ENVIRONMENT", "live"
+)
 
 
 class APIClient:
@@ -44,4 +39,26 @@ class APIClient:
         """
         self.client = LegacyERPClient(environment=environment)
         self.environment = environment
-        logger.debug("Initialized APIClient with environment: %s", environment) 
+        logger.debug("Initialized APIClient with environment: %s", environment)
+        
+    def check_connection(self) -> bool:
+        """
+        Check if the connection to the legacy ERP API is working.
+        
+        This method is used by the health check system to verify 
+        that the API is accessible and responding correctly.
+        
+        Returns:
+            bool: True if connection is successful, False otherwise
+            
+        Raises:
+            LegacyERPError: If an unexpected error occurs during validation
+        """
+        try:
+            logger.info("Checking API client connection to legacy ERP API")
+            return self.client.check_connection()
+        except Exception as e:
+            logger.error(f"API client connection check failed: {e}")
+            raise LegacyERPError(
+                f"Failed to check API client connection: {e}"
+            ) 

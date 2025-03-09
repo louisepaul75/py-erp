@@ -72,7 +72,7 @@ const healthStatusClass = computed(() => {
 const fetchHealthStatus = async () => {
   try {
     const response = await api.get('/monitoring/health-checks/', {
-      timeout: 5000
+      timeout: 120000
     });
     
     if (response.data && response.data.success) {
@@ -94,9 +94,14 @@ const fetchHealthStatus = async () => {
     } else {
       throw new Error('Invalid response format');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to fetch health status:', error);
     healthStatus.value = 'error';
+    
+    // Add specific handling for timeout errors
+    if (error.code === 'ECONNABORTED') {
+      console.warn('Health check request timed out. Health status might still be good, but the request took too long to complete.');
+    }
   }
 };
 

@@ -75,8 +75,12 @@ class LegacyAPIExtractor(BaseExtractor):
             # Extract data with pagination
             all_records = []
             page_size = self.config.get('page_size', 100)
+            all_records_enabled = self.config.get('all_records', False)
             
-            logger.info(f"Fetching data from {self.config['table_name']} with page size {page_size}")
+            logger.info(
+                f"Fetching data from {self.config['table_name']} "
+                f"with page size {page_size}"
+            )
             
             # First try with a small request to test connection
             total_pages = 1  # Start with at least one page
@@ -86,25 +90,36 @@ class LegacyAPIExtractor(BaseExtractor):
                 skip = page * page_size
                 
                 # Fetch page of records
-                logger.info(f"Fetching page {page+1} (skip={skip}, top={page_size})")
+                logger.info(
+                    f"Fetching page {page+1} (skip={skip}, top={page_size})"
+                )
                 
                 records_df = self.connection.fetch_table(
                     table_name=self.config['table_name'],
                     top=page_size,
                     skip=skip,
                     filter_query=filter_query,
-                    all_records=False
+                    all_records=all_records_enabled
                 )
                 
                 # Convert DataFrame to list of dictionaries
                 if not records_df.empty:
                     page_records = records_df.to_dict('records')
                     record_count = len(page_records)
-                    all_records.extend(page_records)
-                    logger.info(f"Fetched {record_count} records on page {page+1}")
                     
-                    # If we got a full page, we might need another page
-                    if record_count == page_size and page == total_pages - 1:
+                    # Debug log first record
+                    if page == 0 and record_count > 0:
+                        logger.info(f"First record sample: {page_records[0]}")
+                    
+                    all_records.extend(page_records)
+                    logger.info(
+                        f"Fetched {record_count} records on page {page+1}"
+                    )
+                    
+                    # If we got a full page and all_records is not enabled,
+                    # we might need another page
+                    if (not all_records_enabled and record_count == page_size
+                            and page == total_pages - 1):
                         total_pages += 1
                 else:
                     logger.info(f"No records returned on page {page+1}")
@@ -114,6 +129,13 @@ class LegacyAPIExtractor(BaseExtractor):
                 f"Extracted {len(all_records)} records from "
                 f"{self.config['table_name']}"
             )
+            
+            # Debug log first few records
+            if all_records:
+                logger.info(f"Sample of first record: {all_records[0]}")
+                logger.info(
+                    f"Fields in first record: {list(all_records[0].keys())}"
+                )
                 
             return all_records
 

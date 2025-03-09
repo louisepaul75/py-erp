@@ -1,8 +1,8 @@
 """
 Settings for the legacy_erp module.
 
-This module loads configuration settings from Django settings with sensible defaults.
-All settings can be overridden in the project's settings file.
+This module loads configuration settings from Django settings with sensible
+defaults. All settings can be overridden in the project's settings file.
 """
 
 import os
@@ -13,7 +13,10 @@ from django.conf import settings
 
 
 def get_env_or_setting(env_key, setting_key, default):
-    """Get value from environment variable first, then from Django settings, then use default"""
+    """
+    Get value from environment variable first, then from Django settings,
+    then use default.
+    """
     env_value = os.environ.get(env_key)
     if env_value:
         return env_value
@@ -31,8 +34,10 @@ API_REST_ENDPOINT = getattr(settings, "LEGACY_API_REST_ENDPOINT", "rest")
 
 # Session settings
 API_SESSION_REFRESH_MARGIN = getattr(
-    settings, "LEGACY_API_SESSION_REFRESH_MARGIN", 300
-)  # 5 minutes in seconds
+    settings,
+    "LEGACY_API_SESSION_REFRESH_MARGIN",
+    300,  # 5 minutes in seconds
+)
 
 # Environment settings - no credentials needed
 API_ENVIRONMENTS = getattr(
@@ -46,12 +51,12 @@ API_ENVIRONMENTS = getattr(
                 API_BASE_URL,
             ),
             "username": get_env_or_setting(
-                "LEGACY_ERP_API_LIVE_USER",
+                "LEGACY_API_USERNAME",
                 "LEGACY_API_USERNAME",
                 "",
             ),
             "password": get_env_or_setting(
-                "LEGACY_ERP_API_LIVE_PASS",
+                "LEGACY_API_PASSWORD",
                 "LEGACY_API_PASSWORD",
                 "",
             ),
@@ -63,12 +68,12 @@ API_ENVIRONMENTS = getattr(
                 API_BASE_URL,
             ),
             "username": get_env_or_setting(
-                "LEGACY_ERP_API_TEST_USER",
+                "LEGACY_API_USERNAME",
                 "LEGACY_API_TEST_USERNAME",
                 "",
             ),
             "password": get_env_or_setting(
-                "LEGACY_ERP_API_TEST_PASS",
+                "LEGACY_API_PASSWORD",
                 "LEGACY_API_TEST_PASSWORD",
                 "",
             ),
@@ -79,13 +84,25 @@ API_ENVIRONMENTS = getattr(
 # Timeout and retry settings
 API_REQUEST_TIMEOUT = getattr(settings, "LEGACY_API_REQUEST_TIMEOUT", 30)
 API_MAX_RETRIES = getattr(settings, "LEGACY_API_MAX_RETRIES", 3)
-API_RETRY_BACKOFF_FACTOR = getattr(settings, "LEGACY_API_RETRY_BACKOFF_FACTOR", 0.5)
+API_RETRY_BACKOFF_FACTOR = getattr(
+    settings,
+    "LEGACY_API_RETRY_BACKOFF_FACTOR",
+    0.5,
+)
 
 # Session settings
-API_SESSION_EXPIRY = getattr(settings, "LEGACY_API_SESSION_EXPIRY", 3600 * 24 * 7)
+API_SESSION_EXPIRY = getattr(
+    settings,
+    "LEGACY_API_SESSION_EXPIRY",
+    3600 * 24 * 7,
+)
 
 # Cache settings for session storage
-API_SESSION_CACHE_NAME = getattr(settings, "LEGACY_API_SESSION_CACHE_NAME", "default")
+API_SESSION_CACHE_NAME = getattr(
+    settings,
+    "LEGACY_API_SESSION_CACHE_NAME",
+    "default",
+)
 API_SESSION_CACHE_KEY_PREFIX = getattr(
     settings,
     "LEGACY_API_SESSION_CACHE_KEY_PREFIX",
@@ -97,6 +114,10 @@ API_LOGGING_ENABLED = getattr(settings, "LEGACY_API_LOGGING_ENABLED", True)
 API_LOGGING_LEVEL = getattr(settings, "LEGACY_API_LOGGING_LEVEL", "INFO")
 
 # Advanced settings
-API_PAGINATION_ENABLED = getattr(settings, "LEGACY_API_PAGINATION_ENABLED", True)
+API_PAGINATION_ENABLED = getattr(
+    settings,
+    "LEGACY_API_PAGINATION_ENABLED",
+    True,
+)
 API_PAGINATION_SIZE = getattr(settings, "LEGACY_API_PAGINATION_SIZE", 100)
 API_RESPONSE_FORMAT = getattr(settings, "LEGACY_API_RESPONSE_FORMAT", "json") 

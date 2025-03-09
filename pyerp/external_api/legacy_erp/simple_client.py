@@ -2,24 +2,29 @@
 Simple API client for the legacy ERP system.
 
 This module provides a simplified version of the LegacyERPClient for use
-in extraction tasks, maintaining compatibility with the previous SimpleAPIClient.
+in extraction tasks, maintaining compatibility with the previous
+SimpleAPIClient.
 """
 
 import logging
+from typing import Optional
+
 import pandas as pd
-from typing import Any, Dict, List, Optional, Union
 
-from pyerp.external_api.legacy_erp.client import LegacyERPClient
+from pyerp.external_api.legacy_erp.base import BaseAPIClient
+from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 
+# Configure logging
 logger = logging.getLogger(__name__)
 
 
-class SimpleAPIClient:
+class SimpleAPIClient(BaseAPIClient):
     """
     Simple client for the legacy ERP API with a subset of functionality.
     
-    This class maintains compatibility with the direct_api.scripts.getTable.SimpleAPIClient
-    interface to avoid breaking existing code that depends on it.
+    This class maintains compatibility with the
+    direct_api.scripts.getTable.SimpleAPIClient interface to avoid breaking
+    existing code that depends on it.
     """
     
     def __init__(self, environment: str = "live", timeout: int = None):
@@ -30,9 +35,31 @@ class SimpleAPIClient:
             environment: The API environment to use ('live', 'test', etc.)
             timeout: Optional timeout for API requests in seconds
         """
-        self.client = LegacyERPClient(environment=environment, timeout=timeout)
-        self.environment = environment
-        logger.debug("Initialized SimpleAPIClient for environment: %s", environment)
+        super().__init__(environment=environment, timeout=timeout)
+        logger.debug(
+            "Initialized SimpleAPIClient for environment: %s",
+            environment,
+        )
+    
+    def check_connection(self) -> bool:
+        """
+        Check if the connection to the legacy ERP API is working.
+        
+        This method is used by the health check system to verify 
+        that the API is accessible and responding correctly.
+        
+        Returns:
+            bool: True if connection is successful, False otherwise
+            
+        Raises:
+            LegacyERPError: If an unexpected error occurs during validation
+        """
+        try:
+            logger.info("Checking connection to legacy ERP API")
+            return self.validate_session()
+        except Exception as e:
+            logger.error(f"Connection check failed: {e}")
+            raise LegacyERPError(f"Failed to check connection: {e}")
     
     def fetch_table(
         self,
@@ -55,11 +82,13 @@ class SimpleAPIClient:
         Returns:
             DataFrame containing the fetched records
         """
-        # This is a wrapper that delegates to the full client implementation
-        # We maintain the same interface for backward compatibility
-        return self.client.fetch_table(
-            table_name=table_name,
-            top=top,
-            skip=skip,
-            filter_query=filter_query,
-        ) 
+        try:
+            return super().fetch_table(
+                table_name=table_name,
+                top=top,
+                skip=skip,
+                filter_query=filter_query,
+                all_records=all_records,
+            )
+        except Exception as e:
+            raise LegacyERPError(f"Failed to fetch table: {e}") 

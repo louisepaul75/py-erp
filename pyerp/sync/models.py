@@ -116,7 +116,7 @@ class SyncLogDetail(models.Model):
     """Detailed log entries for individual record syncs."""
     
     sync_log = models.ForeignKey(SyncLog, on_delete=models.CASCADE, related_name='details')
-    record_id = models.CharField(max_length=255)
+    record_id = models.TextField()
     status = models.CharField(max_length=20, choices=[('success', 'Success'), ('failed', 'Failed')])
     timestamp = models.DateTimeField(auto_now_add=True)
     error_message = models.TextField(blank=True)

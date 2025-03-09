@@ -162,7 +162,7 @@ def check_images_cms_connection():
     else:
         try:
             # Log the API URL being used for debugging
-            api_url = settings.IMAGES_CMS_API.get('BASE_URL')
+            api_url = settings.IMAGE_API.get('BASE_URL')
             logger.debug(
                 f"Images CMS API URL from settings: {api_url}",
             )

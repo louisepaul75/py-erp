@@ -80,6 +80,50 @@ class ImageAPIClient:
             "ImageAPIClient initialized with username: %s",
             self.username
         )
+        
+    def check_connection(self) -> bool:
+        """
+        Check if the connection to the Images CMS API is working.
+        
+        This method is used by the health check system to verify 
+        that the API is accessible and responding correctly.
+        
+        Returns:
+            bool: True if connection is successful, False otherwise
+            
+        Raises:
+            Exception: If an unexpected error occurs during validation
+        """
+        try:
+            logger.info("Checking connection to Images CMS API")
+            # Use a simple API endpoint to test connection
+            endpoint = "all-files-and-articles/"
+            params = {
+                "page": 1,
+                "page_size": 1
+            }
+            
+            response = self.session.get(
+                f"{self.base_url}{endpoint}",
+                params=params,
+                verify=self.verify_ssl,
+                timeout=self.timeout
+            )
+            
+            if response.status_code != HTTP_OK:
+                logger.error(
+                    "Connection check failed. Status: %d, Response: %s",
+                    response.status_code,
+                    response.text
+                )
+                return False
+                
+            # If we made it here, connection is working
+            return True
+            
+        except Exception as e:
+            logger.error(f"Connection check failed with exception: {e}")
+            raise
 
     def get_all_files(self, page=1, page_size=DEFAULT_PAGE_SIZE):
         """

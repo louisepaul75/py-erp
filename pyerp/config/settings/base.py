@@ -27,6 +27,19 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-producti
 # Get application version
 APP_VERSION = get_version()
 
+# Image API settings
+IMAGE_API_URL = os.environ.get(
+    "IMAGE_API_URL",
+    "http://db07.wsz.local/api/"
+)
+IMAGE_API_USERNAME = os.environ.get("IMAGE_API_USERNAME", "admin")
+IMAGE_API_PASSWORD = os.environ.get("IMAGE_API_PASSWORD", "")
+IMAGE_API_TIMEOUT = int(os.environ.get("IMAGE_API_TIMEOUT", "30"))
+IMAGE_API_CACHE_ENABLED = (
+    os.environ.get("IMAGE_API_CACHE_ENABLED", "True").lower() == "true"
+)
+IMAGE_API_CACHE_TIMEOUT = int(os.environ.get("IMAGE_API_CACHE_TIMEOUT", "3600"))
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",

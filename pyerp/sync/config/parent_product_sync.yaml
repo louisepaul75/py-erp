@@ -3,20 +3,19 @@ description: Synchronize parent products from legacy system
 
 source:
   type: api
-  extractor: LegacyAPIExtractor
-  config:
-    environment: live
-    table_name: Artikel_Familie
-    filters:
-      active: true
-    page_size: 100
+  extractor_class: pyerp.sync.extractors.legacy_api.LegacyAPIExtractor
+  environment: live
+  table_name: Artikel_Familie
+  filters:
+    active: true
+  page_size: 1000
+  all_records: true
 
 transformation:
-  transformer: ProductTransformer
+  transformer_class: pyerp.sync.transformers.product.ProductTransformer
   field_mappings:
     __KEY: legacy_id
     Nummer: sku
-    Nummer: base_sku
     Bezeichnung: name
     Bezeichnung_ENG: name_en
     Beschreibung: description
@@ -42,12 +41,11 @@ transformation:
       error_message: Weight must be non-negative
 
 target:
-  loader: DjangoModelLoader
-  config:
-    app_name: pyerp.products
-    model_name: ParentProduct
-    unique_field: sku
-    conflict_strategy: newest_wins
+  loader_class: pyerp.sync.loaders.django_model.DjangoModelLoader
+  app_name: products
+  model_name: ParentProduct
+  unique_field: sku
+  conflict_strategy: newest_wins
 
 scheduling:
   frequency: daily

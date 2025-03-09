@@ -1,15 +1,18 @@
 """
-Management command to wipe all parent products and reload them from Artikel_Familie.  # noqa: E501
+Management command to wipe and reload parent products from the legacy ERP system.
 """
 
 import logging
 import sys
+from typing import Dict
 
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
-from pyerp.products.models import ParentProduct, ProductCategory
+from pyerp.business_modules.products.models import ParentProduct, ProductCategory
+from pyerp.external_api.legacy_erp.simple_client import SimpleAPIClient
 
 # Add the WSZ_api path to the Python path
 WSZ_API_PATH = r"C:\Users\Joan-Admin\PycharmProjects\WSZ_api"

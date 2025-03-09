@@ -1,13 +1,21 @@
 """
-Authentication and session management for the legacy ERP API.
+Authentication and session management for the legacy API.
 
-This module handles authentication with the legacy API and maintains session info.
+This module handles authentication with the legacy API and maintains session
+info.
 """
 
 import logging
 import os
 import threading
-import warnings
+import json
+import requests
+from datetime import datetime
+
+from pyerp.external_api.legacy_erp.settings import (
+    API_ENVIRONMENTS,
+    API_SESSION_EXPIRY,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -24,6 +32,10 @@ file_lock = threading.RLock()
 # Global flag to track if we've hit session limits across the system
 _SESSION_LIMIT_REACHED = False
 _session_limit_lock = threading.RLock()
+
+# Global session cache
+_sessions = {}
+_sessions_lock = threading.RLock()
 
 
 def set_session_limit_reached(reached=True):
@@ -53,26 +65,92 @@ def is_session_limit_reached():
         return _SESSION_LIMIT_REACHED
 
 
-# Placeholder functions for backward compatibility
+def _create_session(environment="live"):
+    """
+    Create a new session by authenticating with the legacy API.
+    
+    Args:
+        environment: Which API environment to use ('live', 'test', etc.)
+        
+    Returns:
+        requests.Session: Authenticated session object
+        
+    Raises:
+        ValueError: If environment config is invalid
+        ConnectionError: If authentication fails
+    """
+    env_config = API_ENVIRONMENTS.get(environment)
+    if not env_config:
+        raise ValueError(f"Invalid environment: {environment}")
+        
+    base_url = env_config.get('base_url')
+    username = env_config.get('username')
+    password = env_config.get('password')
+    
+    if not all([base_url, username, password]):
+        raise ValueError(
+            f"Missing required credentials for environment: {environment}"
+        )
+    
+    session = requests.Session()
+    session.auth = (username, password)
+    session.headers.update({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    })
+    
+    # Store session creation time
+    session.created_at = datetime.now()
+    
+    return session
+
+
 def get_session(environment="live"):
     """
-    Placeholder function for getting a session.
-    This will be fully implemented when the auth module is completed.
+    Get an authenticated session for the legacy API.
+    Creates a new session if one doesn't exist or has expired.
+    
+    Args:
+        environment: Which API environment to use ('live', 'test', etc.)
+        
+    Returns:
+        requests.Session: Authenticated session object
+        
+    Raises:
+        ValueError: If environment config is invalid
+        ConnectionError: If authentication fails
     """
-    warnings.warn(
-        "This is a placeholder implementation. Full implementation pending.",
-        RuntimeWarning,
-    )
-    return None
+    with _sessions_lock:
+        session = _sessions.get(environment)
+        
+        # Check if session exists and is still valid
+        if session:
+            age = datetime.now() - session.created_at
+            if age.total_seconds() < API_SESSION_EXPIRY:
+                return session
+                
+        # Create new session
+        try:
+            session = _create_session(environment)
+            _sessions[environment] = session
+            return session
+        except Exception as e:
+            logger.error(f"Failed to create session: {e}")
+            return None
 
 
 def invalidate_session(environment="live"):
     """
-    Placeholder function for invalidating a session.
-    This will be fully implemented when the auth module is completed.
+    Invalidate the session for the given environment.
+    
+    Args:
+        environment: Which API environment to use ('live', 'test', etc.)
     """
-    warnings.warn(
-        "This is a placeholder implementation. Full implementation pending.",
-        RuntimeWarning,
-    )
-    return None 
+    with _sessions_lock:
+        if environment in _sessions:
+            session = _sessions.pop(environment)
+            try:
+                session.close()
+            except Exception:
+                pass
+            logger.info(f"Invalidated session for environment: {environment}") 
