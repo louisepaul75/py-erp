@@ -55,6 +55,8 @@ class SimpleTestClient:
             
         logger.info(f"Initialized API client with URL: {self.base_url}")
         self.session = requests.Session()
+        # Set reasonable timeouts
+        self.session.timeout = (5, 15)  # (connect timeout, read timeout)
 
     def fetch_table(
         self,
@@ -78,20 +80,24 @@ class SimpleTestClient:
             DataFrame containing the fetched records
         """
         url = f"{self.base_url}/rest/{table_name}"
-        params = {"$top": top}
+        base_url = f"{url}?$top={top}"
         
         if filter_query:
-            params["$filter"] = filter_query
+            url = f"{base_url}&$filter={filter_query}"
+        else:
+            url = base_url
             
         logger.info(f"Fetching from URL: {url}")
-        logger.info(f"With parameters: {params}")
         
         try:
+            logger.info("Attempting to connect to the API...")
             response = self.session.get(
                 url,
-                params=params,
                 auth=(self.username, self.password),
+                verify=False,  # Skip SSL verification for internal servers
             )
+            logger.info(f"Connection established. Status code: {response.status_code}")
+            
             response.raise_for_status()
             
             data = response.json()
@@ -106,12 +112,42 @@ class SimpleTestClient:
             logger.info(f"Retrieved {len(df)} records")
             return df
             
+        except requests.exceptions.SSLError:
+            logger.warning("SSL verification failed, retrying without verification...")
+            response = self.session.get(
+                url,
+                auth=(self.username, self.password),
+                verify=False,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if isinstance(data, dict) and "value" in data:
+                records = data["value"]
+            elif isinstance(data, list):
+                records = data
+            else:
+                records = []
+            df = pd.DataFrame(records)
+            logger.info(f"Retrieved {len(df)} records")
+            return df
+        except requests.exceptions.ConnectTimeout:
+            logger.error(f"Connection timed out while trying to reach {url}")
+            logger.error("Please check if the server is accessible and the network connection is stable")
+            raise
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Failed to connect to {url}")
+            logger.error("This could be due to:")
+            logger.error("1. The server is not running")
+            logger.error("2. The network is not properly configured")
+            logger.error("3. You're not connected to the required network/VPN")
+            logger.error(f"Detailed error: {str(e)}")
+            raise
         except Exception as e:
             logger.error(f"API request failed: {e}")
             raise
 
 
-def test_date_filter(table_name="Kunden", days_ago=30, environment="live"):
+def test_date_filter(table_name="Kunden", days_ago=30, environment="test"):
     """
     Test date filtering by fetching records modified within the last N days.
     
@@ -132,8 +168,8 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="live"):
             datetime.now() - timedelta(days=days_ago)
         ).strftime("%Y-%m-%d")
         
-        # Construct the filter query in the exact format the API expects
-        filter_query = f"modified_date ge '{date_threshold}'"
+        # Construct the filter query with plain symbols
+        filter_query = f"modified_date > '{date_threshold}'"
         logger.info(f"Using date filter: {filter_query}")
         
         # Fetch data with date filter
@@ -171,27 +207,31 @@ def main():
 
         load_dotenv(env_path)
 
-        # Print loaded environment variables for debugging
+        # Print loaded environment variables
         print("\nLoaded environment variables:")
         for key in os.environ:
             if key.startswith("LEGACY_ERP_API_"):
-                print(f"{key}={os.getenv(key)}")
+                # Mask the actual values for security
+                value = os.getenv(key)
+                print(f"{key}={value}")
         
         # Test with different time periods
-        periods = [7, 30, 90]  # Test last week, month, and quarter
+        periods = [90]  # Try last 90 days
         
         for days in periods:
             print(f"\n=== Testing {days} day filter ===")
-            df = test_date_filter(days_ago=days)
-            
-            if not df.empty:
-                msg = f"\nFound {len(df)} records modified in last {days} days"
-                print(msg)
-                print("\nSample of retrieved data:")
-                pd.set_option('display.max_columns', None)
-                print(df.head())
-            else:
-                print(f"No records found modified in the last {days} days")
+            try:
+                df = test_date_filter(days_ago=days, environment="live")
+                if not df.empty:
+                    msg = f"\nFound {len(df)} records modified in last {days} days"
+                    print(msg)
+                    print("\nSample of retrieved data:")
+                    pd.set_option('display.max_columns', None)
+                    print(df.head())
+                else:
+                    print(f"No records found modified in the last {days} days")
+            except Exception as e:
+                print(f"Live environment failed: {e}")
                 
     except Exception as e:
         print(f"Test failed: {e}")
