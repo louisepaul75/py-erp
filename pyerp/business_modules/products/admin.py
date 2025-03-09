@@ -32,8 +32,8 @@ class VariantInline(admin.TabularInline):
 
 @admin.register(ParentProduct)
 class ParentProductAdmin(admin.ModelAdmin):
-    list_display = ("sku", "name", "base_sku", "is_active")
-    list_filter = ("is_active",)
+    list_display = ("sku", "name", "base_sku", "is_active", "is_new", "release_date")
+    list_filter = ("is_active", "is_new")
     search_fields = ("sku", "name", "base_sku", "legacy_id")
     fieldsets = (
         (
@@ -45,7 +45,7 @@ class ParentProductAdmin(admin.ModelAdmin):
         (
             _("Status"),
             {
-                "fields": ("is_active",),
+                "fields": ("is_active", "is_new", "release_date"),
             },
         ),
     )

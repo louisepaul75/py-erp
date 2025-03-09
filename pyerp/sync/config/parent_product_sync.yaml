@@ -26,6 +26,8 @@ transformation:
     ArtGr: category_code
     Haengend: is_hanging
     Einseitig: is_one_sided
+    Release_date: release_date
+    Neu: is_new
   custom_transformers:
     - transform_dimensions
     - transform_boolean_flags

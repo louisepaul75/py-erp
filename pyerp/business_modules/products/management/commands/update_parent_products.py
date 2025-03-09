@@ -34,7 +34,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--env",
             type=str,
-            default="dev",
+            default="live",
             choices=["dev", "live"],
             help="Environment to use (dev or live)",
         )

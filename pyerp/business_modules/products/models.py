@@ -252,6 +252,15 @@ class ParentProduct(BaseProduct):
         db_index=True,
         help_text=_("Base SKU for variants"),
     )
+    release_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_("Release date (maps to Release_date in Artikel_Familie)"),
+    )
+    is_new = models.BooleanField(
+        default=False,
+        help_text=_("Whether this is a new product (maps to Neu in Artikel_Familie)"),
+    )
 
     class Meta:
         verbose_name = _("Parent Product")
