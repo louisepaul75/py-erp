@@ -79,7 +79,7 @@ class HealthCheckResultAdmin(admin.ModelAdmin):
         components = [
             HealthCheckResult.COMPONENT_DATABASE,
             HealthCheckResult.COMPONENT_LEGACY_ERP,
-            HealthCheckResult.COMPONENT_PICTURES_API,
+            HealthCheckResult.COMPONENT_IMAGES_CMS,
             HealthCheckResult.COMPONENT_DATABASE_VALIDATION,
         ]
 

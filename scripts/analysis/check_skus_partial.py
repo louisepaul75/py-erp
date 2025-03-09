@@ -6,12 +6,13 @@ Script to check for partial matches between product SKUs and article numbers.
 import os
 
 import django
+from django.core.management.base import BaseCommand
 
 # Set up Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")
 django.setup()
 
-from pyerp.products.image_api import ImageAPIClient
+from pyerp.external_api.images_cms.client import ImageAPIClient
 from pyerp.products.models import Product
 
 

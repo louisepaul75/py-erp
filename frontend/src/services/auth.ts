@@ -27,6 +27,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  initialized: boolean;
 }
 
 // Authentication service
@@ -89,6 +90,7 @@ const authService = {
       // Check if we have a token
       const token = localStorage.getItem('access_token');
       if (!token) {
+        console.debug('No access token available for getCurrentUser');
         return null;
       }
 
@@ -96,10 +98,16 @@ const authService = {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Get user profile
+      console.debug('Fetching user profile');
       const response = await api.get<User>('/profile/');
+      console.debug('Successfully retrieved user profile');
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get current user:', error);
+      if (error.response?.status === 401) {
+        // Clear invalid token
+        delete api.defaults.headers.common['Authorization'];
+      }
       return null;
     }
   },
@@ -109,22 +117,28 @@ const authService = {
     try {
       const refreshToken = localStorage.getItem('refresh_token');
       if (!refreshToken) {
+        console.debug('No refresh token available');
         return null;
       }
 
+      console.debug('Attempting to refresh token');
       const response = await api.post<{ access: string }>('/token/refresh/', {
         refresh: refreshToken
       });
 
       const newAccessToken = response.data.access;
+      console.debug('Successfully obtained new access token');
+      
       localStorage.setItem('access_token', newAccessToken);
       api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 
       return newAccessToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // If refresh fails, logout the user
-      authService.logout();
+      // If refresh fails, clear all tokens
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      delete api.defaults.headers.common['Authorization'];
       return null;
     }
   },

@@ -12,16 +12,25 @@ export async function authGuard(
 ) {
   const authStore = useAuthStore();
 
-  // If auth store is not initialized yet, initialize it
-  if (!authStore.isAuthenticated && !authStore.isLoading) {
-    await authStore.init();
-  }
+  try {
+    // Wait for auth initialization if not already initialized
+    if (!authStore.initialized) {
+      await authStore.init();
+    }
 
-  // If user is authenticated, allow access
-  if (authStore.isAuthenticated) {
-    next();
-  } else {
-    // Redirect to login page with the intended destination
+    // If user is authenticated, allow access
+    if (authStore.isAuthenticated) {
+      next();
+      return;
+    }
+
+    // If not authenticated, redirect to login
+    next({
+      name: 'Login',
+      query: { redirect: to.fullPath }
+    });
+  } catch (error) {
+    console.error('Auth guard error:', error);
     next({
       name: 'Login',
       query: { redirect: to.fullPath }
@@ -40,19 +49,31 @@ export async function adminGuard(
 ) {
   const authStore = useAuthStore();
 
-  // If auth store is not initialized yet, initialize it
-  if (!authStore.isAuthenticated && !authStore.isLoading) {
-    await authStore.init();
-  }
+  try {
+    // Wait for auth initialization if not already initialized
+    if (!authStore.initialized) {
+      await authStore.init();
+    }
 
-  // If user is authenticated and is an admin, allow access
-  if (authStore.isAuthenticated && authStore.isAdmin) {
-    next();
-  } else if (authStore.isAuthenticated) {
+    // If user is authenticated and is an admin, allow access
+    if (authStore.isAuthenticated && authStore.isAdmin) {
+      next();
+      return;
+    }
+
     // If user is authenticated but not an admin, redirect to home
-    next({ name: 'Home' });
-  } else {
-    // If user is not authenticated, redirect to login
+    if (authStore.isAuthenticated) {
+      next({ name: 'Home' });
+      return;
+    }
+
+    // If not authenticated, redirect to login
+    next({
+      name: 'Login',
+      query: { redirect: to.fullPath }
+    });
+  } catch (error) {
+    console.error('Admin guard error:', error);
     next({
       name: 'Login',
       query: { redirect: to.fullPath }
@@ -71,23 +92,27 @@ export async function guestGuard(
 ) {
   const authStore = useAuthStore();
 
-  // If auth store is not initialized yet, initialize it
-  if (!authStore.isLoading) {
-    await authStore.init();
-  }
-
-  // If user is authenticated, redirect to home or the intended destination
-  if (authStore.isAuthenticated) {
-    // If there's a redirect query parameter, go there
-    const redirectPath = to.query.redirect as string;
-    if (redirectPath) {
-      next(redirectPath);
-    } else {
-      // Otherwise go to home
-      next({ name: 'Home' });
+  try {
+    // Wait for auth initialization if not already initialized
+    if (!authStore.initialized) {
+      await authStore.init();
     }
-  } else {
-    // If user is not authenticated, allow access
+
+    // If user is authenticated, redirect to home or the intended destination
+    if (authStore.isAuthenticated) {
+      const redirectPath = to.query.redirect as string;
+      if (redirectPath) {
+        next(redirectPath);
+        return;
+      }
+      next({ name: 'Home' });
+      return;
+    }
+
+    // If not authenticated, allow access
+    next();
+  } catch (error) {
+    console.error('Guest guard error:', error);
     next();
   }
 }

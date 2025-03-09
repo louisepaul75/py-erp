@@ -371,7 +371,7 @@ export default {
     },
     async fetchDatabaseStats() {
       try {
-        const response = await api.get('/api/monitoring/db-stats/', {
+        const response = await api.get('/monitoring/db-stats/', {
           timeout: 30000 // Increased from 10000 to 30000 ms (30 seconds)
         });
         if (response.data.success && response.data.stats) {
