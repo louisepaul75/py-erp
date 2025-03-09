@@ -56,7 +56,7 @@ scheduling:
 incremental:
   enabled: true
   timestamp_field: modified_date
-  timestamp_filter_format: "filter='{timestamp_field} gt \"{value}\"'"
+  timestamp_filter_format: "'modified_date > '{value}'"
   full_sync_fallback: true
 
 # Variant products configuration

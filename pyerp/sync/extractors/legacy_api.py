@@ -264,11 +264,21 @@ class LegacyAPIExtractor(BaseExtractor):
         modified_date = query_params.get('modified_date')
         if not modified_date:
             return None
-            
+        
+        for filter in modified_date.keys():
+            try:
+                modified_date[filter] = modified_date[filter].strftime("%Y-%m-%d")
+            except:
+                pass
+
         # Get the field name from config or use default
         date_field = self.config.get('modified_date_field', 'modified_date')
         logger.info(f"Date field from config: {date_field}")
         
+
+        print(f"Modified date: {modified_date}")
+        
+
         # Handle various filter formats
         if isinstance(modified_date, dict):
             # Process operators: gt, gte, lt, lte
@@ -283,6 +293,8 @@ class LegacyAPIExtractor(BaseExtractor):
                 filter_str = f"&$filter='{date_field} > '{date_str}''"
                 logger.info(f"Constructed filter string for 'gt': {filter_str}")
                 date_conditions.append(filter_str)
+                print(filter_str)
+                
                 
             # Greater than or equal
             if 'gte' in modified_date:
@@ -348,8 +360,8 @@ class LegacyAPIExtractor(BaseExtractor):
                 dt = date_str
                 
             # Format for legacy API (check config for format or use ISO format)
-            date_format = self.config.get('date_format', '%Y-%m-%dT%H:%M:%S')
-            return dt.strftime(date_format)
+            # date_format = self.config.get('date_format', '%Y-%m-%d')
+            return dt.strftime('%Y-%m-%d')
             
         except Exception as e:
             logger.warning(f"Error formatting date: {str(e)}")

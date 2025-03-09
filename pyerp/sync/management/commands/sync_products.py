@@ -127,9 +127,7 @@ class Command(BaseCommand):
             # Filter by days if specified
             if options["days"]:
                 days_ago = timezone.now() - timedelta(days=options["days"])
-                query_params["modified_date"] = {
-                    "gt": days_ago.isoformat()
-                }
+                query_params["modified_date"] = {"gt": days_ago.strftime("%Y-%m-%d")}
                 days = options['days']
                 msg = f"Filtering records modified in the last {days} days"
                 self.stdout.write(msg)

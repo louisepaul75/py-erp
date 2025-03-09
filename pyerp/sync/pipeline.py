@@ -101,9 +101,16 @@ class SyncPipeline:
             if incremental and self.sync_state.last_successful_sync_time:
                 # Format date according to extractor's requirements
                 modified_since = self.sync_state.last_successful_sync_time
-                params['modified_date'] = {
-                    'gt': modified_since.isoformat()
-                }
+                incremental_config = self.mapping.mapping_config.get(
+                    'incremental', {}
+                )
+                filter_format = incremental_config.get(
+                    'timestamp_filter_format',
+                    "'modified_date > '{value}'"  # Default format
+                )
+                params['filter'] = filter_format.format(
+                    value=modified_since.strftime('%Y-%m-%d')
+                )
             
             logger.info("Starting data extraction...")
             

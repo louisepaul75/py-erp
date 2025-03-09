@@ -387,7 +387,7 @@ class BaseAPIClient:
     def fetch_table(
         self,
         table_name: str,
-        top: int = 100,
+        top: int,
         skip: int = 0,
         filter_query: Optional[str] = None,
         all_records: bool = False,
