@@ -8,7 +8,7 @@ including field validations, relationships, and model methods.
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import connection
-from pyerp.products.models import ImageSyncLog, ParentProduct, VariantProduct
+from pyerp.business_modules.products.models import ImageSyncLog, ParentProduct, VariantProduct
 
 
 @pytest.mark.django_db

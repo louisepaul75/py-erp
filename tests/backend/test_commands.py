@@ -5,11 +5,9 @@ This module contains simplified tests for the product import command,
 using improved mocking to avoid Django setup issues.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-
-from tests.unit.mock_models import MockProduct, MockProductCategory
 
 
 class MockImportCommand:
@@ -29,92 +27,47 @@ class MockImportCommand:
         return validator
 
     def validate_products(self, products_data, validator=None, logger=None):
-        """Validate product data using the specified validator.
+        """Validate products data.
 
         Args:
-            products_data: List of product data dictionaries.
-            validator: Validator instance to use.
-            logger: Logger to use for logging.
+            products_data: List of product data to validate.
+            validator: Optional validator instance.
+            logger: Optional logger instance.
 
         Returns:
-            Generator of validated products.
+            List of validated products.
         """
-        validator = validator or MagicMock()
-        logger = logger or MagicMock()
+        if validator is None:
+            validator = self.create_product_validator()
+        if logger is None:
+            logger = MagicMock()
 
-        for row in products_data:
-            # Mock a successful validation for testing
-            yield row
+        validated_products = []
+        for product in products_data:
+            if validator.validate(product):
+                validated_products.append(product)
+        return validated_products
 
     def handle(self, *args, **options):
-        """Handle command execution.
+        """Handle the command execution.
 
         Args:
             *args: Command arguments.
             **options: Command options.
 
         Returns:
-            True if successful.
+            Success message.
         """
-        file_path = options.get("file_path", "test.json")
-        default_category_code = options.get("default_category", "DEFAULT")
-        strict = options.get("strict", False)
-
-        # Load data
-        products_data = self.load_json_data(file_path)
-
-        # Get default category
-        try:
-            from pyerp.products.models import ProductCategory
-
-            default_category = ProductCategory.objects.get(code=default_category_code)
-        except Exception:
-            # Create mock category for testing
-            default_category = MockProductCategory(code=default_category_code)
-
-        # Create validator
-        validator = self.create_product_validator(
-            strict=strict,
-            default_category=default_category,
-        )
-
-        # Validate and process products
-        for validated_data in self.validate_products(products_data, validator):
-            self.create_or_update_product(validated_data, default_category)
-
-        return True
-
-    def load_json_data(self, file_path):
-        """Load JSON data from file.
-
-        Args:
-            file_path: Path to JSON file.
-
-        Returns:
-            Loaded data.
-        """
-        # Return mock data for testing
-        return [
-            {"sku": "TEST-1", "name": "Test Product 1"},
-            {"sku": "TEST-2", "name": "Test Product 2"},
+        products_data = [
+            {"sku": "TEST1", "name": "Test Product 1"},
+            {"sku": "TEST2", "name": "Test Product 2"},
         ]
-
-    def create_or_update_product(self, data, default_category=None):
-        """Create or update a product with the given data.
-
-        Args:
-            data: Product data.
-            default_category: Default category to use.
-
-        Returns:
-            Created or updated product.
-        """
-        # Create mock product for testing
-        return MockProduct(**data)
+        validated_products = self.validate_products(products_data)
+        return f"Successfully imported {len(validated_products)} products"
 
 
 class TestProductImportCommand:
-    """Tests for the product import command using validation."""
+    """Test cases for product import command."""
 
     @pytest.fixture
     def command(self):
@@ -122,72 +75,36 @@ class TestProductImportCommand:
         return MockImportCommand()
 
     def test_create_product_validator(self, command):
-        """Test creation of product validator."""
-        # Create validator with default category
-        default_category = MockProductCategory()
-        validator = command.create_product_validator(
-            strict=True,
-            default_category=default_category,
-        )
-
-        # Check validator creation
-        assert validator.options["strict"] is True
-        assert validator.options["default_category"] is default_category
+        """Test creating a product validator."""
+        validator = command.create_product_validator(strict=True)
+        assert validator.options == {"strict": True}
 
     def test_validate_products(self, command):
-        """Test validation of products data."""
-        # Mock validator
-        mock_validator = MagicMock()
-
-        # Sample product data
+        """Test product validation."""
         products_data = [
-            {"sku": "VALID-1", "name": "Valid Product"},
-            {"sku": "VALID-2", "name": "Another Valid Product"},
+            {"sku": "TEST1", "name": "Test Product 1"},
+            {"sku": "TEST2", "name": "Test Product 2"},
         ]
 
-        # Mock logger
-        mock_logger = MagicMock()
+        validator = MagicMock()
+        validator.validate.return_value = True
 
-        # Call validate_products
-        validated_products = list(
-            command.validate_products(
-                products_data,
-                validator=mock_validator,
-                logger=mock_logger,
-            ),
-        )
+        logger = MagicMock()
 
-        # Check results
-        assert len(validated_products) == 2
-        assert validated_products[0] == products_data[0]
-        assert validated_products[1] == products_data[1]
+        result = command.validate_products(products_data, validator, logger)
+        assert len(result) == 2
+        assert result[0] == products_data[0]
+        assert result[1] == products_data[1]
+
+        validator.validate.assert_called_with(products_data[1])
+        assert validator.validate.call_count == 2
 
     def test_handle_product_validation(self, command):
-        """Test handle method with product validation."""
-        # Mock methods
-        command.load_json_data = MagicMock(
-            return_value=[
-                {"sku": "TEST-1", "name": "Test Product 1"},
-                {"sku": "TEST-2", "name": "Test Product 2"},
-            ],
+        """Test handling product validation."""
+        result = command.handle(
+            file_path="test.json",
+            strict=True,
+            default_category="DEFAULT",
         )
-        command.create_or_update_product = MagicMock()
 
-        # Patch the ProductCategory model
-        with patch("pyerp.products.models.ProductCategory", MockProductCategory):
-            with patch.object(MockProductCategory, "objects") as mock_category_objects:
-                default_category = MockProductCategory(code="DEFAULT")
-                mock_category_objects.get.return_value = default_category
-
-                # Call handle with options
-                result = command.handle(
-                    file_path="test.json",
-                    default_category="DEFAULT",
-                    strict=True,
-                )
-
-                # Check result
-                assert result is True
-
-                # Check product creation was called
-                assert command.create_or_update_product.call_count == 2
+        assert result == "Successfully imported 2 products"
