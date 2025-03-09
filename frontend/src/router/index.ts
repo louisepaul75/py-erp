@@ -10,6 +10,14 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true }
   },
 
+  // Dashboard_2 route
+  {
+    path: '/dashboard_2',
+    name: 'Dashboard_2',
+    component: () => import('../views/Dashboard_2.vue'),
+    meta: { requiresAuth: true }
+  },
+
   // Health status page (no auth required)
   {
     path: '/Health',

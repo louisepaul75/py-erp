@@ -94,10 +94,12 @@ const drawer = ref(false);
 
 const navItems = [
     { title: 'Dashboard', to: '/' },
+    { title: 'Dashboard_2', to: '/dashboard_2' },
     { title: 'Products', to: '/products' },
     { title: 'Sales', to: '/sales' },
     { title: 'Inventory', to: '/inventory' },
     { title: 'Production', to: '/production' },
+    { title: 'Test Page', to: '/test' },
 ];
 </script>
 
