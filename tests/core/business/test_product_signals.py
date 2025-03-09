@@ -86,3 +86,62 @@ class TestVariantProductSignals(TestCase):
         # Verify only updated_at was changed
         self.assertEqual(self.variant.created_at, created_at)  # Unchanged
         self.assertEqual(self.variant.updated_at, now)  # Updated 
+
+    def test_variant_product_pre_save_no_parent_no_variant(self):
+        """Test pre_save handler when neither parent nor variant code is
+        provided"""
+        # Set up variant without parent or variant code
+        self.variant.parent = None
+        self.variant.variant_code = None
+        self.variant.sku = ""
+
+        # Call the signal handler
+        variant_product_pre_save(instance=self.variant)
+
+        # Verify SKU remains empty
+        self.assertEqual(self.variant.sku, "")
+
+    def test_variant_product_pre_save_parent_no_variant_code(self):
+        """Test pre_save handler when parent exists but variant code is
+        empty"""
+        # Set variant code to None
+        self.variant.variant_code = None
+        self.variant.sku = ""
+
+        # Call the signal handler
+        variant_product_pre_save(instance=self.variant)
+
+        # Verify SKU remains empty
+        self.assertEqual(self.variant.sku, "")
+
+    @patch('pyerp.business_modules.products.signals.timezone')
+    def test_variant_product_pre_save_existing_created_at(self, mock_timezone):
+        """Test that pre_save handler preserves existing created_at for new
+        instances"""
+        # Set up mock timezone
+        now = datetime(2023, 1, 1, 12, 0, 0)
+        mock_timezone.now.return_value = now
+
+        # Set an existing created_at for a new instance
+        existing_created_at = datetime(2022, 1, 1, 12, 0, 0)
+        self.variant.created_at = existing_created_at
+        self.variant.pk = None  # Ensure it's treated as a new instance
+
+        # Call the signal handler
+        variant_product_pre_save(instance=self.variant)
+
+        # Verify created_at wasn't changed but updated_at was set
+        self.assertEqual(self.variant.created_at, existing_created_at)
+        self.assertEqual(self.variant.updated_at, now)
+
+    def test_variant_product_pre_save_parent_no_sku_no_legacy_id(self):
+        """Test pre_save handler when parent has neither SKU nor legacy_id"""
+        # Set parent without SKU or legacy_id
+        self.parent_product.sku = None
+        self.parent_product.legacy_id = None
+
+        # Call the signal handler
+        variant_product_pre_save(instance=self.variant)
+
+        # Verify SKU remains empty since no parent identifier is available
+        self.assertEqual(self.variant.sku, "") 
