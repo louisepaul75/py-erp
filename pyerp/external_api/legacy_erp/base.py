@@ -18,7 +18,6 @@ from requests.auth import HTTPBasicAuth
 from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
     API_REQUEST_TIMEOUT,
-    API_REST_ENDPOINT,
 )
 
 # Configure logging
@@ -343,6 +342,48 @@ class BaseAPIClient:
         logger.info("Session validation failed, attempting to get a new session")
         return self.login()
 
+    def _parse_legacy_date(self, date_str: str) -> Optional[datetime]:
+        """Parse a date string from the legacy system format (DD!MM!YYYY).
+        
+        Args:
+            date_str: Date string in DD!MM!YYYY format
+            
+        Returns:
+            Parsed datetime or None if parsing fails
+        """
+        if not date_str or date_str == "0!0!0":
+            return None
+        try:
+            day, month, year = map(int, date_str.split("!"))
+            return datetime(year, month, day)
+        except (ValueError, AttributeError):
+            logger.warning(f"Failed to parse legacy date: {date_str}")
+            return None
+
+    def _transform_dates_in_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform all date fields in a record from legacy format.
+        
+        Args:
+            record: Record containing potential date fields
+            
+        Returns:
+            Record with transformed date fields
+        """
+        # Common date field names in the legacy system
+        date_fields = [
+            'Release_date', 'Release_Date',  # Different cases observed
+            'Auslaufdatum', 'modified_date',
+            'CREATIONDATE', 'MODIFICATIONDATE'
+        ]
+        
+        for field in date_fields:
+            if field in record and record[field]:
+                parsed_date = self._parse_legacy_date(record[field])
+                if parsed_date:
+                    record[field] = parsed_date.isoformat()
+        
+        return record
+
     def fetch_table(
         self,
         table_name: str,
@@ -352,6 +393,7 @@ class BaseAPIClient:
         all_records: bool = False,
         new_data_only: bool = True,
         date_created_start: Optional[str] = None,
+        fail_on_filter_error: bool = False,
     ) -> pd.DataFrame:
         """
         Fetch data from the specified table.
@@ -364,6 +406,7 @@ class BaseAPIClient:
             filter_query: OData filter query
             new_data_only: If True, only fetch new records
             date_created_start: Start date for filtering by creation date
+            fail_on_filter_error: If True, raise an error if filter doesn't work
 
         Returns:
             pandas.DataFrame: The fetched data
@@ -396,73 +439,107 @@ class BaseAPIClient:
                 filter_query,
                 new_data_only,
                 date_created_start,
+                fail_on_filter_error,
             )
 
-        # Build base URL with pagination
-        url = f"{url}?$top={top}&$skip={skip}"
+        # Build query parameters
+        params = {"$top": top, "$skip": skip}
 
         # Handle filter query with the correct syntax
         if filter_query:
-            # If filter query is already in the correct format (starts with &$filter=), use as is
-            if not filter_query.startswith("&$filter="):
+            # If filter query is already in the correct format, use as is
+            if filter_query.startswith("&$filter="):
+                filter_query = filter_query[1:]  # Remove the leading &
+                params["$filter"] = filter_query[7:]  # Remove "$filter="
+            else:
                 # Extract the field name and value from the filter query
                 parts = filter_query.split(' ')
                 if len(parts) >= 3:
                     field = parts[0]
                     operator = parts[1]
-                    value = parts[2]
+                    value = parts[2].strip("'")
                     # Construct the filter in the exact format required
-                    filter_query = f"&$filter='{field} {operator} '{value}''"
-            url = f"{url}{filter_query}"
+                    params["$filter"] = f"'{field} {operator} '{value}'"
             logger.info(f"Using filter query: {filter_query}")
 
         # Handle date filtering
         if new_data_only and date_created_start:
-            date_filter = f"CREATIONDATE ge '{date_created_start}'"
-            if filter_query:
-                url = f"{url} AND {date_filter}"
+            date_filter = f"CREATIONDATE > '{date_created_start}'"
+            if "$filter" in params:
+                params["$filter"] = (
+                    f"{params['$filter']} AND {date_filter}"
+                )
             else:
-                url = f"{url}&$filter='{date_filter}'"
+                params["$filter"] = f"'{date_filter}'"
             logger.info(f"Using date filter: {date_filter}")
 
         logger.info(f"Full request URL: {url}")
+        logger.info(f"Query parameters: {params}")
 
         # Make the request with error handling for filter failures
         try:
-            response = self.session.get(url)
+            response = self.session.get(url, params=params)
 
             # Check for filter-related errors
-            if response.status_code != 200 and "$filter" in url:
+            if response.status_code != 200 and "$filter" in params:
                 logger.warning(
-                    f"Request failed with status code {response.status_code}. This might be a filter error.",
+                    "Request failed with status code "
+                    f"{response.status_code}. This might be a filter error."
                 )
-                logger.warning(f"Response text: {response.text[:200]}...")
+                logger.warning(
+                    f"Response text: {response.text[:200]}..."
+                )
+                
+                if fail_on_filter_error:
+                    # If we're supposed to fail on filter errors, don't retry without filter
+                    raise Exception(
+                        f"Filter error: Request failed with status code {response.status_code}. "
+                        f"Response: {response.text[:200]}... "
+                        f"The command was configured to fail on filter errors."
+                    )
+                
                 logger.warning("Attempting to retry without filter...")
 
                 # Remove the filter and try again
-                base_url = url.split("&$filter=")[0]
+                params_without_filter = {k: v for k, v in params.items() if k != "$filter"}
                 logger.info(
-                    f"Retrying request without filter: {base_url}",
+                    f"Retrying request without filter: {url}"
                 )
-                response = self.session.get(base_url)
+                response = self.session.get(url, params=params_without_filter)
         except Exception as e:
             logger.error(f"API request failed: {e!s}")
             raise
 
         # Check for successful response
         if response.status_code != 200:
-            raise Exception(
-                f"API request failed with status code {response.status_code}: {response.text}",
+            msg = (
+                f"API request failed with status code "
+                f"{response.status_code}: {response.text}"
             )
+            raise Exception(msg)
 
         # Parse the response
         data = response.json()
 
-        # Debug response structure
-        logger.info(
-            f"Response structure: {list(data.keys()) if isinstance(data, dict) else type(data)}",
-        )
-        logger.info(f"Response data: {str(data)[:500]}...")
+        # Transform dates in the response data
+        if isinstance(data, dict):
+            if "value" in data and isinstance(data["value"], list):
+                data["value"] = [
+                    self._transform_dates_in_record(record) 
+                    for record in data["value"]
+                ]
+            elif "__ENTITIES" in data and isinstance(
+                data["__ENTITIES"], list
+            ):
+                data["__ENTITIES"] = [
+                    self._transform_dates_in_record(record) 
+                    for record in data["__ENTITIES"]
+                ]
+        elif isinstance(data, list):
+            data = [
+                self._transform_dates_in_record(record) 
+                for record in data
+            ]
 
         # Convert to DataFrame
         if "value" in data and isinstance(data["value"], list):
@@ -470,13 +547,17 @@ class BaseAPIClient:
             logger.info(f"Retrieved {len(df)} records")
             return df
         logger.warning("Response does not contain expected 'value' list")
-        if "__ENTITIES" in data and isinstance(data["__ENTITIES"], list):
+        if "__ENTITIES" in data and isinstance(
+            data["__ENTITIES"], list
+        ):
             df = pd.DataFrame(data["__ENTITIES"])
             logger.info(f"Retrieved {len(df)} records from __ENTITIES")
             return df
         if isinstance(data, list):
             df = pd.DataFrame(data)
-            logger.info(f"Retrieved {len(df)} records from direct list response")
+            logger.info(
+                f"Retrieved {len(df)} records from direct list response"
+            )
             return df
         if isinstance(data, dict) and len(data) > 0:
             try:
@@ -484,7 +565,9 @@ class BaseAPIClient:
                 logger.info("Retrieved 1 record from direct dict response")
                 return df
             except Exception as e:
-                logger.warning(f"Failed to convert response dict to DataFrame: {e}")
+                logger.warning(
+                    f"Failed to convert response dict to DataFrame: {e}"
+                )
                 logger.warning(f"Response keys: {list(data.keys())}")
 
         return pd.DataFrame()
@@ -495,6 +578,7 @@ class BaseAPIClient:
         filter_query: Optional[str] = None,
         new_data_only: bool = True,
         date_created_start: Optional[str] = None,
+        fail_on_filter_error: bool = False,
     ) -> pd.DataFrame:
         """Fetch all records from a table using pagination."""
         params = {"$top": 1000, "$skip": 0}
@@ -502,26 +586,26 @@ class BaseAPIClient:
         # Handle filter query with the correct syntax
         if filter_query:
             # If filter query is already in the correct format (starts with &$filter=), use as is
-            if not filter_query.startswith("&$filter="):
+            if filter_query.startswith("&$filter="):
+                filter_query = filter_query[1:]  # Remove the leading &
+                params["$filter"] = filter_query[7:]  # Remove "$filter="
+            else:
                 # Extract the field name and value from the filter query
                 parts = filter_query.split(' ')
                 if len(parts) >= 3:
                     field = parts[0]
                     operator = parts[1]
-                    value = parts[2]
+                    value = parts[2].strip("'")
                     # Construct the filter in the exact format required
-                    filter_query = f"&$filter='{field} {operator} '{value}''"
-            url = f"{url}{filter_query}"
-            logger.info(f"Using filter query: {filter_query}")
+                    params["$filter"] = f"'{field} {operator} '{value}'"
 
         # Handle date filtering
         if new_data_only and date_created_start:
-            date_filter = f"CREATIONDATE ge '{date_created_start}'"
-            if filter_query:
-                params["$filter"] = f'"{filter_query} AND {date_filter}"'
+            date_filter = f"CREATIONDATE > '{date_created_start}'"
+            if "$filter" in params:
+                params["$filter"] = f"{params['$filter']} AND {date_filter}"
             else:
-                params["$filter"] = f'"{date_filter}"'
-            logger.info(f"Using date filter: {date_filter}")
+                params["$filter"] = f"'{date_filter}'"
 
         # Fetch data using pagination
         all_data = []
@@ -539,16 +623,17 @@ class BaseAPIClient:
             self.session.cookies.set("WASID4D", self.session_id)
             if retry_count > 0:
                 logger.info(
-                    f"Reset to single session cookie for retry attempt {retry_count}",
+                    f"Reset to single session cookie for retry attempt {retry_count}"
                 )
 
             # Make the request with error handling for filter failures
-            logger.info(f"Making paginated request: {url} with params: {params}")
+            logger.info(f"Making paginated request: {url}")
+            logger.info(f"With parameters: {params}")
             try:
                 current_params = params.copy()
                 if filter_error_detected and "$filter" in current_params:
                     logger.info(
-                        "Filter error previously detected, removing filter for this request",
+                        "Filter error previously detected, removing filter for this request"
                     )
                     current_params.pop("$filter", None)
 
@@ -561,15 +646,25 @@ class BaseAPIClient:
                     and not filter_error_detected
                 ):
                     logger.warning(
-                        f"Request failed with status code {response.status_code}. This might be a filter error.",
+                        f"Request failed with status code {response.status_code}. "
+                        f"This might be a filter error."
                     )
                     logger.warning(f"Response text: {response.text[:200]}...")
+                    
+                    # If we're supposed to fail on filter errors, raise an exception
+                    if fail_on_filter_error:
+                        raise Exception(
+                            f"Filter error: Request failed with status code {response.status_code}. "
+                            f"Response: {response.text[:200]}... "
+                            f"The command was configured to fail on filter errors."
+                        )
+                    
                     logger.warning("Attempting to retry without filter...")
 
                     # Remove the filter and try again
                     current_params.pop("$filter", None)
                     logger.info(
-                        f"Retrying request without filter: {url} with params: {current_params}",
+                        f"Retrying request without filter: {url}"
                     )
                     response = self.session.get(url, params=current_params)
 
@@ -589,13 +684,15 @@ class BaseAPIClient:
                     ):
                         if retry_count < max_retries:
                             logger.warning(
-                                "Maximum sessions error detected. Attempting to login with a new session...",
+                                "Maximum sessions error detected. "
+                                "Attempting to login with a new session..."
                             )
                             self.session.cookies.clear()
                             if self.login():
                                 retry_count += 1
                                 logger.info(
-                                    f"Re-login successful. Retrying request (attempt {retry_count}/{max_retries})",
+                                    f"Re-login successful. Retrying request "
+                                    f"(attempt {retry_count}/{max_retries})"
                                 )
                                 continue
                         error_msg += (
@@ -605,27 +702,8 @@ class BaseAPIClient:
                     error_msg += f": {response.text}"
                     raise Exception(error_msg)
 
-                # Check for new session cookie in response and update if found
-                for cookie in response.cookies:
-                    if cookie.name == "WASID4D" and cookie.value != self.session_id:
-                        logger.info(
-                            "Received new session cookie in paginated response, updating...",
-                        )
-                        self.session_id = cookie.value
-                        self.save_session_cookie()
-                        self.session.cookies.clear()
-                        self.session.cookies.set("WASID4D", self.session_id)
-                        break
-
                 # Parse the response
                 data = response.json()
-
-                # Debug first request response
-                if total_fetched == 0:
-                    logger.info(
-                        f"First response structure: {list(data.keys()) if isinstance(data, dict) else type(data)}",
-                    )
-                    logger.info(f"First response sample: {str(data)[:500]}...")
 
                 # Extract the records based on the actual response structure
                 if "value" in data and isinstance(data["value"], list):
@@ -633,7 +711,7 @@ class BaseAPIClient:
                     all_data.extend(records)
                     total_fetched += len(records)
                     logger.info(
-                        f"Fetched {len(records)} records (total: {total_fetched})",
+                        f"Fetched {len(records)} records (total: {total_fetched})"
                     )
 
                     # Check if we've received fewer records than requested
@@ -647,7 +725,8 @@ class BaseAPIClient:
                     all_data.extend(records)
                     total_fetched += len(records)
                     logger.info(
-                        f"Fetched {len(records)} records from __ENTITIES (total: {total_fetched})",
+                        f"Fetched {len(records)} records from __ENTITIES "
+                        f"(total: {total_fetched})"
                     )
 
                     # Check if there are more records
@@ -661,13 +740,14 @@ class BaseAPIClient:
                     all_data.extend(data)
                     total_fetched += len(data)
                     logger.info(
-                        f"Fetched {len(data)} records from direct list response (total: {total_fetched})",
+                        f"Fetched {len(data)} records from direct list response "
+                        f"(total: {total_fetched})"
                     )
                     break
                 else:
                     logger.warning("Response does not contain expected data format")
                     logger.warning(
-                        f"Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}",
+                        f"Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}"
                     )
                     break
 

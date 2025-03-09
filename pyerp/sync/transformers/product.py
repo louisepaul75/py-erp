@@ -1,8 +1,11 @@
 """Product data transformer implementation."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 import pandas as pd
+from datetime import datetime
+
+from django.utils import timezone
 
 from .base import BaseTransformer, ValidationError
 
@@ -53,6 +56,12 @@ class ProductTransformer(BaseTransformer):
                 # Apply base field mappings
                 transformed = self.apply_field_mappings(record)
                 logger.info(f"After field mappings: {transformed}")
+                
+                # Handle release_date field
+                if 'release_date' in transformed:
+                    transformed['release_date'] = self._parse_legacy_date(
+                        transformed.get('release_date')
+                    )
                 
                 # Handle modified_time field - ensure it's a valid datetime or None
                 if 'modified_time' in transformed:
@@ -291,4 +300,27 @@ class ProductTransformer(BaseTransformer):
             if not base_sku or not variant_code:
                 return False
                 
-        return True 
+        return True
+
+    def _parse_legacy_date(self, date_str: str) -> Optional[datetime]:
+        """Parse a date string from the legacy system format (DD!MM!YYYY).
+        
+        Args:
+            date_str: Date string in DD!MM!YYYY format
+            
+        Returns:
+            Parsed timezone-aware datetime or None if parsing fails
+        """
+        if not date_str or date_str == "0!0!0":
+            return None
+        try:
+            day, month, year = map(int, date_str.split("!"))
+            # Create a naive datetime
+            naive_dt = datetime(year, month, day)
+            # Make it timezone-aware using the default timezone
+            return timezone.make_aware(naive_dt)
+        except (ValueError, AttributeError):
+            logger.warning(
+                f"Failed to parse legacy date: {date_str}"
+            )
+            return None 

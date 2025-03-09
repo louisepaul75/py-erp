@@ -68,6 +68,7 @@ class SimpleAPIClient(BaseAPIClient):
         skip: int = 0,
         filter_query: Optional[str] = None,
         all_records: bool = False,
+        fail_on_filter_error: bool = False,
     ) -> pd.DataFrame:
         """
         Fetch records from a table in the legacy ERP system.
@@ -78,6 +79,7 @@ class SimpleAPIClient(BaseAPIClient):
             skip: Number of records to skip (for pagination)
             filter_query: OData filter query string
             all_records: Whether to fetch all records (ignore pagination)
+            fail_on_filter_error: If True, raise an error if filter doesn't work
             
         Returns:
             DataFrame containing the fetched records
@@ -89,6 +91,7 @@ class SimpleAPIClient(BaseAPIClient):
                 skip=skip,
                 filter_query=filter_query,
                 all_records=all_records,
+                fail_on_filter_error=fail_on_filter_error,
             )
         except Exception as e:
             raise LegacyERPError(f"Failed to fetch table: {e}") 

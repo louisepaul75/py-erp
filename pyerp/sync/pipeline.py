@@ -65,7 +65,8 @@ class SyncPipeline:
         self, 
         incremental: bool = True, 
         batch_size: int = 100,
-        query_params: Optional[Dict[str, Any]] = None
+        query_params: Optional[Dict[str, Any]] = None,
+        fail_on_filter_error: bool = False
     ) -> SyncLog:
         """Run the sync pipeline.
         
@@ -73,6 +74,7 @@ class SyncPipeline:
             incremental: If True, only sync records modified since last sync
             batch_size: Number of records to process in each batch
             query_params: Optional additional query parameters
+            fail_on_filter_error: If True, fail if filter doesn't work correctly
             
         Returns:
             SyncLog: The completed sync log record
@@ -86,7 +88,8 @@ class SyncPipeline:
                 sync_params={
                     'incremental': incremental,
                     'batch_size': batch_size,
-                    'query_params': query_params or {}
+                    'query_params': query_params or {},
+                    'fail_on_filter_error': fail_on_filter_error
                 }
             )
             
@@ -107,7 +110,10 @@ class SyncPipeline:
             try:
                 # Extract data
                 with self.extractor:
-                    source_data = self.extractor.extract(query_params=params)
+                    source_data = self.extractor.extract(
+                        query_params=params,
+                        fail_on_filter_error=fail_on_filter_error
+                    )
                     
                 logger.info(f"Extracted {len(source_data)} records")
                 

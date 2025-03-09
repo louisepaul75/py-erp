@@ -93,6 +93,13 @@ class Command(BaseCommand):
             action="store_true",
             help="Enable debug output",
         )
+        parser.add_argument(
+            "--fail-on-filter-error",
+            action="store_false",
+            dest="fail_on_filter_error",
+            default=True,
+            help="Don't fail if date filter doesn't work (default: fail)",
+        )
 
     def handle(self, *args, **options):
         """Execute the command."""
@@ -120,8 +127,8 @@ class Command(BaseCommand):
             # Filter by days if specified
             if options["days"]:
                 days_ago = timezone.now() - timedelta(days=options["days"])
-                query_params["last_modified"] = {
-                    "$gt": days_ago.isoformat()
+                query_params["modified_date"] = {
+                    "gt": days_ago.isoformat()
                 }
                 days = options['days']
                 msg = f"Filtering records modified in the last {days} days"
@@ -136,6 +143,19 @@ class Command(BaseCommand):
             batch_size = options["batch_size"]
             self.stdout.write(f"Using batch size: {batch_size}")
             
+            # Get fail_on_filter_error option
+            fail_on_filter_error = options["fail_on_filter_error"]
+            if not fail_on_filter_error:
+                self.stdout.write(
+                    self.style.WARNING(
+                        "Filter errors will be ignored (non-default behavior)"
+                    )
+                )
+            else:
+                self.stdout.write(
+                    "Will fail if filter doesn't work (default behavior)"
+                )
+            
             # Sync parent products if not skipped
             if not options["skip_parents"]:
                 self.stdout.write(
@@ -146,6 +166,7 @@ class Command(BaseCommand):
                     batch_size,
                     query_params,
                     options["force_update"],
+                    fail_on_filter_error,
                 )
                 
                 # Print parent sync results
@@ -175,6 +196,7 @@ class Command(BaseCommand):
                     batch_size,
                     query_params,
                     options["force_update"],
+                    fail_on_filter_error,
                 )
                 
                 # Print variant sync results
@@ -216,6 +238,7 @@ class Command(BaseCommand):
         batch_size: int,
         query_params: Dict[str, Any],
         force_update: bool,
+        fail_on_filter_error: bool = False,
     ) -> LoadResult:
         """Run parent product sync pipeline.
         
@@ -224,6 +247,7 @@ class Command(BaseCommand):
             batch_size: Number of records per batch
             query_params: Query parameters for filtering
             force_update: Whether to update unmodified records
+            fail_on_filter_error: Whether to fail if filter doesn't work
             
         Returns:
             LoadResult containing sync statistics
@@ -243,7 +267,8 @@ class Command(BaseCommand):
         sync_log = pipeline.run(
             incremental=not force_update,
             batch_size=batch_size,
-            query_params=query_params
+            query_params=query_params,
+            fail_on_filter_error=fail_on_filter_error
         )
         
         return LoadResult(
@@ -262,6 +287,7 @@ class Command(BaseCommand):
         batch_size: int,
         query_params: Dict[str, Any],
         force_update: bool,
+        fail_on_filter_error: bool = False,
     ) -> LoadResult:
         """Run variant product sync pipeline.
         
@@ -270,6 +296,7 @@ class Command(BaseCommand):
             batch_size: Number of records per batch
             query_params: Query parameters for filtering
             force_update: Whether to update unmodified records
+            fail_on_filter_error: Whether to fail if filter doesn't work
             
         Returns:
             LoadResult containing sync statistics
@@ -289,7 +316,8 @@ class Command(BaseCommand):
         sync_log = pipeline.run(
             incremental=not force_update,
             batch_size=batch_size,
-            query_params=query_params
+            query_params=query_params,
+            fail_on_filter_error=fail_on_filter_error
         )
         
         return LoadResult(
