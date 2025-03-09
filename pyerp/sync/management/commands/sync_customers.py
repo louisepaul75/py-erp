@@ -15,6 +15,7 @@ from pyerp.sync.transformers.address import AddressTransformer
 from pyerp.sync.loaders.customer import CustomerLoader
 from pyerp.sync.loaders.address import AddressLoader
 from pyerp.sync.pipeline import SyncPipeline
+from pyerp.sync.models import SyncMapping
 
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--batch-size",
             type=int,
-            default=100,
+            default=500,
             help="Number of records to process in each batch",
         )
         parser.add_argument(
@@ -106,9 +107,12 @@ class Command(BaseCommand):
             # Filter by days if specified
             if options["days"]:
                 days_ago = timezone.now() - timedelta(days=options["days"])
-                query_params["last_modified"] = {
-                    "$gt": days_ago.isoformat()
+                query_params["modified_date"] = {
+                    "gt": days_ago.strftime("%Y-%m-%d")
                 }
+                days = options['days']
+                msg = f"Filtering records modified in the last {days} days"
+                self.stdout.write(msg)
                 
             # Filter by customer number if specified
             if options["customer_number"]:
@@ -116,6 +120,7 @@ class Command(BaseCommand):
                 
             # Set batch size
             batch_size = options["batch_size"]
+            self.stdout.write(f"Using batch size: {batch_size}")
             
             # Sync customers if not skipped
             if not options["skip_customers"]:
@@ -209,25 +214,41 @@ class Command(BaseCommand):
         transformer = CustomerTransformer(customer_config['transformation'])
         loader = CustomerLoader(customer_config['target'])
 
+        # Get the sync mapping
+        try:
+            mapping = SyncMapping.objects.get(
+                entity_type='customer',
+                source__name='customers_sync',
+                target__name=(
+                    'business_modules.sales.Customer'
+                )
+            )
+        except SyncMapping.DoesNotExist:
+            raise RuntimeError(
+                "Customer sync mapping not found. "
+                "Please run setup_customer_sync first."
+            )
+
         # Create and run pipeline
         pipeline = SyncPipeline(
+            mapping=mapping,
             extractor=extractor,
             transformer=transformer,
             loader=loader,
         )
         
-        result = pipeline.run(
+        sync_log = pipeline.run(
             batch_size=batch_size,
             query_params=query_params,
-            update_existing=force_update,
+            incremental=not force_update,
         )
         
         return LoadResult(
-            created=result.get('created', 0),
-            updated=result.get('updated', 0),
-            skipped=result.get('skipped', 0),
-            errors=result.get('errors', 0),
-            error_details=result.get('error_details', [])
+            created=sync_log.records_succeeded,
+            updated=0,  # Not tracked separately in new system
+            skipped=sync_log.records_processed - sync_log.records_succeeded,
+            errors=sync_log.records_failed,
+            error_details=list(sync_log.details.filter(status='failed').values())
         )
 
     def _sync_addresses(
@@ -260,23 +281,39 @@ class Command(BaseCommand):
         transformer = AddressTransformer(address_config['transformation'])
         loader = AddressLoader(address_config['target'])
 
+        # Get the sync mapping
+        try:
+            mapping = SyncMapping.objects.get(
+                entity_type='address',
+                source__name='customers_sync_addresses',
+                target__name=(
+                    'business_modules.sales.Address'
+                )
+            )
+        except SyncMapping.DoesNotExist:
+            raise RuntimeError(
+                "Address sync mapping not found. "
+                "Please run setup_customer_sync first."
+            )
+
         # Create and run pipeline
         pipeline = SyncPipeline(
+            mapping=mapping,
             extractor=extractor,
             transformer=transformer,
             loader=loader,
         )
         
-        result = pipeline.run(
+        sync_log = pipeline.run(
             batch_size=batch_size,
             query_params=query_params,
-            update_existing=force_update,
+            incremental=not force_update,
         )
         
         return LoadResult(
-            created=result.get('created', 0),
-            updated=result.get('updated', 0),
-            skipped=result.get('skipped', 0),
-            errors=result.get('errors', 0),
-            error_details=result.get('error_details', [])
+            created=sync_log.records_succeeded,
+            updated=0,  # Not tracked separately in new system
+            skipped=sync_log.records_processed - sync_log.records_succeeded,
+            errors=sync_log.records_failed,
+            error_details=list(sync_log.details.filter(status='failed').values())
         ) 

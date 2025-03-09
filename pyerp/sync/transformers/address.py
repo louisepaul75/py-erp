@@ -3,6 +3,7 @@
 import logging
 from datetime import datetime
 from typing import Any, Dict, List
+from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 from .base import BaseTransformer
@@ -104,9 +105,11 @@ class AddressTransformer(BaseTransformer):
 
         try:
             # Legacy timestamps are in format: "2025-03-06T04:13:17.687Z"
-            return datetime.strptime(
+            dt = datetime.strptime(
                 timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ"
-            ).replace(tzinfo=timezone.utc)
+            )
+            # Use UTC timezone
+            return dt.replace(tzinfo=ZoneInfo("UTC"))
         except (ValueError, TypeError):
             logger.warning(
                 f"Failed to parse legacy timestamp: {timestamp_str}"
