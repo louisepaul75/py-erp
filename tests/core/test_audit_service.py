@@ -7,6 +7,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase, RequestFactory
+from django.utils import timezone
 
 from pyerp.core.models import AuditLog
 from pyerp.core.services import AuditService
@@ -34,6 +35,15 @@ class TestAuditService(TestCase):
         self.sample_request.META['HTTP_USER_AGENT'] = 'Test User Agent'
         self.sample_request.META['REMOTE_ADDR'] = '127.0.0.1'
         self.sample_request.user = self.user
+
+        # Create a sample audit log for testing
+        self.sample_log = AuditLog.objects.create(
+            event_type=AuditLog.EventType.SYSTEM_ERROR,
+            message="Test system error",
+            user=self.user,
+            username=self.user.username,
+            timestamp=timezone.now()
+        )
 
     def test_log_event_basic(self):
         """Test basic event logging without additional context."""
@@ -73,7 +83,8 @@ class TestAuditService(TestCase):
         
         # Verify request info was captured
         self.assertEqual(log_entry.event_type, event_type)
-        self.assertEqual(log_entry.user, self.user)  # Should get user from request
+        # Should get user from request
+        self.assertEqual(log_entry.user, self.user)
         self.assertEqual(log_entry.ip_address, '127.0.0.1')
         self.assertEqual(log_entry.user_agent, 'Test User Agent')
 

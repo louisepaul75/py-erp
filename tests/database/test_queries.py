@@ -6,8 +6,11 @@ including complex queries, aggregations, and performance.
 """
 
 import pytest
-from django.db.models import Count, Q
-from pyerp.business_modules.products.models import ParentProduct, VariantProduct
+from django.db.models import Count
+from pyerp.business_modules.products.models import (
+    ParentProduct,
+    VariantProduct
+)
 
 
 @pytest.mark.django_db
@@ -65,9 +68,15 @@ class TestProductQueries:
     def test_complex_product_query(self, sample_products):
         """Test complex query with multiple conditions."""
         # Find variants that belong to a parent with more than 2 variants
+        parents_with_many_variants = (
+            ParentProduct.objects
+            .annotate(variant_count=Count("variants"))
+            .filter(variant_count__gt=2)
+        )
+        
         complex_query = (
             VariantProduct.objects
-            .filter(parent__variants__count__gt=2)
+            .filter(parent__in=parents_with_many_variants)
             .distinct()
             .order_by("sku")
         )

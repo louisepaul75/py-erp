@@ -488,9 +488,15 @@ class BaseAPIClient:
         full_url = url
         param_strings = []
         for key, value in params.items():
+            if '=' in value:
+                value = value.replace('=', '')
             param_strings.append(f"{key}={value}")
         if param_strings:
             full_url = f"{url}?{'&'.join(param_strings)}"
+
+        print(f"Full URL: {full_url}")
+
+
 
         # Make the request
         try:
@@ -711,13 +717,19 @@ class BaseAPIClient:
                 full_url = url
                 param_strings = []
                 for key, value in current_params.items():
+                    try:
+                        if '=' in value:
+                            value = value.replace('=', '')
+                    except:
+                        pass
                     param_strings.append(f"{key}={value}")
                 if param_strings:
                     full_url = f"{url}?{'&'.join(param_strings)}"
                 
                 # Log the full URL for debugging
                 logger.info(f"Full request URL with parameters: {full_url}")
-                
+                print(f"Full request URL with parameters: {full_url}")
+                # breakpoint()
                 # Make the request - use the full_url directly instead of passing params separately
                 try:
                     response = self.session.get(full_url)
