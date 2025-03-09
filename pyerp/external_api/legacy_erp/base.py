@@ -446,11 +446,14 @@ class BaseAPIClient:
         params = {"$top": top, "$skip": skip}
 
         # Handle filter query with the correct syntax
+        filter_requested = False
         if filter_query:
+            filter_requested = True
             # If filter query is already in the correct format, use as is
             if filter_query.startswith("&$filter="):
-                filter_query = filter_query[1:]  # Remove the leading &
-                params["$filter"] = filter_query[7:]  # Remove "$filter="
+                # Remove the leading & and $filter=
+                filter_query = filter_query[1:]
+                params["$filter"] = filter_query[7:]
             else:
                 # Extract the field name and value from the filter query
                 parts = filter_query.split(' ')
@@ -459,12 +462,17 @@ class BaseAPIClient:
                     operator = parts[1]
                     value = parts[2].strip("'")
                     # Construct the filter in the exact format required
-                    params["$filter"] = f"'{field} {operator} '{value}'"
+                    params["$filter"] = (
+                        f"'{field} {operator} '{value}'"
+                    )
             logger.info(f"Using filter query: {filter_query}")
 
         # Handle date filtering
         if new_data_only and date_created_start:
-            date_filter = f"CREATIONDATE > '{date_created_start}'"
+            filter_requested = True
+            date_filter = (
+                f"CREATIONDATE > '{date_created_start}'"
+            )
             if "$filter" in params:
                 params["$filter"] = (
                     f"{params['$filter']} AND {date_filter}"
@@ -476,38 +484,19 @@ class BaseAPIClient:
         logger.info(f"Full request URL: {url}")
         logger.info(f"Query parameters: {params}")
 
-        # Make the request with error handling for filter failures
+        # Build the full URL with parameters
+        full_url = url
+        param_strings = []
+        for key, value in params.items():
+            param_strings.append(f"{key}={value}")
+        if param_strings:
+            full_url = f"{url}?{'&'.join(param_strings)}"
+
+        # Make the request
         try:
-            response = self.session.get(url, params=params)
-
-            # Check for filter-related errors
-            if response.status_code != 200 and "$filter" in params:
-                logger.warning(
-                    "Request failed with status code "
-                    f"{response.status_code}. This might be a filter error."
-                )
-                logger.warning(
-                    f"Response text: {response.text[:200]}..."
-                )
-                
-                if fail_on_filter_error:
-                    # If we're supposed to fail on filter errors, don't retry without filter
-                    raise Exception(
-                        f"Filter error: Request failed with status code {response.status_code}. "
-                        f"Response: {response.text[:200]}... "
-                        f"The command was configured to fail on filter errors."
-                    )
-                
-                logger.warning("Attempting to retry without filter...")
-
-                # Remove the filter and try again
-                params_without_filter = {k: v for k, v in params.items() if k != "$filter"}
-                logger.info(
-                    f"Retrying request without filter: {url}"
-                )
-                response = self.session.get(url, params=params_without_filter)
+            response = self.session.get(full_url)
         except Exception as e:
-            logger.error(f"API request failed: {e!s}")
+            logger.error(f"Request failed: {e}")
             raise
 
         # Check for successful response
@@ -542,35 +531,104 @@ class BaseAPIClient:
             ]
 
         # Convert to DataFrame
+        df = None
         if "value" in data and isinstance(data["value"], list):
             df = pd.DataFrame(data["value"])
             logger.info(f"Retrieved {len(df)} records")
-            return df
-        logger.warning("Response does not contain expected 'value' list")
-        if "__ENTITIES" in data and isinstance(
+        elif "__ENTITIES" in data and isinstance(
             data["__ENTITIES"], list
         ):
             df = pd.DataFrame(data["__ENTITIES"])
-            logger.info(f"Retrieved {len(df)} records from __ENTITIES")
-            return df
-        if isinstance(data, list):
+            logger.info(
+                f"Retrieved {len(df)} records from __ENTITIES"
+            )
+        elif isinstance(data, list):
             df = pd.DataFrame(data)
             logger.info(
                 f"Retrieved {len(df)} records from direct list response"
             )
-            return df
-        if isinstance(data, dict) and len(data) > 0:
+        elif isinstance(data, dict) and len(data) > 0:
             try:
                 df = pd.DataFrame([data])
-                logger.info("Retrieved 1 record from direct dict response")
-                return df
+                logger.info(
+                    "Retrieved 1 record from direct dict response"
+                )
             except Exception as e:
                 logger.warning(
                     f"Failed to convert response dict to DataFrame: {e}"
                 )
-                logger.warning(f"Response keys: {list(data.keys())}")
+                logger.warning(
+                    f"Response keys: {list(data.keys())}"
+                )
+                df = pd.DataFrame()
+        else:
+            df = pd.DataFrame()
 
-        return pd.DataFrame()
+        # Check if filter was properly applied
+        if filter_requested and fail_on_filter_error:
+            # If we got a full page of results on the first request,
+            # this might indicate the filter wasn't applied
+            if len(df) >= top:
+                msg = (
+                    "Got maximum number of records when filter was "
+                    "requested. Filter may not have been applied."
+                )
+                logger.warning(msg)
+                if "$filter" in params:
+                    msg = (
+                        f"Filter may not have been applied correctly. "
+                        f"Got {len(df)} records with filter: "
+                        f"{params['$filter']}"
+                    )
+                    raise RuntimeError(msg)
+
+            # If we got any records, verify they match our filter criteria
+            if not df.empty and "$filter" in params:
+                filter_parts = params["$filter"].strip("'").split(" ")
+                if len(filter_parts) >= 3:
+                    field = filter_parts[0]
+                    operator = filter_parts[1]
+                    value = " ".join(filter_parts[2:]).strip("'")
+                    
+                    if field in df.columns:
+                        # Convert value to appropriate type if needed
+                        if operator in ['>', '>=', '<', '<=']:
+                            try:
+                                value = pd.to_datetime(value)
+                                df[field] = pd.to_datetime(
+                                    df[field], errors='coerce'
+                                )
+                            except:
+                                try:
+                                    value = float(value)
+                                    df[field] = pd.to_numeric(
+                                        df[field], errors='coerce'
+                                    )
+                                except:
+                                    pass
+                        
+                        # Check if any records don't match the filter
+                        invalid_records = None
+                        if operator == '>':
+                            invalid_records = df[field] <= value
+                        elif operator == '>=':
+                            invalid_records = df[field] < value
+                        elif operator == '<':
+                            invalid_records = df[field] >= value
+                        elif operator == '<=':
+                            invalid_records = df[field] > value
+                        elif operator == '=':
+                            invalid_records = df[field] != value
+                        
+                        if invalid_records is not None and invalid_records.any():
+                            msg = (
+                                f"Filter not applied correctly. Found "
+                                f"records that don't match filter: "
+                                f"{params['$filter']}"
+                            )
+                            raise RuntimeError(msg)
+
+        return df
 
     def _fetch_all_records(
         self,
@@ -582,22 +640,30 @@ class BaseAPIClient:
     ) -> pd.DataFrame:
         """Fetch all records from a table using pagination."""
         params = {"$top": 1000, "$skip": 0}
+        filter_requested = False
 
         # Handle filter query with the correct syntax
         if filter_query:
+            filter_requested = True
+            # Log the raw filter query for debugging
+            logger.info(f"Raw filter query: {filter_query}")
+            
             # If filter query is already in the correct format (starts with &$filter=), use as is
             if filter_query.startswith("&$filter="):
                 filter_query = filter_query[1:]  # Remove the leading &
                 params["$filter"] = filter_query[7:]  # Remove "$filter="
+                logger.info(f"Processed filter query (from &$filter format): {params['$filter']}")
             else:
                 # Extract the field name and value from the filter query
                 parts = filter_query.split(' ')
+                logger.info(f"Filter query parts: {parts}")
                 if len(parts) >= 3:
                     field = parts[0]
                     operator = parts[1]
                     value = parts[2].strip("'")
                     # Construct the filter in the exact format required
                     params["$filter"] = f"'{field} {operator} '{value}'"
+                    logger.info(f"Constructed filter query: {params['$filter']}")
 
         # Handle date filtering
         if new_data_only and date_created_start:
@@ -606,6 +672,7 @@ class BaseAPIClient:
                 params["$filter"] = f"{params['$filter']} AND {date_filter}"
             else:
                 params["$filter"] = f"'{date_filter}'"
+            logger.info(f"Added date filter: {date_filter}")
 
         # Fetch data using pagination
         all_data = []
@@ -613,6 +680,9 @@ class BaseAPIClient:
         retry_count = 0
         max_retries = 3
         filter_error_detected = False
+        
+        # Log the base URL
+        logger.info(f"Base URL for fetching all records: {url}")
 
         while True:
             self.session.cookies.clear()
@@ -637,14 +707,26 @@ class BaseAPIClient:
                     )
                     current_params.pop("$filter", None)
 
-                response = self.session.get(url, params=current_params)
-
+                # Build the full URL with parameters
+                full_url = url
+                param_strings = []
+                for key, value in current_params.items():
+                    param_strings.append(f"{key}={value}")
+                if param_strings:
+                    full_url = f"{url}?{'&'.join(param_strings)}"
+                
+                # Log the full URL for debugging
+                logger.info(f"Full request URL with parameters: {full_url}")
+                
+                # Make the request - use the full_url directly instead of passing params separately
+                try:
+                    response = self.session.get(full_url)
+                except Exception as e:
+                    logger.error(f"Request failed: {e}")
+                    raise
+                
                 # Check for filter-related errors
-                if (
-                    response.status_code != 200
-                    and "$filter" in current_params
-                    and not filter_error_detected
-                ):
+                if response.status_code != 200 and "$filter" in full_url:
                     logger.warning(
                         f"Request failed with status code {response.status_code}. "
                         f"This might be a filter error."
@@ -659,14 +741,15 @@ class BaseAPIClient:
                             f"The command was configured to fail on filter errors."
                         )
                     
+                    # Only retry without filter if we're not configured to fail
                     logger.warning("Attempting to retry without filter...")
-
-                    # Remove the filter and try again
-                    current_params.pop("$filter", None)
+                    base_url = full_url.split("&$filter=")[0]
+                    if not base_url.endswith("?"):
+                        base_url = base_url.split("?")[0]
                     logger.info(
-                        f"Retrying request without filter: {url}"
+                        f"Retrying request without filter: {base_url}"
                     )
-                    response = self.session.get(url, params=current_params)
+                    response = self.session.get(base_url)
 
                     # Mark that we've detected a filter error
                     filter_error_detected = True
@@ -704,6 +787,16 @@ class BaseAPIClient:
 
                 # Parse the response
                 data = response.json()
+
+                # If we're configured to fail on filter errors and we detect that
+                # the filter was ignored (by getting a successful response without
+                # the filter being applied), raise an exception
+                if (fail_on_filter_error and "$filter" in full_url and
+                    filter_error_detected):
+                    raise Exception(
+                        "Filter was ignored by the API. The command was "
+                        "configured to fail on filter errors."
+                    )
 
                 # Extract the records based on the actual response structure
                 if "value" in data and isinstance(data["value"], list):
@@ -762,4 +855,55 @@ class BaseAPIClient:
         # Convert all data to DataFrame
         df = pd.DataFrame(all_data)
         logger.info(f"Total records retrieved: {len(df)}")
+
+        # Validate filter was properly applied
+        if (filter_requested and fail_on_filter_error and 
+            "$filter" in params):
+            filter_parts = params["$filter"].strip("'").split(" ")
+            if len(filter_parts) >= 3:
+                field = filter_parts[0]
+                operator = filter_parts[1]
+                value = " ".join(filter_parts[2:]).strip("'")
+                
+                if field in df.columns:
+                    # Convert value to appropriate type if needed
+                    if operator in ['>', '>=', '<', '<=']:
+                        try:
+                            value = pd.to_datetime(value)
+                            df[field] = pd.to_datetime(
+                                df[field],
+                                errors='coerce'
+                            )
+                        except:
+                            try:
+                                value = float(value)
+                                df[field] = pd.to_numeric(
+                                    df[field],
+                                    errors='coerce'
+                                )
+                            except:
+                                pass
+                    
+                    # Check if any records don't match the filter
+                    invalid_records = None
+                    if operator == '>':
+                        invalid_records = df[field] <= value
+                    elif operator == '>=':
+                        invalid_records = df[field] < value
+                    elif operator == '<':
+                        invalid_records = df[field] >= value
+                    elif operator == '<=':
+                        invalid_records = df[field] > value
+                    elif operator == '=':
+                        invalid_records = df[field] != value
+                    
+                    if (invalid_records is not None and 
+                        invalid_records.any()):
+                        msg = (
+                            "Filter not applied correctly. Found "
+                            "records that don't match filter: "
+                            f"{params['$filter']}"
+                        )
+                        raise RuntimeError(msg)
+
         return df 

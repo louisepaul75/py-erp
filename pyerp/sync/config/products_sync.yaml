@@ -56,7 +56,7 @@ scheduling:
 incremental:
   enabled: true
   timestamp_field: modified_date
-  timestamp_filter_format: "&$filter='modified_date > '{value}'"
+  timestamp_filter_format: "filter='{timestamp_field} gt \"{value}\"'"
   full_sync_fallback: true
 
 # Variant products configuration
@@ -112,4 +112,10 @@ variants:
     app_name: products
     model_name: VariantProduct
     unique_field: sku
-    conflict_strategy: newest_wins 
+    conflict_strategy: newest_wins
+
+  incremental:
+    enabled: true
+    timestamp_field: modified_date
+    timestamp_filter_format: "filter='{timestamp_field} gt \"{value}\"'"
+    full_sync_fallback: true 

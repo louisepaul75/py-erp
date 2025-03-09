@@ -48,13 +48,8 @@ class LegacyAPIExtractor(BaseExtractor):
         """Extract data from legacy API.
         
         Args:
-            query_params: Optional parameters to filter data
-                Supports modified_date filtering with operators:
-                - gt: Greater than (date)
-                - gte: Greater than or equal (date)
-                - lt: Less than (date)
-                - lte: Less than or equal (date)
-            fail_on_filter_error: If True, raise an error if filter doesn't work
+            query_params: Query parameters for filtering data
+            fail_on_filter_error: Whether to fail if filter doesn't work
             
         Returns:
             List of extracted records
@@ -84,6 +79,11 @@ class LegacyAPIExtractor(BaseExtractor):
                 if isinstance(query_params.get('modified_date'), dict):
                     for op, val in query_params.get('modified_date').items():
                         logger.info(f"  - {op}: {val}")
+                
+                # Add more detailed logging
+                logger.info(f"DETAILED FILTER QUERY: {filter_query}")
+                logger.info(f"FILTER FORMAT FROM CONFIG: {self.config.get('timestamp_filter_format')}")
+                logger.info(f"TIMESTAMP FIELD FROM CONFIG: {self.config.get('modified_date_field', 'modified_date')}")
 
             # Extract data with pagination
             all_records = []
@@ -267,9 +267,7 @@ class LegacyAPIExtractor(BaseExtractor):
             
         # Get the field name from config or use default
         date_field = self.config.get('modified_date_field', 'modified_date')
-        
-        # Check if there's a specific filter format in the config
-        filter_format = self.config.get('timestamp_filter_format')
+        logger.info(f"Date field from config: {date_field}")
         
         # Handle various filter formats
         if isinstance(modified_date, dict):
@@ -279,51 +277,41 @@ class LegacyAPIExtractor(BaseExtractor):
             # Greater than
             if 'gt' in modified_date:
                 date_str = self._format_date_for_api(modified_date['gt'])
-                if filter_format:
-                    # Use the format from config
-                    filter_str = filter_format.format(value=date_str)
-                else:
-                    # Use the format that works with the legacy API
-                    filter_str = f"&$filter='{date_field} > '{date_str}'"
+                logger.info(f"Formatted date for 'gt': {date_str}")
+                
+                # Use the exact format that works with the legacy API
+                filter_str = f"&$filter='{date_field} > '{date_str}''"
+                logger.info(f"Constructed filter string for 'gt': {filter_str}")
                 date_conditions.append(filter_str)
                 
             # Greater than or equal
             if 'gte' in modified_date:
                 date_str = self._format_date_for_api(modified_date['gte'])
-                if filter_format:
-                    # Use the format from config, but adjust operator
-                    filter_str = filter_format.replace('>', '>=').format(
-                        value=date_str
-                    )
-                else:
-                    # Use the format that works with the legacy API
-                    filter_str = f"&$filter='{date_field} >= '{date_str}'"
+                logger.info(f"Formatted date for 'gte': {date_str}")
+                
+                # Use the exact format that works with the legacy API
+                filter_str = f"&$filter='{date_field} >= '{date_str}''"
+                logger.info(f"Constructed filter string for 'gte': {filter_str}")
                 date_conditions.append(filter_str)
                 
             # Less than
             if 'lt' in modified_date:
                 date_str = self._format_date_for_api(modified_date['lt'])
-                if filter_format:
-                    # Use the format from config, but adjust operator
-                    filter_str = filter_format.replace('>', '<').format(
-                        value=date_str
-                    )
-                else:
-                    # Use the format that works with the legacy API
-                    filter_str = f"&$filter='{date_field} < '{date_str}'"
+                logger.info(f"Formatted date for 'lt': {date_str}")
+                
+                # Use the exact format that works with the legacy API
+                filter_str = f"&$filter='{date_field} < '{date_str}''"
+                logger.info(f"Constructed filter string for 'lt': {filter_str}")
                 date_conditions.append(filter_str)
                 
             # Less than or equal
             if 'lte' in modified_date:
                 date_str = self._format_date_for_api(modified_date['lte'])
-                if filter_format:
-                    # Use the format from config, but adjust operator
-                    filter_str = filter_format.replace('>', '<=').format(
-                        value=date_str
-                    )
-                else:
-                    # Use the format that works with the legacy API
-                    filter_str = f"&$filter='{date_field} <= '{date_str}'"
+                logger.info(f"Formatted date for 'lte': {date_str}")
+                
+                # Use the exact format that works with the legacy API
+                filter_str = f"&$filter='{date_field} <= '{date_str}''"
+                logger.info(f"Constructed filter string for 'lte': {filter_str}")
                 date_conditions.append(filter_str)
                 
             if date_conditions:
@@ -334,12 +322,11 @@ class LegacyAPIExtractor(BaseExtractor):
         # Handle direct value (equality)
         elif isinstance(modified_date, str):
             date_str = self._format_date_for_api(modified_date)
-            if filter_format:
-                # Use the format from config, but adjust operator
-                filter_str = filter_format.replace('>', '=').format(value=date_str)
-            else:
-                # Use the format that works with the legacy API
-                filter_str = f"&$filter='{date_field} = '{date_str}'"
+            logger.info(f"Formatted date for equality: {date_str}")
+            
+            # Use the exact format that works with the legacy API
+            filter_str = f"&$filter='{date_field} = '{date_str}''"
+            logger.info(f"Constructed filter string for equality: {filter_str}")
             return filter_str
             
         return None
