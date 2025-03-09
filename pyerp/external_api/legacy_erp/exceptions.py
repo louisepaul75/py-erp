@@ -41,7 +41,7 @@ class ResponseError(LegacyERPError):
     def __init__(self, status_code, message, response_body=None):
         self.status_code = status_code
         self.response_body = response_body
-        super().__init__(f"API error {status_code}: {message}")
+        super().__init__(f"API Error ({status_code}): {message}")
 
 
 class RateLimitError(ResponseError):

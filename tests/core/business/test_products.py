@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 
 from pyerp.business_modules.products.validators import (
     ProductImportValidator,
@@ -37,6 +38,7 @@ def validator():
     return validator
 
 
+@pytest.mark.django_db
 class TestProductValidation:
     """Test suite for product validation logic."""
 

@@ -57,12 +57,23 @@ class MockImportCommand:
 
         Returns:
             Success message.
+
+        Raises:
+            ValueError: If validation fails in strict mode.
         """
         products_data = [
             {"sku": "TEST1", "name": "Test Product 1"},
             {"sku": "TEST2", "name": "Test Product 2"},
         ]
-        validated_products = self.validate_products(products_data)
+        validator = self.create_product_validator(
+            strict=options.get('strict', False)
+        )
+        validator.validate.return_value = False  # Simulate validation failure
+        validated_products = self.validate_products(products_data, validator)
+        
+        if options.get('strict', False) and not validated_products:
+            raise ValueError("Validation failed in strict mode")
+            
         return f"Successfully imported {len(validated_products)} products"
 
 
