@@ -69,27 +69,8 @@ jobs:
             --cov-report=html:../coverage/${{ matrix.test-group }}-html \
             --junitxml=../coverage/${{ matrix.test-group }}-junit.xml
 
-      - name: Upload coverage data
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.test-group }}
-          path: coverage/
-          retention-days: 14
-
-  coverage-report:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download coverage data
-        uses: actions/download-artifact@v4
-        with:
-          pattern: coverage-*
-          merge-multiple: true
-          path: coverage
-
       - name: Combine coverage reports
+        if: always()
         run: |
           python -m pip install coverage
           coverage combine coverage/*.xml
@@ -98,18 +79,21 @@ jobs:
           coverage report
 
       - name: Upload to Codecov
+        if: always()
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Wilhelm-Schweizer/pyERP
           files: ./coverage.xml
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 
       - name: Archive code coverage results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: code-coverage-report
+          name: coverage-${{ matrix.test-group }}
           path: |
+            coverage/
             coverage.xml
             htmlcov/
           retention-days: 14
