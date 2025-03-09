@@ -1,5 +1,5 @@
 <template>
-    <v-app-bar color="white" elevation="1">
+    <v-app-bar :color="themeStore.isDark ? 'surface' : 'white'" elevation="1">
         <router-link to="/">
             <img src="@/assets/wsz_logo_long.png" alt="WSZ Logo" height="40">
         </router-link>
@@ -48,6 +48,22 @@
                         </v-list-item-title>
                     </v-list-item>
                     
+                    <!-- Theme Toggle -->
+                    <v-list-item @click="themeStore.toggleTheme">
+                        <v-list-item-title class="d-flex align-center">
+                            <v-icon class="mr-2">{{ themeStore.isDark ? 'mdi-weather-night' : 'mdi-weather-sunny' }}</v-icon>
+                            {{ themeStore.isDark ? 'Light Mode' : 'Dark Mode' }}
+                            <v-switch
+                                v-model="themeStore.isDark"
+                                hide-details
+                                inset
+                                density="compact"
+                                color="primary"
+                                class="ml-auto"
+                            ></v-switch>
+                        </v-list-item-title>
+                    </v-list-item>
+                    
                     <v-divider></v-divider>
                     
                     <v-list-item to="/logout">
@@ -81,15 +97,35 @@
             >
                 <v-list-item-title>{{ item.title }}</v-list-item-title>
             </v-list-item>
+            
+            <v-divider class="my-2"></v-divider>
+            
+            <!-- Theme Toggle in Mobile Menu -->
+            <v-list-item @click="themeStore.toggleTheme">
+                <v-list-item-title class="d-flex align-center">
+                    <v-icon class="mr-2">{{ themeStore.isDark ? 'mdi-weather-night' : 'mdi-weather-sunny' }}</v-icon>
+                    {{ themeStore.isDark ? 'Light Mode' : 'Dark Mode' }}
+                    <v-switch
+                        v-model="themeStore.isDark"
+                        hide-details
+                        inset
+                        density="compact"
+                        color="primary"
+                        class="ml-auto"
+                    ></v-switch>
+                </v-list-item-title>
+            </v-list-item>
         </v-list>
     </v-navigation-drawer>
 </template>
 
 <script setup lang="ts">
 import { useAuthStore } from '../../store/auth';
+import { useThemeStore } from '../../store/theme';
 import { ref } from 'vue';
 
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 const drawer = ref(false);
 
 const navItems = [

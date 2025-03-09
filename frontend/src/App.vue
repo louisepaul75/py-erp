@@ -1,5 +1,5 @@
 <template>
-    <v-app>
+    <v-app :theme="themeStore.isDark ? 'dark' : 'light'">
         <template v-if="!isInitializing">
             <!-- Navigation -->
             <Navbar/>
@@ -28,6 +28,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from './store/auth';
+import { useThemeStore } from './store/theme';
 import { useRouter, useRoute } from 'vue-router';
 import Navbar from './components/layout/Navbar.vue';
 import Footer from './components/layout/Footer.vue';
@@ -35,6 +36,7 @@ import DebugPanel from './components/debug/DebugPanel.vue';
 
 // Initialize auth store and router
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 const router = useRouter();
 const route = useRoute();
 const isInitializing = ref(true);
