@@ -168,8 +168,8 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="test"):
             datetime.now() - timedelta(days=days_ago)
         ).strftime("%Y-%m-%d")
         
-        # Construct the filter query with plain symbols
-        filter_query = f"modified_date > '{date_threshold}'"
+        # Construct the filter query with the entire expression in quotes
+        filter_query = f"'modified_date > \'{date_threshold}\''"
         logger.info(f"Using date filter: {filter_query}")
         
         # Fetch data with date filter
