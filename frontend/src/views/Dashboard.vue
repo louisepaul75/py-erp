@@ -222,6 +222,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import draggable from 'vuedraggable'
+import { GridStack } from 'gridstack'
+import 'gridstack/dist/gridstack.min.css'
 import api from '../services/api'
 import { 
   VHover, 
@@ -276,6 +278,7 @@ const editMode = ref(false)
 // Dashboard state
 const dashboardModules = ref([])
 const originalModules = ref([])
+const grid = ref(null)
 
 // Toggle functions
 const toggleDrawer = () => {
@@ -397,7 +400,7 @@ const availableModules = [
   }
 ]
 
-// Fetch dashboard data on component mount
+// Initialize GridStack
 onMounted(async () => {
   try {
     const response = await api.get('/dashboard/')
@@ -405,6 +408,9 @@ onMounted(async () => {
       dashboardModules.value = response.data.dashboard_modules
       // Sort modules by position
       dashboardModules.value.sort((a, b) => a.position - b.position)
+      
+      // Initialize GridStack after modules are loaded
+      initializeGrid()
     }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
@@ -412,6 +418,60 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const initializeGrid = () => {
+  // Initialize GridStack with options
+  grid.value = GridStack.init({
+    column: 12,
+    cellHeight: 'auto',
+    animate: true,
+    float: true,
+    resizable: {
+      handles: 'e, se, s, sw, w'
+    }
+  })
+
+  // Add modules to grid
+  dashboardModules.value.forEach((module, index) => {
+    if (module.enabled) {
+      grid.value.addWidget({
+        id: module.id,
+        x: module.settings?.x || (index % 2) * 6, // Place modules in 2 columns
+        y: module.settings?.y || Math.floor(index / 2) * 4,
+        w: module.settings?.w || 6, // Default width is half the grid
+        h: module.settings?.h || 4,
+        content: `<div class="grid-stack-item-content" data-module-id="${module.id}"></div>`
+      })
+    }
+  })
+
+  // Listen for changes and save layout
+  grid.value.on('change', saveGridLayout)
+}
+
+const saveGridLayout = () => {
+  if (!grid.value) return
+
+  const layout = grid.value.save()
+  const updatedModules = dashboardModules.value.map(module => {
+    const gridItem = layout.find(item => item.id === module.id)
+    if (gridItem) {
+      return {
+        ...module,
+        settings: {
+          ...module.settings,
+          x: gridItem.x,
+          y: gridItem.y,
+          w: gridItem.w,
+          h: gridItem.h
+        }
+      }
+    }
+    return module
+  })
+
+  dashboardModules.value = updatedModules
+}
 
 // Recent access items
 const recentAccess = [
@@ -487,5 +547,27 @@ const navigateToFavorite = (item) => {
   top: 10px;
   left: 10px;
   z-index: 100;
+}
+
+.grid-stack {
+  background: transparent;
+}
+
+.grid-stack-item {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.grid-stack-item-content {
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.grid-stack-placeholder {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
 }
 </style>
