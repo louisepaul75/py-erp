@@ -36,6 +36,7 @@ from .exceptions import (
     InvalidResponseFormatError,
     MissingFieldsError,
 )
+from pyerp.external_api import connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,12 @@ class ImageAPIClient:
         """
         try:
             logger.info("Checking connection to Images CMS API")
+            
+            # First check if the connection is enabled
+            if not connection_manager.is_connection_enabled("images_cms"):
+                logger.info("Images CMS API connection is disabled")
+                return False
+            
             # Use a simple API endpoint to test connection
             endpoint = "all-files-and-articles/"
             params = {

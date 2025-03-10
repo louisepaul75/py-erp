@@ -12,6 +12,7 @@ import pandas as pd
 
 from pyerp.external_api.legacy_erp.base import BaseAPIClient
 from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
+from pyerp.external_api import connection_manager
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -50,6 +51,12 @@ class LegacyERPClient(BaseAPIClient):
         """
         try:
             logger.info("Checking connection to legacy ERP API")
+            
+            # First check if the connection is enabled
+            if not connection_manager.is_connection_enabled("legacy_erp"):
+                logger.info("Legacy ERP API connection is disabled")
+                return False
+                
             return self.validate_session()
         except Exception as e:
             logger.error(f"Connection check failed: {e}")

@@ -123,6 +123,7 @@
                     :elevation="isHovering ? 2 : 0"
                     class="pa-4 text-center transition-all duration-200"
                     :class="{ 'bg-grey-lighten-4': isHovering }"
+                    @click="navigateTo(tile)"
                   >
                     <v-icon :icon="tile.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
                     <div class="text-body-2">{{ tile.title }}</div>
@@ -203,6 +204,7 @@ import {
   VRow, 
   VCol
 } from 'vuetify/components'
+import { useRouter } from 'vue-router'
 
 // UI state
 const drawer = ref(true)
@@ -254,7 +256,8 @@ const menuTiles = [
   { title: 'Datenbank', icon: 'mdi-database' },
   { title: 'Statistiken', icon: 'mdi-chart-bar' },
   { title: 'Analysen', icon: 'mdi-chart-pie' },
-  { title: 'Kontakte', icon: 'mdi-account-plus' }
+  { title: 'Kontakte', icon: 'mdi-account-plus' },
+  { title: 'Admin Settings', icon: 'mdi-cog-outline', route: '/settings' }
 ]
 
 // Important links
@@ -297,6 +300,16 @@ const getStatusColor = (status) => {
     case 'In Bearbeitung': return 'info'
     case 'Versandt': return 'success'
     default: return 'grey'
+  }
+}
+
+// Import router
+const router = useRouter()
+
+// Navigation function
+const navigateTo = (tile) => {
+  if (tile.route) {
+    router.push(tile.route)
   }
 }
 </script>

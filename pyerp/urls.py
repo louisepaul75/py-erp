@@ -77,6 +77,11 @@ urlpatterns = [
         "api/monitoring/",
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
     ),
+    # Add external API connection management
+    path(
+        "api/external/",
+        include("pyerp.external_api.urls", namespace="external_api"),
+    ),
     # Add products API URLs directly
     path("api/products/", include("pyerp.business_modules.products.api_urls")),
 ]

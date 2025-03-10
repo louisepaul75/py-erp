@@ -185,6 +185,9 @@
                 <v-window-item v-if="authStore.isAdmin" value="system">
                   <h3 class="text-h5 mb-4">System Settings</h3>
                   
+                  <!-- External Connections -->
+                  <ExternalConnectionsSettings class="mb-6" />
+                  
                   <v-row>
                     <v-col cols="12" md="6">
                       <v-card variant="outlined" class="mb-4">
@@ -300,6 +303,7 @@ import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../../store/auth';
 import { useThemeStore } from '../../store/theme';
 import api from '../../services/api';
+import ExternalConnectionsSettings from '../../components/ExternalConnectionsSettings.vue';
 
 const authStore = useAuthStore();
 const themeStore = useThemeStore();

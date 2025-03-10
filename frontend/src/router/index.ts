@@ -50,7 +50,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/auth/Settings.vue'),
     meta: { requiresAuth: true }
   },
-
+  
   // Product routes
   {
     path: '/products',
