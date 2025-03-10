@@ -42,7 +42,13 @@ const routes: Array<RouteRecordRaw> = [
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/auth/Profile.vue'),
-    beforeEnter: authGuard
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/auth/Settings.vue'),
+    meta: { requiresAuth: true }
   },
 
   // Product routes
@@ -116,10 +122,10 @@ const router = createRouter({
 });
 
 // Global navigation guard
-router.beforeEach(async (to, from, next) => {
+router.beforeEach((to, from, next) => {
   // Check if the route requires authentication
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    // Apply the auth guard
+    // Return the Promise from authGuard
     return authGuard(to, from, next);
   } else {
     // No auth required, proceed

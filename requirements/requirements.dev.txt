@@ -11,6 +11,7 @@ pytest==8.0.2
 pytest-django==4.8.0
 pytest-cov==4.1.0
 factory-boy==3.3.0
+faker==22.5.1
 
 # Code quality
 black==24.2.0
@@ -24,9 +25,6 @@ sphinx-rtd-theme==2.0.0
 # Development tools
 django-browser-reload==1.12.1
 watchdog==4.0.0
-
-# Additional dependencies
-pandas==2.2.0
 
 # Frontend Development
 # Note: These are npm packages and should be installed using npm in the frontend directory
@@ -43,3 +41,13 @@ pandas==2.2.0
 # - prettier (^3.1.1): Code formatter
 # - jest (^29.7.0): JavaScript testing framework
 # - @vue/test-utils (^2.4.3): Testing utilities for Vue
+
+# Add development dependencies here
+# These are in addition to the production dependencies
+
+# Linting and formatting
+mypy==1.8.0
+ruff==0.2.1
+
+# Documentation
+sphinx-rtd-theme==2.0.0

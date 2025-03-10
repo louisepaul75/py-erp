@@ -26,7 +26,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useThemeStore } from '../../store/theme';
-import axios from 'axios';
+import api from '@/services/api';
 
 // Get theme store
 const themeStore = useThemeStore();
@@ -78,8 +78,8 @@ const healthStatusClass = computed(() => {
 // Fetch version and health status
 const fetchHealthStatus = async () => {
   try {
-    const response = await axios.get('/api/monitoring/health-checks/', {
-      timeout: 5000
+    const response = await api.get('/monitoring/health-checks/', {
+      timeout: 120000
     });
     
     if (response.data && response.data.success) {
@@ -101,9 +101,14 @@ const fetchHealthStatus = async () => {
     } else {
       throw new Error('Invalid response format');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to fetch health status:', error);
     healthStatus.value = 'error';
+    
+    // Add specific handling for timeout errors
+    if (error.code === 'ECONNABORTED') {
+      console.warn('Health check request timed out. Health status might still be good, but the request took too long to complete.');
+    }
   }
 };
 

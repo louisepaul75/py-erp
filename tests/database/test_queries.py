@@ -7,7 +7,7 @@ including complex queries, aggregations, and performance.
 
 import pytest
 from django.db.models import Count, Q
-from pyerp.products.models import ParentProduct, VariantProduct
+from pyerp.business_modules.products.models import ParentProduct, VariantProduct
 
 
 @pytest.mark.django_db
