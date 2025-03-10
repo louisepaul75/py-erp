@@ -3,12 +3,15 @@ Core models for the ERP system.
 """
 
 import uuid
-
+import json
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class AuditLog(models.Model):
@@ -123,3 +126,82 @@ class AuditLog(models.Model):
         if self.user and not self.username:
             self.username = self.user.username
         super().save(*args, **kwargs)
+
+
+class UserPreference(models.Model):
+    """
+    Store user preferences including dashboard configuration.
+    """
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='preferences'
+    )
+    dashboard_config = models.JSONField(
+        default=dict, 
+        help_text="JSON configuration of user's dashboard layout"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Preferences for {self.user.username}"
+
+    def get_dashboard_modules(self):
+        """
+        Returns the user's dashboard module configuration.
+        If none exists, returns the default configuration.
+        """
+        if not self.dashboard_config or 'modules' not in self.dashboard_config:
+            return self.get_default_dashboard_modules()
+        return self.dashboard_config.get('modules', [])
+
+    def get_default_dashboard_modules(self):
+        """
+        Returns the default dashboard modules configuration.
+        """
+        return [
+            {
+                'id': 'quick-access',
+                'title': 'Schnellzugriff',
+                'type': 'quick-access',
+                'position': 0,
+                'enabled': True,
+                'settings': {}
+            },
+            {
+                'id': 'recent-orders',
+                'title': 'Bestellungen nach Liefertermin',
+                'type': 'recent-orders',
+                'position': 1,
+                'enabled': True,
+                'settings': {}
+            },
+            {
+                'id': 'important-links',
+                'title': 'Wichtige Links',
+                'type': 'important-links',
+                'position': 2,
+                'enabled': True,
+                'settings': {}
+            },
+            {
+                'id': 'news-board',
+                'title': 'Interne Pinnwand',
+                'type': 'news-board',
+                'position': 3,
+                'enabled': True,
+                'settings': {}
+            }
+        ]
+
+    def save_dashboard_config(self, modules):
+        """
+        Save the dashboard configuration modules.
+        """
+        if not self.dashboard_config:
+            self.dashboard_config = {}
+        
+        self.dashboard_config['modules'] = modules
+        self.save()
+        return self.dashboard_config

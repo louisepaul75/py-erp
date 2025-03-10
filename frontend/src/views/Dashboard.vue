@@ -81,34 +81,69 @@
     <!-- Main Content -->
     <v-main class="bg-grey-lighten-4">
       <v-container class="py-4">
-        <!-- Quick Access -->
+        <!-- Dashboard Controls -->
         <v-card class="mb-6" flat>
+          <div class="px-6 py-4 border-b d-flex align-center">
+            <span class="text-h6 font-weight-medium">Dashboard</span>
+            <v-spacer></v-spacer>
+            
+            <v-btn
+              v-if="!editMode"
+              prepend-icon="mdi-pencil"
+              color="primary"
+              variant="text"
+              @click="enableEditMode"
+            >
+              Dashboard anpassen
+            </v-btn>
+            
+            <template v-else>
+              <v-btn
+                color="success"
+                variant="text"
+                class="mr-2"
+                prepend-icon="mdi-content-save"
+                @click="saveDashboardConfig"
+              >
+                Speichern
+              </v-btn>
+              <v-btn
+                color="error"
+                variant="text"
+                prepend-icon="mdi-close"
+                @click="cancelEditMode"
+              >
+                Abbrechen
+              </v-btn>
+            </template>
+          </div>
+        </v-card>
+
+        <!-- Add Module Menu (only visible in edit mode) -->
+        <v-card v-if="editMode" class="mb-6" flat>
           <div class="px-6 py-4 border-b">
-            <span class="text-h6 font-weight-medium">Schnellzugriff</span>
+            <span class="text-subtitle-1 font-weight-medium">Module hinzufügen</span>
           </div>
           <v-card-text>
             <v-row>
-              <v-col v-for="tile in menuTiles" :key="tile.title" cols="6" sm="4" md="3" lg="2">
+              <v-col v-for="module in availableModules" :key="module.id" cols="6" sm="4" md="3" lg="2">
                 <v-hover v-slot="{ isHovering, props }">
                   <v-card
                     v-bind="props"
                     :elevation="isHovering ? 2 : 0"
-                    class="pa-4 text-center transition-all duration-200 position-relative"
+                    class="pa-4 text-center transition-all duration-200"
                     :class="{ 'bg-grey-lighten-4': isHovering }"
-                    @click="navigateTo(tile)"
+                    @click="addModule(module)"
                   >
-                    <v-icon :icon="tile.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
-                    <div class="text-body-2">{{ tile.title }}</div>
-                    
-                    <!-- Favorite Toggle Button -->
+                    <v-icon :icon="module.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
+                    <div class="text-body-2">{{ module.title }}</div>
                     <v-btn
-                      :icon="isTileFavorite(tile) ? 'mdi-star' : 'mdi-star-outline'"
-                      :color="isTileFavorite(tile) ? 'warning' : 'grey-darken-1'"
+                      icon="mdi-plus"
                       size="small"
+                      color="primary"
                       variant="text"
-                      class="favorite-toggle-btn"
-                      :class="{ 'show-on-hover': !isTileFavorite(tile) }"
-                      @click.stop="toggleTileFavorite(tile)"
+                      class="add-module-btn position-absolute"
+                      style="top: 8px; right: 8px;"
                     ></v-btn>
                   </v-card>
                 </v-hover>
@@ -117,146 +152,77 @@
           </v-card-text>
         </v-card>
 
-        <!-- Recent Orders -->
-        <v-card class="mb-6" flat>
-          <div class="d-flex align-center px-6 py-4 border-b">
-            <span class="text-h6 font-weight-medium">Bestellungen nach Liefertermin</span>
-            <v-spacer></v-spacer>
-            <v-text-field
-              v-model="searchQuery"
-              prepend-inner-icon="mdi-magnify"
-              placeholder="Suchen..."
-              hide-details
-              density="compact"
-              variant="outlined"
-              class="max-w-xs"
-            ></v-text-field>
-          </div>
-          <v-table>
-            <thead>
-              <tr>
-                <th class="text-caption font-weight-medium text-grey-darken-1">AUFTRAG</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">KUNDE</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">LIEFERTERMIN</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">STATUS</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">BETRAG</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">FAVORIT</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="order in filteredOrders" :key="order.id" class="text-body-2">
-                <td>{{ order.id }}</td>
-                <td>{{ order.customer }}</td>
-                <td>{{ order.deliveryDate }}</td>
-                <td>
-                  <v-chip
-                    :color="getStatusColor(order.status)"
-                    size="small"
-                    class="font-weight-medium text-caption"
-                    variant="tonal"
-                  >
-                    {{ order.status }}
-                  </v-chip>
-                </td>
-                <td>{{ order.amount }}</td>
-                <td>
-                  <v-btn
-                    :icon="isOrderFavorite(order) ? 'mdi-star' : 'mdi-star-outline'"
-                    :color="isOrderFavorite(order) ? 'warning' : 'grey'"
-                    size="small"
-                    variant="text"
-                    :class="{ 'show-on-hover': !isOrderFavorite(order) }"
-                    @click="toggleOrderFavorite(order)"
-                  ></v-btn>
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
-        </v-card>
+        <!-- Dashboard Modules -->
+        <div v-if="loading" class="d-flex justify-center align-center my-6">
+          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+        </div>
 
-        <v-row>
-          <!-- Important Links -->
-          <v-col cols="12" md="6">
-            <v-card flat>
-              <div class="px-6 py-4 border-b d-flex align-center">
-                <span class="text-h6 font-weight-medium">Wichtige Links</span>
-                <v-spacer></v-spacer>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star"
-                  color="warning"
-                  size="small"
-                  v-if="linkIsFavorites"
-                  @click="removeLinksFromFavorites"
-                  title="Von Favoriten entfernen"
-                ></v-btn>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star-outline"
-                  size="small"
-                  class="show-on-hover"
-                  v-else
-                  @click="addLinksToFavorites"
-                  title="Zu Favoriten hinzufügen"
-                ></v-btn>
-              </div>
-              <v-list class="pa-2">
-                <v-list-item
-                  v-for="link in importantLinks"
-                  :key="link"
-                  :title="link"
-                  prepend-icon="mdi-link"
-                  class="rounded text-body-2"
-                  density="comfortable"
-                ></v-list-item>
-              </v-list>
-            </v-card>
-          </v-col>
-
-          <!-- News Board -->
-          <v-col cols="12" md="6">
-            <v-card flat>
-              <div class="px-6 py-4 border-b d-flex align-center">
-                <span class="text-h6 font-weight-medium">Interne Pinnwand</span>
-                <v-spacer></v-spacer>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star"
-                  color="warning"
-                  size="small"
-                  v-if="newsBoardIsFavorite"
-                  @click="removeNewsBoardFromFavorites"
-                  title="Von Favoriten entfernen"
-                ></v-btn>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star-outline"
-                  size="small"
-                  class="show-on-hover"
-                  v-else
-                  @click="addNewsBoardToFavorites"
-                  title="Zu Favoriten hinzufügen"
-                ></v-btn>
-              </div>
-              <v-card-text>
-                <div v-for="news in newsItems" :key="news.title" class="mb-4 pb-4 border-b">
-                  <div class="d-flex align-center mb-2">
-                    <span class="text-body-2 font-weight-medium">{{ news.title }}</span>
-                    <span class="text-caption text-grey-darken-1 ml-auto">{{ news.date }}</span>
+        <template v-else>
+          <draggable 
+            v-model="dashboardModules" 
+            handle=".drag-handle"
+            :disabled="!editMode"
+            item-key="id"
+            class="dashboard-modules-container"
+          >
+            <template #item="{ element, index }">
+              <div v-if="element.enabled" class="mb-6">
+                <!-- Module Header -->
+                <div class="d-flex align-center px-2">
+                  <v-icon 
+                    v-if="editMode" 
+                    icon="mdi-drag" 
+                    size="small" 
+                    class="drag-handle mr-2 cursor-move text-grey"
+                  ></v-icon>
+                  
+                  <!-- Module Actions (only visible in edit mode) -->
+                  <div v-if="editMode" class="module-actions d-flex align-center ml-auto mb-2">
+                    <v-btn
+                      icon="mdi-arrow-up"
+                      size="small"
+                      variant="text"
+                      :disabled="index === 0"
+                      @click="moveModuleUp(index)"
+                      class="mr-1"
+                    ></v-btn>
+                    <v-btn
+                      icon="mdi-arrow-down"
+                      size="small"
+                      variant="text"
+                      :disabled="index === dashboardModules.length - 1"
+                      @click="moveModuleDown(index)"
+                      class="mr-1"
+                    ></v-btn>
+                    <v-btn
+                      icon="mdi-delete"
+                      size="small"
+                      color="error"
+                      variant="text"
+                      @click="removeModule(element)"
+                    ></v-btn>
                   </div>
-                  <p class="text-body-2 text-grey-darken-1 mb-0">{{ news.content }}</p>
                 </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
+                
+                <!-- Module Content -->
+                <component 
+                  :is="getModuleComponent(element.type)" 
+                  :module="element"
+                  :edit-mode="editMode"
+                ></component>
+              </div>
+            </template>
+          </draggable>
+        </template>
       </v-container>
     </v-main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import draggable from 'vuedraggable'
+import api from '../services/api'
 import { 
   VHover, 
   VIcon, 
@@ -282,24 +248,170 @@ import {
   VRow, 
   VCol,
   VTabs,
-  VTab
+  VTab,
+  VProgressCircular
 } from 'vuetify/components'
 import { useRouter } from 'vue-router'
 import { useFavoritesStore } from '../store/favorites'
 import { useAuthStore } from '../store/auth'
 
+// Import module components
+import QuickAccessModule from '../components/dashboard/QuickAccessModule.vue'
+import RecentOrdersModule from '../components/dashboard/RecentOrdersModule.vue'
+import ImportantLinksModule from '../components/dashboard/ImportantLinksModule.vue'
+import NewsBoardModule from '../components/dashboard/NewsBoardModule.vue'
+
 // Initialize stores
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
+const router = useRouter()
 
 // UI state
 const drawer = ref(true)
 const searchQuery = ref('')
 const activeTab = ref('dashboard')
+const loading = ref(true)
+const editMode = ref(false)
 
+// Dashboard state
+const dashboardModules = ref([])
+const originalModules = ref([])
+
+// Toggle functions
 const toggleDrawer = () => {
   drawer.value = !drawer.value
 }
+
+// Dashboard edit mode functions
+const enableEditMode = () => {
+  originalModules.value = JSON.parse(JSON.stringify(dashboardModules.value))
+  editMode.value = true
+}
+
+const cancelEditMode = () => {
+  dashboardModules.value = JSON.parse(JSON.stringify(originalModules.value))
+  editMode.value = false
+}
+
+const saveDashboardConfig = async () => {
+  try {
+    await api.patch('/dashboard/', {
+      modules: dashboardModules.value
+    })
+    editMode.value = false
+    // Save successful notification would go here
+  } catch (error) {
+    console.error('Failed to save dashboard configuration:', error)
+    // Error notification would go here
+  }
+}
+
+// Module management functions
+const addModule = (module) => {
+  const existingModule = dashboardModules.value.find(m => m.id === module.id)
+  if (existingModule) {
+    existingModule.enabled = true
+  } else {
+    dashboardModules.value.push({
+      ...module,
+      position: dashboardModules.value.length,
+      enabled: true
+    })
+  }
+}
+
+const removeModule = (module) => {
+  const index = dashboardModules.value.findIndex(m => m.id === module.id)
+  if (index !== -1) {
+    // Instead of removing, just disable it
+    dashboardModules.value[index].enabled = false
+  }
+}
+
+const moveModuleUp = (index) => {
+  if (index > 0) {
+    const temp = dashboardModules.value[index]
+    dashboardModules.value[index] = dashboardModules.value[index - 1]
+    dashboardModules.value[index - 1] = temp
+    
+    // Update positions
+    dashboardModules.value.forEach((module, i) => {
+      module.position = i
+    })
+  }
+}
+
+const moveModuleDown = (index) => {
+  if (index < dashboardModules.value.length - 1) {
+    const temp = dashboardModules.value[index]
+    dashboardModules.value[index] = dashboardModules.value[index + 1]
+    dashboardModules.value[index + 1] = temp
+    
+    // Update positions
+    dashboardModules.value.forEach((module, i) => {
+      module.position = i
+    })
+  }
+}
+
+// Component mapping
+const getModuleComponent = (type) => {
+  const moduleComponents = {
+    'quick-access': QuickAccessModule,
+    'recent-orders': RecentOrdersModule,
+    'important-links': ImportantLinksModule,
+    'news-board': NewsBoardModule
+  }
+  return moduleComponents[type] || null
+}
+
+// Available modules definition
+const availableModules = [
+  {
+    id: 'quick-access',
+    title: 'Schnellzugriff',
+    type: 'quick-access',
+    icon: 'mdi-apps',
+    settings: {}
+  },
+  {
+    id: 'recent-orders',
+    title: 'Bestellungen',
+    type: 'recent-orders',
+    icon: 'mdi-cart',
+    settings: {}
+  },
+  {
+    id: 'important-links',
+    title: 'Wichtige Links',
+    type: 'important-links',
+    icon: 'mdi-link',
+    settings: {}
+  },
+  {
+    id: 'news-board',
+    title: 'Interne Pinnwand',
+    type: 'news-board',
+    icon: 'mdi-bulletin-board',
+    settings: {}
+  }
+]
+
+// Fetch dashboard data on component mount
+onMounted(async () => {
+  try {
+    const response = await api.get('/dashboard/')
+    if (response.data && response.data.dashboard_modules) {
+      dashboardModules.value = response.data.dashboard_modules
+      // Sort modules by position
+      dashboardModules.value.sort((a, b) => a.position - b.position)
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error)
+  } finally {
+    loading.value = false
+  }
+})
 
 // Recent access items
 const recentAccess = [
@@ -310,90 +422,7 @@ const recentAccess = [
   { title: 'Kunde: Weber KG', icon: 'mdi-account' }
 ]
 
-// Sample data for recent orders
-const recentOrders = [
-  { id: 'A-1085', customer: 'Müller GmbH', deliveryDate: '15.03.2025', status: 'Offen', amount: '€2,450.00' },
-  { id: 'A-1084', customer: 'Schmidt AG', deliveryDate: '18.03.2025', status: 'In Bearbeitung', amount: '€1,875.50' },
-  { id: 'A-1083', customer: 'Weber KG', deliveryDate: '20.03.2025', status: 'Offen', amount: '€3,120.75' },
-  { id: 'A-1082', customer: 'Becker GmbH', deliveryDate: '22.03.2025', status: 'Versandt', amount: '€950.25' },
-  { id: 'A-1081', customer: 'Fischer & Co.', deliveryDate: '25.03.2025', status: 'Offen', amount: '€4,280.00' },
-  { id: 'A-1080', customer: 'Hoffmann AG', deliveryDate: '28.03.2025', status: 'In Bearbeitung', amount: '€1,650.30' }
-]
-
-// Filtered orders based on search
-const filteredOrders = computed(() => {
-  if (!searchQuery.value) return recentOrders
-  const query = searchQuery.value.toLowerCase()
-  return recentOrders.filter(order => 
-    order.id.toLowerCase().includes(query) ||
-    order.customer.toLowerCase().includes(query)
-  )
-})
-
-// Menu tiles
-const menuTiles = [
-  { title: 'Kunden', icon: 'mdi-account-group' },
-  { title: 'Bestellungen', icon: 'mdi-cart' },
-  { title: 'Produkte', icon: 'mdi-package-variant' },
-  { title: 'Rechnungen', icon: 'mdi-credit-card' },
-  { title: 'Kalender', icon: 'mdi-calendar' },
-  { title: 'Berichte', icon: 'mdi-file-chart' },
-  { title: 'Lieferungen', icon: 'mdi-truck' },
-  { title: 'Aufgaben', icon: 'mdi-clipboard-list' },
-  { title: 'Datenbank', icon: 'mdi-database' },
-  { title: 'Statistiken', icon: 'mdi-chart-bar' },
-  { title: 'Analysen', icon: 'mdi-chart-pie' },
-  { title: 'Kontakte', icon: 'mdi-account-plus' },
-  { title: 'Admin Settings', icon: 'mdi-cog-outline', route: '/settings' }
-]
-
-// Important links
-const importantLinks = [
-  'Unternehmenshandbuch',
-  'Intranet',
-  'Supportportal',
-  'Schulungsvideos',
-  'Produktkatalog',
-  'Preisliste 2025',
-  'Urlaubsplaner',
-  'IT-Helpdesk',
-  'Qualitätsmanagement',
-  'Mitarbeiterportal'
-]
-
-// News items
-const newsItems = [
-  { 
-    title: 'Neue Produktlinie ab April', 
-    date: '09.03.2025', 
-    content: 'Ab April führen wir eine neue Produktlinie ein. Schulungen finden nächste Woche statt.' 
-  },
-  { 
-    title: 'Systemwartung am Wochenende', 
-    date: '08.03.2025', 
-    content: 'Das System wird am Samstag von 22:00 bis 02:00 Uhr für Wartungsarbeiten nicht verfügbar sein.' 
-  },
-  { 
-    title: 'Neue Vertriebspartnerschaft', 
-    date: '05.03.2025', 
-    content: 'Wir freuen uns, eine neue Partnerschaft mit der Firma XYZ bekannt zu geben.' 
-  }
-]
-
-// Helper function for order status colors
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'Offen': return 'warning'
-    case 'In Bearbeitung': return 'info'
-    case 'Versandt': return 'success'
-    default: return 'grey'
-  }
-}
-
-// Import router
-const router = useRouter()
-
-// Navigation function
+// Navigation functions
 const navigateTo = (tile) => {
   if (tile.route) {
     router.push(tile.route)
@@ -405,75 +434,6 @@ const navigateToFavorite = (item) => {
   if (item.route) {
     router.push(item.route)
   }
-}
-
-// Favorites functionality for tiles
-const isTileFavorite = (tile) => {
-  const tileId = `module-${tile.title}`
-  return favoritesStore.isFavorite(tileId)
-}
-
-const toggleTileFavorite = (tile) => {
-  const favoriteItem = {
-    id: `module-${tile.title}`,
-    title: tile.title,
-    icon: tile.icon,
-    route: tile.route,
-    type: 'module'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
-
-// Favorites functionality for orders
-const isOrderFavorite = (order) => {
-  const orderId = `order-${order.id}`
-  return favoritesStore.isFavorite(orderId)
-}
-
-const toggleOrderFavorite = (order) => {
-  const favoriteItem = {
-    id: `order-${order.id}`,
-    title: `Auftrag: ${order.id} - ${order.customer}`,
-    icon: 'mdi-file-document',
-    type: 'order'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
-
-// Favorites functionality for important links
-const linkIsFavorites = computed(() => {
-  return favoritesStore.isFavorite('important-links')
-})
-
-const addLinksToFavorites = () => {
-  favoritesStore.addFavorite({
-    id: 'important-links',
-    title: 'Wichtige Links',
-    icon: 'mdi-link',
-    type: 'other'
-  })
-}
-
-const removeLinksFromFavorites = () => {
-  favoritesStore.removeFavorite('important-links')
-}
-
-// Favorites functionality for news board
-const newsBoardIsFavorite = computed(() => {
-  return favoritesStore.isFavorite('news-board')
-})
-
-const addNewsBoardToFavorites = () => {
-  favoritesStore.addFavorite({
-    id: 'news-board',
-    title: 'Interne Pinnwand',
-    icon: 'mdi-bulletin-board',
-    type: 'other'
-  })
-}
-
-const removeNewsBoardFromFavorites = () => {
-  favoritesStore.removeFavorite('news-board')
 }
 </script>
 
@@ -499,38 +459,33 @@ const removeNewsBoardFromFavorites = () => {
   border-right: 1px solid #e5e7eb !important;
 }
 
-.sidebar-toggle-btn {
-  position: fixed;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 100;
-  border-radius: 0 4px 4px 0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+.dashboard-modules-container {
+  min-height: 200px;
 }
 
-.favorite-toggle-btn {
-  position: absolute;
-  top: 5px;
-  right: 5px;
+.cursor-move {
+  cursor: move;
 }
 
 .show-on-hover {
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s;
 }
 
-.v-hover:hover .show-on-hover,
-tr:hover .show-on-hover,
-.v-card:hover .show-on-hover {
+*:hover > .show-on-hover {
   opacity: 1;
 }
 
-.favorite-remove-btn:hover {
-  color: #f44336 !important;
+.add-module-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
-.position-relative {
-  position: relative !important;
+.sidebar-toggle-btn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 100;
 }
 </style>

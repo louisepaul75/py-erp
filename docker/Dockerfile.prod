@@ -50,7 +50,7 @@ RUN pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 # Copy frontend files first and build Vue
 COPY frontend/package*.json /app/frontend/
 WORKDIR /app/frontend
-RUN npm install
+RUN npm install --legacy-peer-deps && npm install vuedraggable@next
 
 # Create a custom build script that runs TypeScript check separately
 RUN echo '#!/bin/sh\n\
