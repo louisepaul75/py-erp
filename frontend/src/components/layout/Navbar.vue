@@ -70,9 +70,9 @@
                             <v-icon class="mr-2">mdi-translate</v-icon>
                             {{ t('common.language') }}
                             <v-menu
-                                v-model="showLanguageMenu"
-                                :close-on-content-click="true"
                                 location="end"
+                                :close-on-content-click="true"
+                                offset="5"
                             >
                                 <template v-slot:activator="{ props }">
                                     <v-btn
@@ -80,19 +80,28 @@
                                         v-bind="props"
                                         class="ml-auto text-none"
                                         size="small"
+                                        color="primary"
                                     >
-                                        {{ currentLanguage }}
+                                        {{ languages.find(l => l.code === locale)?.name || 'English' }}
                                         <v-icon end>mdi-chevron-down</v-icon>
                                     </v-btn>
                                 </template>
-                                <v-list>
+                                <v-list density="compact" elevation="2">
                                     <v-list-item
                                         v-for="lang in languages"
                                         :key="lang.code"
                                         :value="lang.code"
                                         @click="changeLanguage(lang.code)"
+                                        :class="{ 'bg-primary-subtle': lang.code === locale }"
                                     >
-                                        <v-list-item-title>{{ lang.name }}</v-list-item-title>
+                                        <template v-slot:prepend>
+                                            <v-icon v-if="lang.code === locale" color="primary" size="small">
+                                                mdi-check
+                                            </v-icon>
+                                        </template>
+                                        <v-list-item-title :class="{ 'font-weight-medium': lang.code === locale }">
+                                            {{ lang.name }}
+                                        </v-list-item-title>
                                     </v-list-item>
                                 </v-list>
                             </v-menu>
@@ -172,9 +181,9 @@
                     <v-icon class="mr-2">mdi-translate</v-icon>
                     {{ t('common.language') }}
                     <v-menu
-                        v-model="showLanguageMenu"
-                        :close-on-content-click="true"
                         location="end"
+                        :close-on-content-click="true"
+                        offset="5"
                     >
                         <template v-slot:activator="{ props }">
                             <v-btn
@@ -182,19 +191,28 @@
                                 v-bind="props"
                                 class="ml-auto text-none"
                                 size="small"
+                                color="primary"
                             >
-                                {{ currentLanguage }}
+                                {{ languages.find(l => l.code === locale)?.name || 'English' }}
                                 <v-icon end>mdi-chevron-down</v-icon>
                             </v-btn>
                         </template>
-                        <v-list>
+                        <v-list density="compact" elevation="2">
                             <v-list-item
                                 v-for="lang in languages"
                                 :key="lang.code"
                                 :value="lang.code"
                                 @click="changeLanguage(lang.code)"
+                                :class="{ 'bg-primary-subtle': lang.code === locale }"
                             >
-                                <v-list-item-title>{{ lang.name }}</v-list-item-title>
+                                <template v-slot:prepend>
+                                    <v-icon v-if="lang.code === locale" color="primary" size="small">
+                                        mdi-check
+                                    </v-icon>
+                                </template>
+                                <v-list-item-title :class="{ 'font-weight-medium': lang.code === locale }">
+                                    {{ lang.name }}
+                                </v-list-item-title>
                             </v-list-item>
                         </v-list>
                     </v-menu>
@@ -221,42 +239,33 @@ const authStore = useAuthStore();
 const themeStore = useThemeStore();
 const { locale, t } = useI18n();
 const drawer = ref(false);
-const showLanguageMenu = ref(false);
 
 const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'de', name: 'Deutsch' },
-    { code: 'cs', name: 'Čeština' }
+    { code: 'en', name: t('languages.english') },
+    { code: 'de', name: t('languages.german') },
+    { code: 'cs', name: t('languages.czech') }
 ];
 
-const currentLanguage = computed(() => {
-    const lang = languages.find(l => l.code === locale.value);
-    return lang ? lang.name : 'English';
-});
-
-const toggleLanguageMenu = () => {
-    showLanguageMenu.value = !showLanguageMenu.value;
-};
-
-const changeLanguage = (langCode: string) => {
+const changeLanguage = async (langCode: string) => {
     locale.value = langCode;
-    // Store the language preference in localStorage
     localStorage.setItem('preferred-language', langCode);
+    // Force a page reload to ensure all components update their translations
+    window.location.reload();
 };
 
-const navItems = [
+const navItems = computed(() => [
     { title: t('nav.dashboard'), to: '/dashboard' },
     { title: t('nav.products'), to: '/products' },
     { title: t('nav.sales'), to: '/sales' },
     { title: t('nav.inventory'), to: '/inventory' },
     { title: t('nav.production'), to: '/production' },
     { title: t('nav.test'), to: '/test' },
-];
+]);
 
-// Initialize language from localStorage or default to 'en'
+// Add mounted hook to initialize language from localStorage
 onMounted(() => {
     const savedLanguage = localStorage.getItem('preferred-language');
-    if (savedLanguage && languages.some(l => l.code === savedLanguage)) {
+    if (savedLanguage) {
         locale.value = savedLanguage;
     }
 });

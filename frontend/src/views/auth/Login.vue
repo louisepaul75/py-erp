@@ -2,7 +2,7 @@
   <div class="login-container">
     <v-card class="login-card mx-auto" max-width="400">
       <v-card-title class="text-white bg-primary">
-        <h2>Login</h2>
+        <h2>{{ $t('common.login') }}</h2>
       </v-card-title>
       
       <v-card-text>
@@ -18,7 +18,7 @@
         <v-form @submit.prevent="handleLogin" class="mt-4">
           <v-text-field
             v-model="credentials.username"
-            label="Username"
+            :label="$t('auth.username')"
             id="username"
             required
             autocomplete="username"
@@ -28,7 +28,7 @@
 
           <v-text-field
             v-model="credentials.password"
-            label="Password"
+            :label="$t('auth.password')"
             id="password"
             type="password"
             required

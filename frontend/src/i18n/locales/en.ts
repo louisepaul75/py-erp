@@ -15,7 +15,24 @@ export default {
     search: 'Search',
     loading: 'Loading...',
     error: 'Error',
-    success: 'Success'
+    success: 'Success',
+    adminDashboard: 'Admin Dashboard',
+    language: 'Language',
+    lightMode: 'Light Mode',
+    darkMode: 'Dark Mode',
+    goToHome: 'Go to Home'
+  },
+  nav: {
+    dashboard: 'Dashboard',
+    products: 'Products',
+    sales: 'Sales',
+    inventory: 'Inventory',
+    production: 'Production'
+  },
+  languages: {
+    english: 'English',
+    german: 'Deutsch',
+    czech: 'Čeština'
   },
   validation: {
     required: 'This field is required',
@@ -25,8 +42,41 @@ export default {
   },
   errors: {
     general: 'Something went wrong',
-    notFound: 'Not found',
+    notFound: '404',
+    pageNotFound: 'Page Not Found',
+    pageNotFoundMessage: 'The page you are looking for does not exist or has been moved.',
     unauthorized: 'Unauthorized access',
     forbidden: 'Access forbidden'
+  },
+  auth: {
+    username: 'Username',
+    password: 'Password',
+    confirmPassword: 'Confirm Password',
+    currentPassword: 'Current Password',
+    newPassword: 'New Password',
+    email: 'Email',
+    firstName: 'First Name',
+    lastName: 'Last Name',
+    changePassword: 'Change Password'
+  },
+  home: {
+    welcome: 'Welcome to pyERP',
+    subtitle: 'A comprehensive ERP system for managing your business operations',
+    products: {
+      title: 'Products',
+      description: 'Manage your product catalog, variants, and categories'
+    },
+    sales: {
+      title: 'Sales',
+      description: 'Track orders, invoices, and customer information'
+    },
+    inventory: {
+      title: 'Inventory',
+      description: 'Monitor stock levels and manage warehouses'
+    },
+    production: {
+      title: 'Production',
+      description: 'Plan and track manufacturing processes'
+    }
   }
 } 

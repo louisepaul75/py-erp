@@ -4,7 +4,7 @@
       <v-col cols="12" md="8">
         <v-card>
           <v-card-title class="text-white bg-primary">
-            <h2>User Profile</h2>
+            <h2>{{ $t('common.profile') }}</h2>
           </v-card-title>
           
           <v-card-text>
@@ -30,7 +30,7 @@
 
                 <v-text-field
                   v-model="authStore.user.username"
-                  label="Username"
+                  :label="$t('auth.username')"
                   disabled
                   variant="outlined"
                   class="mb-2"
@@ -38,7 +38,7 @@
 
                 <v-text-field
                   v-model="profileData.email"
-                  label="Email"
+                  :label="$t('auth.email')"
                   type="email"
                   required
                   variant="outlined"
@@ -49,7 +49,7 @@
                   <v-col cols="12" md="6">
                     <v-text-field
                       v-model="profileData.first_name"
-                      label="First Name"
+                      :label="$t('auth.firstName')"
                       variant="outlined"
                     ></v-text-field>
                   </v-col>
@@ -57,7 +57,7 @@
                   <v-col cols="12" md="6">
                     <v-text-field
                       v-model="profileData.last_name"
-                      label="Last Name"
+                      :label="$t('auth.lastName')"
                       variant="outlined"
                     ></v-text-field>
                   </v-col>
@@ -77,7 +77,7 @@
 
               <!-- Password Change Form -->
               <v-divider class="my-6"></v-divider>
-              <h3 class="text-h5 mb-4">Change Password</h3>
+              <h3 class="text-h5 mb-4">{{ $t('auth.changePassword') }}</h3>
 
               <v-form @submit.prevent="changePassword">
                 <v-alert
@@ -91,7 +91,7 @@
 
                 <v-text-field
                   v-model="passwordData.oldPassword"
-                  label="Current Password"
+                  :label="$t('auth.currentPassword')"
                   type="password"
                   required
                   variant="outlined"
@@ -100,7 +100,7 @@
 
                 <v-text-field
                   v-model="passwordData.newPassword"
-                  label="New Password"
+                  :label="$t('auth.newPassword')"
                   type="password"
                   required
                   variant="outlined"
@@ -109,7 +109,7 @@
 
                 <v-text-field
                   v-model="passwordData.confirmPassword"
-                  label="Confirm New Password"
+                  :label="$t('auth.confirmPassword')"
                   type="password"
                   required
                   variant="outlined"
