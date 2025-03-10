@@ -531,7 +531,7 @@ export default {
     },
     
     viewCustomerDetails(customer) {
-      console.log('View details:', customer);
+      this.$router.push({ name: 'CustomerDetail', params: { id: customer.id } });
     },
     
     editCustomer(customer) {
