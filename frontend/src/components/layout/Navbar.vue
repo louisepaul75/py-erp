@@ -43,8 +43,8 @@
                     
                     <v-list-item to="/settings">
                         <v-list-item-title>
-                            <v-icon class="mr-2">mdi-cog</v-icon>
-                            Settings
+                            <v-icon class="mr-2">{{ authStore.isAdmin ? 'mdi-shield-account-outline' : 'mdi-cog' }}</v-icon>
+                            {{ authStore.isAdmin ? 'Admin Dashboard' : 'Settings' }}
                         </v-list-item-title>
                     </v-list-item>
                     
@@ -99,6 +99,28 @@
             </v-list-item>
             
             <v-divider class="my-2"></v-divider>
+            
+            <!-- User Account Links in Mobile Menu -->
+            <v-list-item v-if="authStore.isAuthenticated" to="/profile">
+                <template v-slot:prepend>
+                    <v-icon>mdi-card-account-details</v-icon>
+                </template>
+                <v-list-item-title>Profile</v-list-item-title>
+            </v-list-item>
+            
+            <v-list-item v-if="authStore.isAuthenticated" to="/settings">
+                <template v-slot:prepend>
+                    <v-icon>{{ authStore.isAdmin ? 'mdi-shield-account-outline' : 'mdi-cog' }}</v-icon>
+                </template>
+                <v-list-item-title>{{ authStore.isAdmin ? 'Admin Dashboard' : 'Settings' }}</v-list-item-title>
+            </v-list-item>
+            
+            <v-list-item v-if="authStore.isAuthenticated" to="/logout">
+                <template v-slot:prepend>
+                    <v-icon>mdi-logout</v-icon>
+                </template>
+                <v-list-item-title>Logout</v-list-item-title>
+            </v-list-item>
             
             <!-- Theme Toggle in Mobile Menu -->
             <v-list-item @click="themeStore.toggleTheme">
