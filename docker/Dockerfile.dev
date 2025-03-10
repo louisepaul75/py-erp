@@ -56,6 +56,16 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data \
     && chown -R root:root /var/run \
     && chmod -R 755 /app/logs
 
+# Set up frontend dependencies
+COPY frontend/package*.json /app/frontend/
+WORKDIR /app/frontend
+RUN npm install
+
+# Copy frontend source files
+COPY frontend/ /app/frontend/
+
+WORKDIR /app
+
 # Expose ports for Django and Redis
 EXPOSE 8050 6379 3000 5173
 
