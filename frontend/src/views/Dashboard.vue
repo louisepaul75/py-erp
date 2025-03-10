@@ -158,61 +158,51 @@
         </div>
 
         <template v-else>
-          <draggable 
-            v-model="dashboardModules" 
-            handle=".drag-handle"
-            :disabled="!editMode"
-            item-key="id"
-            class="dashboard-modules-container"
-          >
-            <template #item="{ element, index }">
-              <div v-if="element.enabled" class="mb-6">
-                <!-- Module Header -->
-                <div class="d-flex align-center px-2">
-                  <v-icon 
-                    v-if="editMode" 
-                    icon="mdi-drag" 
-                    size="small" 
-                    class="drag-handle mr-2 cursor-move text-grey"
-                  ></v-icon>
+          <!-- Grid Stack Container -->
+          <div class="grid-stack">
+            <!-- GridStack will automatically create grid-stack-item containers -->
+            <template v-for="(module, index) in dashboardModules" :key="module.id">
+              <div v-if="module.enabled" 
+                   class="grid-stack-item"
+                   :gs-id="module.id"
+                   :gs-x="module.settings?.x || (index % 2) * 6"
+                   :gs-y="module.settings?.y || Math.floor(index / 2) * 4"
+                   :gs-w="module.settings?.w || 6"
+                   :gs-h="module.settings?.h || 4">
+                <div class="grid-stack-item-content">
+                  <!-- Module Header -->
+                  <div class="module-header d-flex align-center px-4 py-2 border-b">
+                    <v-icon 
+                      :icon="getModuleIcon(module.type)"
+                      size="small"
+                      class="mr-2 text-grey-darken-1"
+                    ></v-icon>
+                    <span class="text-subtitle-2 font-weight-medium">{{ module.title }}</span>
+                    
+                    <!-- Module Actions (only visible in edit mode) -->
+                    <div v-if="editMode" class="module-actions d-flex align-center ml-auto">
+                      <v-btn
+                        icon="mdi-delete"
+                        size="small"
+                        color="error"
+                        variant="text"
+                        @click="removeModule(module)"
+                      ></v-btn>
+                    </div>
+                  </div>
                   
-                  <!-- Module Actions (only visible in edit mode) -->
-                  <div v-if="editMode" class="module-actions d-flex align-center ml-auto mb-2">
-                    <v-btn
-                      icon="mdi-arrow-up"
-                      size="small"
-                      variant="text"
-                      :disabled="index === 0"
-                      @click="moveModuleUp(index)"
-                      class="mr-1"
-                    ></v-btn>
-                    <v-btn
-                      icon="mdi-arrow-down"
-                      size="small"
-                      variant="text"
-                      :disabled="index === dashboardModules.length - 1"
-                      @click="moveModuleDown(index)"
-                      class="mr-1"
-                    ></v-btn>
-                    <v-btn
-                      icon="mdi-delete"
-                      size="small"
-                      color="error"
-                      variant="text"
-                      @click="removeModule(element)"
-                    ></v-btn>
+                  <!-- Module Content -->
+                  <div class="pa-4">
+                    <component 
+                      :is="getModuleComponent(module.type)" 
+                      :module="module"
+                      :edit-mode="editMode"
+                    ></component>
                   </div>
                 </div>
-                
-                <!-- Module Content -->
-                <component 
-                  :is="getModuleComponent(element.type)" 
-                  :module="element"
-                  :edit-mode="editMode"
-                ></component>
               </div>
             </template>
-          </draggable>
+          </div>
         </template>
       </v-container>
     </v-main>
@@ -220,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import draggable from 'vuedraggable'
 import { GridStack } from 'gridstack'
 import 'gridstack/dist/gridstack.min.css'
@@ -331,32 +321,6 @@ const removeModule = (module) => {
   }
 }
 
-const moveModuleUp = (index) => {
-  if (index > 0) {
-    const temp = dashboardModules.value[index]
-    dashboardModules.value[index] = dashboardModules.value[index - 1]
-    dashboardModules.value[index - 1] = temp
-    
-    // Update positions
-    dashboardModules.value.forEach((module, i) => {
-      module.position = i
-    })
-  }
-}
-
-const moveModuleDown = (index) => {
-  if (index < dashboardModules.value.length - 1) {
-    const temp = dashboardModules.value[index]
-    dashboardModules.value[index] = dashboardModules.value[index + 1]
-    dashboardModules.value[index + 1] = temp
-    
-    // Update positions
-    dashboardModules.value.forEach((module, i) => {
-      module.position = i
-    })
-  }
-}
-
 // Component mapping
 const getModuleComponent = (type) => {
   const moduleComponents = {
@@ -366,6 +330,17 @@ const getModuleComponent = (type) => {
     'news-board': NewsBoardModule
   }
   return moduleComponents[type] || null
+}
+
+// Get module icon
+const getModuleIcon = (type) => {
+  const moduleIcons = {
+    'quick-access': 'mdi-apps',
+    'recent-orders': 'mdi-cart',
+    'important-links': 'mdi-link',
+    'news-board': 'mdi-bulletin-board'
+  }
+  return moduleIcons[type] || 'mdi-view-dashboard'
 }
 
 // Available modules definition
@@ -408,45 +383,61 @@ onMounted(async () => {
       dashboardModules.value = response.data.dashboard_modules
       // Sort modules by position
       dashboardModules.value.sort((a, b) => a.position - b.position)
-      
-      // Initialize GridStack after modules are loaded
-      initializeGrid()
     }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error)
   } finally {
     loading.value = false
+    // Initialize GridStack after loading is complete and DOM is updated
+    await nextTick()
+    initializeGrid()
+  }
+})
+
+// Watch edit mode changes to enable/disable grid functionality
+watch(editMode, (newValue) => {
+  if (grid.value) {
+    if (newValue) {
+      grid.value.enable()
+    } else {
+      grid.value.disable()
+    }
   }
 })
 
 const initializeGrid = () => {
-  // Initialize GridStack with options
-  grid.value = GridStack.init({
-    column: 12,
-    cellHeight: 'auto',
-    animate: true,
-    float: true,
-    resizable: {
-      handles: 'e, se, s, sw, w'
-    }
-  })
+  // Verify grid container exists before initialization
+  const gridElement = document.querySelector('.grid-stack')
+  if (!gridElement) {
+    console.error('Grid container not found. Retrying in 100ms...')
+    setTimeout(initializeGrid, 100)
+    return
+  }
 
-  // Add modules to grid
-  dashboardModules.value.forEach((module, index) => {
-    if (module.enabled) {
-      grid.value.addWidget({
-        id: module.id,
-        x: module.settings?.x || (index % 2) * 6, // Place modules in 2 columns
-        y: module.settings?.y || Math.floor(index / 2) * 4,
-        w: module.settings?.w || 6, // Default width is half the grid
-        h: module.settings?.h || 4,
-        content: `<div class="grid-stack-item-content" data-module-id="${module.id}"></div>`
-      })
-    }
-  })
+  try {
+    // Initialize GridStack with options
+    grid.value = GridStack.init({
+      column: 12,
+      cellHeight: 'auto',
+      animate: true,
+      float: true,
+      draggable: { handle: '.module-header' },
+      resizable: {
+        handles: 'e, se, s, sw, w'
+      },
+      disableDrag: !editMode.value,
+      disableResize: !editMode.value
+    })
 
-  // Listen for changes and save layout
-  grid.value.on('change', saveGridLayout)
+    if (grid.value) {
+      grid.value.on('change', saveGridLayout)
+      console.log('GridStack initialized successfully')
+    } else {
+      console.error('Grid initialization returned null')
+    }
+  } catch (error) {
+    console.error('Failed to initialize GridStack:', error)
+  }
 }
 
 const saveGridLayout = () => {
@@ -549,25 +540,46 @@ const navigateToFavorite = (item) => {
   z-index: 100;
 }
 
+/* GridStack Styles */
 .grid-stack {
   background: transparent;
 }
 
 .grid-stack-item {
+  min-width: 300px !important;
+}
+
+.grid-stack-item-content {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
+  inset: 4px !important;
 }
 
-.grid-stack-item-content {
-  padding: 0;
-  width: 100%;
-  height: 100%;
+.module-header {
+  background-color: #f8f9fa;
+  cursor: move;
 }
 
 .grid-stack-placeholder {
   background: rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  border: 1px dashed #ccc;
+}
+
+.grid-stack-item.ui-draggable-dragging {
+  z-index: 100;
+}
+
+.grid-stack-item.ui-resizable-resizing {
+  z-index: 100;
+}
+
+/* Edit mode styles */
+.grid-stack.grid-stack-animate .grid-stack-item.ui-draggable-dragging,
+.grid-stack.grid-stack-animate .grid-stack-item.ui-resizable-resizing,
+.grid-stack.grid-stack-animate .grid-stack-item.grid-stack-placeholder {
+  transition: none;
 }
 </style>
