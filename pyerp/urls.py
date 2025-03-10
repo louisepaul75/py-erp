@@ -84,6 +84,8 @@ urlpatterns = [
     ),
     # Add products API URLs directly
     path("api/products/", include("pyerp.business_modules.products.api_urls")),
+    # Add sales API URLs
+    path("api/sales/", include("pyerp.business_modules.sales.urls")),
 ]
 
 # Add API documentation URLs if available

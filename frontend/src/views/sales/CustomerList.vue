@@ -256,6 +256,7 @@
 </template>
 
 <script>
+import { salesApi } from '@/services/api';
 import { 
   VContainer, 
   VRow, 
@@ -333,7 +334,10 @@ export default {
         { title: 'Kundennummer', key: 'customerNumber', sortable: true },
         { title: 'Umsatz (365 Tage)', key: 'revenue365Days', sortable: true },
         { title: 'Aktionen', key: 'actions', sortable: false, align: 'end' }
-      ]
+      ],
+      loading: false,
+      totalCustomers: 0,
+      error: null
     }
   },
   
@@ -443,67 +447,66 @@ export default {
   },
   
   mounted() {
-    this.generateSampleData();
+    this.loadCustomers();
   },
   
   methods: {
-    generateSampleData() {
-      const sampleData = [];
-      const customerTypes = ['b2b', 'b2c'];
-      const cities = ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig'];
-      const countries = ['Deutschland', 'Österreich', 'Schweiz'];
-      const companyNames = ['Technik', 'Systems', 'Solutions', 'Trading', 'Logistics', 'Services'];
-      const firstNames = ['Peter', 'Maria', 'Michael', 'Anna', 'Thomas', 'Sandra', 'Andreas', 'Julia'];
-      const lastNames = ['Müller', 'Schmidt', 'Schneider', 'Fischer', 'Weber', 'Meyer', 'Wagner', 'Becker'];
-      const now = new Date();
+    async loadCustomers() {
+      this.loading = true;
+      this.error = null;
       
-      for (let i = 1; i <= 100; i++) {
-        const type = customerTypes[Math.floor(Math.random() * customerTypes.length)];
-        const isB2B = type === 'b2b';
-        
-        const lastOrderDate = new Date();
-        lastOrderDate.setFullYear(now.getFullYear() - Math.floor(Math.random() * 6));
-        lastOrderDate.setMonth(Math.floor(Math.random() * 12));
-        lastOrderDate.setDate(Math.floor(Math.random() * 28) + 1);
-        
-        const city = cities[Math.floor(Math.random() * cities.length)];
-        const country = countries[Math.floor(Math.random() * countries.length)];
-        
-        let name, email;
-        if (isB2B) {
-          const companyName = companyNames[Math.floor(Math.random() * companyNames.length)];
-          name = `${city} ${companyName} GmbH`;
-          email = `info@${city.toLowerCase()}-${companyName.toLowerCase()}.de`.replace(/\s+/g, '-');
-        } else {
-          const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-          const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-          name = `${firstName} ${lastName}`;
-          email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`;
-        }
-        
-        sampleData.push({
-          id: i,
-          name: name,
-          email: email,
-          type: type,
-          phone: `+49 ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000000) + 1000000}`,
-          city: city,
-          postalCode: `${Math.floor(Math.random() * 90000) + 10000}`,
-          country: country,
-          lastOrderDate: lastOrderDate,
-          customerNumber: `CUST-${String(i).padStart(6, '0')}`,
-          shopNumber: `SHOP-${String(Math.floor(Math.random() * 900) + 100).padStart(3, '0')}`,
-          revenue365Days: isB2B ? 
-            Math.floor(Math.random() * 900000) + 100000 : // B2B: 100k - 1M
-            Math.floor(Math.random() * 9000) + 1000 // B2C: 1k - 10k
+      try {
+        const params = {
+          page: this.currentPage,
+          page_size: this.pageSize,
+          search: this.quickSearch,
+          customer_type: this.filters.customerType !== 'all' ? this.filters.customerType : undefined,
+          country: this.filters.country !== 'all' ? this.filters.country : undefined,
+          min_revenue: this.filters.minRevenue,
+          max_revenue: this.filters.maxRevenue,
+          // Add advanced search params
+          name: this.advancedSearch.name || undefined,
+          email: this.advancedSearch.email || undefined,
+          city: this.advancedSearch.city || undefined,
+          postal_code: this.advancedSearch.postalCode || undefined,
+          customer_number: this.advancedSearch.documentNumber || undefined,
+        };
+
+        const response = await salesApi.getCustomers(params);
+        this.customers = response.data.results.map(customer => {
+          const formatDate = (dateString) => {
+            if (!dateString) return null;
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? null : date;
+          };
+
+          return {
+            id: customer.id,
+            name: customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+            email: customer.email || '',
+            type: customer.customer_group ? (customer.customer_group.toLowerCase().includes('b2b') ? 'b2b' : 'b2c') : 'b2c',
+            phone: customer.phone || '',
+            city: customer.addresses?.[0]?.city || '',
+            postalCode: customer.addresses?.[0]?.postal_code || '',
+            country: customer.addresses?.[0]?.country || '',
+            lastOrderDate: formatDate(customer.last_order_date),
+            customerNumber: customer.customer_number || '',
+            revenue365Days: customer.revenue_365_days || 0,
+            shopNumber: customer.legacy_address_number || ''
+          };
         });
+        this.totalCustomers = response.data.count;
+      } catch (error) {
+        console.error('Error loading customers:', error);
+        this.error = 'Failed to load customers. Please try again.';
+      } finally {
+        this.loading = false;
       }
-      
-      this.customers = sampleData;
     },
     
     applyFilters() {
       this.currentPage = 1;
+      this.loadCustomers();
     },
     
     resetFilters() {
@@ -524,6 +527,7 @@ export default {
         maxRevenue: null
       };
       this.currentPage = 1;
+      this.loadCustomers();
     },
     
     viewCustomerDetails(customer) {
@@ -538,11 +542,17 @@ export default {
       console.log('View orders:', customer);
     },
     
-    deleteCustomer(customer) {
+    async deleteCustomer(customer) {
       if (confirm(`Sind Sie sicher, dass Sie ${customer.name} löschen möchten?`)) {
-        const index = this.customers.findIndex(c => c.id === customer.id);
-        if (index !== -1) {
-          this.customers.splice(index, 1);
+        try {
+          await salesApi.deleteCustomer(customer.id);
+          const index = this.customers.findIndex(c => c.id === customer.id);
+          if (index !== -1) {
+            this.customers.splice(index, 1);
+          }
+        } catch (error) {
+          console.error('Error deleting customer:', error);
+          alert('Failed to delete customer. Please try again.');
         }
       }
     },

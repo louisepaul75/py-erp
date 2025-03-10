@@ -373,7 +373,7 @@ const loadCustomerDetails = async () => {
 
 // Navigation
 const goBack = () => {
-  router.push({ name: 'SalesList', query: { tab: 'customers' } });
+  router.push({ name: 'Sales', query: { tab: 'customers' } });
 };
 
 const viewOrderDetails = (orderId: number) => {

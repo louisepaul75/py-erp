@@ -257,6 +257,11 @@ export const salesApi = {
   // Get orders for a specific customer
   getCustomerOrders: async (customerId: number, params = {}) => {
     return api.get(`/sales/customers/${customerId}/orders/`, { params });
+  },
+
+  // Delete a customer
+  deleteCustomer: async (id: number) => {
+    return api.delete(`/sales/customers/${id}/`);
   }
 };
 

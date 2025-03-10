@@ -92,21 +92,28 @@ const routes: Array<RouteRecordRaw> = [
   // Sales routes
   {
     path: '/sales',
-    name: 'SalesList',
-    component: () => import('../views/sales/SalesList.vue'),
+    name: 'Sales',
+    component: () => import('../views/sales/SalesBase.vue'),
     meta: { requiresAuth: true }
   },
   {
-    path: '/sales/:id',
+    path: '/sales/orders/:id',
     name: 'SalesOrderDetail',
     component: () => import('../views/sales/SalesOrderDetail.vue'),
     props: true,
     meta: { requiresAuth: true }
   },
   {
-    path: '/sales/customer/:id',
+    path: '/sales/orders/:id/edit',
+    name: 'SalesOrderEdit',
+    component: () => import('../views/sales/SalesOrderEdit.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/sales/customers/:id',
     name: 'CustomerDetail',
-    component: () => import('../views/customers/CustomerDetail.vue'),
+    component: () => import('../views/sales/CustomerDetail.vue'),
     props: true,
     meta: { requiresAuth: true }
   },

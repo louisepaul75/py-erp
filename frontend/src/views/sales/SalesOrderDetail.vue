@@ -336,7 +336,7 @@ const loadOrderDetails = async () => {
 
 // Navigation
 const goBack = () => {
-  router.push({ name: 'SalesList' });
+  router.push({ name: 'Sales', query: { tab: 'orders' } });
 };
 
 // Actions
