@@ -20,35 +20,34 @@
         ></v-btn>
       </div>
 
-      <v-list class="px-2">
-        <v-list-item
-          prepend-icon="mdi-view-dashboard"
-          title="Dashboard"
-          class="mb-1 rounded text-body-2"
-          density="comfortable"
-          color="primary"
-          @click="activeTab = 'dashboard'"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-account-group"
-          title="Kundenliste"
-          class="mb-1 rounded text-body-2"
-          density="comfortable"
-          @click="activeTab = 'customers'"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-cart"
-          title="Neue Bestellung"
-          class="mb-1 rounded text-body-2"
-          density="comfortable"
-        ></v-list-item>
-        <v-list-item
-          prepend-icon="mdi-chart-bar"
-          title="Umsatzstatistik"
-          class="mb-1 rounded text-body-2"
-          density="comfortable"
-        ></v-list-item>
-      </v-list>
+      <!-- Favorites List -->
+      <div v-if="favoritesStore.favorites.length > 0">
+        <v-list class="px-2">
+          <v-list-item
+            v-for="item in favoritesStore.favorites"
+            :key="item.id"
+            :prepend-icon="item.icon"
+            :title="item.title"
+            class="mb-1 rounded text-body-2"
+            density="comfortable"
+            @click="navigateToFavorite(item)"
+          >
+            <template v-slot:append>
+              <v-btn
+                icon="mdi-star"
+                size="small"
+                color="warning"
+                variant="text"
+                class="favorite-remove-btn"
+                @click.stop="favoritesStore.removeFavorite(item.id)"
+              ></v-btn>
+            </template>
+          </v-list-item>
+        </v-list>
+      </div>
+      <div v-else class="pa-4 text-center text-body-2 text-grey-darken-1">
+        Keine Favoriten hinzugefügt. Markieren Sie Elemente mit dem Stern, um sie hier anzuzeigen.
+      </div>
 
       <v-divider class="my-2"></v-divider>
 
@@ -94,12 +93,22 @@
                   <v-card
                     v-bind="props"
                     :elevation="isHovering ? 2 : 0"
-                    class="pa-4 text-center transition-all duration-200"
+                    class="pa-4 text-center transition-all duration-200 position-relative"
                     :class="{ 'bg-grey-lighten-4': isHovering }"
                     @click="navigateTo(tile)"
                   >
                     <v-icon :icon="tile.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
                     <div class="text-body-2">{{ tile.title }}</div>
+                    
+                    <!-- Favorite Toggle Button -->
+                    <v-btn
+                      :icon="isTileFavorite(tile) ? 'mdi-star' : 'mdi-star-outline'"
+                      :color="isTileFavorite(tile) ? 'warning' : 'grey-darken-1'"
+                      size="small"
+                      variant="text"
+                      class="favorite-toggle-btn"
+                      @click.stop="toggleTileFavorite(tile)"
+                    ></v-btn>
                   </v-card>
                 </v-hover>
               </v-col>
@@ -130,6 +139,7 @@
                 <th class="text-caption font-weight-medium text-grey-darken-1">LIEFERTERMIN</th>
                 <th class="text-caption font-weight-medium text-grey-darken-1">STATUS</th>
                 <th class="text-caption font-weight-medium text-grey-darken-1">BETRAG</th>
+                <th class="text-caption font-weight-medium text-grey-darken-1">FAVORIT</th>
               </tr>
             </thead>
             <tbody>
@@ -148,6 +158,15 @@
                   </v-chip>
                 </td>
                 <td>{{ order.amount }}</td>
+                <td>
+                  <v-btn
+                    :icon="isOrderFavorite(order) ? 'mdi-star' : 'mdi-star-outline'"
+                    :color="isOrderFavorite(order) ? 'warning' : 'grey'"
+                    size="small"
+                    variant="text"
+                    @click="toggleOrderFavorite(order)"
+                  ></v-btn>
+                </td>
               </tr>
             </tbody>
           </v-table>
@@ -157,8 +176,26 @@
           <!-- Important Links -->
           <v-col cols="12" md="6">
             <v-card flat>
-              <div class="px-6 py-4 border-b">
+              <div class="px-6 py-4 border-b d-flex align-center">
                 <span class="text-h6 font-weight-medium">Wichtige Links</span>
+                <v-spacer></v-spacer>
+                <v-btn
+                  variant="text"
+                  icon="mdi-star"
+                  color="warning"
+                  size="small"
+                  v-if="linkIsFavorites"
+                  @click="removeLinksFromFavorites"
+                  title="Von Favoriten entfernen"
+                ></v-btn>
+                <v-btn
+                  variant="text"
+                  icon="mdi-star-outline"
+                  size="small"
+                  v-else
+                  @click="addLinksToFavorites"
+                  title="Zu Favoriten hinzufügen"
+                ></v-btn>
               </div>
               <v-list class="pa-2">
                 <v-list-item
@@ -176,8 +213,26 @@
           <!-- News Board -->
           <v-col cols="12" md="6">
             <v-card flat>
-              <div class="px-6 py-4 border-b">
+              <div class="px-6 py-4 border-b d-flex align-center">
                 <span class="text-h6 font-weight-medium">Interne Pinnwand</span>
+                <v-spacer></v-spacer>
+                <v-btn
+                  variant="text"
+                  icon="mdi-star"
+                  color="warning"
+                  size="small"
+                  v-if="newsBoardIsFavorite"
+                  @click="removeNewsBoardFromFavorites"
+                  title="Von Favoriten entfernen"
+                ></v-btn>
+                <v-btn
+                  variant="text"
+                  icon="mdi-star-outline"
+                  size="small"
+                  v-else
+                  @click="addNewsBoardToFavorites"
+                  title="Zu Favoriten hinzufügen"
+                ></v-btn>
               </div>
               <v-card-text>
                 <div v-for="news in newsItems" :key="news.title" class="mb-4 pb-4 border-b">
@@ -226,10 +281,17 @@ import {
   VTab
 } from 'vuetify/components'
 import { useRouter } from 'vue-router'
+import { useFavoritesStore } from '../store/favorites'
+import { useAuthStore } from '../store/auth'
+
+// Initialize stores
+const favoritesStore = useFavoritesStore()
+const authStore = useAuthStore()
 
 // UI state
 const drawer = ref(true)
 const searchQuery = ref('')
+const activeTab = ref('dashboard')
 
 const toggleDrawer = () => {
   drawer.value = !drawer.value
@@ -333,6 +395,82 @@ const navigateTo = (tile) => {
     router.push(tile.route)
   }
 }
+
+// Navigate to a favorite item
+const navigateToFavorite = (item) => {
+  if (item.route) {
+    router.push(item.route)
+  }
+}
+
+// Favorites functionality for tiles
+const isTileFavorite = (tile) => {
+  const tileId = `module-${tile.title}`
+  return favoritesStore.isFavorite(tileId)
+}
+
+const toggleTileFavorite = (tile) => {
+  const favoriteItem = {
+    id: `module-${tile.title}`,
+    title: tile.title,
+    icon: tile.icon,
+    route: tile.route,
+    type: 'module'
+  }
+  favoritesStore.toggleFavorite(favoriteItem)
+}
+
+// Favorites functionality for orders
+const isOrderFavorite = (order) => {
+  const orderId = `order-${order.id}`
+  return favoritesStore.isFavorite(orderId)
+}
+
+const toggleOrderFavorite = (order) => {
+  const favoriteItem = {
+    id: `order-${order.id}`,
+    title: `Auftrag: ${order.id} - ${order.customer}`,
+    icon: 'mdi-file-document',
+    type: 'order'
+  }
+  favoritesStore.toggleFavorite(favoriteItem)
+}
+
+// Favorites functionality for important links
+const linkIsFavorites = computed(() => {
+  return favoritesStore.isFavorite('important-links')
+})
+
+const addLinksToFavorites = () => {
+  favoritesStore.addFavorite({
+    id: 'important-links',
+    title: 'Wichtige Links',
+    icon: 'mdi-link',
+    type: 'other'
+  })
+}
+
+const removeLinksFromFavorites = () => {
+  favoritesStore.removeFavorite('important-links')
+}
+
+// Favorites functionality for news board
+const newsBoardIsFavorite = computed(() => {
+  return favoritesStore.isFavorite('news-board')
+})
+
+const addNewsBoardToFavorites = () => {
+  favoritesStore.addFavorite({
+    id: 'news-board',
+    title: 'Interne Pinnwand',
+    icon: 'mdi-bulletin-board',
+    type: 'other'
+  })
+}
+
+const removeNewsBoardFromFavorites = () => {
+  favoritesStore.removeFavorite('news-board')
+}
 </script>
 
 <style>
@@ -365,5 +503,19 @@ const navigateTo = (tile) => {
   z-index: 100;
   border-radius: 0 4px 4px 0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.favorite-toggle-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.favorite-remove-btn:hover {
+  color: #f44336 !important;
+}
+
+.position-relative {
+  position: relative !important;
 }
 </style>
