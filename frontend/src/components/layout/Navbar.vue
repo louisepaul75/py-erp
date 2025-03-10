@@ -17,6 +17,29 @@
             >
                 {{ item.title }}
             </v-btn>
+            
+            <!-- Testing Dropdown -->
+            <v-menu>
+                <template v-slot:activator="{ props }">
+                    <v-btn
+                        variant="text"
+                        v-bind="props"
+                        class="mx-1"
+                    >
+                        {{ t('nav.testing') }}
+                        <v-icon end>mdi-chevron-down</v-icon>
+                    </v-btn>
+                </template>
+                <v-list>
+                    <v-list-item
+                        v-for="item in testingItems"
+                        :key="item.title"
+                        :to="item.to"
+                    >
+                        <v-list-item-title>{{ item.title }}</v-list-item-title>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
         </div>
         
         <v-spacer></v-spacer>
@@ -142,6 +165,24 @@
                 <v-list-item-title>{{ item.title }}</v-list-item-title>
             </v-list-item>
             
+            <!-- Testing Dropdown for Mobile -->
+            <v-list-group value="testing">
+                <template v-slot:activator="{ props }">
+                    <v-list-item
+                        v-bind="props"
+                        title="Testing"
+                    ></v-list-item>
+                </template>
+                <v-list-item
+                    v-for="item in testingItems"
+                    :key="item.title"
+                    :to="item.to"
+                    link
+                >
+                    <v-list-item-title>{{ item.title }}</v-list-item-title>
+                </v-list-item>
+            </v-list-group>
+            
             <v-divider class="my-2"></v-divider>
             
             <!-- User Account Links in Mobile Menu -->
@@ -259,7 +300,12 @@ const navItems = computed(() => [
     { title: t('nav.sales'), to: '/sales' },
     { title: t('nav.inventory'), to: '/inventory' },
     { title: t('nav.production'), to: '/production' },
-    { title: t('nav.test'), to: '/test' },
+]);
+
+// Testing dropdown items
+const testingItems = computed(() => [
+    { title: t('nav.testing'), to: '/testing' },
+    { title: t('nav.components'), to: '/testing/components' },
 ]);
 
 // Add mounted hook to initialize language from localStorage
