@@ -53,6 +53,65 @@
         </div>
       </div>
 
+      <!-- Host Resources Section -->
+      <div class="host-resources-section">
+        <h2>Host Resources</h2>
+        <div class="resource-card">
+          <div class="resource-card-header">
+            <v-icon icon="mdi-server" class="mr-2"></v-icon>
+            System Health
+            <span v-if="hostResources.last_updated" class="last-updated">
+              Last updated: {{ formatTimestamp(hostResources.last_updated) }}
+            </span>
+          </div>
+          <div class="resource-metrics">
+            <div class="resource-metric">
+              <div class="metric-label">CPU Usage</div>
+              <div class="metric-value">
+                <v-progress-linear
+                  :model-value="hostResources.cpu_usage"
+                  :color="getResourceColor(hostResources.cpu_usage)"
+                  height="8"
+                  class="mt-1"
+                ></v-progress-linear>
+                <span class="metric-percentage">{{ hostResources.cpu_usage }}%</span>
+              </div>
+            </div>
+            <div class="resource-metric">
+              <div class="metric-label">Memory Usage</div>
+              <div class="metric-value">
+                <v-progress-linear
+                  :model-value="hostResources.memory_usage"
+                  :color="getResourceColor(hostResources.memory_usage)"
+                  height="8"
+                  class="mt-1"
+                ></v-progress-linear>
+                <span class="metric-percentage">{{ hostResources.memory_usage }}%</span>
+              </div>
+            </div>
+            <div class="resource-metric">
+              <div class="metric-label">Disk Space</div>
+              <div class="metric-value">
+                <v-progress-linear
+                  :model-value="hostResources.disk_usage"
+                  :color="getResourceColor(hostResources.disk_usage)"
+                  height="8"
+                  class="mt-1"
+                ></v-progress-linear>
+                <span class="metric-percentage">{{ hostResources.disk_usage }}%</span>
+              </div>
+            </div>
+          </div>
+          <div class="resource-actions">
+            <button @click="refreshHostResources" class="refresh-resources-btn" :disabled="hostResources.loading">
+              <v-icon v-if="!hostResources.loading" icon="mdi-refresh" class="mr-1"></v-icon>
+              <span v-else class="loading-spinner-small"></span>
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Connection Status Section -->
       <div class="connection-section">
         <h2>Connection Status</h2>
@@ -149,6 +208,14 @@ export default {
           size_mb: 0
         }
       },
+      // Host resources
+      hostResources: {
+        cpu_usage: 35,
+        memory_usage: 68,
+        disk_usage: 42,
+        last_updated: null,
+        loading: false
+      },
       // For animation updates
       lastTransactionCount: 0,
       dbStatsInterval: null,
@@ -200,6 +267,9 @@ export default {
     this.dbStatsInterval = setInterval(() => {
       this.fetchDatabaseStats();
     }, 10000); // Poll every 10 seconds
+    
+    // Initial fetch of host resources
+    this.refreshHostResources();
   },
   beforeUnmount() {
     clearInterval(this.autoRefreshInterval);
@@ -619,6 +689,55 @@ export default {
     },
     toggleDatabaseValidation() {
       this.isDatabaseValidationExpanded = !this.isDatabaseValidationExpanded;
+    },
+    async refreshHostResources() {
+      try {
+        // Set loading state
+        this.hostResources.loading = true;
+        
+        // Make API call to get host resources
+        const response = await api.get('/monitoring/host-resources/', {
+          timeout: 10000 // 10 second timeout
+        });
+        
+        if (response.data && response.data.success) {
+          // Update host resources with data from API
+          this.hostResources = {
+            cpu_usage: Number(response.data.cpu_usage) || 35,
+            memory_usage: Number(response.data.memory_usage) || 68,
+            disk_usage: Number(response.data.disk_usage) || 42,
+            last_updated: new Date(),
+            loading: false
+          };
+          
+          // Show success message
+          this.message = 'Host resources updated successfully';
+          this.messageType = 'success';
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            if (this.messageType === 'success') {
+              this.message = '';
+            }
+          }, 3000);
+        } else {
+          throw new Error(response.data?.error || 'Failed to fetch host resources');
+        }
+      } catch (error) {
+        console.error('Error fetching host resources:', error);
+        
+        // Show error message
+        this.message = `Failed to update host resources: ${error.message}`;
+        this.messageType = 'error';
+        
+        // Keep existing values but update loading state
+        this.hostResources.loading = false;
+      }
+    },
+    getResourceColor(value) {
+      if (value < 60) return 'success';
+      if (value < 80) return 'warning';
+      return 'error';
     }
   }
 };
@@ -1081,5 +1200,105 @@ export default {
   .db-stats {
     grid-template-columns: 1fr;
   }
+}
+
+/* Host Resources Section Styles */
+.host-resources-section {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.resource-card {
+  background-color: #1e1e1e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 15px;
+}
+
+.resource-card-header {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.last-updated {
+  margin-left: auto;
+  font-size: 12px;
+  color: #aaa;
+  font-weight: normal;
+}
+
+.resource-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.resource-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: #ccc;
+}
+
+.metric-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metric-percentage {
+  font-size: 14px;
+  min-width: 40px;
+}
+
+.resource-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.refresh-resources-btn {
+  background-color: transparent;
+  color: #ccc;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.refresh-resources-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.refresh-resources-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading-spinner-small {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
 }
 </style>

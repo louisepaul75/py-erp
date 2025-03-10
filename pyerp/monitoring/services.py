@@ -491,3 +491,90 @@ def run_all_health_checks(as_array=True):
         ]
 
     return results
+
+
+def get_host_resources():
+    """
+    Collect host resource metrics including CPU, memory, and disk usage.
+    
+    Returns:
+        dict: A dictionary containing host resource metrics
+    """
+    import psutil
+    import platform
+    from datetime import datetime
+    
+    try:
+        # Get CPU information
+        cpu_percent = psutil.cpu_percent(interval=1)
+        cpu_count = psutil.cpu_count()
+        cpu_freq = psutil.cpu_freq()
+        
+        # Get memory information
+        memory = psutil.virtual_memory()
+        
+        # Get disk information
+        disk = psutil.disk_usage('/')
+        
+        # Get system information
+        system_info = {
+            'system': platform.system(),
+            'release': platform.release(),
+            'version': platform.version(),
+            'machine': platform.machine(),
+            'processor': platform.processor(),
+            'hostname': platform.node(),
+            'uptime': int(time.time() - psutil.boot_time())
+        }
+        
+        # Get network information
+        net_io = psutil.net_io_counters()
+        
+        # Format the results
+        result = {
+            'timestamp': datetime.now().isoformat(),
+            'cpu': {
+                'percent': cpu_percent,
+                'count': cpu_count,
+                'frequency': {
+                    'current': cpu_freq.current if cpu_freq else None,
+                    'min': (
+                        cpu_freq.min 
+                        if cpu_freq and hasattr(cpu_freq, 'min') 
+                        else None
+                    ),
+                    'max': (
+                        cpu_freq.max 
+                        if cpu_freq and hasattr(cpu_freq, 'max') 
+                        else None
+                    )
+                }
+            },
+            'memory': {
+                'total': memory.total,
+                'available': memory.available,
+                'used': memory.used,
+                'percent': memory.percent
+            },
+            'disk': {
+                'total': disk.total,
+                'used': disk.used,
+                'free': disk.free,
+                'percent': disk.percent
+            },
+            'network': {
+                'bytes_sent': net_io.bytes_sent,
+                'bytes_recv': net_io.bytes_recv,
+                'packets_sent': net_io.packets_sent,
+                'packets_recv': net_io.packets_recv
+            },
+            'system': system_info
+        }
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error collecting host resources: {str(e)}")
+        return {
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }

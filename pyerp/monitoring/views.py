@@ -11,6 +11,7 @@ from django.views.decorators.http import require_GET
 
 from pyerp.monitoring.services import (
     get_database_statistics,
+    get_host_resources,
     run_all_health_checks,
 )
 
@@ -135,3 +136,40 @@ def get_db_statistics(request):
             request._auth_exempt_response = error_response
 
         return error_response
+
+
+@require_GET
+@csrf_exempt
+def get_host_resources_view(request):
+    """
+    Get system resource metrics including CPU, memory, and disk usage.
+    This endpoint provides real-time information about the host system.
+    """
+    try:
+        # Get host resource metrics
+        resources = get_host_resources()
+        
+        # Create response data
+        response_data = {
+            "success": True,
+            "data": resources,
+            "authenticated": (
+                request.user.is_authenticated
+                if hasattr(request, "user")
+                else False
+            ),
+            "server_time": datetime.now().isoformat(),
+        }
+        
+        return JsonResponse(response_data)
+    
+    except Exception as e:
+        logger.exception("Error retrieving host resources")
+        return JsonResponse(
+            {
+                "success": False,
+                "error": str(e),
+                "server_time": datetime.now().isoformat(),
+            },
+            status=500,
+        )

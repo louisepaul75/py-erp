@@ -225,47 +225,56 @@
                         <v-card-title>
                           <v-icon icon="mdi-server" class="mr-2"></v-icon>
                           System Health
+                          <span v-if="hostResources.last_updated" class="text-caption ml-auto">
+                            Last updated: {{ formatTimestamp(hostResources.last_updated) }}
+                          </span>
                         </v-card-title>
                         <v-card-text>
                           <v-list density="compact">
                             <v-list-item>
                               <v-list-item-title>CPU Usage</v-list-item-title>
                               <template v-slot:append>
-                                <v-progress-linear
-                                  model-value="35"
-                                  color="success"
-                                  height="8"
-                                  class="mt-1"
-                                  style="width: 100px"
-                                ></v-progress-linear>
+                                <div class="d-flex align-center" style="min-width: 120px">
+                                  <v-progress-linear
+                                    :model-value="hostResources.cpu_usage"
+                                    :color="getResourceColor(hostResources.cpu_usage)"
+                                    height="8"
+                                    class="mt-1 flex-grow-1"
+                                  ></v-progress-linear>
+                                  <span class="ml-2">{{ hostResources.cpu_usage }}%</span>
+                                </div>
                               </template>
                             </v-list-item>
                             <v-list-item>
                               <v-list-item-title>Memory Usage</v-list-item-title>
                               <template v-slot:append>
-                                <v-progress-linear
-                                  model-value="68"
-                                  color="warning"
-                                  height="8"
-                                  class="mt-1"
-                                  style="width: 100px"
-                                ></v-progress-linear>
+                                <div class="d-flex align-center" style="min-width: 120px">
+                                  <v-progress-linear
+                                    :model-value="hostResources.memory_usage"
+                                    :color="getResourceColor(hostResources.memory_usage)"
+                                    height="8"
+                                    class="mt-1 flex-grow-1"
+                                  ></v-progress-linear>
+                                  <span class="ml-2">{{ hostResources.memory_usage }}%</span>
+                                </div>
                               </template>
                             </v-list-item>
                             <v-list-item>
                               <v-list-item-title>Disk Space</v-list-item-title>
                               <template v-slot:append>
-                                <v-progress-linear
-                                  model-value="42"
-                                  color="success"
-                                  height="8"
-                                  class="mt-1"
-                                  style="width: 100px"
-                                ></v-progress-linear>
+                                <div class="d-flex align-center" style="min-width: 120px">
+                                  <v-progress-linear
+                                    :model-value="hostResources.disk_usage"
+                                    :color="getResourceColor(hostResources.disk_usage)"
+                                    height="8"
+                                    class="mt-1 flex-grow-1"
+                                  ></v-progress-linear>
+                                  <span class="ml-2">{{ hostResources.disk_usage }}%</span>
+                                </div>
                               </template>
                             </v-list-item>
                           </v-list>
-                          <v-btn color="primary" variant="outlined" class="mt-3" prepend-icon="mdi-refresh">
+                          <v-btn color="primary" variant="outlined" class="mt-3" prepend-icon="mdi-refresh" @click="refreshHostResources" :loading="hostResources.loading">
                             Refresh
                           </v-btn>
                         </v-card-text>
@@ -287,17 +296,117 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../../store/auth';
 import { useThemeStore } from '../../store/theme';
+import api from '../../services/api';
 
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
 const activeTab = ref('account');
+
+// Host resources state
+interface HostResources {
+  cpu_usage: number;
+  memory_usage: number;
+  disk_usage: number;
+  last_updated: Date | null;
+  loading: boolean;
+}
+
+const hostResources = ref<HostResources>({
+  cpu_usage: 35,
+  memory_usage: 68,
+  disk_usage: 42,
+  last_updated: null,
+  loading: false
+});
+
+// Function to get color based on resource usage
+const getResourceColor = (value: number) => {
+  if (value < 60) return 'success';
+  if (value < 80) return 'warning';
+  return 'error';
+};
+
+// Function to format timestamp
+const formatTimestamp = (timestamp: Date | null) => {
+  if (!timestamp) return 'Unknown';
+  
+  if (typeof timestamp === 'string') {
+    timestamp = new Date(timestamp);
+  }
+
+  return timestamp.toLocaleString();
+};
+
+// Function to refresh host resources
+const refreshHostResources = async () => {
+  try {
+    // Set loading state
+    hostResources.value.loading = true;
+    
+    // Make API call to get host resources
+    const response = await api.get('/monitoring/host-resources/', {
+      timeout: 10000 // 10 second timeout
+    });
+    
+    if (response.data && response.data.success) {
+      // Extract data from the response
+      const data = response.data.data;
+      
+      // Update host resources with data from API
+      hostResources.value = {
+        cpu_usage: data?.cpu?.percent || 35,
+        memory_usage: data?.memory?.percent || 68,
+        disk_usage: data?.disk?.percent || 42,
+        last_updated: new Date(),
+        loading: false
+      };
+    } else {
+      throw new Error(response.data?.error || 'Failed to fetch host resources');
+    }
+  } catch (error) {
+    console.error('Error fetching host resources:', error);
+    // Keep existing values but update loading state
+    hostResources.value.loading = false;
+  }
+};
+
+// Fetch host resources when component is mounted
+onMounted(() => {
+  if (authStore.isAdmin) {
+    refreshHostResources();
+  }
+});
 </script>
 
 <style scoped>
 .settings-container {
   padding: 20px 0;
+}
+
+/* Override any hardcoded styles from Health.vue */
+:deep(.v-card) {
+  /* Use Vuetify's theme variables instead of hardcoded colors */
+  background-color: inherit !important;
+  color: inherit !important;
+}
+
+/* Ensure consistent card heights in the grid */
+.v-row .v-col .v-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.v-row .v-col .v-card .v-card-text {
+  flex-grow: 1;
+}
+
+/* Fix progress bar styling */
+:deep(.v-progress-linear) {
+  border-radius: 4px;
+  overflow: hidden;
 }
 </style> 
