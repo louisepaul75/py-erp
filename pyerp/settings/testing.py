@@ -10,17 +10,26 @@ import sys
 from pathlib import Path  # noqa: F401
 
 import dj_database_url  # noqa: F401
+import psycopg2
 
-# Load environment variables using centralized loader
-from pyerp.utils.env_loader import load_environment_variables
-
-from .base import *  # noqa
-
-load_environment_variables(verbose=True)
-
-# Disable ddtrace during testing
+# Completely disable ddtrace before any other imports
 os.environ["DD_TRACE_ENABLED"] = "false"
 os.environ["DD_PROFILING_ENABLED"] = "false"
+
+# Unload ddtrace module if it's already loaded to prevent metaclass conflicts
+if "ddtrace" in sys.modules:
+    del sys.modules["ddtrace"]
+    # Also unload any ddtrace submodules
+    for module_name in list(sys.modules.keys()):
+        if module_name.startswith("ddtrace."):
+            del sys.modules[module_name]
+
+# Load environment variables using centralized loader
+from pyerp.utils.env_loader import load_environment_variables  # noqa: E402
+
+from .base import *  # noqa: F403
+
+load_environment_variables(verbose=True)
 
 # Print environment variables for debugging
 print(f"DB_NAME: {os.environ.get('DB_NAME', 'not set')}")
@@ -33,19 +42,30 @@ print(f"DB_PORT: {os.environ.get('DB_PORT', 'not set')}")
 DEBUG = True
 
 # Remove debug toolbar for tests
-if "debug_toolbar" in INSTALLED_APPS:
-    INSTALLED_APPS.remove("debug_toolbar")
+if "debug_toolbar" in INSTALLED_APPS:  # noqa: F405
+    INSTALLED_APPS.remove("debug_toolbar")  # noqa: F405
 
-MIDDLEWARE = [
-    middleware for middleware in MIDDLEWARE if "debug_toolbar" not in middleware
+MIDDLEWARE = [  # noqa: F405
+    middleware
+    for middleware in MIDDLEWARE
+    if "debug_toolbar" not in middleware  # noqa: F405
 ]
+
+# Remove ddtrace middleware if present
+MIDDLEWARE = [  # noqa: F405
+    middleware
+    for middleware in MIDDLEWARE
+    if "ddtrace" not in middleware  # noqa: F405
+]
+
+# Remove ddtrace from INSTALLED_APPS if present
+if "ddtrace.contrib.django" in INSTALLED_APPS:  # noqa: F405
+    INSTALLED_APPS.remove("ddtrace.contrib.django")  # noqa: F405
 
 ALLOWED_HOSTS = ["*"]
 
 # Database configuration for tests
 # Try to use PostgreSQL first, fall back to SQLite if connection fails
-
-import psycopg2
 
 # Define PostgreSQL connection parameters
 PG_PARAMS = {
@@ -136,9 +156,8 @@ LOGGING = {
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 
+
 # Disable migrations when running tests
-
-
 class DisableMigrations:
     def __contains__(self, item):
         return True
@@ -163,3 +182,28 @@ SESSION_COOKIE_SECURE = False
 
 # Media settings for tests
 MEDIA_ROOT = BASE_DIR / "test_media"
+
+# Fix for metaclass conflicts in Django's PostgreSQL fields
+from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.search import SearchVectorField
+from django.db.models import Field
+from django.db.models.fields.mixins import CheckFieldDefaultMixin
+
+# Ensure SearchVectorField has the correct metaclass
+if not isinstance(SearchVectorField, type(Field)):
+    SearchVectorField.__class__ = type(Field)
+
+# Fix ArrayField metaclass conflict
+if not isinstance(ArrayField, type(Field)):
+    # Create a new metaclass that combines both base classes
+    class CombinedMetaclass(type(CheckFieldDefaultMixin), type(Field)):
+        pass
+
+    # Create a new class with the combined metaclass
+    class FixedArrayField(ArrayField):
+        __metaclass__ = CombinedMetaclass
+
+    # Replace the original ArrayField with our fixed version
+    import django.contrib.postgres.fields
+
+    django.contrib.postgres.fields.ArrayField = FixedArrayField

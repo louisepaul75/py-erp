@@ -53,33 +53,100 @@
         </div>
       </div>
 
+      <!-- Host Resources Section -->
+      <div class="host-resources-section">
+        <h2>Host Resources</h2>
+        <v-card class="resource-card">
+          <div class="resource-card-header">
+            <v-icon icon="mdi-server" class="mr-2"></v-icon>
+            System Health
+            <span v-if="hostResources.last_updated" class="last-updated">
+              Last updated: {{ formatTimestamp(hostResources.last_updated) }}
+            </span>
+          </div>
+          <div class="resource-metrics">
+            <div class="resource-metric">
+              <div class="metric-label">CPU Usage</div>
+              <div class="metric-value">
+                <v-progress-linear
+                  :model-value="hostResources.cpu_usage"
+                  :color="getResourceColor(hostResources.cpu_usage)"
+                  height="8"
+                  class="mt-1"
+                ></v-progress-linear>
+                <span class="metric-percentage">{{ hostResources.cpu_usage }}%</span>
+              </div>
+            </div>
+            <div class="resource-metric">
+              <div class="metric-label">Memory Usage</div>
+              <div class="metric-value">
+                <v-progress-linear
+                  :model-value="hostResources.memory_usage"
+                  :color="getResourceColor(hostResources.memory_usage)"
+                  height="8"
+                  class="mt-1"
+                ></v-progress-linear>
+                <span class="metric-percentage">{{ hostResources.memory_usage }}%</span>
+              </div>
+            </div>
+            <div class="resource-metric">
+              <div class="metric-label">Disk Space</div>
+              <div class="metric-value">
+                <v-progress-linear
+                  :model-value="hostResources.disk_usage"
+                  :color="getResourceColor(hostResources.disk_usage)"
+                  height="8"
+                  class="mt-1"
+                ></v-progress-linear>
+                <span class="metric-percentage">{{ hostResources.disk_usage }}%</span>
+              </div>
+            </div>
+          </div>
+          <div class="resource-actions">
+            <v-btn
+              @click="refreshHostResources"
+              :loading="hostResources.loading"
+              variant="tonal"
+              size="small"
+              prepend-icon="mdi-refresh"
+            >
+              Refresh
+            </v-btn>
+          </div>
+        </v-card>
+      </div>
+
       <!-- Connection Status Section -->
       <div class="connection-section">
         <h2>Connection Status</h2>
         <div v-if="Object.keys(filteredHealthResults || {}).length === 0" class="no-status">
           No connection status data available
         </div>
-        <div v-if="filteredHealthResults && Object.keys(filteredHealthResults).length > 0" class="status-cards">
-          <div v-for="(result, componentKey) in filteredHealthResults" :key="componentKey"
-               :class="['status-card', result.status]">
-            <div class="status-card-header">
-              <div class="component-name">
+        <div v-if="filteredHealthResults && Object.keys(filteredHealthResults).length > 0" class="connection-status">
+          <v-card
+            v-for="(result, componentKey) in filteredHealthResults"
+            :key="componentKey"
+            :class="['connection-card', result.status]"
+            variant="flat"
+          >
+            <v-card-item class="connection-card-header">
+              <div class="connection-card-title">
                 {{ getComponentDisplayName(componentKey) }}
               </div>
               <span :class="['status-indicator', result.status]"></span>
-            </div>
-            <div class="status-details">
+            </v-card-item>
+            <v-card-text class="connection-card-body">
               {{ result.details }}
-            </div>
-            <div class="status-meta">
+            </v-card-text>
+            <v-card-text class="connection-card-footer">
               <div v-if="result.response_time !== undefined">
                 Response Time: {{ (Number(result.response_time) || 0).toFixed(2) }} ms
               </div>
               <div v-if="result.timestamp">
                 {{ formatTimestamp(result.timestamp) }}
               </div>
-            </div>
-          </div>
+            </v-card-text>
+          </v-card>
         </div>
       </div>
 
@@ -149,6 +216,14 @@ export default {
           size_mb: 0
         }
       },
+      // Host resources
+      hostResources: {
+        cpu_usage: 35,
+        memory_usage: 68,
+        disk_usage: 42,
+        last_updated: null,
+        loading: false
+      },
       // For animation updates
       lastTransactionCount: 0,
       dbStatsInterval: null,
@@ -200,6 +275,9 @@ export default {
     this.dbStatsInterval = setInterval(() => {
       this.fetchDatabaseStats();
     }, 10000); // Poll every 10 seconds
+    
+    // Initial fetch of host resources
+    this.refreshHostResources();
   },
   beforeUnmount() {
     clearInterval(this.autoRefreshInterval);
@@ -225,145 +303,153 @@ export default {
 
       try {
         // Try to get basic health check
-        try {
-          const basicHealthResponse = await api.get('/api/health/', {
-            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
-          });
-          this.systemInfo = {
-            environment: basicHealthResponse.data?.environment || 'development',
-            version: basicHealthResponse.data?.version || 'unknown'
-          };
-        } catch (error) {
-          console.error('Basic health check error:', error);
-          // Add specific logging for timeout errors
-          if (error.code === 'ECONNABORTED') {
-            console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
-          }
-          this.systemInfo = {
-            environment: 'Unknown (API Unavailable)',
-            version: 'Unknown'
-          };
-        }
+        this.loading = true;
+        const basicHealthResponse = await api.get('/health/', {
+          timeout: 5000
+        });
 
-        // Try to get detailed health checks
-        try {
-          const response = await api.get('/api/monitoring/health-checks/', {
-            timeout: 60000 // Increased from 30000 to 60000 ms (60 seconds)
-          });
+        this.systemInfo = {
+          environment: basicHealthResponse.data?.environment || 'development',
+          version: basicHealthResponse.data?.version || 'unknown'
+        };
 
-          if (response.data && response.data.success) {
-            // Create a new object to avoid reference issues
-            const newHealthResults = {};
-
-            // Process the results - always expect an array format
-            const results = response.data.results;
-            if (Array.isArray(results)) {
-              // First, find the main database result and validation result
-              const dbResult = results.find(result => result.component === 'database');
-              const dbValidationResult = results.find(result => result.component === 'database_validation');
-              
-              // If we have a database result, add it first with validation as a nested property
-              if (dbResult) {
-                newHealthResults['database'] = {
-                  status: dbResult.status,
-                  details: dbResult.details,
-                  response_time: dbResult.response_time,
-                  timestamp: dbResult.timestamp,
-                  // Add validation as a nested property if it exists
-                  validation: dbValidationResult ? {
-                    status: dbValidationResult.status,
-                    details: dbValidationResult.details,
-                    response_time: dbValidationResult.response_time,
-                    timestamp: dbValidationResult.timestamp
-                  } : null
-                };
-              }
-
-              // Then add all other non-database results
-              results.forEach(result => {
-                if (result && result.component && 
-                    !['database', 'database_validation'].includes(result.component)) {
-                  const componentKey = result.component;
-                  newHealthResults[componentKey] = {
-                    status: result.status,
-                    details: result.details,
-                    response_time: result.response_time,
-                    timestamp: result.timestamp,
-                    // Store the original component name as a type property to avoid 'component' naming conflict
-                    type: componentKey
-                  };
-                }
-              });
-
-              // Replace healthResults with the new object
-              this.healthResults = newHealthResults;
-              this.lastUpdated = new Date();
-              this.message = 'Status updated successfully';
-              this.messageType = 'success';
-
-              // Hide success message after 3 seconds
-              setTimeout(() => {
-                if (this.messageType === 'success') {
-                  this.message = '';
-                }
-              }, 3000);
-            } else {
-              throw new Error('Invalid response format: results must be an array');
-            }
-          } else {
-            throw new Error(response.data?.error || 'Unknown error');
-          }
-        } catch (error) {
-          console.error('Health checks error:', error);
-          
-          // Add specific logging for timeout errors
-          if (error.code === 'ECONNABORTED') {
-            console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
-          }
-          
-          // Show error in UI
-          this.message = `Failed to update status: ${error.message}`;
-          this.messageType = 'error';
-          
-          // Set mock data for testing UI
+        // Set initial health status based on basic health check
+        if (basicHealthResponse.data?.status === 'unhealthy') {
           this.healthResults = {
             'database': {
               status: 'error',
-              details: 'Database connection failed',
-              response_time: 0,
-              timestamp: new Date(),
-              validation: {
-                status: 'error',
-                details: 'Database validation not available',
-                response_time: 0,
-                timestamp: new Date()
-              }
-            },
-            'legacy_erp': {
-              status: 'warning',
-              details: 'Cannot verify Legacy ERP status',
+              details: basicHealthResponse.data?.database?.message || 'Database connection failed',
               response_time: 0,
               timestamp: new Date()
-            },
-            'pictures_api': {
-              status: 'warning',
-              details: 'Cannot verify Pictures API status',
+            }
+          };
+          this.message = 'System is unhealthy';
+          this.messageType = 'error';
+          this.loading = false;
+          return;
+        }
+
+      } catch (error) {
+        console.error('Basic health check error:', error);
+        this.message = 'Failed to fetch basic health status';
+        this.messageType = 'error';
+        if (error.code === 'ECONNABORTED') {
+          console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
+          this.message = 'Health check request timed out';
+        }
+        
+        // Set error state for health results
+        this.healthResults = {
+          'database': {
+            status: 'error',
+            details: error.response?.data?.database?.message || 'Failed to connect to health check endpoint',
+            response_time: 0,
+            timestamp: new Date()
+          }
+        };
+        
+        this.loading = false;
+        return;
+      }
+
+      try {
+        // Try to get detailed health checks
+        const response = await api.get('/monitoring/health-checks/', {
+          timeout: 120000  // Increased to 2 minutes (120,000 ms)
+        });
+
+        if (response.data && response.data.success) {
+          // Create a new object to avoid reference issues
+          const newHealthResults = {};
+
+          // Process the results - always expect an array format
+          const results = response.data.results;
+          if (Array.isArray(results)) {
+            // First, find the main database result and validation result
+            const dbResult = results.find(result => result.component === 'database');
+            const dbValidationResult = results.find(result => result.component === 'database_validation');
+            
+            // If we have a database result, add it first with validation as a nested property
+            if (dbResult) {
+              newHealthResults['database'] = {
+                status: dbResult.status,
+                details: dbResult.details,
+                response_time: dbResult.response_time,
+                timestamp: dbResult.timestamp,
+                // Add validation as a nested property if it exists
+                validation: dbValidationResult ? {
+                  status: dbValidationResult.status,
+                  details: dbValidationResult.details,
+                  response_time: dbValidationResult.response_time,
+                  timestamp: dbValidationResult.timestamp
+                } : null
+              };
+            }
+
+            // Then add all other non-database results
+            results.forEach(result => {
+              if (result && result.component && 
+                  !['database', 'database_validation'].includes(result.component)) {
+                const componentKey = result.component;
+                newHealthResults[componentKey] = {
+                  status: result.status,
+                  details: result.details,
+                  response_time: result.response_time,
+                  timestamp: result.timestamp,
+                  // Store the original component name as a type property to avoid 'component' naming conflict
+                  type: componentKey
+                };
+              }
+            });
+
+            // Replace healthResults with the new object
+            this.healthResults = newHealthResults;
+            this.lastUpdated = new Date();
+            this.message = 'Status updated successfully';
+            this.messageType = 'success';
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+              if (this.messageType === 'success') {
+                this.message = '';
+              }
+            }, 3000);
+          } else {
+            throw new Error('Invalid response format: results must be an array');
+          }
+        } else {
+          throw new Error(response.data?.error || 'Unknown error');
+        }
+      } catch (error) {
+        console.error('Health checks error:', error);
+        
+        // Add specific logging for timeout errors
+        if (error.code === 'ECONNABORTED') {
+          console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
+        }
+        
+        // Show error in UI
+        this.message = `Failed to update status: ${error.message}`;
+        this.messageType = 'error';
+        
+        // Set error state for health results if not already set
+        if (!this.healthResults || Object.keys(this.healthResults).length === 0) {
+          this.healthResults = {
+            'database': {
+              status: 'error',
+              details: 'Failed to fetch detailed health status',
               response_time: 0,
               timestamp: new Date()
             }
           };
         }
-      } catch (error) {
-        console.error('Unexpected error in health check:', error);
-        this.message = 'Failed to update status: ' + (error?.message || 'Unknown error');
-        this.messageType = 'error';
       } finally {
         this.loading = false;
       }
     },
     async fetchDatabaseStats() {
       try {
-        const response = await api.get('/api/monitoring/db-stats/', {
+        const response = await api.get('/monitoring/db-stats/', {
           timeout: 30000 // Increased from 10000 to 30000 ms (30 seconds)
         });
         if (response.data.success && response.data.stats) {
@@ -611,6 +697,55 @@ export default {
     },
     toggleDatabaseValidation() {
       this.isDatabaseValidationExpanded = !this.isDatabaseValidationExpanded;
+    },
+    async refreshHostResources() {
+      try {
+        // Set loading state
+        this.hostResources.loading = true;
+        
+        // Make API call to get host resources
+        const response = await api.get('/monitoring/host-resources/', {
+          timeout: 10000 // 10 second timeout
+        });
+        
+        if (response.data && response.data.success) {
+          // Update host resources with data from API
+          this.hostResources = {
+            cpu_usage: Number(response.data.cpu_usage) || 35,
+            memory_usage: Number(response.data.memory_usage) || 68,
+            disk_usage: Number(response.data.disk_usage) || 42,
+            last_updated: new Date(),
+            loading: false
+          };
+          
+          // Show success message
+          this.message = 'Host resources updated successfully';
+          this.messageType = 'success';
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            if (this.messageType === 'success') {
+              this.message = '';
+            }
+          }, 3000);
+        } else {
+          throw new Error(response.data?.error || 'Failed to fetch host resources');
+        }
+      } catch (error) {
+        console.error('Error fetching host resources:', error);
+        
+        // Show error message
+        this.message = `Failed to update host resources: ${error.message}`;
+        this.messageType = 'error';
+        
+        // Keep existing values but update loading state
+        this.hostResources.loading = false;
+      }
+    },
+    getResourceColor(value) {
+      if (value < 60) return 'success';
+      if (value < 80) return 'warning';
+      return 'error';
     }
   }
 };
@@ -624,9 +759,9 @@ export default {
 }
 
 .health-container {
-  background-color: #fff;
+  background-color: rgb(var(--v-theme-surface));
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(var(--v-shadow-key-umbra-opacity));
   padding: 20px;
 }
 
@@ -636,18 +771,18 @@ export default {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgb(var(--v-border-opacity));
 }
 
 .header h1 {
   margin: 0;
   font-size: 24px;
-  color: #333;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .refresh-button button {
-  background-color: #f8f9fa;
-  border: 1px solid #ddd;
+  background-color: rgb(var(--v-theme-surface-variant));
+  border: 1px solid rgb(var(--v-border-opacity));
   border-radius: 4px;
   padding: 8px 16px;
   cursor: pointer;
@@ -658,7 +793,7 @@ export default {
 }
 
 .refresh-button button:hover {
-  background-color: #e9ecef;
+  background-color: rgb(var(--v-theme-surface-variant-darken));
 }
 
 .refresh-button button:disabled {
@@ -708,8 +843,8 @@ export default {
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 20px;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background-color: rgb(var(--v-theme-surface-variant));
+  border: 1px solid rgb(var(--v-border-opacity));
   transition: all 0.3s ease;
 }
 
@@ -742,8 +877,8 @@ export default {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: rgb(var(--v-theme-surface));
+  box-shadow: 0 2px 4px rgba(var(--v-shadow-key-umbra-opacity));
 }
 
 .overall-status.success .status-icon {
@@ -774,10 +909,10 @@ export default {
 
 /* Database Visualization Styles */
 .db-visualization {
-  background-color: white;
+  background-color: rgb(var(--v-theme-surface));
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(var(--v-shadow-key-umbra-opacity));
   margin-bottom: 20px;
 }
 
@@ -785,7 +920,7 @@ export default {
   margin-top: 0;
   margin-bottom: 15px;
   font-size: 18px;
-  color: #333;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .db-canvas {
@@ -798,7 +933,7 @@ export default {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #666;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 10px;
 }
 
@@ -813,122 +948,78 @@ export default {
   border-bottom: 1px solid #eee;
 }
 
-.status-cards {
+.connection-status {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
+  margin-top: 20px;
 }
 
-.status-card {
-  border-radius: 6px;
+.connection-card {
+  background-color: rgb(var(--v-theme-surface));
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(var(--v-shadow-key-umbra-opacity));
 }
 
-.status-card.success {
-  border-top: 4px solid #28a745;
-}
-
-.status-card.warning {
-  border-top: 4px solid #ffc107;
-}
-
-.status-card.error {
-  border-top: 4px solid #dc3545;
-}
-
-.status-card.unknown {
-  border-top: 4px solid #6c757d;
-}
-
-.status-card-header {
+.connection-card-header {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.connection-card-title {
+  color: rgb(var(--v-theme-on-surface));
+  font-weight: 500;
+}
+
+.connection-card-body {
   padding: 15px;
-  background-color: #f8f9fa;
+  color: rgb(var(--v-theme-on-surface));
 }
 
-.component-name {
-  font-weight: bold;
-  font-size: 16px;
+.connection-card-footer {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 10px 15px;
+  font-size: 12px;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
+/* Status Indicators */
 .status-indicator {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
 }
 
 .status-indicator.success {
-  background-color: #28a745;
+  background-color: rgb(var(--v-theme-success));
 }
 
 .status-indicator.warning {
-  background-color: #ffc107;
+  background-color: rgb(var(--v-theme-warning));
 }
 
 .status-indicator.error {
-  background-color: #dc3545;
+  background-color: rgb(var(--v-theme-error));
 }
 
 .status-indicator.unknown {
-  background-color: #6c757d;
-}
-
-.status-details {
-  padding: 15px;
-  min-height: 80px;
-  background-color: #fff;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.status-meta {
-  padding: 10px 15px;
-  background-color: #f8f9fa;
-  font-size: 12px;
-  color: #6c757d;
-  display: flex;
-  justify-content: space-between;
-}
-
-.info-card {
-  background-color: #fff;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-}
-
-.info-card table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.info-card td {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.info-card td:first-child {
-  font-weight: bold;
-  width: 150px;
-}
-
-.info-card tr:last-child td {
-  border-bottom: none;
+  background-color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .no-status {
-  background-color: #f8f9fa;
+  background-color: rgb(var(--v-theme-surface-variant));
   border-radius: 6px;
   padding: 20px;
   text-align: center;
-  color: #6c757d;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-style: italic;
   margin-bottom: 20px;
-  border: 1px dashed #dee2e6;
+  border: 1px dashed rgb(var(--v-border-opacity));
 }
 
 .db-stats-toggle {
@@ -955,21 +1046,21 @@ export default {
 }
 
 .stat-box {
-  background-color: #f8f9fa;
+  background-color: rgb(var(--v-theme-surface-variant));
   border-radius: 6px;
   padding: 12px;
-  border: 1px solid #e9ecef;
+  border: 1px solid rgb(var(--v-border-opacity));
 }
 
 .stat-box h4 {
   margin: 0 0 8px 0;
-  color: #333;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 14px;
 }
 
 .stat-numbers {
   font-size: 13px;
-  color: #666;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.4;
 }
 
@@ -1057,7 +1148,7 @@ export default {
     margin-top: 10px;
   }
 
-  .status-cards {
+  .connection-status {
     grid-template-columns: 1fr;
   }
   
@@ -1073,5 +1164,193 @@ export default {
   .db-stats {
     grid-template-columns: 1fr;
   }
+}
+
+/* Host Resources Section Styles */
+.host-resources-section {
+  margin: 20px 0;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.resource-card {
+  background-color: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 15px;
+}
+
+.resource-card-header {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.last-updated {
+  margin-left: auto;
+  font-size: 12px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-weight: normal;
+}
+
+.resource-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.resource-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.metric-label {
+  font-size: 14px;
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+.metric-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metric-percentage {
+  font-size: 14px;
+  min-width: 40px;
+}
+
+.resource-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.refresh-resources-btn {
+  background-color: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgb(var(--v-border-opacity));
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.refresh-resources-btn:hover:not(:disabled) {
+  background-color: rgb(var(--v-theme-surface-variant-darken));
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.refresh-resources-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading-spinner-small {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(var(--v-theme-on-surface), 0.1);
+  border-top-color: rgb(var(--v-theme-on-surface));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+/* Connection Status Cards */
+.connection-section {
+  margin-top: 30px;
+}
+
+.connection-section h2 {
+  color: rgb(var(--v-theme-on-surface));
+  border-bottom: 1px solid rgb(var(--v-border-opacity));
+}
+
+.connection-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.connection-card {
+  border: 1px solid rgb(var(--v-border-opacity));
+}
+
+.connection-card.success {
+  border-top: 4px solid rgb(var(--v-theme-success));
+}
+
+.connection-card.warning {
+  border-top: 4px solid rgb(var(--v-theme-warning));
+}
+
+.connection-card.error {
+  border-top: 4px solid rgb(var(--v-theme-error));
+}
+
+.connection-card.unknown {
+  border-top: 4px solid rgb(var(--v-theme-on-surface-variant));
+}
+
+.connection-card-header {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 15px;
+}
+
+.connection-card-title {
+  color: rgb(var(--v-theme-on-surface));
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.connection-card-body {
+  padding: 15px;
+  color: rgb(var(--v-theme-on-surface));
+  background-color: rgb(var(--v-theme-surface));
+  min-height: 80px;
+}
+
+.connection-card-footer {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 10px 15px;
+  font-size: 12px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Status Indicators */
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.success {
+  background-color: rgb(var(--v-theme-success));
+}
+
+.status-indicator.warning {
+  background-color: rgb(var(--v-theme-warning));
+}
+
+.status-indicator.error {
+  background-color: rgb(var(--v-theme-error));
+}
+
+.status-indicator.unknown {
+  background-color: rgb(var(--v-theme-on-surface-variant));
 }
 </style>

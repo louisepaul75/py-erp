@@ -100,14 +100,13 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       // Proxy API requests to Django server
       proxy: {
-        '/api': {
+        '^/api/token': {
           target: apiBaseUrl,
           changeOrigin: true
         },
-        '/v1': {
+        '/api': {
           target: apiBaseUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/v1/, '/api/v1')
+          changeOrigin: true
         },
         '/products': {
           target: apiBaseUrl,
@@ -118,11 +117,6 @@ export default defineConfig(({ mode }) => {
           target: apiBaseUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/sales/, '/api/sales')
-        },
-        '/token': {
-          target: apiBaseUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/token/, '/api/token')
         }
       }
     }

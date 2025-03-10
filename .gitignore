@@ -56,6 +56,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+coverage/
 
 # Translations
 *.mo
@@ -91,7 +92,7 @@ ENV/
 
 # pip-tools
 pip-wheel-metadata/
-
+*venv*
 # Python installers
 python-*.exe
 
@@ -100,7 +101,6 @@ docs/_build/
 
 # Backup files
 backups/
-
 
 *dump.rdb
 */.global_session_cookie
@@ -116,3 +116,13 @@ _pgexport/
 logs/
 logs/*
 django-err.log*
+
+# Test database
+test_db.sqlite3
+*.sqlite3
+
+# Session cookies
+pyerp/direct_api/.global_session_cookie
+
+# External connections configuration
+pyerp/config/external_connections.json

@@ -1,8 +1,8 @@
 <template>
     <div class="home">
         <div class="welcome-section mb-5">
-            <h1>Welcome to pyERP</h1>
-            <p class="lead text-muted">A comprehensive ERP system for managing your business operations.</p>
+            <h1>{{ $t('home.welcome') }}</h1>
+            <p class="lead text-muted">{{ $t('home.subtitle') }}</p>
         </div>
 
         <div class="modules">
@@ -10,32 +10,32 @@
                 <div class="icon-container mb-3">
                     <i class="fas fa-box fa-2x"></i>
                 </div>
-                <h3>Products</h3>
-                <p class="text-muted">Manage your product catalog, variants, and categories</p>
+                <h3>{{ $t('home.products.title') }}</h3>
+                <p class="text-muted">{{ $t('home.products.description') }}</p>
             </div>
 
             <div class="module-card" @click="navigateTo('/sales')">
                 <div class="icon-container mb-3">
                     <i class="fas fa-chart-line fa-2x"></i>
                 </div>
-                <h3>Sales</h3>
-                <p class="text-muted">Track orders, invoices, and customer information</p>
+                <h3>{{ $t('home.sales.title') }}</h3>
+                <p class="text-muted">{{ $t('home.sales.description') }}</p>
             </div>
 
             <div class="module-card" @click="navigateTo('/inventory')">
                 <div class="icon-container mb-3">
                     <i class="fas fa-warehouse fa-2x"></i>
                 </div>
-                <h3>Inventory</h3>
-                <p class="text-muted">Monitor stock levels and manage warehouses</p>
+                <h3>{{ $t('home.inventory.title') }}</h3>
+                <p class="text-muted">{{ $t('home.inventory.description') }}</p>
             </div>
 
             <div class="module-card" @click="navigateTo('/production')">
                 <div class="icon-container mb-3">
                     <i class="fas fa-industry fa-2x"></i>
                 </div>
-                <h3>Production</h3>
-                <p class="text-muted">Plan and track manufacturing processes</p>
+                <h3>{{ $t('home.production.title') }}</h3>
+                <p class="text-muted">{{ $t('home.production.description') }}</p>
             </div>
         </div>
     </div>

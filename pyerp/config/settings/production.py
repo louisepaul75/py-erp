@@ -7,7 +7,9 @@ focused on security and performance.
 
 import os
 
-from .base import *
+import dj_database_url  # noqa: F401
+
+from .base import *  # noqa
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -20,9 +22,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("DB_NAME", "pyerp_production"),
-        "USER": os.environ.get("DB_USER", "postgres"),
+        "USER": os.environ.get("DB_USER", "admin"),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
+        "HOST": os.environ.get("DB_HOST", "192.168.73.64"),
         "PORT": os.environ.get("DB_PORT", "5432"),
     },
 }
@@ -32,7 +34,7 @@ DATABASES = {
 #     'default': dj_database_url.config(
 #         default=os.environ.get(
 #             'DATABASE_URL',
-#             'postgresql://postgres:password@localhost:5432/pyerp_production'
+#             'postgresql://user:password@localhost:5432/pyerp_production'
 
 #     )
 # }
@@ -49,19 +51,35 @@ CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
 
 # CORS settings - only allow specific origins in production
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOWED_ORIGINS = [
+    origin
+    for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
 CORS_ALLOW_ALL_ORIGINS = False
 
 # Cache settings
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+try:
+    import django_redis  # noqa: F401
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
         },
-    },
-}
+    }
+    print("Django Redis cache enabled")
+except ImportError:
+    print("WARNING: django_redis not found, falling back to LocMemCache")
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "pyerp-fallback",
+        },
+    }
 
 # AWS S3 settings for static and media files
 if os.environ.get("USE_S3", "False").lower() == "true":
@@ -83,18 +101,16 @@ if os.environ.get("USE_S3", "False").lower() == "true":
     DEFAULT_FILE_STORAGE = "pyerp.core.storage_backends.MediaStorage"
 
 # Email configuration for production
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",
-)
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
-EMAIL_PORT = int(
-    os.environ.get("EMAIL_PORT", "587") if os.environ.get("EMAIL_PORT") else "587",
-)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+try:
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+except ValueError:
+    EMAIL_PORT = 587
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
 # Celery settings for production
 CELERY_TASK_ALWAYS_EAGER = False

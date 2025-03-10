@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia';
 import authService, { User, LoginCredentials, AuthState } from '../services/auth';
+import api from '../services/api';
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
     user: null,
     isAuthenticated: false,
     isLoading: false,
-    error: null
+    error: null,
+    initialized: false
   }),
 
   getters: {
@@ -32,25 +34,89 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     // Initialize the auth state
     async init() {
+      // If already initialized or currently loading, return
+      if (this.initialized || this.isLoading) {
+        console.debug('Auth store already initialized or loading');
+        return;
+      }
+
       this.isLoading = true;
       try {
-        // Check if we have a token
-        if (authService.isAuthenticated()) {
-          // Get the current user
-          const user = await authService.getCurrentUser();
-          if (user) {
-            this.user = user;
-            this.isAuthenticated = true;
-          } else {
-            // If we couldn't get the user, clear the auth state
-            this.logout();
+        console.debug('Initializing auth store...');
+        // Check if we have both tokens before attempting any auth operations
+        const accessToken = localStorage.getItem('access_token');
+        const refreshToken = localStorage.getItem('refresh_token');
+        
+        console.debug('Tokens found:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken
+        });
+
+        if (!accessToken && !refreshToken) {
+          // No tokens available, mark as initialized and return
+          console.debug('No tokens available, marking as initialized');
+          this.initialized = true;
+          return;
+        }
+
+        // First try to get the current user with the existing access token
+        if (accessToken) {
+          try {
+            console.debug('Attempting to get user with current token');
+            const user = await authService.getCurrentUser();
+            if (user) {
+              console.debug('Successfully retrieved user');
+              this.user = user;
+              this.isAuthenticated = true;
+              this.initialized = true;
+              return;
+            }
+          } catch (error) {
+            // If getting user fails, we'll try to refresh the token below
+            console.debug('Failed to get user with current token:', error);
           }
         }
+
+        // If we reach here, either:
+        // 1. We don't have an access token but have a refresh token
+        // 2. The access token failed to get the user
+        // In either case, try to refresh the token if we have a refresh token
+        if (refreshToken) {
+          try {
+            console.debug('Attempting to refresh token');
+            const newToken = await authService.refreshToken();
+            if (newToken) {
+              console.debug('Token refresh successful, getting user');
+              // Try to get user with the new token
+              const user = await authService.getCurrentUser();
+              if (user) {
+                console.debug('Successfully retrieved user after token refresh');
+                this.user = user;
+                this.isAuthenticated = true;
+                this.initialized = true;
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('Token refresh failed:', error);
+          }
+        }
+
+        // If we reach here, authentication failed
+        console.debug('Authentication failed, logging out');
+        await this.logout();
       } catch (error) {
         console.error('Auth initialization failed:', error);
         this.error = 'Failed to initialize authentication';
+        await this.logout();
       } finally {
         this.isLoading = false;
+        this.initialized = true;
+        console.debug('Auth store initialization complete:', {
+          isAuthenticated: this.isAuthenticated,
+          hasUser: !!this.user,
+          error: this.error
+        });
       }
     },
 
@@ -63,6 +129,7 @@ export const useAuthStore = defineStore('auth', {
         const user = await authService.login(credentials);
         this.user = user;
         this.isAuthenticated = true;
+        this.initialized = true;
         return user;
       } catch (error: any) {
         this.error = error.response?.data?.detail || 'Login failed. Please check your credentials.';
@@ -73,10 +140,11 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // Logout user
-    logout() {
+    async logout() {
       authService.logout();
       this.user = null;
       this.isAuthenticated = false;
+      this.error = null;
     },
 
     // Update user profile

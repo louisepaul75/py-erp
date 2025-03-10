@@ -1,179 +1,245 @@
 <template>
   <div class="sales-order-detail">
-    <div class="header">
-      <h1>Sales Order Details</h1>
-      <div class="actions">
-        <button
+    <v-row class="mb-4">
+      <v-col cols="12" sm="6">
+        <h1 class="text-h4">Sales Order Details</h1>
+      </v-col>
+      <v-col cols="12" sm="6" class="d-flex justify-end align-center flex-wrap gap-2">
+        <v-btn
           v-if="order && order.status === 'draft'"
-          class="btn-edit"
+          color="secondary"
+          prepend-icon="mdi-pencil"
           @click="editOrder"
+          class="ma-1"
         >
           Edit Order
-        </button>
-        <button
+        </v-btn>
+        <v-btn
           v-if="order && order.status === 'draft'"
-          class="btn-confirm"
+          color="success"
+          prepend-icon="mdi-check"
           @click="confirmOrder"
+          class="ma-1"
         >
           Confirm Order
-        </button>
-        <button
+        </v-btn>
+        <v-btn
           v-if="order && ['confirmed', 'invoiced'].includes(order.status)"
-          class="btn-invoice"
+          color="info"
+          prepend-icon="mdi-file-document"
           @click="createInvoice"
+          class="ma-1"
         >
           Create Invoice
-        </button>
-        <button class="btn-back" @click="goBack">
+        </v-btn>
+        <v-btn
+          color="primary"
+          variant="outlined"
+          prepend-icon="mdi-arrow-left"
+          @click="goBack"
+          class="ma-1"
+        >
           Back to List
-        </button>
-      </div>
-    </div>
+        </v-btn>
+      </v-col>
+    </v-row>
 
     <!-- Loading indicator -->
-    <div v-if="loading" class="loading">
-      <p>Loading order details...</p>
+    <div v-if="loading" class="d-flex justify-center my-6">
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="64"
+      ></v-progress-circular>
     </div>
 
     <!-- Error message -->
-    <div v-else-if="error" class="error">
-      <p>{{ error }}</p>
-    </div>
+    <v-alert
+      v-else-if="error"
+      type="error"
+      variant="tonal"
+      class="mb-6"
+    >
+      {{ error }}
+    </v-alert>
 
     <!-- Order details -->
-    <div v-else-if="order" class="order-container">
-      <div class="order-header">
-        <div class="order-info">
-          <h2>Order #{{ order.order_number }}</h2>
-          <div class="status">
-            <span :class="'status-badge ' + order.status">
-              {{ capitalizeFirst(order.status) }}
-            </span>
-          </div>
-        </div>
-        <div class="order-meta">
-          <div class="meta-item">
-            <span class="label">Date:</span>
-            <span class="value">{{ formatDate(order.order_date) }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="label">Customer:</span>
-            <span class="value">{{ order.customer_name }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="label">Reference:</span>
-            <span class="value">{{ order.reference || 'N/A' }}</span>
-          </div>
-        </div>
-      </div>
+    <template v-else-if="order">
+      <v-card class="mb-6">
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="6">
+              <h2 class="text-h5">Order #{{ order.order_number }}</h2>
+              <v-chip
+                :color="getStatusColor(order.status)"
+                text-color="white"
+                class="mt-2"
+              >
+                {{ capitalizeFirst(order.status) }}
+              </v-chip>
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-list density="compact" class="bg-transparent">
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-calendar"></v-icon>
+                  </template>
+                  <v-list-item-title>Date: {{ formatDate(order.order_date) }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-account"></v-icon>
+                  </template>
+                  <v-list-item-title>Customer: {{ order.customer_name }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-tag"></v-icon>
+                  </template>
+                  <v-list-item-title>Reference: {{ order.reference || 'N/A' }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
 
-      <div class="order-sections">
-        <!-- Customer Information -->
-        <div class="section">
-          <h3>Customer Information</h3>
-          <div class="section-content">
-            <div class="customer-details">
-              <div class="address">
-                <h4>Billing Address</h4>
-                <p>{{ order.billing_address.name }}</p>
-                <p>{{ order.billing_address.street }}</p>
-                <p>{{ order.billing_address.postal_code }} {{ order.billing_address.city }}</p>
-                <p>{{ order.billing_address.country }}</p>
-              </div>
-              <div class="address" v-if="order.shipping_address">
-                <h4>Shipping Address</h4>
-                <p>{{ order.shipping_address.name }}</p>
-                <p>{{ order.shipping_address.street }}</p>
-                <p>{{ order.shipping_address.postal_code }} {{ order.shipping_address.city }}</p>
-                <p>{{ order.shipping_address.country }}</p>
-              </div>
-              <div class="contact">
-                <h4>Contact</h4>
-                <p v-if="order.contact_email">Email: {{ order.contact_email }}</p>
-                <p v-if="order.contact_phone">Phone: {{ order.contact_phone }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- Customer Information -->
+      <v-card class="mb-6">
+        <v-card-title>
+          <v-icon start icon="mdi-account-details"></v-icon>
+          Customer Information
+        </v-card-title>
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="4">
+              <h4 class="text-subtitle-1 font-weight-bold mb-2">Billing Address</h4>
+              <p>{{ order.billing_address.name }}</p>
+              <p>{{ order.billing_address.street }}</p>
+              <p>{{ order.billing_address.postal_code }} {{ order.billing_address.city }}</p>
+              <p>{{ order.billing_address.country }}</p>
+            </v-col>
+            <v-col cols="12" md="4" v-if="order.shipping_address">
+              <h4 class="text-subtitle-1 font-weight-bold mb-2">Shipping Address</h4>
+              <p>{{ order.shipping_address.name }}</p>
+              <p>{{ order.shipping_address.street }}</p>
+              <p>{{ order.shipping_address.postal_code }} {{ order.shipping_address.city }}</p>
+              <p>{{ order.shipping_address.country }}</p>
+            </v-col>
+            <v-col cols="12" md="4">
+              <h4 class="text-subtitle-1 font-weight-bold mb-2">Contact</h4>
+              <p v-if="order.contact_email">
+                <v-icon size="small" class="mr-1">mdi-email</v-icon>
+                {{ order.contact_email }}
+              </p>
+              <p v-if="order.contact_phone">
+                <v-icon size="small" class="mr-1">mdi-phone</v-icon>
+                {{ order.contact_phone }}
+              </p>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
 
-        <!-- Order Items -->
-        <div class="section">
-          <h3>Order Items</h3>
-          <div class="section-content">
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>SKU</th>
-                  <th>Quantity</th>
-                  <th>Unit Price</th>
-                  <th>Discount</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(item, index) in order.items" :key="index">
-                  <td>{{ item.product_name }}</td>
-                  <td>{{ item.product_sku }}</td>
-                  <td>{{ item.quantity }}</td>
-                  <td>{{ formatCurrency(item.unit_price) }}</td>
-                  <td>{{ item.discount_percent ? item.discount_percent + '%' : '-' }}</td>
-                  <td>{{ formatCurrency(item.total_price) }}</td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="4"></td>
-                  <td>Subtotal:</td>
-                  <td>{{ formatCurrency(order.subtotal) }}</td>
-                </tr>
-                <tr v-if="order.tax_amount > 0">
-                  <td colspan="4"></td>
-                  <td>Tax ({{ order.tax_rate }}%):</td>
-                  <td>{{ formatCurrency(order.tax_amount) }}</td>
-                </tr>
-                <tr v-if="order.shipping_amount > 0">
-                  <td colspan="4"></td>
-                  <td>Shipping:</td>
-                  <td>{{ formatCurrency(order.shipping_amount) }}</td>
-                </tr>
-                <tr class="total-row">
-                  <td colspan="4"></td>
-                  <td>Total:</td>
-                  <td>{{ formatCurrency(order.total_amount) }}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
+      <!-- Order Items -->
+      <v-card class="mb-6">
+        <v-card-title>
+          <v-icon start icon="mdi-cart"></v-icon>
+          Order Items
+        </v-card-title>
+        <v-card-text>
+          <v-table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Discount</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, index) in order.items" :key="index">
+                <td>{{ item.product_name }}</td>
+                <td>{{ item.product_sku }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ formatCurrency(item.unit_price) }}</td>
+                <td>{{ item.discount_percent ? item.discount_percent + '%' : '-' }}</td>
+                <td>{{ formatCurrency(item.total_price) }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4"></td>
+                <td class="text-right font-weight-medium">Subtotal:</td>
+                <td>{{ formatCurrency(order.subtotal) }}</td>
+              </tr>
+              <tr v-if="order.tax_amount > 0">
+                <td colspan="4"></td>
+                <td class="text-right font-weight-medium">Tax ({{ order.tax_rate }}%):</td>
+                <td>{{ formatCurrency(order.tax_amount) }}</td>
+              </tr>
+              <tr v-if="order.shipping_amount > 0">
+                <td colspan="4"></td>
+                <td class="text-right font-weight-medium">Shipping:</td>
+                <td>{{ formatCurrency(order.shipping_amount) }}</td>
+              </tr>
+              <tr class="bg-grey-lighten-4">
+                <td colspan="4"></td>
+                <td class="text-right font-weight-bold">Total:</td>
+                <td class="font-weight-bold">{{ formatCurrency(order.total_amount) }}</td>
+              </tr>
+            </tfoot>
+          </v-table>
+        </v-card-text>
+      </v-card>
 
-        <!-- Notes -->
-        <div class="section" v-if="order.notes">
-          <h3>Notes</h3>
-          <div class="section-content">
-            <p class="notes">{{ order.notes }}</p>
-          </div>
-        </div>
+      <!-- Notes -->
+      <v-card v-if="order.notes" class="mb-6">
+        <v-card-title>
+          <v-icon start icon="mdi-note-text"></v-icon>
+          Notes
+        </v-card-title>
+        <v-card-text>
+          <p>{{ order.notes }}</p>
+        </v-card-text>
+      </v-card>
 
-        <!-- Related Documents -->
-        <div class="section" v-if="order.documents && order.documents.length > 0">
-          <h3>Related Documents</h3>
-          <div class="section-content">
-            <ul class="documents-list">
-              <li v-for="doc in order.documents" :key="doc.id">
-                <a :href="doc.url" target="_blank">{{ doc.name }}</a>
-                <span class="document-date">{{ formatDate(doc.created_at) }}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
+      <!-- Related Documents -->
+      <v-card v-if="order.documents && order.documents.length > 0" class="mb-6">
+        <v-card-title>
+          <v-icon start icon="mdi-file-document-multiple"></v-icon>
+          Related Documents
+        </v-card-title>
+        <v-card-text>
+          <v-list>
+            <v-list-item
+              v-for="doc in order.documents"
+              :key="doc.id"
+              :href="doc.url"
+              target="_blank"
+            >
+              <template v-slot:prepend>
+                <v-icon icon="mdi-file-document"></v-icon>
+              </template>
+              <v-list-item-title>{{ doc.name }}</v-list-item-title>
+              <v-list-item-subtitle>{{ formatDate(doc.created_at) }}</v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+      </v-card>
+    </template>
 
     <!-- No order found message -->
-    <div v-else class="not-found">
-      <p>Sales order not found.</p>
-    </div>
+    <v-alert
+      v-else
+      type="warning"
+      variant="tonal"
+      class="mt-6"
+    >
+      Sales order not found.
+    </v-alert>
   </div>
 </template>
 
@@ -240,6 +306,18 @@ const error = ref('');
 // Get order ID from route params
 const orderId = Number(route.params.id);
 
+// Get status color
+const getStatusColor = (status: string): string => {
+  switch (status) {
+    case 'draft': return 'grey';
+    case 'confirmed': return 'blue';
+    case 'invoiced': return 'orange';
+    case 'completed': return 'green';
+    case 'canceled': return 'red';
+    default: return 'grey';
+  }
+};
+
 // Load order details
 const loadOrderDetails = async () => {
   loading.value = true;
@@ -253,6 +331,40 @@ const loadOrderDetails = async () => {
     error.value = 'Failed to load order details. Please try again.';
   } finally {
     loading.value = false;
+  }
+};
+
+// Navigation
+const goBack = () => {
+  router.push({ name: 'Sales', query: { tab: 'orders' } });
+};
+
+// Actions
+const editOrder = () => {
+  router.push({ name: 'SalesOrderEdit', params: { id: orderId } });
+};
+
+const confirmOrder = async () => {
+  if (!order.value) return;
+  
+  try {
+    await salesApi.updateSalesOrder(orderId, { status: 'confirmed' });
+    await loadOrderDetails();
+  } catch (err) {
+    console.error('Error confirming order:', err);
+    error.value = 'Failed to confirm order. Please try again.';
+  }
+};
+
+const createInvoice = async () => {
+  if (!order.value) return;
+  
+  try {
+    await salesApi.updateSalesOrder(orderId, { status: 'invoiced' });
+    await loadOrderDetails();
+  } catch (err) {
+    console.error('Error creating invoice:', err);
+    error.value = 'Failed to create invoice. Please try again.';
   }
 };
 
@@ -279,39 +391,6 @@ const capitalizeFirst = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-// Navigation
-const goBack = () => {
-  router.push({ name: 'SalesList' });
-};
-
-// Edit order
-const editOrder = () => {
-  router.push({ name: 'SalesOrderEdit', params: { id: orderId } });
-};
-
-// Confirm order
-const confirmOrder = async () => {
-  try {
-    await salesApi.updateSalesOrder(orderId, { status: 'confirmed' });
-    await loadOrderDetails(); // Reload order details
-  } catch (err) {
-    console.error('Error confirming order:', err);
-    error.value = 'Failed to confirm order. Please try again.';
-  }
-};
-
-// Create invoice
-const createInvoice = async () => {
-  try {
-    // This would typically call a specific endpoint to create an invoice
-    await salesApi.updateSalesOrder(orderId, { status: 'invoiced' });
-    await loadOrderDetails(); // Reload order details
-  } catch (err) {
-    console.error('Error creating invoice:', err);
-    error.value = 'Failed to create invoice. Please try again.';
-  }
-};
-
 // Initialize component
 onMounted(() => {
   loadOrderDetails();
@@ -321,234 +400,5 @@ onMounted(() => {
 <style scoped>
 .sales-order-detail {
   padding: 20px 0;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-}
-
-.actions {
-  display: flex;
-  gap: 10px;
-}
-
-.actions button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.btn-edit {
-  background-color: #fff8e1;
-  color: #f57f17;
-}
-
-.btn-edit:hover {
-  background-color: #ffecb3;
-}
-
-.btn-confirm {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-}
-
-.btn-confirm:hover {
-  background-color: #c8e6c9;
-}
-
-.btn-invoice {
-  background-color: #ede7f6;
-  color: #4527a0;
-}
-
-.btn-invoice:hover {
-  background-color: #d1c4e9;
-}
-
-.btn-back {
-  background-color: #f5f5f5;
-  color: #424242;
-}
-
-.btn-back:hover {
-  background-color: #e0e0e0;
-}
-
-.loading, .error, .not-found {
-  text-align: center;
-  padding: 30px;
-}
-
-.error {
-  color: #dc3545;
-}
-
-.order-container {
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.order-header {
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.order-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.order-info h2 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.status-badge.draft {
-  background-color: #e3f2fd;
-  color: #0d47a1;
-}
-
-.status-badge.confirmed {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-}
-
-.status-badge.invoiced {
-  background-color: #ede7f6;
-  color: #4527a0;
-}
-
-.status-badge.completed {
-  background-color: #e0f2f1;
-  color: #004d40;
-}
-
-.status-badge.canceled {
-  background-color: #ffebee;
-  color: #b71c1c;
-}
-
-.order-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.meta-item {
-  display: flex;
-  gap: 5px;
-}
-
-.meta-item .label {
-  font-weight: 500;
-}
-
-.order-sections {
-  padding: 20px;
-}
-
-.section {
-  margin-bottom: 30px;
-}
-
-.section h3 {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.section-content {
-  padding: 0 10px;
-}
-
-.customer-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.address h4, .contact h4 {
-  margin-bottom: 10px;
-  font-size: 1rem;
-}
-
-.address p, .contact p {
-  margin: 5px 0;
-}
-
-.items-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.items-table th, .items-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.items-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.items-table tfoot td {
-  text-align: right;
-  font-weight: 500;
-}
-
-.items-table .total-row {
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.notes {
-  white-space: pre-line;
-  line-height: 1.5;
-}
-
-.documents-list {
-  list-style: none;
-  padding: 0;
-}
-
-.documents-list li {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid #eaeaea;
-}
-
-.documents-list a {
-  color: #1976d2;
-  text-decoration: none;
-}
-
-.documents-list a:hover {
-  text-decoration: underline;
-}
-
-.document-date {
-  color: #757575;
-  font-size: 0.9rem;
 }
 </style>

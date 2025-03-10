@@ -6,7 +6,12 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../views/Home.vue'),
+    redirect: '/dashboard'
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true }
   },
 
@@ -34,9 +39,15 @@ const routes: Array<RouteRecordRaw> = [
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/auth/Profile.vue'),
-    beforeEnter: authGuard
+    meta: { requiresAuth: true }
   },
-
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/auth/Settings.vue'),
+    meta: { requiresAuth: true }
+  },
+  
   // Product routes
   {
     path: '/products',
@@ -81,14 +92,28 @@ const routes: Array<RouteRecordRaw> = [
   // Sales routes
   {
     path: '/sales',
-    name: 'SalesList',
-    component: () => import('../views/sales/SalesList.vue'),
+    name: 'Sales',
+    component: () => import('../views/sales/SalesBase.vue'),
     meta: { requiresAuth: true }
   },
   {
-    path: '/sales/:id',
+    path: '/sales/orders/:id',
     name: 'SalesOrderDetail',
     component: () => import('../views/sales/SalesOrderDetail.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/sales/orders/:id/edit',
+    name: 'SalesOrderEdit',
+    component: () => import('../views/sales/SalesOrderEdit.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/sales/customers/:id',
+    name: 'CustomerDetail',
+    component: () => import('../views/sales/CustomerDetail.vue'),
     props: true,
     meta: { requiresAuth: true }
   },
@@ -108,14 +133,14 @@ const router = createRouter({
 });
 
 // Global navigation guard
-router.beforeEach(async (to, from, next) => {
+router.beforeEach((to, from, next) => {
   // Check if the route requires authentication
   if (to.matched.some(record => record.meta.requiresAuth)) {
-    // Apply the auth guard
-    authGuard(to, from, next);
+    // Return the Promise from authGuard
+    return authGuard(to, from, next);
   } else {
     // No auth required, proceed
-    next();
+    return next();
   }
 });
 

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '../store/auth';
 
 // Determine the appropriate base URL based on the environment
 export const determineBaseUrl = () => {
@@ -10,7 +11,6 @@ export const determineBaseUrl = () => {
   const isSpecificIP = window.location.hostname === '192.168.73.65';
   if (isSpecificIP) {
     // Use HTTPS instead of HTTP to avoid Mixed Content errors
-    // Remove the /api suffix to prevent double prefixing
     return 'https://192.168.73.65';
   }
 
@@ -28,9 +28,7 @@ export const determineBaseUrl = () => {
   return import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
 };
 
-const baseUrl = determineBaseUrl();
-// Don't add /api to the base URL since the Vite proxy handles that
-const apiBaseUrl = baseUrl;
+const apiBaseUrl = determineBaseUrl();
 
 // Log the API base URL being used
 console.log('API Base URL:', apiBaseUrl);
@@ -42,12 +40,28 @@ console.log('Is localhost:', window.location.hostname === 'localhost' ||
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: apiBaseUrl + '/api',  // Add /api prefix to all requests
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true, // Required for cookies/CORS
 });
+
+// Flag to prevent multiple simultaneous token refreshes
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -58,9 +72,9 @@ api.interceptors.request.use(
       config.headers['X-CSRFToken'] = csrfToken;
     }
 
-    // Add JWT token if available
+    // Only add Authorization header for authenticated endpoints
     const token = localStorage.getItem('access_token');
-    if (token) {
+    if (token && !config.url?.includes('token/')) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -77,9 +91,32 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Log the error for debugging
+    console.debug('API Error:', {
+      status: error.response?.status,
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      isRetry: originalRequest?._retry,
+    });
+
     // If error is 401 and we haven't tried refreshing token yet
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If a token refresh is already in progress, add this request to the queue
+        try {
+          const token = await new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          });
+          originalRequest.headers['Authorization'] = `Bearer ${token}`;
+          return api(originalRequest);
+        } catch (err) {
+          console.error('Failed to process queued request:', err);
+          return Promise.reject(err);
+        }
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         // Try to refresh the token
@@ -88,11 +125,13 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await api.post('/api/token/refresh/', {
+        console.debug('Attempting to refresh token...');
+        const response = await api.post('/token/refresh/', {
           refresh: refreshToken
         });
 
         const newAccessToken = response.data.access;
+        console.debug('Token refresh successful');
 
         // Store the new token
         localStorage.setItem('access_token', newAccessToken);
@@ -101,40 +140,75 @@ api.interceptors.response.use(
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
         api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 
+        // Process any queued requests
+        processQueue(null, newAccessToken);
+
         // Retry the original request
         return api(originalRequest);
       } catch (refreshError) {
-        // If refresh fails, clear tokens and reject
+        console.error('Token refresh failed:', refreshError);
+        // If refresh fails, clear tokens and reject all queued requests
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        processQueue(refreshError, null);
+        
+        // Get auth store and logout
+        const authStore = useAuthStore();
+        await authStore.logout();
+        
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
+    // For other errors or if refresh failed, reject the promise
     return Promise.reject(error);
   }
 );
 
 // Product API endpoints
+interface ProductListParams {
+  _ude_variants?: boolean;
+  include_variants?: boolean;
+  page?: number;
+  page_size?: number;
+  q?: string;
+  category?: number;
+  in_stock?: boolean;
+  is_active?: boolean;
+  [key: string]: any;
+}
+
 export const productApi = {
   // Get all products with optional filters
-  getProducts: async (params = {}) => {
-    return api.get('/api/products/', { params });
+  getProducts: async (params: ProductListParams = {}) => {
+    // Convert _ude_variants to include_variants if present
+    if (params._ude_variants !== undefined) {
+      params.include_variants = params._ude_variants;
+      delete params._ude_variants;
+    }
+    return api.get('/products/', { params });
   },
 
   // Get product details by ID
   getProduct: async (id: number) => {
-    return api.get(`/api/products/${id}/`);
+    return api.get(`/products/${id}/`);
+  },
+
+  // Update product by ID
+  updateProduct: async (id: number, data: any) => {
+    return api.patch(`/api/products/${id}/`, data);
   },
 
   // Get product variant details
   getVariant: async (id: number) => {
-    return api.get(`/api/products/variant/${id}/`);
+    return api.get(`/products/variant/${id}/`);
   },
 
   // Get all product categories
   getCategories: async () => {
-    return api.get('/api/products/categories/');
+    return api.get('/products/categories/');
   }
 };
 
@@ -142,32 +216,65 @@ export const productApi = {
 export const salesApi = {
   // Get all sales orders with optional filters
   getSalesOrders: async (params = {}) => {
-    return api.get('/api/sales/orders/', { params });
+    return api.get('/sales/orders/', { params });
   },
 
   // Get sales order details by ID
   getSalesOrder: async (id: number) => {
-    return api.get(`/api/sales/orders/${id}/`);
+    return api.get(`/sales/orders/${id}/`);
   },
 
   // Create a new sales order
   createSalesOrder: async (data: any) => {
-    return api.post('/api/sales/orders/', data);
+    return api.post('/sales/orders/', data);
   },
 
   // Update an existing sales order
   updateSalesOrder: async (id: number, data: any) => {
-    return api.put(`/api/sales/orders/${id}/`, data);
+    return api.put(`/sales/orders/${id}/`, data);
   },
 
   // Delete a sales order
   deleteSalesOrder: async (id: number) => {
-    return api.delete(`/api/sales/orders/${id}/`);
+    return api.delete(`/sales/orders/${id}/`);
   },
 
   // Get all customers
   getCustomers: async (params = {}) => {
-    return api.get('/api/sales/customers/', { params });
+    return api.get('/sales/customers/', { params });
+  },
+
+  // Get customer details by ID
+  getCustomer: async (id: number) => {
+    return api.get(`/sales/customers/${id}/`);
+  },
+
+  // Update an existing customer
+  updateCustomer: async (id: number, data: any) => {
+    return api.put(`/sales/customers/${id}/`, data);
+  },
+
+  // Get orders for a specific customer
+  getCustomerOrders: async (customerId: number, params = {}) => {
+    return api.get(`/sales/customers/${customerId}/orders/`, { params });
+  },
+
+  // Delete a customer
+  deleteCustomer: async (id: number) => {
+    return api.delete(`/sales/customers/${id}/`);
+  }
+};
+
+// External API connection endpoints
+export const externalApiConnections = {
+  // Get all connection settings
+  getConnections: async () => {
+    return api.get('/external/connections/');
+  },
+
+  // Update a connection setting
+  updateConnection: async (connectionName: string, enabled: boolean) => {
+    return api.post(`/external/connections/${connectionName}/`, { enabled });
   }
 };
 

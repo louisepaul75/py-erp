@@ -24,14 +24,17 @@ class HealthCheckResult(models.Model):
 
     COMPONENT_DATABASE = "database"
     COMPONENT_LEGACY_ERP = "legacy_erp"
-    COMPONENT_PICTURES_API = "pictures_api"
+    COMPONENT_IMAGES_CMS = "images_cms"
     COMPONENT_DATABASE_VALIDATION = "database_validation"
 
     COMPONENT_CHOICES = [
         (COMPONENT_DATABASE, _("Database")),
         (COMPONENT_LEGACY_ERP, _("Legacy ERP")),
-        (COMPONENT_PICTURES_API, _("Pictures API")),
-        (COMPONENT_DATABASE_VALIDATION, _("Database Validation")),
+        (COMPONENT_IMAGES_CMS, _("Images CMS")),
+        (
+            COMPONENT_DATABASE_VALIDATION,
+            _("Database Validation"),
+        ),
     ]
 
     component = models.CharField(
@@ -75,6 +78,7 @@ class HealthCheckResult(models.Model):
         indexes = [
             models.Index(fields=["component", "-timestamp"]),
         ]
+        app_label = "monitoring"
 
     def __str__(self):
         return f"{self.get_component_display()} - {self.get_status_display()} - {self.timestamp}"

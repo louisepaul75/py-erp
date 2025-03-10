@@ -17,7 +17,10 @@ def main():
     load_environment_variables(verbose=True)
 
     # Set the default Django settings module if not defined
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.development")
+    os.environ.setdefault(
+        "DJANGO_SETTINGS_MODULE",
+        "pyerp.config.settings.development"
+    )
 
     try:
         from django.core.management import execute_from_command_line

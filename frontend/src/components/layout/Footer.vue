@@ -1,24 +1,35 @@
 <template>
-  <footer class="footer mt-auto py-3 bg-light border-top" :class="{ 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded }">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-6">
-          <p class="mb-0 text-muted">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
-        </div>
-        <div class="col-md-6 text-md-end d-flex justify-content-end align-items-center">
-          <router-link to="/Health" class="health-status me-3" :title="healthStatusText">
+  <v-footer
+    app
+    :class="[
+      'pa-3', 
+      { 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded },
+      themeStore.isDark ? 'bg-surface' : 'bg-grey-lighten-4'
+    ]"
+  >
+    <v-container>
+      <v-row>
+        <v-col cols="12" md="6">
+          <p class="text-body-2 text-medium-emphasis mb-0">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
+        </v-col>
+        <v-col cols="12" md="6" class="text-md-end d-flex justify-end align-center">
+          <p class="text-body-2 text-medium-emphasis mb-0 mr-3">Version {{ appVersion }}</p>
+          <router-link to="/Health" class="health-status" :title="healthStatusText">
             <span class="status-dot" :class="healthStatusClass"></span>
           </router-link>
-          <p class="mb-0 text-muted">Version {{ appVersion }}</p>
-        </div>
-      </div>
-    </div>
-  </footer>
+        </v-col>
+      </v-row>
+    </v-container>
+  </v-footer>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import axios from 'axios';
+import { useThemeStore } from '../../store/theme';
+import api from '@/services/api';
+
+// Get theme store
+const themeStore = useThemeStore();
 
 // Get current year for copyright
 const currentYear = computed(() => new Date().getFullYear());
@@ -64,14 +75,49 @@ const healthStatusClass = computed(() => {
   };
 });
 
-// Define a custom event type
+// Fetch version and health status
+const fetchHealthStatus = async () => {
+  try {
+    const response = await api.get('/monitoring/health-checks/', {
+      timeout: 120000
+    });
+    
+    if (response.data && response.data.success) {
+      // Get version from first result that has it
+      const firstResult = response.data.results[0] as HealthCheckResult;
+      appVersion.value = firstResult?.version || 'unknown';
+
+      // Determine overall status from all components
+      const statuses = response.data.results.map((result: HealthCheckResult) => result.status);
+      if (statuses.includes('error')) {
+        healthStatus.value = 'error';
+      } else if (statuses.includes('warning')) {
+        healthStatus.value = 'warning';
+      } else if (statuses.every((status: string) => status === 'success')) {
+        healthStatus.value = 'success';
+      } else {
+        healthStatus.value = 'unknown';
+      }
+    } else {
+      throw new Error('Invalid response format');
+    }
+  } catch (error: any) {
+    console.error('Failed to fetch health status:', error);
+    healthStatus.value = 'error';
+    
+    // Add specific handling for timeout errors
+    if (error.code === 'ECONNABORTED') {
+      console.warn('Health check request timed out. Health status might still be good, but the request took too long to complete.');
+    }
+  }
+};
+
 interface DebugPanelToggleEvent extends CustomEvent {
   detail: {
     expanded: boolean;
   };
 }
 
-// Event listener for debug panel expansion
 const handleDebugPanelToggle = (event: Event) => {
   const customEvent = event as DebugPanelToggleEvent;
   if (customEvent.detail && typeof customEvent.detail.expanded === 'boolean') {
@@ -84,6 +130,8 @@ interface HealthCheckResult {
   details?: string;
   response_time?: number;
   timestamp?: string;
+  version?: string;
+  component?: string;
 }
 
 interface DetailedHealthResponse {
@@ -91,66 +139,12 @@ interface DetailedHealthResponse {
   results: HealthCheckResult[];
 }
 
-// Check health status
-const checkHealthStatus = async () => {
-  try {
-    // First try the basic health check
-    const basicHealth = await axios.get('/api/health/', {
-      timeout: 60000, // Increased from 15000 to 60000 ms (60 seconds)
-    });
-
-    // Set version from health check response
-    appVersion.value = basicHealth.data.version || 'unknown';
-
-    if (basicHealth.data.status === 'unhealthy') {
-      healthStatus.value = 'error';
-      return;
-    }
-
-    // Then try the detailed health check
-    try {
-      const detailedHealth = await axios.get<DetailedHealthResponse>('/api/monitoring/health-checks/', {
-        timeout: 60000, // Increased from 30000 to 60000 ms (60 seconds)
-      });
-
-      if (!detailedHealth.data.success) {
-        healthStatus.value = 'warning';
-        return;
-      }
-
-      const statuses = detailedHealth.data.results.map((result: HealthCheckResult) => result.status);
-
-      if (statuses.includes('error')) {
-        healthStatus.value = 'error';
-      } else if (statuses.includes('warning')) {
-        healthStatus.value = 'warning';
-      } else if (statuses.every((status: string) => status === 'success')) {
-        healthStatus.value = 'success';
-      } else {
-        healthStatus.value = 'unknown';
-      }
-    } catch (detailedError: any) {
-      console.warn('Detailed health check failed:', detailedError);
-      // If detailed check fails but basic check succeeded, show warning
-      healthStatus.value = 'warning';
-      
-      // Add more detailed logging for network errors
-      if (detailedError.code === 'ECONNABORTED') {
-        console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
-      }
-    }
-  } catch (error) {
-    console.error('Health check failed:', error);
-    healthStatus.value = 'error';
-  }
-};
-
 let healthCheckInterval: number;
 
 onMounted(() => {
   window.addEventListener('debug-panel-toggle', handleDebugPanelToggle);
-  checkHealthStatus();
-  healthCheckInterval = window.setInterval(checkHealthStatus, 60000); // Check every minute
+  fetchHealthStatus();
+  healthCheckInterval = window.setInterval(fetchHealthStatus, 60000); // Check every minute
 });
 
 onUnmounted(() => {
@@ -160,26 +154,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.footer {
+.v-footer {
   position: relative;
   z-index: 10001; /* Higher z-index than debug panel to ensure it's above */
-  flex-shrink: 0;
-  /* Ensure footer is not positioned over the debug panel */
-  margin-bottom: 0;
-}
-
-/* Remove margin bottom when debug panel is active since we want the footer above it */
-.footer.with-debug-panel {
-  margin-bottom: 0;
-}
-
-/* Remove margin when debug panel is expanded */
-.footer.with-expanded-debug {
-  margin-bottom: 0;
 }
 
 .health-status {
   text-decoration: none;
+  display: flex;
+  align-items: center;
 }
 
 .status-dot {
@@ -204,5 +187,10 @@ onUnmounted(() => {
 
 .status-dot.unknown {
   background-color: #6c757d;
+}
+
+/* Dark mode specific styles */
+:deep(.v-theme--dark) .text-medium-emphasis {
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 </style>

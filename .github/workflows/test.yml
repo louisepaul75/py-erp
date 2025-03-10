@@ -1,14 +1,19 @@
-name: Test
+name: Test Suite
 
 on:
   push:
-    branches: [ prod, dev]
+    branches: [ prod, dev ]
   pull_request:
-    branches: [ prod, dev]
+    branches: [ prod, dev ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-group: [ui, backend, core]
+      fail-fast: false
+
     services:
       postgres:
         image: postgres:15
@@ -47,17 +52,72 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.dev.txt
 
-      - name: Run tests
+      - name: Run ${{ matrix.test-group }} tests
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
           REDIS_URL: redis://localhost:6379/0
+          TEST_GROUP: ${{ matrix.test-group }}
+          PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest --cov=pyerp --cov-report=xml
+          # Create coverage directory
+          mkdir -p coverage
+          
+          # Run tests for specific group from tests directory with coverage
+          cd tests && python -m pytest ${{ matrix.test-group }}/ \
+            --cov=../pyerp \
+            --cov-report=xml:../coverage/${{ matrix.test-group }}-coverage.xml \
+            --junitxml=../coverage/${{ matrix.test-group }}-junit.xml \
+            -o junit_family=legacy
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Store test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.test-group }}
+          path: coverage/*-junit.xml
+          retention-days: 14
+
+      - name: Store coverage results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results-${{ matrix.test-group }}
+          path: coverage/*-coverage.xml
+          retention-days: 14
+
+  upload-results:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: "*-*"
+          merge-multiple: true
+
+      - name: Upload test results to Codecov
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: artifacts/test-results-*/junit.xml
+          name: pyerp-test-results
+          fail_ci_if_error: false
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Wilhelm-Schweizer/pyERP
-          file: ./coverage.xml
-          fail_ci_if_error: true
+          directory: artifacts/coverage-results-*/
+          fail_ci_if_error: false
+          
+      - name: Archive all results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-test-results
+          path: artifacts/
+          retention-days: 14

@@ -1,0 +1,169 @@
+"""Transform address data from legacy format to new model format."""
+
+import logging
+from datetime import datetime
+from typing import Any, Dict, List
+
+from django.utils import timezone
+from .base import BaseTransformer
+
+
+logger = logging.getLogger(__name__)
+
+
+class AddressTransformer(BaseTransformer):
+    """Transforms address data from legacy Adressen format to Address model."""
+
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize with default field mappings for addresses."""
+        default_mappings = {
+            "salutation": "Anrede",
+            "first_name": "Vorname",
+            "last_name": "Name1",
+            "company_name": "Name2",
+            "street": "Strasse",
+            "country": "Land",
+            "postal_code": "PLZ",
+            "city": "Ort",
+            "phone": "Telefon",
+            "fax": "Fax",
+            "email": "e_Mail",
+            "contact_person": "Ansprechp",
+            "formal_salutation": "Briefanrede",
+            "legacy_id": "__KEY",
+        }
+        
+        # Merge default mappings with any provided in config
+        if "field_mappings" in config:
+            default_mappings.update(config["field_mappings"])
+        config["field_mappings"] = default_mappings
+
+        super().__init__(config)
+
+    def transform(
+        self, source_data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Transform address records from legacy format.
+        
+        Args:
+            source_data: List of address records from legacy system
+            
+        Returns:
+            List of transformed address records
+        """
+        transformed_records = []
+        
+        for source_record in source_data:
+            try:
+                # Apply basic field mappings
+                record = self.apply_field_mappings(source_record)
+
+                # Clean up country code
+                if "country" in record:
+                    record["country"] = self._clean_country_code(
+                        record["country"]
+                    )
+
+                # Clean up email
+                if "email" in record:
+                    record["email"] = self._clean_email(record["email"])
+
+                # Set synchronization fields
+                record["is_synchronized"] = True
+                record["legacy_modified"] = self._parse_legacy_timestamp(
+                    source_record.get("__TIMESTAMP")
+                )
+
+                # Apply any custom transformations
+                record = self.apply_custom_transformers(record, source_record)
+
+                transformed_records.append(record)
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to transform address record: {e}",
+                    extra={"record": source_record}
+                )
+                continue
+
+        return transformed_records
+
+    def _parse_legacy_timestamp(
+        self, timestamp_str: str
+    ) -> datetime:
+        """Parse legacy system timestamp into datetime object.
+        
+        Args:
+            timestamp_str: Timestamp string from legacy system
+            
+        Returns:
+            Parsed datetime or current time if parsing fails
+        """
+        if not timestamp_str:
+            return timezone.now()
+
+        try:
+            # Legacy timestamps are in format: "2025-03-06T04:13:17.687Z"
+            return datetime.strptime(
+                timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ"
+            ).replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            logger.warning(
+                f"Failed to parse legacy timestamp: {timestamp_str}"
+            )
+            return timezone.now()
+
+    def _clean_country_code(self, country: str) -> str:
+        """Clean and validate country code.
+        
+        Args:
+            country: Raw country code from legacy system
+            
+        Returns:
+            Cleaned 2-letter country code or empty string
+        """
+        if not country:
+            return ""
+            
+        # Convert to uppercase and strip whitespace
+        code = country.strip().upper()
+        
+        # Validate it's a 2-letter code
+        if len(code) == 2 and code.isalpha():
+            return code
+            
+        # Map common variations
+        country_map = {
+            "DEU": "DE",
+            "GER": "DE",
+            "DEUTSCHLAND": "DE",
+            "GERMANY": "DE",
+            "AUT": "AT",
+            "AUSTRIA": "AT",
+            "ÖSTERREICH": "AT",
+            "CHE": "CH",
+            "SWITZERLAND": "CH",
+            "SCHWEIZ": "CH",
+        }
+        return country_map.get(code, "")
+
+    def _clean_email(self, email: str) -> str:
+        """Clean and validate email address.
+        
+        Args:
+            email: Raw email from legacy system
+            
+        Returns:
+            Cleaned email address or empty string
+        """
+        if not email:
+            return ""
+            
+        # Strip whitespace and convert to lowercase
+        email = email.strip().lower()
+        
+        # Basic validation - must contain @ and at least one dot after @
+        if "@" in email and "." in email.split("@")[1]:
+            return email
+            
+        return "" 

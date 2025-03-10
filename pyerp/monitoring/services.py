@@ -11,6 +11,7 @@ import logging
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from django.conf import settings
@@ -18,27 +19,28 @@ from django.db import OperationalError, connections
 from django.utils import timezone
 
 from pyerp.monitoring.models import HealthCheckResult
+from pyerp.external_api import connection_manager
 
-# Import the API clients we'll check
+# Import the API clients from the new structure
 try:
-    from pyerp.direct_api.exceptions import (
-        DirectAPIError,
-        ServerUnavailableError,
-    )
-    from pyerp.direct_api.scripts.getTable import SimpleAPIClient
-
-    LEGACY_API_AVAILABLE = True
+    from pyerp.external_api.images_cms import ImageAPIClient
+    IMAGES_CMS_AVAILABLE = True
 except ImportError:
-    LEGACY_API_AVAILABLE = False
+    IMAGES_CMS_AVAILABLE = False
 
 try:
-    from pyerp.products.image_api import ImageAPIClient
-
-    PICTURES_API_AVAILABLE = True
+    from pyerp.external_api.legacy_erp import LegacyERPClient
+    LEGACY_ERP_AVAILABLE = True
 except ImportError:
-    PICTURES_API_AVAILABLE = False
+    LEGACY_ERP_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+# Maximum time to wait for each health check (in seconds)
+HEALTH_CHECK_TIMEOUT = 120  # Increased to 2 minutes
+
+# Maximum time to wait for individual component checks
+COMPONENT_CHECK_TIMEOUT = 60
 
 
 def check_database_connection():
@@ -49,14 +51,29 @@ def check_database_connection():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_SUCCESS
-    details = "Database connection is healthy."
+    # Default to error since we're using SQLite fallback
+    status = HealthCheckResult.STATUS_ERROR
+    details = (
+        "Using SQLite fallback - primary database connection is not available"
+    )
 
     try:
-        connections["default"].ensure_connection()
-        with connections["default"].cursor() as cursor:
-            cursor.execute("SELECT 1")
-            cursor.fetchone()
+        db_engine = connections["default"].vendor
+        if db_engine == "sqlite":
+            # We're using SQLite fallback, which means primary DB is not available
+            status = HealthCheckResult.STATUS_ERROR
+            details = (
+                "Using SQLite fallback - primary database connection is not available"
+            )
+            logger.error("Database health check: Using SQLite fallback")
+        else:
+            # Check the actual database connection
+            connections["default"].ensure_connection()
+            with connections["default"].cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+            status = HealthCheckResult.STATUS_SUCCESS
+            details = "Database connection is healthy."
     except OperationalError as e:
         status = HealthCheckResult.STATUS_ERROR
         details = f"Failed to connect to database: {e!s}"
@@ -89,45 +106,39 @@ def check_legacy_erp_connection():
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
-    status = HealthCheckResult.STATUS_SUCCESS
-    details = "Legacy ERP connection is healthy."
+    status = HealthCheckResult.STATUS_ERROR
+    details = "Legacy ERP API connection is not available"
 
-    if not LEGACY_API_AVAILABLE:
+    # First check if the connection is enabled
+    if not connection_manager.is_connection_enabled("legacy_erp"):
         status = HealthCheckResult.STATUS_WARNING
-        details = "Legacy ERP API module is not available."
+        details = "Legacy ERP API connection is disabled"
+        logger.info(
+            "Legacy ERP health check: Connection is disabled"
+        )
+        response_time = 0
+    elif not LEGACY_ERP_AVAILABLE:
+        status = HealthCheckResult.STATUS_WARNING
+        details = "Legacy ERP API module is not available"
+        logger.warning(
+            "Legacy ERP health check: Module not available"
+        )
         response_time = 0
     else:
         try:
-            # Use SimpleAPIClient instead of DirectAPIClient
-            client = SimpleAPIClient()
-            
-            # Use validate_session instead of _make_request to $info endpoint
-            session_valid = client.validate_session()
-            
-            if not session_valid:
-                status = HealthCheckResult.STATUS_WARNING
-                details = "Legacy ERP API session validation failed."
-                logger.warning(
-                    "Legacy ERP health check warning: Failed to validate session"
-                )
-
-        except ServerUnavailableError as e:
-            status = HealthCheckResult.STATUS_ERROR
-            details = f"Legacy ERP server is unavailable: {e!s}"
-            msg = "Legacy ERP health check failed - server unavailable: "
-            logger.error(f"{msg}{e!s}")
-        except DirectAPIError as e:
-            status = HealthCheckResult.STATUS_ERROR
-            details = f"Legacy ERP API error: {e!s}"
-            msg = "Legacy ERP health check failed: "
-            logger.error(f"{msg}{e!s}")
+            # Create client and check connection
+            client = LegacyERPClient()
+            client.check_connection()
+            status = HealthCheckResult.STATUS_SUCCESS
+            details = "Legacy ERP API connection is healthy"
+            response_time = (time.time() - start_time) * 1000
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
-            details = f"Unexpected error during Legacy ERP check: {e!s}"
-            msg = "Legacy ERP health check failed with unexpected error: "
-            logger.error(f"{msg}{e!s}")
-
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+            details = f"Legacy ERP API error: {e!s}"
+            logger.error(
+                f"Legacy ERP health check failed: {e!s}"
+            )
+            response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
     return {
@@ -139,57 +150,58 @@ def check_legacy_erp_connection():
     }
 
 
-def check_pictures_api_connection():
+def check_images_cms_connection():
     """
-    Check if the connection to the pictures API is working properly.
+    Check if the connection to the images CMS API is working properly.
 
     Returns:
         dict: Health check result with status, details, and response time
     """
     start_time = time.time()
     status = HealthCheckResult.STATUS_SUCCESS
-    details = "Pictures API connection is healthy."
+    details = "Images CMS API connection is healthy"
 
-    if not PICTURES_API_AVAILABLE:
+    # First check if the connection is enabled
+    if not connection_manager.is_connection_enabled("images_cms"):
         status = HealthCheckResult.STATUS_WARNING
-        details = "Pictures API module is not available."
+        details = "Images CMS API connection is disabled"
+        logger.info(
+            "Images CMS health check: Connection is disabled"
+        )
         response_time = 0
+    elif not IMAGES_CMS_AVAILABLE:
+        status = HealthCheckResult.STATUS_WARNING
+        details = "Images CMS API module is not available"
+        response_time = 0
+        logger.warning(
+            "Images CMS health check: Module not available"
+        )
     else:
         try:
             # Log the API URL being used for debugging
+            api_url = settings.IMAGE_API.get('BASE_URL')
             logger.debug(
-                f"Pictures API URL from settings: {settings.IMAGE_API.get('BASE_URL')}",
+                f"Images CMS API URL from settings: {api_url}"
             )
-            
-            # Create client with explicit settings to ensure it uses the correct URL
+
+            # Create client and check connection
             client = ImageAPIClient()
-            
-            # Log the actual URL being used by the client
-            logger.debug(f"Pictures API client using base URL: {client.base_url}")
-
-            # Try to fetch a small amount of data to verify connection
-            response = client.get_all_images(page=1, page_size=1)
-
-            if not response or "results" not in response:
-                status = HealthCheckResult.STATUS_WARNING
-                details = "Pictures API returned unexpected response format."
+            client.check_connection()
+            status = HealthCheckResult.STATUS_SUCCESS
+            details = "Images CMS API connection is healthy"
+            response_time = (time.time() - start_time) * 1000
 
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
-            details = f"Pictures API connection error: {e!s}"
-            logger.error(f"Pictures API health check failed: {e!s}")
-            # Add more detailed error logging
+            details = f"Images CMS API error: {e!s}"
             logger.error(
-                f"Pictures API connection error details: {type(e).__name__}: {e}",
+                f"Images CMS API health check failed: {e!s}"
             )
-            if hasattr(e, '__cause__') and e.__cause__:
-                logger.error(f"Caused by: {e.__cause__}")
-
-    response_time = (time.time() - start_time) * 1000  # Convert to milliseconds
+            response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
     return {
-        "component": HealthCheckResult.COMPONENT_PICTURES_API,
+        "component": HealthCheckResult.COMPONENT_IMAGES_CMS,
         "status": status,
         "details": details,
         "response_time": response_time,
@@ -291,39 +303,24 @@ def validate_database():
 def get_database_statistics():
     """
     Get detailed statistics about database performance and usage.
-    
+
     Returns:
         dict: Detailed database statistics including connections, transactions, and performance metrics
     """
     stats = {
-        "connections": {
-            "active": 0,
-            "idle": 0,
-            "total": 0
-        },
-        "transactions": {
-            "committed": 0,
-            "rolled_back": 0,
-            "active": 0
-        },
-        "performance": {
-            "slow_queries": 0,
-            "cache_hit_ratio": 0,
-            "avg_query_time": 0
-        },
-        "disk": {
-            "size_mb": 0,
-            "index_size_mb": 0
-        },
+        "connections": {"active": 0, "idle": 0, "total": 0},
+        "transactions": {"committed": 0, "rolled_back": 0, "active": 0},
+        "performance": {"slow_queries": 0, "cache_hit_ratio": 0, "avg_query_time": 0},
+        "disk": {"size_mb": 0, "index_size_mb": 0},
         "queries": {
             "select_count": 0,
             "insert_count": 0,
             "update_count": 0,
-            "delete_count": 0
+            "delete_count": 0,
         },
-        "timestamp": timezone.now()
+        "timestamp": timezone.now(),
     }
-    
+
     try:
         with connections["default"].cursor() as cursor:
             if connections["default"].vendor == "postgresql":
@@ -334,13 +331,15 @@ def get_database_statistics():
                     GROUP BY state
                 """)
                 for state, count in cursor.fetchall():
-                    if state == 'active':
+                    if state == "active":
                         stats["connections"]["active"] = count
-                    elif state == 'idle':
+                    elif state == "idle":
                         stats["connections"]["idle"] = count
-                    
-                stats["connections"]["total"] = stats["connections"]["active"] + stats["connections"]["idle"]
-                
+
+                stats["connections"]["total"] = (
+                    stats["connections"]["active"] + stats["connections"]["idle"]
+                )
+
                 # Get transaction statistics
                 cursor.execute("""
                     SELECT 
@@ -352,7 +351,7 @@ def get_database_statistics():
                 if result:
                     stats["transactions"]["committed"] = result[0] or 0
                     stats["transactions"]["rolled_back"] = result[1] or 0
-                
+
                 # Get active transactions
                 cursor.execute("""
                     SELECT count(*) 
@@ -360,7 +359,7 @@ def get_database_statistics():
                     WHERE state = 'active' AND xact_start IS NOT NULL
                 """)
                 stats["transactions"]["active"] = cursor.fetchone()[0] or 0
-                
+
                 # Get slow queries count (queries taking more than 1 second)
                 cursor.execute("""
                     SELECT count(*) 
@@ -369,15 +368,17 @@ def get_database_statistics():
                     AND NOW() - query_start > interval '1 second'
                 """)
                 stats["performance"]["slow_queries"] = cursor.fetchone()[0] or 0
-                
+
                 # Get cache hit ratio
                 cursor.execute("""
                     SELECT 
                         sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read) + 0.001) * 100 as hit_ratio
                     FROM pg_statio_user_tables
                 """)
-                stats["performance"]["cache_hit_ratio"] = round(cursor.fetchone()[0] or 0, 2)
-                
+                stats["performance"]["cache_hit_ratio"] = round(
+                    cursor.fetchone()[0] or 0, 2
+                )
+
                 # Get database and index size
                 cursor.execute("""
                     SELECT 
@@ -389,7 +390,7 @@ def get_database_statistics():
                 if result:
                     stats["disk"]["size_mb"] = round(result[0] or 0, 2)
                     stats["disk"]["index_size_mb"] = round(result[1] or 0, 2)
-                
+
                 # Get query counts by type (since database start)
                 cursor.execute("""
                     SELECT 
@@ -404,14 +405,14 @@ def get_database_statistics():
                     stats["queries"]["insert_count"] = result[0] or 0
                     stats["queries"]["update_count"] = result[1] or 0
                     stats["queries"]["delete_count"] = result[2] or 0
-                    
+
                 # Get select query count (approximation)
                 cursor.execute("""
                     SELECT sum(seq_scan + idx_scan) as selects
                     FROM pg_stat_user_tables
                 """)
                 stats["queries"]["select_count"] = cursor.fetchone()[0] or 0
-                
+
                 # Calculate average query time
                 cursor.execute("""
                     SELECT extract(epoch from avg(now() - query_start)) as avg_time
@@ -419,49 +420,177 @@ def get_database_statistics():
                     WHERE state = 'active' AND query_start IS NOT NULL
                 """)
                 avg_time = cursor.fetchone()[0]
-                stats["performance"]["avg_query_time"] = round(avg_time * 1000 if avg_time else 0, 2)  # in ms
-                
+                stats["performance"]["avg_query_time"] = round(
+                    avg_time * 1000 if avg_time else 0, 2
+                )  # in ms
+
             else:
                 # For non-PostgreSQL databases, provide limited stats
                 stats["connections"]["total"] = 1
                 stats["connections"]["active"] = 1
-    
+
     except Exception as e:
         logger.error(f"Error fetching database statistics: {e!s}")
-    
+
     return stats
 
 
 def run_all_health_checks(as_array=True):
     """
-    Run all available health checks.
+    Run all health checks concurrently.
 
     Args:
-        as_array (bool): If True, returns results as an array; otherwise as a dict
+        as_array (bool): If True, returns results as an array; otherwise as dict
 
     Returns:
         list or dict: Health check results in the specified format
     """
-    # Run all health checks
-    results = {
-        HealthCheckResult.COMPONENT_DATABASE: check_database_connection(),
-        HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection(),
-        HealthCheckResult.COMPONENT_PICTURES_API: check_pictures_api_connection(),
+    logger.info("Starting health checks")
+    start_time = time.time()
+
+    # Define health check functions to run
+    health_checks = {
+        HealthCheckResult.COMPONENT_DATABASE: check_database_connection,
+        HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection,
+        HealthCheckResult.COMPONENT_IMAGES_CMS: check_images_cms_connection,
     }
-    
-    # Always add database validation result
-    validation_result = validate_database()
-    results[HealthCheckResult.COMPONENT_DATABASE_VALIDATION] = validation_result
-    
+
+    results = {}
+
+    # Run health checks concurrently with timeout
+    with ThreadPoolExecutor() as executor:
+        # Submit all health checks
+        future_to_component = {
+            executor.submit(check_func): component
+            for component, check_func in health_checks.items()
+        }
+
+        # Wait for results with timeout
+        try:
+            futures = as_completed(future_to_component, timeout=HEALTH_CHECK_TIMEOUT)
+            for future in futures:
+                component = future_to_component[future]
+                try:
+                    result = future.result(timeout=COMPONENT_CHECK_TIMEOUT)
+                    results[component] = result
+                    msg = f"Health check completed for {component}"
+                    logger.debug(f"{msg}: {result['status']}")
+                except Exception as e:
+                    error_msg = f"Health check failed for {component}: {e!s}"
+                    logger.error(error_msg)
+                    results[component] = {
+                        "status": HealthCheckResult.STATUS_ERROR,
+                        "details": error_msg,
+                        "response_time": 0,
+                        "timestamp": timezone.now(),
+                    }
+        except TimeoutError:
+            remaining = set(health_checks.keys()) - set(results.keys())
+            msg = f"Health checks timed out for components: {remaining}"
+            logger.error(msg)
+            for component in remaining:
+                results[component] = {
+                    "status": HealthCheckResult.STATUS_ERROR,
+                    "details": "Health check timed out",
+                    "response_time": HEALTH_CHECK_TIMEOUT * 1000,  # ms
+                    "timestamp": timezone.now(),
+                }
+
+    total_time = time.time() - start_time
+    logger.info(f"All health checks completed in {total_time:.2f} seconds")
+
     # Return in the requested format
     if as_array:
         # Convert to array format with component included in each result
         return [
-            {
-                "component": component,
-                **result
-            } 
-            for component, result in results.items()
+            {"component": component, **result} for component, result in results.items()
         ]
-    
+
     return results
+
+
+def get_host_resources():
+    """
+    Collect host resource metrics including CPU, memory, and disk usage.
+    
+    Returns:
+        dict: A dictionary containing host resource metrics
+    """
+    import psutil
+    import platform
+    from datetime import datetime
+    
+    try:
+        # Get CPU information
+        cpu_percent = psutil.cpu_percent(interval=1)
+        cpu_count = psutil.cpu_count()
+        cpu_freq = psutil.cpu_freq()
+        
+        # Get memory information
+        memory = psutil.virtual_memory()
+        
+        # Get disk information
+        disk = psutil.disk_usage('/')
+        
+        # Get system information
+        system_info = {
+            'system': platform.system(),
+            'release': platform.release(),
+            'version': platform.version(),
+            'machine': platform.machine(),
+            'processor': platform.processor(),
+            'hostname': platform.node(),
+            'uptime': int(time.time() - psutil.boot_time())
+        }
+        
+        # Get network information
+        net_io = psutil.net_io_counters()
+        
+        # Format the results
+        result = {
+            'timestamp': datetime.now().isoformat(),
+            'cpu': {
+                'percent': cpu_percent,
+                'count': cpu_count,
+                'frequency': {
+                    'current': cpu_freq.current if cpu_freq else None,
+                    'min': (
+                        cpu_freq.min 
+                        if cpu_freq and hasattr(cpu_freq, 'min') 
+                        else None
+                    ),
+                    'max': (
+                        cpu_freq.max 
+                        if cpu_freq and hasattr(cpu_freq, 'max') 
+                        else None
+                    )
+                }
+            },
+            'memory': {
+                'total': memory.total,
+                'available': memory.available,
+                'used': memory.used,
+                'percent': memory.percent
+            },
+            'disk': {
+                'total': disk.total,
+                'used': disk.used,
+                'free': disk.free,
+                'percent': disk.percent
+            },
+            'network': {
+                'bytes_sent': net_io.bytes_sent,
+                'bytes_recv': net_io.bytes_recv,
+                'packets_sent': net_io.packets_sent,
+                'packets_recv': net_io.packets_recv
+            },
+            'system': system_info
+        }
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error collecting host resources: {str(e)}")
+        return {
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }

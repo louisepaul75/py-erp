@@ -7,17 +7,29 @@ focused on test performance and isolation.
 
 import os
 import sys
-from pathlib import Path
+from pathlib import Path  # noqa: F401
 
-# Load environment variables from .env file
-from dotenv import load_dotenv
+import dj_database_url  # noqa: F401
+import psycopg2
 
-from .base import *
+# Completely disable ddtrace before any other imports
+os.environ["DD_TRACE_ENABLED"] = "false"
+os.environ["DD_PROFILING_ENABLED"] = "false"
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-env_path = PROJECT_ROOT / "config" / "env" / ".env"
-print(f"Loading environment variables from: {env_path}")
-load_dotenv(dotenv_path=env_path)
+# Unload ddtrace module if it's already loaded to prevent metaclass conflicts
+if "ddtrace" in sys.modules:
+    del sys.modules["ddtrace"]
+    # Also unload any ddtrace submodules
+    for module_name in list(sys.modules.keys()):
+        if module_name.startswith("ddtrace."):
+            del sys.modules[module_name]
+
+# Load environment variables using centralized loader
+from pyerp.utils.env_loader import load_environment_variables
+
+from .base import *  # noqa: F403
+
+load_environment_variables(verbose=True)
 
 # Print environment variables for debugging
 print(f"DB_NAME: {os.environ.get('DB_NAME', 'not set')}")
@@ -30,19 +42,24 @@ print(f"DB_PORT: {os.environ.get('DB_PORT', 'not set')}")
 DEBUG = True
 
 # Remove debug toolbar for tests
-if "debug_toolbar" in INSTALLED_APPS:
-    INSTALLED_APPS.remove("debug_toolbar")
+if "debug_toolbar" in INSTALLED_APPS:  # noqa: F405
+    INSTALLED_APPS.remove("debug_toolbar")  # noqa: F405
 
 MIDDLEWARE = [
     middleware for middleware in MIDDLEWARE if "debug_toolbar" not in middleware
 ]
 
+# Remove ddtrace middleware if present
+MIDDLEWARE = [middleware for middleware in MIDDLEWARE if "ddtrace" not in middleware]
+
+# Remove ddtrace from INSTALLED_APPS if present
+if "ddtrace.contrib.django" in INSTALLED_APPS:  # noqa: F405
+    INSTALLED_APPS.remove("ddtrace.contrib.django")  # noqa: F405
+
 ALLOWED_HOSTS = ["*"]
 
 # Database configuration for tests
 # Try to use PostgreSQL first, fall back to SQLite if connection fails
-
-import psycopg2
 
 # Define PostgreSQL connection parameters
 PG_PARAMS = {
@@ -60,20 +77,15 @@ PG_PARAMS = {
 # Define SQLite connection parameters as fallback
 SQLITE_PARAMS = {
     "ENGINE": "django.db.backends.sqlite3",
-    "NAME": "file:memorydb_default?mode=memory&cache=shared",
-    "TEST": {
-        "NAME": "file:memorydb_default?mode=memory&cache=shared",
-    },
+    "NAME": os.path.join(BASE_DIR, "test_db.sqlite3"),
 }
 
-# Try to connect to PostgreSQL, fall back to SQLite if connection fails
+# Try to connect to PostgreSQL, use SQLite if it fails
 try:
-    print(
-        "Attempting to connect to PostgreSQL at {}:{}".format(
-            PG_PARAMS["HOST"],
-            PG_PARAMS["PORT"],
-        ),
+    sys.stderr.write(
+        f"Attempting to connect to PostgreSQL at {PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n",
     )
+
     conn = psycopg2.connect(
         dbname=PG_PARAMS["NAME"],
         user=PG_PARAMS["USER"],
@@ -83,11 +95,13 @@ try:
         connect_timeout=5,
     )
     conn.close()
-    print("SUCCESS: Connected to PostgreSQL")
     DATABASES = {"default": PG_PARAMS}
-except Exception as e:
-    print("ERROR: Could not connect to PostgreSQL:", str(e))
-    print("\nFALLBACK: Using SQLite for testing")
+    sys.stderr.write(
+        f"SUCCESS: Using PostgreSQL database at {PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n",
+    )
+except (OSError, psycopg2.OperationalError) as e:
+    sys.stderr.write(f"ERROR: Could not connect to PostgreSQL: {e!s}\n")
+    sys.stderr.write("FALLBACK: Using SQLite for testing\n")
     DATABASES = {"default": SQLITE_PARAMS}
 
 # Use the fastest possible password hasher
@@ -108,17 +122,26 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 # Disable logging during tests
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,
+    "disable_existing_loggers": True,
     "handlers": {
+        "null": {
+            "class": "logging.NullHandler",
+        },
         "console": {
             "class": "logging.StreamHandler",
-            "stream": sys.stdout,
+            "level": "WARNING",
         },
     },
     "loggers": {
-        "django": {
+        "": {
+            "handlers": ["console"],
+            "propagate": False,
+            "level": "WARNING",
+        },
+        "django.db.backends": {
             "handlers": ["console"],
             "level": "WARNING",
+            "propagate": False,
         },
     },
 }
@@ -154,8 +177,3 @@ SESSION_COOKIE_SECURE = False
 
 # Media settings for tests
 MEDIA_ROOT = BASE_DIR / "test_media"
-
-# Debug toolbar configuration
-DEBUG_TOOLBAR_CONFIG = {
-    "IS_RUNNING_TESTS": False,
-}

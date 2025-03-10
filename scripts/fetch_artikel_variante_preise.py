@@ -10,7 +10,7 @@ import json
 import django
 import pandas as pd
 from pprint import pprint
-from pyerp.direct_api.scripts.getTable import SimpleAPIClient
+from pyerp.external_api.legacy_erp.client import SimpleAPIClient
 
 # Add the project root directory to the Python path
 sys.path.insert(0, os.path.abspath(

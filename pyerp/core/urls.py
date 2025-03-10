@@ -20,7 +20,9 @@ urlpatterns = [
     # User profile endpoints
     path("profile/", UserProfileView.as_view(), name="user_profile"),
     # Dashboard
-    path("", DashboardSummaryView.as_view(), name="dashboard"),
+    path(
+        "dashboard/summary/", DashboardSummaryView.as_view(), name="dashboard_summary"
+    ),
     # System settings
     path("settings/", SystemSettingsView.as_view(), name="system_settings"),
     # Test endpoint for simulating database errors (for testing middleware)

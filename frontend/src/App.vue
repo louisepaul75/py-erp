@@ -1,37 +1,64 @@
 <template>
-    <div class="app-container">
-        <!-- Navigation -->
-        <Navbar/>
-        <!-- Main Content -->
-        <main class="container py-4">
-            <router-view v-slot="{ Component }">
-                <transition name="fade" mode="out-in">
-                    <component :is="Component"/>
-                </transition>
-            </router-view>
-        </main>
-        <!-- Debug Panel - Place before footer in DOM order -->
-        <DebugPanel/>
-        <!-- Footer - Must be last to appear at the bottom -->
-        <Footer/>
-    </div>
+    <v-app :theme="themeStore.isDark ? 'dark' : 'light'">
+        <template v-if="!isInitializing">
+            <!-- Navigation -->
+            <Navbar/>
+            <!-- Main Content -->
+            <v-main>
+                <v-container class="py-4">
+                    <router-view v-slot="{ Component }">
+                        <transition name="fade" mode="out-in">
+                            <component :is="Component"/>
+                        </transition>
+                    </router-view>
+                </v-container>
+            </v-main>
+            <!-- Debug Panel - Place before footer in DOM order -->
+            <DebugPanel/>
+            <!-- Footer - Must be last to appear at the bottom -->
+            <Footer/>
+        </template>
+        <template v-else>
+            <v-container class="d-flex align-center justify-center" style="height: 100vh;">
+                <v-progress-circular indeterminate color="primary"></v-progress-circular>
+            </v-container>
+        </template>
+    </v-app>
 </template>
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from './store/auth';
+import { useThemeStore } from './store/theme';
+import { useRouter, useRoute } from 'vue-router';
 import Navbar from './components/layout/Navbar.vue';
 import Footer from './components/layout/Footer.vue';
 import DebugPanel from './components/debug/DebugPanel.vue';
 
-// Initialize auth store
+// Initialize auth store and router
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
+const router = useRouter();
+const route = useRoute();
+const isInitializing = ref(true);
 
 // App version
 const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
 
 // Initialize auth state when app is mounted
 onMounted(async () => {
-    await authStore.init();
+    try {
+        await authStore.init();
+        
+        // After initialization, if we're on the login page and authenticated,
+        // redirect to the intended destination or home
+        if (route.name === 'Login' && authStore.isAuthenticated) {
+            const redirectPath = route.query.redirect as string || '/';
+            await router.replace(redirectPath);
+        }
+        // If we're on a protected route and not authenticated, router guard will handle redirect
+    } finally {
+        isInitializing.value = false;
+    }
 });
 </script>
 <style>
@@ -56,38 +83,6 @@ body {
     /* Ensure proper stacking context */
     position: relative;
     overflow-x: hidden;
-}
-
-.app-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    position: relative;
-    /* Ensure proper stacking context */
-    isolation: isolate;
-}
-
-main {
-    flex: 1 0 auto;
-}
-
-/* Override Bootstrap primary color */
-.btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover, .btn-primary:focus {
-    background-color: var(--primary-hover);
-    border-color: var(--primary-hover);
-}
-
-.text-primary {
-    color: var(--primary-color) !important;
-}
-
-.bg-primary {
-    background-color: var(--primary-color) !important;
 }
 
 /* Transition animations */

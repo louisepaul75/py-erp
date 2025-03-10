@@ -52,7 +52,7 @@ urlpatterns = [
     # Django admin URLs
     path("admin/", admin.site.urls),
     # API URLs
-    path("api/v1/", include("pyerp.core.api_urls")),
+    path("api/", include("pyerp.core.api_urls")),
     path(
         "api/token/",
         TokenObtainPairView.as_view(permission_classes=[]),
@@ -77,9 +77,15 @@ urlpatterns = [
         "api/monitoring/",
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
     ),
-    path("api/", include("pyerp.core.api_urls")),
+    # Add external API connection management
+    path(
+        "api/external/",
+        include("pyerp.external_api.urls", namespace="external_api"),
+    ),
     # Add products API URLs directly
-    path("api/products/", include("pyerp.products.api_urls")),
+    path("api/products/", include("pyerp.business_modules.products.api_urls")),
+    # Add sales API URLs
+    path("api/sales/", include("pyerp.business_modules.sales.urls")),
 ]
 
 # Add API documentation URLs if available
@@ -102,7 +108,7 @@ OPTIONAL_API_MODULES = [
     ("sales", "pyerp.sales.urls"),
     ("inventory", "pyerp.inventory.urls"),
     ("production", "pyerp.production.urls"),
-    ("legacy-sync", "pyerp.legacy_sync.urls"),
+    ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),
 ]
 
 # Add optional API modules if available
@@ -116,6 +122,11 @@ for url_prefix, module_path in OPTIONAL_API_MODULES:
     except ImportError as e:
         print(f"WARNING: Could not import {module_path}: {e}")
         print(f"URL patterns for api/{url_prefix}/ will not be available")
+
+# Include core URLs at root level (for health check and other core functionality)
+urlpatterns += [
+    path("", include("pyerp.core.urls")),
+]
 
 # Vue.js application route - now as the root URL
 urlpatterns += [
