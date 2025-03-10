@@ -53,7 +53,7 @@ mkdir -p /app/media /app/static /app/data /app/pyerp/static
 # Initialize Vue.js application
 if [ -d "/app/frontend" ]; then
     echo "Initializing Vue.js application..."
-    cd /app/frontend && npm install
+    cd /app/frontend && npm install --legacy-peer-deps
     echo "Vue.js initialization complete"
 fi
 
@@ -73,21 +73,22 @@ fi
 wait_for_db() {
   echo "Waiting for database to be ready..."
   
+  # Check if we're using SQLite fallback
+  if [ "$PG_AVAILABLE" = false ]; then
+    echo "Using SQLite fallback - no need to wait for database"
+    export USE_SQLITE="true"
+    return 0
+  fi
+  
   # For PostgreSQL
-  if [[ "${USE_SQLITE:-false}" == "false" ]]; then
-    # Using PostgreSQL, wait for it to be ready
-    if [ -z "${DB_HOST}" ]; then
-      echo "DB_HOST not set, skipping PostgreSQL check"
-    else
-      while ! pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" >/dev/null 2>&1; do
-        echo "Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT:-5432}..."
-        sleep 1
-      done
-      echo "PostgreSQL is ready!"
-    fi
+  if [ -z "${DB_HOST}" ]; then
+    echo "DB_HOST not set, skipping PostgreSQL check"
   else
-    # Using SQLite, nothing to wait for
-    echo "Using SQLite, no need to wait for database"
+    while ! pg_isready -h "${DB_HOST}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" >/dev/null 2>&1; do
+      echo "Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT:-5432}..."
+      sleep 1
+    done
+    echo "PostgreSQL is ready!"
   fi
 }
 
@@ -158,6 +159,7 @@ wait_for_redis
 
 # Run database migrations
 echo "Running migrations..."
+cd /app
 python manage.py migrate --noinput
 
 # Collect static files

@@ -59,7 +59,7 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data \
 # Set up frontend dependencies
 COPY frontend/package*.json /app/frontend/
 WORKDIR /app/frontend
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy frontend source files
 COPY frontend/ /app/frontend/
