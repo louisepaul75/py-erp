@@ -14,8 +14,9 @@ from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 
-from pyerp.products.validators import (
+from pyerp.business_modules.products.validators import (
     ProductImportValidator,
     validate_product_model,
 )
@@ -23,7 +24,7 @@ from tests.utils.mocks import MockProduct, MockProductCategory
 
 # Patch translation before importing validators
 with patch("django.utils.translation.gettext_lazy", lambda x: x):
-    import pyerp.products.validators as validators_module
+    import pyerp.business_modules.products.validators as validators_module
 
 
 @pytest.fixture
@@ -37,6 +38,7 @@ def validator():
     return validator
 
 
+@pytest.mark.django_db
 class TestProductValidation:
     """Test suite for product validation logic."""
 
@@ -126,7 +128,7 @@ class TestProductValidation:
             category = MockProductCategory(code="CAT1", name="Category 1")
             # Set up the mock to return our category when get() is called
             with patch(
-                "pyerp.products.validators.ProductCategory",
+                "pyerp.business_modules.products.models.ProductCategory",
                 MockProductCategory,
             ):
                 MockProductCategory.objects.get.return_value = category
@@ -143,7 +145,7 @@ class TestProductValidation:
             """Test validation of a category that doesn't exist."""
             # Set up the mock to raise DoesNotExist
             with patch(
-                "pyerp.products.validators.ProductCategory",
+                "pyerp.business_modules.products.models.ProductCategory",
                 MockProductCategory,
             ):
                 MockProductCategory.objects.get.side_effect = (

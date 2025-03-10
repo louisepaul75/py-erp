@@ -16,7 +16,7 @@ from django.db import connection
 from django.db.models import Count
 
 from pyerp.utils.env_loader import load_environment_variables
-from pyerp.products.models import (
+from pyerp.business_modules.products.models import (
     ParentProduct,
     VariantProduct,
 )

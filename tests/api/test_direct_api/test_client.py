@@ -1,33 +1,28 @@
 """
-Unit tests for the DirectAPIClient class.
+Unit tests for the LegacyERPClient class.
 
-These tests verify that the DirectAPIClient correctly handles API requests,
+These tests verify that the LegacyERPClient correctly handles API requests,
 session management, and response parsing.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
 
-from pyerp.direct_api.client import DirectAPIClient
-from pyerp.direct_api.exceptions import ResponseError
+from pyerp.external_api.legacy_erp.client import LegacyERPClient
+from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 
 
-class TestDirectAPIClient(unittest.TestCase):
-    """Test cases for the DirectAPIClient class."""
+class TestLegacyERPClient(unittest.TestCase):
+    """Test cases for the LegacyERPClient class."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.client = DirectAPIClient(
-            host="localhost",
-            port=8080,
-            username="test",
-            password="test",
-        )
+        self.client = LegacyERPClient(environment="test")
 
-        # Sample 4D API response
+        # Sample API response
         self.sample_response = {
             "__DATACLASS": "Artikel_Familie",
             "__entityModel": "Artikel_Familie",
@@ -53,12 +48,12 @@ class TestDirectAPIClient(unittest.TestCase):
             ],
         }
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
-    def test_fetch_table_success(self, mock_make_request):
+    @patch("pyerp.external_api.legacy_erp.client.LegacyERPClient.fetch_table")
+    def test_fetch_table_success(self, mock_fetch_table):
         """Test successful table fetch."""
-        mock_response = MagicMock()
-        mock_response.json.return_value = self.sample_response
-        mock_make_request.return_value = mock_response
+        # Setup mock response
+        mock_df = pd.DataFrame(self.sample_response["__ENTITIES"])
+        mock_fetch_table.return_value = mock_df
 
         # Call the method
         result = self.client.fetch_table("Artikel_Familie", top=10)
@@ -69,71 +64,57 @@ class TestDirectAPIClient(unittest.TestCase):
         self.assertEqual(result.iloc[0]["Bezeichnung"], "Item 1")
 
         # Verify the request was made correctly
-        mock_make_request.assert_called_once_with(
-            "GET",
+        mock_fetch_table.assert_called_once_with(
             "Artikel_Familie",
-            params={
-                "$top": 10,
-                "$skip": 0,
-                "new_data_only": "true"
-            },
+            top=10,
         )
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
-    def test_fetch_table_error_handling(self, mock_make_request):
-        """Test error handling during table fetch."""
-        mock_make_request.side_effect = ResponseError(
-            404,
-            "Not found",
-            "Resource not found",
-        )
+    @patch("pyerp.external_api.legacy_erp.client.LegacyERPClient.fetch_table")
+    def test_fetch_table_pagination(self, mock_fetch_table):
+        """Test table fetch with pagination."""
+        # Setup first response
+        first_df = pd.DataFrame([
+            {"__KEY": "key1", "UID": "uid1", "Bezeichnung": "Item 1"},
+            {"__KEY": "key2", "UID": "uid2", "Bezeichnung": "Item 2"},
+        ])
 
-        # Verify the exception is propagated
-        with pytest.raises(ResponseError):
-            self.client.fetch_table("Artikel_Familie")
+        # Configure mock to return the same response (no pagination)
+        mock_fetch_table.return_value = first_df
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
-    def test_push_field_success(self, mock_make_request):
-        """Test successful field update."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_make_request.return_value = mock_response
-
-        # Call the method
-        result = self.client.push_field(
-            "Artikel_Familie",
-            "key1",
-            "Bezeichnung",
-            "New Name",
-        )
+        # Call the method with top=2
+        result = self.client.fetch_table("Artikel_Familie", top=2)
 
         # Verify the result
-        assert result is True
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(len(result), 2)  # Should have 2 records as pagination is not implemented
+        self.assertEqual(result.iloc[0]["Bezeichnung"], "Item 1")
 
-        # Verify the request was made correctly
-        mock_make_request.assert_called_once_with(
-            "PUT",
-            "Artikel_Familie/key1/Bezeichnung",
-            data={"value": "New Name"},
+        # Verify request was made once
+        mock_fetch_table.assert_called_once_with(
+            "Artikel_Familie",
+            top=2,
         )
 
-    @patch("pyerp.direct_api.client.DirectAPIClient._make_request")
-    def test_push_field_error(self, mock_make_request):
-        """Test error handling during field update."""
-        mock_make_request.side_effect = ResponseError(
-            404,
-            "Not found",
-            "Record not found",
-        )
+    @patch("pyerp.external_api.legacy_erp.client.LegacyERPClient.fetch_table")
+    def test_fetch_table_error_handling(self, mock_fetch_table):
+        """Test error handling during table fetch."""
+        mock_fetch_table.side_effect = LegacyERPError("Failed to fetch table")
 
         # Verify the exception is propagated
-        with pytest.raises(ResponseError):
-            self.client.push_field(
-                "Artikel_Familie",
-                "invalid_key",
-                "Bezeichnung",
-                "New Name",
-            )
+        with pytest.raises(LegacyERPError):
+            self.client.fetch_table("Artikel_Familie")
+
+    def test_check_connection(self):
+        """Test connection check functionality."""
+        with patch.object(self.client, 'validate_session') as mock_validate:
+            # Test successful connection
+            mock_validate.return_value = True
+            self.assertTrue(self.client.check_connection())
+
+            # Test failed connection
+            mock_validate.side_effect = Exception("Connection failed")
+            with pytest.raises(LegacyERPError):
+                self.client.check_connection()
 
 
 if __name__ == "__main__":

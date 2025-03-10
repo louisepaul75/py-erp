@@ -78,7 +78,7 @@ urlpatterns = [
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
     ),
     # Add products API URLs directly
-    path("api/products/", include("pyerp.products.api_urls")),
+    path("api/products/", include("pyerp.business_modules.products.api_urls")),
 ]
 
 # Add API documentation URLs if available
@@ -101,7 +101,7 @@ OPTIONAL_API_MODULES = [
     ("sales", "pyerp.sales.urls"),
     ("inventory", "pyerp.inventory.urls"),
     ("production", "pyerp.production.urls"),
-    ("legacy-sync", "pyerp.legacy_sync.urls"),
+    ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),
 ]
 
 # Add optional API modules if available

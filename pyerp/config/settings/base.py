@@ -27,6 +27,19 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-producti
 # Get application version
 APP_VERSION = get_version()
 
+# Image API settings
+IMAGE_API_URL = os.environ.get(
+    "IMAGE_API_URL",
+    "http://db07.wsz.local/api/"
+)
+IMAGE_API_USERNAME = os.environ.get("IMAGE_API_USERNAME", "admin")
+IMAGE_API_PASSWORD = os.environ.get("IMAGE_API_PASSWORD", "")
+IMAGE_API_TIMEOUT = int(os.environ.get("IMAGE_API_TIMEOUT", "30"))
+IMAGE_API_CACHE_ENABLED = (
+    os.environ.get("IMAGE_API_CACHE_ENABLED", "True").lower() == "true"
+)
+IMAGE_API_CACHE_TIMEOUT = int(os.environ.get("IMAGE_API_CACHE_TIMEOUT", "3600"))
+
 # Application definition
 DJANGO_APPS = [
     "django.contrib.admin",
@@ -48,13 +61,13 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "pyerp.core",
-    "pyerp.products",
-    "pyerp.sales",
-    "pyerp.inventory",
-    "pyerp.production",
-    "pyerp.legacy_sync",
-    "pyerp.direct_api",
+    "pyerp.business_modules.products",
+    "pyerp.business_modules.sales",
+    "pyerp.business_modules.inventory",
+    "pyerp.business_modules.production",
     "pyerp.monitoring",
+    "pyerp.sync",
+    "pyerp.external_api",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -138,7 +151,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Berlin"
 USE_I18N = True
 USE_TZ = True
 
@@ -313,7 +326,7 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
-        "pyerp.legacy_sync": {
+        "pyerp.sync": {
             "handlers": ["console", "data_sync_file"],
             "level": LOG_LEVEL,
             "propagate": False,
@@ -323,7 +336,7 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-        "pyerp.products.image_api": {
+        "pyerp.external_api.images_cms": {
             "handlers": ["console", "data_sync_file"],
             "level": LOG_LEVEL,
             "propagate": False,
@@ -347,7 +360,7 @@ IMAGE_API = {
 }
 
 # Update loggers for image API
-LOGGING["loggers"]["pyerp.products.image_api"] = {
+LOGGING["loggers"]["pyerp.external_api.images_cms"] = {
     "handlers": ["console", "data_sync_file"],
     "level": LOG_LEVEL,
     "propagate": False,

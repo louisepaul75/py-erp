@@ -1,0 +1,282 @@
+"""Management command to sync both customers and addresses from legacy ERP."""
+
+import logging
+import yaml
+from datetime import timedelta
+from pathlib import Path
+from typing import Any, Dict, NamedTuple
+
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from pyerp.sync.extractors.legacy_api import LegacyAPIExtractor
+from pyerp.sync.transformers.customer import CustomerTransformer
+from pyerp.sync.transformers.address import AddressTransformer
+from pyerp.sync.loaders.customer import CustomerLoader
+from pyerp.sync.loaders.address import AddressLoader
+from pyerp.sync.pipeline import SyncPipeline
+
+
+logger = logging.getLogger(__name__)
+
+
+class LoadResult(NamedTuple):
+    """Result of a load operation."""
+    
+    created: int
+    updated: int
+    skipped: int
+    errors: int
+    error_details: list
+
+
+class Command(BaseCommand):
+    """Django management command to sync customers and addresses."""
+
+    help = "Sync customers and addresses from legacy ERP system"
+
+    def add_arguments(self, parser):
+        """Add command line arguments."""
+        parser.add_argument(
+            "--env",
+            type=str,
+            default="live",
+            choices=["dev", "live"],
+            help="Environment to use (dev or live)",
+        )
+        parser.add_argument(
+            "--days",
+            type=int,
+            help="Only sync records modified in the last N days",
+        )
+        parser.add_argument(
+            "--batch-size",
+            type=int,
+            default=100,
+            help="Number of records to process in each batch",
+        )
+        parser.add_argument(
+            "--customer-number",
+            type=str,
+            help="Sync specific customer by customer number",
+        )
+        parser.add_argument(
+            "--skip-customers",
+            action="store_true",
+            help="Skip customer synchronization",
+        )
+        parser.add_argument(
+            "--skip-addresses",
+            action="store_true",
+            help="Skip address synchronization",
+        )
+        parser.add_argument(
+            "--force-update",
+            action="store_true",
+            help="Update records even if not modified",
+        )
+        parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Enable debug output",
+        )
+
+    def handle(self, *args, **options):
+        """Execute the command."""
+        # Set up logging
+        if options["debug"]:
+            logger.setLevel(logging.DEBUG)
+            
+        self.stdout.write("Starting customer sync process")
+        
+        try:
+            # Load configuration
+            config_path = (
+                Path(__file__).resolve().parent.parent.parent /
+                'config' / 'customers_sync.yaml'
+            )
+            self.stdout.write(f"Loading config from: {config_path}")
+            
+            with open(config_path) as f:
+                config = yaml.safe_load(f)
+                
+            # Set up query parameters
+            query_params = {}
+            
+            # Filter by days if specified
+            if options["days"]:
+                days_ago = timezone.now() - timedelta(days=options["days"])
+                query_params["last_modified"] = {
+                    "$gt": days_ago.isoformat()
+                }
+                
+            # Filter by customer number if specified
+            if options["customer_number"]:
+                query_params["KundenNr"] = options["customer_number"]
+                
+            # Set batch size
+            batch_size = options["batch_size"]
+            
+            # Sync customers if not skipped
+            if not options["skip_customers"]:
+                self.stdout.write("\nStarting customer sync...")
+                customer_result = self._sync_customers(
+                    config,
+                    batch_size,
+                    query_params,
+                    options["force_update"],
+                )
+                
+                # Print customer sync results
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"\nCustomer sync completed:"
+                        f"\n- Created: {customer_result.created}"
+                        f"\n- Updated: {customer_result.updated}"
+                        f"\n- Skipped: {customer_result.skipped}"
+                        f"\n- Errors: {customer_result.errors}"
+                    )
+                )
+
+                if customer_result.error_details:
+                    self.stdout.write(
+                        self.style.WARNING("\nCustomer sync errors:")
+                    )
+                    for error in customer_result.error_details:
+                        self.stdout.write(f"- {error['error']}")
+
+            # Sync addresses if not skipped
+            if not options["skip_addresses"]:
+                self.stdout.write("\nStarting address sync...")
+                address_result = self._sync_addresses(
+                    config,
+                    batch_size,
+                    query_params,
+                    options["force_update"],
+                )
+                
+                # Print address sync results
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"\nAddress sync completed:"
+                        f"\n- Created: {address_result.created}"
+                        f"\n- Updated: {address_result.updated}"
+                        f"\n- Skipped: {address_result.skipped}"
+                        f"\n- Errors: {address_result.errors}"
+                    )
+                )
+
+                if address_result.error_details:
+                    self.stdout.write(
+                        self.style.WARNING("\nAddress sync errors:")
+                    )
+                    for error in address_result.error_details:
+                        self.stdout.write(f"- {error['error']}")
+
+        except Exception as e:
+            self.stdout.write(
+                self.style.ERROR(f"\nSync failed: {e}")
+            )
+            raise
+
+    def _sync_customers(
+        self,
+        config: Dict[str, Any],
+        batch_size: int,
+        query_params: Dict[str, Any],
+        force_update: bool,
+    ) -> LoadResult:
+        """Run customer sync pipeline.
+        
+        Args:
+            config: Configuration dictionary
+            batch_size: Number of records per batch
+            query_params: Query parameters for filtering
+            force_update: Whether to update unmodified records
+            
+        Returns:
+            LoadResult containing sync statistics
+        """
+        # Get customer configuration
+        customer_config = {
+            'source': config['source'],
+            'transformation': config['transformation'],
+            'target': config['target']
+        }
+        
+        # Set up pipeline components
+        extractor = LegacyAPIExtractor(customer_config['source'])
+        transformer = CustomerTransformer(customer_config['transformation'])
+        loader = CustomerLoader(customer_config['target'])
+
+        # Create and run pipeline
+        pipeline = SyncPipeline(
+            extractor=extractor,
+            transformer=transformer,
+            loader=loader,
+        )
+        
+        result = pipeline.run(
+            batch_size=batch_size,
+            query_params=query_params,
+            update_existing=force_update,
+        )
+        
+        return LoadResult(
+            created=result.get('created', 0),
+            updated=result.get('updated', 0),
+            skipped=result.get('skipped', 0),
+            errors=result.get('errors', 0),
+            error_details=result.get('error_details', [])
+        )
+
+    def _sync_addresses(
+        self,
+        config: Dict[str, Any],
+        batch_size: int,
+        query_params: Dict[str, Any],
+        force_update: bool,
+    ) -> LoadResult:
+        """Run address sync pipeline.
+        
+        Args:
+            config: Configuration dictionary
+            batch_size: Number of records per batch
+            query_params: Query parameters for filtering
+            force_update: Whether to update unmodified records
+            
+        Returns:
+            LoadResult containing sync statistics
+        """
+        # Get address configuration
+        address_config = {
+            'source': config['addresses']['source'],
+            'transformation': config['addresses']['transformation'],
+            'target': config['addresses']['target']
+        }
+        
+        # Set up pipeline components
+        extractor = LegacyAPIExtractor(address_config['source'])
+        transformer = AddressTransformer(address_config['transformation'])
+        loader = AddressLoader(address_config['target'])
+
+        # Create and run pipeline
+        pipeline = SyncPipeline(
+            extractor=extractor,
+            transformer=transformer,
+            loader=loader,
+        )
+        
+        result = pipeline.run(
+            batch_size=batch_size,
+            query_params=query_params,
+            update_existing=force_update,
+        )
+        
+        return LoadResult(
+            created=result.get('created', 0),
+            updated=result.get('updated', 0),
+            skipped=result.get('skipped', 0),
+            errors=result.get('errors', 0),
+            error_details=result.get('error_details', [])
+        ) 
