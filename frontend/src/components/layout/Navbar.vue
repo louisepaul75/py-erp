@@ -41,10 +41,10 @@
                         </v-list-item-title>
                     </v-list-item>
                     
-                    <v-list-item v-if="authStore.isAdmin" href="/admin/" target="_blank">
+                    <v-list-item to="/settings">
                         <v-list-item-title>
                             <v-icon class="mr-2">mdi-cog</v-icon>
-                            Admin
+                            Settings
                         </v-list-item-title>
                     </v-list-item>
                     
