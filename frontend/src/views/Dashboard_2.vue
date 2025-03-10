@@ -60,37 +60,6 @@
       </v-list>
     </v-navigation-drawer>
 
-    <!-- App Bar -->
-    <v-app-bar flat class="border-b">
-      <template v-if="!drawer">
-        <v-app-bar-nav-icon @click="drawer = true"></v-app-bar-nav-icon>
-      </template>
-      <v-app-bar-title class="text-body-1 font-weight-medium">
-        <v-icon icon="mdi-package-variant" class="mr-2"></v-icon>
-        ERP System
-      </v-app-bar-title>
-
-      <v-spacer></v-spacer>
-
-      <v-btn variant="text" class="text-none text-body-2">
-        <v-icon icon="mdi-earth" class="mr-2"></v-icon>
-        Deutsch
-      </v-btn>
-
-      <v-btn icon class="mx-2">
-        <v-badge dot color="error">
-          <v-icon>mdi-bell</v-icon>
-        </v-badge>
-      </v-btn>
-
-      <v-btn variant="text" class="text-none">
-        <v-avatar size="32" class="mr-2">
-          <v-img src="https://via.placeholder.com/32" alt="Avatar"></v-img>
-        </v-avatar>
-        <span class="text-body-2 d-none d-sm-block">Max Mustermann</span>
-      </v-btn>
-    </v-app-bar>
-
     <!-- Main Content -->
     <v-main class="bg-grey-lighten-4">
       <v-container class="py-4">

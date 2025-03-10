@@ -63,6 +63,41 @@
                             ></v-switch>
                         </v-list-item-title>
                     </v-list-item>
+
+                    <!-- Language Selection -->
+                    <v-list-item @click="toggleLanguageMenu">
+                        <v-list-item-title class="d-flex align-center">
+                            <v-icon class="mr-2">mdi-translate</v-icon>
+                            Language
+                            <v-menu
+                                v-model="showLanguageMenu"
+                                :close-on-content-click="true"
+                                location="end"
+                            >
+                                <template v-slot:activator="{ props }">
+                                    <v-btn
+                                        variant="text"
+                                        v-bind="props"
+                                        class="ml-auto text-none"
+                                        size="small"
+                                    >
+                                        {{ currentLanguage }}
+                                        <v-icon end>mdi-chevron-down</v-icon>
+                                    </v-btn>
+                                </template>
+                                <v-list>
+                                    <v-list-item
+                                        v-for="lang in languages"
+                                        :key="lang.code"
+                                        :value="lang.code"
+                                        @click="changeLanguage(lang.code)"
+                                    >
+                                        <v-list-item-title>{{ lang.name }}</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
+                        </v-list-item-title>
+                    </v-list-item>
                     
                     <v-divider></v-divider>
                     
@@ -149,6 +184,28 @@ import { ref } from 'vue';
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
 const drawer = ref(false);
+const showLanguageMenu = ref(false);
+const currentLanguage = ref('English');
+
+const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'de', name: 'Deutsch' },
+    { code: 'es', name: 'Español' },
+    { code: 'fr', name: 'Français' }
+];
+
+const toggleLanguageMenu = () => {
+    showLanguageMenu.value = !showLanguageMenu.value;
+};
+
+const changeLanguage = (langCode: string) => {
+    const selectedLang = languages.find(lang => lang.code === langCode);
+    if (selectedLang) {
+        currentLanguage.value = selectedLang.name;
+        // Here you would typically call your i18n system to change the language
+        // For example: i18n.locale = langCode;
+    }
+};
 
 const navItems = [
     { title: 'Dashboard', to: '/' },

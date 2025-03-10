@@ -56,7 +56,7 @@
       <!-- Host Resources Section -->
       <div class="host-resources-section">
         <h2>Host Resources</h2>
-        <div class="resource-card">
+        <v-card class="resource-card">
           <div class="resource-card-header">
             <v-icon icon="mdi-server" class="mr-2"></v-icon>
             System Health
@@ -103,13 +103,17 @@
             </div>
           </div>
           <div class="resource-actions">
-            <button @click="refreshHostResources" class="refresh-resources-btn" :disabled="hostResources.loading">
-              <v-icon v-if="!hostResources.loading" icon="mdi-refresh" class="mr-1"></v-icon>
-              <span v-else class="loading-spinner-small"></span>
+            <v-btn
+              @click="refreshHostResources"
+              :loading="hostResources.loading"
+              variant="tonal"
+              size="small"
+              prepend-icon="mdi-refresh"
+            >
               Refresh
-            </button>
+            </v-btn>
           </div>
-        </div>
+        </v-card>
       </div>
 
       <!-- Connection Status Section -->
@@ -118,27 +122,31 @@
         <div v-if="Object.keys(filteredHealthResults || {}).length === 0" class="no-status">
           No connection status data available
         </div>
-        <div v-if="filteredHealthResults && Object.keys(filteredHealthResults).length > 0" class="status-cards">
-          <div v-for="(result, componentKey) in filteredHealthResults" :key="componentKey"
-               :class="['status-card', result.status]">
-            <div class="status-card-header">
-              <div class="component-name">
+        <div v-if="filteredHealthResults && Object.keys(filteredHealthResults).length > 0" class="connection-status">
+          <v-card
+            v-for="(result, componentKey) in filteredHealthResults"
+            :key="componentKey"
+            :class="['connection-card', result.status]"
+            variant="flat"
+          >
+            <v-card-item class="connection-card-header">
+              <div class="connection-card-title">
                 {{ getComponentDisplayName(componentKey) }}
               </div>
               <span :class="['status-indicator', result.status]"></span>
-            </div>
-            <div class="status-details">
+            </v-card-item>
+            <v-card-text class="connection-card-body">
               {{ result.details }}
-            </div>
-            <div class="status-meta">
+            </v-card-text>
+            <v-card-text class="connection-card-footer">
               <div v-if="result.response_time !== undefined">
                 Response Time: {{ (Number(result.response_time) || 0).toFixed(2) }} ms
               </div>
               <div v-if="result.timestamp">
                 {{ formatTimestamp(result.timestamp) }}
               </div>
-            </div>
-          </div>
+            </v-card-text>
+          </v-card>
         </div>
       </div>
 
@@ -751,9 +759,9 @@ export default {
 }
 
 .health-container {
-  background-color: #fff;
+  background-color: rgb(var(--v-theme-surface));
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(var(--v-shadow-key-umbra-opacity));
   padding: 20px;
 }
 
@@ -763,18 +771,18 @@ export default {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgb(var(--v-border-opacity));
 }
 
 .header h1 {
   margin: 0;
   font-size: 24px;
-  color: #333;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .refresh-button button {
-  background-color: #f8f9fa;
-  border: 1px solid #ddd;
+  background-color: rgb(var(--v-theme-surface-variant));
+  border: 1px solid rgb(var(--v-border-opacity));
   border-radius: 4px;
   padding: 8px 16px;
   cursor: pointer;
@@ -785,7 +793,7 @@ export default {
 }
 
 .refresh-button button:hover {
-  background-color: #e9ecef;
+  background-color: rgb(var(--v-theme-surface-variant-darken));
 }
 
 .refresh-button button:disabled {
@@ -835,8 +843,8 @@ export default {
   padding: 20px;
   border-radius: 8px;
   margin-bottom: 20px;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background-color: rgb(var(--v-theme-surface-variant));
+  border: 1px solid rgb(var(--v-border-opacity));
   transition: all 0.3s ease;
 }
 
@@ -869,8 +877,8 @@ export default {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: rgb(var(--v-theme-surface));
+  box-shadow: 0 2px 4px rgba(var(--v-shadow-key-umbra-opacity));
 }
 
 .overall-status.success .status-icon {
@@ -901,10 +909,10 @@ export default {
 
 /* Database Visualization Styles */
 .db-visualization {
-  background-color: white;
+  background-color: rgb(var(--v-theme-surface));
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(var(--v-shadow-key-umbra-opacity));
   margin-bottom: 20px;
 }
 
@@ -912,7 +920,7 @@ export default {
   margin-top: 0;
   margin-bottom: 15px;
   font-size: 18px;
-  color: #333;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .db-canvas {
@@ -925,7 +933,7 @@ export default {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #666;
+  color: rgb(var(--v-theme-on-surface-variant));
   margin-top: 10px;
 }
 
@@ -940,122 +948,78 @@ export default {
   border-bottom: 1px solid #eee;
 }
 
-.status-cards {
+.connection-status {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
+  margin-top: 20px;
 }
 
-.status-card {
-  border-radius: 6px;
+.connection-card {
+  background-color: rgb(var(--v-theme-surface));
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(var(--v-shadow-key-umbra-opacity));
 }
 
-.status-card.success {
-  border-top: 4px solid #28a745;
-}
-
-.status-card.warning {
-  border-top: 4px solid #ffc107;
-}
-
-.status-card.error {
-  border-top: 4px solid #dc3545;
-}
-
-.status-card.unknown {
-  border-top: 4px solid #6c757d;
-}
-
-.status-card-header {
+.connection-card-header {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.connection-card-title {
+  color: rgb(var(--v-theme-on-surface));
+  font-weight: 500;
+}
+
+.connection-card-body {
   padding: 15px;
-  background-color: #f8f9fa;
+  color: rgb(var(--v-theme-on-surface));
 }
 
-.component-name {
-  font-weight: bold;
-  font-size: 16px;
+.connection-card-footer {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 10px 15px;
+  font-size: 12px;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
+/* Status Indicators */
 .status-indicator {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   display: inline-block;
 }
 
 .status-indicator.success {
-  background-color: #28a745;
+  background-color: rgb(var(--v-theme-success));
 }
 
 .status-indicator.warning {
-  background-color: #ffc107;
+  background-color: rgb(var(--v-theme-warning));
 }
 
 .status-indicator.error {
-  background-color: #dc3545;
+  background-color: rgb(var(--v-theme-error));
 }
 
 .status-indicator.unknown {
-  background-color: #6c757d;
-}
-
-.status-details {
-  padding: 15px;
-  min-height: 80px;
-  background-color: #fff;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.status-meta {
-  padding: 10px 15px;
-  background-color: #f8f9fa;
-  font-size: 12px;
-  color: #6c757d;
-  display: flex;
-  justify-content: space-between;
-}
-
-.info-card {
-  background-color: #fff;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-}
-
-.info-card table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.info-card td {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.info-card td:first-child {
-  font-weight: bold;
-  width: 150px;
-}
-
-.info-card tr:last-child td {
-  border-bottom: none;
+  background-color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .no-status {
-  background-color: #f8f9fa;
+  background-color: rgb(var(--v-theme-surface-variant));
   border-radius: 6px;
   padding: 20px;
   text-align: center;
-  color: #6c757d;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-style: italic;
   margin-bottom: 20px;
-  border: 1px dashed #dee2e6;
+  border: 1px dashed rgb(var(--v-border-opacity));
 }
 
 .db-stats-toggle {
@@ -1082,21 +1046,21 @@ export default {
 }
 
 .stat-box {
-  background-color: #f8f9fa;
+  background-color: rgb(var(--v-theme-surface-variant));
   border-radius: 6px;
   padding: 12px;
-  border: 1px solid #e9ecef;
+  border: 1px solid rgb(var(--v-border-opacity));
 }
 
 .stat-box h4 {
   margin: 0 0 8px 0;
-  color: #333;
+  color: rgb(var(--v-theme-on-surface));
   font-size: 14px;
 }
 
 .stat-numbers {
   font-size: 13px;
-  color: #666;
+  color: rgb(var(--v-theme-on-surface-variant));
   line-height: 1.4;
 }
 
@@ -1184,7 +1148,7 @@ export default {
     margin-top: 10px;
   }
 
-  .status-cards {
+  .connection-status {
     grid-template-columns: 1fr;
   }
   
@@ -1212,8 +1176,8 @@ export default {
 }
 
 .resource-card {
-  background-color: #1e1e1e;
-  color: #fff;
+  background-color: rgb(var(--v-theme-surface));
+  color: rgb(var(--v-theme-on-surface));
   border-radius: 8px;
   padding: 20px;
   margin-top: 15px;
@@ -1230,7 +1194,7 @@ export default {
 .last-updated {
   margin-left: auto;
   font-size: 12px;
-  color: #aaa;
+  color: rgb(var(--v-theme-on-surface-variant));
   font-weight: normal;
 }
 
@@ -1248,7 +1212,7 @@ export default {
 
 .metric-label {
   font-size: 14px;
-  color: #ccc;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .metric-value {
@@ -1269,9 +1233,9 @@ export default {
 }
 
 .refresh-resources-btn {
-  background-color: transparent;
-  color: #ccc;
-  border: 1px solid #444;
+  background-color: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface));
+  border: 1px solid rgb(var(--v-border-opacity));
   border-radius: 4px;
   padding: 6px 12px;
   font-size: 14px;
@@ -1282,8 +1246,8 @@ export default {
 }
 
 .refresh-resources-btn:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background-color: rgb(var(--v-theme-surface-variant-darken));
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .refresh-resources-btn:disabled {
@@ -1295,10 +1259,98 @@ export default {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #fff;
+  border: 2px solid rgba(var(--v-theme-on-surface), 0.1);
+  border-top-color: rgb(var(--v-theme-on-surface));
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-right: 8px;
+}
+
+/* Connection Status Cards */
+.connection-section {
+  margin-top: 30px;
+}
+
+.connection-section h2 {
+  color: rgb(var(--v-theme-on-surface));
+  border-bottom: 1px solid rgb(var(--v-border-opacity));
+}
+
+.connection-status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.connection-card {
+  border: 1px solid rgb(var(--v-border-opacity));
+}
+
+.connection-card.success {
+  border-top: 4px solid rgb(var(--v-theme-success));
+}
+
+.connection-card.warning {
+  border-top: 4px solid rgb(var(--v-theme-warning));
+}
+
+.connection-card.error {
+  border-top: 4px solid rgb(var(--v-theme-error));
+}
+
+.connection-card.unknown {
+  border-top: 4px solid rgb(var(--v-theme-on-surface-variant));
+}
+
+.connection-card-header {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 15px;
+}
+
+.connection-card-title {
+  color: rgb(var(--v-theme-on-surface));
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.connection-card-body {
+  padding: 15px;
+  color: rgb(var(--v-theme-on-surface));
+  background-color: rgb(var(--v-theme-surface));
+  min-height: 80px;
+}
+
+.connection-card-footer {
+  background-color: rgb(var(--v-theme-surface-variant));
+  padding: 10px 15px;
+  font-size: 12px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Status Indicators */
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.success {
+  background-color: rgb(var(--v-theme-success));
+}
+
+.status-indicator.warning {
+  background-color: rgb(var(--v-theme-warning));
+}
+
+.status-indicator.error {
+  background-color: rgb(var(--v-theme-error));
+}
+
+.status-indicator.unknown {
+  background-color: rgb(var(--v-theme-on-surface-variant));
 }
 </style>
