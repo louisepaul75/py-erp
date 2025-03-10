@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <div class="dashboard">
     <!-- Navigation Drawer -->
     <v-navigation-drawer
       v-model="drawer"
@@ -204,11 +204,36 @@
         </v-row>
       </v-container>
     </v-main>
-  </v-app>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import { 
+  VHover, 
+  VIcon, 
+  VBtn, 
+  VList, 
+  VListItem, 
+  VDivider, 
+  VNavigationDrawer,
+  VAppBar, 
+  VAppBarNavIcon, 
+  VAppBarTitle, 
+  VSpacer, 
+  VBadge, 
+  VAvatar, 
+  VImg,
+  VMain, 
+  VContainer, 
+  VCard, 
+  VCardText, 
+  VTextField, 
+  VTable, 
+  VChip,
+  VRow, 
+  VCol
+} from 'vuetify/components'
 
 // UI state
 const drawer = ref(true)
