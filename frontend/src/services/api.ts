@@ -242,6 +242,21 @@ export const salesApi = {
   // Get all customers
   getCustomers: async (params = {}) => {
     return api.get('/sales/customers/', { params });
+  },
+
+  // Get customer details by ID
+  getCustomer: async (id: number) => {
+    return api.get(`/sales/customers/${id}/`);
+  },
+
+  // Update an existing customer
+  updateCustomer: async (id: number, data: any) => {
+    return api.put(`/sales/customers/${id}/`, data);
+  },
+
+  // Get orders for a specific customer
+  getCustomerOrders: async (customerId: number, params = {}) => {
+    return api.get(`/sales/customers/${customerId}/orders/`, { params });
   }
 };
 

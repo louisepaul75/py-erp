@@ -1,150 +1,171 @@
 <template>
   <div class="sales-list">
-    <h1 class="text-h4 mb-4">Sales Orders</h1>
+    <h1 class="text-h4 mb-4">Sales</h1>
 
-    <!-- Search and filter form -->
-    <v-card class="mb-6">
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="4">
-            <v-text-field
-              v-model="searchQuery"
-              label="Search orders..."
-              variant="outlined"
-              density="comfortable"
-              prepend-inner-icon="mdi-magnify"
-              @input="debounceSearch"
-              hide-details
-            ></v-text-field>
-          </v-col>
-          
-          <v-col cols="12" md="3">
-            <v-select
-              v-model="selectedStatus"
-              :items="statusOptions"
-              label="Status"
-              variant="outlined"
-              density="comfortable"
-              @update:model-value="loadSalesOrders"
-              hide-details
-            ></v-select>
-          </v-col>
-          
-          <v-col cols="12" md="2">
-            <v-text-field
-              v-model="dateFrom"
-              label="From"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              @update:model-value="loadSalesOrders"
-              hide-details
-            ></v-text-field>
-          </v-col>
-          
-          <v-col cols="12" md="2">
-            <v-text-field
-              v-model="dateTo"
-              label="To"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              @update:model-value="loadSalesOrders"
-              hide-details
-            ></v-text-field>
-          </v-col>
-        </v-row>
-      </v-card-text>
+    <!-- Tabs for different sections -->
+    <v-card flat class="mb-6">
+      <v-tabs
+        v-model="activeTab"
+        bg-color="white"
+        color="primary"
+        align-tabs="start"
+      >
+        <v-tab value="orders">Sales Orders</v-tab>
+        <v-tab value="customers">Kundenübersicht</v-tab>
+      </v-tabs>
     </v-card>
 
-    <!-- Loading indicator -->
-    <div v-if="loading" class="d-flex justify-center my-6">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="64"
-      ></v-progress-circular>
+    <!-- Sales Orders Tab Content -->
+    <div v-if="activeTab === 'orders'">
+      <!-- Search and filter form -->
+      <v-card class="mb-6">
+        <v-card-text>
+          <v-row>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="searchQuery"
+                label="Search orders..."
+                variant="outlined"
+                density="comfortable"
+                prepend-inner-icon="mdi-magnify"
+                @input="debounceSearch"
+                hide-details
+              ></v-text-field>
+            </v-col>
+            
+            <v-col cols="12" md="3">
+              <v-select
+                v-model="selectedStatus"
+                :items="statusOptions"
+                label="Status"
+                variant="outlined"
+                density="comfortable"
+                @update:model-value="loadSalesOrders"
+                hide-details
+              ></v-select>
+            </v-col>
+            
+            <v-col cols="12" md="2">
+              <v-text-field
+                v-model="dateFrom"
+                label="From"
+                type="date"
+                variant="outlined"
+                density="comfortable"
+                @update:model-value="loadSalesOrders"
+                hide-details
+              ></v-text-field>
+            </v-col>
+            
+            <v-col cols="12" md="2">
+              <v-text-field
+                v-model="dateTo"
+                label="To"
+                type="date"
+                variant="outlined"
+                density="comfortable"
+                @update:model-value="loadSalesOrders"
+                hide-details
+              ></v-text-field>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+
+      <!-- Loading indicator -->
+      <div v-if="loading" class="d-flex justify-center my-6">
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          size="64"
+        ></v-progress-circular>
+      </div>
+
+      <!-- Error message -->
+      <v-alert
+        v-else-if="error"
+        type="error"
+        variant="tonal"
+        class="mb-6"
+      >
+        {{ error }}
+      </v-alert>
+
+      <!-- Sales orders table -->
+      <v-card v-else>
+        <v-data-table
+          :headers="headers"
+          :items="salesOrders"
+          :items-per-page="pageSize"
+          class="elevation-1"
+          :loading="loading"
+        >
+          <template v-slot:item.order_date="{ item }">
+            {{ formatDate(item.order_date) }}
+          </template>
+          
+          <template v-slot:item.total_amount="{ item }">
+            {{ formatCurrency(item.total_amount) }}
+          </template>
+          
+          <template v-slot:item.status="{ item }">
+            <v-chip
+              :color="getStatusColor(item.status)"
+              text-color="white"
+              size="small"
+            >
+              {{ capitalizeFirst(item.status) }}
+            </v-chip>
+          </template>
+          
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              size="small"
+              color="primary"
+              variant="text"
+              @click="viewOrderDetails(item.id)"
+            >
+              View
+            </v-btn>
+            
+            <v-btn
+              v-if="item.status === 'draft'"
+              size="small"
+              color="secondary"
+              variant="text"
+              @click="editOrder(item.id)"
+            >
+              Edit
+            </v-btn>
+          </template>
+        </v-data-table>
+        
+        <!-- Pagination -->
+        <v-card-actions v-if="salesOrders.length > 0" class="justify-center">
+          <v-pagination
+            v-model="currentPage"
+            :length="totalPages"
+            @update:model-value="changePage"
+            rounded="circle"
+          ></v-pagination>
+        </v-card-actions>
+      </v-card>
+
+      <!-- No results message -->
+      <v-alert
+        v-if="salesOrders.length === 0 && !loading && !error"
+        type="info"
+        variant="tonal"
+        class="mt-6"
+      >
+        No sales orders found matching your criteria.
+      </v-alert>
     </div>
 
-    <!-- Error message -->
-    <v-alert
-      v-else-if="error"
-      type="error"
-      variant="tonal"
-      class="mb-6"
-    >
-      {{ error }}
-    </v-alert>
-
-    <!-- Sales orders table -->
-    <v-card v-else>
-      <v-data-table
-        :headers="headers"
-        :items="salesOrders"
-        :items-per-page="pageSize"
-        class="elevation-1"
-        :loading="loading"
-      >
-        <template v-slot:item.order_date="{ item }">
-          {{ formatDate(item.order_date) }}
-        </template>
-        
-        <template v-slot:item.total_amount="{ item }">
-          {{ formatCurrency(item.total_amount) }}
-        </template>
-        
-        <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)"
-            text-color="white"
-            size="small"
-          >
-            {{ capitalizeFirst(item.status) }}
-          </v-chip>
-        </template>
-        
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            size="small"
-            color="primary"
-            variant="text"
-            @click="viewOrderDetails(item.id)"
-          >
-            View
-          </v-btn>
-          
-          <v-btn
-            v-if="item.status === 'draft'"
-            size="small"
-            color="secondary"
-            variant="text"
-            @click="editOrder(item.id)"
-          >
-            Edit
-          </v-btn>
-        </template>
-      </v-data-table>
-      
-      <!-- Pagination -->
-      <v-card-actions v-if="salesOrders.length > 0" class="justify-center">
-        <v-pagination
-          v-model="currentPage"
-          :length="totalPages"
-          @update:model-value="changePage"
-          rounded="circle"
-        ></v-pagination>
-      </v-card-actions>
-    </v-card>
-
-    <!-- No results message -->
-    <v-alert
-      v-if="salesOrders.length === 0 && !loading && !error"
-      type="info"
-      variant="tonal"
-      class="mt-6"
-    >
-      No sales orders found matching your criteria.
-    </v-alert>
+    <!-- Customer Overview Tab Content -->
+    <div v-if="activeTab === 'customers'">
+      <CustomerSearch />
+    </div>
   </div>
 </template>
 
@@ -152,6 +173,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { salesApi } from '@/services/api';
+import CustomerSearch from '../customers/customer_search.vue';
 
 // Define types
 interface SalesOrder {
@@ -165,6 +187,9 @@ interface SalesOrder {
 
 // Router
 const router = useRouter();
+
+// Active tab
+const activeTab = ref('orders');
 
 // Table headers
 const headers = [

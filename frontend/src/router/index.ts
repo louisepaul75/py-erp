@@ -103,6 +103,13 @@ const routes: Array<RouteRecordRaw> = [
     props: true,
     meta: { requiresAuth: true }
   },
+  {
+    path: '/sales/customer/:id',
+    name: 'CustomerDetail',
+    component: () => import('../views/customers/CustomerDetail.vue'),
+    props: true,
+    meta: { requiresAuth: true }
+  },
 
   // Catch-all route for 404
   {
