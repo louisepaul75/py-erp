@@ -13,6 +13,18 @@ export async function authGuard(
   const authStore = useAuthStore();
 
   try {
+    // If auth store is loading, wait for it to finish
+    if (authStore.isLoading) {
+      await new Promise<void>((resolve) => {
+        const checkLoading = setInterval(() => {
+          if (!authStore.isLoading) {
+            clearInterval(checkLoading);
+            resolve();
+          }
+        }, 100);
+      });
+    }
+
     // Wait for auth initialization if not already initialized
     if (!authStore.initialized) {
       await authStore.init();
@@ -20,8 +32,16 @@ export async function authGuard(
 
     // If user is authenticated, allow access
     if (authStore.isAuthenticated) {
-      next();
-      return;
+      // If we're already on the login page and authenticated, redirect to home
+      if (to.name === 'Login') {
+        return next({ name: 'Home' });
+      }
+      return next();
+    }
+
+    // If not authenticated and on login page, allow access
+    if (to.name === 'Login') {
+      return next();
     }
 
     // If not authenticated, redirect to login

@@ -1,74 +1,10 @@
 <template>
-  <div class="sales-list">
-    <h1 class="text-h4 mb-4">Sales Orders</h1>
+  <div>
+    <h1 class="text-h4 font-weight-bold mb-6">Sales Orders</h1>
 
-    <!-- Search and filter form -->
-    <v-card class="mb-6">
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="4">
-            <v-text-field
-              v-model="searchQuery"
-              label="Search orders..."
-              variant="outlined"
-              density="comfortable"
-              prepend-inner-icon="mdi-magnify"
-              @input="debounceSearch"
-              hide-details
-            ></v-text-field>
-          </v-col>
-          
-          <v-col cols="12" md="3">
-            <v-select
-              v-model="selectedStatus"
-              :items="statusOptions"
-              label="Status"
-              variant="outlined"
-              density="comfortable"
-              @update:model-value="loadSalesOrders"
-              hide-details
-            ></v-select>
-          </v-col>
-          
-          <v-col cols="12" md="2">
-            <v-text-field
-              v-model="dateFrom"
-              label="From"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              @update:model-value="loadSalesOrders"
-              hide-details
-            ></v-text-field>
-          </v-col>
-          
-          <v-col cols="12" md="2">
-            <v-text-field
-              v-model="dateTo"
-              label="To"
-              type="date"
-              variant="outlined"
-              density="comfortable"
-              @update:model-value="loadSalesOrders"
-              hide-details
-            ></v-text-field>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
-
-    <!-- Loading indicator -->
-    <div v-if="loading" class="d-flex justify-center my-6">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="64"
-      ></v-progress-circular>
-    </div>
-
-    <!-- Error message -->
+    <!-- Loading and Error States -->
     <v-alert
-      v-else-if="error"
+      v-if="error"
       type="error"
       variant="tonal"
       class="mb-6"
@@ -76,7 +12,14 @@
       {{ error }}
     </v-alert>
 
-    <!-- Sales orders table -->
+    <v-progress-linear
+      v-if="loading"
+      indeterminate
+      color="primary"
+      class="mb-6"
+    ></v-progress-linear>
+
+    <!-- Sales Orders Table -->
     <v-card v-else>
       <v-data-table
         :headers="headers"
@@ -149,19 +92,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { salesApi } from '@/services/api';
-
-// Define types
-interface SalesOrder {
-  id: number;
-  order_number: string;
-  order_date: string;
-  customer_name: string;
-  total_amount: number;
-  status: 'draft' | 'confirmed' | 'invoiced' | 'completed' | 'canceled';
-}
 
 // Router
 const router = useRouter();
@@ -187,13 +120,9 @@ const statusOptions = [
 ];
 
 // State
-const salesOrders = ref<SalesOrder[]>([]);
+const salesOrders = ref<any[]>([]);
 const loading = ref(true);
 const error = ref('');
-const searchQuery = ref('');
-const selectedStatus = ref('');
-const dateFrom = ref('');
-const dateTo = ref('');
 const currentPage = ref(1);
 const totalOrders = ref(0);
 const pageSize = ref(10);
@@ -201,34 +130,16 @@ const pageSize = ref(10);
 // Computed
 const totalPages = computed(() => Math.ceil(totalOrders.value / pageSize.value));
 
-// Search debounce
-let searchTimeout: number | null = null;
-
-const debounceSearch = () => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1; // Reset to first page on new search
-    loadSalesOrders();
-  }, 300) as unknown as number;
-};
-
-// Load sales orders with current filters
+// Load sales orders
 const loadSalesOrders = async () => {
   loading.value = true;
   error.value = '';
 
   try {
-    const params = {
+    const response = await salesApi.getSalesOrders({
       page: currentPage.value,
-      q: searchQuery.value,
-      status: selectedStatus.value,
-      date_from: dateFrom.value,
-      date_to: dateTo.value,
-    };
-
-    const response = await salesApi.getSalesOrders(params);
+      page_size: pageSize.value
+    });
     salesOrders.value = response.data.results;
     totalOrders.value = response.data.count;
   } catch (err) {
@@ -239,23 +150,38 @@ const loadSalesOrders = async () => {
   }
 };
 
-// Change page
-const changePage = (page: number) => {
-  currentPage.value = page;
+// Navigation
+const viewOrderDetails = (orderId: number) => {
+  router.push({ name: 'SalesOrderDetail', params: { id: orderId } });
+};
+
+const editOrder = (orderId: number) => {
+  router.push({ name: 'SalesOrderEdit', params: { id: orderId } });
+};
+
+// Page change handler
+const changePage = () => {
   loadSalesOrders();
 };
 
-// View order details
-const viewOrderDetails = (id: number) => {
-  router.push({ name: 'SalesOrderDetail', params: { id } });
+// Utility functions
+const formatDate = (date: string) => {
+  return new Intl.DateTimeFormat('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(new Date(date));
 };
 
-// Edit order
-const editOrder = (id: number) => {
-  router.push({ name: 'SalesOrderEdit', params: { id } });
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 };
 
-// Get status color
 const getStatusColor = (status: string): string => {
   switch (status) {
     case 'draft': return 'grey';
@@ -267,25 +193,6 @@ const getStatusColor = (status: string): string => {
   }
 };
 
-// Format date
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }).format(date);
-};
-
-// Format currency
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(amount);
-};
-
-// Capitalize first letter
 const capitalizeFirst = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
@@ -297,7 +204,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.sales-list {
-  padding: 20px 0;
+.v-data-table {
+  background: white !important;
 }
-</style>
+
+.v-data-table-header th {
+  white-space: nowrap;
+  font-weight: 600 !important;
+}
+
+.v-data-table .v-table__wrapper > table {
+  padding: 0.5rem;
+}
+</style> 

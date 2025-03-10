@@ -196,6 +196,11 @@ export const productApi = {
     return api.get(`/products/${id}/`);
   },
 
+  // Update product by ID
+  updateProduct: async (id: number, data: any) => {
+    return api.patch(`/api/products/${id}/`, data);
+  },
+
   // Get product variant details
   getVariant: async (id: number) => {
     return api.get(`/products/variant/${id}/`);
@@ -237,6 +242,39 @@ export const salesApi = {
   // Get all customers
   getCustomers: async (params = {}) => {
     return api.get('/sales/customers/', { params });
+  },
+
+  // Get customer details by ID
+  getCustomer: async (id: number) => {
+    return api.get(`/sales/customers/${id}/`);
+  },
+
+  // Update an existing customer
+  updateCustomer: async (id: number, data: any) => {
+    return api.put(`/sales/customers/${id}/`, data);
+  },
+
+  // Get orders for a specific customer
+  getCustomerOrders: async (customerId: number, params = {}) => {
+    return api.get(`/sales/customers/${customerId}/orders/`, { params });
+  },
+
+  // Delete a customer
+  deleteCustomer: async (id: number) => {
+    return api.delete(`/sales/customers/${id}/`);
+  }
+};
+
+// External API connection endpoints
+export const externalApiConnections = {
+  // Get all connection settings
+  getConnections: async () => {
+    return api.get('/external/connections/');
+  },
+
+  // Update a connection setting
+  updateConnection: async (connectionName: string, enabled: boolean) => {
+    return api.post(`/external/connections/${connectionName}/`, { enabled });
   }
 };
 

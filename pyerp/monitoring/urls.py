@@ -12,4 +12,9 @@ urlpatterns = [
     # API endpoints
     path("health-checks/", views.run_health_checks, name="health_checks"),
     path("db-stats/", views.get_db_statistics, name="db_statistics"),
+    path(
+        "host-resources/", 
+        views.get_host_resources_view, 
+        name="host_resources"
+    ),
 ]
