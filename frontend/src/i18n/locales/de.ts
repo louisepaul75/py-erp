@@ -20,14 +20,26 @@ export default {
     language: 'Sprache',
     lightMode: 'Heller Modus',
     darkMode: 'Dunkler Modus',
-    goToHome: 'Zur Startseite'
+    goToHome: 'Zur Startseite',
+    noResults: 'Keine Ergebnisse gefunden'
+  },
+  app: {
+    title: 'pyERP',
+    version: 'Version'
   },
   nav: {
-    dashboard: 'Startseite',
+    home: 'Startseite',
+    dashboard: 'Dashboard',
+    dashboard_2: 'Dashboard 2',
+    settings: 'Einstellungen',
+    profile: 'Profil',
+    logout: 'Abmelden',
+    login: 'Anmelden',
     products: 'Produkte',
     sales: 'Vertrieb',
     inventory: 'Lager',
-    production: 'Produktion'
+    production: 'Produktion',
+    test: 'Testseite'
   },
   languages: {
     english: 'English',
@@ -57,7 +69,10 @@ export default {
     email: 'E-Mail',
     firstName: 'Vorname',
     lastName: 'Nachname',
-    changePassword: 'Passwort ändern'
+    changePassword: 'Passwort ändern',
+    register: 'Registrieren',
+    forgotPassword: 'Passwort vergessen?',
+    rememberMe: 'Angemeldet bleiben'
   },
   dashboard: {
     overview: 'Übersicht',
