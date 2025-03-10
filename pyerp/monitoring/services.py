@@ -19,6 +19,7 @@ from django.db import OperationalError, connections
 from django.utils import timezone
 
 from pyerp.monitoring.models import HealthCheckResult
+from pyerp.external_api import connection_manager
 
 # Import the API clients from the new structure
 try:
@@ -108,12 +109,21 @@ def check_legacy_erp_connection():
     status = HealthCheckResult.STATUS_ERROR
     details = "Legacy ERP API connection is not available"
 
-    if not LEGACY_ERP_AVAILABLE:
+    # First check if the connection is enabled
+    if not connection_manager.is_connection_enabled("legacy_erp"):
+        status = HealthCheckResult.STATUS_WARNING
+        details = "Legacy ERP API connection is disabled"
+        logger.info(
+            "Legacy ERP health check: Connection is disabled"
+        )
+        response_time = 0
+    elif not LEGACY_ERP_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Legacy ERP API module is not available"
         logger.warning(
-            "Legacy ERP health check: Module not available",
+            "Legacy ERP health check: Module not available"
         )
+        response_time = 0
     else:
         try:
             # Create client and check connection
@@ -121,15 +131,14 @@ def check_legacy_erp_connection():
             client.check_connection()
             status = HealthCheckResult.STATUS_SUCCESS
             details = "Legacy ERP API connection is healthy"
+            response_time = (time.time() - start_time) * 1000
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Legacy ERP API error: {e!s}"
             logger.error(
-                f"Legacy ERP health check failed: {e!s}",
+                f"Legacy ERP health check failed: {e!s}"
             )
-
-    # Convert to milliseconds
-    response_time = (time.time() - start_time) * 1000
+            response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
     return {
@@ -152,19 +161,27 @@ def check_images_cms_connection():
     status = HealthCheckResult.STATUS_SUCCESS
     details = "Images CMS API connection is healthy"
 
-    if not IMAGES_CMS_AVAILABLE:
+    # First check if the connection is enabled
+    if not connection_manager.is_connection_enabled("images_cms"):
+        status = HealthCheckResult.STATUS_WARNING
+        details = "Images CMS API connection is disabled"
+        logger.info(
+            "Images CMS health check: Connection is disabled"
+        )
+        response_time = 0
+    elif not IMAGES_CMS_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Images CMS API module is not available"
         response_time = 0
         logger.warning(
-            "Images CMS health check: Module not available",
+            "Images CMS health check: Module not available"
         )
     else:
         try:
             # Log the API URL being used for debugging
             api_url = settings.IMAGE_API.get('BASE_URL')
             logger.debug(
-                f"Images CMS API URL from settings: {api_url}",
+                f"Images CMS API URL from settings: {api_url}"
             )
 
             # Create client and check connection
@@ -172,16 +189,15 @@ def check_images_cms_connection():
             client.check_connection()
             status = HealthCheckResult.STATUS_SUCCESS
             details = "Images CMS API connection is healthy"
+            response_time = (time.time() - start_time) * 1000
 
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Images CMS API error: {e!s}"
             logger.error(
-                f"Images CMS API health check failed: {e!s}",
+                f"Images CMS API health check failed: {e!s}"
             )
-
-    # Convert to milliseconds
-    response_time = (time.time() - start_time) * 1000
+            response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
     return {

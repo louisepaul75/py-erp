@@ -6,15 +6,12 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'Home',
-    component: () => import('../views/Home.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/dashboard'
   },
-
-  // Dashboard_2 route
   {
-    path: '/dashboard_2',
-    name: 'Dashboard_2',
-    component: () => import('../views/Dashboard_2.vue'),
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true }
   },
 
@@ -50,7 +47,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/auth/Settings.vue'),
     meta: { requiresAuth: true }
   },
-
+  
   // Product routes
   {
     path: '/products',

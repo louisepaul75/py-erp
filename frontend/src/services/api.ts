@@ -245,4 +245,17 @@ export const salesApi = {
   }
 };
 
+// External API connection endpoints
+export const externalApiConnections = {
+  // Get all connection settings
+  getConnections: async () => {
+    return api.get('/external/connections/');
+  },
+
+  // Update a connection setting
+  updateConnection: async (connectionName: string, enabled: boolean) => {
+    return api.post(`/external/connections/${connectionName}/`, { enabled });
+  }
+};
+
 export default api;

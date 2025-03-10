@@ -245,8 +245,7 @@ const changeLanguage = (langCode: string) => {
 };
 
 const navItems = [
-    { title: t('nav.dashboard'), to: '/' },
-    { title: t('nav.dashboard_2'), to: '/dashboard_2' },
+    { title: t('nav.dashboard'), to: '/dashboard' },
     { title: t('nav.products'), to: '/products' },
     { title: t('nav.sales'), to: '/sales' },
     { title: t('nav.inventory'), to: '/inventory' },

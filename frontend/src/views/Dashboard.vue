@@ -86,6 +86,31 @@
 
         <!-- Dashboard Tab Content -->
         <div v-if="activeTab === 'dashboard'">
+          <!-- Quick Access -->
+          <v-card class="mb-6" flat>
+            <div class="px-6 py-4 border-b">
+              <span class="text-h6 font-weight-medium">Schnellzugriff</span>
+            </div>
+            <v-card-text>
+              <v-row>
+                <v-col v-for="tile in menuTiles" :key="tile.title" cols="6" sm="4" md="3" lg="2">
+                  <v-hover v-slot="{ isHovering, props }">
+                    <v-card
+                      v-bind="props"
+                      :elevation="isHovering ? 2 : 0"
+                      class="pa-4 text-center transition-all duration-200"
+                      :class="{ 'bg-grey-lighten-4': isHovering }"
+                      @click="navigateTo(tile)"
+                    >
+                      <v-icon :icon="tile.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
+                      <div class="text-body-2">{{ tile.title }}</div>
+                    </v-card>
+                  </v-hover>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
           <!-- Recent Orders -->
           <v-card class="mb-6" flat>
             <div class="d-flex align-center px-6 py-4 border-b">
@@ -130,30 +155,6 @@
                 </tr>
               </tbody>
             </v-table>
-          </v-card>
-
-          <!-- Quick Access -->
-          <v-card class="mb-6" flat>
-            <div class="px-6 py-4 border-b">
-              <span class="text-h6 font-weight-medium">Schnellzugriff</span>
-            </div>
-            <v-card-text>
-              <v-row>
-                <v-col v-for="tile in menuTiles" :key="tile.title" cols="6" sm="4" md="3" lg="2">
-                  <v-hover v-slot="{ isHovering, props }">
-                    <v-card
-                      v-bind="props"
-                      :elevation="isHovering ? 2 : 0"
-                      class="pa-4 text-center transition-all duration-200"
-                      :class="{ 'bg-grey-lighten-4': isHovering }"
-                    >
-                      <v-icon :icon="tile.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
-                      <div class="text-body-2">{{ tile.title }}</div>
-                    </v-card>
-                  </v-hover>
-                </v-col>
-              </v-row>
-            </v-card-text>
           </v-card>
 
           <v-row>
@@ -235,6 +236,7 @@ import {
   VTab
 } from 'vuetify/components'
 import CustomerSearch from './customers/customer_search.vue'
+import { useRouter } from 'vue-router'
 
 // UI state
 const drawer = ref(true)
@@ -287,7 +289,8 @@ const menuTiles = [
   { title: 'Datenbank', icon: 'mdi-database' },
   { title: 'Statistiken', icon: 'mdi-chart-bar' },
   { title: 'Analysen', icon: 'mdi-chart-pie' },
-  { title: 'Kontakte', icon: 'mdi-account-plus' }
+  { title: 'Kontakte', icon: 'mdi-account-plus' },
+  { title: 'Admin Settings', icon: 'mdi-cog-outline', route: '/settings' }
 ]
 
 // Important links
@@ -330,6 +333,16 @@ const getStatusColor = (status) => {
     case 'In Bearbeitung': return 'info'
     case 'Versandt': return 'success'
     default: return 'grey'
+  }
+}
+
+// Import router
+const router = useRouter()
+
+// Navigation function
+const navigateTo = (tile) => {
+  if (tile.route) {
+    router.push(tile.route)
   }
 }
 </script>
