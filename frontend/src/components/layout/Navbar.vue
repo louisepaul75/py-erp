@@ -1,6 +1,6 @@
 <template>
     <v-app-bar :color="themeStore.isDark ? 'surface' : 'white'" elevation="1">
-        <router-link to="/">
+        <router-link to="/" class="ml-4">
             <img src="@/assets/wsz_logo_long.png" alt="WSZ Logo" height="40">
         </router-link>
         
