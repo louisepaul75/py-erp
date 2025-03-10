@@ -256,8 +256,51 @@
 </template>
 
 <script>
+import { 
+  VContainer, 
+  VRow, 
+  VCol, 
+  VCard, 
+  VCardText, 
+  VTextField, 
+  VBtn, 
+  VIcon, 
+  VExpandTransition,
+  VRadioGroup, 
+  VRadio, 
+  VSelect, 
+  VDataTable, 
+  VChip, 
+  VMenu, 
+  VList, 
+  VListItem, 
+  VListItemTitle, 
+  VDivider
+} from 'vuetify/components'
+
 export default {
   name: 'CustomerOverview',
+  components: {
+    VContainer, 
+    VRow, 
+    VCol, 
+    VCard, 
+    VCardText, 
+    VTextField, 
+    VBtn, 
+    VIcon, 
+    VExpandTransition,
+    VRadioGroup, 
+    VRadio, 
+    VSelect, 
+    VDataTable, 
+    VChip, 
+    VMenu, 
+    VList, 
+    VListItem, 
+    VListItemTitle, 
+    VDivider
+  },
   data() {
     return {
       customers: [],
