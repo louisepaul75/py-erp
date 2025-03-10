@@ -203,6 +203,7 @@ class SyncPipeline:
                 for record, transformed in zip(batch, transformed_data):
                     cleaned_record = self._clean_for_json(record)
                     cleaned_transformed = self._clean_for_json(transformed)
+                    cleaned_result = self._clean_for_json(result)
                     SyncLogDetail.objects.create(
                         sync_log=self.sync_log,
                         record_id=record.get('id', str(record)),
@@ -210,7 +211,7 @@ class SyncPipeline:
                         record_data={
                             'source': cleaned_record,
                             'transformed': cleaned_transformed,
-                            'result': result
+                            'result': cleaned_result
                         }
                     )
                     success_count += 1
@@ -269,6 +270,12 @@ class SyncPipeline:
             if isinstance(data, float) and math.isnan(data):
                 return None
             return data
+        elif hasattr(data, '_asdict') and callable(data._asdict):
+            # Handle NamedTuple objects like LoadResult
+            return self._clean_for_json(data._asdict())
+        elif hasattr(data, 'to_dict') and callable(data.to_dict):
+            # Handle objects with to_dict method like LoadResult from base.py
+            return self._clean_for_json(data.to_dict())
         else:
             return str(data)
 

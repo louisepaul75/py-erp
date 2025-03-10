@@ -59,6 +59,19 @@ class AddressTransformer(BaseTransformer):
                 # Apply basic field mappings
                 record = self.apply_field_mappings(source_record)
 
+                # Add address_number field
+                record["address_number"] = source_record.get("AdrNr", "")
+                
+                # Add customer_number field for linking to customer
+                # Get customer number from the Kunde relationship if available
+                kunde = source_record.get("Kunde", {})
+                if (isinstance(kunde, dict) and 
+                        "__KEY" in kunde):
+                    record["customer_number"] = kunde["__KEY"]
+                else:
+                    # Fallback to AdrNr as customer_number
+                    record["customer_number"] = source_record.get("AdrNr", "")
+
                 # Clean up country code
                 if "country" in record:
                     record["country"] = self._clean_country_code(

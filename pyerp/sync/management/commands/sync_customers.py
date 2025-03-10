@@ -9,12 +9,7 @@ from typing import Any, Dict, NamedTuple
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from pyerp.sync.extractors.legacy_api import LegacyAPIExtractor
-from pyerp.sync.transformers.customer import CustomerTransformer
-from pyerp.sync.transformers.address import AddressTransformer
-from pyerp.sync.loaders.customer import CustomerLoader
-from pyerp.sync.loaders.address import AddressLoader
-from pyerp.sync.pipeline import SyncPipeline
+from pyerp.sync.pipeline import PipelineFactory
 from pyerp.sync.models import SyncMapping
 
 
@@ -176,7 +171,10 @@ class Command(BaseCommand):
                         self.style.WARNING("\nAddress sync errors:")
                     )
                     for error in address_result.error_details:
-                        self.stdout.write(f"- {error['error']}")
+                        if 'error' in error:
+                            self.stdout.write(f"- {error['error']}")
+                        else:
+                            self.stdout.write(f"- {error}")
 
         except Exception as e:
             self.stdout.write(
@@ -202,18 +200,6 @@ class Command(BaseCommand):
         Returns:
             LoadResult containing sync statistics
         """
-        # Get customer configuration
-        customer_config = {
-            'source': config['source'],
-            'transformation': config['transformation'],
-            'target': config['target']
-        }
-        
-        # Set up pipeline components
-        extractor = LegacyAPIExtractor(customer_config['source'])
-        transformer = CustomerTransformer(customer_config['transformation'])
-        loader = CustomerLoader(customer_config['target'])
-
         # Get the sync mapping
         try:
             mapping = SyncMapping.objects.get(
@@ -229,18 +215,15 @@ class Command(BaseCommand):
                 "Please run setup_customer_sync first."
             )
 
-        # Create and run pipeline
-        pipeline = SyncPipeline(
-            mapping=mapping,
-            extractor=extractor,
-            transformer=transformer,
-            loader=loader,
-        )
+        # Create pipeline using factory
+        pipeline = PipelineFactory.create_pipeline(mapping)
         
+        # Run pipeline
         sync_log = pipeline.run(
             batch_size=batch_size,
             query_params=query_params,
             incremental=not force_update,
+            fail_on_filter_error=True
         )
         
         return LoadResult(
@@ -248,7 +231,9 @@ class Command(BaseCommand):
             updated=0,  # Not tracked separately in new system
             skipped=sync_log.records_processed - sync_log.records_succeeded,
             errors=sync_log.records_failed,
-            error_details=list(sync_log.details.filter(status='failed').values())
+            error_details=list(
+                sync_log.details.filter(status='failed').values()
+            )
         )
 
     def _sync_addresses(
@@ -269,18 +254,6 @@ class Command(BaseCommand):
         Returns:
             LoadResult containing sync statistics
         """
-        # Get address configuration
-        address_config = {
-            'source': config['addresses']['source'],
-            'transformation': config['addresses']['transformation'],
-            'target': config['addresses']['target']
-        }
-        
-        # Set up pipeline components
-        extractor = LegacyAPIExtractor(address_config['source'])
-        transformer = AddressTransformer(address_config['transformation'])
-        loader = AddressLoader(address_config['target'])
-
         # Get the sync mapping
         try:
             mapping = SyncMapping.objects.get(
@@ -296,18 +269,15 @@ class Command(BaseCommand):
                 "Please run setup_customer_sync first."
             )
 
-        # Create and run pipeline
-        pipeline = SyncPipeline(
-            mapping=mapping,
-            extractor=extractor,
-            transformer=transformer,
-            loader=loader,
-        )
+        # Create pipeline using factory
+        pipeline = PipelineFactory.create_pipeline(mapping)
         
+        # Run pipeline
         sync_log = pipeline.run(
             batch_size=batch_size,
             query_params=query_params,
             incremental=not force_update,
+            fail_on_filter_error=True
         )
         
         return LoadResult(
@@ -315,5 +285,7 @@ class Command(BaseCommand):
             updated=0,  # Not tracked separately in new system
             skipped=sync_log.records_processed - sync_log.records_succeeded,
             errors=sync_log.records_failed,
-            error_details=list(sync_log.details.filter(status='failed').values())
+            error_details=list(
+                sync_log.details.filter(status='failed').values()
+            )
         ) 

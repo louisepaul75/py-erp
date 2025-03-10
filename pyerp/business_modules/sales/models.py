@@ -132,6 +132,12 @@ class Address(SalesModel):
         related_name="addresses",
         help_text=_("Customer this address belongs to"),
     )
+    address_number = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text=_("Address number from legacy system"),
+    )
     is_primary = models.BooleanField(
         default=False,
         help_text=_("Whether this is the primary address for the customer"),
