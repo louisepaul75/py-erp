@@ -13,7 +13,7 @@
         <v-btn
           variant="text"
           density="comfortable"
-          icon="mdi-chevron-left"
+          :icon="drawer ? 'mdi-chevron-left' : 'mdi-chevron-right'"
           size="small"
           class="ml-auto"
           @click="toggleDrawer"
@@ -67,6 +67,17 @@
         ></v-list-item>
       </v-list>
     </v-navigation-drawer>
+
+    <!-- Reopen Sidebar Button (shown when sidebar is closed) -->
+    <v-btn
+      v-show="!drawer"
+      icon="mdi-chevron-right"
+      variant="flat"
+      size="small"
+      color="primary"
+      class="sidebar-toggle-btn"
+      @click="toggleDrawer"
+    ></v-btn>
 
     <!-- Main Content -->
     <v-main class="bg-grey-lighten-4">
@@ -344,5 +355,15 @@ const navigateTo = (tile) => {
 
 .v-navigation-drawer {
   border-right: 1px solid #e5e7eb !important;
+}
+
+.sidebar-toggle-btn {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 </style>
