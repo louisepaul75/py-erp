@@ -107,6 +107,7 @@
                       size="small"
                       variant="text"
                       class="favorite-toggle-btn"
+                      :class="{ 'show-on-hover': !isTileFavorite(tile) }"
                       @click.stop="toggleTileFavorite(tile)"
                     ></v-btn>
                   </v-card>
@@ -164,6 +165,7 @@
                     :color="isOrderFavorite(order) ? 'warning' : 'grey'"
                     size="small"
                     variant="text"
+                    :class="{ 'show-on-hover': !isOrderFavorite(order) }"
                     @click="toggleOrderFavorite(order)"
                   ></v-btn>
                 </td>
@@ -192,6 +194,7 @@
                   variant="text"
                   icon="mdi-star-outline"
                   size="small"
+                  class="show-on-hover"
                   v-else
                   @click="addLinksToFavorites"
                   title="Zu Favoriten hinzufügen"
@@ -229,6 +232,7 @@
                   variant="text"
                   icon="mdi-star-outline"
                   size="small"
+                  class="show-on-hover"
                   v-else
                   @click="addNewsBoardToFavorites"
                   title="Zu Favoriten hinzufügen"
@@ -509,6 +513,17 @@ const removeNewsBoardFromFavorites = () => {
   position: absolute;
   top: 5px;
   right: 5px;
+}
+
+.show-on-hover {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.v-hover:hover .show-on-hover,
+tr:hover .show-on-hover,
+.v-card:hover .show-on-hover {
+  opacity: 1;
 }
 
 .favorite-remove-btn:hover {
