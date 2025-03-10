@@ -234,6 +234,7 @@ import {
   VRow, 
   VCol
 } from 'vuetify/components'
+import CustomerSearch from './customers/customer_search.vue'
 
 // UI state
 const drawer = ref(true)
