@@ -28,13 +28,12 @@
             {% endfor %}
         {% endif %}
     {% else %}
-        <!-- Development mode - connect to Vite dev server -->
+        <!-- Development mode - load from Vite dev server -->
         <script type="module">
-            // During development, this connects to the Vite dev server for HMR
-            import { createApp } from 'http://localhost:3000/@vite/client';
-
-            // Load main entry from Vite dev server
-            import('http://localhost:3000/src/main.ts');
+            import { createApp } from 'http://localhost:5173/@vite/client';
+            document.addEventListener('DOMContentLoaded', () => {
+                import('http://localhost:5173/src/main.ts');
+            });
         </script>
     {% endif %}
 </body>
