@@ -33,7 +33,7 @@ transformation:
       error_message: Customer number cannot be empty
 
 target:
-  loader_class: pyerp.sync.loaders.customer.CustomerLoader
+  loader_class: pyerp.sync.loaders.django_model.DjangoModelLoader
   app_name: business_modules.sales
   model_name: Customer
   unique_field: customer_number
@@ -85,7 +85,7 @@ addresses:
         error_message: Invalid email format
 
   target:
-    loader_class: pyerp.sync.loaders.address.AddressLoader
+    loader_class: pyerp.sync.loaders.django_model.DjangoModelLoader
     app_name: business_modules.sales
     model_name: Address
     unique_field: legacy_id
