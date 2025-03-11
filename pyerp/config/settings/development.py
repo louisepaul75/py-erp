@@ -202,3 +202,4 @@ REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [  # noqa
 # Celery settings for development
 CELERY_TASK_ALWAYS_EAGER = (
     os.environ.get("CELERY_TASK_ALWAYS_EAGER", "True").lower() == "true"
+)
