@@ -43,7 +43,7 @@ ANYMAIL = {
     
     # SMTP settings (for generic SMTP providers)
     "SMTP_HOST": os.environ.get("EMAIL_HOST", ""),
-    "SMTP_PORT": int(os.environ.get("EMAIL_PORT", 587)),
+    "SMTP_PORT": int(os.environ.get("EMAIL_PORT", 587)) if os.environ.get("EMAIL_PORT") else 587,
     "SMTP_USERNAME": os.environ.get("EMAIL_HOST_USER", ""),
     "SMTP_PASSWORD": os.environ.get("EMAIL_HOST_PASSWORD", ""),
     "SMTP_USE_TLS": os.environ.get("EMAIL_USE_TLS", "True").lower() == "true",
@@ -66,7 +66,7 @@ ANYMAIL_TEMPLATE_CONTEXT = {}
 
 # Standard Django email settings (used for SMTP and as fallback)
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587)) if os.environ.get("EMAIL_PORT") else 587
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
