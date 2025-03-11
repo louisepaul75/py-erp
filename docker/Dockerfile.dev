@@ -59,7 +59,7 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data \
 # Set up frontend dependencies
 COPY frontend/package*.json /app/frontend/
 WORKDIR /app/frontend
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps && npm install vuedraggable@next gridstack@latest
 
 # Copy frontend source files
 COPY frontend/ /app/frontend/

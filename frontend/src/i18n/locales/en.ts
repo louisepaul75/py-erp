@@ -39,7 +39,8 @@ export default {
     sales: 'Sales',
     inventory: 'Inventory',
     production: 'Production',
-    test: 'Test Page'
+    testing: 'Testing',
+    components: 'UI Components'
   },
   languages: {
     english: 'English',

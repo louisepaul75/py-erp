@@ -118,6 +118,20 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true }
   },
 
+  // Testing routes
+  {
+    path: '/testing',
+    name: 'Testing',
+    component: () => import('../views/Testing.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/testing/components',
+    name: 'Components',
+    component: () => import('../views/Components.vue'),
+    meta: { requiresAuth: true }
+  },
+
   // Catch-all route for 404
   {
     path: '/:pathMatch(.*)*',

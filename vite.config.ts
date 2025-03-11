@@ -97,7 +97,7 @@ export default defineConfig(({ mode }) => {
     server: {
       // Development server configuration
       host: '0.0.0.0',
-      port: 3000,
+      port: 5173,
       // Proxy API requests to Django server
       proxy: {
         '^/api/token': {

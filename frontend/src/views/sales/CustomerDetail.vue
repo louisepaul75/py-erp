@@ -214,7 +214,7 @@
       </v-card>
 
       <!-- Recent Orders -->
-      <v-card>
+      <v-card v-if="recentOrders.length > 0">
         <v-card-title>
           <v-icon start icon="mdi-cart"></v-icon>
           Recent Orders
@@ -273,8 +273,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { salesApi } from '@/services/api';
 
 // Define types
-interface Customer {
-  id: number;
+interface CustomerFields {
   name: string;
   customerNumber: string;
   email: string;
@@ -284,9 +283,46 @@ interface Customer {
   postalCode: string;
   city: string;
   country: string;
-  revenue365Days: number;
   creditLimit: number;
   paymentTerms: number;
+  revenue365Days: number;
+}
+
+interface Address {
+  id: number;
+  is_primary: boolean;
+  salutation?: string;
+  first_name?: string;
+  last_name?: string;
+  company_name?: string;
+  street: string;
+  country: string;
+  postal_code: string;
+  city: string;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  contact_person?: string;
+  formal_salutation?: string;
+}
+
+interface Customer {
+  id: number;
+  customer_number: string;
+  legacy_address_number?: string;
+  customer_group?: string;
+  delivery_block: boolean;
+  price_group?: string;
+  vat_id?: string;
+  payment_method?: string;
+  shipping_method?: string;
+  credit_limit?: number;
+  discount_percentage?: number;
+  payment_terms_discount_days?: number;
+  payment_terms_net_days?: number;
+  notes?: string;
+  addresses: Address[];
+  revenue365Days?: number;
 }
 
 interface Order {
@@ -310,19 +346,40 @@ const isEditing = ref(false);
 const recentOrders = ref<Order[]>([]);
 
 // Computed properties for form fields
-const customerFields = computed(() => {
-  return editedCustomer.value || {
-    name: '',
-    customerNumber: '',
-    email: '',
-    phone: '',
-    type: 'b2b' as const,
-    street: '',
-    postalCode: '',
-    city: '',
-    country: '',
-    creditLimit: 0,
-    paymentTerms: 0
+const customerFields = computed((): CustomerFields => {
+  if (!editedCustomer.value) {
+    return {
+      name: '',
+      customerNumber: '',
+      email: '',
+      phone: '',
+      type: 'b2b' as const,
+      street: '',
+      postalCode: '',
+      city: '',
+      country: '',
+      creditLimit: 0,
+      paymentTerms: 0,
+      revenue365Days: 0
+    };
+  }
+
+  const primaryAddress = editedCustomer.value.addresses.find(a => a.is_primary) || editedCustomer.value.addresses[0];
+  
+  return {
+    name: primaryAddress?.company_name || 
+          `${primaryAddress?.first_name || ''} ${primaryAddress?.last_name || ''}`.trim() || '',
+    customerNumber: editedCustomer.value.customer_number,
+    email: primaryAddress?.email || '',
+    phone: primaryAddress?.phone || '',
+    type: editedCustomer.value.customer_group?.toLowerCase().includes('b2b') ? 'b2b' : 'b2c',
+    street: primaryAddress?.street || '',
+    postalCode: primaryAddress?.postal_code || '',
+    city: primaryAddress?.city || '',
+    country: primaryAddress?.country || '',
+    creditLimit: Number(editedCustomer.value.credit_limit || 0),
+    paymentTerms: Number(editedCustomer.value.payment_terms_net_days || 0),
+    revenue365Days: Number(editedCustomer.value.revenue365Days || 0)
   };
 });
 
@@ -357,12 +414,30 @@ const loadCustomerDetails = async () => {
   try {
     const response = await salesApi.getCustomer(customerId);
     const customerData = response.data as Customer;
+    
+    // Ensure customer has at least one address
+    if (!customerData.addresses || customerData.addresses.length === 0) {
+      customerData.addresses = [{
+        id: 0,
+        is_primary: true,
+        street: '',
+        country: '',
+        postal_code: '',
+        city: ''
+      }];
+    }
+    
     customer.value = customerData;
     editedCustomer.value = { ...customerData };
     
-    // Load recent orders
-    const ordersResponse = await salesApi.getCustomerOrders(customerId);
-    recentOrders.value = ordersResponse.data.results as Order[];
+    // Try to load recent orders, but don't fail if endpoint doesn't exist
+    try {
+      const ordersResponse = await salesApi.getCustomerOrders(customerId);
+      recentOrders.value = ordersResponse.data.results as Order[];
+    } catch (orderErr) {
+      console.log('Orders endpoint not available yet:', orderErr);
+      recentOrders.value = []; // Set empty orders array
+    }
   } catch (err) {
     console.error('Error loading customer details:', err);
     error.value = 'Failed to load customer details. Please try again.';
@@ -424,11 +499,11 @@ const formatDate = (dateString: string): string => {
 };
 
 // Format currency
-const formatCurrency = (amount: number): string => {
+const formatCurrency = (amount: number | undefined): string => {
   return new Intl.NumberFormat('de-DE', {
     style: 'currency',
     currency: 'EUR'
-  }).format(amount);
+  }).format(amount || 0);
 };
 
 // Get status color

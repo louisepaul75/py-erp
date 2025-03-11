@@ -81,33 +81,69 @@
     <!-- Main Content -->
     <v-main class="bg-grey-lighten-4">
       <v-container class="py-4">
-        <!-- Quick Access -->
+        <!-- Dashboard Controls -->
         <v-card class="mb-6" flat>
+          <div class="px-6 py-4 border-b d-flex align-center">
+            <span class="text-h6 font-weight-medium">Dashboard</span>
+            <v-spacer></v-spacer>
+            
+            <v-btn
+              v-if="!editMode"
+              prepend-icon="mdi-pencil"
+              color="primary"
+              variant="text"
+              @click="enableEditMode"
+            >
+              Dashboard anpassen
+            </v-btn>
+            
+            <template v-else>
+              <v-btn
+                color="success"
+                variant="text"
+                class="mr-2"
+                prepend-icon="mdi-content-save"
+                @click="saveDashboardConfig"
+              >
+                Speichern
+              </v-btn>
+              <v-btn
+                color="error"
+                variant="text"
+                prepend-icon="mdi-close"
+                @click="cancelEditMode"
+              >
+                Abbrechen
+              </v-btn>
+            </template>
+          </div>
+        </v-card>
+
+        <!-- Add Module Menu (only visible in edit mode) -->
+        <v-card v-if="editMode" class="mb-6" flat>
           <div class="px-6 py-4 border-b">
-            <span class="text-h6 font-weight-medium">Schnellzugriff</span>
+            <span class="text-subtitle-1 font-weight-medium">Module hinzufügen</span>
           </div>
           <v-card-text>
             <v-row>
-              <v-col v-for="tile in menuTiles" :key="tile.title" cols="6" sm="4" md="3" lg="2">
+              <v-col v-for="module in availableModules" :key="module.id" cols="6" sm="4" md="3" lg="2">
                 <v-hover v-slot="{ isHovering, props }">
                   <v-card
                     v-bind="props"
                     :elevation="isHovering ? 2 : 0"
-                    class="pa-4 text-center transition-all duration-200 position-relative"
+                    class="pa-4 text-center transition-all duration-200"
                     :class="{ 'bg-grey-lighten-4': isHovering }"
-                    @click="navigateTo(tile)"
+                    @click="addModule(module)"
                   >
-                    <v-icon :icon="tile.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
-                    <div class="text-body-2">{{ tile.title }}</div>
-                    
-                    <!-- Favorite Toggle Button -->
+                    <v-icon :icon="module.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
+                    <div class="text-body-2">{{ module.title }}</div>
                     <v-btn
-                      :icon="isTileFavorite(tile) ? 'mdi-star' : 'mdi-star-outline'"
-                      :color="isTileFavorite(tile) ? 'warning' : 'grey-darken-1'"
+                      icon="mdi-plus"
                       size="small"
+                      color="primary"
                       variant="text"
-                      class="favorite-toggle-btn"
-                      @click.stop="toggleTileFavorite(tile)"
+                      class="add-module-btn position-absolute"
+                      style="top: 8px; right: 8px;"
                     ></v-btn>
                   </v-card>
                 </v-hover>
@@ -116,143 +152,69 @@
           </v-card-text>
         </v-card>
 
-        <!-- Recent Orders -->
-        <v-card class="mb-6" flat>
-          <div class="d-flex align-center px-6 py-4 border-b">
-            <span class="text-h6 font-weight-medium">Bestellungen nach Liefertermin</span>
-            <v-spacer></v-spacer>
-            <v-text-field
-              v-model="searchQuery"
-              prepend-inner-icon="mdi-magnify"
-              placeholder="Suchen..."
-              hide-details
-              density="compact"
-              variant="outlined"
-              class="max-w-xs"
-            ></v-text-field>
-          </div>
-          <v-table>
-            <thead>
-              <tr>
-                <th class="text-caption font-weight-medium text-grey-darken-1">AUFTRAG</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">KUNDE</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">LIEFERTERMIN</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">STATUS</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">BETRAG</th>
-                <th class="text-caption font-weight-medium text-grey-darken-1">FAVORIT</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="order in filteredOrders" :key="order.id" class="text-body-2">
-                <td>{{ order.id }}</td>
-                <td>{{ order.customer }}</td>
-                <td>{{ order.deliveryDate }}</td>
-                <td>
-                  <v-chip
-                    :color="getStatusColor(order.status)"
-                    size="small"
-                    class="font-weight-medium text-caption"
-                    variant="tonal"
-                  >
-                    {{ order.status }}
-                  </v-chip>
-                </td>
-                <td>{{ order.amount }}</td>
-                <td>
-                  <v-btn
-                    :icon="isOrderFavorite(order) ? 'mdi-star' : 'mdi-star-outline'"
-                    :color="isOrderFavorite(order) ? 'warning' : 'grey'"
-                    size="small"
-                    variant="text"
-                    @click="toggleOrderFavorite(order)"
-                  ></v-btn>
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
-        </v-card>
+        <!-- Dashboard Modules -->
+        <div v-if="loading" class="d-flex justify-center align-center my-6">
+          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+        </div>
 
-        <v-row>
-          <!-- Important Links -->
-          <v-col cols="12" md="6">
-            <v-card flat>
-              <div class="px-6 py-4 border-b d-flex align-center">
-                <span class="text-h6 font-weight-medium">Wichtige Links</span>
-                <v-spacer></v-spacer>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star"
-                  color="warning"
-                  size="small"
-                  v-if="linkIsFavorites"
-                  @click="removeLinksFromFavorites"
-                  title="Von Favoriten entfernen"
-                ></v-btn>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star-outline"
-                  size="small"
-                  v-else
-                  @click="addLinksToFavorites"
-                  title="Zu Favoriten hinzufügen"
-                ></v-btn>
-              </div>
-              <v-list class="pa-2">
-                <v-list-item
-                  v-for="link in importantLinks"
-                  :key="link"
-                  :title="link"
-                  prepend-icon="mdi-link"
-                  class="rounded text-body-2"
-                  density="comfortable"
-                ></v-list-item>
-              </v-list>
-            </v-card>
-          </v-col>
-
-          <!-- News Board -->
-          <v-col cols="12" md="6">
-            <v-card flat>
-              <div class="px-6 py-4 border-b d-flex align-center">
-                <span class="text-h6 font-weight-medium">Interne Pinnwand</span>
-                <v-spacer></v-spacer>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star"
-                  color="warning"
-                  size="small"
-                  v-if="newsBoardIsFavorite"
-                  @click="removeNewsBoardFromFavorites"
-                  title="Von Favoriten entfernen"
-                ></v-btn>
-                <v-btn
-                  variant="text"
-                  icon="mdi-star-outline"
-                  size="small"
-                  v-else
-                  @click="addNewsBoardToFavorites"
-                  title="Zu Favoriten hinzufügen"
-                ></v-btn>
-              </div>
-              <v-card-text>
-                <div v-for="news in newsItems" :key="news.title" class="mb-4 pb-4 border-b">
-                  <div class="d-flex align-center mb-2">
-                    <span class="text-body-2 font-weight-medium">{{ news.title }}</span>
-                    <span class="text-caption text-grey-darken-1 ml-auto">{{ news.date }}</span>
+        <template v-else>
+          <!-- Grid Stack Container -->
+          <div class="grid-stack">
+            <!-- GridStack will automatically create grid-stack-item containers -->
+            <template v-for="(module, index) in dashboardModules" :key="module.id">
+              <div v-if="module.enabled" 
+                   class="grid-stack-item"
+                   :gs-id="module.id"
+                   :gs-x="module.settings?.x || (index % 2) * 6"
+                   :gs-y="module.settings?.y || Math.floor(index / 2) * 4"
+                   :gs-w="module.settings?.w || 6"
+                   :gs-h="module.settings?.h || 4">
+                <div class="grid-stack-item-content">
+                  <!-- Module Header -->
+                  <div class="module-header d-flex align-center px-4 py-2 border-b">
+                    <v-icon 
+                      :icon="getModuleIcon(module.type)"
+                      size="small"
+                      class="mr-2 text-grey-darken-1"
+                    ></v-icon>
+                    <span class="text-subtitle-2 font-weight-medium">{{ module.title }}</span>
+                    
+                    <!-- Module Actions (only visible in edit mode) -->
+                    <div v-if="editMode" class="module-actions d-flex align-center ml-auto">
+                      <v-btn
+                        icon="mdi-delete"
+                        size="small"
+                        color="error"
+                        variant="text"
+                        @click="removeModule(module)"
+                      ></v-btn>
+                    </div>
                   </div>
-                  <p class="text-body-2 text-grey-darken-1 mb-0">{{ news.content }}</p>
+                  
+                  <!-- Module Content -->
+                  <div class="pa-4">
+                    <component 
+                      :is="getModuleComponent(module.type)" 
+                      :module="module"
+                      :edit-mode="editMode"
+                    ></component>
+                  </div>
                 </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
+              </div>
+            </template>
+          </div>
+        </template>
       </v-container>
     </v-main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import draggable from 'vuedraggable'
+import { GridStack } from 'gridstack'
+import 'gridstack/dist/gridstack.min.css'
+import api from '../services/api'
 import { 
   VHover, 
   VIcon, 
@@ -278,23 +240,228 @@ import {
   VRow, 
   VCol,
   VTabs,
-  VTab
+  VTab,
+  VProgressCircular
 } from 'vuetify/components'
 import { useRouter } from 'vue-router'
 import { useFavoritesStore } from '../store/favorites'
 import { useAuthStore } from '../store/auth'
 
+// Import module components
+import QuickAccessModule from '../components/dashboard/QuickAccessModule.vue'
+import RecentOrdersModule from '../components/dashboard/RecentOrdersModule.vue'
+import ImportantLinksModule from '../components/dashboard/ImportantLinksModule.vue'
+import NewsBoardModule from '../components/dashboard/NewsBoardModule.vue'
+
 // Initialize stores
 const favoritesStore = useFavoritesStore()
 const authStore = useAuthStore()
+const router = useRouter()
 
 // UI state
 const drawer = ref(true)
 const searchQuery = ref('')
 const activeTab = ref('dashboard')
+const loading = ref(true)
+const editMode = ref(false)
 
+// Dashboard state
+const dashboardModules = ref([])
+const originalModules = ref([])
+const grid = ref(null)
+
+// Toggle functions
 const toggleDrawer = () => {
   drawer.value = !drawer.value
+}
+
+// Dashboard edit mode functions
+const enableEditMode = () => {
+  originalModules.value = JSON.parse(JSON.stringify(dashboardModules.value))
+  editMode.value = true
+}
+
+const cancelEditMode = () => {
+  dashboardModules.value = JSON.parse(JSON.stringify(originalModules.value))
+  editMode.value = false
+}
+
+const saveDashboardConfig = async () => {
+  try {
+    await api.patch('/dashboard/', {
+      modules: dashboardModules.value
+    })
+    editMode.value = false
+    // Save successful notification would go here
+  } catch (error) {
+    console.error('Failed to save dashboard configuration:', error)
+    // Error notification would go here
+  }
+}
+
+// Module management functions
+const addModule = (module) => {
+  const existingModule = dashboardModules.value.find(m => m.id === module.id)
+  if (existingModule) {
+    existingModule.enabled = true
+  } else {
+    dashboardModules.value.push({
+      ...module,
+      position: dashboardModules.value.length,
+      enabled: true
+    })
+  }
+}
+
+const removeModule = (module) => {
+  const index = dashboardModules.value.findIndex(m => m.id === module.id)
+  if (index !== -1) {
+    // Instead of removing, just disable it
+    dashboardModules.value[index].enabled = false
+  }
+}
+
+// Component mapping
+const getModuleComponent = (type) => {
+  const moduleComponents = {
+    'quick-access': QuickAccessModule,
+    'recent-orders': RecentOrdersModule,
+    'important-links': ImportantLinksModule,
+    'news-board': NewsBoardModule
+  }
+  return moduleComponents[type] || null
+}
+
+// Get module icon
+const getModuleIcon = (type) => {
+  const moduleIcons = {
+    'quick-access': 'mdi-apps',
+    'recent-orders': 'mdi-cart',
+    'important-links': 'mdi-link',
+    'news-board': 'mdi-bulletin-board'
+  }
+  return moduleIcons[type] || 'mdi-view-dashboard'
+}
+
+// Available modules definition
+const availableModules = [
+  {
+    id: 'quick-access',
+    title: 'Schnellzugriff',
+    type: 'quick-access',
+    icon: 'mdi-apps',
+    settings: {}
+  },
+  {
+    id: 'recent-orders',
+    title: 'Bestellungen',
+    type: 'recent-orders',
+    icon: 'mdi-cart',
+    settings: {}
+  },
+  {
+    id: 'important-links',
+    title: 'Wichtige Links',
+    type: 'important-links',
+    icon: 'mdi-link',
+    settings: {}
+  },
+  {
+    id: 'news-board',
+    title: 'Interne Pinnwand',
+    type: 'news-board',
+    icon: 'mdi-bulletin-board',
+    settings: {}
+  }
+]
+
+// Initialize GridStack
+onMounted(async () => {
+  try {
+    const response = await api.get('/dashboard/')
+    if (response.data && response.data.dashboard_modules) {
+      dashboardModules.value = response.data.dashboard_modules
+      // Sort modules by position
+      dashboardModules.value.sort((a, b) => a.position - b.position)
+    }
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error)
+  } finally {
+    loading.value = false
+    // Initialize GridStack after loading is complete and DOM is updated
+    await nextTick()
+    initializeGrid()
+  }
+})
+
+// Watch edit mode changes to enable/disable grid functionality
+watch(editMode, (newValue) => {
+  if (grid.value) {
+    if (newValue) {
+      grid.value.enable()
+    } else {
+      grid.value.disable()
+    }
+  }
+})
+
+const initializeGrid = () => {
+  // Verify grid container exists before initialization
+  const gridElement = document.querySelector('.grid-stack')
+  if (!gridElement) {
+    console.error('Grid container not found. Retrying in 100ms...')
+    setTimeout(initializeGrid, 100)
+    return
+  }
+
+  try {
+    // Initialize GridStack with options
+    grid.value = GridStack.init({
+      column: 12,
+      cellHeight: 'auto',
+      animate: true,
+      float: true,
+      draggable: { handle: '.module-header' },
+      resizable: {
+        handles: 'e, se, s, sw, w'
+      },
+      disableDrag: !editMode.value,
+      disableResize: !editMode.value
+    })
+
+    if (grid.value) {
+      grid.value.on('change', saveGridLayout)
+      console.log('GridStack initialized successfully')
+    } else {
+      console.error('Grid initialization returned null')
+    }
+  } catch (error) {
+    console.error('Failed to initialize GridStack:', error)
+  }
+}
+
+const saveGridLayout = () => {
+  if (!grid.value) return
+
+  const layout = grid.value.save()
+  const updatedModules = dashboardModules.value.map(module => {
+    const gridItem = layout.find(item => item.id === module.id)
+    if (gridItem) {
+      return {
+        ...module,
+        settings: {
+          ...module.settings,
+          x: gridItem.x,
+          y: gridItem.y,
+          w: gridItem.w,
+          h: gridItem.h
+        }
+      }
+    }
+    return module
+  })
+
+  dashboardModules.value = updatedModules
 }
 
 // Recent access items
@@ -306,90 +473,7 @@ const recentAccess = [
   { title: 'Kunde: Weber KG', icon: 'mdi-account' }
 ]
 
-// Sample data for recent orders
-const recentOrders = [
-  { id: 'A-1085', customer: 'Müller GmbH', deliveryDate: '15.03.2025', status: 'Offen', amount: '€2,450.00' },
-  { id: 'A-1084', customer: 'Schmidt AG', deliveryDate: '18.03.2025', status: 'In Bearbeitung', amount: '€1,875.50' },
-  { id: 'A-1083', customer: 'Weber KG', deliveryDate: '20.03.2025', status: 'Offen', amount: '€3,120.75' },
-  { id: 'A-1082', customer: 'Becker GmbH', deliveryDate: '22.03.2025', status: 'Versandt', amount: '€950.25' },
-  { id: 'A-1081', customer: 'Fischer & Co.', deliveryDate: '25.03.2025', status: 'Offen', amount: '€4,280.00' },
-  { id: 'A-1080', customer: 'Hoffmann AG', deliveryDate: '28.03.2025', status: 'In Bearbeitung', amount: '€1,650.30' }
-]
-
-// Filtered orders based on search
-const filteredOrders = computed(() => {
-  if (!searchQuery.value) return recentOrders
-  const query = searchQuery.value.toLowerCase()
-  return recentOrders.filter(order => 
-    order.id.toLowerCase().includes(query) ||
-    order.customer.toLowerCase().includes(query)
-  )
-})
-
-// Menu tiles
-const menuTiles = [
-  { title: 'Kunden', icon: 'mdi-account-group' },
-  { title: 'Bestellungen', icon: 'mdi-cart' },
-  { title: 'Produkte', icon: 'mdi-package-variant' },
-  { title: 'Rechnungen', icon: 'mdi-credit-card' },
-  { title: 'Kalender', icon: 'mdi-calendar' },
-  { title: 'Berichte', icon: 'mdi-file-chart' },
-  { title: 'Lieferungen', icon: 'mdi-truck' },
-  { title: 'Aufgaben', icon: 'mdi-clipboard-list' },
-  { title: 'Datenbank', icon: 'mdi-database' },
-  { title: 'Statistiken', icon: 'mdi-chart-bar' },
-  { title: 'Analysen', icon: 'mdi-chart-pie' },
-  { title: 'Kontakte', icon: 'mdi-account-plus' },
-  { title: 'Admin Settings', icon: 'mdi-cog-outline', route: '/settings' }
-]
-
-// Important links
-const importantLinks = [
-  'Unternehmenshandbuch',
-  'Intranet',
-  'Supportportal',
-  'Schulungsvideos',
-  'Produktkatalog',
-  'Preisliste 2025',
-  'Urlaubsplaner',
-  'IT-Helpdesk',
-  'Qualitätsmanagement',
-  'Mitarbeiterportal'
-]
-
-// News items
-const newsItems = [
-  { 
-    title: 'Neue Produktlinie ab April', 
-    date: '09.03.2025', 
-    content: 'Ab April führen wir eine neue Produktlinie ein. Schulungen finden nächste Woche statt.' 
-  },
-  { 
-    title: 'Systemwartung am Wochenende', 
-    date: '08.03.2025', 
-    content: 'Das System wird am Samstag von 22:00 bis 02:00 Uhr für Wartungsarbeiten nicht verfügbar sein.' 
-  },
-  { 
-    title: 'Neue Vertriebspartnerschaft', 
-    date: '05.03.2025', 
-    content: 'Wir freuen uns, eine neue Partnerschaft mit der Firma XYZ bekannt zu geben.' 
-  }
-]
-
-// Helper function for order status colors
-const getStatusColor = (status) => {
-  switch (status) {
-    case 'Offen': return 'warning'
-    case 'In Bearbeitung': return 'info'
-    case 'Versandt': return 'success'
-    default: return 'grey'
-  }
-}
-
-// Import router
-const router = useRouter()
-
-// Navigation function
+// Navigation functions
 const navigateTo = (tile) => {
   if (tile.route) {
     router.push(tile.route)
@@ -401,75 +485,6 @@ const navigateToFavorite = (item) => {
   if (item.route) {
     router.push(item.route)
   }
-}
-
-// Favorites functionality for tiles
-const isTileFavorite = (tile) => {
-  const tileId = `module-${tile.title}`
-  return favoritesStore.isFavorite(tileId)
-}
-
-const toggleTileFavorite = (tile) => {
-  const favoriteItem = {
-    id: `module-${tile.title}`,
-    title: tile.title,
-    icon: tile.icon,
-    route: tile.route,
-    type: 'module'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
-
-// Favorites functionality for orders
-const isOrderFavorite = (order) => {
-  const orderId = `order-${order.id}`
-  return favoritesStore.isFavorite(orderId)
-}
-
-const toggleOrderFavorite = (order) => {
-  const favoriteItem = {
-    id: `order-${order.id}`,
-    title: `Auftrag: ${order.id} - ${order.customer}`,
-    icon: 'mdi-file-document',
-    type: 'order'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
-
-// Favorites functionality for important links
-const linkIsFavorites = computed(() => {
-  return favoritesStore.isFavorite('important-links')
-})
-
-const addLinksToFavorites = () => {
-  favoritesStore.addFavorite({
-    id: 'important-links',
-    title: 'Wichtige Links',
-    icon: 'mdi-link',
-    type: 'other'
-  })
-}
-
-const removeLinksFromFavorites = () => {
-  favoritesStore.removeFavorite('important-links')
-}
-
-// Favorites functionality for news board
-const newsBoardIsFavorite = computed(() => {
-  return favoritesStore.isFavorite('news-board')
-})
-
-const addNewsBoardToFavorites = () => {
-  favoritesStore.addFavorite({
-    id: 'news-board',
-    title: 'Interne Pinnwand',
-    icon: 'mdi-bulletin-board',
-    type: 'other'
-  })
-}
-
-const removeNewsBoardFromFavorites = () => {
-  favoritesStore.removeFavorite('news-board')
 }
 </script>
 
@@ -495,27 +510,76 @@ const removeNewsBoardFromFavorites = () => {
   border-right: 1px solid #e5e7eb !important;
 }
 
+.dashboard-modules-container {
+  min-height: 200px;
+}
+
+.cursor-move {
+  cursor: move;
+}
+
+.show-on-hover {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+*:hover > .show-on-hover {
+  opacity: 1;
+}
+
+.add-module-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
 .sidebar-toggle-btn {
   position: fixed;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 10px;
+  left: 10px;
   z-index: 100;
-  border-radius: 0 4px 4px 0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
 }
 
-.favorite-toggle-btn {
-  position: absolute;
-  top: 5px;
-  right: 5px;
+/* GridStack Styles */
+.grid-stack {
+  background: transparent;
 }
 
-.favorite-remove-btn:hover {
-  color: #f44336 !important;
+.grid-stack-item {
+  min-width: 300px !important;
 }
 
-.position-relative {
-  position: relative !important;
+.grid-stack-item-content {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  inset: 4px !important;
+}
+
+.module-header {
+  background-color: #f8f9fa;
+  cursor: move;
+}
+
+.grid-stack-placeholder {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px dashed #ccc;
+}
+
+.grid-stack-item.ui-draggable-dragging {
+  z-index: 100;
+}
+
+.grid-stack-item.ui-resizable-resizing {
+  z-index: 100;
+}
+
+/* Edit mode styles */
+.grid-stack.grid-stack-animate .grid-stack-item.ui-draggable-dragging,
+.grid-stack.grid-stack-animate .grid-stack-item.ui-resizable-resizing,
+.grid-stack.grid-stack-animate .grid-stack-item.grid-stack-placeholder {
+  transition: none;
 }
 </style>
