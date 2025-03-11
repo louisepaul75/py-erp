@@ -100,12 +100,14 @@ class SimpleAPIClient:
             return False
 
         try:
-            with open(COOKIE_FILE_PATH) as f:
-                cookie_data = json.load(f)
+            with open(COOKIE_FILE_PATH, "r") as f:
+                existing_sessions = json.load(f)
 
-                if "value" in cookie_data:
-                    # Extract the cookie value
-                    self.session_id = cookie_data["value"]
+            # Find the session for the current base URL
+            for entry in existing_sessions:
+                if entry["base_url"] == self.base_url:
+                    # Extract the session ID
+                    self.session_id = entry["session_id"]
 
                     # Clear any existing WASID4D cookies to prevent duplicates
                     self._clear_cookies("WASID4D")
@@ -119,12 +121,12 @@ class SimpleAPIClient:
                         if len(self.session_id) > 10
                         else self.session_id
                     )
-                    logger.info(f"Loaded session ID from {COOKIE_FILE_PATH}")
+                    logger.info(f"Loaded session ID for base URL: {self.base_url}")
                     logger.info(f"Set cookie: WASID4D={safe_id}")
                     return True
-                logger.warning("Cookie file has invalid format (missing 'value' field)")
-                return False
 
+            logger.info(f"No session found for base URL: {self.base_url}")
+            return False
         except Exception as e:
             logger.warning(f"Failed to load session cookie: {e}")
             return False
@@ -159,7 +161,7 @@ class SimpleAPIClient:
             logger.warning(f"Error while clearing cookies: {e}")
 
     def save_session_cookie(self):
-        """Save current session ID to file."""
+        """Save the current session ID and base URL to the cookie file."""
         # Extract session ID from cookies
         wasid_cookie = self.session.cookies.get("WASID4D")
         dsid_cookie = self.session.cookies.get("4DSID_WSZ-DB")
@@ -171,23 +173,44 @@ class SimpleAPIClient:
             logger.warning("No session ID found in cookies")
             return False
 
-        # Store just the value, not the name=value format
-        self.session_id = session_id
+        # Create the new session entry
+        new_entry = {
+            "base_url": self.base_url,
+            "session_id": session_id,
+            "timestamp": datetime.now().isoformat(),
+        }
 
-        # Create the cookie data in the simpler format that worked before
-        cookie_data = {"timestamp": datetime.now().isoformat(), "value": session_id}
+        # Load existing sessions from the cookie file
+        existing_sessions = []
+        if os.path.exists(COOKIE_FILE_PATH):
+            try:
+                with open(COOKIE_FILE_PATH, "r") as f:
+                    existing_sessions = json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load existing sessions: {e}")
 
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(COOKIE_FILE_PATH), exist_ok=True)
+        # Check if the base URL already exists in the cookie file
+        updated = False
+        for entry in existing_sessions:
+            if entry["base_url"] == self.base_url:
+                # Update the session ID for the existing base URL
+                entry["session_id"] = session_id
+                entry["timestamp"] = datetime.now().isoformat()
+                updated = True
+                break
 
-        # Save the cookie data
+        # If the base URL doesn't exist, add a new entry
+        if not updated:
+            existing_sessions.append(new_entry)
+
+        # Save the updated sessions back to the cookie file
         try:
             with open(COOKIE_FILE_PATH, "w") as f:
-                json.dump(cookie_data, f)
-            logger.info(f"Saved session ID to {COOKIE_FILE_PATH}")
+                json.dump(existing_sessions, f, indent=2)
+            logger.info(f"Saved session for base URL: {self.base_url}")
             return True
         except Exception as e:
-            logger.warning(f"Failed to save session ID: {e}")
+            logger.warning(f"Failed to save session: {e}")
             return False
 
     def _set_session_header(self, request_kwargs):
@@ -243,6 +266,11 @@ class SimpleAPIClient:
         try:
             logger.info("------ VALIDATING SESSION ------")
             self._log_cookies("Cookies before validation")
+
+            # Check if the base URL matches the one in the cookie file
+            if not self.load_session_cookie():
+                logger.info("No valid session found for this base URL, attempting login")
+                return self.login()
 
             # Try a simple API request to check if our session is valid
             url = f"{self.base_url}/rest/$info"
@@ -307,6 +335,11 @@ class SimpleAPIClient:
             self.session.cookies.clear()
             logger.info("Cleared existing cookies")
 
+            # Check if a session already exists for this base URL
+            if self.load_session_cookie():
+                logger.info("Existing session found for this base URL, reusing it")
+                return True
+
             # Attempt to access an endpoint that will set a cookie
             url = f"{self.base_url}/rest/$info"
             logger.info(f"Login request URL: {url}")
@@ -370,6 +403,11 @@ class SimpleAPIClient:
 
         # Clear all cookies and start fresh
         self.session.cookies.clear()
+
+        # Check if the base URL matches the one in the cookie file
+        if not self.load_session_cookie():
+            logger.info("No valid session found for this base URL, attempting login")
+            return self.login()
 
         # Set just our session ID cookie
         self.session.cookies.set("WASID4D", self.session_id)
@@ -858,15 +896,17 @@ if __name__ == "__main__":
                 with open(COOKIE_FILE_PATH) as f:
                     cookie_data = json.load(f)
                     print(f"Found cookie file at: {COOKIE_FILE_PATH}")
-                    print(f"Cookie name: {cookie_data.get('name', 'Not specified')}")
-                    value = cookie_data.get("value", "")
-                    safe_value = (
-                        f"{value[:5]}...{value[-5:]}" if len(value) > 10 else value
-                    )
-                    print(f"Cookie value: {safe_value}")
-                    print(
-                        f"Created at: {cookie_data.get('created_at', 'Not specified')}"
-                    )
+                    if isinstance(cookie_data, list):
+                        print(f"Cookie name {len(cookie_data)} session(s) in the cookie file:")
+                        for i, session_entry in enumerate(cookie_data, start=1):
+                            session_id = session_entry.get("session_id", "")
+                            safe_value = (
+                                f"{session_id[:5]}...{session_id[-5:]}" if len(session_id) > 10 else session_id
+                            )
+                            print(f"Cookie value: {safe_value}")
+                            print(f"  - Created at: {session_entry.get('timestamp', 'Not specified')}")
+                    else:
+                        print("✗ Invalid cookie file format: Expected a list of sessions")
             else:
                 print("No existing cookie file found")
 
