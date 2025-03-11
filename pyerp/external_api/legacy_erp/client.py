@@ -71,6 +71,7 @@ class LegacyERPClient(BaseAPIClient):
         all_records: bool = False,
         new_data_only: bool = True,
         date_created_start: Optional[str] = None,
+        fail_on_filter_error: bool = False,
     ) -> pd.DataFrame:
         """
         Fetch records from a table in the legacy ERP system.
@@ -83,6 +84,7 @@ class LegacyERPClient(BaseAPIClient):
             all_records: Whether to fetch all records (may take a long time)
             new_data_only: If True, only fetch new records
             date_created_start: Start date for filtering by creation date
+            fail_on_filter_error: Whether to fail if filter query is invalid
             
         Returns:
             DataFrame containing the fetched records
@@ -101,6 +103,7 @@ class LegacyERPClient(BaseAPIClient):
                 all_records=all_records,
                 new_data_only=new_data_only,
                 date_created_start=date_created_start,
+                fail_on_filter_error=fail_on_filter_error,
             )
         except Exception as e:
             raise LegacyERPError(f"Failed to fetch table: {e}") 
