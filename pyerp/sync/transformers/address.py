@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from zoneinfo import ZoneInfo
 
 from django.utils import timezone
+from django.apps import apps
 from .base import BaseTransformer
 
 
@@ -54,6 +55,13 @@ class AddressTransformer(BaseTransformer):
         """
         transformed_records = []
         
+        # Get the Customer model
+        try:
+            Customer = apps.get_model('sales', 'Customer')
+        except LookupError:
+            logger.error("Could not find Customer model in sales app")
+            Customer = None
+        
         for source_record in source_data:
             try:
                 # Apply basic field mappings
@@ -66,11 +74,40 @@ class AddressTransformer(BaseTransformer):
                 # Get customer number from the Kunde relationship if available
                 kunde = source_record.get("Kunde", {})
                 if (isinstance(kunde, dict) and 
-                        "__KEY" in kunde):
-                    record["customer_number"] = kunde["__KEY"]
+                        "KundenNr" in kunde):
+                    record["customer_number"] = kunde["KundenNr"]
+                elif "KundenNr" in source_record:
+                    record["customer_number"] = source_record["KundenNr"]
                 else:
                     # Fallback to AdrNr as customer_number
                     record["customer_number"] = source_record.get("AdrNr", "")
+
+                # Look up the customer by customer_number
+                customer_found = False
+                if Customer and "customer_number" in record:
+                    try:
+                        customer = Customer.objects.get(
+                            customer_number=record["customer_number"]
+                        )
+                        # Set customer foreign key relationship
+                        record["customer"] = customer
+                        customer_found = True
+                    except Customer.DoesNotExist:
+                        logger.warning(
+                            f"Customer not found for number: "
+                            f"{record['customer_number']}"
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"Error looking up customer: {e}",
+                            extra={
+                                "customer_number": record["customer_number"]
+                            }
+                        )
+                
+                # Skip records without a valid customer
+                if not customer_found:
+                    continue
 
                 # Clean up country code
                 if "country" in record:

@@ -143,7 +143,15 @@ class Command(BaseCommand):
                         self.style.WARNING("\nCustomer sync errors:")
                     )
                     for error in customer_result.error_details:
-                        self.stdout.write(f"- {error['error']}")
+                        if isinstance(error, dict) and 'error' in error:
+                            self.stdout.write(f"- {error['error']}")
+                        elif (isinstance(error, dict) and 
+                              'error_message' in error):
+                            self.stdout.write(
+                                f"- {error['error_message']}"
+                            )
+                        else:
+                            self.stdout.write(f"- {error}")
 
             # Sync addresses if not skipped
             if not options["skip_addresses"]:
@@ -171,8 +179,13 @@ class Command(BaseCommand):
                         self.style.WARNING("\nAddress sync errors:")
                     )
                     for error in address_result.error_details:
-                        if 'error' in error:
+                        if isinstance(error, dict) and 'error' in error:
                             self.stdout.write(f"- {error['error']}")
+                        elif (isinstance(error, dict) and 
+                              'error_message' in error):
+                            self.stdout.write(
+                                f"- {error['error_message']}"
+                            )
                         else:
                             self.stdout.write(f"- {error}")
 
@@ -206,7 +219,7 @@ class Command(BaseCommand):
                 entity_type='customer',
                 source__name='customers_sync',
                 target__name=(
-                    'business_modules.sales.Customer'
+                    'sales.Customer'
                 )
             )
         except SyncMapping.DoesNotExist:
@@ -260,7 +273,7 @@ class Command(BaseCommand):
                 entity_type='address',
                 source__name='customers_sync_addresses',
                 target__name=(
-                    'business_modules.sales.Address'
+                    'sales.Address'
                 )
             )
         except SyncMapping.DoesNotExist:

@@ -8,8 +8,8 @@ source:
   table_name: Kunden
   filters:
     active: true
-  page_size: 100
   all_records: true
+  page_size: 1000
 
 transformation:
   transformer_class: pyerp.sync.transformers.customer.CustomerTransformer
@@ -34,10 +34,10 @@ transformation:
 
 target:
   loader_class: pyerp.sync.loaders.django_model.DjangoModelLoader
-  app_name: business_modules.sales
+  app_name: sales
   model_name: Customer
   unique_field: customer_number
-  conflict_strategy: newest_wins
+  conflict_strategy: update
 
 scheduling:
   frequency: daily
@@ -57,7 +57,6 @@ addresses:
     table_name: Adressen
     filters:
       active: true
-    page_size: 100
     all_records: true
 
   transformation:
@@ -86,7 +85,7 @@ addresses:
 
   target:
     loader_class: pyerp.sync.loaders.django_model.DjangoModelLoader
-    app_name: business_modules.sales
+    app_name: sales
     model_name: Address
     unique_field: legacy_id
     conflict_strategy: newest_wins 

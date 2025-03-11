@@ -87,7 +87,7 @@ class LegacyAPIExtractor(BaseExtractor):
 
             # Extract data with pagination
             all_records = []
-            page_size = self.config.get('page_size', 100)
+            page_size = self.config.get('page_size', 10000)
             all_records_enabled = self.config.get('all_records', False)
             
             logger.info(
@@ -95,10 +95,12 @@ class LegacyAPIExtractor(BaseExtractor):
                 f"with page size {page_size}"
             )
             
-            # First try with a small request to test connection
-            total_pages = 1
+            # Initialize pagination variables
+            page = 0
+            more_records = True
             
-            for page in range(total_pages):
+            # Fetch pages until no more records are returned
+            while more_records:
                 # Calculate current skip
                 skip = page * page_size
                 
@@ -231,14 +233,15 @@ class LegacyAPIExtractor(BaseExtractor):
                         f"Fetched {record_count} records on page {page+1}"
                     )
                     
-                    # If we got a full page and all_records is not enabled,
-                    # we might need another page
-                    if (not all_records_enabled and record_count == page_size
-                            and page == total_pages - 1):
-                        total_pages += 1
+                    # If we got a full page, there might be more records
+                    if record_count == page_size:
+                        page += 1
+                    else:
+                        # We got fewer records than the page size, so we're done
+                        more_records = False
                 else:
                     logger.info(f"No records returned on page {page+1}")
-                    break
+                    more_records = False
 
             logger.info(
                 f"Extracted {len(all_records)} records from "

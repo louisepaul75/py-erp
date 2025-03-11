@@ -66,10 +66,9 @@ class Command(BaseCommand):
 
         # Create or update target
         target_config = config.get('target', {})
-        target_name = (
-            f"{target_config.get('app_name', 'business_modules.sales')}."
-            f"{target_config.get('model_name', 'Customer')}"
-        )
+        app_name = target_config.get('app_name', 'sales')
+        model_name = target_config.get('model_name', 'Customer')
+        target_name = f"{app_name}.{model_name}"
         target, created = SyncTarget.objects.update_or_create(
             name=target_name,
             defaults={
@@ -133,10 +132,9 @@ class Command(BaseCommand):
 
         # Create or update target for addresses
         target_config = config.get('addresses', {}).get('target', {})
-        target_name = (
-            f"{target_config.get('app_name', 'business_modules.sales')}."
-            f"{target_config.get('model_name', 'Address')}"
-        )
+        app_name = target_config.get('app_name', 'sales')
+        model_name = target_config.get('model_name', 'Address')
+        target_name = f"{app_name}.{model_name}"
         target, created = SyncTarget.objects.update_or_create(
             name=target_name,
             defaults={
