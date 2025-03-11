@@ -10,11 +10,13 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 import pandas as pd
-import requests
 from dotenv import load_dotenv
+
+# Import the proper client from the legacy_erp module
+from pyerp.external_api.legacy_erp.simple_client import SimpleAPIClient
+from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 
 # Configure logging
 logging.basicConfig(
@@ -25,129 +27,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class SimpleTestClient:
-    """Simplified API client for testing date filters."""
-
-    def __init__(self, environment: str = "live"):
-        """Initialize with environment."""
-        # Get base URL from environment
-        env_var = f"LEGACY_ERP_API_{environment.upper()}"
-        self.base_url = os.getenv(env_var)
-        self.username = os.getenv("LEGACY_API_USERNAME")
-        self.password = os.getenv("LEGACY_API_PASSWORD")
-        
-        if not self.base_url:
-            available_envs = [
-                key.replace("LEGACY_ERP_API_", "").lower()
-                for key in os.environ
-                if key.startswith("LEGACY_ERP_API_")
-            ]
-            raise ValueError(
-                f"No URL found for environment '{environment}'. "
-                f"Available environments: {available_envs}"
-            )
-            
-        if not self.username or not self.password:
-            raise ValueError(
-                "Missing API credentials. Please set LEGACY_API_USERNAME "
-                "and LEGACY_API_PASSWORD environment variables."
-            )
-            
-        logger.info(f"Initialized API client with URL: {self.base_url}")
-        self.session = requests.Session()
-        # Set reasonable timeouts
-        self.session.timeout = (5, 15)  # (connect timeout, read timeout)
-
-    def fetch_table(
-        self,
-        table_name: str,
-        top: int = 1000,
-        filter_query: Optional[str] = None,
-        all_records: bool = False,
-        new_data_only: bool = False,
-    ) -> pd.DataFrame:
-        """
-        Fetch records from a table with optional filtering.
-        
-        Args:
-            table_name: Name of the table to query
-            top: Maximum number of records to fetch
-            filter_query: OData filter query string
-            all_records: Whether to fetch all records
-            new_data_only: Whether to only fetch new records
-            
-        Returns:
-            DataFrame containing the fetched records
-        """
-        url = f"{self.base_url}/rest/{table_name}"
-        base_url = f"{url}?$top={top}"
-        
-        if filter_query:
-            url = f"{base_url}&$filter={filter_query}"
-        else:
-            url = base_url
-            
-        logger.info(f"Fetching from URL: {url}")
-        
-        try:
-            logger.info("Attempting to connect to the API...")
-            response = self.session.get(
-                url,
-                auth=(self.username, self.password),
-                verify=False,  # Skip SSL verification for internal servers
-            )
-            logger.info(f"Connection established. Status code: {response.status_code}")
-            
-            response.raise_for_status()
-            
-            data = response.json()
-            if isinstance(data, dict) and "value" in data:
-                records = data["value"]
-            elif isinstance(data, list):
-                records = data
-            else:
-                records = []
-                
-            df = pd.DataFrame(records)
-            logger.info(f"Retrieved {len(df)} records")
-            return df
-            
-        except requests.exceptions.SSLError:
-            logger.warning("SSL verification failed, retrying without verification...")
-            response = self.session.get(
-                url,
-                auth=(self.username, self.password),
-                verify=False,
-            )
-            response.raise_for_status()
-            data = response.json()
-            if isinstance(data, dict) and "value" in data:
-                records = data["value"]
-            elif isinstance(data, list):
-                records = data
-            else:
-                records = []
-            df = pd.DataFrame(records)
-            logger.info(f"Retrieved {len(df)} records")
-            return df
-        except requests.exceptions.ConnectTimeout:
-            logger.error(f"Connection timed out while trying to reach {url}")
-            logger.error("Please check if the server is accessible and the network connection is stable")
-            raise
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"Failed to connect to {url}")
-            logger.error("This could be due to:")
-            logger.error("1. The server is not running")
-            logger.error("2. The network is not properly configured")
-            logger.error("3. You're not connected to the required network/VPN")
-            logger.error(f"Detailed error: {str(e)}")
-            raise
-        except Exception as e:
-            logger.error(f"API request failed: {e}")
-            raise
-
-
-def test_date_filter(table_name="Kunden", days_ago=30, environment="test"):
+def test_date_filter(table_name="Kunden", days_ago=30, environment="live"):
     """
     Test date filtering by fetching records modified within the last N days.
     
@@ -160,8 +40,8 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="test"):
         pandas.DataFrame: Filtered records
     """
     try:
-        # Initialize API client
-        client = SimpleTestClient(environment=environment)
+        # Initialize API client using the proper SimpleAPIClient
+        client = SimpleAPIClient(environment=environment)
         
         # Calculate the date threshold
         date_threshold = (
@@ -172,6 +52,15 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="test"):
         filter_query = f"'modified_date > \'{date_threshold}\''"
         logger.info(f"Using date filter: {filter_query}")
         
+        # Fetch a sample without filter to verify connection
+        df_full_sample = client.fetch_table(
+            table_name=table_name,
+            top=100,
+        )
+        print(df_full_sample.head())
+        logger.info(f"Full sample size: {len(df_full_sample)}")
+        logger.info(f"Full sample columns: {df_full_sample.columns}")
+
         # Fetch data with date filter
         df = client.fetch_table(
             table_name=table_name,
@@ -184,6 +73,9 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="test"):
         )
         return df
         
+    except LegacyERPError as e:
+        logger.error(f"Legacy ERP API error during date filter test: {e}")
+        raise
     except Exception as e:
         logger.error(f"Error during date filter test: {e}")
         raise
