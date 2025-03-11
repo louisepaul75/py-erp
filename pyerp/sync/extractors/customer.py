@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from pyerp.external_api.legacy_erp.simple_client import SimpleAPIClient
+from pyerp.external_api.legacy_erp.scripts.simple_client import SimpleAPIClient
 from .base import BaseExtractor
 
 

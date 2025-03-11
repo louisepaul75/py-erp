@@ -7,7 +7,6 @@ with the legacy ERP system.
 
 import logging
 import os
-import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 
@@ -18,6 +17,11 @@ from requests.auth import HTTPBasicAuth
 from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
     API_REQUEST_TIMEOUT,
+)
+from pyerp.external_api.legacy_erp.auth import (
+    read_cookie_file_safe,
+    write_cookie_file_safe,
+    file_lock,
 )
 
 # Configure logging
@@ -112,74 +116,61 @@ class BaseAPIClient:
 
     def load_session_cookie(self):
         """Load session cookie value from file if it exists."""
-        if not os.path.exists(COOKIE_FILE_PATH):
-            logger.info("No session cookie file found")
-            return False
-
         # Ensure base_url is initialized
         if not hasattr(self, 'base_url') or not self.base_url:
             logger.warning("Base URL not initialized, cannot load session cookie")
             return False
 
-        try:
-            with open(COOKIE_FILE_PATH, 'r') as f:
-                file_content = f.read().strip()
-                if not file_content:
-                    logger.warning("Empty cookie file")
-                    return False
-                
-                try:
-                    cookie_data = json.loads(file_content)
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Invalid JSON in cookie file: {e}")
-                    return False
+        # Use thread-safe function to read cookie data
+        cookie_data = read_cookie_file_safe()
+        if cookie_data is None:
+            return False
 
-
-            print(cookie_data)
-            # Handle old format (single cookie object)
-            if isinstance(cookie_data, dict) and "value" in cookie_data:
-                logger.info("Found cookie file in old format, converting to new format")
-                # Convert to new format
-                new_format = [{
-                    "base_url": self.base_url,
-                    "session_id": cookie_data["value"],
-                    "timestamp": cookie_data.get("timestamp", datetime.now().isoformat())
-                }]
-                
-                # Save in new format
-                with open(COOKIE_FILE_PATH, "w") as f:
-                    json.dump(new_format, f, indent=2)
-                
-                # Set the session cookie
-                self.session_id = cookie_data["value"]
-                self._clear_cookies("WASID4D")
-                self.session.cookies.set("WASID4D", self.session_id)
-                logger.info(f"Converted and loaded session ID from {COOKIE_FILE_PATH}")
-                return True
-
-            # Handle new format (list of sessions)
-            if isinstance(cookie_data, list):
-                # Find the session for the current base URL
-                for entry in cookie_data:
-                    if not isinstance(entry, dict):
-                        continue
-                    
-                    if entry.get("base_url") == self.base_url and "session_id" in entry:
-                        self.session_id = entry["session_id"]
-                        self._clear_cookies("WASID4D")
-                        self.session.cookies.set("WASID4D", self.session_id)
-                        logger.info(f"Loaded session ID for base URL: {self.base_url}")
-                        return True
-                
-                logger.info(f"No session found for base URL: {self.base_url}")
+        # Handle old format (single cookie object)
+        if isinstance(cookie_data, dict) and "value" in cookie_data:
+            logger.info("Found cookie file in old format, converting to new format")
+            # Convert to new format
+            timestamp = cookie_data.get(
+                "timestamp", 
+                datetime.now().isoformat()
+            )
+            new_format = [{
+                "base_url": self.base_url,
+                "session_id": cookie_data["value"],
+                "timestamp": timestamp
+            }]
+            
+            # Save in new format using thread-safe function
+            if not write_cookie_file_safe(new_format):
+                logger.warning("Failed to convert cookie file format")
                 return False
+            
+            # Set the session cookie
+            self.session_id = cookie_data["value"]
+            self._clear_cookies("WASID4D")
+            self.session.cookies.set("WASID4D", self.session_id)
+            logger.info("Converted and loaded session ID")
+            return True
 
-            logger.warning(f"Cookie file has invalid format: {type(cookie_data)}")
+        # Handle new format (list of sessions)
+        if isinstance(cookie_data, list):
+            # Find the session for the current base URL
+            for entry in cookie_data:
+                if not isinstance(entry, dict):
+                    continue
+                
+                if entry.get("base_url") == self.base_url and "session_id" in entry:
+                    self.session_id = entry["session_id"]
+                    self._clear_cookies("WASID4D")
+                    self.session.cookies.set("WASID4D", self.session_id)
+                    logger.info(f"Loaded session ID for base URL: {self.base_url}")
+                    return True
+            
+            logger.info(f"No session found for base URL: {self.base_url}")
             return False
 
-        except Exception as e:
-            logger.warning(f"Failed to load session cookie: {e}")
-            return False
+        logger.warning(f"Cookie file has invalid format: {type(cookie_data)}")
+        return False
 
     def _clear_cookies(self, cookie_name):
         """Clear all cookies with the specified name to prevent duplicates."""
@@ -233,24 +224,28 @@ class BaseAPIClient:
             "timestamp": datetime.now().isoformat()
         }
 
-        # Load existing sessions or create new list
+        # Read existing sessions using thread-safe function
+        cookie_data = read_cookie_file_safe()
         existing_sessions = []
-        if os.path.exists(COOKIE_FILE_PATH):
-            try:
-                with open(COOKIE_FILE_PATH) as f:
-                    data = json.load(f)
-                    # Convert old format to new if needed
-                    if isinstance(data, dict) and "value" in data:
-                        existing_sessions = []
-                    elif isinstance(data, list):
-                        existing_sessions = data
-            except Exception as e:
-                logger.warning(f"Failed to load existing sessions: {e}")
+        
+        # Convert old format or use existing sessions
+        if cookie_data is None:
+            # No data or error reading - start with empty list
+            existing_sessions = []
+        elif isinstance(cookie_data, dict) and "value" in cookie_data:
+            # Old format - convert to new format
+            existing_sessions = []
+        elif isinstance(cookie_data, list):
+            # New format - use as is
+            existing_sessions = cookie_data
+        else:
+            logger.warning(f"Invalid cookie file format: {type(cookie_data)}")
+            existing_sessions = []
 
         # Update or add new session
         updated = False
         for entry in existing_sessions:
-            if entry.get("base_url") == self.base_url:
+            if isinstance(entry, dict) and entry.get("base_url") == self.base_url:
                 entry.update(new_entry)
                 updated = True
                 break
@@ -258,18 +253,11 @@ class BaseAPIClient:
         if not updated:
             existing_sessions.append(new_entry)
 
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(COOKIE_FILE_PATH), exist_ok=True)
-
-        # Save the updated sessions
-        try:
-            with open(COOKIE_FILE_PATH, "w") as f:
-                json.dump(existing_sessions, f, indent=2)
+        # Save using thread-safe function
+        success = write_cookie_file_safe(existing_sessions)
+        if success:
             logger.info(f"Saved session ID for base URL: {self.base_url}")
-            return True
-        except Exception as e:
-            logger.warning(f"Failed to save session ID: {e}")
-            return False
+        return success
 
     def validate_session(self):
         """Validate the current session by making a simple API request."""

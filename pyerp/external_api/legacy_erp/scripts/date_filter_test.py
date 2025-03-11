@@ -15,7 +15,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 # Import the proper client from the legacy_erp module
-from pyerp.external_api.legacy_erp.simple_client import SimpleAPIClient
+from pyerp.external_api.legacy_erp.scripts.simple_client import SimpleAPIClient
 from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 
 # Configure logging
