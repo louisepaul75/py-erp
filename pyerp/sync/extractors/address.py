@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from pyerp.external_api.legacy_erp.simple_client import SimpleAPIClient
+from pyerp.external_api.legacy_erp import LegacyERPClient
 from .base import BaseExtractor
 
 
@@ -28,7 +28,7 @@ class AddressExtractor(BaseExtractor):
             ConnectionError: If connection cannot be established
         """
         try:
-            self.connection = SimpleAPIClient(
+            self.connection = LegacyERPClient(
                 environment=self.config["environment"]
             )
             logger.info(

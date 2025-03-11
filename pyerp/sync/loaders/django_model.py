@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models, transaction
 from django.db.models import Model
 
-from .base import BaseLoader
+from .base import BaseLoader, LoadResult
 
 
 logger = logging.getLogger(__name__)
@@ -141,6 +141,124 @@ class DjangoModelLoader(BaseLoader):
                     f"Failed to load record: {e}"
                 ) from e
             raise
+
+    def load(
+        self,
+        records: List[Dict[str, Any]],
+        update_existing: bool = True
+    ) -> LoadResult:
+        """Load records into target system with optimized batch processing.
+        
+        This implementation overrides the base loader's method to optimize
+        database operations by fetching existing records in bulk.
+        
+        Args:
+            records: List of records to load
+            update_existing: Whether to update existing records
+            
+        Returns:
+            LoadResult containing operation statistics
+        """
+        result = LoadResult()
+        if not records:
+            return result
+            
+        model_class = self._get_model_class()
+        unique_field = self.config['unique_field']
+        
+        # Step 1: Prepare all records and collect unique values
+        prepared_records = []
+        unique_values = []
+        # Map unique values to original records for error reporting
+        record_map = {}  
+        
+        for record in records:
+            try:
+                lookup_criteria, prepared_record = self.prepare_record(record)
+                unique_value = prepared_record[unique_field]
+                prepared_records.append((unique_value, prepared_record))
+                unique_values.append(unique_value)
+                record_map[unique_value] = record
+            except Exception as e:
+                result.add_error(
+                    record=record,
+                    error=e,
+                    context={'stage': 'preparation'}
+                )
+                logger.error(
+                    f"Error preparing record: {e}",
+                    extra={'record': record}
+                )
+        
+        if not prepared_records:
+            return result
+            
+        # Step 2: Bulk fetch all existing records in one query
+        existing_records = {}
+        try:
+            query_filter = {f"{unique_field}__in": unique_values}
+            for record in model_class.objects.filter(**query_filter):
+                existing_records[getattr(record, unique_field)] = record
+        except Exception as e:
+            logger.error(
+                f"Error fetching existing records: {e}"
+            )
+            # Fall back to individual processing if bulk fetch fails
+            return super().load(records, update_existing)
+        
+        # Step 3: Process each record with O(1) lookups instead of database queries
+        for unique_value, prepared_record in prepared_records:
+            try:
+                instance = existing_records.get(unique_value)
+                
+                with transaction.atomic():
+                    if instance:
+                        if not update_existing:
+                            result.skipped += 1
+                            continue
+                            
+                        # Update existing instance
+                        for field, value in prepared_record.items():
+                            setattr(instance, field, value)
+                        
+                        # Validate and save
+                        try:
+                            instance.full_clean()
+                        except DjangoValidationError as e:
+                            raise ValueError(
+                                f"Validation failed: {e}"
+                            ) from e
+                            
+                        instance.save()
+                        result.updated += 1
+                    else:
+                        # Create new instance
+                        instance = model_class(**prepared_record)
+                        
+                        # Validate and save
+                        try:
+                            instance.full_clean()
+                        except DjangoValidationError as e:
+                            raise ValueError(
+                                f"Validation failed: {e}"
+                            ) from e
+                            
+                        instance.save()
+                        result.created += 1
+                        
+            except Exception as e:
+                original_record = record_map.get(unique_value, prepared_record)
+                result.add_error(
+                    record=original_record,
+                    error=e,
+                    context={'update_existing': update_existing}
+                )
+                logger.error(
+                    f"Error loading record: {e}",
+                    extra={'record': original_record}
+                )
+        
+        return result
 
     def handle_conflicts(
         self,

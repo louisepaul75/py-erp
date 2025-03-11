@@ -1,1 +1,12 @@
-{"timestamp": "2025-03-10T00:41:26.288276", "value": "31ABBE261C97484696E20294F0262AF6"}
+[
+  {
+    "base_url": "http://192.168.73.28:8080",
+    "session_id": "A0376DC958ACB34DBCBDD06B1A23FF98",
+    "timestamp": "2025-03-11T22:26:34.746086"
+  },
+  {
+    "base_url": "default",
+    "session_id": "31ABBE261C97484696E20294F0262AF6",
+    "timestamp": "2025-03-10T00:41:26.288276"
+  }
+]
