@@ -184,12 +184,8 @@ INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
 # Set this to True to actually send emails in development (using the configured ESP)
 USE_ANYMAIL_IN_DEV = os.environ.get("USE_ANYMAIL_IN_DEV", "").lower() == "true"
 if USE_ANYMAIL_IN_DEV:
-    # If ANYMAIL_ESP is set to "smtp", use the logging SMTP backend
-    if os.environ.get("ANYMAIL_ESP", "").lower() == "smtp":
-        EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
-    else:
-        # Otherwise use the anymail backend for the specified ESP with logging
-        EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingAnymailBackend"
+    # Always use the logging email backend for simplicity in development
+    EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
 
 # Disable password validators during development
 AUTH_PASSWORD_VALIDATORS = []
@@ -206,4 +202,3 @@ REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [  # noqa
 # Celery settings for development
 CELERY_TASK_ALWAYS_EAGER = (
     os.environ.get("CELERY_TASK_ALWAYS_EAGER", "True").lower() == "true"
-)

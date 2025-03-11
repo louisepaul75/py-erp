@@ -31,6 +31,10 @@ def send_test_email(to_email, subject=None, context=None):
         }
     
     try:
+        # Log current email settings
+        logger.info(f"Sending test email with settings: HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, "
+                   f"USER={settings.EMAIL_HOST_USER}, SSL={settings.EMAIL_USE_SSL}, TLS={settings.EMAIL_USE_TLS}")
+        
         # Render HTML content
         html_content = render_to_string('email_system/test_email.html', context)
         # Create plain text content
@@ -49,6 +53,9 @@ def send_test_email(to_email, subject=None, context=None):
     
     except Exception as e:
         logger.error(f"Error sending test email: {str(e)}")
+        # Log more detailed error information
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 

@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import re
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -60,15 +62,85 @@ class SMTPSettingsView(View):
                         'error': f"Missing required field: {field}"
                     }, status=400)
             
-            # Update .env file or database with new settings
-            # This is a simplified example - in a real application, you would update
-            # the settings in a more persistent way
+            # Determine which .env file to update based on environment
+            env_file = os.environ.get('DJANGO_SETTINGS_MODULE', '')
+            if 'development' in env_file:
+                env_path = os.path.join(settings.BASE_DIR.parent, 'config', 'env', '.env.dev')
+            elif 'production' in env_file:
+                env_path = os.path.join(settings.BASE_DIR.parent, 'config', 'env', '.env.prod')
+            else:
+                env_path = os.path.join(settings.BASE_DIR.parent, 'config', 'env', '.env')
             
-            # For demonstration purposes, we'll just log the settings
-            logger.info(f"SMTP settings updated: {data}")
+            # Check if the file exists
+            if not os.path.exists(env_path):
+                logger.error(f"Environment file not found: {env_path}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f"Environment file not found: {env_path}"
+                }, status=500)
             
-            # In a real application, you would update the settings in the database
-            # and then reload the Django settings
+            # Read the current .env file
+            with open(env_path, 'r') as f:
+                env_content = f.read()
+            
+            # Update or add the SMTP settings
+            env_lines = env_content.split('\n')
+            updated_lines = []
+            
+            # Define the settings to update
+            settings_map = {
+                'EMAIL_HOST': data['host'],
+                'EMAIL_PORT': str(data['port']),
+                'EMAIL_HOST_USER': data['username'],
+                'EMAIL_HOST_PASSWORD': data['password'],
+                'DEFAULT_FROM_EMAIL': data['from_email'],
+                'EMAIL_USE_TLS': 'True' if data['encryption'] == 'tls' else 'False',
+                'EMAIL_USE_SSL': 'True' if data['encryption'] == 'ssl' else 'False',
+                'USE_ANYMAIL_IN_DEV': 'True',  # Enable anymail in development
+                'ANYMAIL_ESP': 'smtp'  # Use SMTP as the ESP
+            }
+            
+            # Track which settings have been updated
+            updated_settings = set()
+            
+            # Update existing settings
+            for line in env_lines:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    updated_lines.append(line)
+                    continue
+                
+                if '=' in line:
+                    key, _ = line.split('=', 1)
+                    key = key.strip()
+                    
+                    if key in settings_map:
+                        updated_lines.append(f"{key}={settings_map[key]}")
+                        updated_settings.add(key)
+                    else:
+                        updated_lines.append(line)
+                else:
+                    updated_lines.append(line)
+            
+            # Add any settings that weren't updated
+            for key, value in settings_map.items():
+                if key not in updated_settings:
+                    updated_lines.append(f"{key}={value}")
+            
+            # Write the updated content back to the .env file
+            with open(env_path, 'w') as f:
+                f.write('\n'.join(updated_lines))
+            
+            # Update the Django settings in memory
+            settings.EMAIL_HOST = data['host']
+            settings.EMAIL_PORT = int(data['port'])
+            settings.EMAIL_HOST_USER = data['username']
+            settings.EMAIL_HOST_PASSWORD = data['password']
+            settings.DEFAULT_FROM_EMAIL = data['from_email']
+            settings.EMAIL_USE_TLS = data['encryption'] == 'tls'
+            settings.EMAIL_USE_SSL = data['encryption'] == 'ssl'
+            
+            logger.info(f"SMTP settings updated: {data['host']}:{data['port']} (user: {data['username']})")
             
             return JsonResponse({
                 'success': True,
@@ -108,6 +180,10 @@ class TestEmailView(View):
                 'support_email': settings.DEFAULT_FROM_EMAIL,
             }
             
+            # Log current email settings for debugging
+            logger.info(f"Email settings: HOST={settings.EMAIL_HOST}, PORT={settings.EMAIL_PORT}, "
+                       f"USER={settings.EMAIL_HOST_USER}, SSL={settings.EMAIL_USE_SSL}, TLS={settings.EMAIL_USE_TLS}")
+            
             success = send_test_email(data['to_email'], data['subject'], context)
             
             if success:
@@ -116,9 +192,21 @@ class TestEmailView(View):
                     'message': f"Test email sent to {data['to_email']}"
                 })
             else:
+                # Check logs for the most recent error
+                from django.db.models import Q
+                from .models import EmailLog
+                recent_log = EmailLog.objects.filter(
+                    Q(to_email__contains=data['to_email']) & 
+                    Q(subject__contains=data['subject'])
+                ).order_by('-created_at').first()
+                
+                error_message = "Unknown error sending email. Check server logs for details."
+                if recent_log:
+                    error_message = f"Email status: {recent_log.status}. Check server logs for details."
+                
                 return JsonResponse({
                     'success': False,
-                    'error': 'Failed to send test email'
+                    'error': error_message
                 }, status=500)
         except Exception as e:
             logger.error(f"Error sending test email: {str(e)}")
@@ -235,4 +323,120 @@ def email_stats(request):
         return Response({
             'success': False,
             'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UpdateEmailSettingsView(View):
+    """View to update email settings."""
+    
+    def get(self, request):
+        """Get current email settings."""
+        settings_data = {
+            'host': settings.EMAIL_HOST,
+            'port': settings.EMAIL_PORT,
+            'username': settings.EMAIL_HOST_USER,
+            'password': '********' if settings.EMAIL_HOST_PASSWORD else '',
+            'from_email': settings.DEFAULT_FROM_EMAIL,
+            'encryption': 'tls' if settings.EMAIL_USE_TLS else ('ssl' if settings.EMAIL_USE_SSL else 'none'),
+        }
+        
+        return JsonResponse(settings_data)
+    
+    def post(self, request):
+        """Update email settings."""
+        try:
+            data = json.loads(request.body)
+            
+            # Validate required fields
+            required_fields = ['host', 'port', 'username', 'password', 'encryption']
+            for field in required_fields:
+                if field not in data:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f"Missing required field: {field}"
+                    }, status=400)
+            
+            # Validate port
+            try:
+                port = int(data['port'])
+                if port < 1 or port > 65535:
+                    return JsonResponse({
+                        'success': False,
+                        'error': "Port must be between 1 and 65535"
+                    }, status=400)
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'error': "Port must be a number"
+                }, status=400)
+            
+            # Validate encryption
+            if data['encryption'] not in ['none', 'tls', 'ssl']:
+                return JsonResponse({
+                    'success': False,
+                    'error': "Encryption must be one of: none, tls, ssl"
+                }, status=400)
+            
+            # Auto-correct encryption based on common ports
+            if port == 465 and data['encryption'] != 'ssl':
+                logger.info(f"Auto-correcting encryption from {data['encryption']} to 'ssl' for port 465")
+                data['encryption'] = 'ssl'
+            elif port == 587 and data['encryption'] != 'tls':
+                logger.info(f"Auto-correcting encryption from {data['encryption']} to 'tls' for port 587")
+                data['encryption'] = 'tls'
+            
+            # Update settings in .env file
+            env_file = os.environ.get('DJANGO_ENV_FILE', os.path.join(settings.BASE_DIR, 'config', 'env', '.env.dev'))
+            
+            if os.path.exists(env_file):
+                # Read current .env file
+                with open(env_file, 'r') as f:
+                    env_content = f.read()
+                
+                # Update settings
+                env_vars = {
+                    'EMAIL_HOST': data['host'],
+                    'EMAIL_PORT': str(data['port']),
+                    'EMAIL_HOST_USER': data['username'],
+                    'EMAIL_HOST_PASSWORD': data['password'],
+                    'DEFAULT_FROM_EMAIL': data.get('from_email', data['username']),
+                    'EMAIL_USE_TLS': 'True' if data['encryption'] == 'tls' else 'False',
+                    'EMAIL_USE_SSL': 'True' if data['encryption'] == 'ssl' else 'False',
+                }
+                
+                # Update each variable in the .env file
+                for key, value in env_vars.items():
+                    # Check if the variable already exists
+                    pattern = re.compile(f'^{key}=.*$', re.MULTILINE)
+                    if pattern.search(env_content):
+                        # Replace existing variable
+                        env_content = pattern.sub(f'{key}={value}', env_content)
+                    else:
+                        # Add new variable
+                        env_content += f'\n{key}={value}'
+                
+                # Write updated .env file
+                with open(env_file, 'w') as f:
+                    f.write(env_content)
+            
+            # Update settings in memory
+            settings.EMAIL_HOST = data['host']
+            settings.EMAIL_PORT = int(data['port'])
+            settings.EMAIL_HOST_USER = data['username']
+            settings.EMAIL_HOST_PASSWORD = data['password']
+            settings.DEFAULT_FROM_EMAIL = data.get('from_email', data['username'])
+            settings.EMAIL_USE_TLS = data['encryption'] == 'tls'
+            settings.EMAIL_USE_SSL = data['encryption'] == 'ssl'
+            
+            logger.info(f"SMTP settings updated: {settings.EMAIL_HOST}:{settings.EMAIL_PORT} (user: {settings.EMAIL_HOST_USER})")
+            
+            return JsonResponse({
+                'success': True
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating email settings: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500) 

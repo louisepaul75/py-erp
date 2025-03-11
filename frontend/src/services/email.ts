@@ -170,14 +170,16 @@ const emailService = {
   getSettings: async () => {
     try {
       // In production, this would call the API
-      // const response = await api.get('/email/settings/');
-      // return response.data;
+      const response = await api.get('/email/settings/');
+      return response.data;
 
       // For development without database, return mock data from localStorage
+      /*
       return {
         success: true,
         data: mockSettings
       };
+      */
     } catch (error) {
       console.error('Error fetching SMTP settings:', error);
       throw error;
@@ -188,10 +190,11 @@ const emailService = {
   updateSettings: async (settings: SMTPSettings) => {
     try {
       // In production, this would call the API
-      // const response = await api.post('/email/settings/', settings);
-      // return response.data;
+      const response = await api.post('/email/settings/', settings);
+      return response.data;
 
       // For development without database, update mock data and localStorage
+      /*
       mockSettings = { ...settings };
       saveSettingsToStorage(mockSettings);
 
@@ -199,6 +202,7 @@ const emailService = {
         success: true,
         message: 'SMTP settings updated successfully'
       };
+      */
     } catch (error) {
       console.error('Error updating SMTP settings:', error);
       throw error;
@@ -209,10 +213,11 @@ const emailService = {
   sendTestEmail: async (testData: TestEmailData) => {
     try {
       // In production, this would call the API
-      // const response = await api.post('/email/test-email/', testData);
-      // return response.data;
+      const response = await api.post('/email/test-email/', testData);
+      return response.data;
 
       // For development without database, simulate sending an email
+      /*
       // Add a new log entry for the test email
       const newId = mockLogs.length > 0 ? Math.max(...mockLogs.map((log) => log.id)) + 1 : 1;
       const now = new Date().toISOString();
@@ -242,6 +247,7 @@ const emailService = {
         message: 'Test email sent successfully',
         data: { message_id: messageId }
       };
+      */
     } catch (error) {
       console.error('Error sending test email:', error);
       throw error;
@@ -252,10 +258,11 @@ const emailService = {
   getEmailLogs: async () => {
     try {
       // In production, this would call the API
-      // const response = await api.get('/email/email-logs/');
-      // return response.data;
+      const response = await api.get('/email/email-logs/');
+      return response.data;
 
       // For development without database, return mock data from localStorage
+      /*
       return {
         success: true,
         data: {
@@ -263,6 +270,7 @@ const emailService = {
           total: mockLogs.length
         }
       };
+      */
     } catch (error) {
       console.error('Error fetching email logs:', error);
       throw error;
@@ -273,10 +281,11 @@ const emailService = {
   clearEmailLogs: async () => {
     try {
       // In production, this would call the API
-      // const response = await api.delete('/email/email-logs/');
-      // return response.data;
+      const response = await api.delete('/email/email-logs/');
+      return response.data;
 
       // For development without database, clear mock data and localStorage
+      /*
       mockLogs = [];
       saveLogsToStorage(mockLogs);
 
@@ -284,6 +293,7 @@ const emailService = {
         success: true,
         message: 'Email logs cleared successfully'
       };
+      */
     } catch (error) {
       console.error('Error clearing email logs:', error);
       throw error;
@@ -294,10 +304,11 @@ const emailService = {
   getEmailStats: async () => {
     try {
       // In production, this would call the API
-      // const response = await api.get('/email/email-stats/');
-      // return response.data;
+      const response = await api.get('/email/email-stats/');
+      return response.data;
 
       // For development without database, calculate stats from mock data
+      /*
       const total = mockLogs.length;
       const sent = mockLogs.filter(
         (log) =>
@@ -333,6 +344,7 @@ const emailService = {
           failure_rate: total > 0 ? (failed / total) * 100 : 0
         }
       };
+      */
     } catch (error) {
       console.error('Error fetching email statistics:', error);
       throw error;

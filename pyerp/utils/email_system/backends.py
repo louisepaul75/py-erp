@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from django.core.mail.backends.smtp import EmailBackend as SMTPBackend
 from django.utils import timezone
-from anymail.backends.smtp import EmailBackend as AnymailSMTPBackend
+# from anymail.backends.smtp import EmailBackend as AnymailSMTPBackend
 from .models import EmailLog
 
 logger = logging.getLogger('anymail')
@@ -91,9 +91,10 @@ class LoggingEmailBackend(SMTPBackend):
             logger.error(f"Error logging email: {str(e)}")
 
 
-class LoggingAnymailBackend(AnymailSMTPBackend):
+class LoggingAnymailBackend(SMTPBackend):
     """
-    A wrapper around Anymail's SMTP email backend that logs emails to the database.
+    A wrapper around Django's SMTP email backend that logs emails to the database.
+    This is a simplified version that doesn't use Anymail's backend directly.
     """
     
     def send_messages(self, email_messages):

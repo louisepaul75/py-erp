@@ -16,6 +16,54 @@
             Geben Sie die Verbindungsdaten für Ihren SMTP-Server ein.
           </p>
 
+          <!-- Status Banner -->
+          <div v-if="lastSaveStatus" 
+               :class="[
+                 'mb-6 p-4 rounded-md',
+                 lastSaveStatus === 'success' 
+                   ? 'bg-green-50 border border-green-200' 
+                   : 'bg-red-50 border border-red-200'
+               ]">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg v-if="lastSaveStatus === 'success'" 
+                     class="h-5 w-5 text-green-500" 
+                     xmlns="http://www.w3.org/2000/svg" 
+                     viewBox="0 0 20 20" 
+                     fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <svg v-else 
+                     class="h-5 w-5 text-red-500" 
+                     xmlns="http://www.w3.org/2000/svg" 
+                     viewBox="0 0 20 20" 
+                     fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 :class="[
+                  'text-sm font-medium',
+                  lastSaveStatus === 'success' ? 'text-green-800' : 'text-red-800'
+                ]">
+                  {{ lastSaveStatus === 'success' ? 'Einstellungen gespeichert' : 'Fehler beim Speichern' }}
+                </h3>
+                <div :class="[
+                  'mt-2 text-sm',
+                  lastSaveStatus === 'success' ? 'text-green-700' : 'text-red-700'
+                ]">
+                  <p>{{ lastSaveMessage }}</p>
+                  <p v-if="lastSaveDetails" class="mt-1 text-xs">
+                    {{ lastSaveDetails }}
+                  </p>
+                  <p v-if="lastSaveTime" class="mt-2 text-xs font-medium">
+                    Zeitpunkt: {{ lastSaveTime }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <form @submit.prevent="saveSettings" class="space-y-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
@@ -434,6 +482,12 @@ const logs = ref([]);
 const toasts = ref([]);
 let toastId = 0;
 
+// Add these new refs for save status
+const lastSaveStatus = ref(null); // 'success' or 'error'
+const lastSaveMessage = ref('');
+const lastSaveDetails = ref('');
+const lastSaveTime = ref('');
+
 // Helper functions
 const formatDate = (date) => {
   return new Intl.DateTimeFormat('de-DE', {
@@ -633,6 +687,12 @@ const saveSettings = async () => {
     const response = await emailService.updateSettings(smtpForm.value);
 
     if (response.success) {
+      // Update save status
+      lastSaveStatus.value = 'success';
+      lastSaveMessage.value = 'Die SMTP-Einstellungen wurden erfolgreich gespeichert.';
+      lastSaveDetails.value = `Host: ${smtpForm.value.host}, Port: ${smtpForm.value.port}, Benutzer: ${smtpForm.value.username}`;
+      lastSaveTime.value = formatDate(new Date());
+      
       addToast(
         'Einstellungen gespeichert',
         'Die SMTP-Einstellungen wurden erfolgreich gespeichert.'
@@ -653,6 +713,12 @@ const saveSettings = async () => {
       throw new Error(response.error || 'Unbekannter Fehler');
     }
   } catch (error) {
+    // Update save status for error
+    lastSaveStatus.value = 'error';
+    lastSaveMessage.value = 'Die SMTP-Einstellungen konnten nicht gespeichert werden.';
+    lastSaveDetails.value = error.message || 'Unbekannter Fehler';
+    lastSaveTime.value = formatDate(new Date());
+    
     addToast('Fehler', 'Die SMTP-Einstellungen konnten nicht gespeichert werden.', 'error');
     addLog('Fehler beim Speichern der SMTP-Einstellungen', 'error', error.message);
     console.error('Error saving SMTP settings:', error);
