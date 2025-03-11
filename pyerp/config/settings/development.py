@@ -170,6 +170,27 @@ DEBUG_TOOLBAR_CONFIG = {
 # Email backend for development
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+# Import anymail settings for reference, but use console backend
+from .anymail import *  # noqa
+
+# Override anymail settings for development
+ANYMAIL = {
+    **ANYMAIL,
+    "DEBUG_API_REQUESTS": True,
+}
+
+# Set this to True to actually send emails in development (using the configured ESP)
+USE_ANYMAIL_IN_DEV = os.environ.get("USE_ANYMAIL_IN_DEV", "").lower() == "true"
+if USE_ANYMAIL_IN_DEV:
+    # If ANYMAIL_ESP is set to "smtp", use the standard Django SMTP backend
+    if os.environ.get("ANYMAIL_ESP", "").lower() == "smtp":
+        EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    else:
+        # Otherwise use the anymail backend for the specified ESP
+        EMAIL_BACKEND = "anymail.backends.{esp_name}.EmailBackend".format(
+            esp_name=os.environ.get("ANYMAIL_ESP", "sendgrid").lower()
+        )
+
 # Disable password validators during development
 AUTH_PASSWORD_VALIDATORS = []
 
