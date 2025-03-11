@@ -259,7 +259,7 @@
             <button
               type="submit"
               class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-              :disabled="isTesting || !isFormValid"
+              :disabled="isTesting || !isTestFormValid"
             >
               <svg
                 v-if="isTesting"
@@ -650,6 +650,16 @@ const isFormValid = computed(() => {
   );
 });
 
+// Add a new computed property for test form validation
+const isTestFormValid = computed(() => {
+  return (
+    testForm.value.to_email &&
+    validateEmail(testForm.value.to_email) &&
+    testForm.value.subject &&
+    testForm.value.message
+  );
+});
+
 // Load SMTP settings
 const loadSettings = async () => {
   try {
@@ -729,8 +739,10 @@ const saveSettings = async () => {
 
 const sendTestEmail = async () => {
   if (!validateTestForm()) return;
-  if (!validateSMTPForm()) {
-    addToast('Fehler', 'Bitte füllen Sie zuerst die SMTP-Einstellungen aus.', 'error');
+  
+  // Check if basic SMTP settings are filled out without full validation
+  if (!smtpForm.value.host || !smtpForm.value.port || !smtpForm.value.username || !smtpForm.value.from_email) {
+    addToast('Fehler', 'Bitte füllen Sie die grundlegenden SMTP-Einstellungen aus (Host, Port, Benutzername, Absender).', 'error');
     return;
   }
 
