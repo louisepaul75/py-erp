@@ -104,3 +104,10 @@ class LegacyERPClient(BaseAPIClient):
             )
         except Exception as e:
             raise LegacyERPError(f"Failed to fetch table: {e}") 
+        
+
+
+if __name__ == "__main__":
+    client = LegacyERPClient(environment="live")
+    df = client.fetch_table(table_name="Kunden", top=100)
+    print(df)

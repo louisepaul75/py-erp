@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pyerp.external_api.legacy_erp.scripts.simple_client import SimpleAPIClient
+from pyerp.external_api.legacy_erp import LegacyERPClient
 from .base import BaseExtractor
 import pandas as pd
 
@@ -30,7 +30,7 @@ class LegacyAPIExtractor(BaseExtractor):
             ConnectionError: If connection cannot be established
         """
         try:
-            self.connection = SimpleAPIClient(
+            self.connection = LegacyERPClient(
                 environment=self.config['environment']
             )
             logger.info(
@@ -39,7 +39,7 @@ class LegacyAPIExtractor(BaseExtractor):
         except Exception as e:
             raise ConnectionError(
                 f"Failed to connect to legacy API: {e}"
-            ) from e
+            )
 
     def extract(
         self, query_params: Optional[Dict[str, Any]] = None,

@@ -6,6 +6,7 @@ with the legacy ERP system.
 """
 
 import os
+import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 import time
@@ -17,6 +18,7 @@ from requests.auth import HTTPBasicAuth
 from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
     API_REQUEST_TIMEOUT,
+    API_REST_ENDPOINT,
 )
 from pyerp.external_api.legacy_erp.auth import (
     read_cookie_file_safe,
@@ -89,7 +91,25 @@ class BaseAPIClient:
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         """Make an HTTP request to the API with logging and timing."""
+        # Always prefix with REST endpoint
+        endpoint = f"{API_REST_ENDPOINT}/{endpoint.lstrip('/')}"
+            
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        
+        # Log the session cookie being used (safely showing only part of it)
+        if self.session_id:
+            safe_id = (
+                f"{self.session_id[:5]}...{self.session_id[-5:]}"
+                if len(self.session_id) > 10
+                else self.session_id
+            )
+            logger.info(f"Using session cookie WASID4D={safe_id}")
+        else:
+            logger.info("No session cookie available")
+        
+        # Log the complete URL being requested
+        logger.info(f"Making {method} request to: {url}")
+        
         start_time = time.time()
         
         try:
@@ -312,7 +332,7 @@ class BaseAPIClient:
 
     def validate_session(self):
         """
-        Validate the current session by making a test request.
+        Validate the current session by making a test request to the $info endpoint.
         
         Returns:
             bool: True if the session is valid, False otherwise
@@ -324,16 +344,47 @@ class BaseAPIClient:
             return False
             
         try:
-            # Make a lightweight request to validate the session
+            # Make a lightweight request to $info endpoint to validate the session
             response = self._make_request(
                 "GET",
-                "validate",
+                "$info",
                 timeout=self.timeout,
             )
+            
+            # Log response cookies
+            self._log_response_cookies(response)
             
             is_valid = response.status_code == 200
             if is_valid:
                 logger.debug("Session is valid")
+                
+                # Check for new session cookie in the response
+                wasid_cookie = None
+                for cookie in response.cookies:
+                    if cookie.name == "WASID4D":
+                        wasid_cookie = cookie.value
+                        logger.info(f"Found new session cookie in response: {cookie.name}")
+                        break
+                
+                # If we received a new cookie, update our session
+                if wasid_cookie:
+                    logger.info("Updating session with new cookie from response")
+                    self.session.cookies.clear()
+                    logger.info("Cleared all existing cookies")
+                    
+                    # Set the new cookie value
+                    self.session_id = wasid_cookie
+                    self.session.cookies.set("WASID4D", wasid_cookie)
+                    logger.info("Set single new cookie WASID4D with value from response")
+                    
+                    # Save the updated cookie
+                    self.save_session_cookie()
+                else:
+                    logger.info("No new session cookie received, keeping existing one")
+                    if self.session_id and not self.session.cookies.get("WASID4D"):
+                        logger.info("Re-adding existing session cookie")
+                        self.session.cookies.clear()
+                        self.session.cookies.set("WASID4D", self.session_id)
             else:
                 logger.warning(
                     "Session validation failed with status code %d",
@@ -517,7 +568,7 @@ class BaseAPIClient:
                 raise RuntimeError("Failed to establish a valid session")
             
             # Build the URL and parameters
-            url = f"tables/{table_name}/records"
+            url = table_name
             params = {"$top": top, "$skip": skip}
             
             if filter_query:
@@ -538,7 +589,7 @@ class BaseAPIClient:
                 )
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
-            
+ 
             # Parse the response
             try:
                 data = response.json()
@@ -546,13 +597,14 @@ class BaseAPIClient:
                 error_msg = f"Failed to parse JSON response: {str(e)}"
                 logger.error(error_msg)
                 raise RuntimeError(error_msg)
-            
+            # print(pd.DataFrame(data))
+            # breakpoint()
             # Convert to DataFrame
-            if not data or "value" not in data:
+            if not data or "__ENTITIES" not in data:
                 logger.warning("No records found in response")
                 return pd.DataFrame()
             
-            records = data["value"]
+            records = data["__ENTITIES"]
             logger.info("Successfully fetched %d records", len(records))
             
             # Transform dates in records
@@ -627,6 +679,7 @@ class BaseAPIClient:
                     logger.error(error_msg)
                     raise RuntimeError(error_msg)
                 
+
                 try:
                     data = response.json()
                 except json.JSONDecodeError as e:
@@ -634,11 +687,11 @@ class BaseAPIClient:
                     logger.error(error_msg)
                     raise RuntimeError(error_msg)
                 
-                if not data or "value" not in data:
+                if not data or "__ENTITIES" not in data:
                     logger.warning("No records found in response")
                     break
                 
-                records = data["value"]
+                records = data["__ENTITIES"]
                 if not records:
                     break
                 

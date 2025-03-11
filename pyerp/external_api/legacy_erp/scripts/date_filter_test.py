@@ -15,7 +15,7 @@ import pandas as pd
 from dotenv import load_dotenv
 
 # Import the proper client from the legacy_erp module
-from pyerp.external_api.legacy_erp.scripts.simple_client import SimpleAPIClient
+from pyerp.external_api.legacy_erp.client import LegacyERPClient
 from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 
 # Configure logging
@@ -40,8 +40,8 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="live"):
         pandas.DataFrame: Filtered records
     """
     try:
-        # Initialize API client using the proper SimpleAPIClient
-        client = SimpleAPIClient(environment=environment)
+        # Initialize API client using the proper LegacyERPClient
+        client = LegacyERPClient(environment=environment)
         
         # Calculate the date threshold
         date_threshold = (
@@ -115,8 +115,8 @@ def main():
             try:
                 df = test_date_filter(days_ago=days, environment="live")
                 if not df.empty:
-                    msg = f"\nFound {len(df)} records modified in last {days} days"
-                    print(msg)
+                    print(f"\nFound {len(df)} records modified in last "
+                          f"{days} days")
                     print("\nSample of retrieved data:")
                     pd.set_option('display.max_columns', None)
                     print(df.head())
