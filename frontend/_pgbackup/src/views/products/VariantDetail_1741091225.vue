@@ -14,9 +14,7 @@
     <!-- Variant details -->
     <div v-else class="variant-content">
       <div class="variant-header">
-        <button @click="goBack" class="back-button">
-          &larr; Back
-        </button>
+        <button @click="goBack" class="back-button">&larr; Back</button>
         <div v-if="variant.parent" class="parent-link">
           <router-link :to="{ name: 'ProductDetail', params: { id: variant.parent.id } }">
             {{ variant.parent.name }}
@@ -29,7 +27,10 @@
           <div v-if="variant.category" class="category-badge">
             {{ variant.category.name }}
           </div>
-          <div class="stock-badge" :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }">
+          <div
+            class="stock-badge"
+            :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }"
+          >
             {{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}
           </div>
         </div>
@@ -40,7 +41,13 @@
         <div class="variant-images">
           <div class="main-image">
             <img
-              :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png')"
+              :src="
+                selectedImage
+                  ? selectedImage.url
+                  : variant.primary_image
+                    ? variant.primary_image.url
+                    : '/static/images/no-image.png'
+              "
               :alt="variant.name"
             />
           </div>
@@ -120,14 +127,21 @@
           >
             <div class="variant-image">
               <img
-                :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : '/static/images/no-image.png'"
+                :src="
+                  relatedVariant.primary_image
+                    ? relatedVariant.primary_image.url
+                    : '/static/images/no-image.png'
+                "
                 :alt="relatedVariant.name"
               />
             </div>
             <div class="variant-info">
               <h3>{{ relatedVariant.name }}</h3>
               <p class="variant-sku">SKU: {{ relatedVariant.sku }}</p>
-              <div class="variant-attributes" v-if="relatedVariant.attributes && relatedVariant.attributes.length">
+              <div
+                class="variant-attributes"
+                v-if="relatedVariant.attributes && relatedVariant.attributes.length"
+              >
                 <span
                   v-for="(attr, index) in relatedVariant.attributes"
                   :key="index"
@@ -136,7 +150,13 @@
                   {{ attr.name }}: {{ attr.value }}
                 </span>
               </div>
-              <div class="variant-stock" :class="{ 'in-stock': relatedVariant.in_stock, 'out-of-stock': !relatedVariant.in_stock }">
+              <div
+                class="variant-stock"
+                :class="{
+                  'in-stock': relatedVariant.in_stock,
+                  'out-of-stock': !relatedVariant.in_stock
+                }"
+              >
                 {{ relatedVariant.in_stock ? 'In Stock' : 'Out of Stock' }}
               </div>
             </div>
@@ -291,7 +311,8 @@ onMounted(() => {
   padding: 20px 0;
 }
 
-.loading, .error {
+.loading,
+.error {
   text-align: center;
   padding: 30px;
 }
@@ -518,7 +539,9 @@ h1 {
   border: 1px solid #eaeaea;
   border-radius: 8px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   cursor: pointer;
   background-color: white;
 }

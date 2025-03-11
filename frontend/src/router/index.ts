@@ -47,7 +47,15 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/auth/Settings.vue'),
     meta: { requiresAuth: true }
   },
-  
+
+  // SMTP Settings route
+  {
+    path: '/settings/smtp',
+    name: 'SMTPSettings',
+    component: () => import('../views/settings/SMTPSettings.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+
   // Product routes
   {
     path: '/products',
@@ -88,7 +96,7 @@ const routes: Array<RouteRecordRaw> = [
     props: true,
     meta: { requiresAuth: true }
   },
-  
+
   // Sales routes
   {
     path: '/sales',
@@ -149,7 +157,7 @@ const router = createRouter({
 // Global navigation guard
 router.beforeEach((to, from, next) => {
   // Check if the route requires authentication
-  if (to.matched.some(record => record.meta.requiresAuth)) {
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
     // Return the Promise from authGuard
     return authGuard(to, from, next);
   } else {

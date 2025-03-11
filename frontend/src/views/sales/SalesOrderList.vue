@@ -3,12 +3,7 @@
     <h1 class="text-h4 font-weight-bold mb-6">Sales Orders</h1>
 
     <!-- Loading and Error States -->
-    <v-alert
-      v-if="error"
-      type="error"
-      variant="tonal"
-      class="mb-6"
-    >
+    <v-alert v-if="error" type="error" variant="tonal" class="mb-6">
       {{ error }}
     </v-alert>
 
@@ -31,31 +26,22 @@
         <template v-slot:item.order_date="{ item }">
           {{ formatDate(item.order_date) }}
         </template>
-        
+
         <template v-slot:item.total_amount="{ item }">
           {{ formatCurrency(item.total_amount) }}
         </template>
-        
+
         <template v-slot:item.status="{ item }">
-          <v-chip
-            :color="getStatusColor(item.status)"
-            text-color="white"
-            size="small"
-          >
+          <v-chip :color="getStatusColor(item.status)" text-color="white" size="small">
             {{ capitalizeFirst(item.status) }}
           </v-chip>
         </template>
-        
+
         <template v-slot:item.actions="{ item }">
-          <v-btn
-            size="small"
-            color="primary"
-            variant="text"
-            @click="viewOrderDetails(item.id)"
-          >
+          <v-btn size="small" color="primary" variant="text" @click="viewOrderDetails(item.id)">
             View
           </v-btn>
-          
+
           <v-btn
             v-if="item.status === 'draft'"
             size="small"
@@ -67,7 +53,7 @@
           </v-btn>
         </template>
       </v-data-table>
-      
+
       <!-- Pagination -->
       <v-card-actions v-if="salesOrders.length > 0" class="justify-center">
         <v-pagination
@@ -184,12 +170,18 @@ const formatCurrency = (amount: number) => {
 
 const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'draft': return 'grey';
-    case 'confirmed': return 'blue';
-    case 'invoiced': return 'orange';
-    case 'completed': return 'green';
-    case 'canceled': return 'red';
-    default: return 'grey';
+    case 'draft':
+      return 'grey';
+    case 'confirmed':
+      return 'blue';
+    case 'invoiced':
+      return 'orange';
+    case 'completed':
+      return 'green';
+    case 'canceled':
+      return 'red';
+    default:
+      return 'grey';
   }
 };
 
@@ -216,4 +208,4 @@ onMounted(() => {
 .v-data-table .v-table__wrapper > table {
   padding: 0.5rem;
 }
-</style> 
+</style>

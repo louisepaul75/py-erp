@@ -32,13 +32,7 @@
         >
           Save
         </v-btn>
-        <v-btn
-          v-if="isEditing"
-          color="error"
-          variant="text"
-          @click="cancelEditing"
-          class="ma-1"
-        >
+        <v-btn v-if="isEditing" color="error" variant="text" @click="cancelEditing" class="ma-1">
           Cancel
         </v-btn>
       </v-col>
@@ -46,20 +40,11 @@
 
     <!-- Loading indicator -->
     <div v-if="loading" class="d-flex justify-center my-6">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="64"
-      ></v-progress-circular>
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
     </div>
 
     <!-- Error message -->
-    <v-alert
-      v-else-if="error"
-      type="error"
-      variant="tonal"
-      class="mb-6"
-    >
+    <v-alert v-else-if="error" type="error" variant="tonal" class="mb-6">
       {{ error }}
     </v-alert>
 
@@ -220,11 +205,7 @@
           Recent Orders
         </v-card-title>
         <v-card-text>
-          <v-data-table
-            :headers="orderHeaders"
-            :items="recentOrders"
-            :items-per-page="5"
-          >
+          <v-data-table :headers="orderHeaders" :items="recentOrders" :items-per-page="5">
             <template v-slot:item.order_date="{ item }">
               {{ formatDate(item.order_date) }}
             </template>
@@ -232,21 +213,12 @@
               {{ formatCurrency(item.total_amount) }}
             </template>
             <template v-slot:item.status="{ item }">
-              <v-chip
-                :color="getStatusColor(item.status)"
-                text-color="white"
-                size="small"
-              >
+              <v-chip :color="getStatusColor(item.status)" text-color="white" size="small">
                 {{ capitalizeFirst(item.status) }}
               </v-chip>
             </template>
             <template v-slot:item.actions="{ item }">
-              <v-btn
-                size="small"
-                color="primary"
-                variant="text"
-                @click="viewOrderDetails(item.id)"
-              >
+              <v-btn size="small" color="primary" variant="text" @click="viewOrderDetails(item.id)">
                 View
               </v-btn>
             </template>
@@ -256,14 +228,7 @@
     </template>
 
     <!-- No customer found message -->
-    <v-alert
-      v-else
-      type="warning"
-      variant="tonal"
-      class="mt-6"
-    >
-      Customer not found.
-    </v-alert>
+    <v-alert v-else type="warning" variant="tonal" class="mt-6"> Customer not found. </v-alert>
   </div>
 </template>
 
@@ -364,11 +329,14 @@ const customerFields = computed((): CustomerFields => {
     };
   }
 
-  const primaryAddress = editedCustomer.value.addresses.find(a => a.is_primary) || editedCustomer.value.addresses[0];
-  
+  const primaryAddress =
+    editedCustomer.value.addresses.find((a) => a.is_primary) || editedCustomer.value.addresses[0];
+
   return {
-    name: primaryAddress?.company_name || 
-          `${primaryAddress?.first_name || ''} ${primaryAddress?.last_name || ''}`.trim() || '',
+    name:
+      primaryAddress?.company_name ||
+      `${primaryAddress?.first_name || ''} ${primaryAddress?.last_name || ''}`.trim() ||
+      '',
     customerNumber: editedCustomer.value.customer_number,
     email: primaryAddress?.email || '',
     phone: primaryAddress?.phone || '',
@@ -414,22 +382,24 @@ const loadCustomerDetails = async () => {
   try {
     const response = await salesApi.getCustomer(customerId);
     const customerData = response.data as Customer;
-    
+
     // Ensure customer has at least one address
     if (!customerData.addresses || customerData.addresses.length === 0) {
-      customerData.addresses = [{
-        id: 0,
-        is_primary: true,
-        street: '',
-        country: '',
-        postal_code: '',
-        city: ''
-      }];
+      customerData.addresses = [
+        {
+          id: 0,
+          is_primary: true,
+          street: '',
+          country: '',
+          postal_code: '',
+          city: ''
+        }
+      ];
     }
-    
+
     customer.value = customerData;
     editedCustomer.value = { ...customerData };
-    
+
     // Try to load recent orders, but don't fail if endpoint doesn't exist
     try {
       const ordersResponse = await salesApi.getCustomerOrders(customerId);
@@ -472,7 +442,7 @@ const cancelEditing = () => {
 
 const saveChanges = async () => {
   if (!editedCustomer.value) return;
-  
+
   loading.value = true;
   error.value = '';
 
@@ -509,12 +479,18 @@ const formatCurrency = (amount: number | undefined): string => {
 // Get status color
 const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'draft': return 'grey';
-    case 'confirmed': return 'blue';
-    case 'invoiced': return 'orange';
-    case 'completed': return 'green';
-    case 'canceled': return 'red';
-    default: return 'grey';
+    case 'draft':
+      return 'grey';
+    case 'confirmed':
+      return 'blue';
+    case 'invoiced':
+      return 'orange';
+    case 'completed':
+      return 'green';
+    case 'canceled':
+      return 'red';
+    default:
+      return 'grey';
   }
 };
 
@@ -533,4 +509,4 @@ onMounted(() => {
 .customer-detail {
   padding: 20px 0;
 }
-</style> 
+</style>

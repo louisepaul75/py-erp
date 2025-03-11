@@ -15,9 +15,10 @@ export const determineBaseUrl = () => {
   }
 
   // Then check if we're running locally
-  const isLocalhost = window.location.hostname === 'localhost' ||
-                     window.location.hostname === '127.0.0.1' ||
-                     window.location.hostname === '0.0.0.0';
+  const isLocalhost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0';
 
   // If we're running locally, use localhost URL
   if (isLocalhost) {
@@ -25,7 +26,11 @@ export const determineBaseUrl = () => {
   }
 
   // Otherwise use the configured network URL or fallback to window.location.origin
-  return import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  return (
+    import.meta.env.VITE_API_NETWORK_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    window.location.origin
+  );
 };
 
 const apiBaseUrl = determineBaseUrl();
@@ -34,17 +39,20 @@ const apiBaseUrl = determineBaseUrl();
 console.log('API Base URL:', apiBaseUrl);
 console.log('Running on hostname:', window.location.hostname);
 console.log('Is specific IP:', window.location.hostname === '192.168.73.65');
-console.log('Is localhost:', window.location.hostname === 'localhost' ||
-                          window.location.hostname === '127.0.0.1' ||
-                          window.location.hostname === '0.0.0.0');
+console.log(
+  'Is localhost:',
+  window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0'
+);
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: apiBaseUrl + '/api',  // Add /api prefix to all requests
+  baseURL: apiBaseUrl + '/api', // Add /api prefix to all requests
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json'
   },
-  withCredentials: true, // Required for cookies/CORS
+  withCredentials: true // Required for cookies/CORS
 });
 
 // Flag to prevent multiple simultaneous token refreshes
@@ -52,14 +60,14 @@ let isRefreshing = false;
 let failedQueue: any[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
       prom.resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
@@ -96,7 +104,7 @@ api.interceptors.response.use(
       status: error.response?.status,
       url: originalRequest?.url,
       method: originalRequest?.method,
-      isRetry: originalRequest?._retry,
+      isRetry: originalRequest?._retry
     });
 
     // If error is 401 and we haven't tried refreshing token yet
@@ -151,11 +159,11 @@ api.interceptors.response.use(
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         processQueue(refreshError, null);
-        
+
         // Get auth store and logout
         const authStore = useAuthStore();
         await authStore.logout();
-        
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

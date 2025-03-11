@@ -2,7 +2,7 @@
   <v-footer
     app
     :class="[
-      'pa-3', 
+      'pa-3',
       { 'with-debug-panel': isDev, 'with-expanded-debug': isDebugPanelExpanded },
       themeStore.isDark ? 'bg-surface' : 'bg-grey-lighten-4'
     ]"
@@ -10,7 +10,9 @@
     <v-container>
       <v-row>
         <v-col cols="12" md="6">
-          <p class="text-body-2 text-medium-emphasis mb-0">&copy; {{ currentYear }} pyERP. All rights reserved.</p>
+          <p class="text-body-2 text-medium-emphasis mb-0">
+            &copy; {{ currentYear }} pyERP. All rights reserved.
+          </p>
         </v-col>
         <v-col cols="12" md="6" class="text-md-end d-flex justify-end align-center">
           <p class="text-body-2 text-medium-emphasis mb-0 mr-3">Version {{ appVersion }}</p>
@@ -38,7 +40,7 @@ const currentYear = computed(() => new Date().getFullYear());
 const appVersion = ref('');
 
 // Check if in development mode
-const currentPort = computed(() => typeof window !== 'undefined' ? window.location.port : '');
+const currentPort = computed(() => (typeof window !== 'undefined' ? window.location.port : ''));
 const isDevServer = computed(() => currentPort.value === '3000');
 
 // Development environment detection
@@ -68,10 +70,10 @@ const healthStatusText = computed(() => {
 
 const healthStatusClass = computed(() => {
   return {
-    'success': healthStatus.value === 'success',
-    'warning': healthStatus.value === 'warning',
-    'error': healthStatus.value === 'error',
-    'unknown': healthStatus.value === 'unknown'
+    success: healthStatus.value === 'success',
+    warning: healthStatus.value === 'warning',
+    error: healthStatus.value === 'error',
+    unknown: healthStatus.value === 'unknown'
   };
 });
 
@@ -81,7 +83,7 @@ const fetchHealthStatus = async () => {
     const response = await api.get('/monitoring/health-checks/', {
       timeout: 120000
     });
-    
+
     if (response.data && response.data.success) {
       // Get version from first result that has it
       const firstResult = response.data.results[0] as HealthCheckResult;
@@ -104,10 +106,12 @@ const fetchHealthStatus = async () => {
   } catch (error: any) {
     console.error('Failed to fetch health status:', error);
     healthStatus.value = 'error';
-    
+
     // Add specific handling for timeout errors
     if (error.code === 'ECONNABORTED') {
-      console.warn('Health check request timed out. Health status might still be good, but the request took too long to complete.');
+      console.warn(
+        'Health check request timed out. Health status might still be good, but the request took too long to complete.'
+      );
     }
   }
 };

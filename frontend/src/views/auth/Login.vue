@@ -4,14 +4,9 @@
       <v-card-title class="text-white bg-primary">
         <h2>{{ $t('common.login') }}</h2>
       </v-card-title>
-      
+
       <v-card-text>
-        <v-alert
-          v-if="authStore.error"
-          type="error"
-          class="mt-4"
-          variant="tonal"
-        >
+        <v-alert v-if="authStore.error" type="error" class="mt-4" variant="tonal">
           {{ authStore.error }}
         </v-alert>
 
@@ -49,12 +44,7 @@
         </v-form>
 
         <div class="text-center mt-4">
-          <v-btn
-            variant="text"
-            color="primary"
-            href="/accounts/password_reset/"
-            size="small"
-          >
+          <v-btn variant="text" color="primary" href="/accounts/password_reset/" size="small">
             Forgot password?
           </v-btn>
         </div>
@@ -85,7 +75,7 @@ const handleLogin = async () => {
     await authStore.login(credentials.value);
 
     // Redirect to the intended destination or home
-    const redirectPath = route.query.redirect as string || '/';
+    const redirectPath = (route.query.redirect as string) || '/';
     router.push(redirectPath);
   } catch (error) {
     // Error is already handled in the store

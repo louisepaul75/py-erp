@@ -29,8 +29,9 @@ export default defineConfig(({ mode }) => {
   const isSpecificIP = localIpAddress === '192.168.73.65';
 
   // Determine if we're running in a local development environment
-  const isLocalDev = process.env.NODE_ENV === 'development' &&
-                    (!process.env.VITE_API_HOST || process.env.VITE_API_HOST === 'localhost');
+  const isLocalDev =
+    process.env.NODE_ENV === 'development' &&
+    (!process.env.VITE_API_HOST || process.env.VITE_API_HOST === 'localhost');
 
   // Get API URL based on the detected IP
   let apiUrl;
@@ -57,13 +58,13 @@ export default defineConfig(({ mode }) => {
       vue(),
       liveDesigner({
         iconPreferredCase: 'unocss', // default value is 'unocss'
-        devtoolsKey: 'devtoolsKey',
-      }),
+        devtoolsKey: 'devtoolsKey'
+      })
     ],
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url)),
-      },
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
     },
     build: {
       // Output directory for production build
@@ -119,9 +120,9 @@ export default defineConfig(({ mode }) => {
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('Received Response:', proxyRes.statusCode, req.url);
             });
-          },
-        },
-      },
+          }
+        }
+      }
     }
   };
 });

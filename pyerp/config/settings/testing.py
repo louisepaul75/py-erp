@@ -69,6 +69,12 @@ PG_PARAMS = {
     "PASSWORD": os.environ.get("DB_PASSWORD", ""),
     "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
     "PORT": os.environ.get("DB_PORT", "5432"),
+    "OPTIONS": {
+        "connect_timeout": 10,  # Connection timeout in seconds
+        "client_encoding": "UTF8",
+        "sslmode": "prefer",
+        "auth_method": "md5",  # Use MD5 authentication
+    },
     "TEST": {
         "NAME": "test_pyerp_testing",
     },

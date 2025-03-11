@@ -9,13 +9,10 @@ export const useThemeStore = defineStore('theme', () => {
     }
     return false;
   };
-  
+
   // Initialize theme from localStorage or system preference
   const storedTheme = localStorage.getItem('theme');
-  const isDark = ref(storedTheme !== null 
-    ? storedTheme === 'dark'
-    : getSystemPreference()
-  );
+  const isDark = ref(storedTheme !== null ? storedTheme === 'dark' : getSystemPreference());
 
   // Toggle theme function
   function toggleTheme() {
@@ -44,4 +41,4 @@ export const useThemeStore = defineStore('theme', () => {
     toggleTheme,
     setTheme
   };
-}); 
+});

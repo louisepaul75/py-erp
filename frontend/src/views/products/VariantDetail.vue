@@ -1,146 +1,180 @@
 <template>
-    <div class="variant-detail">
-        <!-- Loading indicator -->
-        <div v-if="loading" class="loading">
-            <p>Loading variant details...</p>
-        </div>
-        <!-- Error message -->
-        <div v-else-if="error" class="error">
-            <p>{{ error }}</p>
-            <button @click="goBack" class="back-button">Go Back</button>
-        </div>
-        <!-- Variant details -->
-        <div v-else class="variant-content">
-            <div class="variant-header">
-                <button @click="goBack" class="back-button">
-                    &larr; Back
-</button>
-                <div v-if="variant.parent" class="parent-link">
-                    <router-link :to="{ name: 'ProductDetail', params: { id: variant.parent.id } }">
-                        {{ variant.parent.name }}
-</router-link><span class="separator">/</span>
-                </div>
-                <h1>{{ variant.name }}</h1>
-                <p class="sku">SKU: {{ variant.sku }}</p>
-                <div class="variant-badges">
-                    <div v-if="variant.category" class="category-badge">
-                        {{ variant.category.name }}
-</div>
-                    <div class="stock-badge" :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }">
-                        {{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}
-</div>
-                </div>
-            </div>
-            <div class="variant-layout">
-                <!-- Variant images -->
-                <div class="variant-images">
-                    <div class="main-image">
-                        <div v-if="!selectedImage && !variant.primary_image" class="no-image-placeholder">
-                            <span>No Image Available</span>
-                        </div>
-                        <img
-                            v-else
-                            :src="selectedImage ? selectedImage.url : (variant.primary_image ? variant.primary_image.url : getNoImageUrl())"
-                            :alt="variant.name"
-                            @load="imageLoaded = true"
-                            @error="handleImageError"
-                            :class="{ 'loading': !imageLoaded }"
-                        />
-                        <div v-if="!imageLoaded" class="image-loading">
-                            <span>Loading...</span>
-                        </div>
-                    </div>
-
-                    <div v-if="variant.images && variant.images.length > 1" class="image-thumbnails">
-                        <div
-                            v-for="image in variant.images"
-                            :key="image.id"
-                            class="thumbnail"
-                            :class="{
-                                active: selectedImage && selectedImage.id === image.id,
-                                'loading': !thumbnailsLoaded[image.id]
-                            }"
-                            @click="selectImage(image)"
-                        >
-                            <img
-                                :src="image.thumbnail_url || image.url"
-                                :alt="variant.name"
-                                @load="handleThumbnailLoad(image.id)"
-                                @error="() => handleThumbnailError(image.id)"
-                            />
-                            <div v-if="!thumbnailsLoaded[image.id]" class="thumbnail-loading">
-                                <span>Loading...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Variant info -->
-                <div class="variant-info">
-                    <!-- Description -->
-                    <div class="info-section">
-                        <h3>Description</h3>
-                        <p v-if="variant.description">{{ variant.description }}</p>
-                        <p v-else>No description available.</p>
-                    </div>
-                    <!-- Attributes -->
-                    <div v-if="variant.attributes && variant.attributes.length > 0" class="info-section">
-                        <h3>Attributes</h3>
-                        <div class="attributes-list">
-                            <div v-for="(attr, index) in variant.attributes" :key="index" class="attribute-item"><span class="attribute-name">{{ attr.name }}:</span><span class="attribute-value">{{ attr.value }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Details -->
-                    <div class="info-section">
-                        <h3>Details</h3>
-                        <table class="details-table">
-                            <tr v-if="variant.category">
-                                <td>Category:</td>
-                                <td>{{ variant.category.name }}</td>
-                            </tr>
-                            <tr v-if="variant.in_stock !== undefined">
-                                <td>Stock Status:</td>
-                                <td>{{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}</td>
-                            </tr>
-                            <tr v-if="variant.is_active !== undefined">
-                                <td>Status:</td>
-                                <td>{{ variant.is_active ? 'Active' : 'Inactive' }}</td>
-                            </tr>
-                            <tr v-if="variant.created_at">
-                                <td>Created:</td>
-                                <td>{{ formatDate(variant.created_at) }}</td>
-                            </tr>
-                            <tr v-if="variant.updated_at">
-                                <td>Last Updated:</td>
-                                <td>{{ formatDate(variant.updated_at) }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <!-- Related variants section -->
-            <div v-if="relatedVariants.length > 0" class="related-variants-section">
-                <h2>Other Variants of {{ variant.parent?.name }}</h2>
-                <div class="variants-grid">
-                    <div v-for="relatedVariant in relatedVariants" :key="relatedVariant.id" class="variant-card" @click="viewVariantDetails(relatedVariant.id)">
-                        <div class="variant-image">
-                            <img :src="relatedVariant.primary_image ? relatedVariant.primary_image.url : getNoImageUrl()" :alt="relatedVariant.name"/>
-                        </div>
-                        <div class="variant-info">
-                            <h3>{{ relatedVariant.name }}</h3>
-                            <p class="variant-sku">SKU: {{ relatedVariant.sku }}</p>
-                            <div class="variant-attributes" v-if="relatedVariant.attributes && relatedVariant.attributes.length"><span v-for="(attr, index) in relatedVariant.attributes" :key="index" class="attribute-badge">
-                  {{ attr.name }}: {{ attr.value }} </span>
-                            </div>
-                            <div class="variant-stock" :class="{ 'in-stock': relatedVariant.in_stock, 'out-of-stock': !relatedVariant.in_stock }">
-                                {{ relatedVariant.in_stock ? 'In Stock' : 'Out of Stock' }}
-</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="variant-detail">
+    <!-- Loading indicator -->
+    <div v-if="loading" class="loading">
+      <p>Loading variant details...</p>
     </div>
+    <!-- Error message -->
+    <div v-else-if="error" class="error">
+      <p>{{ error }}</p>
+      <button @click="goBack" class="back-button">Go Back</button>
+    </div>
+    <!-- Variant details -->
+    <div v-else class="variant-content">
+      <div class="variant-header">
+        <button @click="goBack" class="back-button">&larr; Back</button>
+        <div v-if="variant.parent" class="parent-link">
+          <router-link :to="{ name: 'ProductDetail', params: { id: variant.parent.id } }">
+            {{ variant.parent.name }} </router-link
+          ><span class="separator">/</span>
+        </div>
+        <h1>{{ variant.name }}</h1>
+        <p class="sku">SKU: {{ variant.sku }}</p>
+        <div class="variant-badges">
+          <div v-if="variant.category" class="category-badge">
+            {{ variant.category.name }}
+          </div>
+          <div
+            class="stock-badge"
+            :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }"
+          >
+            {{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}
+          </div>
+        </div>
+      </div>
+      <div class="variant-layout">
+        <!-- Variant images -->
+        <div class="variant-images">
+          <div class="main-image">
+            <div v-if="!selectedImage && !variant.primary_image" class="no-image-placeholder">
+              <span>No Image Available</span>
+            </div>
+            <img
+              v-else
+              :src="
+                selectedImage
+                  ? selectedImage.url
+                  : variant.primary_image
+                    ? variant.primary_image.url
+                    : getNoImageUrl()
+              "
+              :alt="variant.name"
+              @load="imageLoaded = true"
+              @error="handleImageError"
+              :class="{ loading: !imageLoaded }"
+            />
+            <div v-if="!imageLoaded" class="image-loading">
+              <span>Loading...</span>
+            </div>
+          </div>
+
+          <div v-if="variant.images && variant.images.length > 1" class="image-thumbnails">
+            <div
+              v-for="image in variant.images"
+              :key="image.id"
+              class="thumbnail"
+              :class="{
+                active: selectedImage && selectedImage.id === image.id,
+                loading: !thumbnailsLoaded[image.id]
+              }"
+              @click="selectImage(image)"
+            >
+              <img
+                :src="image.thumbnail_url || image.url"
+                :alt="variant.name"
+                @load="handleThumbnailLoad(image.id)"
+                @error="() => handleThumbnailError(image.id)"
+              />
+              <div v-if="!thumbnailsLoaded[image.id]" class="thumbnail-loading">
+                <span>Loading...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Variant info -->
+        <div class="variant-info">
+          <!-- Description -->
+          <div class="info-section">
+            <h3>Description</h3>
+            <p v-if="variant.description">{{ variant.description }}</p>
+            <p v-else>No description available.</p>
+          </div>
+          <!-- Attributes -->
+          <div v-if="variant.attributes && variant.attributes.length > 0" class="info-section">
+            <h3>Attributes</h3>
+            <div class="attributes-list">
+              <div v-for="(attr, index) in variant.attributes" :key="index" class="attribute-item">
+                <span class="attribute-name">{{ attr.name }}:</span
+                ><span class="attribute-value">{{ attr.value }}</span>
+              </div>
+            </div>
+          </div>
+          <!-- Details -->
+          <div class="info-section">
+            <h3>Details</h3>
+            <table class="details-table">
+              <tr v-if="variant.category">
+                <td>Category:</td>
+                <td>{{ variant.category.name }}</td>
+              </tr>
+              <tr v-if="variant.in_stock !== undefined">
+                <td>Stock Status:</td>
+                <td>{{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}</td>
+              </tr>
+              <tr v-if="variant.is_active !== undefined">
+                <td>Status:</td>
+                <td>{{ variant.is_active ? 'Active' : 'Inactive' }}</td>
+              </tr>
+              <tr v-if="variant.created_at">
+                <td>Created:</td>
+                <td>{{ formatDate(variant.created_at) }}</td>
+              </tr>
+              <tr v-if="variant.updated_at">
+                <td>Last Updated:</td>
+                <td>{{ formatDate(variant.updated_at) }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- Related variants section -->
+      <div v-if="relatedVariants.length > 0" class="related-variants-section">
+        <h2>Other Variants of {{ variant.parent?.name }}</h2>
+        <div class="variants-grid">
+          <div
+            v-for="relatedVariant in relatedVariants"
+            :key="relatedVariant.id"
+            class="variant-card"
+            @click="viewVariantDetails(relatedVariant.id)"
+          >
+            <div class="variant-image">
+              <img
+                :src="
+                  relatedVariant.primary_image ? relatedVariant.primary_image.url : getNoImageUrl()
+                "
+                :alt="relatedVariant.name"
+              />
+            </div>
+            <div class="variant-info">
+              <h3>{{ relatedVariant.name }}</h3>
+              <p class="variant-sku">SKU: {{ relatedVariant.sku }}</p>
+              <div
+                class="variant-attributes"
+                v-if="relatedVariant.attributes && relatedVariant.attributes.length"
+              >
+                <span
+                  v-for="(attr, index) in relatedVariant.attributes"
+                  :key="index"
+                  class="attribute-badge"
+                >
+                  {{ attr.name }}: {{ attr.value }}
+                </span>
+              </div>
+              <div
+                class="variant-stock"
+                :class="{
+                  'in-stock': relatedVariant.in_stock,
+                  'out-of-stock': !relatedVariant.in_stock
+                }"
+              >
+                {{ relatedVariant.in_stock ? 'In Stock' : 'Out of Stock' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
@@ -280,17 +314,17 @@ const viewVariantDetails = (id: number) => {
 
 // Add these new methods
 const selectImage = (image: ProductImage) => {
-    selectedImage.value = image;
-    imageLoaded.value = false; // Reset loading state for main image
+  selectedImage.value = image;
+  imageLoaded.value = false; // Reset loading state for main image
 };
 
 const handleThumbnailLoad = (imageId: number) => {
-    thumbnailsLoaded.value[imageId] = true;
+  thumbnailsLoaded.value[imageId] = true;
 };
 
 const handleThumbnailError = (imageId: number) => {
-    thumbnailsLoaded.value[imageId] = true;
-    // Could add error state handling here if needed
+  thumbnailsLoaded.value[imageId] = true;
+  // Could add error state handling here if needed
 };
 
 // Initialize component
@@ -303,7 +337,8 @@ onMounted(() => {
   padding: 20px 0;
 }
 
-.loading, .error {
+.loading,
+.error {
   text-align: center;
   padding: 30px;
 }
@@ -565,7 +600,9 @@ h1 {
   border: 1px solid #eaeaea;
   border-radius: 8px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   cursor: pointer;
   background-color: white;
 }

@@ -95,4 +95,4 @@ export default {
       description: 'Plan and track manufacturing processes'
     }
   }
-} 
+};

@@ -43,7 +43,6 @@ PG_PARAMS = {
         "connect_timeout": 10,  # Connection timeout in seconds
         "client_encoding": "UTF8",
         "sslmode": "prefer",
-        "gssencmode": "disable",  # Disable GSSAPI/Kerberos encryption
     },
 }
 
@@ -168,7 +167,25 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 # Email backend for development
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
+
+# Import anymail settings for reference, but use console backend
+from .anymail import *  # noqa
+
+# Override anymail settings for development
+ANYMAIL = {
+    **ANYMAIL,
+    "DEBUG_API_REQUESTS": True,
+}
+
+# Add email_system to installed apps
+INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
+
+# Set this to True to actually send emails in development (using the configured ESP)
+USE_ANYMAIL_IN_DEV = os.environ.get("USE_ANYMAIL_IN_DEV", "").lower() == "true"
+if USE_ANYMAIL_IN_DEV:
+    # Always use the logging email backend for simplicity in development
+    EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
 
 # Disable password validators during development
 AUTH_PASSWORD_VALIDATORS = []

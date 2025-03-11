@@ -3,7 +3,7 @@
     <div class="px-6 py-4 border-b d-flex align-center">
       <span class="text-h6 font-weight-medium">{{ module.title }}</span>
       <v-spacer></v-spacer>
-      
+
       <v-btn
         v-if="!editMode"
         :icon="isFavorite ? 'mdi-star' : 'mdi-star-outline'"
@@ -28,7 +28,7 @@
             >
               <v-icon :icon="tile.icon" size="24" class="mb-2 text-grey-darken-1"></v-icon>
               <div class="text-body-2">{{ tile.title }}</div>
-              
+
               <!-- Favorite Toggle Button -->
               <v-btn
                 :icon="isTileFavorite(tile) ? 'mdi-star' : 'mdi-star-outline'"
@@ -48,9 +48,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFavoritesStore } from '../../store/favorites'
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useFavoritesStore } from '../../store/favorites';
 
 const props = defineProps({
   module: {
@@ -61,10 +61,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
-})
+});
 
-const router = useRouter()
-const favoritesStore = useFavoritesStore()
+const router = useRouter();
+const favoritesStore = useFavoritesStore();
 
 // Menu tiles
 const menuTiles = [
@@ -81,19 +81,19 @@ const menuTiles = [
   { title: 'Analysen', icon: 'mdi-chart-pie' },
   { title: 'Kontakte', icon: 'mdi-account-plus' },
   { title: 'Admin Settings', icon: 'mdi-cog-outline', route: '/settings' }
-]
+];
 
 // Navigation function
 const navigateTo = (tile) => {
   if (tile.route) {
-    router.push(tile.route)
+    router.push(tile.route);
   }
-}
+};
 
 // Favorites functionality
 const isFavorite = computed(() => {
-  return favoritesStore.isFavorite(props.module.id)
-})
+  return favoritesStore.isFavorite(props.module.id);
+});
 
 const toggleFavorite = () => {
   const favoriteItem = {
@@ -101,15 +101,15 @@ const toggleFavorite = () => {
     title: props.module.title,
     icon: props.module.icon,
     type: 'module'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
+  };
+  favoritesStore.toggleFavorite(favoriteItem);
+};
 
 // Favorites functionality for tiles
 const isTileFavorite = (tile) => {
-  const tileId = `tile-${tile.title}`
-  return favoritesStore.isFavorite(tileId)
-}
+  const tileId = `tile-${tile.title}`;
+  return favoritesStore.isFavorite(tileId);
+};
 
 const toggleTileFavorite = (tile) => {
   const favoriteItem = {
@@ -118,9 +118,9 @@ const toggleTileFavorite = (tile) => {
     icon: tile.icon,
     route: tile.route,
     type: 'tile'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
+  };
+  favoritesStore.toggleFavorite(favoriteItem);
+};
 </script>
 
 <style scoped>
@@ -143,4 +143,4 @@ const toggleTileFavorite = (tile) => {
 .v-card:hover .show-on-hover {
   opacity: 1;
 }
-</style> 
+</style>
