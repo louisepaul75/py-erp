@@ -28,9 +28,9 @@
                 <td class="py-3 px-4">{{ user.email }}</td>
                 <td class="py-3 px-4">
                   <div class="flex flex-wrap gap-1">
-                    <span 
-                      v-for="(group, i) in user.groups" 
-                      :key="i" 
+                    <span
+                      v-for="(group, i) in user.groups"
+                      :key="i"
                       class="px-2 py-1 text-xs rounded-full border border-gray-200"
                     >
                       {{ group }}
@@ -44,18 +44,33 @@
                       class="p-1 rounded-md hover:bg-gray-100"
                       title="Gruppen zuweisen"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                       </svg>
                     </button>
-                    <button
-                      class="p-1 rounded-md hover:bg-gray-100"
-                      title="Bearbeiten"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <button class="p-1 rounded-md hover:bg-gray-100" title="Bearbeiten">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
@@ -78,40 +93,40 @@ defineEmits(['user-action']);
 
 // In einer echten Anwendung würden diese Daten vom Django-Backend abgerufen werden
 const users = ref([
-  { 
-    id: '1', 
-    username: "anna.mueller", 
-    name: "Anna Müller", 
-    email: "anna.mueller@example.com", 
-    groups: ["Administratoren", "Buchhaltung"] 
+  {
+    id: '1',
+    username: 'anna.mueller',
+    name: 'Anna Müller',
+    email: 'anna.mueller@example.com',
+    groups: ['Administratoren', 'Buchhaltung']
   },
-  { 
-    id: '2', 
-    username: "thomas.schmidt", 
-    name: "Thomas Schmidt", 
-    email: "thomas.schmidt@example.com", 
-    groups: ["Buchhaltung"] 
+  {
+    id: '2',
+    username: 'thomas.schmidt',
+    name: 'Thomas Schmidt',
+    email: 'thomas.schmidt@example.com',
+    groups: ['Buchhaltung']
   },
-  { 
-    id: '3', 
-    username: "lisa.wagner", 
-    name: "Lisa Wagner", 
-    email: "lisa.wagner@example.com", 
-    groups: ["Vertrieb", "Buchhaltung"] 
+  {
+    id: '3',
+    username: 'lisa.wagner',
+    name: 'Lisa Wagner',
+    email: 'lisa.wagner@example.com',
+    groups: ['Vertrieb', 'Buchhaltung']
   },
-  { 
-    id: '4', 
-    username: "michael.becker", 
-    name: "Michael Becker", 
-    email: "michael.becker@example.com", 
-    groups: ["Lager"] 
+  {
+    id: '4',
+    username: 'michael.becker',
+    name: 'Michael Becker',
+    email: 'michael.becker@example.com',
+    groups: ['Lager']
   },
-  { 
-    id: '5', 
-    username: "sarah.hoffmann", 
-    name: "Sarah Hoffmann", 
-    email: "sarah.hoffmann@example.com", 
-    groups: ["Vertrieb"] 
-  },
+  {
+    id: '5',
+    username: 'sarah.hoffmann',
+    name: 'Sarah Hoffmann',
+    email: 'sarah.hoffmann@example.com',
+    groups: ['Vertrieb']
+  }
 ]);
 </script>

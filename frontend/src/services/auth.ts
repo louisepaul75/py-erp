@@ -128,7 +128,7 @@ const authService = {
 
       const newAccessToken = response.data.access;
       console.debug('Successfully obtained new access token');
-      
+
       localStorage.setItem('access_token', newAccessToken);
       api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
 

@@ -33,18 +33,18 @@
             <p v-else>Status unknown</p>
           </div>
         </div>
-        
+
         <!-- Database Visualization Animation -->
         <div class="db-visualization">
-          <canvas 
-            ref="dbCanvas" 
-            class="db-canvas"
-            width="600" 
-            height="100">
-          </canvas>
+          <canvas ref="dbCanvas" class="db-canvas" width="600" height="100"> </canvas>
           <div class="canvas-legend">
             <div class="legend-item">
-              <span>Speed: Average query time ({{ formatNumber(dbStats?.performance?.avg_query_time) }} ms)</span>
+              <span
+                >Speed: Average query time ({{
+                  formatNumber(dbStats?.performance?.avg_query_time)
+                }}
+                ms)</span
+              >
             </div>
             <div class="legend-item">
               <span>Blocks: System health + Transaction volume</span>
@@ -122,7 +122,10 @@
         <div v-if="Object.keys(filteredHealthResults || {}).length === 0" class="no-status">
           No connection status data available
         </div>
-        <div v-if="filteredHealthResults && Object.keys(filteredHealthResults).length > 0" class="connection-status">
+        <div
+          v-if="filteredHealthResults && Object.keys(filteredHealthResults).length > 0"
+          class="connection-status"
+        >
           <v-card
             v-for="(result, componentKey) in filteredHealthResults"
             :key="componentKey"
@@ -233,13 +236,15 @@ export default {
   },
   computed: {
     overallStatus() {
-      const statuses = Object.values(this.healthResults || {}).map(result => result?.status || 'unknown');
+      const statuses = Object.values(this.healthResults || {}).map(
+        (result) => result?.status || 'unknown'
+      );
 
       if (statuses.includes('error')) {
         return 'error';
       } else if (statuses.includes('warning')) {
         return 'warning';
-      } else if (statuses.every(status => status === 'success')) {
+      } else if (statuses.every((status) => status === 'success')) {
         return 'success';
       } else {
         return 'unknown';
@@ -247,7 +252,11 @@ export default {
     },
     // Get database response time from health results
     dbResponseTime() {
-      if (this.healthResults && this.healthResults.database && this.healthResults.database.response_time) {
+      if (
+        this.healthResults &&
+        this.healthResults.database &&
+        this.healthResults.database.response_time
+      ) {
         return this.healthResults.database.response_time;
       }
       return 100; // Default response time if not available
@@ -261,21 +270,24 @@ export default {
   mounted() {
     this.refreshHealthChecks();
     // Auto refresh every 5 minutes
-    this.autoRefreshInterval = setInterval(() => {
-      this.refreshHealthChecks();
-    }, 5 * 60 * 1000);
-    
+    this.autoRefreshInterval = setInterval(
+      () => {
+        this.refreshHealthChecks();
+      },
+      5 * 60 * 1000
+    );
+
     // Initialize canvas animation
     this.$nextTick(() => {
       this.setupCanvas();
     });
-    
+
     // Set up database statistics polling
     this.fetchDatabaseStats();
     this.dbStatsInterval = setInterval(() => {
       this.fetchDatabaseStats();
     }, 10000); // Poll every 10 seconds
-    
+
     // Initial fetch of host resources
     this.refreshHostResources();
   },
@@ -316,7 +328,7 @@ export default {
         // Set initial health status based on basic health check
         if (basicHealthResponse.data?.status === 'unhealthy') {
           this.healthResults = {
-            'database': {
+            database: {
               status: 'error',
               details: basicHealthResponse.data?.database?.message || 'Database connection failed',
               response_time: 0,
@@ -328,26 +340,29 @@ export default {
           this.loading = false;
           return;
         }
-
       } catch (error) {
         console.error('Basic health check error:', error);
         this.message = 'Failed to fetch basic health status';
         this.messageType = 'error';
         if (error.code === 'ECONNABORTED') {
-          console.error('Health check request timed out. Consider increasing the timeout or optimizing the server response.');
+          console.error(
+            'Health check request timed out. Consider increasing the timeout or optimizing the server response.'
+          );
           this.message = 'Health check request timed out';
         }
-        
+
         // Set error state for health results
         this.healthResults = {
-          'database': {
+          database: {
             status: 'error',
-            details: error.response?.data?.database?.message || 'Failed to connect to health check endpoint',
+            details:
+              error.response?.data?.database?.message ||
+              'Failed to connect to health check endpoint',
             response_time: 0,
             timestamp: new Date()
           }
         };
-        
+
         this.loading = false;
         return;
       }
@@ -355,7 +370,7 @@ export default {
       try {
         // Try to get detailed health checks
         const response = await api.get('/monitoring/health-checks/', {
-          timeout: 120000  // Increased to 2 minutes (120,000 ms)
+          timeout: 120000 // Increased to 2 minutes (120,000 ms)
         });
 
         if (response.data && response.data.success) {
@@ -366,9 +381,11 @@ export default {
           const results = response.data.results;
           if (Array.isArray(results)) {
             // First, find the main database result and validation result
-            const dbResult = results.find(result => result.component === 'database');
-            const dbValidationResult = results.find(result => result.component === 'database_validation');
-            
+            const dbResult = results.find((result) => result.component === 'database');
+            const dbValidationResult = results.find(
+              (result) => result.component === 'database_validation'
+            );
+
             // If we have a database result, add it first with validation as a nested property
             if (dbResult) {
               newHealthResults['database'] = {
@@ -377,19 +394,24 @@ export default {
                 response_time: dbResult.response_time,
                 timestamp: dbResult.timestamp,
                 // Add validation as a nested property if it exists
-                validation: dbValidationResult ? {
-                  status: dbValidationResult.status,
-                  details: dbValidationResult.details,
-                  response_time: dbValidationResult.response_time,
-                  timestamp: dbValidationResult.timestamp
-                } : null
+                validation: dbValidationResult
+                  ? {
+                      status: dbValidationResult.status,
+                      details: dbValidationResult.details,
+                      response_time: dbValidationResult.response_time,
+                      timestamp: dbValidationResult.timestamp
+                    }
+                  : null
               };
             }
 
             // Then add all other non-database results
-            results.forEach(result => {
-              if (result && result.component && 
-                  !['database', 'database_validation'].includes(result.component)) {
+            results.forEach((result) => {
+              if (
+                result &&
+                result.component &&
+                !['database', 'database_validation'].includes(result.component)
+              ) {
                 const componentKey = result.component;
                 newHealthResults[componentKey] = {
                   status: result.status,
@@ -422,20 +444,22 @@ export default {
         }
       } catch (error) {
         console.error('Health checks error:', error);
-        
+
         // Add specific logging for timeout errors
         if (error.code === 'ECONNABORTED') {
-          console.error('Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.');
+          console.error(
+            'Health check detailed request timed out. Consider increasing the timeout or optimizing the server response.'
+          );
         }
-        
+
         // Show error in UI
         this.message = `Failed to update status: ${error.message}`;
         this.messageType = 'error';
-        
+
         // Set error state for health results if not already set
         if (!this.healthResults || Object.keys(this.healthResults).length === 0) {
           this.healthResults = {
-            'database': {
+            database: {
               status: 'error',
               details: 'Failed to fetch detailed health status',
               response_time: 0,
@@ -455,7 +479,7 @@ export default {
         if (response.data.success && response.data.stats) {
           // Store previous transaction count for animation
           this.lastTransactionCount = this.getTotalTransactions();
-          
+
           // Create a new stats object with default values
           const newStats = {
             transactions: {
@@ -477,35 +501,35 @@ export default {
               size_mb: 0
             }
           };
-          
+
           const stats = response.data.stats;
-          
+
           // Safely update nested properties with type conversion
           if (stats.transactions) {
             newStats.transactions.committed = Number(stats.transactions.committed) || 0;
             newStats.transactions.rolled_back = Number(stats.transactions.rolled_back) || 0;
             newStats.transactions.active = Number(stats.transactions.active) || 0;
           }
-          
+
           if (stats.queries) {
             newStats.queries.select_count = Number(stats.queries.select_count) || 0;
             newStats.queries.insert_count = Number(stats.queries.insert_count) || 0;
             newStats.queries.update_count = Number(stats.queries.update_count) || 0;
             newStats.queries.delete_count = Number(stats.queries.delete_count) || 0;
           }
-          
+
           if (stats.performance) {
             newStats.performance.avg_query_time = Number(stats.performance.avg_query_time) || 0;
             newStats.performance.cache_hit_ratio = Number(stats.performance.cache_hit_ratio) || 0;
           }
-          
+
           if (stats.disk) {
             newStats.disk.size_mb = Number(stats.disk.size_mb) || 0;
           }
-          
+
           // Update the component state with the new stats
           this.dbStats = newStats;
-          
+
           // Update animation if transaction count changed
           if (this.getTotalTransactions() !== this.lastTransactionCount) {
             this.updateAnimation();
@@ -516,27 +540,31 @@ export default {
       }
     },
     getTotalTransactions() {
-      return (this.dbStats?.transactions?.committed || 0) + 
-             (this.dbStats?.transactions?.rolled_back || 0) + 
-             (this.dbStats?.transactions?.active || 0);
+      return (
+        (this.dbStats?.transactions?.committed || 0) +
+        (this.dbStats?.transactions?.rolled_back || 0) +
+        (this.dbStats?.transactions?.active || 0)
+      );
     },
     getTotalQueries() {
-      return (this.dbStats?.queries?.select_count || 0) + 
-             (this.dbStats?.queries?.insert_count || 0) + 
-             (this.dbStats?.queries?.update_count || 0) + 
-             (this.dbStats?.queries?.delete_count || 0);
+      return (
+        (this.dbStats?.queries?.select_count || 0) +
+        (this.dbStats?.queries?.insert_count || 0) +
+        (this.dbStats?.queries?.update_count || 0) +
+        (this.dbStats?.queries?.delete_count || 0)
+      );
     },
     getComponentDisplayName(key) {
       // Convert snake_case or camelCase to Title Case with spaces
       return key
         .replace(/_/g, ' ')
         .replace(/([A-Z])/g, ' $1')
-        .replace(/^./, str => str.toUpperCase())
+        .replace(/^./, (str) => str.toUpperCase())
         .trim();
     },
     formatTimestamp(timestamp) {
       if (!timestamp) return 'Unknown';
-      
+
       if (typeof timestamp === 'string') {
         timestamp = new Date(timestamp);
       }
@@ -551,7 +579,7 @@ export default {
       // Format with specified decimal places
       return num.toFixed(decimals);
     },
-    
+
     // Animation methods
     setupCanvas() {
       try {
@@ -560,27 +588,27 @@ export default {
           console.warn('Canvas element not found');
           return;
         }
-        
+
         this.ctx = this.canvas.getContext('2d');
         if (!this.ctx) {
           console.warn('Could not get canvas context');
           return;
         }
-        
+
         this.initializeSquares();
         this.animate();
       } catch (error) {
         console.error('Error setting up canvas:', error);
       }
     },
-    
+
     initializeSquares() {
       try {
         // Clear existing squares
         this.squares = [];
-        
+
         if (!this.canvas || !this.ctx) return;
-        
+
         // Number of squares based on status: success=10, warning=7, error=3, unknown=5
         let numSquares = 5; // default for unknown
         if (this.overallStatus === 'success') {
@@ -590,25 +618,25 @@ export default {
         } else if (this.overallStatus === 'error') {
           numSquares = 3;
         }
-        
+
         // Add more squares based on transaction count (max additional 10)
         const transactionCount = this.getTotalTransactions();
         if (transactionCount > 0) {
           // Add 1 square for every 100 transactions, up to 10 more squares
           numSquares += Math.min(10, Math.floor(transactionCount / 100));
         }
-        
+
         // Get colors based on status
         const colors = this.getStatusColors(this.overallStatus);
-        
+
         // Create squares in a line formation
         const spacing = this.canvas.width / numSquares;
         const yPosition = this.canvas.height / 2 - 10; // Center vertically
-        
+
         for (let i = 0; i < numSquares; i++) {
           // Distribute squares evenly across the canvas width
           const xPosition = i * spacing;
-          
+
           this.squares.push({
             x: xPosition,
             y: yPosition,
@@ -620,14 +648,14 @@ export default {
         console.error('Error initializing squares:', error);
       }
     },
-    
+
     updateAnimation() {
       // Only recreate squares if the overall status has changed or transaction count changed significantly
       if (this.canvas && this.ctx) {
         this.initializeSquares();
       }
     },
-    
+
     animate() {
       try {
         if (!this.canvas || !this.ctx || !this.squares || this.squares.length === 0) {
@@ -635,42 +663,45 @@ export default {
           this.animationFrameId = requestAnimationFrame(this.animate);
           return;
         }
-        
+
         // Clear the canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         // Calculate speed factor using detailed stats
         let speedFactor = 2; // Default speed
-        
+
         // Use avg_query_time if available (faster queries = faster animation)
         if (this.dbStats?.performance?.avg_query_time > 0) {
           // Scale: 1-10ms = fastest, >300ms = slowest
-          speedFactor = Math.max(1, Math.min(5, 100 / (this.dbStats.performance.avg_query_time + 10)));
+          speedFactor = Math.max(
+            1,
+            Math.min(5, 100 / (this.dbStats.performance.avg_query_time + 10))
+          );
         } else if (this.dbResponseTime > 0) {
           // Fallback to basic response time if detailed stats not available
           speedFactor = Math.max(1, Math.min(5, 200 / this.dbResponseTime));
         }
-        
+
         // Add boost based on active transactions
         if (this.dbStats?.transactions?.active > 0) {
           speedFactor += Math.min(2, this.dbStats.transactions.active / 5);
         }
-        
+
         // Update and draw squares
-        this.squares.forEach(square => {
+        this.squares.forEach((square) => {
           // Move square from left to right
           square.x += speedFactor;
-          
+
           // Wrap around when reaching right edge
           if (square.x > this.canvas.width) {
             square.x = -square.size;
           }
-          
+
           // Draw square
           this.ctx.fillStyle = square.color;
           this.ctx.fillRect(square.x, square.y, square.size, square.size);
         });
-        
+
         // Continue animation loop
         this.animationFrameId = requestAnimationFrame(this.animate);
       } catch (error) {
@@ -679,7 +710,7 @@ export default {
         this.animationFrameId = requestAnimationFrame(this.animate);
       }
     },
-    
+
     getStatusColors(status) {
       switch (status) {
         case 'success':
@@ -689,7 +720,11 @@ export default {
         case 'error':
           return ['rgba(220, 53, 69, 0.7)', 'rgba(220, 53, 69, 0.5)', 'rgba(220, 53, 69, 0.3)'];
         default:
-          return ['rgba(108, 117, 125, 0.7)', 'rgba(108, 117, 125, 0.5)', 'rgba(108, 117, 125, 0.3)'];
+          return [
+            'rgba(108, 117, 125, 0.7)',
+            'rgba(108, 117, 125, 0.5)',
+            'rgba(108, 117, 125, 0.3)'
+          ];
       }
     },
     toggleDatabaseStats() {
@@ -702,12 +737,12 @@ export default {
       try {
         // Set loading state
         this.hostResources.loading = true;
-        
+
         // Make API call to get host resources
         const response = await api.get('/monitoring/host-resources/', {
           timeout: 10000 // 10 second timeout
         });
-        
+
         if (response.data && response.data.success) {
           // Update host resources with data from API
           this.hostResources = {
@@ -717,11 +752,11 @@ export default {
             last_updated: new Date(),
             loading: false
           };
-          
+
           // Show success message
           this.message = 'Host resources updated successfully';
           this.messageType = 'success';
-          
+
           // Clear success message after 3 seconds
           setTimeout(() => {
             if (this.messageType === 'success') {
@@ -733,11 +768,11 @@ export default {
         }
       } catch (error) {
         console.error('Error fetching host resources:', error);
-        
+
         // Show error message
         this.message = `Failed to update host resources: ${error.message}`;
         this.messageType = 'error';
-        
+
         // Keep existing values but update loading state
         this.hostResources.loading = false;
       }
@@ -812,7 +847,9 @@ export default {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .status-message {
@@ -937,11 +974,13 @@ export default {
   margin-top: 10px;
 }
 
-.connection-section, .additional-info-section {
+.connection-section,
+.additional-info-section {
   margin-bottom: 30px;
 }
 
-.connection-section h2, .additional-info-section h2 {
+.connection-section h2,
+.additional-info-section h2 {
   font-size: 20px;
   margin-bottom: 15px;
   padding-bottom: 10px;
@@ -1151,16 +1190,16 @@ export default {
   .connection-status {
     grid-template-columns: 1fr;
   }
-  
+
   .db-canvas {
     height: 80px;
   }
-  
+
   .canvas-legend {
     flex-direction: column;
     gap: 5px;
   }
-  
+
   .db-stats {
     grid-template-columns: 1fr;
   }

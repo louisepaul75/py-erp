@@ -14,13 +14,7 @@
         >
           Save Changes
         </v-btn>
-        <v-btn
-          color="error"
-          variant="text"
-          @click="cancelEdit"
-          :disabled="saving"
-          class="ma-1"
-        >
+        <v-btn color="error" variant="text" @click="cancelEdit" :disabled="saving" class="ma-1">
           Cancel
         </v-btn>
       </v-col>
@@ -28,20 +22,11 @@
 
     <!-- Loading indicator -->
     <div v-if="loading" class="d-flex justify-center my-6">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="64"
-      ></v-progress-circular>
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
     </div>
 
     <!-- Error message -->
-    <v-alert
-      v-if="error"
-      type="error"
-      variant="tonal"
-      class="mb-6"
-    >
+    <v-alert v-if="error" type="error" variant="tonal" class="mb-6">
       {{ error }}
     </v-alert>
 
@@ -205,13 +190,7 @@
             <v-icon start icon="mdi-cart"></v-icon>
             Order Items
           </div>
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-plus"
-            @click="addOrderItem"
-          >
-            Add Item
-          </v-btn>
+          <v-btn color="primary" prepend-icon="mdi-plus" @click="addOrderItem"> Add Item </v-btn>
         </v-card-title>
         <v-card-text>
           <v-table>
@@ -295,9 +274,7 @@
               </tr>
               <tr>
                 <td colspan="4"></td>
-                <td class="text-right font-weight-medium">
-                  Tax ({{ editedOrder.tax_rate }}%):
-                </td>
+                <td class="text-right font-weight-medium">Tax ({{ editedOrder.tax_rate }}%):</td>
                 <td>{{ formatCurrency(calculateTax()) }}</td>
                 <td></td>
               </tr>
@@ -380,8 +357,9 @@ const loadOrderDetails = async () => {
   try {
     const response = await salesApi.getSalesOrder(orderId);
     editedOrder.value = { ...response.data };
-    sameAsBilling.value = JSON.stringify(editedOrder.value.billing_address) === 
-                         JSON.stringify(editedOrder.value.shipping_address);
+    sameAsBilling.value =
+      JSON.stringify(editedOrder.value.billing_address) ===
+      JSON.stringify(editedOrder.value.shipping_address);
   } catch (err) {
     console.error('Error loading order details:', err);
     error.value = 'Failed to load order details. Please try again.';
@@ -418,7 +396,7 @@ const updateItemTotal = (item: any) => {
   const quantity = Number(item.quantity) || 0;
   const unitPrice = Number(item.unit_price) || 0;
   const discount = Number(item.discount_percent) || 0;
-  
+
   item.total_price = quantity * unitPrice * (1 - discount / 100);
   updateTotals();
 };
@@ -488,4 +466,4 @@ onMounted(() => {
 .v-table {
   background: white !important;
 }
-</style> 
+</style>

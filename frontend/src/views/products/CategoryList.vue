@@ -87,7 +87,9 @@ h1 {
   margin-bottom: 30px;
 }
 
-.loading, .error, .no-results {
+.loading,
+.error,
+.no-results {
   text-align: center;
   padding: 30px;
 }
@@ -106,7 +108,9 @@ h1 {
   background-color: #f8f9fa;
   border-radius: 8px;
   padding: 20px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   cursor: pointer;
   height: 100%;
   min-height: 150px;

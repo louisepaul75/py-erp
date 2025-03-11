@@ -21,4 +21,4 @@ const i18n = createI18n({
   silentFallbackWarn: true
 });
 
-export default i18n; 
+export default i18n;

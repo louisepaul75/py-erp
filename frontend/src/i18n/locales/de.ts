@@ -104,4 +104,4 @@ export default {
       cancelled: 'Storniert'
     }
   }
-} 
+};

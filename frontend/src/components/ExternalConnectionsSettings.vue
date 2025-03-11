@@ -4,23 +4,11 @@
       <span class="text-h6 font-weight-medium">External Connections</span>
     </div>
     <v-card-text>
-      <v-alert
-        v-if="error"
-        type="error"
-        class="mb-4"
-        density="comfortable"
-        closable
-      >
+      <v-alert v-if="error" type="error" class="mb-4" density="comfortable" closable>
         {{ error }}
       </v-alert>
-      
-      <v-alert
-        v-if="successMessage"
-        type="success"
-        class="mb-4"
-        density="comfortable"
-        closable
-      >
+
+      <v-alert v-if="successMessage" type="success" class="mb-4" density="comfortable" closable>
         {{ successMessage }}
       </v-alert>
 
@@ -29,13 +17,14 @@
         type="list-item-three-line"
         class="mb-4"
       ></v-skeleton-loader>
-      
+
       <div v-else>
         <p class="text-body-2 text-grey-darken-1 mb-4">
-          Toggle external connections to enable or disable external system integrations for this instance.
-          These settings are stored in a local configuration file specific to this installation.
+          Toggle external connections to enable or disable external system integrations for this
+          instance. These settings are stored in a local configuration file specific to this
+          installation.
         </p>
-        
+
         <v-list>
           <v-list-item v-for="(enabled, name) in connections" :key="name" class="mb-1 rounded">
             <template v-slot:prepend>
@@ -43,11 +32,11 @@
                 {{ enabled ? 'mdi-connection' : 'mdi-connection-off' }}
               </v-icon>
             </template>
-            
+
             <v-list-item-title class="font-weight-medium">
               {{ formatConnectionName(name) }}
             </v-list-item-title>
-            
+
             <v-list-item-subtitle class="text-grey-darken-1">
               {{ enabled ? 'Enabled' : 'Disabled' }}
             </v-list-item-subtitle>
@@ -90,7 +79,7 @@ const pendingUpdates = ref([]);
 const formatConnectionName = (name) => {
   return name
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };
 
@@ -98,7 +87,7 @@ const formatConnectionName = (name) => {
 const loadConnections = async () => {
   loading.value = true;
   error.value = null;
-  
+
   try {
     const response = await externalApiConnections.getConnections();
     connections.value = response.data;
@@ -115,7 +104,7 @@ const updateConnection = async (name, enabled) => {
   error.value = null;
   successMessage.value = null;
   pendingUpdates.value.push(name);
-  
+
   try {
     const response = await externalApiConnections.updateConnection(name, enabled);
     connections.value = response.data;
@@ -126,7 +115,7 @@ const updateConnection = async (name, enabled) => {
     // Revert the UI state since the operation failed
     loadConnections();
   } finally {
-    pendingUpdates.value = pendingUpdates.value.filter(item => item !== name);
+    pendingUpdates.value = pendingUpdates.value.filter((item) => item !== name);
   }
 };
 
@@ -138,4 +127,4 @@ onMounted(loadConnections);
 .v-list-item {
   min-height: 60px;
 }
-</style> 
+</style>

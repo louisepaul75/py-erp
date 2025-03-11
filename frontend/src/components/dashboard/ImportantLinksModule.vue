@@ -3,13 +3,19 @@
     <div class="px-6 py-4 border-b d-flex align-center">
       <span class="text-h6 font-weight-medium">{{ module.title }}</span>
       <v-spacer></v-spacer>
-      
+
       <v-tooltip v-if="editMode && isAdmin" text="Hier können Sie die wichtigen Links bearbeiten">
         <template v-slot:activator="{ props }">
-          <v-icon v-bind="props" icon="mdi-information-outline" class="mr-2" size="small" color="info"></v-icon>
+          <v-icon
+            v-bind="props"
+            icon="mdi-information-outline"
+            class="mr-2"
+            size="small"
+            color="info"
+          ></v-icon>
         </template>
       </v-tooltip>
-      
+
       <v-btn
         v-if="!editMode"
         :icon="isFavorite ? 'mdi-star' : 'mdi-star-outline'"
@@ -36,7 +42,7 @@
           link
         ></v-list-item>
       </template>
-      
+
       <!-- Edit mode for admin -->
       <template v-else>
         <v-list-item
@@ -51,7 +57,7 @@
               hide-details
               placeholder="Link text"
               class="mr-2"
-              :rules="[v => !!v || 'Text ist erforderlich']"
+              :rules="[(v) => !!v || 'Text ist erforderlich']"
             ></v-text-field>
             <v-text-field
               v-model="link.url"
@@ -60,8 +66,8 @@
               placeholder="URL (z.B. https://example.com)"
               class="mr-2"
               :rules="[
-                v => !!v || 'URL ist erforderlich',
-                v => isValidUrl(v) || 'Ungültige URL (muss mit http:// oder https:// beginnen)'
+                (v) => !!v || 'URL ist erforderlich',
+                (v) => isValidUrl(v) || 'Ungültige URL (muss mit http:// oder https:// beginnen)'
               ]"
             ></v-text-field>
             <v-tooltip text="Link entfernen">
@@ -78,7 +84,7 @@
             </v-tooltip>
           </div>
         </v-list-item>
-        
+
         <!-- Add new link button -->
         <v-btn
           block
@@ -96,10 +102,10 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'
-import { useFavoritesStore } from '../../store/favorites'
-import { useAuthStore } from '../../store/auth'
-import api from '../../services/api'
+import { computed, ref, onMounted, watch } from 'vue';
+import { useFavoritesStore } from '../../store/favorites';
+import { useAuthStore } from '../../store/auth';
+import api from '../../services/api';
 
 const props = defineProps({
   module: {
@@ -110,22 +116,22 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
-})
+});
 
-const authStore = useAuthStore()
-const favoritesStore = useFavoritesStore()
+const authStore = useAuthStore();
+const favoritesStore = useFavoritesStore();
 
 // Check if user is admin
-const isAdmin = computed(() => authStore.isAdmin)
+const isAdmin = computed(() => authStore.isAdmin);
 
 // Convert the static array to a ref with structured data
-const importantLinks = ref([])
+const importantLinks = ref([]);
 
 // Initialize the links data
 onMounted(() => {
   // Use module settings if available, otherwise use defaults
   if (props.module.settings && props.module.settings.links) {
-    importantLinks.value = [...props.module.settings.links]
+    importantLinks.value = [...props.module.settings.links];
   } else {
     // Default links
     importantLinks.value = [
@@ -139,9 +145,9 @@ onMounted(() => {
       { id: 8, text: 'IT-Helpdesk', url: 'https://helpdesk.company.de' },
       { id: 9, text: 'Qualitätsmanagement', url: 'https://quality.company.de' },
       { id: 10, text: 'Mitarbeiterportal', url: 'https://staff.company.de' }
-    ]
+    ];
   }
-})
+});
 
 // Validate URLs
 const isValidUrl = (url) => {
@@ -154,37 +160,42 @@ const isValidUrl = (url) => {
 };
 
 // Save links to module settings when they change in edit mode
-watch(importantLinks, (newLinks) => {
-  if (props.editMode && isAdmin.value) {
-    // Update the module settings
-    if (!props.module.settings) {
-      props.module.settings = {}
+watch(
+  importantLinks,
+  (newLinks) => {
+    if (props.editMode && isAdmin.value) {
+      // Update the module settings
+      if (!props.module.settings) {
+        props.module.settings = {};
+      }
+      props.module.settings.links = [...newLinks];
     }
-    props.module.settings.links = [...newLinks]
-  }
-}, { deep: true })
+  },
+  { deep: true }
+);
 
 // Link management functions
 const addNewLink = () => {
-  const newId = importantLinks.value.length > 0 
-    ? Math.max(...importantLinks.value.map(link => link.id)) + 1 
-    : 1
-    
+  const newId =
+    importantLinks.value.length > 0
+      ? Math.max(...importantLinks.value.map((link) => link.id)) + 1
+      : 1;
+
   importantLinks.value.push({
     id: newId,
     text: 'Neuer Link',
     url: 'https://'
-  })
-}
+  });
+};
 
 const removeLink = (index) => {
-  importantLinks.value.splice(index, 1)
-}
+  importantLinks.value.splice(index, 1);
+};
 
 // Favorites functionality
 const isFavorite = computed(() => {
-  return favoritesStore.isFavorite(props.module.id)
-})
+  return favoritesStore.isFavorite(props.module.id);
+});
 
 const toggleFavorite = () => {
   const favoriteItem = {
@@ -192,9 +203,9 @@ const toggleFavorite = () => {
     title: props.module.title,
     icon: 'mdi-link',
     type: 'module'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
+  };
+  favoritesStore.toggleFavorite(favoriteItem);
+};
 </script>
 
 <style scoped>
@@ -214,4 +225,4 @@ const toggleFavorite = () => {
 .links-edit-item:hover {
   background-color: #f5f5f5;
 }
-</style> 
+</style>

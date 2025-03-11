@@ -46,7 +46,7 @@ export const useAuthStore = defineStore('auth', {
         // Check if we have both tokens before attempting any auth operations
         const accessToken = localStorage.getItem('access_token');
         const refreshToken = localStorage.getItem('refresh_token');
-        
+
         console.debug('Tokens found:', {
           hasAccessToken: !!accessToken,
           hasRefreshToken: !!refreshToken

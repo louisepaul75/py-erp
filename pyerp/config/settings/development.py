@@ -43,7 +43,6 @@ PG_PARAMS = {
         "connect_timeout": 10,  # Connection timeout in seconds
         "client_encoding": "UTF8",
         "sslmode": "prefer",
-        "gssencmode": "disable",  # Disable GSSAPI/Kerberos encryption
     },
 }
 
@@ -168,7 +167,7 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 # Email backend for development
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
 
 # Import anymail settings for reference, but use console backend
 from .anymail import *  # noqa
@@ -179,17 +178,18 @@ ANYMAIL = {
     "DEBUG_API_REQUESTS": True,
 }
 
+# Add email_system to installed apps
+INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
+
 # Set this to True to actually send emails in development (using the configured ESP)
 USE_ANYMAIL_IN_DEV = os.environ.get("USE_ANYMAIL_IN_DEV", "").lower() == "true"
 if USE_ANYMAIL_IN_DEV:
-    # If ANYMAIL_ESP is set to "smtp", use the standard Django SMTP backend
+    # If ANYMAIL_ESP is set to "smtp", use the logging SMTP backend
     if os.environ.get("ANYMAIL_ESP", "").lower() == "smtp":
-        EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+        EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
     else:
-        # Otherwise use the anymail backend for the specified ESP
-        EMAIL_BACKEND = "anymail.backends.{esp_name}.EmailBackend".format(
-            esp_name=os.environ.get("ANYMAIL_ESP", "sendgrid").lower()
-        )
+        # Otherwise use the anymail backend for the specified ESP with logging
+        EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingAnymailBackend"
 
 # Disable password validators during development
 AUTH_PASSWORD_VALIDATORS = []

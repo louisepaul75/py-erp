@@ -2,21 +2,29 @@
   <div class="customer-detail">
     <div class="header">
       <h1>
-        {{ customer.is_company ? customer.company_name : `${customer.first_name} ${customer.last_name}` }}
+        {{
+          customer.is_company
+            ? customer.company_name
+            : `${customer.first_name} ${customer.last_name}`
+        }}
         <span v-if="!customer.is_active" class="inactive-badge">Inactive</span>
       </h1>
       <div class="actions">
         <button @click="editCustomer" class="btn primary">Edit</button>
-        <button @click="toggleActive" class="btn" :class="customer.is_active ? 'warning' : 'success'">
+        <button
+          @click="toggleActive"
+          class="btn"
+          :class="customer.is_active ? 'warning' : 'success'"
+        >
           {{ customer.is_active ? 'Deactivate' : 'Activate' }}
         </button>
       </div>
     </div>
 
     <div class="tabs">
-      <button 
-        v-for="tab in tabs" 
-        :key="tab.id" 
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
         @click="activeTab = tab.id"
         :class="{ active: activeTab === tab.id }"
       >
@@ -52,7 +60,9 @@
           <div class="info-item">
             <label>Website</label>
             <span>
-              <a v-if="customer.website" :href="customer.website" target="_blank">{{ customer.website }}</a>
+              <a v-if="customer.website" :href="customer.website" target="_blank">{{
+                customer.website
+              }}</a>
               <span v-else>Not provided</span>
             </span>
           </div>
@@ -125,14 +135,18 @@
               <div class="dropdown-menu">
                 <button @click="createNewDocument('order')" class="dropdown-item">Order</button>
                 <button @click="createNewDocument('invoice')" class="dropdown-item">Invoice</button>
-                <button @click="createNewDocument('delivery')" class="dropdown-item">Delivery Note</button>
+                <button @click="createNewDocument('delivery')" class="dropdown-item">
+                  Delivery Note
+                </button>
                 <button @click="createNewDocument('quote')" class="dropdown-item">Quote</button>
-                <button @click="createNewDocument('credit')" class="dropdown-item">Credit Note</button>
+                <button @click="createNewDocument('credit')" class="dropdown-item">
+                  Credit Note
+                </button>
               </div>
             </div>
           </div>
         </div>
-        
+
         <div class="document-stats">
           <div class="stat-card">
             <div class="stat-value">{{ documentCounts.orders || 0 }}</div>
@@ -155,13 +169,13 @@
             <div class="stat-label">Total Revenue</div>
           </div>
         </div>
-        
+
         <div class="document-filter">
           <div class="search-box">
-            <input 
-              type="text" 
-              v-model="documentSearch" 
-              placeholder="Search documents..." 
+            <input
+              type="text"
+              v-model="documentSearch"
+              placeholder="Search documents..."
               @input="filterDocuments"
             />
           </div>
@@ -190,21 +204,21 @@
             </select>
           </div>
         </div>
-        
+
         <div v-if="filteredDocuments.length === 0" class="empty-state">
           <p>No documents found</p>
         </div>
-        
+
         <div v-else class="document-table">
           <table>
             <thead>
               <tr class="draggable-header">
-                <th 
-                  v-for="column in visibleColumns" 
+                <th
+                  v-for="column in visibleColumns"
                   :key="column.id"
                   @click="sortTable(column.id)"
-                  :class="{ 
-                    'sortable': column.sortable, 
+                  :class="{
+                    sortable: column.sortable,
                     'sorted-asc': sortColumn === column.id && sortDirection === 'asc',
                     'sorted-desc': sortColumn === column.id && sortDirection === 'desc'
                   }"
@@ -232,7 +246,9 @@
                   </span>
                 </td>
                 <td v-if="isColumnVisible('date')">{{ formatDate(doc.date) }}</td>
-                <td v-if="isColumnVisible('dueDate')">{{ doc.due_date ? formatDate(doc.due_date) : '-' }}</td>
+                <td v-if="isColumnVisible('dueDate')">
+                  {{ doc.due_date ? formatDate(doc.due_date) : '-' }}
+                </td>
                 <td v-if="isColumnVisible('amount')">{{ formatCurrency(doc.amount) }}</td>
                 <td v-if="isColumnVisible('status')">
                   <span class="status-badge" :class="doc.status">
@@ -250,26 +266,26 @@
                     <button @click="downloadDocument(doc.id)" class="btn icon" title="Download">
                       <span class="icon">📥</span>
                     </button>
-                    <button 
-                      v-if="canEditDocument(doc)" 
-                      @click="editDocument(doc.id)" 
-                      class="btn icon" 
+                    <button
+                      v-if="canEditDocument(doc)"
+                      @click="editDocument(doc.id)"
+                      class="btn icon"
                       title="Edit"
                     >
                       <span class="icon">✏️</span>
                     </button>
-                    <button 
-                      v-if="canSendDocument(doc)" 
-                      @click="sendDocument(doc.id)" 
-                      class="btn icon success" 
+                    <button
+                      v-if="canSendDocument(doc)"
+                      @click="sendDocument(doc.id)"
+                      class="btn icon success"
                       title="Send"
                     >
                       <span class="icon">📤</span>
                     </button>
-                    <button 
-                      v-if="canCancelDocument(doc)" 
-                      @click="cancelDocument(doc.id)" 
-                      class="btn icon danger" 
+                    <button
+                      v-if="canCancelDocument(doc)"
+                      @click="cancelDocument(doc.id)"
+                      class="btn icon danger"
                       title="Cancel"
                     >
                       <span class="icon">❌</span>
@@ -280,18 +296,18 @@
             </tbody>
           </table>
         </div>
-        
+
         <div class="pagination" v-if="totalDocumentPages > 1">
-          <button 
-            @click="changePage(currentDocumentPage - 1)" 
+          <button
+            @click="changePage(currentDocumentPage - 1)"
             :disabled="currentDocumentPage === 1"
             class="btn small"
           >
             Previous
           </button>
           <span>Page {{ currentDocumentPage }} of {{ totalDocumentPages }}</span>
-          <button 
-            @click="changePage(currentDocumentPage + 1)" 
+          <button
+            @click="changePage(currentDocumentPage + 1)"
             :disabled="currentDocumentPage === totalDocumentPages"
             class="btn small"
           >
@@ -363,11 +379,11 @@
           <h2>Shipping Addresses</h2>
           <button @click="addShippingAddress" class="btn small">Add Address</button>
         </div>
-        
+
         <div v-if="shippingAddresses.length === 0" class="empty-state">
           No shipping addresses found
         </div>
-        
+
         <div v-else class="shipping-addresses">
           <div v-for="address in shippingAddresses" :key="address.id" class="shipping-address-card">
             <div class="address-header">
@@ -381,8 +397,16 @@
             </div>
             <div class="address-actions">
               <button @click="editShippingAddress(address.id)" class="btn small">Edit</button>
-              <button v-if="!address.is_default" @click="setDefaultAddress(address.id)" class="btn small">Set as Default</button>
-              <button @click="deleteShippingAddress(address.id)" class="btn small danger">Delete</button>
+              <button
+                v-if="!address.is_default"
+                @click="setDefaultAddress(address.id)"
+                class="btn small"
+              >
+                Set as Default
+              </button>
+              <button @click="deleteShippingAddress(address.id)" class="btn small danger">
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -396,11 +420,11 @@
           <h2>Additional Contact Information</h2>
           <button @click="addContactInfo" class="btn small">Add Contact</button>
         </div>
-        
+
         <div v-if="contactInfos.length === 0" class="empty-state">
           No additional contact information found
         </div>
-        
+
         <div v-else class="contact-infos">
           <div v-for="contact in contactInfos" :key="contact.id" class="contact-info-card">
             <div class="contact-info-header">
@@ -413,8 +437,16 @@
             </div>
             <div class="contact-info-actions">
               <button @click="editContactInfo(contact.id)" class="btn small">Edit</button>
-              <button v-if="!contact.is_primary" @click="setPrimaryContact(contact.id)" class="btn small">Set as Primary</button>
-              <button @click="deleteContactInfo(contact.id)" class="btn small danger">Delete</button>
+              <button
+                v-if="!contact.is_primary"
+                @click="setPrimaryContact(contact.id)"
+                class="btn small"
+              >
+                Set as Primary
+              </button>
+              <button @click="deleteContactInfo(contact.id)" class="btn small danger">
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -426,11 +458,9 @@
           <h2>Contact Persons</h2>
           <button @click="addContactPerson" class="btn small">Add Person</button>
         </div>
-        
-        <div v-if="contactPersons.length === 0" class="empty-state">
-          No contact persons found
-        </div>
-        
+
+        <div v-if="contactPersons.length === 0" class="empty-state">No contact persons found</div>
+
         <div v-else class="contact-persons">
           <div v-for="person in contactPersons" :key="person.id" class="contact-person-card">
             <div class="contact-person-header">
@@ -443,7 +473,9 @@
             </div>
             <div class="contact-person-actions">
               <button @click="editContactPerson(person.id)" class="btn small">Edit</button>
-              <button @click="deleteContactPerson(person.id)" class="btn small danger">Delete</button>
+              <button @click="deleteContactPerson(person.id)" class="btn small danger">
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -474,12 +506,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
-const route = useRoute()
-const router = useRouter()
-const customerId = computed(() => route.params.id)
+const route = useRoute();
+const router = useRouter();
+const customerId = computed(() => route.params.id);
 
 // Mock data instead of API calls
 const customer = ref({
@@ -515,7 +547,7 @@ const customer = ref({
   is_active: true,
   created_at: '2024-02-20',
   updated_at: '2024-02-20'
-})
+});
 
 const shippingAddresses = ref([
   {
@@ -542,7 +574,7 @@ const shippingAddresses = ref([
     is_default: false,
     address_label: 'Warehouse'
   }
-])
+]);
 
 const contactInfos = ref([
   {
@@ -569,7 +601,7 @@ const contactInfos = ref([
     is_primary: false,
     description: 'Support Hotline'
   }
-])
+]);
 
 const contactPersons = ref([
   {
@@ -590,9 +622,9 @@ const contactPersons = ref([
     phone: '+49 30 123456-200',
     email: 'jane.smith@demo-company.com'
   }
-])
+]);
 
-const activeTab = ref('general')
+const activeTab = ref('general');
 const documents = ref([
   {
     id: 101,
@@ -600,7 +632,7 @@ const documents = ref([
     type: 'order',
     date: '2024-02-15',
     due_date: null,
-    amount: 1250.00,
+    amount: 1250.0,
     status: 'processing',
     customer_reference: 'PO-12345'
   },
@@ -610,7 +642,7 @@ const documents = ref([
     type: 'invoice',
     date: '2024-02-20',
     due_date: '2024-03-20',
-    amount: 1250.00,
+    amount: 1250.0,
     status: 'sent',
     customer_reference: 'PO-12345'
   },
@@ -630,7 +662,7 @@ const documents = ref([
     type: 'order',
     date: '2024-01-10',
     due_date: null,
-    amount: 750.50,
+    amount: 750.5,
     status: 'completed',
     customer_reference: 'PO-12346'
   },
@@ -640,7 +672,7 @@ const documents = ref([
     type: 'invoice',
     date: '2024-01-15',
     due_date: '2024-02-15',
-    amount: 750.50,
+    amount: 750.5,
     status: 'paid',
     customer_reference: 'PO-12346'
   },
@@ -650,11 +682,11 @@ const documents = ref([
     type: 'quote',
     date: '2024-03-01',
     due_date: '2024-03-31',
-    amount: 3200.00,
+    amount: 3200.0,
     status: 'sent',
     customer_reference: 'RFQ-789'
   }
-])
+]);
 
 const documentCounts = ref({
   orders: 2,
@@ -662,23 +694,23 @@ const documentCounts = ref({
   deliveries: 1,
   quotes: 1,
   credits: 0
-})
+});
 
 const documentTotals = ref({
-  revenue: 2000.50,
-  outstanding: 1250.00
-})
+  revenue: 2000.5,
+  outstanding: 1250.0
+});
 
 // Document filtering and pagination
-const documentSearch = ref('')
-const documentTypeFilter = ref('all')
-const documentStatusFilter = ref('all')
-const documentSortOrder = ref('newest')
-const currentDocumentPage = ref(1)
-const documentsPerPage = 10
+const documentSearch = ref('');
+const documentTypeFilter = ref('all');
+const documentStatusFilter = ref('all');
+const documentSortOrder = ref('newest');
+const currentDocumentPage = ref(1);
+const documentsPerPage = 10;
 const totalDocumentPages = computed(() => {
-  return Math.ceil(filteredDocuments.value.length / documentsPerPage)
-})
+  return Math.ceil(filteredDocuments.value.length / documentsPerPage);
+});
 
 // Table columns configuration
 const columns = ref([
@@ -689,15 +721,15 @@ const columns = ref([
   { id: 'amount', label: 'Amount', sortable: true, visible: true },
   { id: 'status', label: 'Status', sortable: true, visible: true },
   { id: 'actions', label: 'Actions', sortable: false, visible: true }
-])
+]);
 
 const visibleColumns = computed(() => {
-  return columns.value.filter(col => col.visible)
-})
+  return columns.value.filter((col) => col.visible);
+});
 
 // Sorting
-const sortColumn = ref('date')
-const sortDirection = ref('desc')
+const sortColumn = ref('date');
+const sortDirection = ref('desc');
 
 const tabs = [
   { id: 'general', name: 'General' },
@@ -706,325 +738,326 @@ const tabs = [
   { id: 'shipping', name: 'Shipping Addresses' },
   { id: 'contacts', name: 'Contacts' },
   { id: 'marketing', name: 'Marketing' }
-]
+];
 
 const filteredDocuments = computed(() => {
-  let result = [...documents.value]
-  
+  let result = [...documents.value];
+
   // Apply search filter
   if (documentSearch.value) {
-    const searchTerm = documentSearch.value.toLowerCase()
-    result = result.filter(doc => 
-      doc.number.toLowerCase().includes(searchTerm) || 
-      (doc.customer_reference && doc.customer_reference.toLowerCase().includes(searchTerm))
-    )
+    const searchTerm = documentSearch.value.toLowerCase();
+    result = result.filter(
+      (doc) =>
+        doc.number.toLowerCase().includes(searchTerm) ||
+        (doc.customer_reference && doc.customer_reference.toLowerCase().includes(searchTerm))
+    );
   }
-  
+
   // Apply type filter
   if (documentTypeFilter.value !== 'all') {
-    result = result.filter(doc => doc.type === documentTypeFilter.value)
+    result = result.filter((doc) => doc.type === documentTypeFilter.value);
   }
-  
+
   // Apply status filter
   if (documentStatusFilter.value !== 'all') {
-    result = result.filter(doc => doc.status === documentStatusFilter.value)
+    result = result.filter((doc) => doc.status === documentStatusFilter.value);
   }
-  
-  return result
-})
+
+  return result;
+});
 
 const sortedDocuments = computed(() => {
-  let result = [...filteredDocuments.value]
-  
+  let result = [...filteredDocuments.value];
+
   if (sortColumn.value) {
     result.sort((a, b) => {
-      let aValue, bValue
-      
+      let aValue, bValue;
+
       // Handle special cases for different column types
       switch (sortColumn.value) {
         case 'number':
-          aValue = a.number
-          bValue = b.number
-          break
+          aValue = a.number;
+          bValue = b.number;
+          break;
         case 'type':
-          aValue = a.type
-          bValue = b.type
-          break
+          aValue = a.type;
+          bValue = b.type;
+          break;
         case 'date':
-          aValue = new Date(a.date)
-          bValue = new Date(b.date)
-          break
+          aValue = new Date(a.date);
+          bValue = new Date(b.date);
+          break;
         case 'dueDate':
-          aValue = a.due_date ? new Date(a.due_date) : new Date(0)
-          bValue = b.due_date ? new Date(b.due_date) : new Date(0)
-          break
+          aValue = a.due_date ? new Date(a.due_date) : new Date(0);
+          bValue = b.due_date ? new Date(b.due_date) : new Date(0);
+          break;
         case 'amount':
-          aValue = a.amount
-          bValue = b.amount
-          break
+          aValue = a.amount;
+          bValue = b.amount;
+          break;
         case 'status':
-          aValue = a.status
-          bValue = b.status
-          break
+          aValue = a.status;
+          bValue = b.status;
+          break;
         default:
-          aValue = a[sortColumn.value]
-          bValue = b[sortColumn.value]
+          aValue = a[sortColumn.value];
+          bValue = b[sortColumn.value];
       }
-      
+
       // Compare the values based on sort direction
       if (sortDirection.value === 'asc') {
-        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
       } else {
-        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
       }
-    })
+    });
   }
-  
+
   // Apply pagination
-  const startIndex = (currentDocumentPage.value - 1) * documentsPerPage
-  return result.slice(startIndex, startIndex + documentsPerPage)
-})
+  const startIndex = (currentDocumentPage.value - 1) * documentsPerPage;
+  return result.slice(startIndex, startIndex + documentsPerPage);
+});
 
 function isColumnVisible(columnId) {
-  const column = columns.value.find(col => col.id === columnId)
-  return column && column.visible
+  const column = columns.value.find((col) => col.id === columnId);
+  return column && column.visible;
 }
 
 function sortTable(columnId) {
   // If clicking the same column, toggle sort direction
   if (sortColumn.value === columnId) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
   } else {
     // If clicking a different column, set it as the sort column with default 'asc' direction
-    sortColumn.value = columnId
-    sortDirection.value = 'asc'
+    sortColumn.value = columnId;
+    sortDirection.value = 'asc';
   }
 }
 
 // Drag and drop functionality for columns
-let draggedColumnId = null
+let draggedColumnId = null;
 
 function dragStart(event, columnId) {
-  draggedColumnId = columnId
-  event.dataTransfer.effectAllowed = 'move'
+  draggedColumnId = columnId;
+  event.dataTransfer.effectAllowed = 'move';
 }
 
 function drop(event, targetColumnId) {
-  if (draggedColumnId === targetColumnId) return
-  
+  if (draggedColumnId === targetColumnId) return;
+
   // Find the indices of the dragged and target columns
-  const draggedIndex = columns.value.findIndex(col => col.id === draggedColumnId)
-  const targetIndex = columns.value.findIndex(col => col.id === targetColumnId)
-  
+  const draggedIndex = columns.value.findIndex((col) => col.id === draggedColumnId);
+  const targetIndex = columns.value.findIndex((col) => col.id === targetColumnId);
+
   // Reorder the columns
-  const draggedColumn = columns.value.splice(draggedIndex, 1)[0]
-  columns.value.splice(targetIndex, 0, draggedColumn)
-  
-  draggedColumnId = null
+  const draggedColumn = columns.value.splice(draggedIndex, 1)[0];
+  columns.value.splice(targetIndex, 0, draggedColumn);
+
+  draggedColumnId = null;
 }
 
 function editCustomer() {
-  router.push(`/customers/${customerId.value}/edit`)
+  router.push(`/customers/${customerId.value}/edit`);
 }
 
 function toggleActive() {
-  customer.value.is_active = !customer.value.is_active
+  customer.value.is_active = !customer.value.is_active;
 }
 
 // Document functions
 function filterDocuments() {
-  currentDocumentPage.value = 1 // Reset to first page when filtering
+  currentDocumentPage.value = 1; // Reset to first page when filtering
 }
 
 function changePage(page) {
-  currentDocumentPage.value = page
+  currentDocumentPage.value = page;
 }
 
 function getDocumentTypeName(type) {
   const types = {
-    'order': 'Order',
-    'invoice': 'Invoice',
-    'delivery': 'Delivery Note',
-    'quote': 'Quote',
-    'credit': 'Credit Note'
-  }
-  return types[type] || type
+    order: 'Order',
+    invoice: 'Invoice',
+    delivery: 'Delivery Note',
+    quote: 'Quote',
+    credit: 'Credit Note'
+  };
+  return types[type] || type;
 }
 
 function getStatusName(status) {
   const statuses = {
-    'draft': 'Draft',
-    'sent': 'Sent',
-    'paid': 'Paid',
-    'overdue': 'Overdue',
-    'cancelled': 'Cancelled',
-    'completed': 'Completed',
-    'processing': 'Processing'
-  }
-  return statuses[status] || status
+    draft: 'Draft',
+    sent: 'Sent',
+    paid: 'Paid',
+    overdue: 'Overdue',
+    cancelled: 'Cancelled',
+    completed: 'Completed',
+    processing: 'Processing'
+  };
+  return statuses[status] || status;
 }
 
 function getDocumentRowClass(doc) {
-  if (doc.status === 'overdue') return 'overdue'
-  if (doc.status === 'cancelled') return 'cancelled'
-  return ''
+  if (doc.status === 'overdue') return 'overdue';
+  if (doc.status === 'cancelled') return 'cancelled';
+  return '';
 }
 
 function canEditDocument(doc) {
   // Only allow editing of documents in draft status
-  return doc.status === 'draft'
+  return doc.status === 'draft';
 }
 
 function canSendDocument(doc) {
   // Allow sending documents that are in draft status
-  return doc.status === 'draft'
+  return doc.status === 'draft';
 }
 
 function canCancelDocument(doc) {
   // Allow cancelling documents that are not already cancelled or completed
-  return !['cancelled', 'completed', 'paid'].includes(doc.status)
+  return !['cancelled', 'completed', 'paid'].includes(doc.status);
 }
 
 function sendDocument(id) {
-  if (!confirm('Are you sure you want to send this document?')) return
-  
+  if (!confirm('Are you sure you want to send this document?')) return;
+
   // Find the document and update its status
-  const doc = documents.value.find(d => d.id === id)
+  const doc = documents.value.find((d) => d.id === id);
   if (doc) {
-    doc.status = 'sent'
+    doc.status = 'sent';
   }
 }
 
 function cancelDocument(id) {
-  if (!confirm('Are you sure you want to cancel this document?')) return
-  
+  if (!confirm('Are you sure you want to cancel this document?')) return;
+
   // Find the document and update its status
-  const doc = documents.value.find(d => d.id === id)
+  const doc = documents.value.find((d) => d.id === id);
   if (doc) {
-    doc.status = 'cancelled'
+    doc.status = 'cancelled';
   }
 }
 
 function createNewDocument(type) {
   router.push({
     path: '/documents/new',
-    query: { 
+    query: {
       customer_id: customerId.value,
       type: type
     }
-  })
+  });
 }
 
 function viewDocument(id) {
-  router.push(`/documents/${id}`)
+  router.push(`/documents/${id}`);
 }
 
 function editDocument(id) {
-  router.push(`/documents/${id}/edit`)
+  router.push(`/documents/${id}/edit`);
 }
 
 function printDocument(id) {
-  window.open(`/documents/${id}/print`, '_blank')
+  window.open(`/documents/${id}/print`, '_blank');
 }
 
 function downloadDocument(id) {
-  window.open(`/api/documents/${id}/download`, '_blank')
+  window.open(`/api/documents/${id}/download`, '_blank');
 }
 
 // Shipping address functions
 function addShippingAddress() {
-  router.push(`/customers/${customerId.value}/shipping-addresses/new`)
+  router.push(`/customers/${customerId.value}/shipping-addresses/new`);
 }
 
 function editShippingAddress(addressId) {
-  router.push(`/customers/${customerId.value}/shipping-addresses/${addressId}/edit`)
+  router.push(`/customers/${customerId.value}/shipping-addresses/${addressId}/edit`);
 }
 
 function setDefaultAddress(addressId) {
   // Update local data to set the selected address as default
-  shippingAddresses.value.forEach(addr => {
-    addr.is_default = addr.id === addressId
-  })
+  shippingAddresses.value.forEach((addr) => {
+    addr.is_default = addr.id === addressId;
+  });
 }
 
 function deleteShippingAddress(addressId) {
-  if (!confirm('Are you sure you want to delete this shipping address?')) return
-  shippingAddresses.value = shippingAddresses.value.filter(addr => addr.id !== addressId)
+  if (!confirm('Are you sure you want to delete this shipping address?')) return;
+  shippingAddresses.value = shippingAddresses.value.filter((addr) => addr.id !== addressId);
 }
 
 // Contact info functions
 function addContactInfo() {
-  router.push(`/customers/${customerId.value}/contact-info/new`)
+  router.push(`/customers/${customerId.value}/contact-info/new`);
 }
 
 function editContactInfo(contactId) {
-  router.push(`/customers/${customerId.value}/contact-info/${contactId}/edit`)
+  router.push(`/customers/${customerId.value}/contact-info/${contactId}/edit`);
 }
 
 function setPrimaryContact(contactId) {
-  const contact = contactInfos.value.find(c => c.id === contactId)
+  const contact = contactInfos.value.find((c) => c.id === contactId);
   if (contact) {
     // Set all contacts of the same type to non-primary
-    contactInfos.value.forEach(c => {
+    contactInfos.value.forEach((c) => {
       if (c.contact_type === contact.contact_type) {
-        c.is_primary = c.id === contactId
+        c.is_primary = c.id === contactId;
       }
-    })
-    
+    });
+
     // Update customer's main contact info if this is a primary contact
     if (contact.is_primary) {
       if (contact.contact_type === 'PHONE') {
-        customer.value.phone_main = contact.value
+        customer.value.phone_main = contact.value;
       } else if (contact.contact_type === 'EMAIL') {
-        customer.value.email_main = contact.value
+        customer.value.email_main = contact.value;
       }
     }
   }
 }
 
 function deleteContactInfo(contactId) {
-  if (!confirm('Are you sure you want to delete this contact information?')) return
-  contactInfos.value = contactInfos.value.filter(contact => contact.id !== contactId)
+  if (!confirm('Are you sure you want to delete this contact information?')) return;
+  contactInfos.value = contactInfos.value.filter((contact) => contact.id !== contactId);
 }
 
 // Contact person functions
 function addContactPerson() {
-  router.push(`/customers/${customerId.value}/contact-persons/new`)
+  router.push(`/customers/${customerId.value}/contact-persons/new`);
 }
 
 function editContactPerson(personId) {
-  router.push(`/customers/${customerId.value}/contact-persons/${personId}/edit`)
+  router.push(`/customers/${customerId.value}/contact-persons/${personId}/edit`);
 }
 
 function deleteContactPerson(personId) {
-  if (!confirm('Are you sure you want to delete this contact person?')) return
-  contactPersons.value = contactPersons.value.filter(person => person.id !== personId)
+  if (!confirm('Are you sure you want to delete this contact person?')) return;
+  contactPersons.value = contactPersons.value.filter((person) => person.id !== personId);
 }
 
 // Helper functions
 function formatDate(dateString) {
-  if (!dateString) return 'N/A'
-  return new Date(dateString).toLocaleDateString()
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString();
 }
 
 function formatCurrency(amount) {
-  if (!amount) return '€0.00'
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount)
+  if (!amount) return '€0.00';
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
 }
 
 function formatPaymentMethods(methods) {
-  if (!methods || methods.length === 0) return 'None specified'
-  return Array.isArray(methods) ? methods.join(', ') : methods
+  if (!methods || methods.length === 0) return 'None specified';
+  return Array.isArray(methods) ? methods.join(', ') : methods;
 }
 
 function formatContactType(type) {
-  if (!type) return 'Unknown'
+  if (!type) return 'Unknown';
   const types = {
-    'PHONE': 'Phone',
-    'EMAIL': 'Email',
-    'FAX': 'Fax'
-  }
-  return types[type] || type
+    PHONE: 'Phone',
+    EMAIL: 'Email',
+    FAX: 'Fax'
+  };
+  return types[type] || type;
 }
 </script>
 
@@ -1369,32 +1402,41 @@ function formatContactType(type) {
 }
 
 /* Shipping address styles */
-.shipping-addresses, .contact-infos, .contact-persons {
+.shipping-addresses,
+.contact-infos,
+.contact-persons {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 15px;
 }
 
-.shipping-address-card, .contact-info-card, .contact-person-card {
+.shipping-address-card,
+.contact-info-card,
+.contact-person-card {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   padding: 15px;
 }
 
-.address-header, .contact-info-header, .contact-person-header {
+.address-header,
+.contact-info-header,
+.contact-person-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
 }
 
-.address-header h3, .contact-info-header h3, .contact-person-header h3 {
+.address-header h3,
+.contact-info-header h3,
+.contact-person-header h3 {
   font-size: 16px;
   font-weight: 600;
   margin: 0;
 }
 
-.default-badge, .primary-badge {
+.default-badge,
+.primary-badge {
   background-color: #10b981;
   color: white;
   font-size: 12px;
@@ -1402,16 +1444,22 @@ function formatContactType(type) {
   border-radius: 12px;
 }
 
-.address-content, .contact-info-content, .contact-person-content {
+.address-content,
+.contact-info-content,
+.contact-person-content {
   margin-bottom: 15px;
 }
 
-.address-content p, .contact-info-content p, .contact-person-content p {
+.address-content p,
+.contact-info-content p,
+.contact-person-content p {
   margin: 5px 0;
   font-size: 14px;
 }
 
-.address-actions, .contact-info-actions, .contact-person-actions {
+.address-actions,
+.contact-info-actions,
+.contact-person-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;

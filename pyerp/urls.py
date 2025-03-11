@@ -82,6 +82,11 @@ urlpatterns = [
         "api/external/",
         include("pyerp.external_api.urls", namespace="external_api"),
     ),
+    # Add email system URLs
+    path(
+        "api/email/",
+        include("pyerp.utils.email_system.urls", namespace="email_system"),
+    ),
     # Add products API URLs directly
     path("api/products/", include("pyerp.business_modules.products.api_urls")),
     # Add sales API URLs

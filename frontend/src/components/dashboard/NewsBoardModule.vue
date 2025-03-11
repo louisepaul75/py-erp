@@ -3,7 +3,7 @@
     <div class="px-6 py-4 border-b d-flex align-center">
       <span class="text-h6 font-weight-medium">{{ module.title }}</span>
       <v-spacer></v-spacer>
-      
+
       <v-btn
         v-if="!editMode"
         :icon="isFavorite ? 'mdi-star' : 'mdi-star-outline'"
@@ -28,8 +28,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useFavoritesStore } from '../../store/favorites'
+import { computed } from 'vue';
+import { useFavoritesStore } from '../../store/favorites';
 
 const props = defineProps({
   module: {
@@ -40,33 +40,35 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
-})
+});
 
-const favoritesStore = useFavoritesStore()
+const favoritesStore = useFavoritesStore();
 
 // News items
 const newsItems = [
-  { 
-    title: 'Neue Produktlinie ab April', 
-    date: '09.03.2025', 
-    content: 'Ab April führen wir eine neue Produktlinie ein. Schulungen finden nächste Woche statt.' 
+  {
+    title: 'Neue Produktlinie ab April',
+    date: '09.03.2025',
+    content:
+      'Ab April führen wir eine neue Produktlinie ein. Schulungen finden nächste Woche statt.'
   },
-  { 
-    title: 'Systemwartung am Wochenende', 
-    date: '08.03.2025', 
-    content: 'Das System wird am Samstag von 22:00 bis 02:00 Uhr für Wartungsarbeiten nicht verfügbar sein.' 
+  {
+    title: 'Systemwartung am Wochenende',
+    date: '08.03.2025',
+    content:
+      'Das System wird am Samstag von 22:00 bis 02:00 Uhr für Wartungsarbeiten nicht verfügbar sein.'
   },
-  { 
-    title: 'Neue Vertriebspartnerschaft', 
-    date: '05.03.2025', 
-    content: 'Wir freuen uns, eine neue Partnerschaft mit der Firma XYZ bekannt zu geben.' 
+  {
+    title: 'Neue Vertriebspartnerschaft',
+    date: '05.03.2025',
+    content: 'Wir freuen uns, eine neue Partnerschaft mit der Firma XYZ bekannt zu geben.'
   }
-]
+];
 
 // Favorites functionality
 const isFavorite = computed(() => {
-  return favoritesStore.isFavorite(props.module.id)
-})
+  return favoritesStore.isFavorite(props.module.id);
+});
 
 const toggleFavorite = () => {
   const favoriteItem = {
@@ -74,9 +76,9 @@ const toggleFavorite = () => {
     title: props.module.title,
     icon: 'mdi-bulletin-board',
     type: 'module'
-  }
-  favoritesStore.toggleFavorite(favoriteItem)
-}
+  };
+  favoritesStore.toggleFavorite(favoriteItem);
+};
 </script>
 
 <style scoped>
@@ -96,4 +98,4 @@ const toggleFavorite = () => {
 .border-b:last-child {
   border-bottom: none !important;
 }
-</style> 
+</style>

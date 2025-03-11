@@ -46,20 +46,11 @@
 
     <!-- Loading indicator -->
     <div v-if="loading" class="d-flex justify-center my-6">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="64"
-      ></v-progress-circular>
+      <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
     </div>
 
     <!-- Error message -->
-    <v-alert
-      v-else-if="error"
-      type="error"
-      variant="tonal"
-      class="mb-6"
-    >
+    <v-alert v-else-if="error" type="error" variant="tonal" class="mb-6">
       {{ error }}
     </v-alert>
 
@@ -70,11 +61,7 @@
           <v-row>
             <v-col cols="12" md="6">
               <h2 class="text-h5">Order #{{ order.order_number }}</h2>
-              <v-chip
-                :color="getStatusColor(order.status)"
-                text-color="white"
-                class="mt-2"
-              >
+              <v-chip :color="getStatusColor(order.status)" text-color="white" class="mt-2">
                 {{ capitalizeFirst(order.status) }}
               </v-chip>
             </v-col>
@@ -232,14 +219,7 @@
     </template>
 
     <!-- No order found message -->
-    <v-alert
-      v-else
-      type="warning"
-      variant="tonal"
-      class="mt-6"
-    >
-      Sales order not found.
-    </v-alert>
+    <v-alert v-else type="warning" variant="tonal" class="mt-6"> Sales order not found. </v-alert>
   </div>
 </template>
 
@@ -309,12 +289,18 @@ const orderId = Number(route.params.id);
 // Get status color
 const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'draft': return 'grey';
-    case 'confirmed': return 'blue';
-    case 'invoiced': return 'orange';
-    case 'completed': return 'green';
-    case 'canceled': return 'red';
-    default: return 'grey';
+    case 'draft':
+      return 'grey';
+    case 'confirmed':
+      return 'blue';
+    case 'invoiced':
+      return 'orange';
+    case 'completed':
+      return 'green';
+    case 'canceled':
+      return 'red';
+    default:
+      return 'grey';
   }
 };
 
@@ -346,7 +332,7 @@ const editOrder = () => {
 
 const confirmOrder = async () => {
   if (!order.value) return;
-  
+
   try {
     await salesApi.updateSalesOrder(orderId, { status: 'confirmed' });
     await loadOrderDetails();
@@ -358,7 +344,7 @@ const confirmOrder = async () => {
 
 const createInvoice = async () => {
   if (!order.value) return;
-  
+
   try {
     await salesApi.updateSalesOrder(orderId, { status: 'invoiced' });
     await loadOrderDetails();

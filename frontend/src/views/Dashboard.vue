@@ -1,12 +1,7 @@
 <template>
   <div class="dashboard">
     <!-- Navigation Drawer -->
-    <v-navigation-drawer
-      v-model="drawer"
-      permanent
-      class="bg-grey-lighten-4"
-      :width="240"
-    >
+    <v-navigation-drawer v-model="drawer" permanent class="bg-grey-lighten-4" :width="240">
       <div class="d-flex align-center px-4 py-3 border-b">
         <v-icon icon="mdi-star" color="warning" class="mr-2"></v-icon>
         <span class="text-body-2 font-weight-medium text-grey-darken-3">Favoriten</span>
@@ -86,7 +81,7 @@
           <div class="px-6 py-4 border-b d-flex align-center">
             <span class="text-h6 font-weight-medium">Dashboard</span>
             <v-spacer></v-spacer>
-            
+
             <v-btn
               v-if="!editMode"
               prepend-icon="mdi-pencil"
@@ -96,7 +91,7 @@
             >
               Dashboard anpassen
             </v-btn>
-            
+
             <template v-else>
               <v-btn
                 color="success"
@@ -107,12 +102,7 @@
               >
                 Speichern
               </v-btn>
-              <v-btn
-                color="error"
-                variant="text"
-                prepend-icon="mdi-close"
-                @click="cancelEditMode"
-              >
+              <v-btn color="error" variant="text" prepend-icon="mdi-close" @click="cancelEditMode">
                 Abbrechen
               </v-btn>
             </template>
@@ -126,7 +116,14 @@
           </div>
           <v-card-text>
             <v-row>
-              <v-col v-for="module in availableModules" :key="module.id" cols="6" sm="4" md="3" lg="2">
+              <v-col
+                v-for="module in availableModules"
+                :key="module.id"
+                cols="6"
+                sm="4"
+                md="3"
+                lg="2"
+              >
                 <v-hover v-slot="{ isHovering, props }">
                   <v-card
                     v-bind="props"
@@ -143,7 +140,7 @@
                       color="primary"
                       variant="text"
                       class="add-module-btn position-absolute"
-                      style="top: 8px; right: 8px;"
+                      style="top: 8px; right: 8px"
                     ></v-btn>
                   </v-card>
                 </v-hover>
@@ -162,23 +159,25 @@
           <div class="grid-stack">
             <!-- GridStack will automatically create grid-stack-item containers -->
             <template v-for="(module, index) in dashboardModules" :key="module.id">
-              <div v-if="module.enabled" 
-                   class="grid-stack-item"
-                   :gs-id="module.id"
-                   :gs-x="module.settings?.x || (index % 2) * 6"
-                   :gs-y="module.settings?.y || Math.floor(index / 2) * 4"
-                   :gs-w="module.settings?.w || 6"
-                   :gs-h="module.settings?.h || 4">
+              <div
+                v-if="module.enabled"
+                class="grid-stack-item"
+                :gs-id="module.id"
+                :gs-x="module.settings?.x || (index % 2) * 6"
+                :gs-y="module.settings?.y || Math.floor(index / 2) * 4"
+                :gs-w="module.settings?.w || 6"
+                :gs-h="module.settings?.h || 4"
+              >
                 <div class="grid-stack-item-content">
                   <!-- Module Header -->
                   <div class="module-header d-flex align-center px-4 py-2 border-b">
-                    <v-icon 
+                    <v-icon
                       :icon="getModuleIcon(module.type)"
                       size="small"
                       class="mr-2 text-grey-darken-1"
                     ></v-icon>
                     <span class="text-subtitle-2 font-weight-medium">{{ module.title }}</span>
-                    
+
                     <!-- Module Actions (only visible in edit mode) -->
                     <div v-if="editMode" class="module-actions d-flex align-center ml-auto">
                       <v-btn
@@ -190,11 +189,11 @@
                       ></v-btn>
                     </div>
                   </div>
-                  
+
                   <!-- Module Content -->
                   <div class="pa-4">
-                    <component 
-                      :is="getModuleComponent(module.type)" 
+                    <component
+                      :is="getModuleComponent(module.type)"
                       :module="module"
                       :edit-mode="editMode"
                     ></component>
@@ -210,116 +209,116 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import draggable from 'vuedraggable'
-import { GridStack } from 'gridstack'
-import 'gridstack/dist/gridstack.min.css'
-import api from '../services/api'
-import { 
-  VHover, 
-  VIcon, 
-  VBtn, 
-  VList, 
-  VListItem, 
-  VDivider, 
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import draggable from 'vuedraggable';
+import { GridStack } from 'gridstack';
+import 'gridstack/dist/gridstack.min.css';
+import api from '../services/api';
+import {
+  VHover,
+  VIcon,
+  VBtn,
+  VList,
+  VListItem,
+  VDivider,
   VNavigationDrawer,
-  VAppBar, 
-  VAppBarNavIcon, 
-  VAppBarTitle, 
-  VSpacer, 
-  VBadge, 
-  VAvatar, 
+  VAppBar,
+  VAppBarNavIcon,
+  VAppBarTitle,
+  VSpacer,
+  VBadge,
+  VAvatar,
   VImg,
-  VMain, 
-  VContainer, 
-  VCard, 
-  VCardText, 
-  VTextField, 
-  VTable, 
+  VMain,
+  VContainer,
+  VCard,
+  VCardText,
+  VTextField,
+  VTable,
   VChip,
-  VRow, 
+  VRow,
   VCol,
   VTabs,
   VTab,
   VProgressCircular
-} from 'vuetify/components'
-import { useRouter } from 'vue-router'
-import { useFavoritesStore } from '../store/favorites'
-import { useAuthStore } from '../store/auth'
+} from 'vuetify/components';
+import { useRouter } from 'vue-router';
+import { useFavoritesStore } from '../store/favorites';
+import { useAuthStore } from '../store/auth';
 
 // Import module components
-import QuickAccessModule from '../components/dashboard/QuickAccessModule.vue'
-import RecentOrdersModule from '../components/dashboard/RecentOrdersModule.vue'
-import ImportantLinksModule from '../components/dashboard/ImportantLinksModule.vue'
-import NewsBoardModule from '../components/dashboard/NewsBoardModule.vue'
+import QuickAccessModule from '../components/dashboard/QuickAccessModule.vue';
+import RecentOrdersModule from '../components/dashboard/RecentOrdersModule.vue';
+import ImportantLinksModule from '../components/dashboard/ImportantLinksModule.vue';
+import NewsBoardModule from '../components/dashboard/NewsBoardModule.vue';
 
 // Initialize stores
-const favoritesStore = useFavoritesStore()
-const authStore = useAuthStore()
-const router = useRouter()
+const favoritesStore = useFavoritesStore();
+const authStore = useAuthStore();
+const router = useRouter();
 
 // UI state
-const drawer = ref(true)
-const searchQuery = ref('')
-const activeTab = ref('dashboard')
-const loading = ref(true)
-const editMode = ref(false)
+const drawer = ref(true);
+const searchQuery = ref('');
+const activeTab = ref('dashboard');
+const loading = ref(true);
+const editMode = ref(false);
 
 // Dashboard state
-const dashboardModules = ref([])
-const originalModules = ref([])
-const grid = ref(null)
+const dashboardModules = ref([]);
+const originalModules = ref([]);
+const grid = ref(null);
 
 // Toggle functions
 const toggleDrawer = () => {
-  drawer.value = !drawer.value
-}
+  drawer.value = !drawer.value;
+};
 
 // Dashboard edit mode functions
 const enableEditMode = () => {
-  originalModules.value = JSON.parse(JSON.stringify(dashboardModules.value))
-  editMode.value = true
-}
+  originalModules.value = JSON.parse(JSON.stringify(dashboardModules.value));
+  editMode.value = true;
+};
 
 const cancelEditMode = () => {
-  dashboardModules.value = JSON.parse(JSON.stringify(originalModules.value))
-  editMode.value = false
-}
+  dashboardModules.value = JSON.parse(JSON.stringify(originalModules.value));
+  editMode.value = false;
+};
 
 const saveDashboardConfig = async () => {
   try {
     await api.patch('/dashboard/', {
       modules: dashboardModules.value
-    })
-    editMode.value = false
+    });
+    editMode.value = false;
     // Save successful notification would go here
   } catch (error) {
-    console.error('Failed to save dashboard configuration:', error)
+    console.error('Failed to save dashboard configuration:', error);
     // Error notification would go here
   }
-}
+};
 
 // Module management functions
 const addModule = (module) => {
-  const existingModule = dashboardModules.value.find(m => m.id === module.id)
+  const existingModule = dashboardModules.value.find((m) => m.id === module.id);
   if (existingModule) {
-    existingModule.enabled = true
+    existingModule.enabled = true;
   } else {
     dashboardModules.value.push({
       ...module,
       position: dashboardModules.value.length,
       enabled: true
-    })
+    });
   }
-}
+};
 
 const removeModule = (module) => {
-  const index = dashboardModules.value.findIndex(m => m.id === module.id)
+  const index = dashboardModules.value.findIndex((m) => m.id === module.id);
   if (index !== -1) {
     // Instead of removing, just disable it
-    dashboardModules.value[index].enabled = false
+    dashboardModules.value[index].enabled = false;
   }
-}
+};
 
 // Component mapping
 const getModuleComponent = (type) => {
@@ -328,9 +327,9 @@ const getModuleComponent = (type) => {
     'recent-orders': RecentOrdersModule,
     'important-links': ImportantLinksModule,
     'news-board': NewsBoardModule
-  }
-  return moduleComponents[type] || null
-}
+  };
+  return moduleComponents[type] || null;
+};
 
 // Get module icon
 const getModuleIcon = (type) => {
@@ -339,9 +338,9 @@ const getModuleIcon = (type) => {
     'recent-orders': 'mdi-cart',
     'important-links': 'mdi-link',
     'news-board': 'mdi-bulletin-board'
-  }
-  return moduleIcons[type] || 'mdi-view-dashboard'
-}
+  };
+  return moduleIcons[type] || 'mdi-view-dashboard';
+};
 
 // Available modules definition
 const availableModules = [
@@ -373,45 +372,45 @@ const availableModules = [
     icon: 'mdi-bulletin-board',
     settings: {}
   }
-]
+];
 
 // Initialize GridStack
 onMounted(async () => {
   try {
-    const response = await api.get('/dashboard/')
+    const response = await api.get('/dashboard/');
     if (response.data && response.data.dashboard_modules) {
-      dashboardModules.value = response.data.dashboard_modules
+      dashboardModules.value = response.data.dashboard_modules;
       // Sort modules by position
-      dashboardModules.value.sort((a, b) => a.position - b.position)
+      dashboardModules.value.sort((a, b) => a.position - b.position);
     }
   } catch (error) {
-    console.error('Failed to fetch dashboard data:', error)
+    console.error('Failed to fetch dashboard data:', error);
   } finally {
-    loading.value = false
+    loading.value = false;
     // Initialize GridStack after loading is complete and DOM is updated
-    await nextTick()
-    initializeGrid()
+    await nextTick();
+    initializeGrid();
   }
-})
+});
 
 // Watch edit mode changes to enable/disable grid functionality
 watch(editMode, (newValue) => {
   if (grid.value) {
     if (newValue) {
-      grid.value.enable()
+      grid.value.enable();
     } else {
-      grid.value.disable()
+      grid.value.disable();
     }
   }
-})
+});
 
 const initializeGrid = () => {
   // Verify grid container exists before initialization
-  const gridElement = document.querySelector('.grid-stack')
+  const gridElement = document.querySelector('.grid-stack');
   if (!gridElement) {
-    console.error('Grid container not found. Retrying in 100ms...')
-    setTimeout(initializeGrid, 100)
-    return
+    console.error('Grid container not found. Retrying in 100ms...');
+    setTimeout(initializeGrid, 100);
+    return;
   }
 
   try {
@@ -427,25 +426,25 @@ const initializeGrid = () => {
       },
       disableDrag: !editMode.value,
       disableResize: !editMode.value
-    })
+    });
 
     if (grid.value) {
-      grid.value.on('change', saveGridLayout)
-      console.log('GridStack initialized successfully')
+      grid.value.on('change', saveGridLayout);
+      console.log('GridStack initialized successfully');
     } else {
-      console.error('Grid initialization returned null')
+      console.error('Grid initialization returned null');
     }
   } catch (error) {
-    console.error('Failed to initialize GridStack:', error)
+    console.error('Failed to initialize GridStack:', error);
   }
-}
+};
 
 const saveGridLayout = () => {
-  if (!grid.value) return
+  if (!grid.value) return;
 
-  const layout = grid.value.save()
-  const updatedModules = dashboardModules.value.map(module => {
-    const gridItem = layout.find(item => item.id === module.id)
+  const layout = grid.value.save();
+  const updatedModules = dashboardModules.value.map((module) => {
+    const gridItem = layout.find((item) => item.id === module.id);
     if (gridItem) {
       return {
         ...module,
@@ -456,13 +455,13 @@ const saveGridLayout = () => {
           w: gridItem.w,
           h: gridItem.h
         }
-      }
+      };
     }
-    return module
-  })
+    return module;
+  });
 
-  dashboardModules.value = updatedModules
-}
+  dashboardModules.value = updatedModules;
+};
 
 // Recent access items
 const recentAccess = [
@@ -471,21 +470,21 @@ const recentAccess = [
   { title: 'Kunde: Schmidt AG', icon: 'mdi-account' },
   { title: 'Auftrag #1079', icon: 'mdi-file-document' },
   { title: 'Kunde: Weber KG', icon: 'mdi-account' }
-]
+];
 
 // Navigation functions
 const navigateTo = (tile) => {
   if (tile.route) {
-    router.push(tile.route)
+    router.push(tile.route);
   }
-}
+};
 
 // Navigate to a favorite item
 const navigateToFavorite = (item) => {
   if (item.route) {
-    router.push(item.route)
+    router.push(item.route);
   }
-}
+};
 </script>
 
 <style>

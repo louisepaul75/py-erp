@@ -26,6 +26,12 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": os.environ.get("DB_HOST", "192.168.73.64"),
         "PORT": os.environ.get("DB_PORT", "5432"),
+        "OPTIONS": {
+            "connect_timeout": 10,  # Connection timeout in seconds
+            "client_encoding": "UTF8",
+            "sslmode": "prefer",
+            "auth_method": "md5",  # Use MD5 authentication
+        },
     },
 }
 
@@ -102,16 +108,17 @@ if os.environ.get("USE_S3", "False").lower() == "true":
 
 # Email configuration for production
 if os.environ.get("ANYMAIL_ESP", "").lower() == "smtp":
-    # Use standard Django SMTP backend for SMTP
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    # Use logging SMTP backend for SMTP
+    EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
 else:
-    # Use anymail backend for other ESPs
-    EMAIL_BACKEND = "anymail.backends.{esp_name}.EmailBackend".format(
-        esp_name=os.environ.get("ANYMAIL_ESP", "sendgrid").lower()
-    )
+    # Use logging anymail backend for other ESPs
+    EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingAnymailBackend"
 
 # Import anymail settings
 from .anymail import *  # noqa
+
+# Add email_system to installed apps
+INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
 
 # Legacy email settings (kept for backwards compatibility)
 # These will be used if ANYMAIL_ESP is not set

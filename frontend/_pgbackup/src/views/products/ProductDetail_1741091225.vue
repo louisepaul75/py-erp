@@ -14,9 +14,7 @@
     <!-- Product details -->
     <div v-else class="product-content">
       <div class="product-header">
-        <button @click="goBack" class="back-button">
-          &larr; Back to Products
-        </button>
+        <button @click="goBack" class="back-button">&larr; Back to Products</button>
         <h1>{{ product.name }}</h1>
         <p class="sku">SKU: {{ product.sku }}</p>
         <div v-if="product.category" class="category-badge">
@@ -29,7 +27,13 @@
         <div class="product-images">
           <div class="main-image">
             <img
-              :src="selectedImage ? selectedImage.url : (product.primary_image ? product.primary_image.url : '/static/images/no-image.png')"
+              :src="
+                selectedImage
+                  ? selectedImage.url
+                  : product.primary_image
+                    ? product.primary_image.url
+                    : '/static/images/no-image.png'
+              "
               :alt="product.name"
             />
           </div>
@@ -92,14 +96,19 @@
           >
             <div class="variant-image">
               <img
-                :src="variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png'"
+                :src="
+                  variant.primary_image ? variant.primary_image.url : '/static/images/no-image.png'
+                "
                 :alt="variant.name"
               />
             </div>
             <div class="variant-info">
               <h3>{{ variant.name }}</h3>
               <p class="variant-sku">SKU: {{ variant.sku }}</p>
-              <div class="variant-attributes" v-if="variant.attributes && variant.attributes.length">
+              <div
+                class="variant-attributes"
+                v-if="variant.attributes && variant.attributes.length"
+              >
                 <span
                   v-for="(attr, index) in variant.attributes"
                   :key="index"
@@ -108,7 +117,10 @@
                   {{ attr.name }}: {{ attr.value }}
                 </span>
               </div>
-              <div class="variant-stock" :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }">
+              <div
+                class="variant-stock"
+                :class="{ 'in-stock': variant.in_stock, 'out-of-stock': !variant.in_stock }"
+              >
                 {{ variant.in_stock ? 'In Stock' : 'Out of Stock' }}
               </div>
             </div>
@@ -239,7 +251,8 @@ onMounted(() => {
   padding: 20px 0;
 }
 
-.loading, .error {
+.loading,
+.error {
   text-align: center;
   padding: 30px;
 }
@@ -407,7 +420,9 @@ h1 {
   border: 1px solid #eaeaea;
   border-radius: 8px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   cursor: pointer;
   background-color: white;
 }

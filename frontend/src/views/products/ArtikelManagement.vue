@@ -1,252 +1,278 @@
 <template>
-    <div class="artikel-management">
-        <!-- Header -->
-        <div class="artikel-header">
-            <div class="artikel-title"><span class="artikel-heart">❤</span><span>Artikel</span>
-            </div>
-            <div class="window-controls">
-                <button class="window-control-button" @click="minimizeWindow"><span>_</span>
-                </button>
-                <button class="window-control-button" @click="maximizeWindow"><span>□</span>
-                </button>
-                <button class="window-control-button" @click="closeWindow"><span>×</span>
-                </button>
-            </div>
-        </div>
-        <!-- Toolbar -->
-        <div class="artikel-toolbar">
-            <button class="toolbar-button">
-                <PlusIcon class="icon-small"/>
-            </button>
-            <button class="toolbar-button">
-                <MinusIcon class="icon-small"/>
-            </button>
-            <div class="search-input-container">
-                <AtSignIcon class="search-icon"/>
-                <input class="search-input" placeholder="Search..." v-model="searchQuery" @input="debounceSearch"/>
-            </div>
-            <button class="toolbar-button">
-                <TypeIcon class="icon-small"/>
-            </button>
-            <button class="toolbar-button">
-                <EyeIcon class="icon-small"/>
-            </button>
-            <button class="toolbar-button">
-                <SearchIcon class="icon-small"/>
-            </button>
-            <button class="toolbar-button">
-                <FileTextIcon class="icon-small"/>
-            </button>
-            <button class="artikel-button" @click="saveProduct">
-                Speichern
-            </button>
-            <button class="artikel-button">
-                Artikel übernehmen
-            </button>
-            <div class="toolbar-right">
-                <button class="toolbar-button">
-                    <RotateCcwIcon class="icon-small"/>
-                </button>
-                <button class="toolbar-button">
-                    <SettingsIcon class="icon-small"/>
-                </button>
-            </div>
-        </div>
-        <!-- Main Content -->
-        <div class="artikel-content">
-            <!-- Left Panel - Product List -->
-            <div class="product-list-panel">
-                <div class="artikel-list-container">
-                    <div class="artikel-list-header">
-                        <div class="artikel-list-header-item">Nummer</div>
-                        <div class="artikel-list-header-item">Bezeichnung</div>
-                    </div>
-                    <div class="artikel-list" @scroll="handleScroll">
-                        <!-- Loading state -->
-                        <div v-if="isLoadingProductList && !productData.length" class="artikel-loading">
-                            <p>Loading products...</p>
-                        </div>
-                        <!-- Error state -->
-                        <div v-else-if="productListError && !productData.length" class="artikel-error">
-                            <p>{{ productListError }}</p>
-                            <button class="artikel-button" @click="() => loadProducts(false)">Retry</button>
-                        </div>
-                        <!-- Empty state -->
-                        <div v-else-if="productData.length === 0" class="artikel-empty">
-                            <p>No products found</p>
-                            <p v-if="searchQuery" class="artikel-empty-hint">Try a different search term</p>
-                        </div>
-                        <!-- Product list -->
-                        <template v-else>
-                            <div v-for="product in productData" :key="product.id || product.nummer" class="artikel-list-item" :class="{ 'selected': product.selected }" @click="selectProduct(product)">
-                                <div class="artikel-list-item-nummer">{{ product.nummer }}</div>
-                                <div class="artikel-list-item-bezeichnung">{{ product.bezeichnung }}</div>
-                            </div>
-                            <!-- Loading more indicator -->
-                            <div v-if="isLoadingMoreProducts || loadingAll" class="artikel-list-loading-more">
-                                <p>{{ loadingAll ? 'Loading all products...' : 'Loading more products...' }} ({{ productData.length }} of {{ totalProductCount }})</p>
-                            </div>
-                            <!-- Load more button -->
-                            <div v-else-if="hasMorePages" class="artikel-list-load-more">
-                                <div class="load-buttons">
-                                    <button class="artikel-button" @click="manualLoadMore">
-                                        Load More ({{ productData.length }} of {{ totalProductCount }})
-</button>
-                                    <button class="artikel-button load-all-button" @click="loadAllProducts">
-                                        Load All Products
-</button>
-                                </div>
-                            </div>
-                            <!-- End of list indicator -->
-                            <div v-else-if="productData.length > 0" class="artikel-list-end">
-                                <p>Showing all {{ productData.length }} products</p>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-            <!-- Right Panel - Product Details -->
-            <div class="product-details-panel">
-                <!-- Loading state -->
-                <div v-if="isLoadingProduct" class="artikel-loading">
-                    <p>Loading product details...</p>
-                </div>
-                <!-- Error state -->
-                <div v-else-if="productLoadError" class="artikel-error">
-                    <p>{{ productLoadError }}</p>
-                </div>
-                <!-- Product details -->
-                <div v-else class="artikel-details">
-                    <div class="artikel-tabs">
-                        <button class="artikel-tab" :class="{ 'active': activeTab === 'mutter' }" @click="activeTab = 'mutter'">
-                            Mutter
-</button>
-                        <button class="artikel-tab" :class="{ 'active': activeTab === 'varianten' }" @click="activeTab = 'varianten'">
-                            Varianten
-</button>
-                    </div>
-                    <div class="artikel-details-content">
-                        <div class="artikel-form-section">
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Bezeichnung</div>
-                                <input class="artikel-form-input" v-model="selectedProductData.bezeichnung"/>
-                            </div>
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Beschreibung</div>
-                                <textarea class="artikel-form-textarea" v-model="selectedProductData.beschreibung"></textarea>
-                            </div>
-                        </div>
-                        <div class="artikel-form-section">
-                            <div class="artikel-form-row checkbox-row">
-                                <label class="artikel-checkbox-label">
-                                    <input type="checkbox" v-model="selectedProductData.hangend"/>
-                                    <span>Hängend</span>
-                                </label>
-                                <label class="artikel-checkbox-label">
-                                    <input type="checkbox" v-model="selectedProductData.einseitig"/>
-                                    <span>Einseitig</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="artikel-form-section">
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Breite</div>
-                                <input class="artikel-form-input" v-model="selectedProductData.breite"/>
-                            </div>
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Höhe</div>
-                                <input class="artikel-form-input" v-model="selectedProductData.hohe"/>
-                            </div>
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Tiefe</div>
-                                <input class="artikel-form-input" v-model="selectedProductData.tiefe"/>
-                            </div>
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Gewicht</div>
-                                <input class="artikel-form-input" v-model="selectedProductData.gewicht"/>
-                            </div>
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Boxgröße</div>
-                                <input class="artikel-form-input" v-model="selectedProductData.boxgrosse"/>
-                            </div>
-                        </div>
-                        <div class="artikel-form-section">
-                            <div class="artikel-form-row">
-                                <div class="artikel-form-label">Tags</div>
-                                <input class="artikel-form-input" v-model="selectedProductData.tags"/>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Right Side Panel -->
-                <div class="side-panel">
-                    <div class="side-panel-header">
-                        <span class="section-label">Besteht aus</span>
-                        <span class="section-label">Anz</span>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th class="table-header">DE</th>
-                                    <th class="table-header"></th>
-                                    <th class="table-header"></th>
-                                    <th class="table-header"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="table-cell">EN</td>
-                                    <td class="table-cell"></td>
-                                    <td class="table-cell"></td>
-                                    <td class="table-cell"></td>
-                                </tr>
-                                <tr v-for="i in 10" :key="i">
-                                    <td class="table-cell"></td>
-                                    <td class="table-cell"></td>
-                                    <td class="table-cell"></td>
-                                    <td class="table-cell"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="publish-button-container">
-                        <button class="publish-button">
-                            Publish
-</button>
-                    </div>
-                    <div class="help-button-container">
-                        <div class="help-button">
-                            ?
-</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="artikel-management">
+    <!-- Header -->
+    <div class="artikel-header">
+      <div class="artikel-title"><span class="artikel-heart">❤</span><span>Artikel</span></div>
+      <div class="window-controls">
+        <button class="window-control-button" @click="minimizeWindow"><span>_</span></button>
+        <button class="window-control-button" @click="maximizeWindow"><span>□</span></button>
+        <button class="window-control-button" @click="closeWindow"><span>×</span></button>
+      </div>
     </div>
-    <!-- Debug panel (only visible in development) -->
-    <div v-if="isDevelopment" class="debug-info">
-        <div>Total products: {{ totalProductCount }}</div>
-        <div>Loaded products: {{ productData.length }}</div>
-        <div>Current page: {{ currentPage }}</div>
-        <div>Has more pages: {{ hasMorePages ? 'Yes' : 'No' }}</div>
-        <div>Loading: {{ isLoadingProductList || isLoadingMoreProducts || loadingAll ? 'Yes' : 'No' }}</div>
-        <div>Loading all: {{ loadingAll ? 'Yes' : 'No' }}</div>
-        <div>Pages loaded: {{ loadedPages }}</div>
+    <!-- Toolbar -->
+    <div class="artikel-toolbar">
+      <button class="toolbar-button">
+        <PlusIcon class="icon-small" />
+      </button>
+      <button class="toolbar-button">
+        <MinusIcon class="icon-small" />
+      </button>
+      <div class="search-input-container">
+        <AtSignIcon class="search-icon" />
+        <input
+          class="search-input"
+          placeholder="Search..."
+          v-model="searchQuery"
+          @input="debounceSearch"
+        />
+      </div>
+      <button class="toolbar-button">
+        <TypeIcon class="icon-small" />
+      </button>
+      <button class="toolbar-button">
+        <EyeIcon class="icon-small" />
+      </button>
+      <button class="toolbar-button">
+        <SearchIcon class="icon-small" />
+      </button>
+      <button class="toolbar-button">
+        <FileTextIcon class="icon-small" />
+      </button>
+      <button class="artikel-button" @click="saveProduct">Speichern</button>
+      <button class="artikel-button">Artikel übernehmen</button>
+      <div class="toolbar-right">
+        <button class="toolbar-button">
+          <RotateCcwIcon class="icon-small" />
+        </button>
+        <button class="toolbar-button">
+          <SettingsIcon class="icon-small" />
+        </button>
+      </div>
     </div>
+    <!-- Main Content -->
+    <div class="artikel-content">
+      <!-- Left Panel - Product List -->
+      <div class="product-list-panel">
+        <div class="artikel-list-container">
+          <div class="artikel-list-header">
+            <div class="artikel-list-header-item">Nummer</div>
+            <div class="artikel-list-header-item">Bezeichnung</div>
+          </div>
+          <div class="artikel-list" @scroll="handleScroll">
+            <!-- Loading state -->
+            <div v-if="isLoadingProductList && !productData.length" class="artikel-loading">
+              <p>Loading products...</p>
+            </div>
+            <!-- Error state -->
+            <div v-else-if="productListError && !productData.length" class="artikel-error">
+              <p>{{ productListError }}</p>
+              <button class="artikel-button" @click="() => loadProducts(false)">Retry</button>
+            </div>
+            <!-- Empty state -->
+            <div v-else-if="productData.length === 0" class="artikel-empty">
+              <p>No products found</p>
+              <p v-if="searchQuery" class="artikel-empty-hint">Try a different search term</p>
+            </div>
+            <!-- Product list -->
+            <template v-else>
+              <div
+                v-for="product in productData"
+                :key="product.id || product.nummer"
+                class="artikel-list-item"
+                :class="{ selected: product.selected }"
+                @click="selectProduct(product)"
+              >
+                <div class="artikel-list-item-nummer">{{ product.nummer }}</div>
+                <div class="artikel-list-item-bezeichnung">{{ product.bezeichnung }}</div>
+              </div>
+              <!-- Loading more indicator -->
+              <div v-if="isLoadingMoreProducts || loadingAll" class="artikel-list-loading-more">
+                <p>
+                  {{ loadingAll ? 'Loading all products...' : 'Loading more products...' }} ({{
+                    productData.length
+                  }}
+                  of {{ totalProductCount }})
+                </p>
+              </div>
+              <!-- Load more button -->
+              <div v-else-if="hasMorePages" class="artikel-list-load-more">
+                <div class="load-buttons">
+                  <button class="artikel-button" @click="manualLoadMore">
+                    Load More ({{ productData.length }} of {{ totalProductCount }})
+                  </button>
+                  <button class="artikel-button load-all-button" @click="loadAllProducts">
+                    Load All Products
+                  </button>
+                </div>
+              </div>
+              <!-- End of list indicator -->
+              <div v-else-if="productData.length > 0" class="artikel-list-end">
+                <p>Showing all {{ productData.length }} products</p>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+      <!-- Right Panel - Product Details -->
+      <div class="product-details-panel">
+        <!-- Loading state -->
+        <div v-if="isLoadingProduct" class="artikel-loading">
+          <p>Loading product details...</p>
+        </div>
+        <!-- Error state -->
+        <div v-else-if="productLoadError" class="artikel-error">
+          <p>{{ productLoadError }}</p>
+        </div>
+        <!-- Product details -->
+        <div v-else class="artikel-details">
+          <div class="artikel-tabs">
+            <button
+              class="artikel-tab"
+              :class="{ active: activeTab === 'mutter' }"
+              @click="activeTab = 'mutter'"
+            >
+              Mutter
+            </button>
+            <button
+              class="artikel-tab"
+              :class="{ active: activeTab === 'varianten' }"
+              @click="activeTab = 'varianten'"
+            >
+              Varianten
+            </button>
+          </div>
+          <div class="artikel-details-content">
+            <div class="artikel-form-section">
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Bezeichnung</div>
+                <input class="artikel-form-input" v-model="selectedProductData.bezeichnung" />
+              </div>
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Beschreibung</div>
+                <textarea
+                  class="artikel-form-textarea"
+                  v-model="selectedProductData.beschreibung"
+                ></textarea>
+              </div>
+            </div>
+            <div class="artikel-form-section">
+              <div class="artikel-form-row checkbox-row">
+                <label class="artikel-checkbox-label">
+                  <input type="checkbox" v-model="selectedProductData.hangend" />
+                  <span>Hängend</span>
+                </label>
+                <label class="artikel-checkbox-label">
+                  <input type="checkbox" v-model="selectedProductData.einseitig" />
+                  <span>Einseitig</span>
+                </label>
+              </div>
+            </div>
+            <div class="artikel-form-section">
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Breite</div>
+                <input class="artikel-form-input" v-model="selectedProductData.breite" />
+              </div>
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Höhe</div>
+                <input class="artikel-form-input" v-model="selectedProductData.hohe" />
+              </div>
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Tiefe</div>
+                <input class="artikel-form-input" v-model="selectedProductData.tiefe" />
+              </div>
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Gewicht</div>
+                <input class="artikel-form-input" v-model="selectedProductData.gewicht" />
+              </div>
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Boxgröße</div>
+                <input class="artikel-form-input" v-model="selectedProductData.boxgrosse" />
+              </div>
+            </div>
+            <div class="artikel-form-section">
+              <div class="artikel-form-row">
+                <div class="artikel-form-label">Tags</div>
+                <input class="artikel-form-input" v-model="selectedProductData.tags" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right Side Panel -->
+        <div class="side-panel">
+          <div class="side-panel-header">
+            <span class="section-label">Besteht aus</span>
+            <span class="section-label">Anz</span>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="table-header">DE</th>
+                  <th class="table-header"></th>
+                  <th class="table-header"></th>
+                  <th class="table-header"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="table-cell">EN</td>
+                  <td class="table-cell"></td>
+                  <td class="table-cell"></td>
+                  <td class="table-cell"></td>
+                </tr>
+                <tr v-for="i in 10" :key="i">
+                  <td class="table-cell"></td>
+                  <td class="table-cell"></td>
+                  <td class="table-cell"></td>
+                  <td class="table-cell"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="publish-button-container">
+            <button class="publish-button">Publish</button>
+          </div>
+          <div class="help-button-container">
+            <div class="help-button">?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Debug panel (only visible in development) -->
+  <div v-if="isDevelopment" class="debug-info">
+    <div>Total products: {{ totalProductCount }}</div>
+    <div>Loaded products: {{ productData.length }}</div>
+    <div>Current page: {{ currentPage }}</div>
+    <div>Has more pages: {{ hasMorePages ? 'Yes' : 'No' }}</div>
+    <div>
+      Loading: {{ isLoadingProductList || isLoadingMoreProducts || loadingAll ? 'Yes' : 'No' }}
+    </div>
+    <div>Loading all: {{ loadingAll ? 'Yes' : 'No' }}</div>
+    <div>Pages loaded: {{ loadedPages }}</div>
+  </div>
 </template>
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, defineProps, defineEmits, computed, onUnmounted } from 'vue';
+import {
+  ref,
+  reactive,
+  onMounted,
+  watch,
+  defineProps,
+  defineEmits,
+  computed,
+  onUnmounted
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { 
-  Plus as PlusIcon, 
-  Minus as MinusIcon, 
-  AtSign as AtSignIcon, 
-  Type as TypeIcon, 
-  Eye as EyeIcon, 
-  Search as SearchIcon, 
-  FileText as FileTextIcon, 
-  RotateCcw as RotateCcwIcon, 
+import {
+  Plus as PlusIcon,
+  Minus as MinusIcon,
+  AtSign as AtSignIcon,
+  Type as TypeIcon,
+  Eye as EyeIcon,
+  Search as SearchIcon,
+  FileText as FileTextIcon,
+  RotateCcw as RotateCcwIcon,
   Settings as SettingsIcon
 } from 'lucide-vue-next';
 import { productApi } from '@/services/api';
@@ -306,7 +332,7 @@ const activeTab = ref('mutter');
 
 // Debug mode detection
 const isDevelopment = computed(() => {
-    return process.env.NODE_ENV === 'development';
+  return process.env.NODE_ENV === 'development';
 });
 
 // Load products from API
@@ -320,13 +346,13 @@ const loadProducts = async (loadMore = false) => {
     initialLoadComplete.value = false;
     loadedPages.value = 0;
   }
-  
+
   productListError.value = '';
-  
+
   try {
     console.log(`Loading products from API... Page: ${currentPage.value}`);
     loadedPages.value++;
-    
+
     // Create params object for filtering
     const params: Record<string, any> = {
       page_size: 1000, // Increased to 1000 for maximum data per request
@@ -334,13 +360,13 @@ const loadProducts = async (loadMore = false) => {
       q: searchQuery.value, // Apply search query if any
       is_parent: true // Only fetch parent products
     };
-    
+
     const response = await productApi.getProducts(params);
     console.log('Products API response:', response);
-    
+
     if (response && response.data) {
       let products = [];
-      
+
       if (Array.isArray(response.data)) {
         // Handle case where response is a direct array
         products = response.data;
@@ -348,18 +374,20 @@ const loadProducts = async (loadMore = false) => {
       } else if (response.data.results) {
         // Handle paginated response
         products = response.data.results;
-        
+
         // Update pagination state
         hasMorePages.value = !!response.data.next;
         totalProductCount.value = response.data.count || 0;
-        
+
         console.log('Total products available:', totalProductCount.value);
         console.log('Has next page:', hasMorePages.value);
         console.log('Products loaded in this batch:', products.length);
         console.log(`Loaded ${loadedPages.value} pages so far`);
-        console.log(`Total products loaded: ${loadMore ? productData.value.length + products.length : products.length} of ${totalProductCount.value}`);
+        console.log(
+          `Total products loaded: ${loadMore ? productData.value.length + products.length : products.length} of ${totalProductCount.value}`
+        );
       }
-      
+
       // Map the products to the format needed for the list
       const mappedProducts = products.map((product: any) => ({
         nummer: product.sku || '', // Map SKU to Nummer
@@ -368,7 +396,7 @@ const loadProducts = async (loadMore = false) => {
         selected: false,
         product: product // Keep the original product data
       }));
-      
+
       if (loadMore) {
         // Append to existing products
         productData.value = [...productData.value, ...mappedProducts];
@@ -376,17 +404,21 @@ const loadProducts = async (loadMore = false) => {
         // Replace existing products
         productData.value = mappedProducts;
       }
-      
+
       console.log('Total mapped products in view:', productData.value.length);
-      
+
       // Automatically load more pages during initial load
-      if (hasMorePages.value && !initialLoadComplete.value && currentPage.value < maxInitialPages.value) {
+      if (
+        hasMorePages.value &&
+        !initialLoadComplete.value &&
+        currentPage.value < maxInitialPages.value
+      ) {
         console.log(`Initial load: automatically loading page ${currentPage.value + 1}...`);
         currentPage.value++;
         setTimeout(() => loadProducts(true), 100);
       } else {
         initialLoadComplete.value = true;
-        
+
         // If we're loading all products, continue loading until we have all of them
         if (loadingAll.value && hasMorePages.value) {
           console.log('Loading all products: continuing to next page');
@@ -400,12 +432,12 @@ const loadProducts = async (loadMore = false) => {
   } catch (err: any) {
     console.error('Error loading products:', err);
     productListError.value = `Failed to load products: ${err.message || 'Unknown error'}`;
-    
+
     if (!loadMore) {
       // Only clear if not loading more
       productData.value = [];
     }
-    
+
     initialLoadComplete.value = true;
     loadingAll.value = false;
   } finally {
@@ -430,13 +462,19 @@ const handleScroll = (event: Event) => {
   const target = event.target as HTMLElement;
   const scrollPosition = target.scrollTop + target.clientHeight;
   const scrollHeight = target.scrollHeight;
-  
+
   // Load more when user scrolls to 80% of the list (reduced from 90%)
   const scrollThreshold = 0.8;
-  
-  console.log(`Scroll position: ${scrollPosition}, Scroll height: ${scrollHeight}, Threshold: ${scrollHeight * scrollThreshold}`);
-  
-  if (scrollPosition > scrollHeight * scrollThreshold && hasMorePages.value && !isLoadingMoreProducts.value) {
+
+  console.log(
+    `Scroll position: ${scrollPosition}, Scroll height: ${scrollHeight}, Threshold: ${scrollHeight * scrollThreshold}`
+  );
+
+  if (
+    scrollPosition > scrollHeight * scrollThreshold &&
+    hasMorePages.value &&
+    !isLoadingMoreProducts.value
+  ) {
     console.log('Scroll threshold reached, loading more products...');
     loadMoreProducts();
   }
@@ -470,13 +508,18 @@ const debounceSearch = () => {
 };
 
 // Select product function
-const selectProduct = async (product: { nummer: string; bezeichnung: string; selected?: boolean; id?: number }) => {
+const selectProduct = async (product: {
+  nummer: string;
+  bezeichnung: string;
+  selected?: boolean;
+  id?: number;
+}) => {
   // Clear previous selection
-  productData.value.forEach(p => p.selected = false);
-  
+  productData.value.forEach((p) => (p.selected = false));
+
   // Set new selection
   product.selected = true;
-  
+
   // If product has ID, load its details
   if (product.id) {
     await loadProductDetails(product.id);
@@ -487,29 +530,29 @@ const selectProduct = async (product: { nummer: string; bezeichnung: string; sel
 const loadProductDetails = async (productId: number) => {
   isLoadingProduct.value = true;
   productLoadError.value = '';
-  
+
   try {
     console.log('Loading product details for ID:', productId);
     const response = await productApi.getProduct(productId);
-    
+
     if (response && response.data) {
       console.log('Product details loaded:', response.data);
-      
+
       // Map API product data to ArtikelManagement format
       const product = response.data;
-      
+
       selectedProductData.bezeichnung = product.name || '';
       selectedProductData.beschreibung = product.description || '';
       selectedProductData.hangend = product.is_hanging || false;
       selectedProductData.einseitig = product.is_one_sided || false;
-      
+
       // Map additional fields if they exist
       if (product.attributes) {
         // Extract dimensions and other attributes
         product.attributes.forEach((attr: any) => {
           const name = attr.name?.toLowerCase();
           const value = attr.value;
-          
+
           if (name === 'breite' || name === 'width') {
             selectedProductData.breite = value;
           } else if (name === 'höhe' || name === 'height') {
@@ -523,11 +566,11 @@ const loadProductDetails = async (productId: number) => {
           }
         });
       }
-      
+
       // Extract tags if they exist
       if (product.tags) {
-        selectedProductData.tags = Array.isArray(product.tags) 
-          ? product.tags.join(', ') 
+        selectedProductData.tags = Array.isArray(product.tags)
+          ? product.tags.join(', ')
           : product.tags;
       }
     }
@@ -543,31 +586,31 @@ const loadProductDetails = async (productId: number) => {
 const loadProductFromApi = async (productId: string | number) => {
   isLoadingProduct.value = true;
   productLoadError.value = '';
-  
+
   try {
     console.log('Loading product data for ID:', productId);
     // Ensure productId is a number
     const id = typeof productId === 'string' ? parseInt(productId, 10) : productId;
     const response = await productApi.getProduct(id);
-    
+
     if (response && response.data) {
       console.log('Product data loaded:', response.data);
-      
+
       // Map API product data to ArtikelManagement format
       const product = response.data;
-      
+
       selectedProductData.bezeichnung = product.name || '';
       selectedProductData.beschreibung = product.description || '';
       selectedProductData.hangend = product.is_hanging || false;
       selectedProductData.einseitig = product.is_one_sided || false;
-      
+
       // Map additional fields if they exist
       if (product.attributes) {
         // Extract dimensions and other attributes
         product.attributes.forEach((attr: any) => {
           const name = attr.name?.toLowerCase();
           const value = attr.value;
-          
+
           if (name === 'breite' || name === 'width') {
             selectedProductData.breite = value;
           } else if (name === 'höhe' || name === 'height') {
@@ -581,17 +624,17 @@ const loadProductFromApi = async (productId: string | number) => {
           }
         });
       }
-      
+
       // Extract tags if they exist
       if (product.tags) {
-        selectedProductData.tags = Array.isArray(product.tags) 
-          ? product.tags.join(', ') 
+        selectedProductData.tags = Array.isArray(product.tags)
+          ? product.tags.join(', ')
           : product.tags;
       }
-      
+
       // Select the corresponding product in the list if it exists
       if (product.sku) {
-        const matchingProduct = productData.value.find(p => p.nummer === product.sku);
+        const matchingProduct = productData.value.find((p) => p.nummer === product.sku);
         if (matchingProduct) {
           selectProduct(matchingProduct);
         }
@@ -618,7 +661,7 @@ const closeWindow = () => {
   // If we're in a modal, emit close event
   if (props.product) {
     emit('close');
-  } 
+  }
   // If we're in a standalone page, navigate back
   else {
     router.back();
@@ -629,7 +672,7 @@ const closeWindow = () => {
 const saveProduct = async () => {
   try {
     // Get the currently selected product from the list
-    const selectedProduct = productData.value.find(p => p.selected);
+    const selectedProduct = productData.value.find((p) => p.selected);
     if (!selectedProduct?.id) {
       console.error('No product selected');
       return;
@@ -640,7 +683,7 @@ const saveProduct = async () => {
       name: selectedProductData.bezeichnung,
       description: selectedProductData.beschreibung,
       is_hanging: selectedProductData.hangend,
-      is_one_sided: selectedProductData.einseitig,
+      is_one_sided: selectedProductData.einseitig
     };
 
     // Update the product
@@ -650,7 +693,6 @@ const saveProduct = async () => {
     // Update the product in the list
     selectedProduct.bezeichnung = selectedProductData.bezeichnung;
     selectedProduct.product = response.data;
-
   } catch (err: any) {
     console.error('Error saving product:', err);
     productLoadError.value = `Failed to save product: ${err.message || 'Unknown error'}`;
@@ -658,69 +700,77 @@ const saveProduct = async () => {
 };
 
 // Watch for product prop changes
-watch(() => props.product, (newProduct) => {
-  if (newProduct) {
-    console.log('Product data received via prop:', newProduct);
-    
-    // Map the product data to the ArtikelManagement format
-    selectedProductData.bezeichnung = newProduct.name || '';
-    selectedProductData.beschreibung = newProduct.description || '';
-    selectedProductData.hangend = newProduct.is_hanging || false;
-    selectedProductData.einseitig = newProduct.is_one_sided || false;
-    
-    // Map additional fields if they exist
-    if (newProduct.attributes) {
-      // Extract dimensions and other attributes
-      newProduct.attributes.forEach((attr: any) => {
-        const name = attr.name?.toLowerCase();
-        const value = attr.value;
-        
-        if (name === 'breite' || name === 'width') {
-          selectedProductData.breite = value;
-        } else if (name === 'höhe' || name === 'height') {
-          selectedProductData.hohe = value;
-        } else if (name === 'tiefe' || name === 'depth') {
-          selectedProductData.tiefe = value;
-        } else if (name === 'gewicht' || name === 'weight') {
-          selectedProductData.gewicht = value;
-        } else if (name === 'boxgröße' || name === 'box size') {
-          selectedProductData.boxgrosse = value;
+watch(
+  () => props.product,
+  (newProduct) => {
+    if (newProduct) {
+      console.log('Product data received via prop:', newProduct);
+
+      // Map the product data to the ArtikelManagement format
+      selectedProductData.bezeichnung = newProduct.name || '';
+      selectedProductData.beschreibung = newProduct.description || '';
+      selectedProductData.hangend = newProduct.is_hanging || false;
+      selectedProductData.einseitig = newProduct.is_one_sided || false;
+
+      // Map additional fields if they exist
+      if (newProduct.attributes) {
+        // Extract dimensions and other attributes
+        newProduct.attributes.forEach((attr: any) => {
+          const name = attr.name?.toLowerCase();
+          const value = attr.value;
+
+          if (name === 'breite' || name === 'width') {
+            selectedProductData.breite = value;
+          } else if (name === 'höhe' || name === 'height') {
+            selectedProductData.hohe = value;
+          } else if (name === 'tiefe' || name === 'depth') {
+            selectedProductData.tiefe = value;
+          } else if (name === 'gewicht' || name === 'weight') {
+            selectedProductData.gewicht = value;
+          } else if (name === 'boxgröße' || name === 'box size') {
+            selectedProductData.boxgrosse = value;
+          }
+        });
+      }
+
+      // Extract tags if they exist
+      if (newProduct.tags) {
+        selectedProductData.tags = Array.isArray(newProduct.tags)
+          ? newProduct.tags.join(', ')
+          : newProduct.tags;
+      }
+
+      // Select the corresponding product in the list if it exists
+      if (newProduct.sku) {
+        const matchingProduct = productData.value.find((p) => p.nummer === newProduct.sku);
+        if (matchingProduct) {
+          selectProduct(matchingProduct);
         }
-      });
-    }
-    
-    // Extract tags if they exist
-    if (newProduct.tags) {
-      selectedProductData.tags = Array.isArray(newProduct.tags) 
-        ? newProduct.tags.join(', ') 
-        : newProduct.tags;
-    }
-    
-    // Select the corresponding product in the list if it exists
-    if (newProduct.sku) {
-      const matchingProduct = productData.value.find(p => p.nummer === newProduct.sku);
-      if (matchingProduct) {
-        selectProduct(matchingProduct);
       }
     }
-  }
-}, { immediate: true });
+  },
+  { immediate: true }
+);
 
 // Watch for route param changes
-watch(() => route.params.id, (newId) => {
-  if (newId && !props.product) {
-    // Ensure newId is a string or number, not an array
-    const id = Array.isArray(newId) ? newId[0] : newId;
-    loadProductFromApi(id);
-  }
-}, { immediate: true });
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (newId && !props.product) {
+      // Ensure newId is a string or number, not an array
+      const id = Array.isArray(newId) ? newId[0] : newId;
+      loadProductFromApi(id);
+    }
+  },
+  { immediate: true }
+);
 
 // Add a method to load ALL products
 const loadAllProducts = () => {
   if (!loadingAll.value) {
     console.log('Loading ALL products...');
     loadingAll.value = true;
-    
+
     // If we already have some products loaded, just continue from current page
     if (productData.value.length > 0 && hasMorePages.value) {
       currentPage.value++;
@@ -736,10 +786,10 @@ onMounted(() => {
   console.log('ArtikelManagement component mounted');
   console.log('Initial product prop:', props.product);
   console.log('Route params:', route.params);
-  
+
   // Load the product list
   loadProducts();
-  
+
   // If we have an ID from the route and no product prop, load the product
   const routeId = route.params.id || props.id;
   if (routeId && !props.product) {
@@ -747,10 +797,10 @@ onMounted(() => {
     const id = Array.isArray(routeId) ? routeId[0] : routeId;
     loadProductFromApi(id);
   }
-  
+
   // Add event listener for window resize to adjust loading behavior
   window.addEventListener('resize', handleResize);
-  
+
   // Initial check if we should load all products based on screen size
   checkIfShouldLoadAll();
 });
@@ -768,7 +818,12 @@ const handleResize = () => {
 // Check if we should load all products based on screen size
 const checkIfShouldLoadAll = () => {
   // On larger screens, automatically load all products
-  if (window.innerWidth >= 1440 && !loadingAll.value && hasMorePages.value && productData.value.length < totalProductCount.value) {
+  if (
+    window.innerWidth >= 1440 &&
+    !loadingAll.value &&
+    hasMorePages.value &&
+    productData.value.length < totalProductCount.value
+  ) {
     console.log('Large screen detected, automatically loading all products');
     loadAllProducts();
   }
@@ -779,7 +834,9 @@ const checkIfShouldLoadAll = () => {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+    'Helvetica Neue', sans-serif;
 }
 
 .artikel-header {
@@ -1149,7 +1206,7 @@ const checkIfShouldLoadAll = () => {
 }
 
 .artikel-list-loading-more::before {
-  content: "";
+  content: '';
   width: 20px;
   height: 20px;
   margin-right: 10px;
@@ -1160,7 +1217,9 @@ const checkIfShouldLoadAll = () => {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .artikel-list-end {

@@ -1,44 +1,44 @@
 <template>
-    <div class="home">
-        <div class="welcome-section mb-5">
-            <h1>{{ $t('home.welcome') }}</h1>
-            <p class="lead text-muted">{{ $t('home.subtitle') }}</p>
-        </div>
-
-        <div class="modules">
-            <div class="module-card" @click="navigateTo('/products')">
-                <div class="icon-container mb-3">
-                    <i class="fas fa-box fa-2x"></i>
-                </div>
-                <h3>{{ $t('home.products.title') }}</h3>
-                <p class="text-muted">{{ $t('home.products.description') }}</p>
-            </div>
-
-            <div class="module-card" @click="navigateTo('/sales')">
-                <div class="icon-container mb-3">
-                    <i class="fas fa-chart-line fa-2x"></i>
-                </div>
-                <h3>{{ $t('home.sales.title') }}</h3>
-                <p class="text-muted">{{ $t('home.sales.description') }}</p>
-            </div>
-
-            <div class="module-card" @click="navigateTo('/inventory')">
-                <div class="icon-container mb-3">
-                    <i class="fas fa-warehouse fa-2x"></i>
-                </div>
-                <h3>{{ $t('home.inventory.title') }}</h3>
-                <p class="text-muted">{{ $t('home.inventory.description') }}</p>
-            </div>
-
-            <div class="module-card" @click="navigateTo('/production')">
-                <div class="icon-container mb-3">
-                    <i class="fas fa-industry fa-2x"></i>
-                </div>
-                <h3>{{ $t('home.production.title') }}</h3>
-                <p class="text-muted">{{ $t('home.production.description') }}</p>
-            </div>
-        </div>
+  <div class="home">
+    <div class="welcome-section mb-5">
+      <h1>{{ $t('home.welcome') }}</h1>
+      <p class="lead text-muted">{{ $t('home.subtitle') }}</p>
     </div>
+
+    <div class="modules">
+      <div class="module-card" @click="navigateTo('/products')">
+        <div class="icon-container mb-3">
+          <i class="fas fa-box fa-2x"></i>
+        </div>
+        <h3>{{ $t('home.products.title') }}</h3>
+        <p class="text-muted">{{ $t('home.products.description') }}</p>
+      </div>
+
+      <div class="module-card" @click="navigateTo('/sales')">
+        <div class="icon-container mb-3">
+          <i class="fas fa-chart-line fa-2x"></i>
+        </div>
+        <h3>{{ $t('home.sales.title') }}</h3>
+        <p class="text-muted">{{ $t('home.sales.description') }}</p>
+      </div>
+
+      <div class="module-card" @click="navigateTo('/inventory')">
+        <div class="icon-container mb-3">
+          <i class="fas fa-warehouse fa-2x"></i>
+        </div>
+        <h3>{{ $t('home.inventory.title') }}</h3>
+        <p class="text-muted">{{ $t('home.inventory.description') }}</p>
+      </div>
+
+      <div class="module-card" @click="navigateTo('/production')">
+        <div class="icon-container mb-3">
+          <i class="fas fa-industry fa-2x"></i>
+        </div>
+        <h3>{{ $t('home.production.title') }}</h3>
+        <p class="text-muted">{{ $t('home.production.description') }}</p>
+      </div>
+    </div>
+  </div>
 </template>
 <script setup lang="ts">
 import { useRouter } from 'vue-router';

@@ -34,4 +34,4 @@ import SalesOrderList from './SalesOrderList.vue';
 import CustomerList from './CustomerList.vue';
 
 const activeTab = ref('orders');
-</script> 
+</script>
