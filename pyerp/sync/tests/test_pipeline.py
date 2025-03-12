@@ -3,8 +3,6 @@ from datetime import datetime, timezone
 import unittest
 from unittest import mock
 
-from django.utils import timezone as django_timezone
-
 from pyerp.sync.pipeline import SyncPipeline
 from pyerp.sync.models import SyncMapping
 from pyerp.sync.extractors.base import BaseExtractor
@@ -90,9 +88,14 @@ class TestSyncPipeline(unittest.TestCase):
         
         # Mock SyncState.objects.get_or_create
         self.mock_sync_state = mock.MagicMock()
-        self.sync_state_patcher = mock.patch('pyerp.sync.pipeline.SyncState')
+        self.sync_state_patcher = mock.patch(
+            'pyerp.sync.pipeline.SyncState'
+        )
         self.mock_sync_state_class = self.sync_state_patcher.start()
-        self.mock_sync_state_class.objects.get_or_create.return_value = (self.mock_sync_state, False)
+        self.mock_sync_state_class.objects.get_or_create.return_value = (
+            self.mock_sync_state, 
+            False
+        )
         
         # Create a SyncPipeline instance for testing
         self.pipeline = SyncPipeline(
@@ -202,7 +205,10 @@ class TestSyncPipeline(unittest.TestCase):
         """Test that run updates the sync state."""
         # Set up mock
         mock_state = mock.MagicMock()
-        mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
+        mock_sync_state_class.objects.get_or_create.return_value = (
+            mock_state, 
+            False
+        )
         
         # Run the pipeline
         self.pipeline.run(incremental=True, batch_size=10)
@@ -218,13 +224,18 @@ class TestSyncPipeline(unittest.TestCase):
         
         # Mock SyncLog and SyncState
         with mock.patch('pyerp.sync.pipeline.SyncLog') as mock_sync_log_class:
-            with mock.patch('pyerp.sync.pipeline.SyncState') as mock_sync_state_class:
+            with mock.patch(
+                'pyerp.sync.pipeline.SyncState'
+            ) as mock_sync_state_class:
                 # Set up mocks
                 mock_log = mock.MagicMock()
                 mock_sync_log_class.objects.create.return_value = mock_log
                 
                 mock_state = mock.MagicMock()
-                mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
+                mock_sync_state_class.objects.get_or_create.return_value = (
+                    mock_state, 
+                    False
+                )
                 
                 # Run the pipeline
                 self.pipeline.run(incremental=True, batch_size=10)
@@ -272,15 +283,22 @@ class TestSyncPipeline(unittest.TestCase):
     def test_run_with_incremental_false(self):
         """Test that run with incremental=False creates a full sync log."""
         # Mock SyncLog and SyncState
-        with mock.patch('pyerp.sync.pipeline.SyncLog') as mock_sync_log_class:
-            with mock.patch('pyerp.sync.pipeline.SyncState') as mock_sync_state_class:
+        with mock.patch(
+            'pyerp.sync.pipeline.SyncLog'
+        ) as mock_log_class:
+            with mock.patch(
+                'pyerp.sync.pipeline.SyncState'
+            ) as mock_state_class:
                 # Set up mocks
                 mock_log = mock.MagicMock()
                 mock_log.is_full_sync = True
-                mock_sync_log_class.objects.create.return_value = mock_log
+                mock_log_class.objects.create.return_value = mock_log
                 
                 mock_state = mock.MagicMock()
-                mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
+                mock_state_class.objects.get_or_create.return_value = (
+                    mock_state, 
+                    False
+                )
                 
                 # Run the pipeline
                 result = self.pipeline.run(incremental=False, batch_size=10)
@@ -289,61 +307,8 @@ class TestSyncPipeline(unittest.TestCase):
         self.assertTrue(result.is_full_sync)
 
     @mock.patch('pyerp.sync.pipeline.SyncLog')
-    def test_run_marks_log_completed_on_success(self, mock_sync_log_class):
-        """Test that run marks the sync log as completed on success."""
-        # Set up mocks
-        mock_log = mock.MagicMock()
-        mock_sync_log_class.objects.create.return_value = mock_log
-        
-        # Set up test data
-        self.extractor.extract_results = [{"id": 1}, {"id": 2}]
-        self.transformer.transform_results = [{"id": 1, "name": "Test"}]
-        self.loader.load_result = LoadResult(created=1, updated=0, skipped=0, errors=0)
-        
-        # Mock SyncState
-        with mock.patch('pyerp.sync.pipeline.SyncState') as mock_sync_state_class:
-            mock_state = mock.MagicMock()
-            mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
-            
-            # Run the pipeline
-            self.pipeline.run(incremental=True, batch_size=10)
-        
-        # Check that mark_completed was called with correct parameters
-        mock_log.mark_completed.assert_called_once_with(
-            records_succeeded=1, 
-            records_failed=0
-        )
-
-    @mock.patch('pyerp.sync.pipeline.SyncLog')
-    def test_run_marks_log_completed_with_errors(self, mock_sync_log_class):
-        """Test that run marks the sync log as completed with errors."""
-        # Set up mocks
-        mock_log = mock.MagicMock()
-        mock_sync_log_class.objects.create.return_value = mock_log
-        
-        # Set up test data
-        self.extractor.extract_results = [{"id": 1}, {"id": 2}]
-        self.transformer.transform_results = [{"id": 1, "name": "Test"}]
-        self.loader.load_result = LoadResult(created=1, updated=0, skipped=0, errors=1)
-        
-        # Mock SyncState
-        with mock.patch('pyerp.sync.pipeline.SyncState') as mock_sync_state_class:
-            mock_state = mock.MagicMock()
-            mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
-            
-            # Run the pipeline
-            self.pipeline.run(incremental=True, batch_size=10)
-        
-        # Check that mark_completed was called with correct parameters
-        mock_log.mark_completed.assert_called_once_with(
-            records_succeeded=1, 
-            records_failed=1
-        )
-
-    @mock.patch('pyerp.sync.pipeline.SyncLog')
-    @mock.patch('pyerp.sync.pipeline.SyncState')
     def test_run_updates_sync_state_on_success(
-        self, mock_sync_state_class, mock_sync_log_class
+        self, mock_sync_log_class, mock_sync_state_class
     ):
         """Test that run updates the sync state on success."""
         # Set up mocks
@@ -351,12 +316,22 @@ class TestSyncPipeline(unittest.TestCase):
         mock_sync_log_class.objects.create.return_value = mock_log
         
         mock_state = mock.MagicMock()
-        mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
+        mock_sync_state_class.objects.get_or_create.return_value = (
+            mock_state, 
+            False
+        )
         
         # Set up test data
         self.extractor.extract_results = [{"id": 1}, {"id": 2}]
-        self.transformer.transform_results = [{"id": 1, "name": "Test"}]
-        self.loader.load_result = LoadResult(created=1, updated=0, skipped=0, errors=0)
+        self.transformer.transform_results = [
+            {"id": 1, "name": "Test"}
+        ]
+        self.loader.load_result = LoadResult(
+            created=1, 
+            updated=0, 
+            skipped=0, 
+            errors=0
+        )
         
         # Run the pipeline
         self.pipeline.run(incremental=True, batch_size=10)
@@ -365,9 +340,8 @@ class TestSyncPipeline(unittest.TestCase):
         mock_state.update_sync_completed.assert_called_once_with(success=True)
 
     @mock.patch('pyerp.sync.pipeline.SyncLog')
-    @mock.patch('pyerp.sync.pipeline.SyncState')
     def test_run_updates_sync_state_on_failure(
-        self, mock_sync_state_class, mock_sync_log_class
+        self, mock_sync_log_class, mock_sync_state_class
     ):
         """Test that run updates the sync state on failure."""
         # Set up mocks
@@ -375,12 +349,22 @@ class TestSyncPipeline(unittest.TestCase):
         mock_sync_log_class.objects.create.return_value = mock_log
         
         mock_state = mock.MagicMock()
-        mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
+        mock_sync_state_class.objects.get_or_create.return_value = (
+            mock_state, 
+            False
+        )
         
         # Set up test data
         self.extractor.extract_results = [{"id": 1}, {"id": 2}]
-        self.transformer.transform_results = [{"id": 1, "name": "Test"}]
-        self.loader.load_result = LoadResult(created=0, updated=0, skipped=0, errors=2)
+        self.transformer.transform_results = [
+            {"id": 1, "name": "Test"}
+        ]
+        self.loader.load_result = LoadResult(
+            created=0, 
+            updated=0, 
+            skipped=0, 
+            errors=2
+        )
         
         # Run the pipeline
         self.pipeline.run(incremental=True, batch_size=10)
@@ -401,11 +385,16 @@ class TestSyncPipeline(unittest.TestCase):
         )
         
         # Mock SyncState
-        with mock.patch('pyerp.sync.pipeline.SyncState') as mock_sync_state_class:
+        with mock.patch(
+            'pyerp.sync.pipeline.SyncState'
+        ) as mock_sync_state_class:
             mock_state = mock.MagicMock()
-            mock_sync_state_class.objects.get_or_create.return_value = (mock_state, False)
+            mock_sync_state_class.objects.get_or_create.return_value = (
+                mock_state, 
+                False
+            )
             
-            # Run the pipeline
+            # Run the pipeline and check for exception
             with self.assertRaises(Exception):
                 self.pipeline.run(incremental=True, batch_size=10)
         
@@ -415,4 +404,152 @@ class TestSyncPipeline(unittest.TestCase):
         self.assertIn(
             "Test exception", 
             mock_log.mark_failed.call_args[1]['error_message']
+        )
+
+    def test_run_with_empty_extract_results(self):
+        """Test pipeline behavior when extractor returns no results."""
+        # Set up test data - empty results
+        self.extractor.extract_results = []
+        self.transformer.transform_results = []
+        self.loader.load_result = LoadResult(
+            created=0, 
+            updated=0, 
+            skipped=0, 
+            errors=0
+        )
+        
+        # Mock SyncLog
+        with mock.patch(
+            'pyerp.sync.pipeline.SyncLog'
+        ) as mock_log_class:
+            mock_log = mock.MagicMock()
+            mock_log_class.objects.create.return_value = mock_log
+            
+            # Run the pipeline
+            result = self.pipeline.run(incremental=True, batch_size=10)
+        
+        # Verify behavior with empty results
+        self.assertEqual(result.records_processed, 0)
+        self.assertEqual(result.records_succeeded, 0)
+        mock_log.mark_completed.assert_called_once_with(
+            records_succeeded=0, 
+            records_failed=0
+        )
+
+    def test_run_with_transformer_error(self):
+        """Test pipeline behavior when transformer raises an error."""
+        # Set up test data
+        self.extractor.extract_results = [{"id": 1}, {"id": 2}]
+        
+        # Make transformer raise an error
+        error_msg = "Transform error"
+        self.transformer.transform = mock.MagicMock(
+            side_effect=ValueError(error_msg)
+        )
+        
+        # Mock SyncLog
+        with mock.patch(
+            'pyerp.sync.pipeline.SyncLog'
+        ) as mock_log_class:
+            mock_log = mock.MagicMock()
+            mock_log_class.objects.create.return_value = mock_log
+            
+            # Run pipeline and expect exception
+            with self.assertRaises(ValueError):
+                self.pipeline.run(incremental=True, batch_size=10)
+        
+        # Verify error handling
+        mock_log.mark_failed.assert_called_once()
+        self.assertIn(
+            error_msg,
+            mock_log.mark_failed.call_args[1]['error_message']
+        )
+
+    def test_run_with_invalid_batch_size(self):
+        """Test pipeline behavior with invalid batch size."""
+        # Test with negative batch size
+        with self.assertRaises(ValueError):
+            self.pipeline.run(incremental=True, batch_size=-1)
+        
+        # Test with zero batch size
+        with self.assertRaises(ValueError):
+            self.pipeline.run(incremental=True, batch_size=0)
+
+    def test_run_with_custom_query_params(self):
+        """Test pipeline with custom query parameters."""
+        # Set up test data
+        query_params = {
+            'modified_after': '2023-01-01',
+            'status': 'active'
+        }
+        
+        self.extractor.extract_results = [{"id": 1, "status": "active"}]
+        self.transformer.transform_results = [
+            {"id": 1, "name": "Test", "status": "active"}
+        ]
+        self.loader.load_result = LoadResult(
+            created=1, 
+            updated=0, 
+            skipped=0, 
+            errors=0
+        )
+        
+        # Mock SyncLog
+        with mock.patch(
+            'pyerp.sync.pipeline.SyncLog'
+        ) as mock_log_class:
+            mock_log = mock.MagicMock()
+            mock_log_class.objects.create.return_value = mock_log
+            
+            # Run pipeline with custom query params
+            result = self.pipeline.run(
+                incremental=True,
+                batch_size=10,
+                query_params=query_params
+            )
+        
+        # Verify query params were passed to extractor
+        self.assertEqual(self.extractor.query_params, query_params)
+        self.assertEqual(result.records_succeeded, 1)
+
+    def test_run_with_loader_partial_success(self):
+        """Test pipeline when loader has mixed success/failure."""
+        # Set up test data
+        self.extractor.extract_results = [
+            {"id": 1}, 
+            {"id": 2},
+            {"id": 3}
+        ]
+        self.transformer.transform_results = [
+            {"id": 1, "name": "Success"},
+            {"id": 2, "name": "Error"},
+            {"id": 3, "name": "Skip"}
+        ]
+        self.loader.load_result = LoadResult(
+            created=1,
+            updated=0,
+            skipped=1,
+            errors=1,
+            error_details=[
+                {"id": 2, "error": "Test error"}
+            ]
+        )
+        
+        # Mock SyncLog
+        with mock.patch(
+            'pyerp.sync.pipeline.SyncLog'
+        ) as mock_log_class:
+            mock_log = mock.MagicMock()
+            mock_log_class.objects.create.return_value = mock_log
+            
+            # Run pipeline
+            result = self.pipeline.run(incremental=True, batch_size=10)
+        
+        # Verify partial success handling
+        self.assertEqual(result.records_processed, 3)
+        self.assertEqual(result.records_succeeded, 2)  # 1 created + 1 skipped
+        self.assertEqual(result.records_failed, 1)
+        mock_log.mark_completed.assert_called_once_with(
+            records_succeeded=2,
+            records_failed=1
         ) 
