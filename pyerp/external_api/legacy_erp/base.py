@@ -14,7 +14,7 @@ import time
 import pandas as pd
 import requests
 from requests.auth import HTTPBasicAuth
-
+import sys
 from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
     API_REQUEST_TIMEOUT,
@@ -285,9 +285,6 @@ class BaseAPIClient:
             logger.warning("No session ID found in cookies")
             return False
 
-        # Store just the value, not the name=value format
-        self.session_id = session_id
-
         # Create the new session entry
         new_entry = {
             "base_url": self.base_url,
@@ -323,7 +320,7 @@ class BaseAPIClient:
 
         if not updated:
             existing_sessions.append(new_entry)
-
+        logger.info(f"existing_sessions : {existing_sessions}")
         # Save using thread-safe function
         success = write_cookie_file_safe(existing_sessions)
         if success:
@@ -350,8 +347,10 @@ class BaseAPIClient:
                 "$info",
                 timeout=self.timeout,
             )
-            
-            # Log response cookies
+            if not self.load_session_cookie():
+                logger.info("No valid session found for this base URL, attempting login")
+                return self.login()
+
             self._log_response_cookies(response)
             
             is_valid = response.status_code == 200
@@ -399,12 +398,19 @@ class BaseAPIClient:
     def login(self):
         """Log in to the legacy ERP system and obtain a session cookie."""
         logger.info("Attempting login to legacy ERP system")
-        
         try:
+           
+            self.session.cookies.clear()
+            logger.info("Cleared existing cookies")
+
+            # Check if a session already exists for this base URL
+            if self.load_session_cookie():
+                logger.info("Existing session found for this base URL, reusing it")
+                return True
+            
             response = self._make_request(
-                "POST",
-                "login",
-                auth=HTTPBasicAuth(self.username, self.password),
+                "GET",
+                "$info",
                 timeout=self.timeout,
             )
             
