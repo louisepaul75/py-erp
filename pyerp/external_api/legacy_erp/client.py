@@ -120,8 +120,7 @@ if __name__ == "__main__":
 
     # Filter query for records modified after March 11, 2025
     filter_query = [
-        ["modified_date", ">", dt(2025, 1, 10)],
-        # ["Preisgruppe", "==", "1"],
+        # ["modified_date", ">", dt(2025, 1, 10)],
     ]
     print(filter_query)
     # Fetch records from the "Kunden" table

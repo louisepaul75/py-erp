@@ -529,6 +529,15 @@ class BaseAPIClient:
         if not date_str or not isinstance(date_str, str):
             return None
             
+        # Handle DD!MM!YYYY format (primary legacy format)
+        if '!' in date_str:
+            try:
+                day, month, year = map(int, date_str.split('!'))
+                if year > 0 and month > 0 and day > 0:
+                    return datetime(year, month, day)
+            except (ValueError, IndexError):
+                pass
+
         # Common date formats in the legacy system
         formats = [
             '%Y-%m-%d',
@@ -553,6 +562,7 @@ class BaseAPIClient:
     def _transform_dates_in_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transform date strings in a record to datetime objects.
+        Only transforms fields that are known to contain dates.
         
         Args:
             record: Dictionary containing record data
@@ -568,20 +578,35 @@ class BaseAPIClient:
             return record
             
         transformed = {}
+        # Fields that are known to contain dates
+        date_fields = {
+            '__TIMESTAMP',  # Standard timestamp field
+            'modified_date',
+            'created_date',
+            'Release_date',
+            'Auslaufdatum',  # Discontinuation date
+            'last_modified',
+            'CREATIONDATE',
+            'MODIFICATIONDATE',
+            'UStID_Dat',
+            'letzteLieferung',
+
+        }
+        
         for key, value in record.items():
-            if isinstance(value, str):
+            if key in date_fields and isinstance(value, str):
                 try:
                     parsed_date = self._parse_legacy_date(value)
-                    if parsed_date is not None:
-                        transformed[key] = parsed_date
-                        continue
+                    transformed[key] = parsed_date if parsed_date is not None else value
                 except ValueError as e:
                     logger.debug(
                         "Failed to parse date for field %s: %s",
                         key,
                         str(e)
                     )
-            transformed[key] = value
+                    transformed[key] = value
+            else:
+                transformed[key] = value
             
         return transformed
 
