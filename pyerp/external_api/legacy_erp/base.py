@@ -14,7 +14,7 @@ import time
 import pandas as pd
 import requests
 from requests.auth import HTTPBasicAuth
-
+import sys
 from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
     API_REQUEST_TIMEOUT,
@@ -107,13 +107,63 @@ class BaseAPIClient:
         else:
             logger.info("No session cookie available")
         
-        # Log the complete URL being requested
-        logger.info(f"Making {method} request to: {url}")
+        # Construct and log the full URL with parameters for better debugging
+        if 'params' in kwargs and kwargs['params']:
+            from urllib.parse import urlencode
+            
+            # Create a copy of params to avoid modifying the original
+            params_for_logging = kwargs['params'].copy()
+            
+            # Handle the $filter parameter specially to avoid double encoding
+            # This ensures the filter is properly formatted in the URL
+            query_params = []
+            for key, value in params_for_logging.items():
+                if key == '$filter':
+                    # Add the filter parameter directly without additional encoding
+                    query_params.append(f'{key}={value}')
+                else:
+                    # Use urlencode for other parameters
+                    encoded_param = urlencode({key: value}, doseq=True)
+                    param_value = encoded_param.split('=', 1)[1]
+                    query_params.append(f"{key}={param_value}")
+            
+            # Join all parameters with &
+            query_string = "&".join(query_params)
+            full_url = f"{url}?{query_string}"
+            logger.info(f"Full URL: {full_url}")
+            
+            # Remove params from kwargs since we're using the manually 
+            # constructed URL
+            params = kwargs.pop('params', None)
+        else:
+            full_url = url
+            params = None
+
         
         start_time = time.time()
-        
+
         try:
-            response = self.session.request(method, url, **kwargs)
+            print(method, url, kwargs)
+            
+            # Extract timeout from kwargs as it's not valid for Request constructor
+            timeout = None
+            if 'timeout' in kwargs:
+                timeout = kwargs.pop('timeout', self.timeout)
+            else:
+                timeout = self.timeout
+            
+            # Use the manually constructed URL directly instead of relying on 
+            # prepare_request to handle the parameters, which would apply automatic 
+            # encoding
+            response = self.session.request(
+                method=method,
+                url=full_url,
+                **kwargs,
+                timeout=timeout
+            )
+            
+            print("Exact full URL:", full_url)
+            
             duration_ms = int((time.time() - start_time) * 1000)
             
             # Log the API request using our centralized logging
@@ -126,6 +176,7 @@ class BaseAPIClient:
                     "method": method,
                     "environment": self.environment,
                     "url": url,
+                    "params": params if params else {},
                 }
             )
             
@@ -134,9 +185,10 @@ class BaseAPIClient:
                 log_performance(
                     name=f"legacy_erp_{method}_{endpoint}",
                     duration_ms=duration_ms,
-                    extra_context={"url": url}
+                    extra_context={"url": url, "params": params if params else {}}
                 )
-            
+            print(response)
+         
             return response
             
         except requests.RequestException as e:
@@ -285,9 +337,6 @@ class BaseAPIClient:
             logger.warning("No session ID found in cookies")
             return False
 
-        # Store just the value, not the name=value format
-        self.session_id = session_id
-
         # Create the new session entry
         new_entry = {
             "base_url": self.base_url,
@@ -323,7 +372,7 @@ class BaseAPIClient:
 
         if not updated:
             existing_sessions.append(new_entry)
-
+        logger.info(f"existing_sessions : {existing_sessions}")
         # Save using thread-safe function
         success = write_cookie_file_safe(existing_sessions)
         if success:
@@ -350,8 +399,10 @@ class BaseAPIClient:
                 "$info",
                 timeout=self.timeout,
             )
-            
-            # Log response cookies
+            if not self.load_session_cookie():
+                logger.info("No valid session found for this base URL, attempting login")
+                return self.login()
+
             self._log_response_cookies(response)
             
             is_valid = response.status_code == 200
@@ -399,12 +450,19 @@ class BaseAPIClient:
     def login(self):
         """Log in to the legacy ERP system and obtain a session cookie."""
         logger.info("Attempting login to legacy ERP system")
-        
         try:
+           
+            self.session.cookies.clear()
+            logger.info("Cleared existing cookies")
+
+            # Check if a session already exists for this base URL
+            if self.load_session_cookie():
+                logger.info("Existing session found for this base URL, reusing it")
+                return True
+            
             response = self._make_request(
-                "POST",
-                "login",
-                auth=HTTPBasicAuth(self.username, self.password),
+                "GET",
+                "$info",
                 timeout=self.timeout,
             )
             
@@ -530,7 +588,7 @@ class BaseAPIClient:
     def fetch_table(
         self,
         table_name: str,
-        top: int,
+        top: Optional[int] = None,
         skip: int = 0,
         filter_query: Optional[str] = None,
         all_records: bool = False,
@@ -543,7 +601,9 @@ class BaseAPIClient:
         
         Args:
             table_name: Name of the table to fetch from
-            top: Number of records to fetch per request
+            top: Number of records to fetch per request (None for no limit, 
+                though the API server may still apply a default limit, 
+                typically 100 records)
             skip: Number of records to skip
             filter_query: Optional OData filter query
             all_records: Whether to fetch all records (may take a long time)
@@ -555,9 +615,9 @@ class BaseAPIClient:
             DataFrame containing the fetched records
         """
         logger.info(
-            "Fetching table %s (top=%d, skip=%d, filter=%s)",
+            "Fetching table %s (top=%s, skip=%d, filter=%s)",
             table_name,
-            top,
+            top if top is not None else "None",
             skip,
             filter_query or "None",
         )
@@ -569,11 +629,56 @@ class BaseAPIClient:
             
             # Build the URL and parameters
             url = table_name
-            params = {"$top": top, "$skip": skip}
+            params = {"$skip": skip}
+            
+            # Only add top parameter if it's specified
+            if top is not None:
+                params["$top"] = top
             
             if filter_query:
-                params["$filter"] = filter_query
+                # Check if filter_query is already a list format
+                if isinstance(filter_query, list):
+                    filter_parts = []
+                    for filter_item in filter_query:
+                        try:
+                            # Handle both list and tuple formats
+                            if len(filter_item) != 3:
+                                logger.warning(
+                                    f"Invalid filter item format: {filter_item}. "
+                                    "Expected [field, operator, value]."
+                                )
+                                continue
+                                
+                            field = filter_item[0]
+                            operator = filter_item[1]
+                            value = filter_item[2]
+                            
+                            # Format date values if needed
+                            if hasattr(value, 'strftime'):
+                                value = value.strftime("%Y-%m-%d")
+                                
+
+                            
+                            filter_parts.append(f"{field} {operator} {value}")
+                        except Exception as e:
+                            error_msg = f"Error processing filter item {filter_item}: {str(e)}"
+                            logger.error(error_msg)
+                            if fail_on_filter_error:
+                                raise RuntimeError(error_msg) from e
+                    
+                    if not filter_parts:
+                        logger.warning("No valid filter parts found in filter query")
+                    else:
+                        # Join all filter parts with 'and'
+                        params["$filter"] = " and ".join(filter_parts)
+                else:
+                    # Handle legacy string format
+                    params["$filter"] = filter_query
+                # params["$filter"] = '"' + params["$filter"] + '"'
             
+
+            
+
             # Make the request
             response = self._make_request(
                 "GET",
@@ -619,109 +724,3 @@ class BaseAPIClient:
             error_msg = f"Error fetching table {table_name}: {str(e)}"
             logger.error(error_msg)
             raise RuntimeError(error_msg) from e
-
-    def _fetch_all_records(
-        self,
-        url: str,
-        filter_query: Optional[str] = None,
-        new_data_only: bool = True,
-        date_created_start: Optional[str] = None,
-        fail_on_filter_error: bool = False,
-    ) -> pd.DataFrame:
-        """
-        Fetch all records from a table using pagination.
-        
-        Args:
-            url: Base URL for the table
-            filter_query: Optional OData filter query
-            new_data_only: Only fetch records newer than last sync
-            date_created_start: Optional start date for filtering
-            fail_on_filter_error: Whether to raise an error on filter issues
-            
-        Returns:
-            DataFrame containing all fetched records
-        """
-        logger.info(
-            "Fetching all records (filter=%s, new_data_only=%s)",
-            filter_query or "None",
-            new_data_only,
-        )
-        
-        all_records = []
-        page = 0
-        page_size = 1000  # Fetch 1000 records at a time
-        total_records = 0
-        
-        try:
-            while True:
-                skip = page * page_size
-                
-                # Make the request for this page
-                params = {
-                    "$top": page_size,
-                    "$skip": skip,
-                }
-                if filter_query:
-                    params["$filter"] = filter_query
-                
-                response = self._make_request(
-                    "GET",
-                    url,
-                    params=params,
-                    timeout=self.timeout,
-                )
-                
-                if response.status_code != 200:
-                    error_msg = (
-                        f"Failed to fetch page {page}: "
-                        f"Status {response.status_code}"
-                    )
-                    logger.error(error_msg)
-                    raise RuntimeError(error_msg)
-                
-
-                try:
-                    data = response.json()
-                except json.JSONDecodeError as e:
-                    error_msg = f"Failed to parse JSON response: {str(e)}"
-                    logger.error(error_msg)
-                    raise RuntimeError(error_msg)
-                
-                if not data or "__ENTITIES" not in data:
-                    logger.warning("No records found in response")
-                    break
-                
-                records = data["__ENTITIES"]
-                if not records:
-                    break
-                
-                # Transform dates in records
-                records = [
-                    self._transform_dates_in_record(record)
-                    for record in records
-                ]
-                
-                all_records.extend(records)
-                total_records += len(records)
-                
-                logger.info(
-                    "Fetched page %d with %d records (total: %d)",
-                    page,
-                    len(records),
-                    total_records,
-                )
-                
-                # If we got fewer records than the page size,
-                # we've reached the end
-                if len(records) < page_size:
-                    break
-                
-                page += 1
-            
-            logger.info("Successfully fetched all %d records", total_records)
-            return pd.DataFrame(all_records)
-            
-        except Exception as e:
-            error_msg = f"Error fetching all records: {str(e)}"
-            logger.error(error_msg)
-            raise RuntimeError(error_msg) from e 
