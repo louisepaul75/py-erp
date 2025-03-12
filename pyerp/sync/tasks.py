@@ -1,15 +1,15 @@
 """Celery tasks for scheduled synchronization operations."""
 
-import logging
 from typing import Dict, List, Optional, Union
 
 from celery import shared_task
+from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .models import SyncMapping, SyncLog
 from .pipeline import PipelineFactory
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @shared_task(
@@ -48,7 +48,7 @@ def run_entity_sync(
             query_params=query_params
         )
         
-        return {
+        result = {
             'status': sync_log.status,
             'records_processed': sync_log.records_processed,
             'records_succeeded': sync_log.records_succeeded,
@@ -56,14 +56,49 @@ def run_entity_sync(
             'sync_log_id': sync_log.id
         }
         
+        log_data_sync_event(
+            source=mapping.source.name,
+            destination=mapping.target.name,
+            record_count=sync_log.records_processed,
+            status=sync_log.status,
+            details={
+                'entity_type': mapping.entity_type,
+                'incremental': incremental,
+                'sync_log_id': sync_log.id,
+                **result
+            }
+        )
+        
+        return result
+        
     except SyncMapping.DoesNotExist:
-        logger.error(f"Sync mapping with ID {mapping_id} not found or not active")
+        error_msg = f"Sync mapping with ID {mapping_id} not found or not active"
+        log_data_sync_event(
+            source="unknown",
+            destination="unknown",
+            record_count=0,
+            status="failed",
+            details={
+                'mapping_id': mapping_id,
+                'error': error_msg
+            }
+        )
         return {
             'status': 'failed',
-            'error': f"Sync mapping with ID {mapping_id} not found or not active"
+            'error': error_msg
         }
     except Exception as e:
-        logger.exception(f"Error in run_entity_sync task: {str(e)}")
+        error_msg = f"Error in run_entity_sync task: {str(e)}"
+        log_data_sync_event(
+            source=getattr(mapping, 'source.name', 'unknown'),
+            destination=getattr(mapping, 'target.name', 'unknown'),
+            record_count=0,
+            status="failed",
+            details={
+                'mapping_id': mapping_id,
+                'error': error_msg
+            }
+        )
         raise  # This will trigger retry mechanism
 
 
@@ -106,6 +141,17 @@ def run_all_mappings(
             'task_id': task_result.id
         })
     
+    log_data_sync_event(
+        source=source_name or "all",
+        destination="all",
+        record_count=len(mappings),
+        status="scheduled",
+        details={
+            'incremental': incremental,
+            'task_count': len(mappings)
+        }
+    )
+    
     return results
 
 
@@ -118,7 +164,13 @@ def run_incremental_sync() -> List[Dict]:
     Returns:
         List of dicts with sync results
     """
-    logger.info("Starting scheduled incremental sync")
+    log_data_sync_event(
+        source="all",
+        destination="all",
+        record_count=0,
+        status="starting_incremental",
+        details={'schedule': '5min'}
+    )
     return run_all_mappings(incremental=True)
 
 
@@ -131,7 +183,13 @@ def run_full_sync() -> List[Dict]:
     Returns:
         List of dicts with sync results
     """
-    logger.info("Starting scheduled full sync")
+    log_data_sync_event(
+        source="all",
+        destination="all",
+        record_count=0,
+        status="starting_full",
+        details={'schedule': 'nightly'}
+    )
     return run_all_mappings(incremental=False)
 
 

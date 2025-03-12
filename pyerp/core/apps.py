@@ -18,3 +18,9 @@ class CoreConfig(AppConfig):
         Initialize app when Django is ready.
         Import signals to ensure they are registered.
         """
+        # Import signals to ensure they are registered
+        from . import signals  # noqa
+
+        # Initialize the centralized logging system
+        from pyerp.utils.logging.logging_init import initialize_logging
+        initialize_logging()

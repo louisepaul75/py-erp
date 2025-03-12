@@ -131,4 +131,19 @@ def main():
 
 
 if __name__ == "__main__":
+    print("\nValidating session...")
+    client = LegacyERPClient(environment="live")
+    if client.validate_session():
+        print("✓ Session validation successful")
+        print("\nCurrent session cookies:")
+        client._log_cookies()
+    else:
+        print("✗ Session validation failed, attempting login...")
+        if client.login():
+            print("✓ Login successful")
+            print("\nNew session cookies:")
+            client._log_cookies()
+        else:
+            print("✗ Login failed")
+            sys.exit(1)
     main()

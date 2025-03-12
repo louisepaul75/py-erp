@@ -1,12 +1,12 @@
 """Pipeline orchestration for sync operations."""
 
-import logging
 import traceback
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
 import math
 from django.utils import timezone
+from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .extractors.base import BaseExtractor
 from .transformers.base import BaseTransformer
@@ -19,21 +19,7 @@ from .models import (
 )
 
 
-# Configure logger
-logger = logging.getLogger("pyerp.sync.pipeline")
-logger.setLevel(logging.INFO)
-
-# Remove existing handlers
-for handler in logger.handlers[:]:
-    logger.removeHandler(handler)
-
-# Add console handler with custom formatter
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(levelname)s: %(message)s')
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-logger.propagate = False
+logger = get_logger(__name__)
 
 
 class SyncPipeline:
@@ -112,7 +98,17 @@ class SyncPipeline:
                     value=modified_since.strftime('%Y-%m-%d')
                 )
             
-            logger.info("Starting data extraction...")
+            log_data_sync_event(
+                source=self.mapping.source.name,
+                destination=self.mapping.target.name,
+                record_count=0,
+                status="started",
+                details={
+                    "entity_type": self.mapping.entity_type,
+                    "incremental": incremental,
+                    "batch_size": batch_size
+                }
+            )
             
             try:
                 # Extract data
@@ -122,7 +118,16 @@ class SyncPipeline:
                         fail_on_filter_error=fail_on_filter_error
                     )
                     
-                logger.info(f"Extracted {len(source_data)} records")
+                log_data_sync_event(
+                    source=self.mapping.source.name,
+                    destination=self.mapping.target.name,
+                    record_count=len(source_data),
+                    status="extracted",
+                    details={
+                        "entity_type": self.mapping.entity_type,
+                        "incremental": incremental
+                    }
+                )
                 
                 # Process data in batches
                 total_processed = 0
@@ -131,7 +136,10 @@ class SyncPipeline:
                 
                 for i in range(0, len(source_data), batch_size):
                     batch = source_data[i:i+batch_size]
-                    logger.info(f"Processing batch {i//batch_size + 1} ({len(batch)} records)")
+                    logger.info(
+                        f"Processing batch {i//batch_size + 1} "
+                        f"({len(batch)} records)"
+                    )
                     
                     # Process batch
                     batch_success, batch_failed = self._process_batch(batch)
@@ -150,6 +158,20 @@ class SyncPipeline:
                 self.sync_log.mark_completed(total_success, total_failed)
                 self.sync_state.update_sync_completed(success=total_failed == 0)
                 
+                # Log final status
+                status = "completed" if total_failed == 0 else "completed_with_errors"
+                log_data_sync_event(
+                    source=self.mapping.source.name,
+                    destination=self.mapping.target.name,
+                    record_count=total_processed,
+                    status=status,
+                    details={
+                        "entity_type": self.mapping.entity_type,
+                        "succeeded": total_success,
+                        "failed": total_failed
+                    }
+                )
+                
                 return self.sync_log
                 
             except Exception as e:
@@ -159,6 +181,19 @@ class SyncPipeline:
                     error_message=str(e),
                     trace=traceback.format_exc()
                 )
+                
+                # Log failure event
+                log_data_sync_event(
+                    source=self.mapping.source.name,
+                    destination=self.mapping.target.name,
+                    record_count=0,
+                    status="failed",
+                    details={
+                        "entity_type": self.mapping.entity_type,
+                        "error": str(e)
+                    }
+                )
+                
                 return self.sync_log
                 
         except Exception as e:

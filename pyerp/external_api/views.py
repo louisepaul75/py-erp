@@ -2,8 +2,6 @@
 API views for managing external API connections.
 """
 
-import logging
-
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
@@ -11,9 +9,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from . import connection_manager
+from pyerp.utils.logging import get_logger
 
-# Set up logging
-logger = logging.getLogger("pyerp.external_api")
+# Set up logging using the centralized logging system
+logger = get_logger(__name__)
 
 
 @api_view(['GET'])

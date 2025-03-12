@@ -8,6 +8,7 @@ from typing import Any, Dict, NamedTuple
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+from django.apps import apps
 
 from pyerp.sync.pipeline import PipelineFactory
 from pyerp.sync.models import SyncMapping
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class LoadResult(NamedTuple):
     """Result of a load operation."""
-    
+
     created: int
     updated: int
     skipped: int
@@ -82,41 +83,40 @@ class Command(BaseCommand):
         # Set up logging
         if options["debug"]:
             logger.setLevel(logging.DEBUG)
-            
+
         self.stdout.write("Starting customer sync process")
-        
+
         try:
             # Load configuration
             config_path = (
-                Path(__file__).resolve().parent.parent.parent /
-                'config' / 'customers_sync.yaml'
+                Path(__file__).resolve().parent.parent.parent
+                / "config"
+                / "customers_sync.yaml"
             )
             self.stdout.write(f"Loading config from: {config_path}")
-            
+
             with open(config_path) as f:
                 config = yaml.safe_load(f)
-                
+
             # Set up query parameters
             query_params = {}
-            
+
             # Filter by days if specified
             if options["days"]:
                 days_ago = timezone.now() - timedelta(days=options["days"])
-                query_params["modified_date"] = {
-                    "gt": days_ago.strftime("%Y-%m-%d")
-                }
-                days = options['days']
+                query_params["modified_date"] = {"gt": days_ago.strftime("%Y-%m-%d")}
+                days = options["days"]
                 msg = f"Filtering records modified in the last {days} days"
                 self.stdout.write(msg)
-                
+
             # Filter by customer number if specified
             if options["customer_number"]:
                 query_params["KundenNr"] = options["customer_number"]
-                
+
             # Set batch size
             batch_size = options["batch_size"]
             self.stdout.write(f"Using batch size: {batch_size}")
-            
+
             # Sync customers if not skipped
             if not options["skip_customers"]:
                 self.stdout.write("\nStarting customer sync...")
@@ -126,7 +126,7 @@ class Command(BaseCommand):
                     query_params,
                     options["force_update"],
                 )
-                
+
                 # Print customer sync results
                 self.stdout.write(
                     self.style.SUCCESS(
@@ -139,17 +139,12 @@ class Command(BaseCommand):
                 )
 
                 if customer_result.error_details:
-                    self.stdout.write(
-                        self.style.WARNING("\nCustomer sync errors:")
-                    )
+                    self.stdout.write(self.style.WARNING("\nCustomer sync errors:"))
                     for error in customer_result.error_details:
-                        if isinstance(error, dict) and 'error' in error:
+                        if isinstance(error, dict) and "error" in error:
                             self.stdout.write(f"- {error['error']}")
-                        elif (isinstance(error, dict) and 
-                              'error_message' in error):
-                            self.stdout.write(
-                                f"- {error['error_message']}"
-                            )
+                        elif isinstance(error, dict) and "error_message" in error:
+                            self.stdout.write(f"- {error['error_message']}")
                         else:
                             self.stdout.write(f"- {error}")
 
@@ -162,7 +157,7 @@ class Command(BaseCommand):
                     query_params,
                     options["force_update"],
                 )
-                
+
                 # Print address sync results
                 self.stdout.write(
                     self.style.SUCCESS(
@@ -175,24 +170,17 @@ class Command(BaseCommand):
                 )
 
                 if address_result.error_details:
-                    self.stdout.write(
-                        self.style.WARNING("\nAddress sync errors:")
-                    )
+                    self.stdout.write(self.style.WARNING("\nAddress sync errors:"))
                     for error in address_result.error_details:
-                        if isinstance(error, dict) and 'error' in error:
+                        if isinstance(error, dict) and "error" in error:
                             self.stdout.write(f"- {error['error']}")
-                        elif (isinstance(error, dict) and 
-                              'error_message' in error):
-                            self.stdout.write(
-                                f"- {error['error_message']}"
-                            )
+                        elif isinstance(error, dict) and "error_message" in error:
+                            self.stdout.write(f"- {error['error_message']}")
                         else:
                             self.stdout.write(f"- {error}")
 
         except Exception as e:
-            self.stdout.write(
-                self.style.ERROR(f"\nSync failed: {e}")
-            )
+            self.stdout.write(self.style.ERROR(f"\nSync failed: {e}"))
             raise
 
     def _sync_customers(
@@ -203,24 +191,22 @@ class Command(BaseCommand):
         force_update: bool,
     ) -> LoadResult:
         """Run customer sync pipeline.
-        
+
         Args:
             config: Configuration dictionary
             batch_size: Number of records per batch
             query_params: Query parameters for filtering
             force_update: Whether to update unmodified records
-            
+
         Returns:
             LoadResult containing sync statistics
         """
         # Get the sync mapping
         try:
             mapping = SyncMapping.objects.get(
-                entity_type='customer',
-                source__name='customers_sync',
-                target__name=(
-                    'sales.Customer'
-                )
+                entity_type="customer",
+                source__name="customers_sync",
+                target__name=("sales.Customer"),
             )
         except SyncMapping.DoesNotExist:
             raise RuntimeError(
@@ -230,23 +216,63 @@ class Command(BaseCommand):
 
         # Create pipeline using factory
         pipeline = PipelineFactory.create_pipeline(mapping)
-        
-        # Run pipeline
-        sync_log = pipeline.run(
-            batch_size=batch_size,
-            query_params=query_params,
-            incremental=not force_update,
-            fail_on_filter_error=True
+
+        # Get existing customer numbers for prefiltering
+        Customer = apps.get_model("sales", "Customer")
+        existing_customer_numbers = set(
+            Customer.objects.values_list("customer_number", flat=True)
         )
-        
-        return LoadResult(
-            created=sync_log.records_succeeded,
-            updated=0,  # Not tracked separately in new system
-            skipped=sync_log.records_processed - sync_log.records_succeeded,
-            errors=sync_log.records_failed,
-            error_details=list(
-                sync_log.details.filter(status='failed').values()
+        self.stdout.write(f"Found {len(existing_customer_numbers)} existing customers")
+
+        # Extract data with optimized approach
+        with pipeline.extractor:
+            source_data = pipeline.extractor.extract(
+                query_params=query_params, fail_on_filter_error=True
             )
+
+        self.stdout.write(f"Extracted {len(source_data)} customer records")
+
+        # Prefilter records to separate new and existing
+        new_records, existing_records = pipeline.transformer.prefilter_records(
+            source_data,
+            existing_keys=existing_customer_numbers,
+            key_field="customer_number",
+        )
+
+        self.stdout.write(
+            f"Prefiltered: {len(new_records)} new, "
+            f"{len(existing_records)} existing customers"
+        )
+
+        # Process new records
+        created = 0
+        if new_records:
+            self.stdout.write("Processing new customer records...")
+            transformed_new = pipeline.transformer.transform(new_records)
+            new_result = pipeline.loader.load(transformed_new, update_existing=False)
+            created = new_result.created
+
+        # Process existing records if needed
+        updated = 0
+        if existing_records and force_update:
+            self.stdout.write("Processing existing customer records...")
+            transformed_existing = pipeline.transformer.transform(existing_records)
+            existing_result = pipeline.loader.load(
+                transformed_existing, update_existing=True
+            )
+            updated = existing_result.updated
+        else:
+            self.stdout.write("Skipping existing customer records")
+
+        # Create a combined result
+        errors = []
+
+        return LoadResult(
+            created=created,
+            updated=updated,
+            skipped=len(existing_records) if not force_update else 0,
+            errors=len(errors),
+            error_details=errors,
         )
 
     def _sync_addresses(
@@ -257,24 +283,22 @@ class Command(BaseCommand):
         force_update: bool,
     ) -> LoadResult:
         """Run address sync pipeline.
-        
+
         Args:
             config: Configuration dictionary
             batch_size: Number of records per batch
             query_params: Query parameters for filtering
             force_update: Whether to update unmodified records
-            
+
         Returns:
             LoadResult containing sync statistics
         """
         # Get the sync mapping
         try:
             mapping = SyncMapping.objects.get(
-                entity_type='address',
-                source__name='customers_sync_addresses',
-                target__name=(
-                    'sales.Address'
-                )
+                entity_type="address",
+                source__name="customers_sync_addresses",
+                target__name=("sales.Address"),
             )
         except SyncMapping.DoesNotExist:
             raise RuntimeError(
@@ -284,21 +308,57 @@ class Command(BaseCommand):
 
         # Create pipeline using factory
         pipeline = PipelineFactory.create_pipeline(mapping)
-        
-        # Run pipeline
-        sync_log = pipeline.run(
-            batch_size=batch_size,
-            query_params=query_params,
-            incremental=not force_update,
-            fail_on_filter_error=True
-        )
-        
-        return LoadResult(
-            created=sync_log.records_succeeded,
-            updated=0,  # Not tracked separately in new system
-            skipped=sync_log.records_processed - sync_log.records_succeeded,
-            errors=sync_log.records_failed,
-            error_details=list(
-                sync_log.details.filter(status='failed').values()
+
+        # Get existing address legacy IDs for prefiltering
+        Address = apps.get_model("sales", "Address")
+        existing_address_ids = set(Address.objects.values_list("legacy_id", flat=True))
+        self.stdout.write(f"Found {len(existing_address_ids)} existing addresses")
+
+        # Extract data with optimized approach
+        with pipeline.extractor:
+            source_data = pipeline.extractor.extract(
+                query_params=query_params, fail_on_filter_error=True
             )
-        ) 
+
+        self.stdout.write(f"Extracted {len(source_data)} address records")
+
+        # Prefilter records to separate new and existing
+        new_records, existing_records = pipeline.transformer.prefilter_records(
+            source_data, existing_keys=existing_address_ids, key_field="legacy_id"
+        )
+
+        self.stdout.write(
+            f"Prefiltered: {len(new_records)} new, "
+            f"{len(existing_records)} existing addresses"
+        )
+
+        # Process new records
+        created = 0
+        if new_records:
+            self.stdout.write("Processing new address records...")
+            transformed_new = pipeline.transformer.transform(new_records)
+            new_result = pipeline.loader.load(transformed_new, update_existing=False)
+            created = new_result.created
+
+        # Process existing records if needed
+        updated = 0
+        if existing_records and force_update:
+            self.stdout.write("Processing existing address records...")
+            transformed_existing = pipeline.transformer.transform(existing_records)
+            existing_result = pipeline.loader.load(
+                transformed_existing, update_existing=True
+            )
+            updated = existing_result.updated
+        else:
+            self.stdout.write("Skipping existing address records")
+
+        # Create a combined result
+        errors = []
+
+        return LoadResult(
+            created=created,
+            updated=updated,
+            skipped=len(existing_records) if not force_update else 0,
+            errors=len(errors),
+            error_details=errors,
+        )
