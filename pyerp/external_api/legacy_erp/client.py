@@ -65,7 +65,7 @@ class LegacyERPClient(BaseAPIClient):
     def fetch_table(
         self,
         table_name: str,
-        top: int = 100,
+        top: Optional[int] = None,
         skip: int = 0,
         filter_query: Optional[str] = None,
         all_records: bool = False,
@@ -78,7 +78,9 @@ class LegacyERPClient(BaseAPIClient):
         
         Args:
             table_name: Name of the table to fetch records from
-            top: Maximum number of records to fetch (page size)
+            top: Number of records to fetch per request (None for no limit, 
+                though the API server may still apply a default limit, 
+                typically 100 records)
             skip: Number of records to skip (for pagination)
             filter_query: OData filter query string
             all_records: Whether to fetch all records (may take a long time)
@@ -107,10 +109,24 @@ class LegacyERPClient(BaseAPIClient):
             )
         except Exception as e:
             raise LegacyERPError(f"Failed to fetch table: {e}") 
-        
 
 
 if __name__ == "__main__":
+    from datetime import datetime as dt
+
+    pd.set_option('display.max_columns', None)
+
     client = LegacyERPClient(environment="live")
-    df = client.fetch_table(table_name="Kunden", top=100)
+
+    # Filter query for records modified after March 11, 2025
+    filter_query = [
+        ["modified_date", ">", dt(2025, 1, 10)],
+        # ["Preisgruppe", "==", "1"],
+    ]
+    print(filter_query)
+    # Fetch records from the "Kunden" table
+    df = client.fetch_table(
+        table_name="Kunden", top=15000, filter_query=filter_query
+    )
+
     print(df)
