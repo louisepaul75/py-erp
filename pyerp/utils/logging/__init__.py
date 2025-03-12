@@ -12,6 +12,9 @@ from .logging import (
     log_data_sync_event,
     log_user_activity,
     log_audit_event,
+    configure_django_loggers,
+    create_console_handler,
+    create_file_handler,
 )
 
 __all__ = [
@@ -23,4 +26,7 @@ __all__ = [
     'log_data_sync_event',
     'log_user_activity',
     'log_audit_event',
+    'configure_django_loggers',
+    'create_console_handler',
+    'create_file_handler',
 ] 
