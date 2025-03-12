@@ -6,8 +6,8 @@ corresponding VariantProduct records, ensuring that all fields are correctly
 mapped from the legacy system.
 """
 
-import logging
 from datetime import datetime
+import logging
 
 import pandas as pd
 from django.core.management.base import BaseCommand
@@ -19,12 +19,13 @@ from pyerp.business_modules.products.models import (
     VariantProduct,
 )
 from pyerp.external_api.legacy_erp.client import LegacyERPClient
+from pyerp.utils.logging import get_logger, get_category_logger
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Configure logging using the centralized logging system
+logger = get_logger(__name__)
 
-# Disable SQL logging
-db_logger = logging.getLogger('django.db.backends')
+# Use category logger for database operations
+db_logger = get_category_logger('database')
 db_logger.setLevel(logging.ERROR)
 
 

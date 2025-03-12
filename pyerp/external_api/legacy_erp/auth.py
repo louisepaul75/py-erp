@@ -5,7 +5,6 @@ This module handles authentication with the legacy API and maintains session
 info.
 """
 
-import logging
 import os
 import threading
 import json
@@ -16,9 +15,10 @@ from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
     API_SESSION_EXPIRY,
 )
+from pyerp.utils.logging import get_logger
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Configure logging using the centralized logging system
+logger = get_logger(__name__)
 
 # File for storing the session cookie globally
 COOKIE_FILE_PATH = os.path.join(

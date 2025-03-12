@@ -5,15 +5,14 @@ This module provides functionality for interacting with the legacy ERP system
 using the API client from direct_api, adapted for the legacy_sync package.
 """
 
-import logging
-
 from django.conf import settings
 
 from pyerp.external_api.legacy_erp.client import LegacyERPClient
 from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
+from pyerp.utils.logging import get_logger
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Configure logging using the centralized logging system
+logger = get_logger(__name__)
 
 # Default API environment
 DEFAULT_ENVIRONMENT = getattr(

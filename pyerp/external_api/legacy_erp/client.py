@@ -5,7 +5,6 @@ This module provides the LegacyERPClient class which handles all interactions
 with the legacy API, including data retrieval and updates.
 """
 
-import logging
 from typing import Optional
 
 import pandas as pd
@@ -13,9 +12,10 @@ import pandas as pd
 from pyerp.external_api.legacy_erp.base import BaseAPIClient
 from pyerp.external_api.legacy_erp.exceptions import LegacyERPError
 from pyerp.external_api import connection_manager
+from pyerp.utils.logging import get_logger
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Configure logging using the centralized logging system
+logger = get_logger(__name__)
 
 
 class LegacyERPClient(BaseAPIClient):

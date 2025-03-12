@@ -7,12 +7,13 @@ JSON file that is excluded from version control.
 """
 
 import json
-import logging
 from pathlib import Path
 from typing import Dict
 
-# Set up logging
-logger = logging.getLogger("pyerp.external_api")
+from pyerp.utils.logging import get_logger
+
+# Set up logging using the centralized logging system
+logger = get_logger(__name__)
 
 # Define the path to the connection settings file
 # Place it in a location that is .gitignore'd

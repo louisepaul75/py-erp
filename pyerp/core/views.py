@@ -3,7 +3,6 @@ Views for the Core app.
 """
 
 import json
-import logging
 import os
 import subprocess
 
@@ -20,8 +19,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-# Set up logging
-logger = logging.getLogger("pyerp.core")
+# Set up logging using the centralized logging system
+from pyerp.utils.logging import get_logger
+logger = get_logger(__name__)
 
 # Language session key constant (compatible with Django 5.1+)
 LANGUAGE_SESSION_KEY = "django_language"

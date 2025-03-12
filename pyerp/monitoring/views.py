@@ -3,7 +3,6 @@ Views for the monitoring app.
 """
 
 from datetime import datetime
-import logging
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -14,9 +13,10 @@ from pyerp.monitoring.services import (
     get_host_resources,
     run_all_health_checks,
 )
+from pyerp.utils.logging import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # Apply decorators to exempt this view from authentication and CSRF protection
