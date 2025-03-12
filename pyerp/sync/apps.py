@@ -1,6 +1,10 @@
 """App configuration for the sync module."""
 
 from django.apps import AppConfig
+from pyerp.utils.logging import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class SyncConfig(AppConfig):
@@ -28,9 +32,11 @@ class SyncConfig(AppConfig):
                         'options': periodic_config.get('options', {})
                     }
             
-        except (ImportError, AttributeError):
+            logger.info("Sync app initialized with periodic tasks registered")
+            
+        except (ImportError, AttributeError) as e:
             # Handle the case where Celery is not available
-            import logging
-            logging.getLogger(__name__).warning(
-                "Celery app not available, periodic tasks not registered"
+            logger.warning(
+                "Celery app not available, periodic tasks not registered: %s",
+                str(e)
             ) 

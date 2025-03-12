@@ -1,15 +1,16 @@
 """Legacy API data extractor implementation."""
 
-import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pyerp.external_api.legacy_erp import LegacyERPClient
-from .base import BaseExtractor
 import pandas as pd
+from pyerp.external_api.legacy_erp import LegacyERPClient
+from pyerp.utils.logging import get_logger, log_data_sync_event
+
+from .base import BaseExtractor
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class LegacyAPIExtractor(BaseExtractor):
@@ -33,8 +34,12 @@ class LegacyAPIExtractor(BaseExtractor):
             self.connection = LegacyERPClient(
                 environment=self.config['environment']
             )
-            logger.info(
-                f"Connected to legacy API ({self.config['environment']})"
+            log_data_sync_event(
+                source=f"legacy_api_{self.config['environment']}",
+                destination="pyerp",
+                record_count=0,
+                status="connected",
+                details={"table": self.config['table_name']}
             )
         except Exception as e:
             raise ConnectionError(
