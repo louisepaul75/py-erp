@@ -112,8 +112,39 @@
               </div>
 
               <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Passwort</label>
+                <div class="flex justify-between">
+                  <label for="password" class="block text-sm font-medium text-gray-700">Passwort</label>
+                  <div class="flex items-center">
+                    <input
+                      id="use_1password"
+                      v-model="smtpForm.use_1password"
+                      type="checkbox"
+                      class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                    />
+                    <label for="use_1password" class="ml-2 block text-sm text-gray-700">
+                      1Password verwenden
+                    </label>
+                  </div>
+                </div>
+                <div v-if="smtpForm.use_1password">
+                  <div class="mt-1 flex rounded-md shadow-sm">
+                    <input
+                      id="onepassword_item_name"
+                      v-model="smtpForm.onepassword_item_name"
+                      type="text"
+                      placeholder="Name des 1Password-Eintrags"
+                      class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                    />
+                  </div>
+                  <p class="mt-1 text-xs text-gray-500">
+                    Das Passwort wird aus 1Password abgerufen. Geben Sie den Namen des Eintrags an.
+                  </p>
+                  <p v-if="errors.onepassword_item_name" class="mt-1 text-sm text-red-600">
+                    {{ errors.onepassword_item_name }}
+                  </p>
+                </div>
                 <input
+                  v-else
                   id="password"
                   v-model="smtpForm.password"
                   type="password"
@@ -461,7 +492,9 @@ const smtpForm = ref({
   password: '',
   from_email: '',
   from_name: '',
-  encryption: 'tls' // 'none', 'ssl', 'tls'
+  encryption: 'tls', // 'none', 'ssl', 'tls'
+  use_1password: false,
+  onepassword_item_name: ''
 });
 
 const testForm = ref({
@@ -599,8 +632,14 @@ const validateSMTPForm = () => {
     newErrors.username = 'Benutzername ist erforderlich';
   }
 
-  if (!smtpForm.value.password) {
+  // Passwort ist nur erforderlich, wenn 1Password nicht verwendet wird
+  if (!smtpForm.value.use_1password && !smtpForm.value.password) {
     newErrors.password = 'Passwort ist erforderlich';
+  }
+
+  // 1Password-Eintrag ist erforderlich, wenn 1Password verwendet wird
+  if (smtpForm.value.use_1password && !smtpForm.value.onepassword_item_name) {
+    newErrors.onepassword_item_name = 'Name des 1Password-Eintrags ist erforderlich';
   }
 
   if (!smtpForm.value.from_email) {
@@ -639,15 +678,22 @@ const validateTestForm = () => {
 };
 
 const isFormValid = computed(() => {
-  return (
+  // Basisvalidierung für Felder, die immer erforderlich sind
+  const baseValidation = 
     smtpForm.value.host &&
     smtpForm.value.port &&
     smtpForm.value.username &&
-    smtpForm.value.password &&
     smtpForm.value.from_email &&
     validateEmail(smtpForm.value.from_email) &&
-    smtpForm.value.from_name
-  );
+    smtpForm.value.from_name;
+  
+  // Wenn 1Password verwendet wird, prüfe auf onepassword_item_name
+  // Andernfalls prüfe auf password
+  if (smtpForm.value.use_1password) {
+    return baseValidation && smtpForm.value.onepassword_item_name;
+  } else {
+    return baseValidation && smtpForm.value.password;
+  }
 });
 
 // Add a new computed property for test form validation
@@ -675,6 +721,9 @@ const loadSettings = async () => {
       smtpForm.value.from_email = data.from_email || '';
       smtpForm.value.from_name = data.from_name || '';
       smtpForm.value.encryption = data.encryption || 'tls';
+      // Lade 1Password-Einstellungen
+      smtpForm.value.use_1password = data.use_1password || false;
+      smtpForm.value.onepassword_item_name = data.onepassword_item_name || '';
 
       addLog('SMTP-Einstellungen geladen', 'info');
     } else {

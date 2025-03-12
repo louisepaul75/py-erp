@@ -3,8 +3,10 @@ import logging
 from datetime import datetime
 from django.core.mail.backends.smtp import EmailBackend as SMTPBackend
 from django.utils import timezone
+from django.conf import settings
 # from anymail.backends.smtp import EmailBackend as AnymailSMTPBackend
 from .models import EmailLog
+from pyerp.utils.onepassword_connect import get_email_password
 
 logger = logging.getLogger('anymail')
 
@@ -13,6 +15,33 @@ class LoggingEmailBackend(SMTPBackend):
     """
     A wrapper around Django's SMTP email backend that logs emails to the database.
     """
+    
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize the backend and retrieve the password from 1Password if needed.
+        """
+        # Check if 1Password integration is enabled
+        use_1password = getattr(settings, 'EMAIL_USE_1PASSWORD', False)
+        if use_1password and not settings.EMAIL_HOST_PASSWORD:
+            # Get the item name and username
+            item_name = getattr(settings, 'EMAIL_1PASSWORD_ITEM_NAME', '')
+            username = getattr(settings, 'EMAIL_HOST_USER', '')
+            
+            if username:
+                # Retrieve the password
+                password = get_email_password(
+                    email_username=username,
+                    item_name=item_name or None
+                )
+                
+                if password:
+                    # Update the password in settings
+                    settings.EMAIL_HOST_PASSWORD = password
+                    logger.info("Retrieved email password from 1Password")
+                else:
+                    logger.error("Failed to retrieve email password from 1Password")
+        
+        super().__init__(*args, **kwargs)
     
     def send_messages(self, email_messages):
         """
@@ -96,6 +125,33 @@ class LoggingAnymailBackend(SMTPBackend):
     A wrapper around Django's SMTP email backend that logs emails to the database.
     This is a simplified version that doesn't use Anymail's backend directly.
     """
+    
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize the backend and retrieve the password from 1Password if needed.
+        """
+        # Check if 1Password integration is enabled
+        use_1password = getattr(settings, 'EMAIL_USE_1PASSWORD', False)
+        if use_1password and not settings.EMAIL_HOST_PASSWORD:
+            # Get the item name and username
+            item_name = getattr(settings, 'EMAIL_1PASSWORD_ITEM_NAME', '')
+            username = getattr(settings, 'EMAIL_HOST_USER', '')
+            
+            if username:
+                # Retrieve the password
+                password = get_email_password(
+                    email_username=username,
+                    item_name=item_name or None
+                )
+                
+                if password:
+                    # Update the password in settings
+                    settings.EMAIL_HOST_PASSWORD = password
+                    logger.info("Retrieved email password from 1Password")
+                else:
+                    logger.error("Failed to retrieve email password from 1Password")
+        
+        super().__init__(*args, **kwargs)
     
     def send_messages(self, email_messages):
         """

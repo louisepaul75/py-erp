@@ -3,8 +3,39 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
+from pyerp.utils.onepassword_connect import get_email_password
 
 logger = logging.getLogger('anymail')
+
+
+def _ensure_password_from_1password():
+    """
+    Ensure that the email password is retrieved from 1Password if needed.
+    """
+    # Check if 1Password integration is enabled
+    use_1password = getattr(settings, 'EMAIL_USE_1PASSWORD', False)
+    if use_1password and not settings.EMAIL_HOST_PASSWORD:
+        # Get the item name and username
+        item_name = getattr(settings, 'EMAIL_1PASSWORD_ITEM_NAME', '')
+        username = getattr(settings, 'EMAIL_HOST_USER', '')
+        
+        if username:
+            # Retrieve the password
+            password = get_email_password(
+                email_username=username,
+                item_name=item_name or None
+            )
+            
+            if password:
+                # Update the password in settings
+                settings.EMAIL_HOST_PASSWORD = password
+                logger.info("Retrieved email password from 1Password")
+                return True
+            else:
+                logger.error("Failed to retrieve email password from 1Password")
+                return False
+    
+    return True  # No need to retrieve password or already set
 
 
 def send_test_email(to_email, subject=None, context=None):
@@ -19,6 +50,11 @@ def send_test_email(to_email, subject=None, context=None):
     Returns:
         bool: True if the email was sent successfully, False otherwise
     """
+    # Ensure password is retrieved from 1Password if needed
+    if not _ensure_password_from_1password():
+        logger.error("Cannot send test email: Failed to retrieve password from 1Password")
+        return False
+    
     if subject is None:
         subject = "Test Email from pyERP"
     
@@ -76,6 +112,11 @@ def send_html_email(to_email, subject, html_content, from_email=None, cc=None, b
     Returns:
         bool: True if the email was sent successfully, False otherwise
     """
+    # Ensure password is retrieved from 1Password if needed
+    if not _ensure_password_from_1password():
+        logger.error("Cannot send email: Failed to retrieve password from 1Password")
+        return False
+    
     try:
         # Convert to_email to list if it's a string
         if isinstance(to_email, str):

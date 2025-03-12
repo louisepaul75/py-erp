@@ -84,3 +84,6 @@ ddtrace==2.0.0
 # - vue-i18n (^9.8.0): Internationalization plugin for Vue.js
 # - axios (^1.6.2): Promise based HTTP client
 # - @mdi/font (^7.4.47): Material Design Icons
+
+# Add the 1Password Connect SDK to the production requirements
+onepasswordconnectsdk

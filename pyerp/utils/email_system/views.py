@@ -15,6 +15,7 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.decorators import api_view, permission_classes
 from .utils import send_test_email, send_html_email
 from .models import EmailLog
+from pyerp.utils.onepassword_connect import get_email_password
 
 logger = logging.getLogger('anymail')
 
@@ -35,6 +36,8 @@ class SMTPSettingsView(View):
                 'from_email': settings.DEFAULT_FROM_EMAIL,
                 'from_name': '',  # This might be stored elsewhere
                 'encryption': 'tls' if settings.EMAIL_USE_TLS else ('ssl' if settings.EMAIL_USE_SSL else 'none'),
+                'use_1password': getattr(settings, 'EMAIL_USE_1PASSWORD', False),
+                '1password_item_name': getattr(settings, 'EMAIL_1PASSWORD_ITEM_NAME', ''),
             }
             
             return JsonResponse({
@@ -54,13 +57,24 @@ class SMTPSettingsView(View):
             data = json.loads(request.body)
             
             # Validate required fields
-            required_fields = ['host', 'port', 'username', 'password', 'from_email', 'encryption']
+            required_fields = ['host', 'port', 'username', 'from_email', 'encryption']
             for field in required_fields:
                 if field not in data:
                     return JsonResponse({
                         'success': False,
                         'error': f"Missing required field: {field}"
                     }, status=400)
+            
+            # Check if using 1Password
+            use_1password = data.get('use_1password', False)
+            op_item_name = data.get('1password_item_name', '')
+            
+            # If using 1Password, password is not required in the request
+            if not use_1password and 'password' not in data:
+                return JsonResponse({
+                    'success': False,
+                    'error': "Password is required when not using 1Password"
+                }, status=400)
             
             # Determine which .env file to update based on environment
             env_file = os.environ.get('DJANGO_SETTINGS_MODULE', '')
@@ -92,13 +106,18 @@ class SMTPSettingsView(View):
                 'EMAIL_HOST': data['host'],
                 'EMAIL_PORT': str(data['port']),
                 'EMAIL_HOST_USER': data['username'],
-                'EMAIL_HOST_PASSWORD': data['password'],
                 'DEFAULT_FROM_EMAIL': data['from_email'],
                 'EMAIL_USE_TLS': 'True' if data['encryption'] == 'tls' else 'False',
                 'EMAIL_USE_SSL': 'True' if data['encryption'] == 'ssl' else 'False',
                 'USE_ANYMAIL_IN_DEV': 'True',  # Enable anymail in development
-                'ANYMAIL_ESP': 'smtp'  # Use SMTP as the ESP
+                'ANYMAIL_ESP': 'smtp',  # Use SMTP as the ESP
+                'EMAIL_USE_1PASSWORD': 'True' if use_1password else 'False',
+                'EMAIL_1PASSWORD_ITEM_NAME': op_item_name if use_1password else '',
             }
+            
+            # Only include password in settings if not using 1Password
+            if not use_1password and 'password' in data:
+                settings_map['EMAIL_HOST_PASSWORD'] = data['password']
             
             # Track which settings have been updated
             updated_settings = set()
@@ -135,10 +154,30 @@ class SMTPSettingsView(View):
             settings.EMAIL_HOST = data['host']
             settings.EMAIL_PORT = int(data['port'])
             settings.EMAIL_HOST_USER = data['username']
-            settings.EMAIL_HOST_PASSWORD = data['password']
             settings.DEFAULT_FROM_EMAIL = data['from_email']
             settings.EMAIL_USE_TLS = data['encryption'] == 'tls'
             settings.EMAIL_USE_SSL = data['encryption'] == 'ssl'
+            settings.EMAIL_USE_1PASSWORD = use_1password
+            settings.EMAIL_1PASSWORD_ITEM_NAME = op_item_name if use_1password else ''
+            
+            # If using 1Password, retrieve the password
+            if use_1password:
+                password = get_email_password(
+                    email_username=data['username'],
+                    item_name=op_item_name or None
+                )
+                if password:
+                    settings.EMAIL_HOST_PASSWORD = password
+                    logger.info("Retrieved email password from 1Password")
+                else:
+                    logger.error("Failed to retrieve email password from 1Password")
+                    return JsonResponse({
+                        'success': False,
+                        'error': "Failed to retrieve email password from 1Password"
+                    }, status=500)
+            else:
+                # Use the password from the request
+                settings.EMAIL_HOST_PASSWORD = data.get('password', '')
             
             logger.info(f"SMTP settings updated: {data['host']}:{data['port']} (user: {data['username']})")
             
@@ -338,6 +377,8 @@ class UpdateEmailSettingsView(View):
             'password': '********' if settings.EMAIL_HOST_PASSWORD else '',
             'from_email': settings.DEFAULT_FROM_EMAIL,
             'encryption': 'tls' if settings.EMAIL_USE_TLS else ('ssl' if settings.EMAIL_USE_SSL else 'none'),
+            'use_1password': getattr(settings, 'EMAIL_USE_1PASSWORD', False),
+            '1password_item_name': getattr(settings, 'EMAIL_1PASSWORD_ITEM_NAME', ''),
         }
         
         return JsonResponse(settings_data)
@@ -347,8 +388,15 @@ class UpdateEmailSettingsView(View):
         try:
             data = json.loads(request.body)
             
+            # Check if using 1Password
+            use_1password = data.get('use_1password', False)
+            op_item_name = data.get('1password_item_name', '')
+            
             # Validate required fields
-            required_fields = ['host', 'port', 'username', 'password', 'encryption']
+            required_fields = ['host', 'port', 'username', 'encryption']
+            if not use_1password:
+                required_fields.append('password')
+                
             for field in required_fields:
                 if field not in data:
                     return JsonResponse({
@@ -398,42 +446,64 @@ class UpdateEmailSettingsView(View):
                     'EMAIL_HOST': data['host'],
                     'EMAIL_PORT': str(data['port']),
                     'EMAIL_HOST_USER': data['username'],
-                    'EMAIL_HOST_PASSWORD': data['password'],
                     'DEFAULT_FROM_EMAIL': data.get('from_email', data['username']),
                     'EMAIL_USE_TLS': 'True' if data['encryption'] == 'tls' else 'False',
                     'EMAIL_USE_SSL': 'True' if data['encryption'] == 'ssl' else 'False',
+                    'EMAIL_USE_1PASSWORD': 'True' if use_1password else 'False',
+                    'EMAIL_1PASSWORD_ITEM_NAME': op_item_name if use_1password else '',
                 }
                 
+                # Only include password in settings if not using 1Password
+                if not use_1password and 'password' in data:
+                    env_vars['EMAIL_HOST_PASSWORD'] = data['password']
+
                 # Update each variable in the .env file
                 for key, value in env_vars.items():
-                    # Check if the variable already exists
-                    pattern = re.compile(f'^{key}=.*$', re.MULTILINE)
+                    pattern = re.compile(f"^{key}=.*$", re.MULTILINE)
                     if pattern.search(env_content):
-                        # Replace existing variable
-                        env_content = pattern.sub(f'{key}={value}', env_content)
+                        env_content = pattern.sub(f"{key}={value}", env_content)
                     else:
-                        # Add new variable
-                        env_content += f'\n{key}={value}'
+                        env_content += f"\n{key}={value}"
                 
-                # Write updated .env file
+                # Write updated content back to .env file
                 with open(env_file, 'w') as f:
                     f.write(env_content)
             
-            # Update settings in memory
+            # Update Django settings in memory
             settings.EMAIL_HOST = data['host']
-            settings.EMAIL_PORT = int(data['port'])
+            settings.EMAIL_PORT = port
             settings.EMAIL_HOST_USER = data['username']
-            settings.EMAIL_HOST_PASSWORD = data['password']
             settings.DEFAULT_FROM_EMAIL = data.get('from_email', data['username'])
             settings.EMAIL_USE_TLS = data['encryption'] == 'tls'
             settings.EMAIL_USE_SSL = data['encryption'] == 'ssl'
+            settings.EMAIL_USE_1PASSWORD = use_1password
+            settings.EMAIL_1PASSWORD_ITEM_NAME = op_item_name if use_1password else ''
             
-            logger.info(f"SMTP settings updated: {settings.EMAIL_HOST}:{settings.EMAIL_PORT} (user: {settings.EMAIL_HOST_USER})")
+            # If using 1Password, retrieve the password
+            if use_1password:
+                password = get_email_password(
+                    email_username=data['username'],
+                    item_name=op_item_name or None
+                )
+                if password:
+                    settings.EMAIL_HOST_PASSWORD = password
+                    logger.info("Retrieved email password from 1Password")
+                else:
+                    logger.error("Failed to retrieve email password from 1Password")
+                    return JsonResponse({
+                        'success': False,
+                        'error': "Failed to retrieve email password from 1Password"
+                    }, status=500)
+            else:
+                # Use the password from the request
+                settings.EMAIL_HOST_PASSWORD = data.get('password', '')
+            
+            logger.info(f"Email settings updated: {data['host']}:{data['port']} (user: {data['username']})")
             
             return JsonResponse({
-                'success': True
+                'success': True,
+                'message': 'Email settings updated successfully'
             })
-            
         except Exception as e:
             logger.error(f"Error updating email settings: {str(e)}")
             return JsonResponse({
