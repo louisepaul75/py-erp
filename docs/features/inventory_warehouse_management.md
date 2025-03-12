@@ -19,6 +19,83 @@ Legacy data in Stamm_Lagerorte includes: Country, city_building, sale (if produc
 
 The current structure is somewhat messy, and we need to improve it while maintaining the ability to sync with the old system.
 
+## Legacy Data Analysis
+After examining the Stamm_Lagerorte table data (923 records), we have a clearer understanding of the legacy storage location structure:
+
+### Key Fields in Stamm_Lagerorte
+- **Location Hierarchy**:
+  - `Land_LKZ`: Country code (e.g., "DE" for Germany)
+  - `Ort_Gebaeude`: City/Building (e.g., "Hamburg-Markt", "Stammlager-Diessen")
+  - `Regal`: Unit/Shelf number (numeric values like 1, 4, 26, etc.)
+  - `Fach`: Compartment number (typically 1-3)
+  - `Boden`: Shelf level (typically 1-5)
+  - `Schuette`: Appears to be a chute or slot identifier (often null)
+  - `Lagerort`: Formatted location string (e.g., "DE-Hamburg-Markt-R04-F02-B02")
+
+- **Status Indicators**:
+  - `Abverkauf`: Boolean indicating if products in this location are for sale
+  - `Sonderlager`: Boolean indicating if it's a special storage location
+
+- **Metadata**:
+  - `ID_Lagerort`: Numeric ID for the storage location (primary key)
+  - Creation and modification tracking fields (name, date, time)
+
+- **Unused Fields**:
+  - `X`, `Y`, `Z`: Coordinate fields (all zeros in current data)
+  - `Packed`: Boolean field (all False in current data)
+  - `Attribut`: Additional attributes (all None in current data)
+
+### Data Mapping Strategy
+For the new system, we map these legacy fields to our new data models as follows:
+
+1. **StorageLocation Model**:
+   - `legacy_id` ← `ID_Lagerort` (used as the primary identifier for synchronization)
+   - `location_code` ← `Lagerort` (formatted location string)
+   - `country` ← `Land_LKZ`
+   - `city_building` ← `Ort_Gebaeude`
+   - `unit` ← `Regal`
+   - `compartment` ← `Fach`
+   - `shelf` ← `Boden`
+   - `sale` ← `Abverkauf`
+   - `special_spot` ← `Sonderlager`
+   - `name` ← Generated from `location_code` or components
+
+2. **Box and BoxSlot Models**:
+   - These are new concepts not present in the legacy system
+   - Boxes will be assigned to StorageLocations
+   - Each Box will contain multiple BoxSlots based on BoxType configuration
+
+### Implementation Notes
+- The `ID_Lagerort` field is used as the primary identifier for synchronization, as it's also printed on labels and QR codes in the legacy system.
+- We're skipping the `Schuette`, `Slots`, and `Schuette_und_Slots` fields for now, as they're not critical for the initial implementation.
+- The `location_code` field stores the formatted location string from `Lagerort`, which provides a human-readable identifier.
+- The `name` field is generated from the `location_code` if available, or from the individual components if not.
+
+## Progress Update
+We have made significant progress on the inventory management system:
+
+1. **Data Models**: Created all required models for the inventory system including StorageLocation, BoxType, Box, BoxSlot, ProductStorage, and InventoryMovement.
+
+2. **Foreign Key References**: Updated the ProductStorage and InventoryMovement models to reference the VariantProduct model using the SKU field for product identification.
+
+3. **Sync Infrastructure**: Implemented the inventory sync using the existing ETL pipeline:
+   - Created transformer classes in the sync directory for all inventory components
+   - Created a YAML configuration file for inventory sync
+   - Implemented setup and sync management commands
+   - Integrated inventory sync with the run_all_sync command
+
+4. **Legacy Data Integration**: Set up the synchronization with the Stamm_Lagerorte table to import storage location data.
+
+5. **Migrations**: Successfully applied migrations to establish the database schema.
+
+## Next Steps
+1. Implement the UI components for inventory management
+2. Create APIs for inventory operations
+3. Integrate with the sales module for order fulfillment
+4. Implement picking list generation
+5. Add inventory reporting features
+6. Test the complete workflow with real data
+
 ## Acceptance Criteria
 1. Given I need to migrate data from the legacy system
    When I run the synchronization process
@@ -53,7 +130,7 @@ The current structure is somewhat messy, and we need to improve it while maintai
    Then the system should record these movements with appropriate reference information
 
 ## Technical Requirements
-- [ ] Create data models for:
+- [x] Create data models for:
   - StorageLocation (country, city_building, unit, compartment, shelf, sale, special_spot, etc.)
   - BoxType (dimensions, weight capacity, slot count, slot naming scheme)
   - Box (box type, code, storage location, status)
@@ -61,10 +138,11 @@ The current structure is somewhat messy, and we need to improve it while maintai
   - ProductStorage (product, box slot, quantity, reservation status)
   - InventoryMovement (product, from/to slots, quantity, movement type)
 
-- [ ] Implement synchronization with legacy Stamm_Lagerorte data
-  - Create extractor for Stamm_Lagerorte table
-  - Develop transformer to map legacy fields to new model
-  - Build loader to handle updates and conflict resolution
+- [x] Implement synchronization with legacy Stamm_Lagerorte data
+  - [x] Create extractor for Stamm_Lagerorte table
+  - [x] Develop transformer to map legacy fields to new model
+  - [x] Build loader to handle updates and conflict resolution
+  - [x] Integrate with existing ETL pipeline
 
 - [ ] Create APIs for managing inventory:
   - Storage location management
@@ -113,9 +191,9 @@ The current structure is somewhat messy, and we need to improve it while maintai
    - Expected: Inventory should be updated and movements recorded
 
 ## Dependencies
-- [ ] Access to legacy Stamm_Lagerorte table
-- [ ] Product module
-- [ ] User authentication and permissions module
+- [x] Access to legacy Stamm_Lagerorte table
+- [x] Product module
+- [x] User authentication and permissions module
 - [ ] Sales module for order integration
 - [ ] Production module for materials management
 

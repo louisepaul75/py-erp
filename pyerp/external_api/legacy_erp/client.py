@@ -125,7 +125,7 @@ if __name__ == "__main__":
     print(filter_query)
     # Fetch records from the "Kunden" table
     df = client.fetch_table(
-        table_name="Kunden", top=15000, filter_query=filter_query
+        table_name="Stamm_Lagerorte", top=15000, filter_query=filter_query
     )
 
     print(df)
