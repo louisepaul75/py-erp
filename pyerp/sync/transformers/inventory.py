@@ -32,15 +32,35 @@ class StammLagerorteTransformer(BaseTransformer):
             List of dictionaries in the format required by StorageLocation model
         """
         transformed_records = []
+        skipped_records = 0
         
         for record in source_data:
+            # Directly extract ID_Lagerort before applying mappings
+            legacy_id = record.get('ID_Lagerort')
+            
+            # Log the original record to see if ID_Lagerort is present
+            logger.debug(
+                f"Original record before mapping: ID_Lagerort={legacy_id}, "
+                f"keys={list(record.keys())}"
+            )
+            
+            # Skip records without a legacy_id
+            if legacy_id is None:
+                skipped_records += 1
+                logger.warning(f"Skipping record without legacy_id: {record}")
+                continue
+                
             # Apply field mappings from config
             transformed = self.apply_field_mappings(record)
             
-            # Convert ID_Lagerort to string if it's not already
-            if ('legacy_id' in transformed and 
-                    transformed['legacy_id'] is not None):
-                transformed['legacy_id'] = str(transformed['legacy_id'])
+            # Ensure legacy_id is set correctly
+            transformed['legacy_id'] = str(legacy_id)
+            
+            # Log the transformed record to see if legacy_id is present
+            logger.debug(
+                f"After field mapping: legacy_id={transformed.get('legacy_id')}, "
+                f"keys={list(transformed.keys())}"
+            )
             
             # Apply custom transformations
             transformed = self.apply_custom_transformers(transformed, record)
@@ -65,20 +85,20 @@ class StammLagerorteTransformer(BaseTransformer):
                     ]
                     transformed['name'] = (
                         ' / '.join(name_parts) if name_parts 
-                        else 'Unknown Location'
+                        else f"Location {transformed['legacy_id']}"
                     )
             
             # Set default values for required fields
             transformed.setdefault('is_active', True)
             
             # Log the legacy ID for debugging
-            if 'legacy_id' in transformed:
-                logger.debug(f"Mapped legacy ID: {transformed['legacy_id']}")
+            logger.debug(f"Mapped legacy ID: {transformed['legacy_id']}")
             
             transformed_records.append(transformed)
             
         logger.info(
-            f"Transformed {len(transformed_records)} storage location records"
+            f"Transformed {len(transformed_records)} storage location records, "
+            f"skipped {skipped_records} records without legacy_id"
         )
         return transformed_records
 

@@ -144,6 +144,21 @@ class DjangoModelLoader(BaseLoader):
         Returns:
             LoadResult containing operation statistics
         """
+        # Check update_strategy from config
+        update_strategy = self.config.get("update_strategy", "update_or_create")
+        if update_strategy == "update":
+            # Only update existing records, don't create new ones
+            update_existing = True
+            create_new = False
+        elif update_strategy == "create":
+            # Only create new records, don't update existing ones
+            update_existing = False
+            create_new = True
+        else:  # "update_or_create" (default)
+            # Update existing records and create new ones
+            update_existing = True
+            create_new = True
+
         result = LoadResult()
         if not records:
             return result
@@ -195,7 +210,10 @@ class DjangoModelLoader(BaseLoader):
                 else:
                     result.skipped += 1
             else:
-                records_to_create.append((unique_value, prepared_record))
+                if create_new:
+                    records_to_create.append((unique_value, prepared_record))
+                else:
+                    result.skipped += 1
 
         logger.info(
             f"Records to create: {len(records_to_create)}, Records to update: {len(records_to_update)}"

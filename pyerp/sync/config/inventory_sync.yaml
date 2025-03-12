@@ -34,7 +34,7 @@ storage_locations:
       app_name: "inventory"
       model_name: "StorageLocation"
       unique_field: "legacy_id"
-      update_strategy: "update_or_create"
+      update_strategy: "update"
   schedule:
     frequency: "daily"
     time: "01:00"
