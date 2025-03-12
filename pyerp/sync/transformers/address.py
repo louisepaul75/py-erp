@@ -1,6 +1,5 @@
 """Transform address data from legacy format to new model format."""
 
-import logging
 from datetime import datetime
 from typing import Any, Dict, List, Set
 from zoneinfo import ZoneInfo
@@ -8,9 +7,11 @@ from zoneinfo import ZoneInfo
 from django.utils import timezone
 from django.apps import apps
 from .base import BaseTransformer
+from pyerp.utils.logging import get_logger
 
 
-logger = logging.getLogger(__name__)
+# Get logger for data sync operations
+logger = get_logger(__name__)
 
 
 class AddressTransformer(BaseTransformer):
@@ -123,16 +124,36 @@ class AddressTransformer(BaseTransformer):
                     try:
                         # Match on legacy_address_number
                         lookup_value = record["address_number"]
+                        logger.info(
+                            "Looking up customer with "
+                            "legacy_address_number: %s",
+                            lookup_value
+                        )
                         customer = Customer.objects.get(
                             legacy_address_number=lookup_value
                         )
                         # Set customer foreign key relationship
                         record["customer"] = customer
                         customer_found = True
-                    except Exception as e:
-                        extra = {"address_number": record["address_number"]}
+                        logger.info(
+                            "Found customer: %s (customer_number: %s) "
+                            "for address: %s",
+                            customer.id,
+                            customer.customer_number,
+                            lookup_value
+                        )
+                    except Customer.DoesNotExist:
                         logger.error(
-                            "Error looking up customer: %s", e,
+                            "No customer found with legacy_address_number: %s",
+                            lookup_value
+                        )
+                    except Exception as e:
+                        extra = {
+                            "address_number": record["address_number"],
+                            "error_type": type(e).__name__
+                        }
+                        logger.error(
+                            "Error looking up customer: %s", str(e),
                             extra=extra
                         )
                 
