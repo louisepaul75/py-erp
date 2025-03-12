@@ -72,20 +72,19 @@ class BaseTransformer(ABC):
 
     def apply_field_mappings(self, source_record: Dict[str, Any]) -> Dict[str, Any]:
         """Apply field mappings to a source record.
-
+        
         Args:
             source_record: Source record to transform
-
+            
         Returns:
             Transformed record with mapped fields
         """
         result = {}
-
-        # Apply field mappings
-        for target_field, source_field in self.field_mappings.items():
+        # apply field mappings
+        for source_field, target_field in self.field_mappings.items():
             if source_field in source_record:
                 result[target_field] = source_record[source_field]
-
+        
         return result
 
     def apply_custom_transformers(
