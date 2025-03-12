@@ -107,12 +107,6 @@ class BaseAPIClient:
         else:
             logger.info("No session cookie available")
         
-        # Log the complete URL being requested with params
-        params_str = ""
-        if 'params' in kwargs and kwargs['params']:
-            params_str = f" with params: {kwargs['params']}"
-        logger.info(f"Making {method} request to: {url}{params_str}")
-        
         # Construct and log the full URL with parameters for better debugging
         if 'params' in kwargs and kwargs['params']:
             from urllib.parse import urlencode
@@ -137,6 +131,13 @@ class BaseAPIClient:
             query_string = "&".join(query_params)
             full_url = f"{url}?{query_string}"
             logger.info(f"Full URL: {full_url}")
+            
+            # Remove params from kwargs since we're using the manually 
+            # constructed URL
+            params = kwargs.pop('params', None)
+        else:
+            full_url = url
+            params = None
 
         
         start_time = time.time()
@@ -151,15 +152,18 @@ class BaseAPIClient:
             else:
                 timeout = self.timeout
             
-            # Prepare the request to get the exact URL with all parameters
-            prepared_request = self.session.prepare_request(
-                requests.Request(method, url, **kwargs)
+            # Use the manually constructed URL directly instead of relying on 
+            # prepare_request to handle the parameters, which would apply automatic 
+            # encoding
+            response = self.session.request(
+                method=method,
+                url=full_url,
+                **kwargs,
+                timeout=timeout
             )
-            full_url = prepared_request.url
+            
             print("Exact full URL:", full_url)
             
-            # Send the prepared request with the timeout parameter
-            response = self.session.send(prepared_request, timeout=timeout)
             duration_ms = int((time.time() - start_time) * 1000)
             
             # Log the API request using our centralized logging
@@ -172,7 +176,7 @@ class BaseAPIClient:
                     "method": method,
                     "environment": self.environment,
                     "url": url,
-                    "params": kwargs.get('params', {}),
+                    "params": params if params else {},
                 }
             )
             
@@ -181,7 +185,7 @@ class BaseAPIClient:
                 log_performance(
                     name=f"legacy_erp_{method}_{endpoint}",
                     duration_ms=duration_ms,
-                    extra_context={"url": url, "params": kwargs.get('params', {})}
+                    extra_context={"url": url, "params": params if params else {}}
                 )
             print(response)
          
