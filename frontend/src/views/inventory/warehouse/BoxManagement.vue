@@ -150,7 +150,7 @@
                       label
                       class="text-capitalize"
                     >
-                      {{ $t(`inventory.status${item.status}`) }}
+                      {{ $t(`inventory.status.${item.status.toLowerCase()}`) }}
                     </v-chip>
                   </template>
 
@@ -162,7 +162,7 @@
                       label
                       class="text-capitalize"
                     >
-                      {{ $t(`inventory.purpose${item.purpose}`) }}
+                      {{ $t(`inventory.purpose.${item.purpose.toLowerCase()}`) }}
                     </v-chip>
                   </template>
 
@@ -195,7 +195,7 @@
                             color="primary"
                             class="mr-1"
                             v-bind="attrs"
-                            v-on="on"
+                            v-on="{ ...on }"
                             @click="viewBox(item)"
                           >
                             <v-icon x-small>mdi-eye</v-icon>
@@ -211,7 +211,7 @@
                             x-small
                             color="secondary"
                             v-bind="attrs"
-                            v-on="on"
+                            v-on="{ ...on }"
                             @click="editBox(item)"
                           >
                             <v-icon x-small>mdi-pencil</v-icon>
@@ -392,7 +392,7 @@
                   <v-list-item-title>{{ $t('inventory.status') }}</v-list-item-title>
                   <v-list-item-subtitle>
                     <v-chip :color="getStatusColor(selectedBox.status)" small>
-                      {{ selectedBox.status }}
+                      {{ $t(`inventory.status.${selectedBox.status.toLowerCase()}`) }}
                     </v-chip>
                   </v-list-item-subtitle>
                 </v-list-item-content>
@@ -407,7 +407,7 @@
                   <v-list-item-title>{{ $t('inventory.purpose') }}</v-list-item-title>
                   <v-list-item-subtitle>
                     <v-chip :color="getPurposeColor(selectedBox.purpose)" small>
-                      {{ selectedBox.purpose }}
+                      {{ $t(`inventory.purpose.${selectedBox.purpose.toLowerCase()}`) }}
                     </v-chip>
                   </v-list-item-subtitle>
                 </v-list-item-content>
@@ -544,19 +544,19 @@ export default defineComponent({
   computed: {
     statusOptions() {
       return [
-        { text: this.$t('inventory.statusAVAILABLE'), value: 'AVAILABLE' },
-        { text: this.$t('inventory.statusIN_USE'), value: 'IN_USE' },
-        { text: this.$t('inventory.statusRESERVED'), value: 'RESERVED' },
-        { text: this.$t('inventory.statusDAMAGED'), value: 'DAMAGED' },
-        { text: this.$t('inventory.statusRETIRED'), value: 'RETIRED' }
+        { text: this.$t('inventory.status.available'), value: 'AVAILABLE' },
+        { text: this.$t('inventory.status.in_use'), value: 'IN_USE' },
+        { text: this.$t('inventory.status.reserved'), value: 'RESERVED' },
+        { text: this.$t('inventory.status.damaged'), value: 'DAMAGED' },
+        { text: this.$t('inventory.status.retired'), value: 'RETIRED' }
       ];
     },
     purposeOptions() {
       return [
-        { text: this.$t('inventory.purposeSTORAGE'), value: 'STORAGE' },
-        { text: this.$t('inventory.purposePICKING'), value: 'PICKING' },
-        { text: this.$t('inventory.purposeTRANSPORT'), value: 'TRANSPORT' },
-        { text: this.$t('inventory.purposeWORKSHOP'), value: 'WORKSHOP' }
+        { text: this.$t('inventory.purpose.storage'), value: 'STORAGE' },
+        { text: this.$t('inventory.purpose.picking'), value: 'PICKING' },
+        { text: this.$t('inventory.purpose.transport'), value: 'TRANSPORT' },
+        { text: this.$t('inventory.purpose.workshop'), value: 'WORKSHOP' }
       ];
     },
     filteredBoxes() {
@@ -629,20 +629,20 @@ export default defineComponent({
     },
     getStatusColor(status: string): string {
       const statusMap = {
-        AVAILABLE: { color: 'success', text: this.$t('inventory.statusAvailable') },
-        IN_USE: { color: 'primary', text: this.$t('inventory.statusInUse') },
-        RESERVED: { color: 'warning', text: this.$t('inventory.statusReserved') },
-        DAMAGED: { color: 'error', text: this.$t('inventory.statusDamaged') },
-        RETIRED: { color: 'grey', text: this.$t('inventory.statusRetired') }
+        AVAILABLE: { color: 'success', text: this.$t('inventory.status.available') },
+        IN_USE: { color: 'primary', text: this.$t('inventory.status.in_use') },
+        RESERVED: { color: 'warning', text: this.$t('inventory.status.reserved') },
+        DAMAGED: { color: 'error', text: this.$t('inventory.status.damaged') },
+        RETIRED: { color: 'grey', text: this.$t('inventory.status.retired') }
       };
       return statusMap[status as keyof typeof statusMap]?.color || 'grey';
     },
     getPurposeColor(purpose: string): string {
       const purposeMap = {
-        STORAGE: { color: 'blue', text: this.$t('inventory.purposeStorage') },
-        PICKING: { color: 'green', text: this.$t('inventory.purposePicking') },
-        TRANSPORT: { color: 'orange', text: this.$t('inventory.purposeTransport') },
-        WORKSHOP: { color: 'purple', text: this.$t('inventory.purposeWorkshop') }
+        STORAGE: { color: 'blue', text: this.$t('inventory.purpose.storage') },
+        PICKING: { color: 'green', text: this.$t('inventory.purpose.picking') },
+        TRANSPORT: { color: 'orange', text: this.$t('inventory.purpose.transport') },
+        WORKSHOP: { color: 'purple', text: this.$t('inventory.purpose.workshop') }
       };
       return purposeMap[purpose as keyof typeof purposeMap]?.color || 'grey';
     },
