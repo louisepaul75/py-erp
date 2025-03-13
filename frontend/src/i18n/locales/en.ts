@@ -140,6 +140,25 @@ export default {
     dashboardDescription: 'Detailed inventory statistics and analytics will be available here soon',
     productInventoryDescription: 'Product inventory management will be available here soon',
     movementsPageDescription: 'Inventory movement tracking will be available here soon',
-    warehouseMapDescription: 'Interactive warehouse map will be available here soon'
+    warehouseMapDescription: 'Interactive warehouse map will be available here soon',
+    boxCode: 'Box Code',
+    boxType: 'Box Type',
+    storageLocation: 'Storage Location',
+    status: 'Status',
+    purpose: 'Purpose',
+    availableSlots: 'Available Slots',
+    noLocation: 'No Location',
+    statusAvailable: 'Available',
+    statusInUse: 'In Use',
+    statusReserved: 'Reserved',
+    statusDamaged: 'Damaged',
+    statusRetired: 'Retired',
+    purposeStorage: 'Storage',
+    purposePicking: 'Picking',
+    purposeTransport: 'Transport',
+    purposeWorkshop: 'Workshop',
+    boxes: 'Boxes',
+    boxTypes: 'Box Types',
+    noNotes: 'No notes'
   }
 };

@@ -4,14 +4,14 @@
       <v-col cols="12">
         <v-card>
           <v-card-title class="text-h5 py-3">
-            {{ $t('inventory.warehouseManagement') }} / {{ $t('inventory.lagerverwaltung') }}
+            {{ $t('inventory.warehouseManagement') }}
           </v-card-title>
           <v-tabs v-model="activeTab" background-color="secondary" dark>
             <v-tab :to="{ name: 'StorageLocations' }">
               {{ $t('inventory.storageLocations') }}
             </v-tab>
             <v-tab :to="{ name: 'BoxManagement' }">
-              {{ $t('inventory.boxManagement') }} / {{ $t('inventory.schuettenverwaltung') }}
+              {{ $t('inventory.boxManagement') }}
             </v-tab>
             <v-tab :to="{ name: 'WarehouseMap' }">
               {{ $t('inventory.warehouseMap') }}

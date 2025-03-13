@@ -3,20 +3,27 @@
     <v-row>
       <v-col cols="12">
         <v-card>
-          <v-card-title class="d-flex justify-space-between align-center">
-            <span class="text-h6">
-              {{ $t('inventory.boxManagement') }} / {{ $t('inventory.schuettenverwaltung') }}
-            </span>
-            <v-btn color="primary" @click="refreshData">
+          <!-- Simple header with tabs and refresh -->
+          <v-card-title class="d-flex justify-space-between align-center px-4">
+            <div class="d-flex align-center">
+              <v-tabs v-model="activeTab">
+                <v-tab value="boxes" class="text-none">
+                  <v-icon left>mdi-package-variant</v-icon>
+                  {{ $t('inventory.boxes') }}
+                </v-tab>
+                <v-tab value="boxTypes" class="text-none">
+                  <v-icon left>mdi-package-variant-closed</v-icon>
+                  {{ $t('inventory.boxTypes') }}
+                </v-tab>
+              </v-tabs>
+            </div>
+            <v-btn color="primary" @click="refreshData" class="ml-4">
               <v-icon left>mdi-refresh</v-icon>
               {{ $t('common.refresh') }}
             </v-btn>
           </v-card-title>
 
-          <v-tabs v-model="activeTab">
-            <v-tab value="boxes">{{ $t('inventory.boxes') }}</v-tab>
-            <v-tab value="boxTypes">{{ $t('inventory.boxTypes') }}</v-tab>
-          </v-tabs>
+          <v-divider />
 
           <v-card-text>
             <!-- Box Types Tab -->
@@ -47,8 +54,9 @@
                     <v-chip
                       :color="getStatusColor(item.status)"
                       small
+                      label
                     >
-                      {{ item.status }}
+                      {{ $t(`inventory.status${item.status}`) }}
                     </v-chip>
                   </template>
 
@@ -57,15 +65,16 @@
                     <v-chip
                       :color="getPurposeColor(item.purpose)"
                       small
+                      label
                     >
-                      {{ item.purpose }}
+                      {{ $t(`inventory.purpose${item.purpose}`) }}
                     </v-chip>
                   </template>
 
                   <!-- Storage Location column -->
                   <template v-slot:item.storage_location="{ item }">
                     <span v-if="item.storage_location">{{ item.storage_location.name }}</span>
-                    <span v-else class="text-caption">{{ $t('inventory.noLocation') }}</span>
+                    <span v-else class="text-caption grey--text">{{ $t('inventory.noLocation') }}</span>
                   </template>
 
                   <!-- Actions column -->
@@ -278,7 +287,16 @@
                 </v-list-item-icon>
                 <v-list-item-content>
                   <v-list-item-title>{{ $t('inventory.availableSlots') }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedBox.available_slots }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>
+                    <v-chip
+                      :color="selectedBox.available_slots > 0 ? 'success' : 'error'"
+                      small
+                      label
+                      outlined
+                    >
+                      {{ selectedBox.available_slots }}
+                    </v-chip>
+                  </v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>
             </v-col>
@@ -328,13 +346,50 @@ export default defineComponent({
         { text: this.$t('common.actions'), value: 'actions', sortable: false, align: 'center' }
       ],
       boxHeaders: [
-        { text: this.$t('inventory.code'), value: 'code', sortable: true },
-        { text: this.$t('inventory.boxType'), value: 'box_type.name', sortable: true },
-        { text: this.$t('inventory.location'), value: 'storage_location', sortable: true },
-        { text: this.$t('inventory.status'), value: 'status', sortable: true },
-        { text: this.$t('inventory.purpose'), value: 'purpose', sortable: true },
-        { text: this.$t('inventory.availableSlots'), value: 'available_slots', sortable: true },
-        { text: this.$t('common.actions'), value: 'actions', sortable: false, align: 'center' }
+        { 
+          text: this.$t('inventory.boxCode'),
+          value: 'code',
+          sortable: true,
+          align: 'start'
+        },
+        { 
+          text: this.$t('inventory.boxType'),
+          value: 'box_type.name',
+          sortable: true 
+        },
+        { 
+          text: this.$t('inventory.storageLocation'),
+          value: 'storage_location',
+          sortable: true 
+        },
+        { 
+          text: this.$t('inventory.status'),
+          value: 'status',
+          sortable: true,
+          align: 'center',
+          width: '120'
+        },
+        { 
+          text: this.$t('inventory.purpose'),
+          value: 'purpose',
+          sortable: true,
+          align: 'center',
+          width: '120'
+        },
+        { 
+          text: this.$t('inventory.availableSlots'),
+          value: 'available_slots',
+          sortable: true,
+          align: 'center',
+          width: '100'
+        },
+        { 
+          text: this.$t('common.actions'),
+          value: 'actions',
+          sortable: false,
+          align: 'center',
+          width: '100'
+        }
       ],
       detailDialog: false,
       selectedBoxType: null as BoxType | null,
@@ -386,23 +441,23 @@ export default defineComponent({
       console.info(this.$t('common.featureNotImplemented'));
     },
     getStatusColor(status: string): string {
-      const colors = {
-        AVAILABLE: 'success',
-        IN_USE: 'primary',
-        RESERVED: 'warning',
-        DAMAGED: 'error',
-        RETIRED: 'grey'
+      const statusMap = {
+        AVAILABLE: { color: 'success', text: this.$t('inventory.statusAvailable') },
+        IN_USE: { color: 'primary', text: this.$t('inventory.statusInUse') },
+        RESERVED: { color: 'warning', text: this.$t('inventory.statusReserved') },
+        DAMAGED: { color: 'error', text: this.$t('inventory.statusDamaged') },
+        RETIRED: { color: 'grey', text: this.$t('inventory.statusRetired') }
       };
-      return colors[status as keyof typeof colors] || 'grey';
+      return statusMap[status as keyof typeof statusMap]?.color || 'grey';
     },
     getPurposeColor(purpose: string): string {
-      const colors = {
-        STORAGE: 'blue',
-        PICKING: 'green',
-        TRANSPORT: 'orange',
-        WORKSHOP: 'purple'
+      const purposeMap = {
+        STORAGE: { color: 'blue', text: this.$t('inventory.purposeStorage') },
+        PICKING: { color: 'green', text: this.$t('inventory.purposePicking') },
+        TRANSPORT: { color: 'orange', text: this.$t('inventory.purposeTransport') },
+        WORKSHOP: { color: 'purple', text: this.$t('inventory.purposeWorkshop') }
       };
-      return colors[purpose as keyof typeof colors] || 'grey';
+      return purposeMap[purpose as keyof typeof purposeMap]?.color || 'grey';
     }
   }
 });
