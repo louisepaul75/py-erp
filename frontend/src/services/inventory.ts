@@ -16,6 +16,27 @@ export interface BoxType {
 }
 
 /**
+ * Interface for Box data
+ */
+export interface Box {
+  id: number;
+  code: string;
+  barcode: string;
+  box_type: {
+    id: number;
+    name: string;
+  };
+  storage_location: {
+    id: number;
+    name: string;
+  } | null;
+  status: string;
+  purpose: string;
+  notes: string;
+  available_slots: number;
+}
+
+/**
  * Interface for StorageLocation data
  */
 export interface StorageLocation {
@@ -49,6 +70,14 @@ export const inventoryService = {
    */
   getBoxType(id: number): Promise<BoxType> {
     return api.get(`/inventory/box-types/${id}/`).then(response => response.data);
+  },
+
+  /**
+   * Get all boxes
+   * @returns Promise with boxes data
+   */
+  getBoxes(): Promise<Box[]> {
+    return api.get('/inventory/boxes/').then(response => response.data);
   },
 
   /**

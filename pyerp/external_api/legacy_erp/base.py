@@ -590,6 +590,7 @@ class BaseAPIClient:
             'MODIFICATIONDATE',
             'UStID_Dat',
             'letzteLieferung',
+            'Druckdatum',
 
         }
         

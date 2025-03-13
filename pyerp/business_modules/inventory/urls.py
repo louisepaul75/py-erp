@@ -1,9 +1,10 @@
 from django.http import JsonResponse
 from django.urls import path
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import BoxType, StorageLocation
+from .models import BoxType, StorageLocation, Box
 
 app_name = "inventory"
 
@@ -62,11 +63,40 @@ def storage_locations_list(request):
     return Response(data)
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def boxes_list(request):
+    """API endpoint to list all boxes."""
+    boxes = Box.objects.all()
+    data = [
+        {
+            "id": box.id,
+            "code": box.code,
+            "barcode": box.barcode,
+            "box_type": {
+                "id": box.box_type.id,
+                "name": box.box_type.name,
+            },
+            "storage_location": {
+                "id": box.storage_location.id,
+                "name": box.storage_location.name,
+            } if box.storage_location else None,
+            "status": box.status,
+            "purpose": box.purpose,
+            "notes": box.notes,
+            "available_slots": box.available_slots,
+        }
+        for box in boxes
+    ]
+    return Response(data)
+
+
 # URL patterns for the inventory app
 urlpatterns = [
     path("status/", placeholder_view, name="status"),
     path("placeholder/", placeholder_view, name="placeholder"),
     path("box-types/", box_types_list, name="box_types_list"),
+    path("boxes/", boxes_list, name="boxes_list"),
     path(
         "storage-locations/",
         storage_locations_list,

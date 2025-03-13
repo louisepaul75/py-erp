@@ -113,18 +113,22 @@ class LegacyERPClient(BaseAPIClient):
 
 if __name__ == "__main__":
     pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', 10)
+    pd.set_option('display.width', 1000)
 
     client = LegacyERPClient(environment="live")
 
-    # Filter query for records modified after March 11, 2025
-    filter_query = [
-        # ["modified_date", ">", dt(2025, 1, 10)],
-    ]
-    print(filter_query)
-    # Fetch records from the "Kunden" table
+    # Fetch sample records from the box master table
     df = client.fetch_table(
-        table_name="parameter", top=15000, filter_query=filter_query
+        table_name="Stamm_Lager_Schuetten",
+        top=10  # Fetch just 10 records for analysis
     )
 
-    df = df.loc[df["scope"] == "Schüttentypen"]
-    print(pd.DataFrame(df['data_'].iloc[0]['Schüttentypen']))
+    print("\nColumns in Stamm_Lager_Schuetten:")
+    print(df.columns.tolist())
+    print("\nSample records:")
+    print(df.head())
+    
+    # Display detailed info for first record
+    print("\nDetailed first record:")
+    print(df.iloc[0].to_dict())

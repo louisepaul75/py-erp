@@ -369,9 +369,10 @@ class BoxTypeTransformer(BaseTransformer):
 
 class BoxTransformer(BaseTransformer):
     """
-    Transformer for box data.
+    Transformer for box data from Stamm_Lager_Schuetten table.
     
-    This transformer converts box data to the format required by the Box model.
+    This transformer converts legacy box data to the format required by 
+    the Box model.
     """
     
     # Define purpose mapping based on box characteristics
@@ -383,67 +384,132 @@ class BoxTransformer(BaseTransformer):
         'werkstatt': 'WORKSHOP',
     }
     
-    def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def transform(
+        self, source_data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """
-        Transform box data.
+        Transform box data from Stamm_Lager_Schuetten records.
         
         Args:
-            source_data: List of dictionaries containing box data
+            source_data: List of dictionaries containing box data from 
+                legacy Stamm_Lager_Schuetten table
             
         Returns:
             List of dictionaries in the format required by Box model
         """
         transformed_records = []
         
+        # Get all existing box types for validation
+        from pyerp.business_modules.inventory.models import BoxType
+        existing_box_types = {
+            bt.name: bt for bt in BoxType.objects.all()
+        }
+        
         for record in source_data:
-            # Apply field mappings from config
-            transformed = self.apply_field_mappings(record)
+            # Skip records without data_ field
+            if 'data_' not in record:
+                msg = f"Record {record.get('ID')} has no data_ field"
+                logger.warning(msg)
+                continue
+
+            # Extract legacy_id
+            legacy_id = (
+                str(record.get('ID')) 
+                if record.get('ID') is not None 
+                else None
+            )
+            if not legacy_id:
+                logger.warning("Record has no ID field")
+                continue
+
+            # Extract data from data_ JSON field
+            data = record.get('data_', {})
             
-            # Apply custom transformations
-            transformed = self.apply_custom_transformers(transformed, record)
-            
-            # Set default values for required fields
-            transformed.setdefault('status', 'AVAILABLE')
-            
-            # Determine purpose based on box type or name
-            purpose = self._determine_purpose(record)
-            transformed.setdefault('purpose', purpose)
-            
+            # Extract box type name
+            box_type_name = data.get('Schuettentype')
+            if not box_type_name:
+                msg = f"Record {legacy_id} has no box type"
+                logger.warning(msg)
+                continue
+
+            # Validate box type exists and get instance
+            box_type = existing_box_types.get(box_type_name)
+            if not box_type:
+                msg = (
+                    f"Box type '{box_type_name}' not found "
+                    f"for box {legacy_id}"
+                )
+                logger.error(msg)
+                continue
+
+            # Extract storage location code (now optional)
+            storage_location_code = data.get('Lagerort')
+            if not storage_location_code:
+                logger.info(
+                    f"Record {legacy_id} has no storage location"
+                )
+                storage_location_code = None
+
+            # Map purpose from Schuettenzweck
+            purpose = data.get('Schuettenzweck', '').lower()
+            purpose = self.PURPOSE_MAPPING.get(purpose, 'STORAGE')
+
+            # Extract parent box ID from URI if present
+            parent_box_legacy_id = None
+            if 'viele_schuetten' in record:
+                try:
+                    parent_data = record['viele_schuetten']
+                    if (isinstance(parent_data, dict) and 
+                            '__deferred' in parent_data):
+                        uri = parent_data['__deferred'].get('uri', '')
+                        if uri:
+                            # Extract ID from URI pattern
+                            import re
+                            pattern = r'Stamm_Lager_Schuetten\[(\d+)\]'
+                            match = re.search(pattern, uri)
+                            if match:
+                                parent_box_legacy_id = match.group(1)
+                    elif (isinstance(parent_data, str) and 
+                          parent_data.isdigit()):
+                        parent_box_legacy_id = parent_data
+                except (KeyError, IndexError, AttributeError) as e:
+                    msg = (
+                        f"Could not extract parent box ID from "
+                        f"{record.get('viele_schuetten')}: {str(e)}"
+                    )
+                    logger.warning(msg)
+
+            # Build transformed record
+            transformed = {
+                'legacy_id': legacy_id,
+                'code': f'SC{legacy_id}',
+                'box_type': box_type,  # Set the actual BoxType instance
+                'box_type_name': box_type_name,  # Keep name for reference
+                'storage_location_code': storage_location_code,
+                'purpose': purpose,
+                'max_slots': record.get('max_Anzahl_Slots', 1),
+                'unit_count': data.get('Anzahl_Schuetteneinheiten', 1),
+                'last_labelprint_date': record.get('Druckdatum'),
+                'last_labelprint_time': record.get('Druckzeit'),
+                'parent_box_legacy_id': parent_box_legacy_id,
+                'status': 'AVAILABLE',
+                'is_active': True,
+                'is_synchronized': True,
+            }
+
+            # Add audit fields
+            audit_fields = [
+                'created_name', 'created_date', 'created_time',
+                'modified_name', 'modified_date', 'modified_time'
+            ]
+            for field in audit_fields:
+                if field in record:
+                    transformed[field] = record[field]
+
             transformed_records.append(transformed)
-            
+
         logger.info(f"Transformed {len(transformed_records)} box records")
         return transformed_records
-    
-    def _determine_purpose(self, record: Dict[str, Any]) -> str:
-        """
-        Determine the purpose of the box based on its characteristics.
-        
-        Args:
-            record: Dictionary containing box data
-            
-        Returns:
-            Purpose of the box (STORAGE, PICKING, TRANSPORT, WORKSHOP)
-        """
-        # Check if purpose is explicitly provided
-        if 'purpose' in record:
-            purpose = record['purpose'].upper()
-            if purpose in ['STORAGE', 'PICKING', 'TRANSPORT', 'WORKSHOP']:
-                return purpose
-        
-        # Check if box type name contains purpose indicators
-        box_type_name = ''
-        if 'box_type_name' in record:
-            box_type_name = record['box_type_name'].lower()
-        elif 'box_type' in record and hasattr(record['box_type'], 'name'):
-            box_type_name = record['box_type'].name.lower()
-        
-        # Check for purpose indicators in the name
-        for keyword, purpose in self.PURPOSE_MAPPING.items():
-            if keyword in box_type_name:
-                return purpose
-        
-        # Default to storage
-        return 'STORAGE'
 
 
 class BoxSlotTransformer(BaseTransformer):

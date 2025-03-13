@@ -190,6 +190,8 @@ class Box(SalesModel):
         StorageLocation,
         on_delete=models.PROTECT,
         related_name="boxes",
+        null=True,
+        blank=True,
         help_text=_("Storage location where the box is placed"),
     )
     status = models.CharField(
