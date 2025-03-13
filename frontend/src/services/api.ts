@@ -37,8 +37,6 @@ const apiBaseUrl = determineBaseUrl();
 
 // Log the API base URL being used
 console.log('API Base URL:', apiBaseUrl);
-console.log('Running on hostname:', window.location.hostname);
-console.log('Is specific IP:', window.location.hostname === '192.168.73.65');
 console.log(
   'Is localhost:',
   window.location.hostname === 'localhost' ||
@@ -52,7 +50,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true // Required for cookies/CORS
+  withCredentials: true, // Required for cookies/CORS
+  timeout: 30000 // Set a 30 second timeout
 });
 
 // Flag to prevent multiple simultaneous token refreshes
@@ -119,7 +118,8 @@ api.interceptors.response.use(
           baseURL: originalRequest?.baseURL,
           method: originalRequest?.method,
           headers: originalRequest?.headers
-        }
+        },
+        error: error
       });
       return Promise.reject(error);
     }
@@ -131,7 +131,8 @@ api.interceptors.response.use(
       baseURL: originalRequest.baseURL,
       fullURL: originalRequest.baseURL + originalRequest.url,
       error: error.response?.data,
-      headers: originalRequest.headers
+      headers: originalRequest.headers,
+      response: error.response
     });
 
     // Handle 401 Unauthorized error

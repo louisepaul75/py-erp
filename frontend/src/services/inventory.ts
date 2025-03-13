@@ -42,12 +42,14 @@ export interface Box {
 export interface StorageLocation {
   id: number;
   name: string;
+  description: string;
   country: string;
   city_building: string;
-  unit: number | null;
-  compartment: number | null;
-  shelf: number | null;
-  location_code: string;
+  unit: string;
+  compartment: string;
+  shelf: string;
+  sale: boolean;
+  special_spot: boolean;
   is_active: boolean;
 }
 
@@ -60,7 +62,11 @@ export const inventoryService = {
    * @returns Promise with box types data
    */
   getBoxTypes(): Promise<BoxType[]> {
-    return api.get('/inventory/box-types/').then(response => response.data);
+    console.log('Fetching box types...');
+    return api.get('/inventory/box-types/').then(response => {
+      console.log('Box types response:', response.data);
+      return response.data;
+    });
   },
 
   /**
@@ -69,15 +75,31 @@ export const inventoryService = {
    * @returns Promise with box type data
    */
   getBoxType(id: number): Promise<BoxType> {
-    return api.get(`/inventory/box-types/${id}/`).then(response => response.data);
+    console.log(`Fetching box type ${id}...`);
+    return api.get(`/inventory/box-types/${id}/`).then(response => {
+      console.log('Box type response:', response.data);
+      return response.data;
+    });
   },
 
   /**
    * Get all boxes
    * @returns Promise with boxes data
    */
-  getBoxes(): Promise<Box[]> {
-    return api.get('/inventory/boxes/').then(response => response.data);
+  getBoxes(page = 1, pageSize = 10): Promise<{ results: Box[], total: number, page: number, page_size: number, total_pages: number }> {
+    console.log('Fetching boxes...');
+    return api.get('/inventory/boxes/', {
+      params: {
+        page,
+        page_size: pageSize
+      }
+    }).then(response => {
+      console.log('Boxes response:', response.data);
+      return response.data;
+    }).catch(error => {
+      console.error('Error fetching boxes:', error);
+      throw error;
+    });
   },
 
   /**
@@ -85,7 +107,11 @@ export const inventoryService = {
    * @returns Promise with storage locations data
    */
   getStorageLocations(): Promise<StorageLocation[]> {
-    return api.get('/inventory/storage-locations/').then(response => response.data);
+    console.log('Fetching storage locations...');
+    return api.get('/inventory/storage-locations/').then(response => {
+      console.log('Storage locations response:', response.data);
+      return response.data;
+    });
   },
 
   /**
@@ -94,7 +120,11 @@ export const inventoryService = {
    * @returns Promise with storage location data
    */
   getStorageLocation(id: number): Promise<StorageLocation> {
-    return api.get(`/inventory/storage-locations/${id}/`).then(response => response.data);
+    console.log(`Fetching storage location ${id}...`);
+    return api.get(`/inventory/storage-locations/${id}/`).then(response => {
+      console.log('Storage location response:', response.data);
+      return response.data;
+    });
   }
 };
 

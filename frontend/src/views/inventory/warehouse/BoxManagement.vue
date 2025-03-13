@@ -35,10 +35,11 @@
                   :headers="boxHeaders"
                   :items="inventoryStore.getBoxes"
                   :loading="inventoryStore.isBoxesLoading"
-                  :items-per-page="10"
-                  :footer-props="{
-                    'items-per-page-options': [10, 25, 50, 100],
-                  }"
+                  :items-per-page="inventoryStore.getBoxesPagination.pageSize"
+                  :page="inventoryStore.getBoxesPagination.page"
+                  :server-items-length="inventoryStore.getBoxesPagination.total"
+                  @update:page="handlePageChange"
+                  @update:items-per-page="handlePageSizeChange"
                   class="elevation-1"
                 >
                   <!-- Status column -->
@@ -350,6 +351,12 @@ export default defineComponent({
         this.inventoryStore.fetchBoxTypes(),
         this.inventoryStore.fetchBoxes()
       ]);
+    },
+    handlePageChange(page: number) {
+      this.inventoryStore.fetchBoxes(page);
+    },
+    handlePageSizeChange(pageSize: number) {
+      this.inventoryStore.fetchBoxes(1, pageSize);
     },
     formatDimensions(item: BoxType) {
       if (!item.length || !item.width || !item.height) {
