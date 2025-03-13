@@ -28,7 +28,9 @@ class Command(BaseCommand):
                 "box_types", 
                 "boxes", 
                 "box_slots", 
-                "product_storage"
+                "product_storage",
+                "product_storage_artikel_lagerorte",
+                "product_storage_lager_schuetten"
             ],
             help="Specific inventory component to sync",
         )
@@ -148,7 +150,9 @@ class Command(BaseCommand):
                 'box_types', 
                 'boxes', 
                 'box_slots', 
-                'product_storage'
+                'product_storage',
+                'product_storage_artikel_lagerorte',
+                'product_storage_lager_schuetten'
             ]
             mappings = mappings.filter(entity_type__in=inventory_components)
             

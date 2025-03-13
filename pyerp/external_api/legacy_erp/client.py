@@ -113,14 +113,14 @@ class LegacyERPClient(BaseAPIClient):
 
 if __name__ == "__main__":
     pd.set_option('display.max_columns', None)
-    pd.set_option('display.max_rows', 10)
-    pd.set_option('display.width', 1000)
+    # pd.set_option('display.max_rows', 10)
+    # pd.set_option('display.width', 1000)
 
     client = LegacyERPClient(environment="live")
 
     # Fetch sample records from the box master table
     df = client.fetch_table(
-        table_name="Stamm_Lager_Schuetten_Slots",
+        table_name="Artikel_Lagerorte",
         top=10  # Fetch just 10 records for analysis
     )
 

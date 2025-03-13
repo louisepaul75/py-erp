@@ -426,6 +426,17 @@ We have made significant progress on the inventory management system:
       - Handled duplicate slots with appropriate validation
       - Generated consistent barcodes for all slots
 
+18. **Product Storage Synchronization Issue Identified**:
+    - Discovered a critical mismatch in the product identification during ProductStorage synchronization:
+      - The `ProductStorageTransformer` is using `ID_Artikel_Stamm` from the Artikel_Lagerorte table to look up products
+      - However, the VariantProduct model's `legacy_id` field contains the UUID from the legacy system (matching `__KEY` and `UID`), not the `ID_Artikel_Stamm` value
+      - This mismatch is causing all product lookups to fail with "Product with legacy_id X not found" errors
+      - Verified the issue by examining sample data from the legacy system and comparing with our database schema
+    - Determined that we need to expand our product variant synchronization to include the `ID_Artikel_Stamm` value:
+      - Need to add a new field to the VariantProduct model to store the `ID_Artikel_Stamm` value
+      - Must update the product variant sync process to capture this additional identifier
+      - Will need to modify the `ProductStorageTransformer._get_product` method to look up products using this new field
+
 ## Next Steps
 1. **Fix Box Type Synchronization Issues**:
    - Analyze all unique box types in legacy data
@@ -434,51 +445,59 @@ We have made significant progress on the inventory management system:
    - Add validation checks before box synchronization
    - Create report of unmatched box types
 
-2. **Implement Product Storage Synchronization**:
+2. **Fix Product Storage Synchronization**:
+   - Add a new `legacy_artikel_id` field to the VariantProduct model to store the `ID_Artikel_Stamm` value
+   - Create a migration to add this field and ensure it's properly indexed
+   - Update the product variant sync process to capture and store the `ID_Artikel_Stamm` value
+   - Modify the `ProductStorageTransformer._get_product` method to look up products using the new field
+   - Run a one-time update to populate the field for existing products
+   - Implement proper error handling and logging for diagnostic purposes
+
+3. **Implement Product Storage Synchronization**:
    - Create ProductStorageTransformer for inventory data
    - Implement synchronization for box inventory data from Lager_Schuetten and Lager_Schuetten_Einheiten
    - Create history tracking based on Historie_Stamm_Lager_Schuetten table structure
    - Add validation for product and slot relationships
    - Implement proper error handling for missing products or slots
 
-3. Create APIs for inventory operations
+4. Create APIs for inventory operations
    - Storage location management endpoints
    - Box and slot operations
    - Product placement and removal
    - Inventory movements and reservations
 
-4. Design UI components for inventory management
+5. Design UI components for inventory management
    - Storage location browsing/management
    - Box management with slot visualization
    - Product placement interface
    - Movement recording
 
-5. Integrate with the sales module for order fulfillment
+6. Integrate with the sales module for order fulfillment
    - Implement picking list generation
    - Create order fulfillment workflow
    - Add inventory reservation system
 
-6. Develop inventory movement tracking functionality
+7. Develop inventory movement tracking functionality
    - Implement movement history
    - Add audit trail for inventory changes
    - Create reporting tools for movement analysis
 
-7. Add inventory reporting features
+8. Add inventory reporting features
    - Stock level reports
    - Inventory valuation
    - Movement and turnover analysis
 
-8. Test the complete workflow with real data
+9. Test the complete workflow with real data
    - Create comprehensive test scenarios
    - Validate with real-world inventory data
    - Perform load testing with large datasets
 
-9. Enhance frontend functionality
-   - Add create/edit forms for box types
-   - Implement box assignment to storage locations
-   - Add filtering and search capabilities
-   - Create interactive warehouse map visualization
-   - Implement drag-and-drop box management
+10. Enhance frontend functionality
+    - Add create/edit forms for box types
+    - Implement box assignment to storage locations
+    - Add filtering and search capabilities
+    - Create interactive warehouse map visualization
+    - Implement drag-and-drop box management
 
 ## Acceptance Criteria
 1. Given I need to migrate data from the legacy system
@@ -592,25 +611,31 @@ We have made significant progress on the inventory management system:
    - Expected: Box and BoxSlot records should be created with proper relationships and data
    - Status: ✅ Completed - Successfully synchronized 3,475 boxes and over 3,800 box slots with proper relationships and data
 
-4. Product Placement
+4. Product Storage Synchronization
+   - Setup: Configure access to legacy Artikel_Lagerorte and Lager_Schuetten tables
+   - Steps: Run ProductStorage synchronization process after fixing the product ID mismatch
+   - Expected: ProductStorage records should be created with proper relationships to products and box slots
+   - Status: 🔄 In progress - Identified issue with product ID mismatch, implementing fix
+
+5. Product Placement
    - Setup: Create test storage locations, boxes, and products
    - Steps: Assign products to box slots
    - Expected: Products should be correctly associated with slots and locations
    - Status: 🔄 Pending implementation
 
-5. Box Movement
+6. Box Movement
    - Setup: Create test storage locations, boxes with products
    - Steps: Move a box to a different storage location
    - Expected: All product slots should update to the new location
    - Status: 🔄 Pending implementation
 
-6. Inventory Reservation
+7. Inventory Reservation
    - Setup: Create test products in storage
    - Steps: Reserve inventory for an order
    - Expected: Reserved inventory should be marked and not available for other orders
    - Status: 🔄 Pending implementation
 
-7. Picking Process
+8. Picking Process
    - Setup: Create test order with multiple products
    - Steps: Generate picking list and complete picking
    - Expected: Inventory should be updated and movements recorded
@@ -618,8 +643,9 @@ We have made significant progress on the inventory management system:
 
 ## Dependencies
 - [x] Access to legacy Stamm_Lagerorte table
-- [ ] Access to legacy Stamm_Lager_Schuetten table
-- [ ] Access to legacy Stamm_Lager_Schuetten_Slots table
+- [x] Access to legacy Stamm_Lager_Schuetten table
+- [x] Access to legacy Stamm_Lager_Schuetten_Slots table
+- [x] Access to legacy Artikel_Lagerorte table
 - [ ] Access to legacy Lager_Schuetten and Lager_Schuetten_Einheiten tables
 - [ ] Access to legacy Historie_Stamm_Lager_Schuetten table
 - [x] Product module
