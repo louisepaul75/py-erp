@@ -46,24 +46,35 @@ storage_locations:
 # Box Type Sync
 box_types:
   name: "Box Types Sync"
-  description: "Synchronize box types"
+  description: "Synchronize box types from legacy parameter table"
   source:
-    type: "manual"
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
     config:
-      data_source: "file"
+      environment: "live"
+      table_name: "parameter"
+      page_size: 1000
+      all_records: true
+      filter_query: "scope eq 'Schüttentypen'"
   transformer:
     type: "custom"
     class: "pyerp.sync.transformers.inventory.BoxTypeTransformer"
     config: {}
   loader:
     type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
     config:
       app_name: "inventory"
       model_name: "BoxType"
       unique_field: "name"
       update_strategy: "update_or_create"
   schedule:
-    frequency: "manual"
+    frequency: "daily"
+    time: "01:30"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > '{value}'"
 
 # Box Sync
 boxes:

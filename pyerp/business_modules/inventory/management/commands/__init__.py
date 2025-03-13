@@ -1,3 +1,3 @@
 """
-Management commands for inventory app.
+Management commands for the inventory module.
 """ 

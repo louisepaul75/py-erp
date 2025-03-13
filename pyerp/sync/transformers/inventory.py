@@ -105,38 +105,238 @@ class StammLagerorteTransformer(BaseTransformer):
 
 class BoxTypeTransformer(BaseTransformer):
     """
-    Transformer for box type data.
+    Transformer for box type data from the legacy system.
     
-    This transformer converts box type data to the format required by the 
-    BoxType model.
+    This transformer converts box type data from the parameter table
+    to the format required by the BoxType model.
     """
     
-    def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    # Define color mapping for standardization
+    COLOR_MAPPING = {
+        'Blau': 'blue',
+        'Gelb': 'yellow',
+        'Grün': 'green',
+        'Rot': 'red',
+        'Grau': 'gray',
+        'Orange': 'orange',
+        'Schwarz': 'black',
+        'Transparent': 'transparent',
+        'Weiß': 'white',
+    }
+    
+    # Define purpose mapping based on box characteristics
+    PURPOSE_MAPPING = {
+        'Lager': 'storage',
+        'Picken': 'picking',
+        'Transport': 'transport',
+        'Werkstatt': 'workshop',
+    }
+    
+    def transform(
+        self, source_data: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """
-        Transform box type data.
+        Transform box type data from the parameter table.
         
         Args:
-            source_data: List of dictionaries containing box type data
+            source_data: List of dictionaries containing parameter records
             
         Returns:
             List of dictionaries in the format required by BoxType model
         """
         transformed_records = []
         
-        for record in source_data:
-            # Apply field mappings from config
-            transformed = self.apply_field_mappings(record)
-            
-            # Apply custom transformations
-            transformed = self.apply_custom_transformers(transformed, record)
-            
-            # Set default values for required fields
-            transformed.setdefault('is_active', True)
-            
-            transformed_records.append(transformed)
-            
-        logger.info(f"Transformed {len(transformed_records)} box type records")
+        # Filter for parameter records with scope 'Schüttentypen'
+        schuettentypen_records = [
+            record for record in source_data 
+            if record.get('scope') == 'Schüttentypen'
+        ]
+        
+        if not schuettentypen_records:
+            logger.warning("No Schüttentypen records found in parameter table")
+            return []
+        
+        # Extract box types from the data_ field
+        for record in schuettentypen_records:
+            if 'data_' not in record or not record['data_']:
+                logger.warning(
+                    f"Record {record.get('id')} has no data_ field"
+                )
+                continue
+                
+            try:
+                box_types_data = record['data_'].get('Schüttentypen', [])
+                if not box_types_data:
+                    logger.warning(
+                        f"No Schüttentypen data found in record {record.get('id')}"
+                    )
+                    continue
+                    
+                for box_type in box_types_data:
+                    transformed = self._transform_box_type(box_type)
+                    if transformed:
+                        transformed_records.append(transformed)
+            except Exception as e:
+                logger.error(f"Error processing box type data: {e}")
+                continue
+        
+        logger.info(
+            f"Transformed {len(transformed_records)} box type records"
+        )
         return transformed_records
+    
+    def _transform_box_type(
+        self, box_type: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Transform a single box type record.
+        
+        Args:
+            box_type: Dictionary containing box type data
+            
+        Returns:
+            Dictionary in the format required by BoxType model
+        """
+        # Skip empty or invalid records
+        if not box_type.get('Type'):
+            logger.warning(
+                f"Skipping box type with no Type field: {box_type}"
+            )
+            return None
+            
+        # Extract the name and color from the Type field
+        name = box_type.get('Type', '')
+        color = self._extract_color(name)
+        
+        # Create description with manufacturer and part number
+        description = (
+            f"{box_type.get('Hersteller', '')} "
+            f"{box_type.get('Hersteller_Art_Nr', '')}"
+        ).strip()
+        
+        # Add color and purpose information to description
+        if color != 'other':
+            description += f" - Color: {color}"
+            
+        purpose = self._determine_purpose(box_type)
+        if purpose:
+            description += f" - Purpose: {purpose}"
+            
+        # Add dimensions to description
+        dimensions = []
+        if box_type.get('Box_Länge'):
+            dimensions.append(
+                f"Length: {box_type.get('Box_Länge')}mm"
+            )
+        if box_type.get('Box_Breite'):
+            dimensions.append(
+                f"Width: {box_type.get('Box_Breite')}mm"
+            )
+        if box_type.get('Box_Höhe'):
+            dimensions.append(
+                f"Height: {box_type.get('Box_Höhe')}mm"
+            )
+            
+        if dimensions:
+            description += f" - Dimensions: {', '.join(dimensions)}"
+            
+        # Add weight information to description
+        if box_type.get('Box_Gewicht'):
+            description += f" - Empty Weight: {box_type.get('Box_Gewicht')}g"
+            
+        if (box_type.get('Trenner_Gewicht') and 
+                float(box_type.get('Trenner_Gewicht', 0)) > 0):
+            description += (
+                f" - Divider Weight: {box_type.get('Trenner_Gewicht')}g"
+            )
+        
+        # Map fields from the box type data to the BoxType model
+        transformed = {
+            'name': name,
+            'description': description,
+            'length': self._convert_to_decimal(box_type.get('Box_Länge')),
+            'width': self._convert_to_decimal(box_type.get('Box_Breite')),
+            'height': self._convert_to_decimal(box_type.get('Box_Höhe')),
+            # Convert g to kg and round to 2 decimal places
+            'weight_capacity': self._convert_to_decimal(
+                box_type.get('Box_Gewicht'), 
+                unit_conversion=0.001,
+                round_to=2
+            ),
+            'slot_count': int(box_type.get('Slots', 1)),
+            'slot_naming_scheme': 'numeric',  # Default to numeric naming scheme
+            'legacy_id': str(box_type.get('id', '')),
+            'is_synchronized': True,
+        }
+        
+        return transformed
+    
+    def _extract_color(self, name: str) -> str:
+        """
+        Extract color from the box type name.
+        
+        Args:
+            name: Box type name
+            
+        Returns:
+            Standardized color name
+        """
+        for german_color, english_color in self.COLOR_MAPPING.items():
+            if german_color in name:
+                return english_color
+        return 'other'
+    
+    def _determine_purpose(self, box_type: Dict[str, Any]) -> str:
+        """
+        Determine the purpose of the box based on its characteristics.
+        
+        Args:
+            box_type: Dictionary containing box type data
+            
+        Returns:
+            Purpose of the box
+        """
+        # Default to 'storage' if no specific purpose can be determined
+        name = box_type.get('Type', '').lower()
+        
+        if 'lager' in name:
+            return 'storage'
+        elif 'picken' in name or 'pick' in name:
+            return 'picking'
+        elif 'transport' in name:
+            return 'transport'
+        elif 'werkstatt' in name:
+            return 'workshop'
+        
+        # Default to storage
+        return 'storage'
+    
+    def _convert_to_decimal(
+        self, value, unit_conversion=0.1, round_to=2
+    ) -> float:
+        """
+        Convert a value to a decimal, handling None and zero values.
+        
+        Args:
+            value: Value to convert
+            unit_conversion: Factor to convert units (default: 0.1 for mm to cm)
+            round_to: Number of decimal places to round to
+            
+        Returns:
+            Decimal value or None if conversion fails
+        """
+        if value is None:
+            return None
+            
+        try:
+            decimal_value = float(value)
+            # Apply unit conversion if value is positive
+            if decimal_value > 0:
+                # Convert and round to specified decimal places
+                return round(decimal_value * unit_conversion, round_to)
+            return None
+        except (ValueError, TypeError):
+            return None
 
 
 class BoxTransformer(BaseTransformer):
@@ -145,6 +345,15 @@ class BoxTransformer(BaseTransformer):
     
     This transformer converts box data to the format required by the Box model.
     """
+    
+    # Define purpose mapping based on box characteristics
+    PURPOSE_MAPPING = {
+        'lager': 'STORAGE',
+        'picken': 'PICKING',
+        'pick': 'PICKING',
+        'transport': 'TRANSPORT',
+        'werkstatt': 'WORKSHOP',
+    }
     
     def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -168,10 +377,45 @@ class BoxTransformer(BaseTransformer):
             # Set default values for required fields
             transformed.setdefault('status', 'AVAILABLE')
             
+            # Determine purpose based on box type or name
+            purpose = self._determine_purpose(record)
+            transformed.setdefault('purpose', purpose)
+            
             transformed_records.append(transformed)
             
         logger.info(f"Transformed {len(transformed_records)} box records")
         return transformed_records
+    
+    def _determine_purpose(self, record: Dict[str, Any]) -> str:
+        """
+        Determine the purpose of the box based on its characteristics.
+        
+        Args:
+            record: Dictionary containing box data
+            
+        Returns:
+            Purpose of the box (STORAGE, PICKING, TRANSPORT, WORKSHOP)
+        """
+        # Check if purpose is explicitly provided
+        if 'purpose' in record:
+            purpose = record['purpose'].upper()
+            if purpose in ['STORAGE', 'PICKING', 'TRANSPORT', 'WORKSHOP']:
+                return purpose
+        
+        # Check if box type name contains purpose indicators
+        box_type_name = ''
+        if 'box_type_name' in record:
+            box_type_name = record['box_type_name'].lower()
+        elif 'box_type' in record and hasattr(record['box_type'], 'name'):
+            box_type_name = record['box_type'].name.lower()
+        
+        # Check for purpose indicators in the name
+        for keyword, purpose in self.PURPOSE_MAPPING.items():
+            if keyword in box_type_name:
+                return purpose
+        
+        # Default to storage
+        return 'STORAGE'
 
 
 class BoxSlotTransformer(BaseTransformer):

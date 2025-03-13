@@ -143,6 +143,12 @@ class BoxType(SalesModel):
         default="numeric",
         help_text=_("Naming scheme for slots (numeric, alphabetic, etc.)"),
     )
+    purpose = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        help_text=_("Legacy purpose field - use Box.purpose instead"),
+    )
     
     class Meta:
         verbose_name = _("Box Type")
@@ -164,6 +170,12 @@ class Box(SalesModel):
         RESERVED = "RESERVED", _("Reserved")
         DAMAGED = "DAMAGED", _("Damaged")
         RETIRED = "RETIRED", _("Retired")
+    
+    class BoxPurpose(models.TextChoices):
+        STORAGE = "STORAGE", _("Storage")
+        PICKING = "PICKING", _("Picking")
+        TRANSPORT = "TRANSPORT", _("Transport")
+        WORKSHOP = "WORKSHOP", _("Workshop")
     
     code = models.CharField(
         max_length=50,
@@ -191,6 +203,12 @@ class Box(SalesModel):
         choices=BoxStatus.choices,
         default=BoxStatus.AVAILABLE,
         help_text=_("Current status of the box"),
+    )
+    purpose = models.CharField(
+        max_length=20,
+        choices=BoxPurpose.choices,
+        default=BoxPurpose.STORAGE,
+        help_text=_("Primary purpose of this box"),
     )
     notes = models.TextField(
         blank=True,
