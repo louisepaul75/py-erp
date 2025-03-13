@@ -86,9 +86,20 @@ api.interceptors.request.use(
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Log request for debugging
+    console.log('Making request:', {
+      method: config.method,
+      url: config.url,
+      baseURL: config.baseURL || '',
+      fullURL: (config.baseURL || '') + (config.url || ''),
+      headers: config.headers,
+      token: token ? 'Present' : 'Not present'
+    });
+
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
@@ -99,18 +110,33 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Log the error for debugging
-    console.debug('API Error:', {
+    // If error is network-related, log it and reject
+    if (!error.response) {
+      console.error('Network error:', {
+        message: error.message,
+        config: {
+          url: originalRequest?.url,
+          baseURL: originalRequest?.baseURL,
+          method: originalRequest?.method,
+          headers: originalRequest?.headers
+        }
+      });
+      return Promise.reject(error);
+    }
+
+    // Log response error for debugging
+    console.error('Response error:', {
       status: error.response?.status,
-      url: originalRequest?.url,
-      method: originalRequest?.method,
-      isRetry: originalRequest?._retry
+      url: originalRequest.url,
+      baseURL: originalRequest.baseURL,
+      fullURL: originalRequest.baseURL + originalRequest.url,
+      error: error.response?.data,
+      headers: originalRequest.headers
     });
 
-    // If error is 401 and we haven't tried refreshing token yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle 401 Unauthorized error
+    if (error.response.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If a token refresh is already in progress, add this request to the queue
         try {
           const token = await new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
@@ -118,7 +144,6 @@ api.interceptors.response.use(
           originalRequest.headers['Authorization'] = `Bearer ${token}`;
           return api(originalRequest);
         } catch (err) {
-          console.error('Failed to process queued request:', err);
           return Promise.reject(err);
         }
       }
@@ -127,50 +152,35 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Try to refresh the token
         const refreshToken = localStorage.getItem('refresh_token');
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
 
-        console.debug('Attempting to refresh token...');
         const response = await api.post('/token/refresh/', {
           refresh: refreshToken
         });
 
-        const newAccessToken = response.data.access;
-        console.debug('Token refresh successful');
+        const { access } = response.data;
+        localStorage.setItem('access_token', access);
 
-        // Store the new token
-        localStorage.setItem('access_token', newAccessToken);
+        api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
+        originalRequest.headers['Authorization'] = `Bearer ${access}`;
 
-        // Update the Authorization header
-        originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-        api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-
-        // Process any queued requests
-        processQueue(null, newAccessToken);
-
-        // Retry the original request
+        processQueue(null, access);
         return api(originalRequest);
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        // If refresh fails, clear tokens and reject all queued requests
+        processQueue(refreshError, null);
+        // Clear tokens and redirect to login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        processQueue(refreshError, null);
-
-        // Get auth store and logout
-        const authStore = useAuthStore();
-        await authStore.logout();
-
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    // For other errors or if refresh failed, reject the promise
     return Promise.reject(error);
   }
 );

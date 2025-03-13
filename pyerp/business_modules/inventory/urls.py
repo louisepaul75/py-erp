@@ -22,6 +22,7 @@ def placeholder_view(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def box_types_list(request):
     """API endpoint to list all box types."""
     box_types = BoxType.objects.all()

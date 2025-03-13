@@ -85,10 +85,13 @@ CORS_ALLOW_ALL_ORIGINS = (
 CORS_ALLOW_CREDENTIALS = (
     os.environ.get("CORS_ALLOW_CREDENTIALS", "True").lower() == "true"
 )
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000",
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://0.0.0.0:5173",
+    "http://localhost:8050",
+    "http://127.0.0.1:8050",
+]
 
 CORS_ALLOW_METHODS = [
     "DELETE",
@@ -109,6 +112,13 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
+]
+
+CORS_EXPOSE_HEADERS = [
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
 ]
 
 # Logging configuration for development
