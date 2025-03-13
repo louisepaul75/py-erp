@@ -5,7 +5,8 @@ Management command to synchronize box types from the legacy parameter table.
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from pyerp.sync.pipeline import SyncPipeline
+from pyerp.sync.models import SyncMapping
+from pyerp.sync.pipeline import PipelineFactory
 from pyerp.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -43,39 +44,58 @@ class Command(BaseCommand):
         self.stdout.write(f"Starting box types sync at {start_time}")
         
         try:
-            # Initialize the sync pipeline for box types
-            pipeline = SyncPipeline(
-                component_name="box_types",
-                config_file="inventory_sync.yaml",
-                force_full_sync=force,
+            # Get the box_types mapping
+            mappings = SyncMapping.objects.filter(
+                entity_type="box_types",
+                active=True
             )
             
+            if not mappings.exists():
+                self.stdout.write(
+                    self.style.ERROR("No active box_types mapping found")
+                )
+                return
+                
+            # Use the first active mapping
+            mapping = mappings.first()
+            self.stdout.write(f"Using mapping: {mapping}")
+            
+            # Create the pipeline using PipelineFactory
+            pipeline = PipelineFactory.create_pipeline(mapping)
+            
             # Run the sync
-            result = pipeline.run()
+            sync_log = pipeline.run(
+                incremental=not force,
+                batch_size=100
+            )
             
             # Log the results
             end_time = timezone.now()
             duration = (end_time - start_time).total_seconds()
             
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Box types sync completed in {duration:.2f} seconds"
+            if sync_log.status == 'completed':
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Box types sync completed in {duration:.2f} seconds"
+                    )
                 )
-            )
-            self.stdout.write(
-                f"Processed {result.get('processed', 0)} records, "
-                f"created {result.get('created', 0)}, "
-                f"updated {result.get('updated', 0)}, "
-                f"skipped {result.get('skipped', 0)}, "
-                f"errors {result.get('errors', 0)}"
-            )
-            
-            if result.get("errors", 0) > 0:
+            else:
                 self.stdout.write(
                     self.style.WARNING(
-                        f"Encountered {result.get('errors', 0)} errors "
-                        f"during sync"
+                        f"Box types sync completed with status {sync_log.status} "
+                        f"in {duration:.2f} seconds"
                     )
+                )
+            
+            self.stdout.write(
+                f"Processed {sync_log.records_processed} records, "
+                f"succeeded {sync_log.records_succeeded}, "
+                f"failed {sync_log.records_failed}"
+            )
+            
+            if sync_log.error_message:
+                self.stdout.write(
+                    self.style.ERROR(f"Error: {sync_log.error_message}")
                 )
                 
         except Exception as e:

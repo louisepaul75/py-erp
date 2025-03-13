@@ -107,28 +107,28 @@ class BoxType(SalesModel):
         help_text=_("Description of the box type"),
     )
     length = models.DecimalField(
-        max_digits=10,
+        max_digits=6,
         decimal_places=2,
         null=True,
         blank=True,
         help_text=_("Length of the box in cm"),
     )
     width = models.DecimalField(
-        max_digits=10,
+        max_digits=6,
         decimal_places=2,
         null=True,
         blank=True,
         help_text=_("Width of the box in cm"),
     )
     height = models.DecimalField(
-        max_digits=10,
+        max_digits=6,
         decimal_places=2,
         null=True,
         blank=True,
         help_text=_("Height of the box in cm"),
     )
     weight_capacity = models.DecimalField(
-        max_digits=10,
+        max_digits=6,
         decimal_places=2,
         null=True,
         blank=True,
@@ -142,12 +142,6 @@ class BoxType(SalesModel):
         max_length=50,
         default="numeric",
         help_text=_("Naming scheme for slots (numeric, alphabetic, etc.)"),
-    )
-    purpose = models.CharField(
-        max_length=20,
-        null=True,
-        blank=True,
-        help_text=_("Legacy purpose field - use Box.purpose instead"),
     )
     
     class Meta:

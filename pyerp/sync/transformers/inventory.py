@@ -3,6 +3,7 @@ Transformers for inventory data from legacy systems.
 """
 
 from typing import Dict, Any, List
+from decimal import Decimal
 
 from pyerp.business_modules.products.models import VariantProduct
 from pyerp.sync.transformers.base import BaseTransformer
@@ -124,14 +125,6 @@ class BoxTypeTransformer(BaseTransformer):
         'Weiß': 'white',
     }
     
-    # Define purpose mapping based on box characteristics
-    PURPOSE_MAPPING = {
-        'Lager': 'storage',
-        'Picken': 'picking',
-        'Transport': 'transport',
-        'Werkstatt': 'workshop',
-    }
-    
     def transform(
         self, source_data: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
@@ -214,13 +207,9 @@ class BoxTypeTransformer(BaseTransformer):
             f"{box_type.get('Hersteller_Art_Nr', '')}"
         ).strip()
         
-        # Add color and purpose information to description
+        # Add color information to description
         if color != 'other':
             description += f" - Color: {color}"
-            
-        purpose = self._determine_purpose(box_type)
-        if purpose:
-            description += f" - Purpose: {purpose}"
             
         # Add dimensions to description
         dimensions = []
@@ -250,19 +239,26 @@ class BoxTypeTransformer(BaseTransformer):
                 f" - Divider Weight: {box_type.get('Trenner_Gewicht')}g"
             )
         
+        # Convert dimensions from mm to cm (divide by 10)
+        length = self._convert_to_decimal(box_type.get('Box_Länge'))
+        width = self._convert_to_decimal(box_type.get('Box_Breite'))
+        height = self._convert_to_decimal(box_type.get('Box_Höhe'))
+        
+        # Convert weight from g to kg (divide by 1000)
+        weight_capacity = self._convert_to_decimal(
+            box_type.get('Box_Gewicht'), 
+            unit_conversion=0.001,
+            round_to=2
+        )
+        
         # Map fields from the box type data to the BoxType model
         transformed = {
             'name': name,
             'description': description,
-            'length': self._convert_to_decimal(box_type.get('Box_Länge')),
-            'width': self._convert_to_decimal(box_type.get('Box_Breite')),
-            'height': self._convert_to_decimal(box_type.get('Box_Höhe')),
-            # Convert g to kg and round to 2 decimal places
-            'weight_capacity': self._convert_to_decimal(
-                box_type.get('Box_Gewicht'), 
-                unit_conversion=0.001,
-                round_to=2
-            ),
+            'length': length,
+            'width': width,
+            'height': height,
+            'weight_capacity': weight_capacity,
             'slot_count': int(box_type.get('Slots', 1)),
             'slot_naming_scheme': 'numeric',  # Default to numeric naming scheme
             'legacy_id': str(box_type.get('id', '')),
@@ -286,34 +282,9 @@ class BoxTypeTransformer(BaseTransformer):
                 return english_color
         return 'other'
     
-    def _determine_purpose(self, box_type: Dict[str, Any]) -> str:
-        """
-        Determine the purpose of the box based on its characteristics.
-        
-        Args:
-            box_type: Dictionary containing box type data
-            
-        Returns:
-            Purpose of the box
-        """
-        # Default to 'storage' if no specific purpose can be determined
-        name = box_type.get('Type', '').lower()
-        
-        if 'lager' in name:
-            return 'storage'
-        elif 'picken' in name or 'pick' in name:
-            return 'picking'
-        elif 'transport' in name:
-            return 'transport'
-        elif 'werkstatt' in name:
-            return 'workshop'
-        
-        # Default to storage
-        return 'storage'
-    
     def _convert_to_decimal(
         self, value, unit_conversion=0.1, round_to=2
-    ) -> float:
+    ) -> Decimal:
         """
         Convert a value to a decimal, handling None and zero values.
         
@@ -332,8 +303,10 @@ class BoxTypeTransformer(BaseTransformer):
             decimal_value = float(value)
             # Apply unit conversion if value is positive
             if decimal_value > 0:
-                # Convert and round to specified decimal places
-                return round(decimal_value * unit_conversion, round_to)
+                # Convert to Decimal with exact decimal places
+                converted = decimal_value * unit_conversion
+                # Format to exactly 2 decimal places
+                return Decimal(f"{converted:.2f}")
             return None
         except (ValueError, TypeError):
             return None
