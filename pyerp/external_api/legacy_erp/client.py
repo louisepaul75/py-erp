@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     # Fetch sample records from the box master table
     df = client.fetch_table(
-        table_name="Artikel_Stamm",
+        table_name="Artikel_Lagerorte",
         top=10  # Fetch just 10 records for analysis
     )
 

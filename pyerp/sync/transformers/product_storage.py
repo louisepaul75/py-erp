@@ -62,6 +62,12 @@ class ProductStorageTransformer(BaseTransformer):
     def _get_product(self, product_id: str) -> Optional[VariantProduct]:
         """
         Get product instance from cache or database.
+        
+        Args:
+            product_id: The ID_Artikel_Stamm value from Artikel_Lagerorte
+            
+        Returns:
+            VariantProduct instance or None if not found
         """
         if product_id not in self._product_cache:
             # Log the product_id format for debugging

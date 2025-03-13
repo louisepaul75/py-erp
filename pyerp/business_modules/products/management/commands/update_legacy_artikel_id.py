@@ -55,36 +55,42 @@ class Command(BaseCommand):
         Fetch products from the legacy system.
         
         Returns:
-            DataFrame containing product data with ID and Nummer columns
+            DataFrame containing product data with ID and ArtNr columns
         """
         client = LegacyERPClient(environment="live")
         self.stdout.write("Fetching products from legacy system...")
         
-        # Fetch products from Artikel_Variante table
-        df = client.fetch_table(
-            table_name="Artikel_Variante",
+        # Fetch products from Artikel_Stamm table
+        artikel_stamm_df = client.fetch_table(
+            table_name="Artikel_Stamm",
             all_records=True
         )
         
-        # Print all columns for debugging
-        self.stdout.write(f"Available columns: {', '.join(df.columns)}")
-        
-        # Keep only the columns we need
-        if 'UID' in df.columns and 'Nummer' in df.columns:
-            return df[['UID', 'Nummer', 'alteNummer']]
-        else:
-            missing_cols = []
-            if 'UID' not in df.columns:
-                missing_cols.append('UID')
-            if 'Nummer' not in df.columns:
-                missing_cols.append('Nummer')
-            if 'alteNummer' not in df.columns:
-                missing_cols.append('alteNummer')
-            
-            self.stdout.write(
-                self.style.ERROR(f"Missing required columns: {', '.join(missing_cols)}")
-            )
+        if artikel_stamm_df is None or artikel_stamm_df.empty:
+            self.stdout.write(self.style.ERROR("No data found in Artikel_Stamm table"))
             return None
+        
+        # Print all columns for debugging
+        self.stdout.write(f"Artikel_Stamm columns: {', '.join(artikel_stamm_df.columns)}")
+        
+        # Check if we have the required columns
+        required_stamm_cols = ['ID', 'ArtNr']
+        
+        missing_stamm_cols = [col for col in required_stamm_cols if col not in artikel_stamm_df.columns]
+        if missing_stamm_cols:
+            self.stdout.write(self.style.ERROR(
+                f"Missing required columns in Artikel_Stamm: {', '.join(missing_stamm_cols)}"
+            ))
+            return None
+        
+        # Create a copy of the Artikel_Stamm dataframe with only the columns we need
+        result_df = artikel_stamm_df[['ID', 'ArtNr']].copy()
+        
+        # Filter out rows where ArtNr is null or empty
+        result_df = result_df[result_df['ArtNr'].notna()]
+        
+        self.stdout.write(f"Found {len(result_df)} products with valid ArtNr")
+        return result_df
 
     def update_legacy_artikel_ids(self, legacy_products_df, dry_run=False):
         """
@@ -98,24 +104,20 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("No legacy product data available"))
             return
         
-        # Create a mapping from SKU to ID
-        sku_to_id_map = {}
-        legacy_sku_to_id_map = {}
+        # Create a mapping from ArtNr to ID
+        artnr_to_id_map = {}
         
         for _, row in legacy_products_df.iterrows():
-            if pd.notna(row['Nummer']):
-                sku_to_id_map[row['Nummer']] = row['UID']
-            if pd.notna(row['alteNummer']):
-                legacy_sku_to_id_map[row['alteNummer']] = row['UID']
+            if pd.notna(row['ArtNr']) and pd.notna(row['ID']):
+                artnr_to_id_map[row['ArtNr']] = row['ID']
         
         self.stdout.write(
-            f"Created mapping for {len(sku_to_id_map)} SKUs and "
-            f"{len(legacy_sku_to_id_map)} legacy SKUs"
+            f"Created mapping for {len(artnr_to_id_map)} ArtNr values"
         )
         
-        # Get all products that need updating
-        products = VariantProduct.objects.filter(legacy_artikel_id__isnull=True)
-        self.stdout.write(f"Found {products.count()} products without legacy_artikel_id")
+        # Get all products that need updating (either null or incorrect legacy_artikel_id)
+        products = VariantProduct.objects.all()
+        self.stdout.write(f"Found {products.count()} products to check for legacy_artikel_id")
         
         updated_count = 0
         not_found_count = 0
@@ -125,19 +127,20 @@ class Command(BaseCommand):
                 for product in products:
                     artikel_id = None
                     
-                    # Try to match by SKU first
-                    if product.sku in sku_to_id_map:
-                        artikel_id = sku_to_id_map[product.sku]
-                    # Then try to match by legacy_sku
-                    elif product.legacy_sku and product.legacy_sku in legacy_sku_to_id_map:
-                        artikel_id = legacy_sku_to_id_map[product.legacy_sku]
+                    # Try to match by legacy_sku (which should match ArtNr)
+                    if product.legacy_sku and product.legacy_sku in artnr_to_id_map:
+                        artikel_id = artnr_to_id_map[product.legacy_sku]
+                    # Then try to match by sku
+                    elif product.sku in artnr_to_id_map:
+                        artikel_id = artnr_to_id_map[product.sku]
                     
                     if artikel_id:
-                        product.legacy_artikel_id = artikel_id
-                        product.save(update_fields=['legacy_artikel_id'])
-                        updated_count += 1
-                        if updated_count % 100 == 0:
-                            self.stdout.write(f"Updated {updated_count} products so far")
+                        if product.legacy_artikel_id != artikel_id:
+                            product.legacy_artikel_id = artikel_id
+                            product.save(update_fields=['legacy_artikel_id'])
+                            updated_count += 1
+                            if updated_count % 100 == 0:
+                                self.stdout.write(f"Updated {updated_count} products so far")
                     else:
                         not_found_count += 1
                         self.stdout.write(
@@ -151,17 +154,18 @@ class Command(BaseCommand):
             for product in products:
                 artikel_id = None
                 
-                # Try to match by SKU first
-                if product.sku in sku_to_id_map:
-                    artikel_id = sku_to_id_map[product.sku]
-                # Then try to match by legacy_sku
-                elif product.legacy_sku and product.legacy_sku in legacy_sku_to_id_map:
-                    artikel_id = legacy_sku_to_id_map[product.legacy_sku]
+                # Try to match by legacy_sku (which should match ArtNr)
+                if product.legacy_sku and product.legacy_sku in artnr_to_id_map:
+                    artikel_id = artnr_to_id_map[product.legacy_sku]
+                # Then try to match by sku
+                elif product.sku in artnr_to_id_map:
+                    artikel_id = artnr_to_id_map[product.sku]
                 
                 if artikel_id:
-                    updated_count += 1
-                    if updated_count % 100 == 0:
-                        self.stdout.write(f"Would update {updated_count} products so far")
+                    if product.legacy_artikel_id != artikel_id:
+                        updated_count += 1
+                        if updated_count % 100 == 0:
+                            self.stdout.write(f"Would update {updated_count} products so far")
                 else:
                     not_found_count += 1
         
