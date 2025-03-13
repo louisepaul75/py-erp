@@ -11,7 +11,7 @@ export default {
     cancel: 'Cancel',
     delete: 'Delete',
     edit: 'Edit',
-    create: 'Create',
+    create: 'Create New',
     search: 'Search',
     loading: 'Loading...',
     error: 'Error',
@@ -30,7 +30,10 @@ export default {
     close: 'Close',
     noDescription: 'No description available',
     comingSoon: 'Coming Soon',
-    featureNotImplemented: 'This feature is not yet implemented'
+    featureNotImplemented: 'This feature is not yet implemented',
+    view: 'View Details',
+    reset: 'Reset Filters',
+    export: 'Export'
   },
   app: {
     title: 'pyERP',
@@ -148,17 +151,19 @@ export default {
     purpose: 'Purpose',
     availableSlots: 'Available Slots',
     noLocation: 'No Location',
-    statusAvailable: 'Available',
-    statusInUse: 'In Use',
-    statusReserved: 'Reserved',
-    statusDamaged: 'Damaged',
-    statusRetired: 'Retired',
-    purposeStorage: 'Storage',
-    purposePicking: 'Picking',
-    purposeTransport: 'Transport',
-    purposeWorkshop: 'Workshop',
+    statusAVAILABLE: 'Available',
+    statusIN_USE: 'In Use',
+    statusRESERVED: 'Reserved',
+    statusDAMAGED: 'Damaged',
+    statusRETIRED: 'Retired',
+    purposeSTORAGE: 'Storage',
+    purposePICKING: 'Picking',
+    purposeTRANSPORT: 'Transport',
+    purposeWORKSHOP: 'Workshop',
     boxes: 'Boxes',
     boxTypes: 'Box Types',
-    noNotes: 'No notes'
+    noNotes: 'No notes',
+    barcode: 'Barcode',
+    location: 'Location'
   }
 };

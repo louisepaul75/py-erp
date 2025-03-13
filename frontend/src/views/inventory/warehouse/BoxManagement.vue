@@ -38,23 +38,117 @@
                   {{ inventoryStore.getBoxesError }}
                 </v-alert>
                 
+                <!-- Search and filter controls -->
+                <v-card class="mb-4">
+                  <v-card-text class="py-2">
+                    <v-row align="center">
+                      <v-col cols="12" sm="4">
+                        <v-text-field
+                          v-model="searchQuery"
+                          :label="$t('common.search')"
+                          prepend-icon="mdi-magnify"
+                          hide-details
+                          clearable
+                          @input="handleSearch"
+                          dense
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12" sm="3">
+                        <v-select
+                          v-model="statusFilter"
+                          :items="statusOptions"
+                          :label="$t('inventory.status')"
+                          prepend-icon="mdi-filter-variant"
+                          hide-details
+                          clearable
+                          @change="handleFilterChange"
+                          dense
+                        ></v-select>
+                      </v-col>
+                      <v-col cols="12" sm="3">
+                        <v-select
+                          v-model="purposeFilter"
+                          :items="purposeOptions"
+                          :label="$t('inventory.purpose')"
+                          prepend-icon="mdi-filter-variant"
+                          hide-details
+                          clearable
+                          @change="handleFilterChange"
+                          dense
+                        ></v-select>
+                      </v-col>
+                      <v-col cols="12" sm="2" class="d-flex justify-end">
+                        <v-btn 
+                          color="primary" 
+                          text 
+                          @click="resetFilters"
+                          :disabled="!hasActiveFilters"
+                        >
+                          <v-icon left>mdi-filter-remove</v-icon>
+                          {{ $t('common.reset') }}
+                        </v-btn>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+                
                 <v-data-table
                   :headers="boxHeaders"
-                  :items="inventoryStore.getBoxes"
+                  :items="filteredBoxes"
                   :loading="inventoryStore.isBoxesLoading"
                   :items-per-page="inventoryStore.getBoxesPagination.pageSize"
                   :page="inventoryStore.getBoxesPagination.page"
                   :server-items-length="inventoryStore.getBoxesPagination.total"
+                  :footer-props="{
+                    'items-per-page-options': [10, 25, 50, 100],
+                    showFirstLastPage: true,
+                  }"
+                  :no-data-text="$t('common.noResults')"
+                  :no-results-text="$t('common.noResults')"
+                  multi-sort
                   @update:page="handlePageChange"
                   @update:items-per-page="handlePageSizeChange"
-                  class="elevation-1"
+                  @update:sort-by="handleSortChange"
+                  class="elevation-2"
+                  fixed-header
+                  hide-default-header
                 >
+                  <template v-slot:header>
+                    <thead class="v-data-table-header">
+                      <tr>
+                        <th class="text-left">{{ $t('inventory.boxCode') }}</th>
+                        <th class="text-left">{{ $t('inventory.boxType') }}</th>
+                        <th class="text-left">{{ $t('inventory.storageLocation') }}</th>
+                        <th class="text-center">{{ $t('inventory.status') }}</th>
+                        <th class="text-center">{{ $t('inventory.purpose') }}</th>
+                        <th class="text-center">{{ $t('inventory.availableSlots') }}</th>
+                        <th class="text-center">{{ $t('common.actions') }}</th>
+                      </tr>
+                    </thead>
+                  </template>
+                  
+                  <template v-slot:top>
+                    <v-toolbar flat class="mb-1">
+                      <v-toolbar-title class="text-subtitle-1 font-weight-bold">{{ $t('inventory.boxes') }}</v-toolbar-title>
+                      <v-spacer></v-spacer>
+                      <v-btn color="primary" x-small class="mr-2">
+                        <v-icon small left>mdi-plus</v-icon>
+                        {{ $t('common.create') }}
+                      </v-btn>
+                      <v-btn color="secondary" x-small>
+                        <v-icon small left>mdi-export-variant</v-icon>
+                        {{ $t('common.export') }}
+                      </v-btn>
+                    </v-toolbar>
+                  </template>
+                  
                   <!-- Status column -->
                   <template v-slot:item.status="{ item }">
                     <v-chip
                       :color="getStatusColor(item.status)"
-                      small
+                      x-small
                       label
+                      class="text-capitalize"
                     >
                       {{ $t(`inventory.status${item.status}`) }}
                     </v-chip>
@@ -64,8 +158,9 @@
                   <template v-slot:item.purpose="{ item }">
                     <v-chip
                       :color="getPurposeColor(item.purpose)"
-                      small
+                      x-small
                       label
+                      class="text-capitalize"
                     >
                       {{ $t(`inventory.purpose${item.purpose}`) }}
                     </v-chip>
@@ -77,14 +172,54 @@
                     <span v-else class="text-caption grey--text">{{ $t('inventory.noLocation') }}</span>
                   </template>
 
+                  <!-- Available Slots column -->
+                  <template v-slot:item.available_slots="{ item }">
+                    <v-chip
+                      :color="item.available_slots > 0 ? 'success' : 'error'"
+                      x-small
+                      label
+                      outlined
+                    >
+                      {{ item.available_slots }}
+                    </v-chip>
+                  </template>
+
                   <!-- Actions column -->
                   <template v-slot:item.actions="{ item }">
-                    <v-btn icon small color="primary" @click="viewBox(item)">
-                      <v-icon small>mdi-eye</v-icon>
-                    </v-btn>
-                    <v-btn icon small color="secondary" @click="editBox(item)">
-                      <v-icon small>mdi-pencil</v-icon>
-                    </v-btn>
+                    <div class="d-flex justify-center">
+                      <v-tooltip bottom>
+                        <template v-slot:activator="{ on, attrs }">
+                          <v-btn
+                            icon
+                            x-small
+                            color="primary"
+                            class="mr-1"
+                            v-bind="attrs"
+                            v-on="on"
+                            @click="viewBox(item)"
+                          >
+                            <v-icon x-small>mdi-eye</v-icon>
+                          </v-btn>
+                        </template>
+                        <span>{{ $t('common.view') }}</span>
+                      </v-tooltip>
+
+                      <v-tooltip bottom>
+                        <template v-slot:activator="{ on, attrs }">
+                          <v-btn
+                            icon
+                            x-small
+                            color="secondary"
+                            v-bind="attrs"
+                            v-on="on"
+                            @click="editBox(item)"
+                          >
+                            <v-icon x-small>mdi-pencil</v-icon>
+                          </v-btn>
+                        </template>
+                        <span>{{ $t('common.edit') }}</span>
+                      </v-tooltip>
+                    </div>
                   </template>
                 </v-data-table>
               </v-window-item>
@@ -338,6 +473,11 @@ export default defineComponent({
   data() {
     return {
       activeTab: 'boxes',
+      searchQuery: '',
+      statusFilter: null,
+      purposeFilter: null,
+      sortBy: ['code'],
+      sortDesc: [false],
       boxTypeHeaders: [
         { text: this.$t('inventory.name'), value: 'name', sortable: true },
         { text: this.$t('inventory.dimensions'), value: 'dimensions', sortable: false },
@@ -350,17 +490,20 @@ export default defineComponent({
           text: this.$t('inventory.boxCode'),
           value: 'code',
           sortable: true,
-          align: 'start'
+          align: 'start',
+          width: '120'
         },
         { 
           text: this.$t('inventory.boxType'),
           value: 'box_type.name',
-          sortable: true 
+          sortable: true,
+          width: '200'
         },
         { 
           text: this.$t('inventory.storageLocation'),
           value: 'storage_location',
-          sortable: true 
+          sortable: true,
+          width: '200'
         },
         { 
           text: this.$t('inventory.status'),
@@ -388,7 +531,8 @@ export default defineComponent({
           value: 'actions',
           sortable: false,
           align: 'center',
-          width: '100'
+          width: '120',
+          filterable: false
         }
       ],
       detailDialog: false,
@@ -396,6 +540,49 @@ export default defineComponent({
       boxDetailDialog: false,
       selectedBox: null as Box | null
     };
+  },
+  computed: {
+    statusOptions() {
+      return [
+        { text: this.$t('inventory.statusAVAILABLE'), value: 'AVAILABLE' },
+        { text: this.$t('inventory.statusIN_USE'), value: 'IN_USE' },
+        { text: this.$t('inventory.statusRESERVED'), value: 'RESERVED' },
+        { text: this.$t('inventory.statusDAMAGED'), value: 'DAMAGED' },
+        { text: this.$t('inventory.statusRETIRED'), value: 'RETIRED' }
+      ];
+    },
+    purposeOptions() {
+      return [
+        { text: this.$t('inventory.purposeSTORAGE'), value: 'STORAGE' },
+        { text: this.$t('inventory.purposePICKING'), value: 'PICKING' },
+        { text: this.$t('inventory.purposeTRANSPORT'), value: 'TRANSPORT' },
+        { text: this.$t('inventory.purposeWORKSHOP'), value: 'WORKSHOP' }
+      ];
+    },
+    filteredBoxes() {
+      if (!this.searchQuery && !this.statusFilter && !this.purposeFilter) {
+        return this.inventoryStore.getBoxes;
+      }
+      
+      return this.inventoryStore.getBoxes.filter(box => {
+        // Filter by search query
+        const matchesSearch = !this.searchQuery || 
+          box.code.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          box.box_type.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          (box.storage_location && box.storage_location.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+        
+        // Filter by status
+        const matchesStatus = !this.statusFilter || box.status === this.statusFilter;
+        
+        // Filter by purpose
+        const matchesPurpose = !this.purposeFilter || box.purpose === this.purposeFilter;
+        
+        return matchesSearch && matchesStatus && matchesPurpose;
+      });
+    },
+    hasActiveFilters() {
+      return this.searchQuery || this.statusFilter || this.purposeFilter;
+    }
   },
   created() {
     this.fetchData();
@@ -458,13 +645,71 @@ export default defineComponent({
         WORKSHOP: { color: 'purple', text: this.$t('inventory.purposeWorkshop') }
       };
       return purposeMap[purpose as keyof typeof purposeMap]?.color || 'grey';
+    },
+    handleSearch() {
+      // Client-side filtering is handled by the computed property
+      // For server-side, you would call the API with search params
+    },
+    handleFilterChange() {
+      // Client-side filtering is handled by the computed property
+      // For server-side, you would call the API with filter params
+    },
+    resetFilters() {
+      this.searchQuery = '';
+      this.statusFilter = null;
+      this.purposeFilter = null;
+    },
+    handleSortChange(sortBy: string[]) {
+      this.sortBy = sortBy;
+      // For server-side sorting, you would call the API with sort params
     }
   }
 });
 </script>
 
 <style scoped>
-.v-data-table ::v-deep th {
-  font-weight: bold !important;
+.v-data-table {
+  border-radius: 4px;
+}
+
+.v-data-table-header th {
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  white-space: nowrap;
+  background-color: #f5f5f5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  height: 48px !important;
+  color: rgba(0, 0, 0, 0.8) !important;
+  padding: 0 16px !important;
+  border-bottom: thin solid rgba(0, 0, 0, 0.12);
+}
+
+.v-data-table ::v-deep td {
+  height: 40px !important;
+  border-bottom: thin solid rgba(0, 0, 0, 0.12);
+  font-size: 0.875rem !important;
+}
+
+.v-chip {
+  font-weight: 500 !important;
+}
+
+.v-chip.v-size--x-small {
+  height: 20px;
+  font-size: 0.75rem !important;
+}
+
+.v-toolbar {
+  border-bottom: thin solid rgba(0, 0, 0, 0.12);
+}
+
+.v-btn--icon.v-size--x-small {
+  width: 20px;
+  height: 20px;
+}
+
+.v-btn--icon.v-size--x-small .v-icon {
+  font-size: 16px;
 }
 </style> 
