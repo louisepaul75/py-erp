@@ -65,14 +65,14 @@ class ProductStorageTransformer(BaseTransformer):
         """
         if product_id not in self._product_cache:
             # Log the product_id format for debugging
-            self.log.debug(f"Looking for product with legacy_id: '{product_id}'")
+            self.log.debug(f"Looking for product with legacy_artikel_id: '{product_id}'")
             
             try:
                 self._product_cache[product_id] = VariantProduct.objects.get(
-                    legacy_id=product_id
+                    legacy_artikel_id=product_id
                 )
             except VariantProduct.DoesNotExist:
-                self.log.warning(f"Product with legacy_id {product_id} not found")
+                self.log.warning(f"Product with legacy_artikel_id {product_id} not found")
                 return None
         return self._product_cache[product_id]
 
