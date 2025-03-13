@@ -20,7 +20,21 @@ Legacy data in Stamm_Lagerorte includes: Country, city_building, sale (if produc
 The current structure is somewhat messy, and we need to improve it while maintaining the ability to sync with the old system.
 
 ## Legacy Data Analysis
-After examining the Stamm_Lagerorte table data (923 records), we have a clearer understanding of the legacy storage location structure:
+After examining the Stamm_Lagerorte table data (923 records) and analyzing the complete database schema, we have a clearer understanding of the legacy storage location structure:
+
+### Database Schema Overview
+The legacy inventory system consists of several interconnected tables:
+
+1. **Artikel_Stamm** - Product/article master table
+2. **Stamm_Lagerorte** - Storage location master table
+3. **Artikel_Lagerorte** - Junction table linking products to storage locations
+4. **Stamm_Lager_Schuetten** - Box/container master table
+5. **Stamm_Lager_Schuetten_Slots** - Slots within boxes/containers
+6. **Historie_Stamm_Lager_Schuetten** - History table for boxes
+7. **Lager_Schuetten** - Current box inventory table
+8. **Lager_Schuetten_Einheiten** - Units stored in boxes
+
+This structure reveals a more complex box and slot system than initially understood, with dedicated tables for box types, slots, and their relationships. The system also includes history tracking for boxes and specific tables for managing box units.
 
 ### Key Fields in Stamm_Lagerorte
 - **Location Hierarchy**:
@@ -61,9 +75,12 @@ For the new system, we map these legacy fields to our new data models as follows
    - `name` ← Generated from components (combination of country, city_building, unit, compartment, shelf)
 
 2. **Box and BoxSlot Models**:
-   - These are new concepts not present in the legacy system
-   - Boxes will be assigned to StorageLocations
-   - Each Box will contain multiple BoxSlots based on BoxType configuration
+   - These are not entirely new concepts but rather refinements of existing structures in the legacy system
+   - The legacy system has dedicated tables for boxes (Stamm_Lager_Schuetten) and slots (Stamm_Lager_Schuetten_Slots)
+   - Our new models will enhance these concepts with improved relationships and additional functionality
+   - Boxes will be assigned to StorageLocations, similar to the legacy system
+   - Each Box will contain multiple BoxSlots based on BoxType configuration, maintaining the existing slot concept
+   - We'll incorporate data from the legacy Stamm_Lager_Schuetten and Stamm_Lager_Schuetten_Slots tables during synchronization
 
 ### BoxType Configuration Details
 Based on our analysis of the legacy ERP parameters table, we have identified the following configuration options for BoxTypes:
@@ -142,6 +159,9 @@ These configuration options will be used to define the BoxType model, which will
 - The `name` field is generated from the `location_code` if available, or from the individual components if not.
 - The BoxType configuration will be used to standardize box creation and ensure consistency across the warehouse.
 - For boxes with missing dimensions or weights, we'll implement validation rules to ensure data integrity.
+- We'll need to implement proper synchronization for the Stamm_Lager_Schuetten and Stamm_Lager_Schuetten_Slots tables to maintain the existing box and slot relationships.
+- The history tracking functionality will be based on the Historie_Stamm_Lager_Schuetten table structure.
+- The Lager_Schuetten and Lager_Schuetten_Einheiten tables will be used to synchronize current box inventory data.
 
 ## Progress Update
 We have made significant progress on the inventory management system:
@@ -234,9 +254,11 @@ We have made significant progress on the inventory management system:
 
 ## Next Steps
 1. Implement Box and BoxSlot synchronization
-   - Create BoxTransformer to handle box data
-   - Implement BoxSlotTransformer for slot generation
+   - Create BoxTransformer to handle box data from Stamm_Lager_Schuetten
+   - Implement BoxSlotTransformer for slot generation from Stamm_Lager_Schuetten_Slots
    - Add validation for box and slot relationships
+   - Implement synchronization for box inventory data from Lager_Schuetten and Lager_Schuetten_Einheiten
+   - Create history tracking based on Historie_Stamm_Lager_Schuetten table structure
 
 2. Create APIs for inventory operations
    - Storage location management endpoints
@@ -337,6 +359,15 @@ We have made significant progress on the inventory management system:
   - [x] Implement precise decimal handling for dimensions and weights
   - [x] Fix migration issues and ensure proper database schema
 
+- [ ] Implement synchronization with legacy box and slot data
+  - [ ] Create extractors for Stamm_Lager_Schuetten and Stamm_Lager_Schuetten_Slots tables
+  - [ ] Develop transformers to map legacy box and slot data to new models
+  - [ ] Implement synchronization for box inventory data from Lager_Schuetten and Lager_Schuetten_Einheiten
+  - [ ] Create history tracking based on Historie_Stamm_Lager_Schuetten table
+  - [ ] Add validation for box and slot relationships
+  - [ ] Integrate with existing ETL pipeline
+  - [ ] Add error handling and reporting for sync process
+
 - [ ] Create APIs for managing inventory:
   - Storage location management
   - Box and slot operations
@@ -370,25 +401,31 @@ We have made significant progress on the inventory management system:
    - Expected: BoxType records should be created with proper dimensions and weights
    - Status: ✅ Completed - Successfully synchronized 49 box types with proper decimal precision
 
-3. Product Placement
+3. Data Synchronization - Boxes and Slots
+   - Setup: Configure access to legacy Stamm_Lager_Schuetten and Stamm_Lager_Schuetten_Slots tables
+   - Steps: Run Box and BoxSlot synchronization process
+   - Expected: Box and BoxSlot records should be created with proper relationships and data
+   - Status: 🔄 Pending implementation
+
+4. Product Placement
    - Setup: Create test storage locations, boxes, and products
    - Steps: Assign products to box slots
    - Expected: Products should be correctly associated with slots and locations
    - Status: 🔄 Pending implementation
 
-4. Box Movement
+5. Box Movement
    - Setup: Create test storage locations, boxes with products
    - Steps: Move a box to a different storage location
    - Expected: All product slots should update to the new location
    - Status: 🔄 Pending implementation
 
-5. Inventory Reservation
+6. Inventory Reservation
    - Setup: Create test products in storage
    - Steps: Reserve inventory for an order
    - Expected: Reserved inventory should be marked and not available for other orders
    - Status: 🔄 Pending implementation
 
-6. Picking Process
+7. Picking Process
    - Setup: Create test order with multiple products
    - Steps: Generate picking list and complete picking
    - Expected: Inventory should be updated and movements recorded
@@ -396,6 +433,10 @@ We have made significant progress on the inventory management system:
 
 ## Dependencies
 - [x] Access to legacy Stamm_Lagerorte table
+- [ ] Access to legacy Stamm_Lager_Schuetten table
+- [ ] Access to legacy Stamm_Lager_Schuetten_Slots table
+- [ ] Access to legacy Lager_Schuetten and Lager_Schuetten_Einheiten tables
+- [ ] Access to legacy Historie_Stamm_Lager_Schuetten table
 - [x] Product module
 - [x] User authentication and permissions module
 - [x] ETL pipeline for data synchronization
