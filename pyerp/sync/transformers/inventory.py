@@ -13,94 +13,149 @@ logger = get_logger(__name__)
 
 
 class StammLagerorteTransformer(BaseTransformer):
-    """
-    Transformer for Stamm_Lagerorte data from the legacy system.
+    """Transforms legacy storage location data into StorageLocation format.
     
-    This transformer converts legacy storage location data to the format
-    required by the StorageLocation model.
+    This transformer handles the conversion of legacy storage location 
+    records into a format compatible with the StorageLocation model.
     """
-    
-    def transform(
-        self, source_data: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """
-        Transform storage location data from legacy format.
-        
+
+    def transform(self, source_data: List[Dict]) -> List[Dict]:
+        """Transform legacy storage location data into StorageLocation format.
+
         Args:
-            source_data: List of dictionaries containing legacy storage location data
-            
+            source_data: List of dictionaries containing legacy storage 
+                location data.
+
         Returns:
-            List of dictionaries in the format required by StorageLocation model
+            List of transformed dictionaries ready for StorageLocation 
+            model.
         """
         transformed_records = []
-        skipped_records = 0
-        
+        logger.info(f"Using field mappings: {self.field_mappings}")
+
+        # Track used location combinations to handle duplicates
+        used_combinations = {}
+
         for record in source_data:
-            # Directly extract ID_Lagerort before applying mappings
-            legacy_id = record.get('ID_Lagerort')
+            logger.info(f"Processing record: {record}")
+
+            # Extract legacy_id before applying mappings
+            legacy_id_field = self.field_mappings.get('legacy_id', 'ID_Lagerort')
+            legacy_id = str(record.get(legacy_id_field)) if record.get(legacy_id_field) is not None else None
             
-            # Log the original record to see if ID_Lagerort is present
-            logger.debug(
-                f"Original record before mapping: ID_Lagerort={legacy_id}, "
-                f"keys={list(record.keys())}"
-            )
-            
-            # Skip records without a legacy_id
-            if legacy_id is None:
-                skipped_records += 1
-                logger.warning(f"Skipping record without legacy_id: {record}")
+            if not legacy_id:
+                logger.warning(
+                    f"Skipping record without legacy_id: {record}"
+                )
                 continue
-                
-            # Apply field mappings from config
-            transformed = self.apply_field_mappings(record)
-            
-            # Ensure legacy_id is set correctly
-            transformed['legacy_id'] = str(legacy_id)
-            
-            # Log the transformed record to see if legacy_id is present
-            logger.debug(
-                f"After field mapping: legacy_id={transformed.get('legacy_id')}, "
-                f"keys={list(transformed.keys())}"
+
+            # Initialize transformed record with default values
+            transformed = {
+                'legacy_id': legacy_id,
+                'is_active': True,
+                'is_synchronized': False
+            }
+
+            # Apply field mappings for all fields
+            for target_field, source_field in self.field_mappings.items():
+                if source_field in record and record[source_field] is not None:
+                    value = record[source_field]
+                    # Convert numeric values to strings for unit, compartment, shelf
+                    if target_field in ['unit', 'compartment', 'shelf'] and value is not None:
+                        try:
+                            value = str(int(value))
+                        except (ValueError, TypeError):
+                            value = str(value) if value else ''
+                    transformed[target_field] = value
+
+            # Ensure all required fields for unique constraint are set
+            # If not in field mappings, try to extract directly from record
+            if 'country' not in transformed and 'Land_LKZ' in record:
+                transformed['country'] = record['Land_LKZ'] or ''
+            if 'city_building' not in transformed and 'Ort_Gebaeude' in record:
+                transformed['city_building'] = record['Ort_Gebaeude'] or ''
+            if 'unit' not in transformed and 'Regal' in record:
+                try:
+                    transformed['unit'] = str(int(record['Regal'])) if record['Regal'] is not None else ''
+                except (ValueError, TypeError):
+                    transformed['unit'] = str(record['Regal']) if record['Regal'] else ''
+            if 'compartment' not in transformed and 'Fach' in record:
+                try:
+                    transformed['compartment'] = str(int(record['Fach'])) if record['Fach'] is not None else ''
+                except (ValueError, TypeError):
+                    transformed['compartment'] = str(record['Fach']) if record['Fach'] else ''
+            if 'shelf' not in transformed and 'Boden' in record:
+                try:
+                    transformed['shelf'] = str(int(record['Boden'])) if record['Boden'] is not None else ''
+                except (ValueError, TypeError):
+                    transformed['shelf'] = str(record['Boden']) if record['Boden'] else ''
+            if 'location_code' not in transformed and 'Lagerort' in record:
+                transformed['location_code'] = record['Lagerort'] or ''
+
+            # Ensure all required fields have at least empty strings
+            for field in ['country', 'city_building', 'unit', 'compartment', 'shelf']:
+                if field not in transformed:
+                    transformed[field] = ''
+
+            # Create location combination key
+            location_key = (
+                transformed.get('country', ''),
+                transformed.get('city_building', ''),
+                transformed.get('unit', ''),
+                transformed.get('compartment', ''),
+                transformed.get('shelf', '')
             )
-            
-            # Apply custom transformations
-            transformed = self.apply_custom_transformers(transformed, record)
-            
-            # Generate a descriptive name if not present
-            if 'name' not in transformed:
-                # Use location_code if available, otherwise generate from components
-                if ('location_code' in transformed and 
-                        transformed['location_code']):
-                    transformed['name'] = transformed['location_code']
-                else:
-                    country = transformed.get('country', '')
-                    city_building = transformed.get('city_building', '')
-                    unit = transformed.get('unit', '')
-                    compartment = transformed.get('compartment', '')
-                    shelf = transformed.get('shelf', '')
-                    
-                    name_parts = [
-                        p for p in [
-                            country, city_building, unit, compartment, shelf
-                        ] if p
-                    ]
-                    transformed['name'] = (
-                        ' / '.join(name_parts) if name_parts 
-                        else f"Location {transformed['legacy_id']}"
+
+            # Handle duplicate combinations
+            if location_key in used_combinations:
+                used_combinations[location_key] += 1
+                # Append suffix to location code
+                if 'location_code' in transformed:
+                    transformed['location_code'] = (
+                        f"{transformed['location_code']}_"
+                        f"{used_combinations[location_key]}"
                     )
-            
-            # Set default values for required fields
-            transformed.setdefault('is_active', True)
-            
-            # Log the legacy ID for debugging
-            logger.debug(f"Mapped legacy ID: {transformed['legacy_id']}")
-            
+                # Append suffix to unit to make the combination unique
+                if 'unit' in transformed:
+                    transformed['unit'] = (
+                        f"{transformed['unit']}_"
+                        f"{used_combinations[location_key]}"
+                    )
+            else:
+                used_combinations[location_key] = 1
+
+            # Generate descriptive name if not already set
+            if 'name' not in transformed:
+                name_parts = []
+                if transformed.get('country'):
+                    name_parts.append(transformed['country'])
+                if transformed.get('city_building'):
+                    name_parts.append(transformed['city_building'])
+                if transformed.get('unit'):
+                    name_parts.append(f"R{transformed['unit']}")
+                if transformed.get('compartment'):
+                    name_parts.append(f"F{transformed['compartment']}")
+                if transformed.get('shelf'):
+                    name_parts.append(f"B{transformed['shelf']}")
+                
+                if name_parts:
+                    transformed['name'] = '-'.join(
+                        str(part) for part in name_parts
+                    )
+                else:
+                    transformed['name'] = f"Location {legacy_id}"
+
+            logger.info(f"After field mappings: {transformed}")
+            logger.info(f"Final transformed record: {transformed}")
             transformed_records.append(transformed)
-            
+
         logger.info(
-            f"Transformed {len(transformed_records)} storage location records, "
-            f"skipped {skipped_records} records without legacy_id"
+            f"Transformed {len(transformed_records)} storage location "
+            f"records, skipped "
+            f"{len(source_data) - len(transformed_records)} records "
+            f"without legacy_id"
         )
+
         return transformed_records
 
 
