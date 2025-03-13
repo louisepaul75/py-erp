@@ -514,23 +514,32 @@ class BoxTransformer(BaseTransformer):
 
 class BoxSlotTransformer(BaseTransformer):
     """
-    Transformer for box slot data.
+    Transformer for box slot data from Stamm_Lager_Schuetten_Slots table.
     
-    This transformer converts box slot data to the format required by the 
-    BoxSlot model.
+    This transformer converts legacy box slot data to the format required by 
+    the BoxSlot model.
     """
     
     def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Transform box slot data.
+        Transform box slot data from Stamm_Lager_Schuetten_Slots records.
         
         Args:
-            source_data: List of dictionaries containing box slot data
+            source_data: List of dictionaries containing box slot data from 
+                legacy Stamm_Lager_Schuetten_Slots table
             
         Returns:
             List of dictionaries in the format required by BoxSlot model
         """
         transformed_records = []
+        
+        # Get all existing boxes for validation
+        from pyerp.business_modules.inventory.models import Box
+        existing_boxes = {
+            str(box.legacy_id): box for box in Box.objects.all()
+        }
+        
+        logger.info(f"Found {len(existing_boxes)} existing boxes for slot assignment")
         
         for record in source_data:
             # Apply field mappings from config
@@ -539,11 +548,101 @@ class BoxSlotTransformer(BaseTransformer):
             # Apply custom transformations
             transformed = self.apply_custom_transformers(transformed, record)
             
+            # Set legacy_id from ID field
+            if 'ID' in record:
+                transformed['legacy_id'] = str(record['ID'])
+            
+            # Extract data from JSON field
+            if 'data_' in record and record['data_']:
+                try:
+                    data_json = record['data_']
+                    if isinstance(data_json, str):
+                        import json
+                        data_json = json.loads(data_json)
+                    
+                    # Extract slot code
+                    if 'Slot_Code' in data_json:
+                        transformed['slot_code'] = data_json['Slot_Code']
+                    
+                    # Extract unit number
+                    if 'Einheiten_Nr' in data_json:
+                        try:
+                            transformed['unit_number'] = int(data_json['Einheiten_Nr'])
+                        except (ValueError, TypeError):
+                            transformed['unit_number'] = 1
+                    
+                    # Extract color code
+                    if 'Einheitenfabe' in data_json:
+                        transformed['color_code'] = str(data_json['Einheitenfabe'])
+                except Exception as e:
+                    logger.warning(f"Error parsing data_ JSON field: {e}")
+            
+            # Set legacy_slot_id from ID_Lager_Schuetten_Slots
+            if 'ID_Lager_Schuetten_Slots' in record:
+                transformed['legacy_slot_id'] = str(record['ID_Lager_Schuetten_Slots'])
+            
+            # Set slot_number from Lfd_Nr
+            if 'Lfd_Nr' in record:
+                try:
+                    transformed['slot_number'] = int(record['Lfd_Nr'])
+                except (ValueError, TypeError):
+                    transformed['slot_number'] = 1
+            
+            # Set order_number from Auftrags_Nr
+            if 'Auftrags_Nr' in record:
+                transformed['order_number'] = str(record['Auftrags_Nr'])
+            
+            # Resolve box reference
+            box_id = None
+            
+            # First try to get box ID from ID_Lager_Schuetten_Slots
+            # which is the box ID in the Stamm_Lager_Schuetten table
+            if 'ID_Lager_Schuetten_Slots' in record:
+                box_id = str(record['ID_Lager_Schuetten_Slots'])
+            
+            # Alternatively, try to get box ID from viele_zu_eins reference
+            elif 'viele_zu_eins' in record and record['viele_zu_eins']:
+                box_id = str(record['viele_zu_eins'])
+            
+            # If we have a box ID, try to find the box
+            if box_id:
+                if box_id in existing_boxes:
+                    transformed['box'] = existing_boxes[box_id]
+                else:
+                    logger.warning(
+                        f"Box with legacy_id {box_id} not found, skipping slot record"
+                    )
+                    continue
+            else:
+                logger.warning(
+                    f"No box ID found for slot record {record.get('ID', 'unknown')}, skipping"
+                )
+                continue
+            
+            # Generate barcode if not present
+            if 'barcode' not in transformed or not transformed['barcode']:
+                box_code = transformed['box'].code
+                slot_code = transformed.get('slot_code', '')
+                transformed['barcode'] = f"{box_code}.{slot_code}"
+            
             # Set default values for required fields
-            transformed.setdefault('is_occupied', False)
+            transformed.setdefault('slot_code', f"S{transformed.get('slot_number', 1)}")
+            transformed.setdefault('unit_number', 1)
+            transformed.setdefault('color_code', '')
+            transformed.setdefault('order_number', '')
+            transformed.setdefault('occupied', False)
+            
+            # Add audit fields
+            audit_fields = [
+                'created_name', 'created_date', 'created_time',
+                'modified_name', 'modified_date', 'modified_time'
+            ]
+            for field in audit_fields:
+                if field in record:
+                    transformed[field] = record[field]
             
             transformed_records.append(transformed)
-            
+        
         logger.info(f"Transformed {len(transformed_records)} box slot records")
         return transformed_records
 

@@ -120,12 +120,10 @@ if __name__ == "__main__":
 
     # Fetch sample records from the box master table
     df = client.fetch_table(
-        table_name="Stamm_Lager_Schuetten",
+        table_name="Stamm_Lager_Schuetten_Slots",
         top=10  # Fetch just 10 records for analysis
     )
 
-    print("\nColumns in Stamm_Lager_Schuetten:")
-    print(df.columns.tolist())
     print("\nSample records:")
     print(df.head())
     

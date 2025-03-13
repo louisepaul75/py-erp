@@ -240,9 +240,43 @@ class BoxSlot(SalesModel):
         related_name="slots",
         help_text=_("Box containing this slot"),
     )
+    legacy_slot_id = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text=_(
+            "Unique identifier from legacy system (ID_Lager_Schuetten_Slots)"
+        ),
+    )
+    slot_number = models.IntegerField(
+        default=1,
+        help_text=_(
+            "Sequential number within the box (maps to Lfd_Nr in legacy system)"
+        ),
+    )
     slot_code = models.CharField(
         max_length=20,
         help_text=_("Code for the slot within the box"),
+    )
+    unit_number = models.IntegerField(
+        default=1,
+        help_text=_(
+            "Unit number within the slot (maps to Einheiten_Nr in legacy system)"
+        ),
+    )
+    color_code = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text=_(
+            "Color code identifier (maps to Einheitenfabe in legacy system)"
+        ),
+    )
+    order_number = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text=_(
+            "Associated order number (maps to Auftrags_Nr in legacy system)"
+        ),
     )
     barcode = models.CharField(
         max_length=100,
@@ -262,7 +296,7 @@ class BoxSlot(SalesModel):
     
     def __str__(self):
         """Return a string representation of the box slot."""
-        return f"{self.box.code}-{self.slot_code}"
+        return f"{self.box.code}.{self.slot_code}"
 
 
 class ProductStorage(SalesModel):
