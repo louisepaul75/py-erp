@@ -65,11 +65,83 @@ For the new system, we map these legacy fields to our new data models as follows
    - Boxes will be assigned to StorageLocations
    - Each Box will contain multiple BoxSlots based on BoxType configuration
 
+### BoxType Configuration Details
+Based on our analysis of the legacy ERP parameters table, we have identified the following configuration options for BoxTypes:
+
+1. **Box Types (Schüttentypen)**:
+   After analyzing the data from the parameter table, we found 42 different box types with detailed specifications. The key attributes include:
+
+   - **Dimensions**:
+     - Length (Box_Länge): Ranges from 160mm to 792mm
+     - Width (Box_Breite): Ranges from 85mm to 593mm
+     - Height (Box_Höhe): Ranges from 80mm to 450mm
+
+   - **Weight Properties**:
+     - Empty Weight (Box_Gewicht): Ranges from 101g to 7800g
+     - Divider Weight (Trenner_Gewicht): Mostly 0g, with one box having 250g
+
+   - **Slot Configuration**:
+     - Most boxes have a single slot
+     - Some models (e.g., Schäfer LF 532) have 3 slots
+
+   - **Manufacturers**:
+     - Schäfer (most common)
+     - Bito
+     - Auer
+     - Visus
+     - Walther
+     - Kennoset
+     - Arca Systems
+
+   - **Notable Box Types**:
+     - Largest: "Lager grau XXL" (792 x 593 x 450 mm, 7800g)
+     - Smallest: "Schäfer 2" series (160 x 105 x 80 mm, 101g)
+     - Multi-slot: "Schäfer LF 532" series (3 slots)
+
+2. **Box Colors (Schüttenfarben)**:
+   From the box type data, we identified the following colors in use:
+   - Blau (Blue) - 11 box types
+   - Gelb (Yellow) - 5 box types
+   - Grün (Green) - 5 box types
+   - Rot (Red) - 4 box types
+   - Grau (Gray) - 4 box types
+   - Other/Unspecified - 13 box types
+
+   Additional colors mentioned in the parameters but not found in the current box types:
+   - Orange
+   - Schwarz (Black)
+   - Transparent
+   - Weiß (White)
+
+3. **Box Purposes (Schüttenzweck)**:
+   - Lager (Storage)
+   - Picken (Picking)
+   - Transport
+   - Werkstatt (Workshop)
+
+### BoxType Data Mapping
+Based on our analysis, we will map the legacy data to our BoxType model as follows:
+
+- **name**: Derived from the Type field (e.g., "14/6-2H Blau", "EF6220 Grau")
+- **colour**: Extracted from the Type name (e.g., "Blau", "Gelb", "Grün")
+- **length**: Mapped directly from Box_Länge
+- **width**: Mapped directly from Box_Breite
+- **height**: Mapped directly from Box_Höhe
+- **weight_empty**: Mapped directly from Box_Gewicht
+- **default_slot_count**: Mapped directly from Slots
+- **divider_weight**: Mapped directly from Trenner_Gewicht
+- **purpose**: Will be assigned based on box characteristics or additional data
+- **UUID**: Will be generated for new records (not present in legacy data)
+
+These configuration options will be used to define the BoxType model, which will include attributes for type, color, purpose, dimensions, weight capacity, and slot configuration. The BoxType model will serve as a template for creating Box instances, which will be placed in StorageLocations and contain multiple BoxSlots for storing products.
+
 ### Implementation Notes
 - The `ID_Lagerort` field is used as the primary identifier for synchronization, as it's also printed on labels and QR codes in the legacy system.
 - We're skipping the `Schuette`, `Slots`, and `Schuette_und_Slots` fields for now, as they're not critical for the initial implementation.
 - The `location_code` field stores the formatted location string from `Lagerort`, which provides a human-readable identifier.
 - The `name` field is generated from the `location_code` if available, or from the individual components if not.
+- The BoxType configuration will be used to standardize box creation and ensure consistency across the warehouse.
+- For boxes with missing dimensions or weights, we'll implement validation rules to ensure data integrity.
 
 ## Progress Update
 We have made significant progress on the inventory management system:
@@ -100,6 +172,11 @@ We have made significant progress on the inventory management system:
    - Implemented debug mode for detailed logging during synchronization
    - Provided summary statistics for sync operations
 
+8. **BoxType Configuration**: Identified and documented the standard box types, colors, and purposes from the legacy ERP parameters table, which will be used to configure the BoxType model.
+   - Analyzed 42 different box types with detailed specifications
+   - Mapped legacy attributes to the new BoxType model
+   - Identified common manufacturers and their product lines
+
 ## Next Steps
 1. Implement the UI components for inventory management
 2. Create APIs for inventory operations
@@ -109,6 +186,8 @@ We have made significant progress on the inventory management system:
 6. Test the complete workflow with real data
 7. Implement Box and BoxSlot synchronization
 8. Develop inventory movement tracking functionality
+9. Create standard BoxType configurations based on the identified parameters
+10. Implement validation for boxes with missing dimensions or weights
 
 ## Acceptance Criteria
 1. Given I need to migrate data from the legacy system

@@ -112,8 +112,6 @@ class LegacyERPClient(BaseAPIClient):
 
 
 if __name__ == "__main__":
-    from datetime import datetime as dt
-
     pd.set_option('display.max_columns', None)
 
     client = LegacyERPClient(environment="live")
@@ -125,7 +123,8 @@ if __name__ == "__main__":
     print(filter_query)
     # Fetch records from the "Kunden" table
     df = client.fetch_table(
-        table_name="Stamm_Lager_Schuetten", top=15000, filter_query=filter_query
+        table_name="parameter", top=15000, filter_query=filter_query
     )
 
-    print(df)
+    df = df.loc[df["scope"] == "Schüttentypen"]
+    print(pd.DataFrame(df['data_'].iloc[0]['Schüttentypen']))
