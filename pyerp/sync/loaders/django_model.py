@@ -72,12 +72,21 @@ class DjangoModelLoader(BaseLoader):
         # Prepare record data
         prepared_record = record.copy()
 
-        # Remove any fields that don't exist on the model
+        # Remove any fields that don't exist on the model or are auto-managed
         model_class = self._get_model_class()
         model_fields = {f.name: f for f in model_class._meta.get_fields()}
 
         for field in list(prepared_record.keys()):
+            # Skip if field doesn't exist or is auto-managed
             if field not in model_fields:
+                prepared_record.pop(field)
+                continue
+                
+            field_obj = model_fields[field]
+            is_pk = getattr(field_obj, 'primary_key', False)  # Primary key
+            is_auto = getattr(field_obj, 'auto_created', False)  # Auto-created
+            
+            if is_pk or is_auto:
                 prepared_record.pop(field)
 
         return lookup_criteria, prepared_record
@@ -124,8 +133,33 @@ class DjangoModelLoader(BaseLoader):
                     if not create_new:
                         return None
 
-                    # Create new instance
-                    instance = model_class(**record)
+                    # Create new instance - exclude auto-managed fields
+                    model_fields = {
+                        f.name: f for f in model_class._meta.get_fields()
+                    }
+                    filtered_record = {}
+                    for field, value in record.items():
+                        # Explicitly exclude 'id' field
+                        if field == 'id':
+                            continue
+                            
+                        if field not in model_fields:
+                            continue
+                            
+                        field_obj = model_fields[field]
+                        is_pk = getattr(field_obj, 'primary_key', False)
+                        is_auto = getattr(field_obj, 'auto_created', False)
+                        
+                        if not (is_pk or is_auto):
+                            filtered_record[field] = value
+                    
+                    # Log the filtered record for debugging
+                    logger.debug(
+                        f"Creating new {model_class.__name__} "
+                        f"with data: {filtered_record}"
+                    )
+                            
+                    instance = model_class(**filtered_record)
 
                 # Validate and save
                 try:

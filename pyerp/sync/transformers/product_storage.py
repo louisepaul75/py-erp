@@ -71,15 +71,28 @@ class ProductStorageTransformer(BaseTransformer):
         """
         if product_id not in self._product_cache:
             # Log the product_id format for debugging
-            self.log.debug(f"Looking for product with legacy_artikel_id: '{product_id}'")
+            self.log.debug(f"Looking for product with legacy_id: '{product_id}'")
             
             try:
+                # First try to find by legacy_id
                 self._product_cache[product_id] = VariantProduct.objects.get(
-                    legacy_artikel_id=product_id
+                    legacy_id=product_id
                 )
             except VariantProduct.DoesNotExist:
-                self.log.warning(f"Product with legacy_artikel_id {product_id} not found")
-                return None
+                # If not found, try by sku
+                try:
+                    self._product_cache[product_id] = VariantProduct.objects.get(
+                        sku=product_id
+                    )
+                except VariantProduct.DoesNotExist:
+                    # If still not found, try by legacy_sku
+                    try:
+                        self._product_cache[product_id] = VariantProduct.objects.get(
+                            legacy_sku=product_id
+                        )
+                    except VariantProduct.DoesNotExist:
+                        self.log.warning(f"Product with ID {product_id} not found using any lookup method")
+                        return None
         return self._product_cache[product_id]
 
     def _get_box_slot(self, box_id: str, slot_number: int = 1) -> Optional[BoxSlot]:
@@ -124,9 +137,14 @@ class ProductStorageTransformer(BaseTransformer):
         Transform data from Artikel_Lagerorte table.
         """
         try:
-            product_id = data.get("ID_Artikel_Stamm")
+            # Try to get refOld first, then fall back to ID_Artikel_Stamm if not available
+            product_id = data.get("refOld")
             if not product_id:
-                self.log.warning("Missing ID_Artikel_Stamm in record")
+                product_id = data.get("ID_Artikel_Stamm")
+                self.log.warning("refOld not found, falling back to ID_Artikel_Stamm")
+                
+            if not product_id:
+                self.log.warning("Missing product identifier in record")
                 return None
 
             # Try to find the product by legacy_id

@@ -1,11 +1,11 @@
 """Legacy API data extractor implementation."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-import pandas as pd
 from pyerp.external_api.legacy_erp import LegacyERPClient
 from pyerp.utils.logging import get_logger, log_data_sync_event
+from pyerp.sync.exceptions import ExtractError
 
 from .base import BaseExtractor
 
@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 
 
 class LegacyAPIExtractor(BaseExtractor):
-    """Extractor for legacy 4D API data source."""
+    """Extractor for legacy API data."""
 
     def get_required_config_fields(self) -> List[str]:
         """Get required configuration fields.
@@ -41,234 +41,116 @@ class LegacyAPIExtractor(BaseExtractor):
                 status="connected",
                 details={"table": self.config['table_name']}
             )
-        except Exception as e:
+        except ConnectionError as e:
             raise ConnectionError(
                 f"Failed to connect to legacy API: {e}"
             )
 
     def extract(
-        self, query_params: Optional[Dict[str, Any]] = None,
+        self,
+        query_params: Dict[str, Any] = None,
         fail_on_filter_error: bool = False
     ) -> List[Dict[str, Any]]:
-        """Extract data from legacy API.
+        """Extract data from the legacy API.
         
         Args:
             query_params: Query parameters for filtering data
-            fail_on_filter_error: Whether to fail if filter doesn't work
+            fail_on_filter_error: Whether to raise an error if filter 
+                construction fails
             
         Returns:
-            List of extracted records
+            List of dictionaries containing the extracted data
             
         Raises:
-            ConnectionError: If not connected to API
-            ValueError: If query parameters are invalid
-            RuntimeError: If filter doesn't work and fail_on_filter_error is True
+            ExtractError: If data extraction fails or if filter construction 
+                fails and fail_on_filter_error is True
         """
-        if not self.connection:
-            raise ConnectionError("Not connected to legacy API")
-
+        # Initialize filter parts list
+        filter_parts = []
+        filter_query = None
+        
         try:
-            # Initialize filter query
-            filter_query = None
-            filter_requested = False
-            
-            # Process query parameters for date filtering
-            if query_params and 'modified_date' in query_params:
-                filter_query = self._build_date_filter_query(query_params)
-                filter_requested = True
-                logger.info(f"Using date filter query: {filter_query}")
-                logger.info(f"Query params: {query_params}")
-                logger.info(
-                    f"Modified date value: {query_params.get('modified_date')}"
+            # Handle SKU filter
+            if query_params and "Nummer" in query_params:
+                filter_parts.append(
+                    f"Nummer eq '{query_params['Nummer']}'"
                 )
-                if isinstance(query_params.get('modified_date'), dict):
-                    for op, val in query_params.get('modified_date').items():
-                        logger.info(f"  - {op}: {val}")
                 
-                # Add more detailed logging
-                logger.info(f"DETAILED FILTER QUERY: {filter_query}")
-                logger.info(f"FILTER FORMAT FROM CONFIG: {self.config.get('timestamp_filter_format')}")
-                logger.info(f"TIMESTAMP FIELD FROM CONFIG: {self.config.get('modified_date_field', 'modified_date')}")
-
-            # Extract data with pagination
-            all_records = []
-            page_size = self.config.get('page_size', 10000)
-            all_records_enabled = self.config.get('all_records', False)
+            # Handle date filter
+            if query_params and "modified_date" in query_params:
+                if "gt" in query_params["modified_date"]:
+                    date_val = query_params["modified_date"]["gt"]
+                    filter_parts.append(
+                        f"modified_date gt datetime'{date_val}'"
+                    )
             
+            # Combine all filter parts with 'and'
+            if filter_parts:
+                filter_query = " and ".join(filter_parts)
+                
+        except (ValueError, KeyError) as e:
+            error_msg = f"Error constructing filter query: {e}"
+            logger.error(error_msg)
+            if fail_on_filter_error:
+                raise ExtractError(error_msg)
+        
+        try:
+            # Get client from connection manager
+            client = self.connection
+            
+            # Get page size from config or use default
+            page_size = self.config.get("page_size", 1000)
+            all_records = self.config.get("all_records", False)
+            
+            # Initialize variables for pagination
+            skip = 0
+            all_records_list = []
+            
+            while True:
+                # Fetch data using the constructed filter
+                df = client.fetch_table(
+                    table_name=self.config["table_name"],
+                    filter_query=filter_query,
+                    top=page_size,
+                    skip=skip,
+                    all_records=all_records,
+                )
+                
+                if df is None or df.empty:
+                    break
+                    
+                # Convert DataFrame to list of dictionaries and append
+                records = df.to_dict(orient="records")
+                all_records_list.extend(records)
+                
+                # Log progress
+                logger.info(
+                    f"Fetched {len(records)} records (total: {len(all_records_list)})"
+                )
+                
+                # If we got fewer records than page_size, we've reached the end
+                if len(records) < page_size:
+                    break
+                    
+                # Increment skip for next page
+                skip += page_size
+                
+            record_count = len(all_records_list)
             logger.info(
-                f"Fetching data from {self.config['table_name']} "
-                f"with page size {page_size}"
+                f"Extracted {record_count} total records from legacy API"
             )
             
-            # Initialize pagination variables
-            page = 0
-            more_records = True
+            return all_records_list
             
-            # Fetch pages until no more records are returned
-            while more_records:
-                # Calculate current skip
-                skip = page * page_size
-                
-                # Fetch page of records
-                logger.info(
-                    f"Fetching page {page+1} (skip={skip}, top={page_size})"
-                )
-                logger.info(f"Final filter query: {filter_query}")
-                
-                try:
-                    records_df = self.connection.fetch_table(
-                        table_name=self.config['table_name'],
-                        top=page_size,
-                        skip=skip,
-                        filter_query=filter_query,
-                        all_records=all_records_enabled,
-                        fail_on_filter_error=fail_on_filter_error
-                    )
-                    
-                    # Check if we got too many records when a filter was requested
-                    if (filter_requested and fail_on_filter_error and 
-                            len(records_df) >= page_size and page == 0):
-                        # This might indicate the filter wasn't applied
-                        # Let's check if the records match our filter criteria
-                        if 'modified_date' in query_params:
-                            # Get the date field from config
-                            date_field = self.config.get('modified_date_field', 'modified_date')
-                            if date_field in records_df.columns:
-                                # Check if any records don't match our filter
-                                if isinstance(query_params['modified_date'], dict):
-                                    for op, val in query_params['modified_date'].items():
-                                        date_val = datetime.fromisoformat(val.replace('Z', '+00:00'))
-                                        if op == 'gt':
-                                            # Convert string dates to datetime objects for comparison
-                                            try:
-                                                # Check if the column contains string dates
-                                                if records_df[date_field].dtype == 'object':
-                                                    # Try to convert to datetime
-                                                    date_series = pd.to_datetime(
-                                                        records_df[date_field], 
-                                                        errors='coerce'
-                                                    )
-                                                    # Check for any records that don't match our filter
-                                                    invalid_records = date_series <= date_val
-                                                    if invalid_records.any():
-                                                        raise RuntimeError(
-                                                            f"Filter not applied correctly. Found records older than {val}"
-                                                        )
-                                            except Exception as e:
-                                                logger.warning(
-                                                    f"Could not validate date filter: {e}"
-                                                )
-                                        elif op == 'gte':
-                                            # Convert string dates to datetime objects for comparison
-                                            try:
-                                                # Check if the column contains string dates
-                                                if records_df[date_field].dtype == 'object':
-                                                    # Try to convert to datetime
-                                                    date_series = pd.to_datetime(
-                                                        records_df[date_field], 
-                                                        errors='coerce'
-                                                    )
-                                                    # Check for any records that don't match our filter
-                                                    invalid_records = date_series < date_val
-                                                    if invalid_records.any():
-                                                        raise RuntimeError(
-                                                            f"Filter not applied correctly. Found records older than {val}"
-                                                        )
-                                            except Exception as e:
-                                                logger.warning(
-                                                    f"Could not validate date filter: {e}"
-                                                )
-                                        elif op == 'lt':
-                                            # Convert string dates to datetime objects for comparison
-                                            try:
-                                                # Check if the column contains string dates
-                                                if records_df[date_field].dtype == 'object':
-                                                    # Try to convert to datetime
-                                                    date_series = pd.to_datetime(
-                                                        records_df[date_field], 
-                                                        errors='coerce'
-                                                    )
-                                                    # Check for any records that don't match our filter
-                                                    invalid_records = date_series >= date_val
-                                                    if invalid_records.any():
-                                                        raise RuntimeError(
-                                                            f"Filter not applied correctly. Found records newer than {val}"
-                                                        )
-                                            except Exception as e:
-                                                logger.warning(
-                                                    f"Could not validate date filter: {e}"
-                                                )
-                                        elif op == 'lte':
-                                            # Convert string dates to datetime objects for comparison
-                                            try:
-                                                # Check if the column contains string dates
-                                                if records_df[date_field].dtype == 'object':
-                                                    # Try to convert to datetime
-                                                    date_series = pd.to_datetime(
-                                                        records_df[date_field], 
-                                                        errors='coerce'
-                                                    )
-                                                    # Check for any records that don't match our filter
-                                                    invalid_records = date_series > date_val
-                                                    if invalid_records.any():
-                                                        raise RuntimeError(
-                                                            f"Filter not applied correctly. Found records newer than {val}"
-                                                        )
-                                            except Exception as e:
-                                                logger.warning(
-                                                    f"Could not validate date filter: {e}"
-                                                )
-                except Exception as e:
-                    logger.error(f"Error fetching records: {e}")
-                    # If we're supposed to fail on filter errors and a filter was requested,
-                    # don't silently fall back to getting all records
-                    if filter_requested and fail_on_filter_error:
-                        raise RuntimeError(
-                            f"Filter error: {e}. The command was configured to fail on filter errors."
-                        )
-                    raise
-                
-                # Convert DataFrame to list of dictionaries
-                if not records_df.empty:
-                    page_records = records_df.to_dict('records')
-                    record_count = len(page_records)
-                    
-                    all_records.extend(page_records)
-                    logger.info(
-                        f"Fetched {record_count} records on page {page+1}"
-                    )
-                    
-                    # If we got a full page, there might be more records
-                    if record_count == page_size:
-                        page += 1
-                    else:
-                        # We got fewer records than the page size, so we're done
-                        more_records = False
-                else:
-                    logger.info(f"No records returned on page {page+1}")
-                    more_records = False
-
-            logger.info(
-                f"Extracted {len(all_records)} records from "
-                f"{self.config['table_name']}"
+        except (ConnectionError, ValueError) as e:
+            error_msg = (
+                f"Error extracting data from legacy API: {e}"
             )
-                
-            return all_records
-
-        except Exception as e:
-            raise ValueError(
-                f"Failed to extract data from legacy API: {e}"
-            ) from e
+            logger.error(error_msg)
+            raise ExtractError(error_msg)
             
     def _build_date_filter_query(self, query_params: Dict[str, Any]) -> str:
-        """Build a date filter query string for the legacy API.
-        
-        Args:
-            query_params: Query parameters with date filters
-            
-        Returns:
-            List of filter conditions in the format [[field, operator, value], ...]
-        """
+        """Build OData filter query for date filtering."""
         modified_date = query_params.get('modified_date')
         if not modified_date:
             return None

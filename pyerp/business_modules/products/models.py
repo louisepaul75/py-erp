@@ -48,9 +48,11 @@ class ProductCategory(models.Model):
 
 class BaseProduct(models.Model):
     """
-    Abstract base class for common product fields.
+    Abstract base class for all product models.
+    Contains common fields and functionality.
     """
 
+    id = models.BigAutoField(auto_created=True, primary_key=True, serialize=False)
     sku = models.CharField(
         max_length=50,
         unique=True,
@@ -96,10 +98,12 @@ class BaseProduct(models.Model):
     )
     description = models.TextField(
         blank=True,
+        null=True,
         help_text=_("Full product description (maps to Beschreibung in legacy system)"),
     )
     description_en = models.TextField(
         blank=True,
+        null=True,
         help_text=_("Full product description in English"),
     )
     keywords = models.CharField(
@@ -297,13 +301,6 @@ class VariantProduct(BaseProduct):
         null=True,
         help_text=_("Legacy SKU (maps to alteNummer in Artikel_Variante)"),
     )
-    legacy_artikel_id = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        db_index=True,
-        help_text=_("Legacy ID_Artikel_Stamm value from the Artikel_Stamm table"),
-    )
     base_sku = models.CharField(
         max_length=50,
         db_index=True,
@@ -317,6 +314,14 @@ class VariantProduct(BaseProduct):
         null=True,
         db_column="familie_",
         help_text=_("Original Familie_ field from Artikel_Variante"),
+    )
+
+    # Add refOld field
+    refOld = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text=_("Reference to old product ID"),
     )
 
     # HIGH PRIORITY - Core product data from legacy system

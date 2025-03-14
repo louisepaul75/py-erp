@@ -118,9 +118,10 @@ if __name__ == "__main__":
 
     client = LegacyERPClient(environment="live")
 
-    # Fetch sample records from the box master table
+
+        # Fetch sample records from the box master table
     df = client.fetch_table(
-        table_name="Artikel_Lagerorte",
+        table_name="Artikel_Variante",
         top=10  # Fetch just 10 records for analysis
     )
 
