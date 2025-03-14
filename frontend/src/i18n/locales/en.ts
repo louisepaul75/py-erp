@@ -147,8 +147,8 @@ export default {
     boxCode: 'Box Code',
     boxType: 'Box Type',
     storageLocation: 'Storage Location',
-    status: 'Status',
-    purpose: 'Purpose',
+    statusLabel: 'Status',
+    purposeLabel: 'Purpose',
     availableSlots: 'Available Slots',
     noLocation: 'No Location',
     statusAVAILABLE: 'Available',
@@ -164,6 +164,27 @@ export default {
     boxTypes: 'Box Types',
     noNotes: 'No notes',
     barcode: 'Barcode',
-    location: 'Location'
+    location: 'Location',
+    overview: 'Overview',
+    productMovements: 'Product Movements',
+    position: 'Position',
+    flags: 'Flags',
+    saleLocation: 'Sale Location',
+    specialSpot: 'Special Spot',
+    viewInventory: 'View Inventory',
+    sale: 'Sale',
+    status: {
+      available: 'Available',
+      in_use: 'In Use',
+      reserved: 'Reserved',
+      damaged: 'Damaged',
+      retired: 'Retired'
+    },
+    purpose: {
+      storage: 'Storage',
+      picking: 'Picking',
+      transport: 'Transport',
+      workshop: 'Workshop'
+    }
   }
 };

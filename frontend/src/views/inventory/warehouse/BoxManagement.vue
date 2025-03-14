@@ -119,8 +119,8 @@
                         <th class="text-left">{{ $t('inventory.boxCode') }}</th>
                         <th class="text-left">{{ $t('inventory.boxType') }}</th>
                         <th class="text-left">{{ $t('inventory.storageLocation') }}</th>
-                        <th class="text-center">{{ $t('inventory.status') }}</th>
-                        <th class="text-center">{{ $t('inventory.purpose') }}</th>
+                        <th class="text-center">{{ $t('inventory.statusLabel') }}</th>
+                        <th class="text-center">{{ $t('inventory.purposeLabel') }}</th>
                         <th class="text-center">{{ $t('inventory.availableSlots') }}</th>
                         <th class="text-center">{{ $t('common.actions') }}</th>
                       </tr>
@@ -389,7 +389,7 @@
                   <v-icon>mdi-information</v-icon>
                 </v-list-item-icon>
                 <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.status') }}</v-list-item-title>
+                  <v-list-item-title>{{ $t('inventory.statusLabel') }}</v-list-item-title>
                   <v-list-item-subtitle>
                     <v-chip :color="getStatusColor(selectedBox.status)" small>
                       {{ $t(`inventory.status.${selectedBox.status.toLowerCase()}`) }}
@@ -404,7 +404,7 @@
                   <v-icon>mdi-flag</v-icon>
                 </v-list-item-icon>
                 <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.purpose') }}</v-list-item-title>
+                  <v-list-item-title>{{ $t('inventory.purposeLabel') }}</v-list-item-title>
                   <v-list-item-subtitle>
                     <v-chip :color="getPurposeColor(selectedBox.purpose)" small>
                       {{ $t(`inventory.purpose.${selectedBox.purpose.toLowerCase()}`) }}
@@ -506,14 +506,14 @@ export default defineComponent({
           width: '200'
         },
         { 
-          text: this.$t('inventory.status'),
+          text: this.$t('inventory.statusLabel'),
           value: 'status',
           sortable: true,
           align: 'center',
           width: '120'
         },
         { 
-          text: this.$t('inventory.purpose'),
+          text: this.$t('inventory.purposeLabel'),
           value: 'purpose',
           sortable: true,
           align: 'center',
