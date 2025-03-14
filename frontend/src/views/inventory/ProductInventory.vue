@@ -7,7 +7,7 @@
             {{ $t('inventory.productInventory') }}
           </v-card-title>
           
-          <v-tabs v-model="activeTab" background-color="secondary" dark>
+          <v-tabs v-model="activeTab" bg-color="secondary" dark>
             <v-tab value="overview">
               {{ $t('inventory.overview') }}
             </v-tab>
@@ -23,7 +23,7 @@
             <!-- Overview Tab -->
             <v-window-item value="overview">
               <v-card-text class="text-center py-5">
-                <v-icon size="64" color="grey lighten-1">mdi-cube-outline</v-icon>
+                <v-icon size="64" color="grey-lighten-1">mdi-cube-outline</v-icon>
                 <h3 class="mt-4">{{ $t('common.comingSoon') }}</h3>
                 <p class="text-body-1 mt-2">
                   {{ $t('inventory.productInventoryDescription') }}
@@ -39,7 +39,7 @@
             <!-- Movements Tab -->
             <v-window-item value="movements">
               <v-card-text class="text-center py-5">
-                <v-icon size="64" color="grey lighten-1">mdi-swap-horizontal</v-icon>
+                <v-icon size="64" color="grey-lighten-1">mdi-swap-horizontal</v-icon>
                 <h3 class="mt-4">{{ $t('common.comingSoon') }}</h3>
                 <p class="text-body-1 mt-2">
                   {{ $t('inventory.movementsDescription') }}
@@ -53,20 +53,11 @@
   </v-container>
 </template>
 
-<script>
+<script setup>
 import StorageLocationsTab from './product/StorageLocationsTab.vue';
+import { ref } from 'vue';
 
-export default {
-  name: 'ProductInventory',
-  components: {
-    StorageLocationsTab
-  },
-  data() {
-    return {
-      activeTab: 'storage-locations' // Default to storage locations tab
-    };
-  }
-};
+const activeTab = ref('storage-locations'); // Default to storage locations tab
 </script>
 
 <style scoped>

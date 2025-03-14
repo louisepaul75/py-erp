@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import inventoryService, { BoxType, Box, StorageLocation } from '@/services/inventory';
+import inventoryService, { BoxType, Box, StorageLocation, BoxWithProducts } from '@/services/inventory';
 
 interface InventoryState {
   boxTypes: BoxType[];
@@ -11,15 +11,21 @@ interface InventoryState {
     totalPages: number;
   };
   storageLocations: StorageLocation[];
+  productsByLocation: {
+    locationId: number | null;
+    data: BoxWithProducts[];
+  };
   loading: {
     boxTypes: boolean;
     boxes: boolean;
     storageLocations: boolean;
+    productsByLocation: boolean;
   };
   error: {
     boxTypes: string | null;
     boxes: string | null;
     storageLocations: string | null;
+    productsByLocation: string | null;
   };
 }
 
@@ -34,15 +40,21 @@ export const useInventoryStore = defineStore('inventory', {
       totalPages: 0
     },
     storageLocations: [],
+    productsByLocation: {
+      locationId: null,
+      data: []
+    },
     loading: {
       boxTypes: false,
       boxes: false,
-      storageLocations: false
+      storageLocations: false,
+      productsByLocation: false
     },
     error: {
       boxTypes: null,
       boxes: null,
-      storageLocations: null
+      storageLocations: null,
+      productsByLocation: null
     }
   }),
   
@@ -51,12 +63,16 @@ export const useInventoryStore = defineStore('inventory', {
     getBoxes: (state) => state.boxes,
     getBoxesPagination: (state) => state.boxesPagination,
     getStorageLocations: (state) => state.storageLocations,
+    getProductsByLocation: (state) => state.productsByLocation.data,
+    getCurrentLocationId: (state) => state.productsByLocation.locationId,
     isBoxTypesLoading: (state) => state.loading.boxTypes,
     isBoxesLoading: (state) => state.loading.boxes,
     isStorageLocationsLoading: (state) => state.loading.storageLocations,
+    isProductsByLocationLoading: (state) => state.loading.productsByLocation,
     getBoxTypesError: (state) => state.error.boxTypes,
     getBoxesError: (state) => state.error.boxes,
-    getStorageLocationsError: (state) => state.error.storageLocations
+    getStorageLocationsError: (state) => state.error.storageLocations,
+    getProductsByLocationError: (state) => state.error.productsByLocation
   },
   
   actions: {
@@ -125,6 +141,27 @@ export const useInventoryStore = defineStore('inventory', {
       } finally {
         this.loading.storageLocations = false;
       }
+    },
+    
+    async fetchProductsByLocation(locationId: number) {
+      this.loading.productsByLocation = true;
+      this.error.productsByLocation = null;
+      
+      try {
+        const data = await inventoryService.getProductsByLocation(locationId);
+        this.productsByLocation.locationId = locationId;
+        this.productsByLocation.data = data;
+      } catch (error) {
+        console.error('Error fetching products by location:', error);
+        this.error.productsByLocation = 'Failed to fetch products by location';
+      } finally {
+        this.loading.productsByLocation = false;
+      }
+    },
+    
+    clearProductsByLocation() {
+      this.productsByLocation.locationId = null;
+      this.productsByLocation.data = [];
     }
   }
 }); 

@@ -54,6 +54,37 @@ export interface StorageLocation {
 }
 
 /**
+ * Interface for Product in Storage data
+ */
+export interface StoredProduct {
+  id: number;
+  sku: string;
+  name: string;
+  quantity: number;
+  reservation_status: string;
+  batch_number: string;
+  date_stored: string;
+}
+
+/**
+ * Interface for BoxSlot with Products data
+ */
+export interface BoxSlotWithProducts {
+  slot_id: number;
+  slot_code: string;
+  products: StoredProduct[];
+}
+
+/**
+ * Interface for Box with Slots and Products data
+ */
+export interface BoxWithProducts {
+  box_id: number;
+  box_code: string;
+  slots: BoxSlotWithProducts[];
+}
+
+/**
  * Inventory API service functions
  */
 export const inventoryService = {
@@ -123,6 +154,19 @@ export const inventoryService = {
     console.log(`Fetching storage location ${id}...`);
     return api.get(`/inventory/storage-locations/${id}/`).then(response => {
       console.log('Storage location response:', response.data);
+      return response.data;
+    });
+  },
+
+  /**
+   * Get products by storage location
+   * @param locationId Storage location ID
+   * @returns Promise with products data grouped by box and slot
+   */
+  getProductsByLocation(locationId: number): Promise<BoxWithProducts[]> {
+    console.log(`Fetching products for location ${locationId}...`);
+    return api.get(`/inventory/storage-locations/${locationId}/products/`).then(response => {
+      console.log('Products by location response:', response.data);
       return response.data;
     });
   }

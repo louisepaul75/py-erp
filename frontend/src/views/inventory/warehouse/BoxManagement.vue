@@ -187,15 +187,14 @@
                   <!-- Actions column -->
                   <template v-slot:item.actions="{ item }">
                     <div class="d-flex justify-center">
-                      <v-tooltip bottom>
-                        <template v-slot:activator="{ on, attrs }">
+                      <v-tooltip location="bottom">
+                        <template v-slot:activator="{ props }">
                           <v-btn
                             icon
                             x-small
                             color="primary"
                             class="mr-1"
-                            v-bind="attrs"
-                            v-on="{ ...on }"
+                            v-bind="props"
                             @click="viewBox(item)"
                           >
                             <v-icon x-small>mdi-eye</v-icon>
@@ -204,14 +203,13 @@
                         <span>{{ $t('common.view') }}</span>
                       </v-tooltip>
 
-                      <v-tooltip bottom>
-                        <template v-slot:activator="{ on, attrs }">
+                      <v-tooltip location="bottom">
+                        <template v-slot:activator="{ props }">
                           <v-btn
                             icon
                             x-small
                             color="secondary"
-                            v-bind="attrs"
-                            v-on="{ ...on }"
+                            v-bind="props"
                             @click="editBox(item)"
                           >
                             <v-icon x-small>mdi-pencil</v-icon>
@@ -287,50 +285,42 @@
           <v-row>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-ruler</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.dimensions') }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ formatDimensions(selectedBoxType) }}</v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.dimensions') }}</v-list-item-title>
+                <v-list-item-subtitle>{{ formatDimensions(selectedBoxType) }}</v-list-item-subtitle>
               </v-list-item>
             </v-col>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-weight</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.weightCapacity') }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    {{ selectedBoxType.weight_capacity ? `${selectedBoxType.weight_capacity} kg` : '-' }}
-                  </v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.weightCapacity') }}</v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ selectedBoxType.weight_capacity ? `${selectedBoxType.weight_capacity} kg` : '-' }}
+                </v-list-item-subtitle>
               </v-list-item>
             </v-col>
           </v-row>
           <v-row>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-grid</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.slotCount') }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedBoxType.slot_count }}</v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.slotCount') }}</v-list-item-title>
+                <v-list-item-subtitle>{{ selectedBoxType.slot_count }}</v-list-item-subtitle>
               </v-list-item>
             </v-col>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-format-list-numbered</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.slotNamingScheme') }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedBoxType.slot_naming_scheme }}</v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.slotNamingScheme') }}</v-list-item-title>
+                <v-list-item-subtitle>{{ selectedBoxType.slot_naming_scheme }}</v-list-item-subtitle>
               </v-list-item>
             </v-col>
           </v-row>
@@ -359,91 +349,79 @@
           <v-row>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-package-variant</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.boxType') }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedBox.box_type.name }}</v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.boxType') }}</v-list-item-title>
+                <v-list-item-subtitle>{{ selectedBox.box_type.name }}</v-list-item-subtitle>
               </v-list-item>
             </v-col>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-map-marker</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.location') }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    {{ selectedBox.storage_location ? selectedBox.storage_location.name : $t('inventory.noLocation') }}
-                  </v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.location') }}</v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ selectedBox.storage_location ? selectedBox.storage_location.name : $t('inventory.noLocation') }}
+                </v-list-item-subtitle>
               </v-list-item>
             </v-col>
           </v-row>
           <v-row>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
-                  <v-icon>mdi-information</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.statusLabel') }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    <v-chip :color="getStatusColor(selectedBox.status)" small>
-                      {{ $t(`inventory.status.${selectedBox.status.toLowerCase()}`) }}
-                    </v-chip>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
+                <template v-slot:prepend>
+                  <v-icon>mdi-checkbox-marked-circle</v-icon>
+                </template>
+                <v-list-item-title>{{ $t('common.status') }}</v-list-item-title>
+                <v-list-item-subtitle>
+                  <v-chip :color="getStatusColor(selectedBox.status)" small>
+                    {{ $t(`inventory.status.${selectedBox.status.toLowerCase()}`) }}
+                  </v-chip>
+                </v-list-item-subtitle>
               </v-list-item>
             </v-col>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-flag</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.purposeLabel') }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    <v-chip :color="getPurposeColor(selectedBox.purpose)" small>
-                      {{ $t(`inventory.purpose.${selectedBox.purpose.toLowerCase()}`) }}
-                    </v-chip>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.purposeLabel') }}</v-list-item-title>
+                <v-list-item-subtitle>
+                  <v-chip :color="getPurposeColor(selectedBox.purpose)" small>
+                    {{ $t(`inventory.purpose.${selectedBox.purpose.toLowerCase()}`) }}
+                  </v-chip>
+                </v-list-item-subtitle>
               </v-list-item>
             </v-col>
           </v-row>
           <v-row>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-grid</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.availableSlots') }}</v-list-item-title>
-                  <v-list-item-subtitle>
-                    <v-chip
-                      :color="selectedBox.available_slots > 0 ? 'success' : 'error'"
-                      small
-                      label
-                      outlined
-                    >
-                      {{ selectedBox.available_slots }}
-                    </v-chip>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.availableSlots') }}</v-list-item-title>
+                <v-list-item-subtitle>
+                  <v-chip
+                    :color="selectedBox.available_slots > 0 ? 'success' : 'error'"
+                    small
+                    label
+                    outlined
+                  >
+                    {{ selectedBox.available_slots }}
+                  </v-chip>
+                </v-list-item-subtitle>
               </v-list-item>
             </v-col>
             <v-col cols="6">
               <v-list-item>
-                <v-list-item-icon>
+                <template v-slot:prepend>
                   <v-icon>mdi-barcode</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                  <v-list-item-title>{{ $t('inventory.barcode') }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ selectedBox.barcode || '-' }}</v-list-item-subtitle>
-                </v-list-item-content>
+                </template>
+                <v-list-item-title>{{ $t('inventory.barcode') }}</v-list-item-title>
+                <v-list-item-subtitle>{{ selectedBox.barcode || '-' }}</v-list-item-subtitle>
               </v-list-item>
             </v-col>
           </v-row>

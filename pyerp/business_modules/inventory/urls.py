@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import logging
 
-from .models import BoxType, StorageLocation, Box
+from .models import BoxType, StorageLocation, Box, BoxSlot, ProductStorage
 
 app_name = "inventory"
 logger = logging.getLogger(__name__)
@@ -144,6 +144,89 @@ def storage_locations_list(request):
         )
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def products_by_location(request, location_id=None):
+    """API endpoint to list products by storage location."""
+    try:
+        # Get all box slots in the specified storage location
+        if location_id:
+            box_slots = BoxSlot.objects.filter(
+                box__storage_location_id=location_id
+            ).select_related('box', 'box__storage_location')
+        else:
+            return Response(
+                {"detail": "Storage location ID is required"},
+                status=400
+            )
+        
+        # Get products in these box slots
+        product_storage_items = ProductStorage.objects.filter(
+            box_slot__in=box_slots
+        ).select_related(
+            'product', 
+            'box_slot', 
+            'box_slot__box', 
+            'box_slot__box__storage_location'
+        )
+        
+        # Group products by box and slot
+        result = {}
+        for item in product_storage_items:
+            box_code = item.box_slot.box.code
+            slot_code = item.box_slot.slot_code
+            
+            if box_code not in result:
+                result[box_code] = {
+                    "box_id": item.box_slot.box.id,
+                    "box_code": box_code,
+                    "slots": {}
+                }
+            
+            if slot_code not in result[box_code]["slots"]:
+                result[box_code]["slots"][slot_code] = {
+                    "slot_id": item.box_slot.id,
+                    "slot_code": slot_code,
+                    "products": []
+                }
+            
+            result[box_code]["slots"][slot_code]["products"].append({
+                "id": item.product.id,
+                "sku": item.product.sku,
+                "name": item.product.name,
+                "quantity": item.quantity,
+                "reservation_status": item.reservation_status,
+                "batch_number": item.batch_number,
+                "date_stored": item.date_stored
+            })
+        
+        # Convert to list format for easier consumption in frontend
+        formatted_result = []
+        for box_code, box_data in result.items():
+            box_item = {
+                "box_id": box_data["box_id"],
+                "box_code": box_code,
+                "slots": []
+            }
+            
+            for slot_code, slot_data in box_data["slots"].items():
+                box_item["slots"].append({
+                    "slot_id": slot_data["slot_id"],
+                    "slot_code": slot_code,
+                    "products": slot_data["products"]
+                })
+            
+            formatted_result.append(box_item)
+        
+        return Response(formatted_result)
+    except Exception as e:
+        logger.error(f"Error fetching products by location: {e}")
+        return Response(
+            {"detail": f"Failed to fetch products by location: {str(e)}"},
+            status=500
+        )
+
+
 # URL patterns for the inventory app
 urlpatterns = [
     path("status/", placeholder_view, name="status"),
@@ -154,5 +237,10 @@ urlpatterns = [
         "storage-locations/",
         storage_locations_list,
         name="storage_locations_list",
+    ),
+    path(
+        "storage-locations/<int:location_id>/products/",
+        products_by_location,
+        name="products_by_location",
     ),
 ]
