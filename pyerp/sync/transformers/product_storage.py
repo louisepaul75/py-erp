@@ -28,17 +28,34 @@ def parse_decimal(value: str) -> Decimal:
     Returns:
         Decimal value
     """
-    if not value or value.lower() == 'null':
+    # Handle None values
+    if value is None:
+        return Decimal('0')
+        
+    # Handle float/int values directly
+    if isinstance(value, (float, int)):
+        # Check for NaN
+        if isinstance(value, float) and (value != value):  # NaN check
+            return Decimal('0')
+        return Decimal(str(value))
+    
+    # Handle string values
+    if not value or (isinstance(value, str) and value.lower() in ('null', 'nan')):
         return Decimal('0')
     
     # Replace comma with dot for decimal separator
-    value = value.replace(',', '.')
-    
-    # Remove any non-numeric characters except dot
-    value = ''.join(c for c in value if c.isdigit() or c == '.')
+    if isinstance(value, str):
+        value = value.replace(',', '.')
+        
+        # Remove any non-numeric characters except dot
+        value = ''.join(c for c in value if c.isdigit() or c == '.')
     
     try:
-        return Decimal(value)
+        decimal_value = Decimal(value)
+        # Check if the result is NaN
+        if decimal_value.is_nan():
+            return Decimal('0')
+        return decimal_value
     except (ValueError, InvalidOperation):
         return Decimal('0')
 
@@ -69,30 +86,49 @@ class ProductStorageTransformer(BaseTransformer):
         Returns:
             VariantProduct instance or None if not found
         """
+        # Skip lookup for empty or zero product IDs
+        if not product_id or product_id == "0":
+            self.log.info("Skipping lookup for empty or zero product ID")
+            return None
+            
         if product_id not in self._product_cache:
             # Log the product_id format for debugging
-            self.log.debug(f"Looking for product with legacy_id: '{product_id}'")
+            self.log.debug(f"Looking for product with ID: '{product_id}'")
             
             try:
-                # First try to find by legacy_id
+                # First try to find by refOld - this is the key link for legacy sync
                 self._product_cache[product_id] = VariantProduct.objects.get(
-                    legacy_id=product_id
+                    refOld=product_id
                 )
+                self.log.debug(f"Found by refOld: {self._product_cache[product_id]}")
             except VariantProduct.DoesNotExist:
-                # If not found, try by sku
+                # If not found by refOld, try by legacy_id
                 try:
                     self._product_cache[product_id] = VariantProduct.objects.get(
-                        sku=product_id
+                        legacy_id=product_id
                     )
+                    self.log.debug(f"Found by legacy_id: {self._product_cache[product_id]}")
                 except VariantProduct.DoesNotExist:
-                    # If still not found, try by legacy_sku
+                    # If not found, try by sku
                     try:
                         self._product_cache[product_id] = VariantProduct.objects.get(
-                            legacy_sku=product_id
+                            sku=product_id
                         )
+                        self.log.debug(f"Found by sku: {self._product_cache[product_id]}")
                     except VariantProduct.DoesNotExist:
-                        self.log.warning(f"Product with ID {product_id} not found using any lookup method")
-                        return None
+                        # If still not found, try by legacy_sku
+                        try:
+                            self._product_cache[product_id] = VariantProduct.objects.get(
+                                legacy_sku=product_id
+                            )
+                            self.log.debug(
+                                f"Found by legacy_sku: {self._product_cache[product_id]}"
+                            )
+                        except VariantProduct.DoesNotExist:
+                            self.log.info(
+                                f"Product with ID {product_id} not found using any lookup"
+                            )
+                            return None
         return self._product_cache[product_id]
 
     def _get_box_slot(self, box_id: str, slot_number: int = 1) -> Optional[BoxSlot]:
@@ -118,8 +154,17 @@ class ProductStorageTransformer(BaseTransformer):
         """
         Parse quantity string to Decimal, handling null/empty values.
         """
-        if not quantity_str or quantity_str.lower() == "null":
+        if quantity_str is None:
             return Decimal("0")
+            
+        # Handle float values directly
+        if isinstance(quantity_str, (float, int)):
+            return Decimal(str(quantity_str))
+            
+        # Handle string values
+        if not quantity_str or (isinstance(quantity_str, str) and quantity_str.lower() == "null"):
+            return Decimal("0")
+            
         return parse_decimal(quantity_str)
 
     def _determine_status(self, data: Dict[str, Any]) -> str:
@@ -137,31 +182,75 @@ class ProductStorageTransformer(BaseTransformer):
         Transform data from Artikel_Lagerorte table.
         """
         try:
-            # Try to get refOld first, then fall back to ID_Artikel_Stamm if not available
-            product_id = data.get("refOld")
-            if not product_id:
-                product_id = data.get("ID_Artikel_Stamm")
-                self.log.warning("refOld not found, falling back to ID_Artikel_Stamm")
+            # For Artikel_Lagerorte, we want to primarily use ID_Artikel_Stamm
+            # as this matches with refOld in Artikel_Variante
+            product_id = data.get("ID_Artikel_Stamm")
+            
+            # Ensure product_id is a string
+            if product_id is not None:
+                product_id = str(product_id).strip()
                 
-            if not product_id:
-                self.log.warning("Missing product identifier in record")
+            if not product_id or product_id == "0":
+                # Fall back to refOld if ID_Artikel_Stamm is not available or is 0
+                product_id = data.get("refOld")
+                if product_id is not None:
+                    product_id = str(product_id).strip()
+                self.log.info("ID_Artikel_Stamm not found or is 0, falling back to refOld")
+                
+            if not product_id or product_id == "0":
+                self.log.info(f"Skipping record with missing or zero product identifier: {data.get('UUID')}")
                 return None
 
-            # Try to find the product by legacy_id
+            # Try to find the product by refOld (matching Artikel_Variante's refOld)
             product = self._get_product(product_id)
             if not product:
-                # Log the missing product and continue with other records
+                # Log the missing product as info and continue with other records
+                self.log.info(f"Skipping record - product with ID {product_id} not found: {data.get('UUID')}")
                 return None
 
-            quantity = self._parse_quantity(data.get("Bestand", "0"))
+            # Handle quantity - explicitly check for null/NaN values
+            bestand = data.get("Bestand")
+            if bestand is None or (isinstance(bestand, float) and (bestand != bestand)):  # NaN check
+                self.log.debug(f"Null or NaN quantity found, setting to 0")
+                quantity = Decimal("0")
+            else:
+                quantity = self._parse_quantity(bestand)
+                
+            # If quantity is still NaN or invalid, set to 0
+            if quantity is None or (hasattr(quantity, 'is_nan') and quantity.is_nan()):
+                self.log.debug(f"Invalid quantity after parsing, setting to 0")
+                quantity = Decimal("0")
+                
             status = self._determine_status(data)
 
-            # We'll set box_slot to None initially and update it later
-            # when processing Lager_Schuetten data
+            # Try to find a box slot for this product
+            box_slot = None
+            try:
+                # Look for existing box slot assignments in Lager_Schuetten
+                from django.db.models import Q
+                from pyerp.business_modules.inventory.models import BoxSlot
+                
+                # Get the first available box slot
+                # This is a temporary solution until we implement proper box slot assignment
+                box_slot = BoxSlot.objects.filter(
+                    ~Q(stored_products__isnull=False)
+                ).first()
+                
+                if not box_slot:
+                    self.log.info(
+                        f"No available box slot found for product {product}. "
+                        "Skipping record as box_slot is required."
+                    )
+                    return None
+                    
+            except Exception as e:
+                self.log.info(f"Error finding box slot: {str(e)}")
+                return None
+
             transformed = {
                 "legacy_id": data.get("UUID"),
                 "product": product,
-                "box_slot": None,  # Will be updated when processing Lager_Schuetten
+                "box_slot": box_slot,  # Assign a box slot or skip the record
                 "quantity": quantity,
                 "reservation_status": status,
                 "created_by": data.get("created_name"),

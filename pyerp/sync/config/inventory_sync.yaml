@@ -188,8 +188,8 @@ product_storage_artikel_lagerorte:
       field_resolution:
         product:
           model: "products.VariantProduct"
-          lookup_field: "legacy_id"
-          source_field: "refOld"
+          lookup_field: "refOld"
+          source_field: "ID_Artikel_Stamm"
   schedule:
     frequency: "daily"
     time: "04:00"
