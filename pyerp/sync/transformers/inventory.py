@@ -400,9 +400,14 @@ class BoxTransformer(BaseTransformer):
         transformed_records = []
         
         # Get all existing box types for validation
-        from pyerp.business_modules.inventory.models import BoxType
+        from pyerp.business_modules.inventory.models import BoxType, StorageLocation
         existing_box_types = {
             bt.name: bt for bt in BoxType.objects.all()
+        }
+        
+        # Get all storage locations by UUID for lookup
+        storage_locations_by_uuid = {
+            sl.legacy_id: sl for sl in StorageLocation.objects.all()
         }
         
         for record in source_data:
@@ -444,6 +449,26 @@ class BoxTransformer(BaseTransformer):
 
             # Extract storage location code (now optional)
             storage_location_code = data.get('Lagerort')
+            
+            # Try to get storage location from Stamm_Lagerort UUID in data_
+            storage_location = None
+            storage_location_uuid = data.get('Stamm_Lagerort')
+            
+            if storage_location_uuid:
+                # Look up storage location by UUID
+                storage_location = storage_locations_by_uuid.get(storage_location_uuid)
+                if storage_location:
+                    storage_location_code = storage_location.location_code
+                    logger.info(
+                        f"Found storage location {storage_location.location_code} "
+                        f"for box {legacy_id} using UUID {storage_location_uuid}"
+                    )
+                else:
+                    logger.warning(
+                        f"Storage location with UUID {storage_location_uuid} "
+                        f"not found for box {legacy_id}"
+                    )
+            
             if not storage_location_code:
                 logger.info(
                     f"Record {legacy_id} has no storage location"
@@ -485,7 +510,9 @@ class BoxTransformer(BaseTransformer):
                 'code': f'SC{legacy_id}',
                 'box_type': box_type,  # Set the actual BoxType instance
                 'box_type_name': box_type_name,  # Keep name for reference
+                'storage_location': storage_location,  # Set the actual StorageLocation instance
                 'storage_location_code': storage_location_code,
+                'storage_location_uuid': storage_location_uuid,  # Store UUID for reference
                 'purpose': purpose,
                 'max_slots': record.get('max_Anzahl_Slots', 1),
                 'unit_count': data.get('Anzahl_Schuetteneinheiten', 1),

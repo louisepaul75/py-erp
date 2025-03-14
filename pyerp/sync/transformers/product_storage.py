@@ -11,7 +11,7 @@ import json
 import logging
 
 from pyerp.business_modules.inventory.models import (
-    ProductStorage, BoxSlot, Box
+    ProductStorage, BoxSlot, Box, StorageLocation
 )
 from pyerp.business_modules.products.models import VariantProduct
 from pyerp.sync.transformers.base import BaseTransformer
@@ -81,7 +81,8 @@ class ProductStorageTransformer(BaseTransformer):
         Get product instance from cache or database.
         
         Args:
-            product_id: The ID_Artikel_Stamm value from Artikel_Lagerorte
+            product_id: The ID_Artikel_Stamm value from Artikel_Lagerorte,
+                       which should match with refOld in VariantProduct
             
         Returns:
             VariantProduct instance or None if not found
@@ -182,8 +183,8 @@ class ProductStorageTransformer(BaseTransformer):
         Transform data from Artikel_Lagerorte table.
         """
         try:
-            # For Artikel_Lagerorte, we want to primarily use ID_Artikel_Stamm
-            # as this matches with refOld in Artikel_Variante
+            # Always use ID_Artikel_Stamm as the product identifier
+            # This matches with refOld in VariantProduct
             product_id = data.get("ID_Artikel_Stamm")
             
             # Ensure product_id is a string
@@ -191,21 +192,20 @@ class ProductStorageTransformer(BaseTransformer):
                 product_id = str(product_id).strip()
                 
             if not product_id or product_id == "0":
-                # Fall back to refOld if ID_Artikel_Stamm is not available or is 0
-                product_id = data.get("refOld")
-                if product_id is not None:
-                    product_id = str(product_id).strip()
-                self.log.info("ID_Artikel_Stamm not found or is 0, falling back to refOld")
-                
-            if not product_id or product_id == "0":
-                self.log.info(f"Skipping record with missing or zero product identifier: {data.get('UUID')}")
+                self.log.info(
+                    f"Skipping record with missing or zero product identifier: "
+                    f"{data.get('UUID')}"
+                )
                 return None
 
             # Try to find the product by refOld (matching Artikel_Variante's refOld)
             product = self._get_product(product_id)
             if not product:
                 # Log the missing product as info and continue with other records
-                self.log.info(f"Skipping record - product with ID {product_id} not found: {data.get('UUID')}")
+                self.log.info(
+                    f"Skipping record - product with ID {product_id} not found: "
+                    f"{data.get('UUID')}"
+                )
                 return None
 
             # Handle quantity - explicitly check for null/NaN values
@@ -271,20 +271,81 @@ class ProductStorageTransformer(BaseTransformer):
         try:
             artikel_lagerorte_uuid = data.get("UUID_Artikel_Lagerorte")
             if not artikel_lagerorte_uuid:
-                raise TransformError("Missing UUID_Artikel_Lagerorte")
+                # Try to get it from data_ field if not in main record
+                if data.get("data_") and isinstance(data.get("data_"), dict):
+                    artikel_lagerorte_uuid = data.get("data_").get(
+                        "Artikel_Lagerort"
+                    )
+                
+                if not artikel_lagerorte_uuid:
+                    self.log.warning(
+                        f"Skipping record - Missing UUID_Artikel_Lagerorte: "
+                        f"{data.get('UUID')}"
+                    )
+                    return None
 
             # Get box slot
             box_id = data.get("ID_Stamm_Lager_Schuetten")
             if not box_id:
-                raise TransformError("Missing ID_Stamm_Lager_Schuetten")
+                # Try to get it from data_ field if not in main record
+                if data.get("data_") and isinstance(data.get("data_"), dict):
+                    box_id = data.get("data_").get(
+                        "Schütten_ID"
+                    )
+                
+                if not box_id:
+                    self.log.warning(
+                        f"Skipping record - Missing ID_Stamm_Lager_Schuetten: "
+                        f"{data.get('UUID')}"
+                    )
+                    return None
+
+            # Add detailed logging
+            self.log.info(
+                f"Processing Lager_Schuetten record: UUID={data.get('UUID')}, "
+                f"UUID_Artikel_Lagerorte={artikel_lagerorte_uuid}, "
+                f"ID_Stamm_Lager_Schuetten={box_id}"
+            )
 
             # Parse data_ JSON field if present
             data_json = {}
             if data.get("data_"):
                 try:
-                    data_json = json.loads(data.get("data_", "{}"))
+                    if isinstance(data.get("data_"), str):
+                        data_json = json.loads(data.get("data_", "{}"))
+                    else:
+                        data_json = data.get("data_", {})
+                    self.log.debug(f"Parsed data_ JSON: {data_json}")
                 except json.JSONDecodeError:
-                    self.log.warning(f"Invalid JSON in data_ field: {data.get('data_')}")
+                    self.log.warning(
+                        f"Invalid JSON in data_ field: {data.get('data_')}"
+                    )
+
+            # Check if the box has a storage location, if not try to update it
+            try:
+                box = Box.objects.get(legacy_id=box_id)
+                
+                # If box has no storage location, try to assign one from data_
+                if not box.storage_location and data_json.get("Stamm_Lagerort"):
+                    storage_location_uuid = data_json.get("Stamm_Lagerort")
+                    try:
+                        storage_location = StorageLocation.objects.get(
+                            legacy_id=storage_location_uuid
+                        )
+                        box.storage_location = storage_location
+                        box.save()
+                        self.log.info(
+                            f"Updated box {box_id} with storage location "
+                            f"{storage_location.location_code} "
+                            f"(UUID: {storage_location_uuid})"
+                        )
+                    except StorageLocation.DoesNotExist:
+                        self.log.warning(
+                            f"Storage location with UUID {storage_location_uuid} "
+                            f"not found"
+                        )
+            except Box.DoesNotExist:
+                self.log.warning(f"Box with ID {box_id} not found")
 
             box_slot = self._get_box_slot(box_id)
             if not box_slot:
@@ -293,20 +354,89 @@ class ProductStorageTransformer(BaseTransformer):
 
             # Find existing ProductStorage record
             try:
+                # Add detailed logging
+                self.log.info(
+                    f"Looking for ProductStorage with "
+                    f"legacy_id={artikel_lagerorte_uuid}"
+                )
+                
                 product_storage = ProductStorage.objects.get(
                     legacy_id=artikel_lagerorte_uuid
                 )
+                
+                self.log.info(
+                    f"Found ProductStorage: id={product_storage.id}, "
+                    f"product={product_storage.product}, "
+                    f"current box_slot={product_storage.box_slot}"
+                )
+                
                 product_storage.box_slot = box_slot
                 product_storage.save()
+                
                 self.log.info(
-                    f"Updated ProductStorage {product_storage.id} with box slot {box_slot}"
+                    f"Updated ProductStorage {product_storage.id} "
+                    f"with box slot {box_slot}"
                 )
-                return None  # We've updated existing record, no need to create new one
+                # We've updated existing record, no need to create new one
+                return None
 
             except ProductStorage.DoesNotExist:
                 self.log.warning(
-                    f"ProductStorage not found for UUID {artikel_lagerorte_uuid}"
+                    f"ProductStorage not found for UUID {artikel_lagerorte_uuid}. "
+                    "Checking if we need to create a new record."
                 )
+                
+                # Check if we can find the corresponding Artikel_Lagerorte record
+                from pyerp.external_api.legacy_erp import LegacyERPClient
+                
+                try:
+                    client = LegacyERPClient()
+                    # Try to find the Artikel_Lagerorte record with this UUID
+                    filter_query = f"UUID eq '{artikel_lagerorte_uuid}'"
+                    artikel_lagerorte_records = client.fetch_table(
+                        "Artikel_Lagerorte", 
+                        top=1, 
+                        filter_query=filter_query
+                    )
+                    
+                    if not artikel_lagerorte_records.empty:
+                        artikel_lagerorte_data = (
+                            artikel_lagerorte_records.iloc[0].to_dict()
+                        )
+                        self.log.info(
+                            f"Found Artikel_Lagerorte record for UUID "
+                            f"{artikel_lagerorte_uuid}"
+                        )
+                        
+                        # Transform the Artikel_Lagerorte data to get product info
+                        transformed_data = self.transform_artikel_lagerorte(
+                            artikel_lagerorte_data
+                        )
+                        
+                        if transformed_data:
+                            # Update the box_slot with the one we found
+                            transformed_data["box_slot"] = box_slot
+                            self.log.info(
+                                f"Creating new ProductStorage record for UUID "
+                                f"{artikel_lagerorte_uuid} with box_slot {box_slot}"
+                            )
+                            return transformed_data
+                        else:
+                            self.log.warning(
+                                f"Could not transform Artikel_Lagerorte data "
+                                f"for UUID {artikel_lagerorte_uuid}"
+                            )
+                    else:
+                        self.log.warning(
+                            f"No Artikel_Lagerorte record found for UUID "
+                            f"{artikel_lagerorte_uuid}"
+                        )
+                
+                except Exception as e:
+                    self.log.error(
+                        f"Error fetching Artikel_Lagerorte record: {str(e)}"
+                    )
+                
                 return None
 
         except Exception as e:

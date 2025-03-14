@@ -72,6 +72,35 @@
                   </v-icon>
                 </template>
                 
+                <!-- Products count column -->
+                <template v-slot:item.product_count="{ item }">
+                  <div class="d-flex align-center">
+                    <v-chip
+                      color="primary"
+                      size="x-small"
+                      label
+                      class="mr-1"
+                    >
+                      {{ item.product_count }}
+                    </v-chip>
+                    <v-tooltip location="bottom">
+                      <template v-slot:activator="{ props }">
+                        <v-btn 
+                          icon 
+                          size="x-small" 
+                          color="grey-lighten-1" 
+                          v-bind="props"
+                          @click="refreshProductCount(item)"
+                          :loading="refreshingLocationId === item.id"
+                        >
+                          <v-icon size="x-small">mdi-refresh</v-icon>
+                        </v-btn>
+                      </template>
+                      <span>{{ $t('inventory.refreshProductCount') }}</span>
+                    </v-tooltip>
+                  </div>
+                </template>
+                
                 <!-- Actions column -->
                 <template v-slot:item.actions="{ item }">
                   <v-tooltip location="bottom">
@@ -339,9 +368,11 @@
 import { ref, computed, onMounted } from 'vue';
 import { useInventoryStore } from '@/store/inventory';
 import { useNotificationsStore } from '@/store/notifications';
+import { useI18n } from 'vue-i18n';
 
 const inventoryStore = useInventoryStore();
 const notificationsStore = useNotificationsStore();
+const { t } = useI18n();
 
 // Reactive state
 const searchQuery = ref('');
@@ -349,6 +380,7 @@ const productSearchQuery = ref('');
 const locationDialog = ref(false);
 const productsDialog = ref(false);
 const selectedLocation = ref(null);
+const refreshingLocationId = ref(null); // Track which location is being refreshed
 
 // Table headers
 const headers = [
@@ -359,6 +391,7 @@ const headers = [
   { title: 'Unit', key: 'unit', sortable: true },
   { title: 'Compartment', key: 'compartment', sortable: true },
   { title: 'Shelf', key: 'shelf', sortable: true },
+  { title: t('inventory.productCount'), key: 'product_count', sortable: true, align: 'center' },
   { title: 'Sale', key: 'sale', sortable: true, align: 'center' },
   { title: 'Special Spot', key: 'special_spot', sortable: true, align: 'center' },
   { title: 'Status', key: 'is_active', sortable: true, align: 'center' },
@@ -376,13 +409,48 @@ const productHeaders = [
 ];
 
 // Computed properties
+const locationProductCounts = computed(() => {
+  const counts = {};
+  
+  // Initialize counts for all locations
+  inventoryStore.getStorageLocations.forEach(location => {
+    counts[location.id] = 0;
+  });
+  
+  // Count products in each location based on boxes
+  inventoryStore.getBoxes.forEach(box => {
+    if (box.storage_location) {
+      const locationId = box.storage_location.id;
+      if (!counts[locationId]) {
+        counts[locationId] = 0;
+      }
+      // Increment by 1 for each box in the location
+      // This is a simplification - ideally we'd count actual products
+      counts[locationId]++;
+    }
+  });
+  
+  return counts;
+});
+
+const locationsWithProductCount = computed(() => {
+  return inventoryStore.getStorageLocations.map(location => {
+    return {
+      ...location,
+      product_count: locationProductCounts.value[location.id] || 0
+    };
+  });
+});
+
 const filteredLocations = computed(() => {
+  let locations = locationsWithProductCount.value;
+  
   if (!searchQuery.value) {
-    return inventoryStore.getStorageLocations;
+    return locations;
   }
   
   const query = searchQuery.value.toLowerCase();
-  return inventoryStore.getStorageLocations.filter(location => {
+  return locations.filter(location => {
     return (
       location.name.toLowerCase().includes(query) ||
       location.location_code?.toLowerCase().includes(query) ||
@@ -417,12 +485,13 @@ const filteredBoxes = computed(() => {
 });
 
 // Methods
-const fetchData = () => {
-  inventoryStore.fetchStorageLocations();
+const fetchData = async () => {
+  await inventoryStore.fetchStorageLocations();
+  await inventoryStore.fetchBoxes(1, 1000); // Fetch all boxes to get accurate product counts
 };
 
-const refreshData = () => {
-  fetchData();
+const refreshData = async () => {
+  await fetchData();
 };
 
 const viewLocationDetails = (location) => {
@@ -496,6 +565,51 @@ const formatDate = (dateString) => {
     hour: '2-digit',
     minute: '2-digit'
   }).format(date);
+};
+
+// Add a method to get a more accurate product count for a specific location
+const getAccurateProductCount = async (locationId) => {
+  try {
+    // Fetch products for this location
+    await inventoryStore.fetchProductsByLocation(locationId);
+    
+    // Count total products across all boxes and slots
+    let count = 0;
+    inventoryStore.getProductsByLocation.forEach(box => {
+      box.slots.forEach(slot => {
+        count += slot.products.length;
+      });
+    });
+    
+    // Update the product count for this location
+    const updatedLocation = locationsWithProductCount.value.find(loc => loc.id === locationId);
+    if (updatedLocation) {
+      updatedLocation.product_count = count;
+    }
+    
+    // Clear products by location to free memory
+    inventoryStore.clearProductsByLocation();
+    
+    return count;
+  } catch (error) {
+    console.error(`Error fetching product count for location ${locationId}:`, error);
+    return 0;
+  }
+};
+
+// Add a method to refresh the product count for a specific location
+const refreshProductCount = async (location) => {
+  refreshingLocationId.value = location.id;
+  try {
+    const count = await getAccurateProductCount(location.id);
+    // Update the UI with the new count
+    location.product_count = count;
+    notificationsStore.showSuccess(`Product count updated for ${location.name}`);
+  } catch (error) {
+    notificationsStore.showError(`Failed to update product count: ${error.message}`);
+  } finally {
+    refreshingLocationId.value = null;
+  }
 };
 
 // Lifecycle hooks

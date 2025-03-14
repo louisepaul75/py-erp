@@ -8,15 +8,9 @@
           </v-card-title>
           
           <v-tabs v-model="activeTab" bg-color="secondary" dark>
-            <v-tab value="overview">
-              {{ $t('inventory.overview') }}
-            </v-tab>
-            <v-tab value="storage-locations">
-              {{ $t('inventory.storageLocations') }}
-            </v-tab>
-            <v-tab value="movements">
-              {{ $t('inventory.productMovements') }}
-            </v-tab>
+            <v-tab value="overview" v-text="$t('inventory.overview')"></v-tab>
+            <v-tab value="storage-locations" v-text="$t('inventory.storageLocations')"></v-tab>
+            <v-tab value="movements" v-text="$t('inventory.productMovements')"></v-tab>
           </v-tabs>
           
           <v-window v-model="activeTab">
