@@ -24,22 +24,45 @@ else
     ENV_ARG="-e DJANGO_SETTINGS_MODULE=pyerp.config.settings.development -e PYERP_ENV=dev"
 fi
 
+# Add monitoring environment variables
+MONITORING_ENV="-e ELASTICSEARCH_HOST=localhost -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=localhost -e KIBANA_PORT=5601 -e SENTRY_DSN=https://development@sentry.example.com/1"
+
 # Start a new container
 echo "Starting new pyerp-dev container..."
 docker run -d \
   --name pyerp-dev \
   $ENV_ARG \
+  $MONITORING_ENV \
   -p 8050:8050 \
   -p 3000:3000 \
   -p 6379:6379 \
   -p 5173:5173 \
   -p 80:80 \
+  -p 9200:9200 \
+  -p 5601:5601 \
   -v $(pwd):/app \
+  -v pyerp_elasticsearch_data:/var/lib/elasticsearch \
   pyerp-dev-image \
-  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/install_monitoring.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
 # Show the last 50 lines of container logs
 echo "Showing last 50 lines of container logs..."
 docker logs --tail 50 pyerp-dev || true
 
 echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again."
+echo -e "\nMonitoring services:"
+echo -e "- Elasticsearch: http://localhost:9200"
+echo -e "- Kibana: http://localhost:5601"
+echo -e "- Sentry: Integrated with Django application"
+
+# Frage den Benutzer, ob das Remote-Monitoring eingerichtet werden soll
+echo ""
+read -p "Möchten Sie das Monitoring-System auf dem Remote-Server (192.168.73.65) einrichten? (j/n): " setup_remote
+
+if [[ $setup_remote == "j" || $setup_remote == "J" || $setup_remote == "y" || $setup_remote == "Y" ]]; then
+    # Führe das setup_monitoring_complete.sh Skript aus
+    echo "Starte Remote-Monitoring-Setup..."
+    bash ./setup_monitoring_complete.sh
+else
+    echo "Remote-Monitoring-Setup übersprungen."
+fi
