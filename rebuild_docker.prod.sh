@@ -14,7 +14,7 @@ docker build -t pyerp-prod-image -f docker/Dockerfile.prod \
   --build-arg DJANGO_SETTINGS_MODULE=pyerp.config.settings.production .
 
 # Add monitoring environment variables
-MONITORING_ENV="-e ELASTICSEARCH_HOST=localhost -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=localhost -e KIBANA_PORT=5601 -e SENTRY_DSN=https://production@sentry.example.com/1"
+MONITORING_ENV="-e ELASTICSEARCH_HOST=0.0.0.0 -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=0.0.0.0 -e KIBANA_PORT=5601 -e SENTRY_DSN=https://production@sentry.example.com/1"
 
 # Start a new container
 echo "Starting new pyerp-prod container..."
@@ -28,6 +28,7 @@ docker run -d \
   -p 5601:5601 \
   -v $(pwd)/docker/nginx/ssl:/etc/nginx/ssl \
   -v pyerp_elasticsearch_data_prod:/var/lib/elasticsearch \
+  --restart unless-stopped \
   pyerp-prod-image
 
 # Follow the logs for just 10 seconds to see startup

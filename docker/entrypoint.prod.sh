@@ -13,5 +13,10 @@ echo "PostgreSQL database is ready!"
 # Apply database migrations
 python manage.py migrate --noinput
 
-# Start Supervisor (which manages Gunicorn and Nginx)
+# Create directories for Elasticsearch and Kibana
+mkdir -p /var/lib/elasticsearch /var/log/elasticsearch /app/logs
+chown -R root:root /var/lib/elasticsearch /var/log/elasticsearch /app/logs
+chmod -R 755 /var/lib/elasticsearch /var/log/elasticsearch /app/logs
+
+# Start Supervisor (which manages Gunicorn, Nginx, Elasticsearch, and Kibana)
 exec "$@"
