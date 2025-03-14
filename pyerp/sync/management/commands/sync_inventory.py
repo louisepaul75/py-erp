@@ -107,12 +107,14 @@ class Command(BaseCommand):
                 # Report results
                 if sync_log.status == 'completed':
                     success_msg = (
-                        f"Sync completed successfully in {duration:.2f} seconds"
+                        f"Sync completed successfully in {duration:.2f} "
+                        f"seconds"
                     )
                     self.stdout.write(self.style.SUCCESS(success_msg))
                 elif sync_log.status == 'partial':
                     warning_msg = (
-                        f"Sync completed with some errors in {duration:.2f} seconds"
+                        f"Sync completed with some errors in {duration:.2f} "
+                        f"seconds"
                     )
                     self.stdout.write(self.style.WARNING(warning_msg))
                 else:
@@ -175,3 +177,74 @@ class Command(BaseCommand):
             self.stdout.write(f"{filter_msg} ({days} days ago)")
             
         return query_params 
+
+
+if __name__ == "__main__":
+    import os
+    import sys
+    import django
+    
+    # Set up Django environment
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings')
+    django.setup()
+    
+    # Import argparse to handle command line arguments
+    import argparse
+    
+    # Create argument parser
+    parser = argparse.ArgumentParser(
+        description='Synchronize inventory data from legacy system'
+    )
+    
+    # Add arguments
+    parser.add_argument(
+        "--component",
+        type=str,
+        choices=[
+            "storage_locations", 
+            "box_types", 
+            "boxes", 
+            "box_slots", 
+            "product_storage",
+            "product_storage_artikel_lagerorte",
+            "product_storage_lager_schuetten"
+        ],
+        help="Specific inventory component to sync",
+    )
+    parser.add_argument(
+        "--days",
+        type=int,
+        help="Only sync records modified in the last N days",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=100,
+        help="Number of records to process in each batch",
+    )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Perform full sync instead of incremental",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug output",
+    )
+    parser.add_argument(
+        "--fail-on-filter-error",
+        action="store_true",
+        default=False,
+        help="Fail if date filter doesn't work (default: don't fail)",
+    )
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # Convert namespace to dictionary
+    options = vars(args)
+    
+    # Create and run command
+    command = Command()
+    command.handle(**options) 
