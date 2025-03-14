@@ -82,7 +82,7 @@ class LegacyERPClient(BaseAPIClient):
                 though the API server may still apply a default limit, 
                 typically 100 records)
             skip: Number of records to skip (for pagination)
-            filter_query: OData filter query string
+            filter_query: [['field', 'operator', 'value']]
             all_records: Whether to fetch all records (may take a long time)
             new_data_only: If True, only fetch new records
             date_created_start: Start date for filtering by creation date

@@ -400,7 +400,7 @@ class ProductStorageTransformer(BaseTransformer):
                 try:
                     client = LegacyERPClient()
                     # Try to find the Artikel_Lagerorte record with this UUID
-                    filter_query = f"UUID eq '{artikel_lagerorte_uuid}'"
+                    filter_query = [['UUID','==', str(artikel_lagerorte_uuid)]]
                     artikel_lagerorte_records = client.fetch_table(
                         "Artikel_Lagerorte", 
                         top=1, 

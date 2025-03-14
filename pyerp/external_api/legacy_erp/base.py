@@ -632,7 +632,7 @@ class BaseAPIClient:
                 though the API server may still apply a default limit, 
                 typically 100 records)
             skip: Number of records to skip
-            filter_query: Optional OData filter query
+            filter_query: [['field', 'operator', 'value']]
             all_records: Whether to fetch all records (may take a long time)
             new_data_only: Only fetch records newer than last sync
             date_created_start: Optional start date for filtering

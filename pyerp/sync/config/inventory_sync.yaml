@@ -41,7 +41,7 @@ storage_locations:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: "modified_date > '{value}'"
+    timestamp_filter_format: [['modified_date', '>', '{value}']]
 
 # Box Type Sync
 box_types:
@@ -55,7 +55,7 @@ box_types:
       table_name: "parameter"
       page_size: 1000
       all_records: true
-      filter_query: "scope eq 'Schüttentypen'"
+      filter_query: [['scope', '==', 'Schüttentypen']]
   transformer:
     type: "custom"
     class: "pyerp.sync.transformers.inventory.BoxTypeTransformer"
@@ -74,7 +74,7 @@ box_types:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: "modified_date > '{value}'"
+    timestamp_filter_format: [['modified_date', '>', '{value}']]
 
 # Box Sync
 boxes:
@@ -120,7 +120,7 @@ boxes:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: "modified_date > '{value}'"
+    timestamp_filter_format: [['modified_date', '>', '{value}']]
   dependencies:
     - "box_types"
     - "storage_locations"
@@ -157,7 +157,7 @@ box_slots:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: "modified_date > '{value}'"
+    timestamp_filter_format: [['modified_date', '>', '{value}']]
   dependencies:
     - "boxes"
 
@@ -197,7 +197,7 @@ product_storage_artikel_lagerorte:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: "modified_date > '{value}'"
+    timestamp_filter_format: [['modified_date', '>', '{value}']]
   dependencies:
     - "products"
 
@@ -237,7 +237,7 @@ product_storage_lager_schuetten:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: "modified_date > '{value}'"
+    timestamp_filter_format: [['modified_date', '>', '{value}']]
   dependencies:
     - "product_storage_artikel_lagerorte"
     - "box_slots"
