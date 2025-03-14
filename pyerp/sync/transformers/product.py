@@ -131,6 +131,14 @@ class ProductTransformer(BaseTransformer):
                 if '__KEY' in record:
                     transformed['legacy_id'] = str(record['__KEY'])
                 
+                # Handle refOld field
+                if 'refOld' in record:
+                    transformed['refOld'] = str(record['refOld'])
+                    logger.debug(
+                        "Set refOld from source: %s",
+                        transformed['refOld']
+                    )
+                
                 # Handle Familie_ field for variants
                 if 'Familie_' in record:
                     parent_id = str(record['Familie_'])
