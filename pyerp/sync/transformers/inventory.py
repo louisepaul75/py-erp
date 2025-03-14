@@ -450,9 +450,19 @@ class BoxTransformer(BaseTransformer):
             # Extract storage location code (now optional)
             storage_location_code = data.get('Lagerort')
             
-            # Try to get storage location from Stamm_Lagerort UUID in data_
+            # Try to get storage location from UUID sources
             storage_location = None
-            storage_location_uuid = data.get('Stamm_Lagerort')
+            storage_location_uuid = None
+            
+            # First check UUID_Stamm_Lagerorte in the main record
+            if 'UUID_Stamm_Lagerorte' in record and record['UUID_Stamm_Lagerorte']:
+                storage_location_uuid = record['UUID_Stamm_Lagerorte']
+                logger.info(f"Found UUID_Stamm_Lagerorte in main record: {storage_location_uuid}")
+            
+            # If not found, check Stamm_Lagerort in data_ field
+            if not storage_location_uuid and data.get('Stamm_Lagerort'):
+                storage_location_uuid = data.get('Stamm_Lagerort')
+                logger.info(f"Found Stamm_Lagerort in data_ field: {storage_location_uuid}")
             
             if storage_location_uuid:
                 # Look up storage location by UUID

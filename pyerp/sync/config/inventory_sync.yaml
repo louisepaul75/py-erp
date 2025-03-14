@@ -109,6 +109,7 @@ boxes:
           model: "inventory.StorageLocation"
           lookup_field: "legacy_id"
           source_field: "storage_location_uuid"
+          fallback_fields: ["UUID_Stamm_Lagerorte"]
         parent_box:
           model: "inventory.Box"
           lookup_field: "legacy_id"

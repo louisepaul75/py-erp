@@ -323,27 +323,35 @@ class ProductStorageTransformer(BaseTransformer):
 
             # Check if the box has a storage location, if not try to update it
             try:
+                from pyerp.business_modules.inventory.models import Box, StorageLocation
                 box = Box.objects.get(legacy_id=box_id)
                 
                 # If box has no storage location, try to assign one from data_
-                if not box.storage_location and data_json.get("Stamm_Lagerort"):
-                    storage_location_uuid = data_json.get("Stamm_Lagerort")
-                    try:
-                        storage_location = StorageLocation.objects.get(
-                            legacy_id=storage_location_uuid
-                        )
-                        box.storage_location = storage_location
-                        box.save()
-                        self.log.info(
-                            f"Updated box {box_id} with storage location "
-                            f"{storage_location.location_code} "
-                            f"(UUID: {storage_location_uuid})"
-                        )
-                    except StorageLocation.DoesNotExist:
-                        self.log.warning(
-                            f"Storage location with UUID {storage_location_uuid} "
-                            f"not found"
-                        )
+                if not box.storage_location:
+                    # First check UUID_Stamm_Lagerorte in the main record
+                    storage_location_uuid = data.get("UUID_Stamm_Lagerorte")
+                    
+                    # If not found, check Stamm_Lagerort in data_ field
+                    if not storage_location_uuid and data_json.get("Stamm_Lagerort"):
+                        storage_location_uuid = data_json.get("Stamm_Lagerort")
+                    
+                    if storage_location_uuid:
+                        try:
+                            storage_location = StorageLocation.objects.get(
+                                legacy_id=storage_location_uuid
+                            )
+                            box.storage_location = storage_location
+                            box.save()
+                            self.log.info(
+                                f"Updated box {box_id} with storage location "
+                                f"{storage_location.location_code} "
+                                f"(UUID: {storage_location_uuid})"
+                            )
+                        except StorageLocation.DoesNotExist:
+                            self.log.warning(
+                                f"Storage location with UUID {storage_location_uuid} "
+                                f"not found"
+                            )
             except Box.DoesNotExist:
                 self.log.warning(f"Box with ID {box_id} not found")
 
