@@ -110,6 +110,7 @@ class Customer(SalesModel):
     class Meta:
         verbose_name = _("Customer")
         verbose_name_plural = _("Customers")
+        app_label = "sales"
         indexes = [
             models.Index(fields=["customer_number"]),
             models.Index(fields=["legacy_id"]),
@@ -212,6 +213,7 @@ class Address(SalesModel):
     class Meta:
         verbose_name = _("Address")
         verbose_name_plural = _("Addresses")
+        app_label = "sales"
         indexes = [
             models.Index(fields=["customer"]),
             models.Index(fields=["legacy_id"]),

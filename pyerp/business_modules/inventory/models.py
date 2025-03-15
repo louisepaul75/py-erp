@@ -77,6 +77,7 @@ class StorageLocation(SalesModel):
     class Meta:
         verbose_name = _("Storage Location")
         verbose_name_plural = _("Storage Locations")
+        app_label = "inventory"
         ordering = ["country", "city_building", "unit", "compartment", "shelf"]
         indexes = [
             models.Index(fields=["legacy_id"]),
@@ -147,6 +148,7 @@ class BoxType(SalesModel):
     class Meta:
         verbose_name = _("Box Type")
         verbose_name_plural = _("Box Types")
+        app_label = "inventory"
         ordering = ["name"]
     
     def __str__(self):
@@ -214,6 +216,7 @@ class Box(SalesModel):
     class Meta:
         verbose_name = _("Box")
         verbose_name_plural = _("Boxes")
+        app_label = "inventory"
         ordering = ["code"]
         indexes = [
             models.Index(fields=["code"]),
@@ -299,6 +302,7 @@ class BoxSlot(SalesModel):
     class Meta:
         verbose_name = _("Box Slot")
         verbose_name_plural = _("Box Slots")
+        app_label = "inventory"
         ordering = ["box", "slot_code"]
         unique_together = (("box", "slot_code"),)
     
@@ -402,6 +406,7 @@ class ProductStorage(SalesModel):
     class Meta:
         verbose_name = _("Product Storage")
         verbose_name_plural = _("Product Storage")
+        app_label = "inventory"
         ordering = ["-date_stored"]
         indexes = [
             models.Index(fields=["product"]),
@@ -485,6 +490,7 @@ class InventoryMovement(SalesModel):
     class Meta:
         verbose_name = _("Inventory Movement")
         verbose_name_plural = _("Inventory Movements")
+        app_label = "inventory"
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["product"]),

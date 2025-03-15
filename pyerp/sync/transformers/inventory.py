@@ -4,6 +4,7 @@ Transformers for inventory data from legacy systems.
 
 from typing import Dict, Any, List
 from decimal import Decimal
+import json
 
 from pyerp.business_modules.products.models import VariantProduct
 from pyerp.sync.transformers.base import BaseTransformer
@@ -410,62 +411,67 @@ class BoxTransformer(BaseTransformer):
             sl.legacy_id: sl for sl in StorageLocation.objects.all()
         }
         
-        for record in source_data:
-            # Skip records without data_ field
-            if 'data_' not in record:
-                msg = f"Record {record.get('ID')} has no data_ field"
-                logger.warning(msg)
-                continue
-
-            # Extract legacy_id
-            legacy_id = (
-                str(record.get('ID')) 
-                if record.get('ID') is not None 
-                else None
-            )
+        # Log the number of storage locations found
+        logger.info(f"Found {len(storage_locations_by_uuid)} storage locations")
+        
+        for data in source_data:
+            # Extract required fields
+            legacy_id = data.get('ID')
             if not legacy_id:
-                logger.warning("Record has no ID field")
+                logger.warning(f"Skipping record with missing ID: {data}")
                 continue
-
-            # Extract data from data_ JSON field
-            data = record.get('data_', {})
+                
+            # Extract box code
+            box_code = data.get('Schuettencode', '')
+            if not box_code:
+                # Generate a code if not provided
+                box_code = f"BOX-{legacy_id}"
+                logger.info(f"Generated box code for legacy ID {legacy_id}: {box_code}")
             
-            # Extract box type name
-            box_type_name = data.get('Schuettentype')
+            # Extract box type
+            box_type_name = data.get('Schuettentyp', 'Standard')
             if not box_type_name:
-                msg = f"Record {legacy_id} has no box type"
-                logger.warning(msg)
-                continue
-
-            # Validate box type exists and get instance
+                box_type_name = 'Standard'
+                
+            # Validate box type exists
+            if box_type_name not in existing_box_types:
+                logger.warning(
+                    f"Box type '{box_type_name}' not found for box {legacy_id}. "
+                    "Using 'Standard' instead."
+                )
+                box_type_name = 'Standard'
+                
             box_type = existing_box_types.get(box_type_name)
             if not box_type:
-                msg = (
-                    f"Box type '{box_type_name}' not found "
-                    f"for box {legacy_id}"
+                logger.error(
+                    f"Standard box type not found. Cannot proceed with import."
                 )
-                logger.error(msg)
                 continue
-
-            # Extract storage location code (now optional)
-            storage_location_code = data.get('Lagerort')
             
-            # Try to get storage location from UUID sources
-            storage_location = None
-            storage_location_uuid = None
+            # Extract storage location
+            storage_location_code = None
+            storage_location_uuid = data.get('UUID_Stamm_Lagerorte')
             
-            # First check UUID_Stamm_Lagerorte in the main record
-            if 'UUID_Stamm_Lagerorte' in record and record['UUID_Stamm_Lagerorte']:
-                storage_location_uuid = record['UUID_Stamm_Lagerorte']
-                logger.info(f"Found UUID_Stamm_Lagerorte in main record: {storage_location_uuid}")
+            # Log the storage location UUID for debugging
+            logger.info(f"Box {legacy_id} has storage location UUID: {storage_location_uuid}")
             
             # If not found, check Stamm_Lagerort in data_ field
-            if not storage_location_uuid and data.get('Stamm_Lagerort'):
-                storage_location_uuid = data.get('Stamm_Lagerort')
-                logger.info(f"Found Stamm_Lagerort in data_ field: {storage_location_uuid}")
+            if not storage_location_uuid and data.get('data_'):
+                try:
+                    if isinstance(data.get('data_'), str):
+                        data_json = json.loads(data.get('data_', '{}'))
+                    else:
+                        data_json = data.get('data_', {})
+                    
+                    if data_json.get('Stamm_Lagerort'):
+                        storage_location_uuid = data_json.get('Stamm_Lagerort')
+                        logger.info(f"Found Stamm_Lagerort in data_ field: {storage_location_uuid}")
+                except json.JSONDecodeError:
+                    logger.warning(f"Invalid JSON in data_ field: {data.get('data_')}")
             
+            # Look up storage location by UUID
+            storage_location = None
             if storage_location_uuid:
-                # Look up storage location by UUID
                 storage_location = storage_locations_by_uuid.get(storage_location_uuid)
                 if storage_location:
                     storage_location_code = storage_location.location_code
@@ -479,7 +485,7 @@ class BoxTransformer(BaseTransformer):
                         f"not found for box {legacy_id}"
                     )
             
-            if not storage_location_code:
+            if not storage_location:
                 logger.info(
                     f"Record {legacy_id} has no storage location"
                 )
@@ -491,61 +497,21 @@ class BoxTransformer(BaseTransformer):
 
             # Extract parent box ID from URI if present
             parent_box_legacy_id = None
-            if 'viele_schuetten' in record:
-                try:
-                    parent_data = record['viele_schuetten']
-                    if (isinstance(parent_data, dict) and 
-                            '__deferred' in parent_data):
-                        uri = parent_data['__deferred'].get('uri', '')
-                        if uri:
-                            # Extract ID from URI pattern
-                            import re
-                            pattern = r'Stamm_Lager_Schuetten\[(\d+)\]'
-                            match = re.search(pattern, uri)
-                            if match:
-                                parent_box_legacy_id = match.group(1)
-                    elif (isinstance(parent_data, str) and 
-                          parent_data.isdigit()):
-                        parent_box_legacy_id = parent_data
-                except (KeyError, IndexError, AttributeError) as e:
-                    msg = (
-                        f"Could not extract parent box ID from "
-                        f"{record.get('viele_schuetten')}: {str(e)}"
-                    )
-                    logger.warning(msg)
-
-            # Build transformed record
-            transformed = {
+            
+            # Create transformed record
+            transformed_record = {
                 'legacy_id': legacy_id,
-                'code': f'SC{legacy_id}',
-                'box_type': box_type,  # Set the actual BoxType instance
-                'box_type_name': box_type_name,  # Keep name for reference
-                'storage_location': storage_location,  # Set the actual StorageLocation instance
-                'storage_location_code': storage_location_code,
-                'storage_location_uuid': storage_location_uuid,  # Store UUID for reference
+                'code': box_code,
+                'box_type': box_type,
+                'storage_location': storage_location,  # Use the actual StorageLocation object
                 'purpose': purpose,
-                'max_slots': record.get('max_Anzahl_Slots', 1),
-                'unit_count': data.get('Anzahl_Schuetteneinheiten', 1),
-                'last_labelprint_date': record.get('Druckdatum'),
-                'last_labelprint_time': record.get('Druckzeit'),
-                'parent_box_legacy_id': parent_box_legacy_id,
-                'status': 'AVAILABLE',
-                'is_active': True,
-                'is_synchronized': True,
+                'status': 'AVAILABLE',  # Default status
+                'barcode': data.get('Barcode', ''),
+                'notes': data.get('Bemerkung', ''),
             }
-
-            # Add audit fields
-            audit_fields = [
-                'created_name', 'created_date', 'created_time',
-                'modified_name', 'modified_date', 'modified_time'
-            ]
-            for field in audit_fields:
-                if field in record:
-                    transformed[field] = record[field]
-
-            transformed_records.append(transformed)
-
-        logger.info(f"Transformed {len(transformed_records)} box records")
+            
+            transformed_records.append(transformed_record)
+            
         return transformed_records
 
 

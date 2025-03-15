@@ -62,17 +62,19 @@ def parse_decimal(value: str) -> Decimal:
 
 class ProductStorageTransformer(BaseTransformer):
     """
-    Transformer for ProductStorage model that combines data from Artikel_Lagerorte
-    and Lager_Schuetten tables to create/update ProductStorage records.
+    Transformer for product storage data from Artikel_Lagerorte table.
+    
+    This transformer converts legacy product storage data to the format required by 
+    the ProductStorage model.
     """
-
-    def __init__(self, config: Dict[str, Any] = None):
-        super().__init__(config or {})
-        self.log = logging.getLogger(__name__)
-        # Cache for box slots to avoid repeated lookups
-        self._box_slot_cache = {}
-        # Cache for products to avoid repeated lookups
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize the transformer."""
+        super().__init__(*args, **kwargs)
         self._product_cache = {}
+        self._box_slot_cache = {}
+        self._box_cache = {}
+        self.log = logging.getLogger(__name__)
         # Get source from config
         self.source = self.config.get('source')
 
@@ -141,15 +143,52 @@ class ProductStorageTransformer(BaseTransformer):
         if cache_key not in self._box_slot_cache:
             try:
                 box = Box.objects.get(legacy_id=box_id)
-                self._box_slot_cache[cache_key] = BoxSlot.objects.get(
-                    box=box, slot_number=slot_number
-                )
-            except (Box.DoesNotExist, BoxSlot.DoesNotExist):
+                try:
+                    # First try to get the slot by slot_number
+                    self._box_slot_cache[cache_key] = BoxSlot.objects.get(
+                        box=box, slot_number=slot_number
+                    )
+                except BoxSlot.DoesNotExist:
+                    # If not found, get the first slot of the box
+                    slots = box.slots.all()
+                    if slots.exists():
+                        self._box_slot_cache[cache_key] = slots.first()
+                    else:
+                        # Create a new slot if none exists
+                        self._box_slot_cache[cache_key] = BoxSlot.objects.create(
+                            box=box,
+                            slot_number=1,
+                            slot_code=f"{box.code}-1",
+                            unit_number=1
+                        )
+                        self.log.info(f"Created new slot for box {box_id}")
+            except Box.DoesNotExist:
                 self.log.warning(
-                    f"BoxSlot not found for box {box_id} and slot {slot_number}"
+                    f"Box not found for legacy_id {box_id}"
                 )
                 return None
         return self._box_slot_cache[cache_key]
+
+    def _get_box_from_product_storage(self, product_storage_uuid: str) -> Optional[str]:
+        """
+        Find the box ID associated with a product storage UUID.
+        """
+        try:
+            # Query the legacy system to find boxes that reference this product storage
+            from pyerp.external_api.legacy_erp.client import LegacyERPClient
+            client = LegacyERPClient(environment="live")
+            
+            # Use a filter to find boxes that reference this product storage
+            filter_query = [["UUID_Artikel_Lagerorte", "==", product_storage_uuid]]
+            boxes = client.fetch_table("Lager_Schuetten", filter_query=filter_query)
+            
+            if not boxes.empty:
+                return boxes.iloc[0]['ID']
+                
+            return None
+        except Exception as e:
+            self.log.error(f"Error finding box for product storage {product_storage_uuid}: {str(e)}")
+            return None
 
     def _parse_quantity(self, quantity_str: str) -> Optional[Decimal]:
         """
@@ -180,84 +219,62 @@ class ProductStorageTransformer(BaseTransformer):
 
     def transform_artikel_lagerorte(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Transform data from Artikel_Lagerorte table.
+        Transform product storage data from Artikel_Lagerorte records.
+        
+        Args:
+            data: Dictionary containing product storage data from legacy Artikel_Lagerorte table
+            
+        Returns:
+            Dictionary in the format required by ProductStorage model or None if record should be skipped
         """
         try:
-            # Always use ID_Artikel_Stamm as the product identifier
-            # This matches with refOld in VariantProduct
+            # Get product ID
             product_id = data.get("ID_Artikel_Stamm")
-            
-
-
-
-
-            # Ensure product_id is a string
-            if product_id is not None:
-                product_id = str(product_id).strip()
-                
-            if not product_id or product_id == "0":
-
-                self.log.info(
-                    f"Skipping record with missing or zero product identifier: "
-                    f"{data.get('UUID')}"
-                )
-
+            if not product_id:
+                self.log.warning(f"Missing product ID in record {data.get('UUID')}")
                 return None
-
-            # Try to find the product by refOld (matching Artikel_Variante's refOld)
+                
+            # Get product
             product = self._get_product(product_id)
             if not product:
-                # Log the missing product as info and continue with other records
-                self.log.info(
-                    f"Skipping record - product with ID {product_id} not found: "
-                    f"{data.get('UUID')}"
+                self.log.warning(f"Product not found for ID {product_id}")
+                return None
+                
+            # Parse quantity
+            quantity = self._parse_quantity(data.get("Bestand", "0"))
+            
+            # Determine status
+            status = self._determine_status(data)
+            
+            # Find the box ID - first check if there's a direct reference
+            box_id = None
+            if 'UUID_Lager_Schuetten' in data and data['UUID_Lager_Schuetten']:
+                box_id = data['UUID_Lager_Schuetten']
+            
+            # If no direct reference, try to find a box that references this product storage
+            if not box_id:
+                box_id = self._get_box_from_product_storage(data.get("UUID"))
+            
+            # If still no box ID, log warning and skip
+            if not box_id:
+                self.log.warning(
+                    f"No box found for product storage {data.get('UUID')} (product {product_id})"
                 )
-
                 return None
 
-            # Handle quantity - explicitly check for null/NaN values
-            bestand = data.get("Bestand")
-            if bestand is None or (isinstance(bestand, float) and (bestand != bestand)):  # NaN check
-                self.log.debug(f"Null or NaN quantity found, setting to 0")
-                quantity = Decimal("0")
-            else:
-                quantity = self._parse_quantity(bestand)
-                
-            # If quantity is still NaN or invalid, set to 0
-            if quantity is None or (hasattr(quantity, 'is_nan') and quantity.is_nan()):
-                self.log.debug(f"Invalid quantity after parsing, setting to 0")
-                quantity = Decimal("0")
-                
-            status = self._determine_status(data)
-
             # Try to find a box slot for this product
-            box_slot = None
-            try:
-                # Look for existing box slot assignments in Lager_Schuetten
-                from django.db.models import Q
-                from pyerp.business_modules.inventory.models import BoxSlot
-                
-                # Get the first available box slot
-                # This is a temporary solution until we implement proper box slot assignment
-                box_slot = BoxSlot.objects.filter(
-                    ~Q(stored_products__isnull=False)
-                ).first()
-                
-                if not box_slot:
-                    self.log.info(
-                        f"No available box slot found for product {product}. "
-                        "Skipping record as box_slot is required."
-                    )
-                    return None
-                    
-            except Exception as e:
-                self.log.info(f"Error finding box slot: {str(e)}")
+            box_slot = self._get_box_slot(box_id)
+            if not box_slot:
+                self.log.warning(
+                    f"No box slot found for box {box_id}, product {product_id}. "
+                    "Skipping record as box_slot is required."
+                )
                 return None
 
             transformed = {
                 "legacy_id": data.get("UUID"),
                 "product": product,
-                "box_slot": box_slot,  # Assign a box slot or skip the record
+                "box_slot": box_slot,
                 "quantity": quantity,
                 "reservation_status": status,
                 "created_by": data.get("created_name"),
