@@ -8,6 +8,30 @@ from django.utils.translation import gettext_lazy as _
 from pyerp.business_modules.sales.models import SalesModel
 
 
+class InventoryModel(models.Model):
+    """
+    Base model for inventory-related models that don't need legacy IDs.
+    """
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    legacy_modified = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "Last modification timestamp in legacy system"
+        ),
+    )
+    is_synchronized = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Whether this record is synchronized with the legacy system"
+        ),
+    )
+
+    class Meta:
+        abstract = True
+
+
 class StorageLocation(SalesModel):
     """
     Storage location model for warehouse management.
@@ -95,7 +119,7 @@ class StorageLocation(SalesModel):
         return self.name
 
 
-class BoxType(SalesModel):
+class BoxType(InventoryModel):
     """
     Box type model for defining different types of storage boxes.
     """
@@ -123,6 +147,7 @@ class BoxType(SalesModel):
         max_length=20,
         choices=BoxColor.choices,
         blank=True,
+        null=True,
         help_text=_("Color of the box type"),
     )
     length = models.DecimalField(
@@ -146,12 +171,12 @@ class BoxType(SalesModel):
         blank=True,
         help_text=_("Height of the box in cm"),
     )
-    weight_capacity = models.DecimalField(
-        max_digits=6,
+    weight_empty = models.DecimalField(
+        max_digits=10,
         decimal_places=2,
         null=True,
         blank=True,
-        help_text=_("Maximum weight capacity in kg"),
+        help_text=_("Empty weight of the box in kg"),
     )
     slot_count = models.IntegerField(
         default=1,
@@ -160,7 +185,7 @@ class BoxType(SalesModel):
     slot_naming_scheme = models.CharField(
         max_length=50,
         default="numeric",
-        help_text=_("Naming scheme for slots (numeric, alphabetic, etc.)"),
+        help_text=_("Scheme for naming slots (e.g., numeric, alphabetic)"),
     )
     
     class Meta:
@@ -168,6 +193,7 @@ class BoxType(SalesModel):
         verbose_name_plural = _("Box Types")
         app_label = "inventory"
         ordering = ["name"]
+        unique_together = (("name", "slot_count", "height", "length", "width", "color"),)
     
     def __str__(self):
         """Return a string representation of the box type."""

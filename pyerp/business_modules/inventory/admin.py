@@ -93,7 +93,7 @@ class BoxTypeAdmin(admin.ModelAdmin):
         'length',
         'width',
         'height',
-        'weight_capacity',
+        'weight_empty',
         'slot_count',
         'slot_naming_scheme',
     )
@@ -104,7 +104,7 @@ class BoxTypeAdmin(admin.ModelAdmin):
             'fields': ('name', 'description')
         }),
         (_('Dimensions'), {
-            'fields': ('length', 'width', 'height', 'weight_capacity')
+            'fields': ('length', 'width', 'height', 'weight_empty')
         }),
         (_('Slot Configuration'), {
             'fields': ('slot_count', 'slot_naming_scheme')

@@ -101,6 +101,17 @@ Based on our analysis of the legacy ERP parameters table, we have identified the
      - Most boxes have a single slot
      - Some models (e.g., Schäfer LF 532) have 3 slots
 
+   - **Colors**:
+     - Blue (Blau) - Most common
+     - Yellow (Gelb)
+     - Green (Grün)
+     - Red (Rot)
+     - Gray (Grau)
+     - Orange
+     - Black (Schwarz)
+     - Transparent
+     - White (Weiß)
+
    - **Manufacturers**:
      - Schäfer (most common)
      - Bito
@@ -115,42 +126,79 @@ Based on our analysis of the legacy ERP parameters table, we have identified the
      - Smallest: "Schäfer 2" series (160 x 105 x 80 mm, 101g)
      - Multi-slot: "Schäfer LF 532" series (3 slots)
 
-2. **Box Colors (Schüttenfarben)**:
-   From the box type data, we identified the following colors in use:
-   - Blau (Blue) - 11 box types
-   - Gelb (Yellow) - 5 box types
-   - Grün (Green) - 5 box types
-   - Rot (Red) - 4 box types
-   - Grau (Gray) - 4 box types
-   - Other/Unspecified - 13 box types
+### BoxType Data Model
+The BoxType model has been refined with the following structure:
 
-   Additional colors mentioned in the parameters but not found in the current box types:
-   - Orange
-   - Schwarz (Black)
-   - Transparent
-   - Weiß (White)
+1. **Core Fields**:
+   - `name`: Unique name of the box type (e.g., "Schäfer LF 532")
+   - `description`: Detailed description including manufacturer and specifications
+   - `color`: Color of the box type (choices: blue, yellow, green, red, gray, orange, black, transparent, white)
+   - `length`: Length in cm (converted from mm)
+   - `width`: Width in cm (converted from mm)
+   - `height`: Height in cm (converted from mm)
+   - `weight_empty`: Empty weight in kg (converted from g)
+   - `slot_count`: Number of slots in this box type
+   - `slot_naming_scheme`: Scheme for naming slots (default: "numeric")
 
-3. **Box Purposes (Schüttenzweck)**:
-   - Lager (Storage)
-   - Picken (Picking)
-   - Transport
-   - Werkstatt (Workshop)
+2. **Constraints**:
+   - Unique constraint on the combination of (name, slot_count, height, length, width, color)
+   - This ensures no duplicate box types with the same physical characteristics
+   - Allows variations of the same box type with different colors or slot configurations
 
-### BoxType Data Mapping
-Based on our analysis, we will map the legacy data to our BoxType model as follows:
+3. **Data Validation**:
+   - Dimensions stored with 2 decimal places precision
+   - Weight stored with 2 decimal places precision
+   - Color field can be blank for legacy compatibility
+   - All dimension fields are optional but should be provided when available
 
-- **name**: Derived from the Type field (e.g., "14/6-2H Blau", "EF6220 Grau")
-- **colour**: Extracted from the Type name (e.g., "Blau", "Gelb", "Grün")
-- **length**: Mapped directly from Box_Länge
-- **width**: Mapped directly from Box_Breite
-- **height**: Mapped directly from Box_Höhe
-- **weight_empty**: Mapped directly from Box_Gewicht
-- **default_slot_count**: Mapped directly from Slots
-- **divider_weight**: Mapped directly from Trenner_Gewicht
-- **purpose**: Will be assigned based on box characteristics or additional data
-- **UUID**: Will be generated for new records (not present in legacy data)
+### Box Data Structure
+The Box model maintains its relationship with BoxType and includes:
 
-These configuration options will be used to define the BoxType model, which will include attributes for type, color, purpose, dimensions, weight capacity, and slot configuration. The BoxType model will serve as a template for creating Box instances, which will be placed in StorageLocations and contain multiple BoxSlots for storing products.
+1. **Core Fields**:
+   - `code`: Unique identifier for the box
+   - `barcode`: Optional barcode for scanning
+   - `box_type`: Foreign key to BoxType
+   - `storage_location`: Optional foreign key to StorageLocation
+   - `status`: Current status (AVAILABLE, IN_USE, RESERVED, DAMAGED, RETIRED)
+   - `purpose`: Primary purpose (STORAGE, PICKING, TRANSPORT, WORKSHOP)
+   - `notes`: Additional information about the box
+
+2. **Relationships**:
+   - Many-to-one with BoxType
+   - Many-to-one with StorageLocation (optional)
+   - One-to-many with BoxSlot
+
+### Box Storage Implementation
+The system now uses a dual-table approach for tracking product storage:
+
+1. **ProductStorage Model**:
+   - Maps to legacy Artikel_Lagerorte table
+   - Tracks product-to-location relationships
+   - Fields:
+     - `product`: Foreign key to VariantProduct
+     - `storage_location`: Foreign key to StorageLocation
+     - `quantity`: Total quantity at this location
+     - `reservation_status`: Current status (AVAILABLE, RESERVED, ALLOCATED, PICKED)
+     - `reservation_reference`: Reference for reservations
+
+2. **BoxStorage Model**:
+   - Maps to legacy Lager_Schuetten table
+   - Tracks physical placement in boxes
+   - Fields:
+     - `product_storage`: Foreign key to ProductStorage
+     - `box_slot`: Foreign key to BoxSlot
+     - `position_in_slot`: Position identifier
+     - `quantity`: Quantity in this slot
+     - `batch_number`: Optional batch tracking
+     - `expiry_date`: Optional expiry date
+     - `date_stored`: Timestamp of storage
+
+3. **Key Benefits**:
+   - Clear separation of inventory tracking and physical storage
+   - Support for boxes without fixed locations (in transit)
+   - Multiple box placements per product within a location
+   - Batch and expiry date tracking at the box level
+   - Automatic box slot occupation status updates
 
 ### Box Data Structure Analysis
 After examining the `Stamm_Lager_Schuetten` table data, we have identified the following structure:
@@ -288,57 +336,70 @@ This detailed understanding of the slot data structure will enable us to properl
 ## Progress Update
 We have made significant progress on the inventory management system:
 
-1. **Data Models**: Created all required models for the inventory system including StorageLocation, BoxType, Box, BoxSlot, ProductStorage, and InventoryMovement.
+1. **Data Models**: Created and refined all required models for the inventory system including StorageLocation, BoxType, Box, BoxSlot, ProductStorage, and BoxStorage.
 
-2. **Foreign Key References**: Updated the ProductStorage and InventoryMovement models to reference the VariantProduct model using the SKU field for product identification.
+2. **BoxType Model Enhancements**:
+   - Added color field with standardized choices
+   - Implemented unique constraint on physical characteristics
+   - Converted weight_capacity to weight_empty with increased precision
+   - Added proper validation for dimensions and weights
+   - Removed legacy fields no longer needed
 
-3. **Sync Infrastructure**: Implemented the inventory sync using the existing ETL pipeline:
+3. **Dual-Table Storage Implementation**:
+   - Separated inventory tracking (ProductStorage) from physical storage (BoxStorage)
+   - Implemented proper relationships between all components
+   - Added support for batch tracking and expiry dates
+   - Created automatic box slot occupation status updates
+
+4. **Foreign Key References**: Updated the ProductStorage and InventoryMovement models to reference the VariantProduct model using the SKU field for product identification.
+
+5. **Sync Infrastructure**: Implemented the inventory sync using the existing ETL pipeline:
    - Created transformer classes in the sync directory for all inventory components
    - Created a YAML configuration file for inventory sync
    - Implemented setup and sync management commands
    - Integrated inventory sync with the run_all_sync command
 
-4. **Legacy Data Integration**: Set up the synchronization with the Stamm_Lagerorte table to import storage location data.
+6. **Legacy Data Integration**: Set up the synchronization with the Stamm_Lagerorte table to import storage location data.
    - Successfully synchronized all 923 storage location records from the legacy system
    - Implemented validation to handle duplicate storage locations
    - Added proper error handling for data integrity issues
 
-5. **Migrations**: Successfully applied migrations to establish the database schema.
+7. **Migrations**: Successfully applied migrations to establish the database schema.
 
-6. **Data Validation**: Implemented validation rules to ensure data integrity:
+8. **Data Validation**: Implemented validation rules to ensure data integrity:
    - Enforced unique constraints on storage location fields (Country, City building, Unit, Compartment, Shelf)
    - Added proper error handling for duplicate records during synchronization
 
-7. **Command-line Interface**: Enhanced management commands for inventory operations:
+9. **Command-line Interface**: Enhanced management commands for inventory operations:
    - Added component-specific sync commands (e.g., `sync_inventory --component storage_locations`)
    - Implemented debug mode for detailed logging during synchronization
    - Provided summary statistics for sync operations
 
-8. **BoxType Configuration**: Identified and documented the standard box types, colors, and purposes from the legacy ERP parameters table, which will be used to configure the BoxType model.
-   - Analyzed 42 different box types with detailed specifications
-   - Mapped legacy attributes to the new BoxType model
-   - Identified common manufacturers and their product lines
+10. **BoxType Configuration**: Identified and documented the standard box types, colors, and purposes from the legacy ERP parameters table, which will be used to configure the BoxType model.
+    - Analyzed 42 different box types with detailed specifications
+    - Mapped legacy attributes to the new BoxType model
+    - Identified common manufacturers and their product lines
 
-9. **BoxType Synchronization**: Implemented the BoxType transformer to synchronize box types from the legacy system:
-   - Created BoxTypeTransformer class to handle data transformation
-   - Added proper unit conversion for dimensions (mm to cm) and weights (g to kg)
-   - Implemented rounding to ensure decimal values meet database constraints
-   - Added detailed descriptions including manufacturer, dimensions, and weights
-   - Successfully synchronized 49 box types from the legacy system
+11. **BoxType Synchronization**: Implemented the BoxType transformer to synchronize box types from the legacy system:
+    - Created BoxTypeTransformer class to handle data transformation
+    - Added proper unit conversion for dimensions (mm to cm) and weights (g to kg)
+    - Implemented rounding to ensure decimal values meet database constraints
+    - Added detailed descriptions including manufacturer, dimensions, and weights
+    - Successfully synchronized 49 box types from the legacy system
 
-10. **Box Purpose Management**: Improved the box purpose management:
+12. **Box Purpose Management**: Improved the box purpose management:
     - Moved the purpose field from BoxType to Box model to match legacy system design
     - Created BoxPurpose choices in the Box model with standard options (Storage, Picking, Transport, Workshop)
     - Updated BoxTransformer to determine purpose based on box type characteristics
     - Completely removed the purpose field from BoxType table to simplify the data model
 
-11. **Decimal Precision Handling**: Enhanced the decimal field handling for BoxType dimensions and weights:
+13. **Decimal Precision Handling**: Enhanced the decimal field handling for BoxType dimensions and weights:
     - Updated BoxType model to use appropriate max_digits and decimal_places for all decimal fields
     - Implemented precise decimal conversion in the BoxTypeTransformer using Python's Decimal type
     - Ensured consistent formatting of decimal values to exactly 2 decimal places
     - Fixed validation issues related to decimal precision in the synchronization process
 
-12. **Frontend Implementation**: Started implementing the Vue.js frontend components:
+14. **Frontend Implementation**: Started implementing the Vue.js frontend components:
     - Created base warehouse management interface with tabbed navigation
     - Implemented i18n support for German and English languages
     - Added comprehensive translations for all inventory-related terms
@@ -358,13 +419,13 @@ We have made significant progress on the inventory management system:
       - Implemented proper error handling
       - Added request/response interceptors
 
-13. **TypeScript Integration**: Enhanced type safety across the frontend:
+15. **TypeScript Integration**: Enhanced type safety across the frontend:
     - Added TypeScript interfaces for all inventory-related data structures
     - Implemented proper type checking for component props and data
     - Created type-safe store actions and state management
     - Added proper typing for API service methods
 
-14. **StorageLocation Synchronization Improvements**:
+16. **StorageLocation Synchronization Improvements**:
     - Fixed issues with the `StammLagerorteTransformer` class to properly set fields required for the unique constraint (country, city_building, unit, compartment, shelf)
     - Enhanced the transformer to handle numeric field conversions properly (for unit, compartment, shelf)
     - Added logic to handle duplicate combinations by appending suffixes to location_code and unit fields
@@ -374,7 +435,7 @@ We have made significant progress on the inventory management system:
     - Added field mapping documentation to clarify the relationship between legacy and new fields
     - Fixed issues with field data types, ensuring proper string conversion for numeric fields
 
-15. **Box Synchronization Implementation**:
+17. **Box Synchronization Implementation**:
     - Analyzed the box data structure in the legacy system and identified key fields:
       - Core fields like `ID` and `max_Anzahl_Slots`
       - Box information stored in the `data_` JSON field including `Schuettentype`, `Anzahl_Schuetteneinheiten`, and `Schuettenzweck`
@@ -394,7 +455,7 @@ We have made significant progress on the inventory management system:
       - Approximately 300 box records failing due to missing box type references
       - Successfully transformed 3,475 box records with proper box type assignments
 
-16. **Performance Optimization**:
+18. **Performance Optimization**:
     - Fixed timeout issues in the boxes API endpoint:
       - Implemented server-side pagination for the boxes list endpoint
       - Added page and page_size query parameters
@@ -407,7 +468,7 @@ We have made significant progress on the inventory management system:
       - Updated the inventory service to handle paginated responses
       - Improved error handling and user feedback
 
-17. **BoxSlot Synchronization Implementation**:
+19. **BoxSlot Synchronization Implementation**:
     - Implemented the BoxSlotTransformer to handle slot data from Stamm_Lager_Schuetten_Slots:
       - Added support for extracting data from the `data_` JSON field
       - Implemented proper mapping of slot codes, unit numbers, and color codes
@@ -426,7 +487,7 @@ We have made significant progress on the inventory management system:
       - Handled duplicate slots with appropriate validation
       - Generated consistent barcodes for all slots
 
-18. **Product Storage Synchronization Issue Fixed**:
+20. **Product Storage Synchronization Issue Fixed**:
     - Identified and fixed a critical mismatch in product identification during ProductStorage synchronization:
       - The issue was that `ProductStorageTransformer` was trying to match `ID_Artikel_Stamm` from Artikel_Lagerorte with `legacy_id` in VariantProduct
       - However, the correct relationship is matching `ID_Artikel_Stamm` with `refOld` in VariantProduct
@@ -438,7 +499,7 @@ We have made significant progress on the inventory management system:
     - Verified the fix by confirming that product lookups now succeed using the `refOld` field
     - This completes the link between inventory storage locations and products, enabling proper inventory tracking
 
-19. **ProductStorage Sync Data Quality Improvements**:
+21. **ProductStorage Sync Data Quality Improvements**:
     - Enhanced the ProductStorage synchronization to handle various data quality issues:
       - Fixed handling of NaN and null values in quantity fields by adding explicit type checking
       - Improved handling of numeric values by properly converting them to Decimal
@@ -452,7 +513,7 @@ We have made significant progress on the inventory management system:
       - Maintained data integrity by ensuring all required fields are properly set
     - This completes the first phase of inventory data synchronization, establishing the foundation for inventory tracking
 
-20. **Storage Location Assignment Issue Identified**:
+22. **Storage Location Assignment Issue Identified**:
     - Discovered a critical issue with product storage and box locations:
       - All 3,003 product storage entries in the database have boxes without assigned storage locations
       - This explains why API calls to find products by storage location return no results
@@ -469,7 +530,7 @@ We have made significant progress on the inventory management system:
       - Picking operations that use location information
       - Warehouse space optimization
 
-21. **ProductStorage Synchronization Configuration Fix**:
+23. **ProductStorage Synchronization Configuration Fix**:
     - Identified and fixed issues with the ProductStorage synchronization configuration:
       - Fixed the source configuration in the inventory_sync.yaml file to properly specify the source type and extractor class
       - Updated the transformer class reference to use the correct ProductStorageTransformer from product_storage.py
@@ -486,7 +547,7 @@ We have made significant progress on the inventory management system:
       - Identified that only 5 records have non-zero quantities
       - Confirmed that products are distributed across 32 unique box slots
 
-22. **Data Model Restructuring for Legacy Compatibility**:
+24. **Data Model Restructuring for Legacy Compatibility**:
     - Decided to change our approach to better match the legacy ERP structure:
       - Instead of combining two legacy tables (Artikel_Lagerorte and Lager_Schuetten) into one ProductStorage table, we created two separate tables
       - The new structure includes ProductStorage (mapping to Artikel_Lagerorte) and BoxStorage (mapping to Lager_Schuetten)
@@ -502,7 +563,7 @@ We have made significant progress on the inventory management system:
       - Lager_Schuetten links Artikel_Lagerorte records to physical boxes
       - The separation of these tables provides flexibility in the warehouse management system
 
-23. **Implementation of Dual-Table Storage System**:
+25. **Implementation of Dual-Table Storage System**:
     - Successfully refactored the data model to use separate ProductStorage and BoxStorage tables:
       - ProductStorage model connects products to storage locations
         - Contains fields for product, storage location, quantity, and reservation status
@@ -535,7 +596,7 @@ We have made significant progress on the inventory management system:
       - Updated synchronization transformers (pending)
       - Prepared API endpoints for the new data model (pending)
 
-24. **Dual-Table Storage System Verification**:
+26. **Dual-Table Storage System Verification**:
     - Successfully executed the migration to implement the new storage structure:
       - Verified that both inventory_productstorage and inventory_boxstorage tables were created
       - Confirmed that all foreign key relationships were established correctly
