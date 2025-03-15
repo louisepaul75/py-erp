@@ -166,8 +166,16 @@ export const inventoryService = {
   getProductsByLocation(locationId: number): Promise<BoxWithProducts[]> {
     console.log(`Fetching products for location ${locationId}...`);
     return api.get(`/inventory/storage-locations/${locationId}/products/`).then(response => {
-      console.log('Products by location response:', response.data);
+      console.log('Raw products by location response:', response);
+      console.log('Products by location response data:', response.data);
+      if (!Array.isArray(response.data)) {
+        console.warn('API response is not an array:', response.data);
+      }
       return response.data;
+    }).catch(error => {
+      console.error('Error in getProductsByLocation:', error);
+      console.error('Error response:', error.response);
+      throw error;
     });
   }
 };

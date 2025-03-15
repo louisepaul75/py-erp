@@ -48,7 +48,78 @@
                 :no-results-text="$t('common.noResults')"
                 multi-sort
                 class="elevation-0"
+                show-expand
+                v-model:expanded="expandedLocations"
               >
+                <!-- Expanded content -->
+                <template v-slot:expanded-row="{ item }">
+                  <td :colspan="headers.length">
+                    <v-card flat>
+                      <v-card-text>
+                        <div v-if="expandedLocationLoading[item.id]" class="text-center py-4">
+                          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+                          <div class="mt-2">{{ $t('common.loading') }}</div>
+                        </div>
+                        <div v-else-if="expandedLocationProducts[item.id]">
+                          <v-expansion-panels>
+                            <v-expansion-panel
+                              v-for="box in expandedLocationProducts[item.id]"
+                              :key="box.box_id"
+                            >
+                              <v-expansion-panel-title>
+                                <div class="d-flex align-center">
+                                  <v-icon color="primary" class="mr-2">mdi-package-variant-closed</v-icon>
+                                  <span class="font-weight-medium">{{ $t('inventory.box') }}: {{ box.box_code }}</span>
+                                  <v-chip class="ml-4" size="small">
+                                    {{ box.slots.length }} {{ $t('inventory.slots') }}
+                                  </v-chip>
+                                  <v-chip class="ml-2" size="small" color="primary" text-color="white">
+                                    {{ getTotalProductsInBox(box) }} {{ $t('inventory.products') }}
+                                  </v-chip>
+                                </div>
+                              </v-expansion-panel-title>
+                              <v-expansion-panel-text>
+                                <v-data-table
+                                  :headers="productHeaders"
+                                  :items="getProductsInBox(box)"
+                                  :items-per-page="5"
+                                  :footer-props="{
+                                    'items-per-page-options': [5, 10, 25],
+                                    showFirstLastPage: true,
+                                  }"
+                                  :no-data-text="$t('common.noResults')"
+                                  :no-results-text="$t('common.noResults')"
+                                  density="compact"
+                                  class="elevation-0"
+                                >
+                                  <template v-slot:item.reservation_status="{ item }">
+                                    <v-chip
+                                      :color="getStatusColor(item.reservation_status)"
+                                      size="x-small"
+                                      label
+                                    >
+                                      {{ item.reservation_status }}
+                                    </v-chip>
+                                  </template>
+                                  
+                                  <template v-slot:item.date_stored="{ item }">
+                                    {{ formatDate(item.date_stored) }}
+                                  </template>
+                                </v-data-table>
+                              </v-expansion-panel-text>
+                            </v-expansion-panel>
+                          </v-expansion-panels>
+                        </div>
+                        <div v-else class="text-center py-4">
+                          <v-alert type="info" variant="outlined">
+                            {{ $t('inventory.noProductsInLocation') }}
+                          </v-alert>
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </td>
+                </template>
+                
                 <!-- Status column -->
                 <template v-slot:item.is_active="{ item }">
                   <v-chip
@@ -373,7 +444,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useInventoryStore } from '@/store/inventory';
 import { useNotificationsStore } from '@/store/notifications';
 import { useI18n } from 'vue-i18n';
@@ -390,6 +461,9 @@ const productsDialog = ref(false);
 const selectedLocation = ref(null);
 const refreshingLocationId = ref(null);
 const showOnlyWithProducts = ref(false);
+const expandedLocations = ref([]);
+const expandedLocationProducts = ref({});
+const expandedLocationLoading = ref({});
 
 // Table headers
 const headers = [
@@ -591,6 +665,56 @@ const refreshProductCount = async (location) => {
     refreshingLocationId.value = null;
   }
 };
+
+const onExpandRow = async (item) => {
+  const locationId = item.id;
+  console.log('Expanding row for location:', locationId);
+  console.log('Current expandedLocationProducts:', expandedLocationProducts.value);
+  console.log('Current expandedLocationLoading:', expandedLocationLoading.value);
+  
+  if (!expandedLocationProducts.value[locationId]) {
+    expandedLocationLoading.value[locationId] = true;
+    try {
+      console.log('Fetching products for location:', locationId);
+      await inventoryStore.fetchProductsByLocation(locationId);
+      const products = inventoryStore.getProductsByLocation;
+      console.log('Products fetched:', products);
+      
+      // Create a new object to ensure reactivity
+      expandedLocationProducts.value = {
+        ...expandedLocationProducts.value,
+        [locationId]: products
+      };
+      console.log('Updated expandedLocationProducts:', expandedLocationProducts.value);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      notificationsStore.showError(`Failed to load products: ${error.message}`);
+    } finally {
+      expandedLocationLoading.value = {
+        ...expandedLocationLoading.value,
+        [locationId]: false
+      };
+      console.log('Updated loading state:', expandedLocationLoading.value);
+    }
+  }
+};
+
+// Update the watcher
+watch(expandedLocations, async (newExpanded, oldExpanded) => {
+  console.log('Expanded locations changed:', { newExpanded, oldExpanded });
+  
+  // Find newly expanded locations
+  const newlyExpanded = newExpanded.filter(id => !oldExpanded?.includes(id));
+  console.log('Newly expanded locations:', newlyExpanded);
+  
+  // Load data for newly expanded locations
+  for (const locationId of newlyExpanded) {
+    if (!expandedLocationProducts.value[locationId]) {
+      console.log('Loading data for location:', locationId);
+      await onExpandRow({ id: locationId });
+    }
+  }
+});
 
 // Lifecycle hooks
 onMounted(() => {
