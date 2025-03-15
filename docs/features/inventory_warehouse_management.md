@@ -486,21 +486,117 @@ We have made significant progress on the inventory management system:
       - Identified that only 5 records have non-zero quantities
       - Confirmed that products are distributed across 32 unique box slots
 
+22. **Data Model Restructuring for Legacy Compatibility**:
+    - Decided to change our approach to better match the legacy ERP structure:
+      - Instead of combining two legacy tables (Artikel_Lagerorte and Lager_Schuetten) into one ProductStorage table, we created two separate tables
+      - The new structure includes ProductStorage (mapping to Artikel_Lagerorte) and BoxStorage (mapping to Lager_Schuetten)
+      - This approach makes synchronization more straightforward and maintains closer compatibility with the legacy system
+      - The separation makes data integrity issues easier to diagnose and fix
+    - Key differences in the new approach:
+      - ProductStorage tracks product-to-location relationships and quantities
+      - BoxStorage tracks the physical placement of products in specific boxes
+      - The relationship between products, locations, and boxes is maintained through foreign keys
+      - This mirrors the exact structure of the legacy ERP, making data synchronization more reliable
+    - Analysis of the legacy schema revealed the following structure:
+      - Artikel_Lagerorte links products to storage locations
+      - Lager_Schuetten links Artikel_Lagerorte records to physical boxes
+      - The separation of these tables provides flexibility in the warehouse management system
+
+23. **Implementation of Dual-Table Storage System**:
+    - Successfully refactored the data model to use separate ProductStorage and BoxStorage tables:
+      - ProductStorage model connects products to storage locations
+        - Contains fields for product, storage location, quantity, and reservation status
+        - Tracks inventory at the location level, matching Artikel_Lagerorte
+        - Enforces unique product-location combinations
+      - BoxStorage model connects ProductStorage records to box slots
+        - Contains fields for product_storage, box_slot, position, quantity, and batch information
+        - Tracks physical placement in boxes, matching Lager_Schuetten
+        - Allows multiple products in the same box slot with different positions
+    - Created database migrations to implement the new schema:
+      - Removed previous combined ProductStorage table
+      - Created new tables with proper foreign key relationships
+      - Established appropriate indexes for performance optimization
+    - Updated the admin interface to support the new structure:
+      - ProductStorageAdmin for managing product-location assignments
+      - BoxStorageAdmin for managing box placements
+      - Inline editing of BoxStorage records from the ProductStorage admin
+    - Key benefits of the new structure:
+      - Supports flexible warehouse operations:
+        - Boxes can exist without storage locations (for boxes in transit)
+        - Products can be assigned to storage locations without box assignments
+        - Products can have multiple box placements within the same location
+      - Maintains data integrity through appropriate constraints
+      - Provides clear separation of concerns:
+        - Inventory tracking at the location level
+        - Physical storage management at the box level
+      - Simplifies synchronization with legacy ERP system
+    - Updated associated code components to work with the new structure:
+      - Modified admin classes to support new relationships
+      - Updated synchronization transformers (pending)
+      - Prepared API endpoints for the new data model (pending)
+
+24. **Dual-Table Storage System Verification**:
+    - Successfully executed the migration to implement the new storage structure:
+      - Verified that both inventory_productstorage and inventory_boxstorage tables were created
+      - Confirmed that all foreign key relationships were established correctly
+      - Validated the database schema with Django's system check framework
+    - Updated the synchronization configuration:
+      - Modified inventory_sync.yaml to include separate configurations for ProductStorage and BoxStorage
+      - Created a BoxStorageTransformer class to handle Lager_Schuetten data
+      - Updated the ProductStorageTransformer to focus on Artikel_Lagerorte data
+      - Ran setup_inventory_sync to register the new configuration
+    - Established clear relationships between inventory tables:
+      - Product → ProductStorage → StorageLocation (product location tracking)
+      - ProductStorage → BoxStorage → BoxSlot → Box (physical placement tracking)
+      - Box → StorageLocation (optional relationship for boxes in transit)
+    - Confirmed that the new structure mirrors the legacy ERP system:
+      - ProductStorage maps directly to Artikel_Lagerorte
+      - BoxStorage maps directly to Lager_Schuetten
+      - All relationships match the legacy system's structure
+
 ## Next Steps
-1. **Fix Box Type Synchronization Issues**:
+1. **Update Synchronization for Restructured Data Model**:
+   - Develop new transformer classes for ProductStorage and BoxStorage
+   - Configure YAML definitions for synchronization
+   - Create migration scripts to transfer data from legacy tables
+   - Implement validation and error handling
+
+2. **Verify Synchronization for Restructured Data Model**:
+   - Test the ProductStorage synchronization from Artikel_Lagerorte:
+     - Run a test sync with a small batch of records
+     - Verify that products are correctly linked to storage locations
+     - Confirm that quantities and reservation statuses are properly set
+     - Check that legacy IDs are preserved for future updates
+   - Test the BoxStorage synchronization from Lager_Schuetten:
+     - Run a test sync with a small batch of records
+     - Verify that BoxStorage records link to the correct ProductStorage records
+     - Confirm that box slots are properly assigned
+     - Validate that batch information and quantities are preserved
+   - Implement data validation and error handling:
+     - Add validation for required fields and relationships
+     - Create error logging for missing references
+     - Implement retry logic for temporary failures
+     - Add reporting for sync statistics and issues
+   - Create data migration scripts:
+     - Develop scripts to transfer data from legacy tables
+     - Implement data cleaning and normalization
+     - Add validation checks for data integrity
+     - Create rollback procedures for failed migrations
+
+3. **Fix Box Type Synchronization Issues**:
    - Analyze all unique box types in legacy data
    - Create mapping for variant box type names
    - Implement data cleaning and standardization
    - Add validation checks before box synchronization
    - Create report of unmatched box types
 
-2. **Complete Inventory Movement Tracking**:
+4. **Complete Inventory Movement Tracking**:
    - Create inventory movement history tables
    - Implement synchronization for box inventory units
    - Add transaction-based movement recording
    - Implement proper validation and error handling
 
-3. **Fix Storage Location Assignment Issue**:
+5. **Fix Storage Location Assignment Issue**:
    - Investigate why boxes are being created without storage location assignments during synchronization
    - Check if the legacy data in Stamm_Lager_Schuetten contains storage location references
    - Analyze the BoxTransformer to ensure it correctly processes storage location assignments
@@ -509,20 +605,20 @@ We have made significant progress on the inventory management system:
    - Add a data quality check to the inventory dashboard to highlight boxes without locations
    - Update the synchronization process to better handle the storage location assignment
 
-4. **Create APIs for inventory operations**:
+6. **Create APIs for inventory operations**:
    - Storage location management endpoints
    - Box and slot operations
    - Product placement and removal
    - Inventory movements and reservations
 
-5. **Implement Lager_Schuetten Synchronization**:
+7. **Implement Lager_Schuetten Synchronization**:
    - Complete the implementation of the transform_lager_schuetten method in ProductStorageTransformer
    - Add support for updating existing ProductStorage records with box slot information
    - Implement proper error handling for missing box slots
    - Add validation for quantity fields and handle NaN/null values
    - Create history tracking based on Historie_Stamm_Lager_Schuetten table structure
 
-6. **Enhance Frontend for Inventory Management**:
+8. **Enhance Frontend for Inventory Management**:
    - Implement product storage visualization
    - Create box and slot management interface
    - Add inventory movement tracking and reporting
@@ -615,85 +711,4 @@ After examining the data from the `Artikel_Lagerorte` and `Lager_Schuetten` tabl
      - Modification tracking fields (modified_name, modified_date, modified_time)
    
    - **Relationships**:
-     - `Relation_88`: Appears to be a reference to related data
-     - `Relation_89`: Another reference to related data
-     - `Relation_113_zurueck`: Reference to history or reverse relationship
-
-2. **Lager_Schuetten** (Box Inventory Table):
-   This table manages the specific box assignments for products, linking boxes to the product-location relationships:
-   
-   - **Primary Identifiers**:
-     - `ID`: Primary key for the box record
-     - `ID_Stamm_Lager_Schuetten`: Reference to the box definition (e.g., 626.692) in Stamm_Lager_Schuetten
-     - `UUID_Artikel_Lagerorte`: Reference to the product-location junction (e.g., 67494EC839DF7A45B8433C48126FD8B)
-   
-   - **Box Inventory Data** (stored in the `data_` JSON field):
-     - `"Schuetten_ID"`: Internal box identifier (e.g., "626692")
-     - `"Artikel_Lagerort"`: Reference to the product-location UUID
-     - `"Stamm_Lagerort"`: Reference to the storage location UUID (e.g., "360D0071BF89274789928A825289663E")
-   
-   - **Audit Information**:
-     - Creation tracking fields (created_name, created_date, created_time)
-     - Modification tracking fields (modified_name, modified_date, modified_time)
-   
-   - **Relationships**:
-     - `Relation_113`: Reference to related data
-     - `Relation_96_zurueck`: Reference to history or related box data
-     - `Relation_95_zurueck`: Another reference to related box data
-
-3. **Lager_Schuetten_Einheiten** (Box Units Table):
-   This table manages the specific units stored in boxes, providing detailed inventory counts:
-   
-   - Works in conjunction with Lager_Schuetten to track individual units within boxes
-   - Connects specific product references to physical box slots
-   - Contains detailed quantity information at the unit level
-   - Maintains history of product placements and removals
-
-### Product Storage Data Relationships
-Based on the analysis of the tables, we can identify the following key relationships:
-
-1. **Product → Storage Location Relationship**:
-   - Managed through `Artikel_Lagerorte` as a many-to-many relationship
-   - Each product (ID_Artikel_Stamm) can be stored in multiple locations
-   - Each location (UUID_Stamm_Lagerorte) can store multiple products
-   - The `Bestand` field indicates the quantity of a product at a specific location
-
-2. **Product-Location → Box Relationship**:
-   - Managed through `Lager_Schuetten`
-   - Each product-location junction (UUID_Artikel_Lagerorte) can be associated with a box
-   - The box (ID_Stamm_Lager_Schuetten) serves as the physical container for the product
-   - The data_ JSON field provides additional linking between boxes, products, and locations
-
-3. **Box → Box Slot Relationship**:
-   - Managed through `Stamm_Lager_Schuetten_Slots` and extended in `Lager_Schuetten_Einheiten`
-   - Each box can have multiple slots
-   - Each slot can hold a specific product unit
-   - The relationship forms the most granular level of inventory tracking
-
-### Product Storage Data Mapping Strategy
-Based on the analysis, we will map these legacy tables to our new ProductStorage model as follows:
-
-1. **ProductStorage Model**:
-   - `product` ← Foreign key to Product, determined by ID_Artikel_Stamm in Artikel_Lagerorte
-   - `box_slot` ← Foreign key to BoxSlot, connecting to the specific slot in a box
-   - `quantity` ← Bestand from Artikel_Lagerorte, potentially refined by unit counts in Lager_Schuetten_Einheiten
-   - `status` ← Derived from data (in_stock, reserved, allocated)
-   - `reservation_reference` ← Reference to order or other process reserving the inventory
-   - Standard audit fields will be maintained by Django
-
-2. **Implementation Notes for ProductStorage Synchronization**:
-   - Data from both Artikel_Lagerorte and Lager_Schuetten must be combined to create complete ProductStorage records
-   - The UUID_Artikel_Lagerorte field is the key link between the two tables
-   - Box and slot references must be resolved before creating ProductStorage records
-   - Quantity information needs to be carefully managed, especially when distributed across multiple slots
-   - Storage locations without box assignments still need to be maintained for compatibility
-   - Consider handling special cases where Bestand value is null (no inventory)
-
-3. **ProductStorage Enhancements**:
-   - Add reservation system for tying inventory to orders
-   - Implement status tracking (in_stock, reserved, allocated, etc.)
-   - Create inventory movement history tracking
-   - Add validation for quantity updates
-   - Implement stock level alerts and notifications
-
-This detailed understanding of the product storage data structure will enable us to properly implement the ProductStorage model and its synchronization with the legacy system, ensuring all inventory data is preserved while enhancing the functionality for modern warehouse management needs. 
+     - `

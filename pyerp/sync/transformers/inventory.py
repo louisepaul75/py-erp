@@ -411,8 +411,19 @@ class BoxTransformer(BaseTransformer):
             sl.legacy_id: sl for sl in StorageLocation.objects.all()
         }
         
+        # Also get storage locations by location_code for fallback lookup
+        storage_locations_by_code = {
+            sl.location_code: sl for sl in StorageLocation.objects.all() if sl.location_code
+        }
+        
         # Log the number of storage locations found
-        logger.info(f"Found {len(storage_locations_by_uuid)} storage locations")
+        logger.info(f"Found {len(storage_locations_by_uuid)} storage locations by UUID")
+        logger.info(f"Found {len(storage_locations_by_code)} storage locations by code")
+        
+        # Track stats
+        boxes_with_location = 0
+        boxes_without_location = 0
+        boxes_with_location_not_found = 0
         
         for data in source_data:
             # Extract required fields
@@ -451,43 +462,94 @@ class BoxTransformer(BaseTransformer):
             # Extract storage location
             storage_location_code = None
             storage_location_uuid = data.get('UUID_Stamm_Lagerorte')
+            storage_location = None
             
-            # Log the storage location UUID for debugging
-            logger.info(f"Box {legacy_id} has storage location UUID: {storage_location_uuid}")
+            # Step 1: Try to find by UUID from the main field
+            if storage_location_uuid:
+                logger.debug(f"Box {legacy_id} has direct storage location UUID: {storage_location_uuid}")
+                storage_location = storage_locations_by_uuid.get(storage_location_uuid)
+                if storage_location:
+                    storage_location_code = storage_location.location_code
+                    boxes_with_location += 1
+                    logger.info(
+                        f"Found storage location {storage_location.location_code} "
+                        f"for box {legacy_id} using direct UUID {storage_location_uuid}"
+                    )
+                else:
+                    boxes_with_location_not_found += 1
+                    logger.warning(
+                        f"Storage location with direct UUID {storage_location_uuid} "
+                        f"not found for box {legacy_id}"
+                    )
             
-            # If not found, check Stamm_Lagerort in data_ field
-            if not storage_location_uuid and data.get('data_'):
+            # Step 2: If not found and data_ exists, try to extract from JSON
+            if not storage_location and data.get('data_'):
                 try:
                     if isinstance(data.get('data_'), str):
                         data_json = json.loads(data.get('data_', '{}'))
                     else:
                         data_json = data.get('data_', {})
                     
+                    # Check for storage location UUID in data_
                     if data_json.get('Stamm_Lagerort'):
                         storage_location_uuid = data_json.get('Stamm_Lagerort')
-                        logger.info(f"Found Stamm_Lagerort in data_ field: {storage_location_uuid}")
+                        logger.debug(f"Box {legacy_id} has JSON storage location UUID: {storage_location_uuid}")
+                        storage_location = storage_locations_by_uuid.get(storage_location_uuid)
+                        if storage_location:
+                            storage_location_code = storage_location.location_code
+                            boxes_with_location += 1
+                            logger.info(
+                                f"Found storage location {storage_location.location_code} "
+                                f"for box {legacy_id} using JSON UUID {storage_location_uuid}"
+                            )
+                        else:
+                            boxes_with_location_not_found += 1
+                            logger.warning(
+                                f"Storage location with JSON UUID {storage_location_uuid} "
+                                f"not found for box {legacy_id}"
+                            )
+                    
+                    # Also check for storage location code in data_
+                    if not storage_location and data_json.get('Lagerort'):
+                        location_code = data_json.get('Lagerort')
+                        logger.debug(f"Box {legacy_id} has JSON location code: {location_code}")
+                        storage_location = storage_locations_by_code.get(location_code)
+                        if storage_location:
+                            storage_location_code = location_code
+                            boxes_with_location += 1
+                            logger.info(
+                                f"Found storage location {storage_location.location_code} "
+                                f"for box {legacy_id} using JSON location code {location_code}"
+                            )
+                        else:
+                            boxes_with_location_not_found += 1
+                            logger.warning(
+                                f"Storage location with JSON code {location_code} "
+                                f"not found for box {legacy_id}"
+                            )
                 except json.JSONDecodeError:
                     logger.warning(f"Invalid JSON in data_ field: {data.get('data_')}")
             
-            # Look up storage location by UUID
-            storage_location = None
-            if storage_location_uuid:
-                storage_location = storage_locations_by_uuid.get(storage_location_uuid)
-                if storage_location:
-                    storage_location_code = storage_location.location_code
-                    logger.info(
-                        f"Found storage location {storage_location.location_code} "
-                        f"for box {legacy_id} using UUID {storage_location_uuid}"
-                    )
-                else:
-                    logger.warning(
-                        f"Storage location with UUID {storage_location_uuid} "
-                        f"not found for box {legacy_id}"
-                    )
+            # Step 3: If still not found, check if we can find a location using the box code
+            if not storage_location and box_code:
+                # Try to extract location code from box code if it contains location information
+                # Example: If box_code is "DE-Hamburg-R04-F02-B02-123", extract "DE-Hamburg-R04-F02-B02"
+                for location_code in storage_locations_by_code.keys():
+                    if location_code and box_code.startswith(location_code):
+                        storage_location = storage_locations_by_code.get(location_code)
+                        if storage_location:
+                            storage_location_code = location_code
+                            boxes_with_location += 1
+                            logger.info(
+                                f"Found storage location {storage_location.location_code} "
+                                f"for box {legacy_id} by matching box code prefix {location_code}"
+                            )
+                            break
             
             if not storage_location:
+                boxes_without_location += 1
                 logger.info(
-                    f"Record {legacy_id} has no storage location"
+                    f"Box {legacy_id} with code {box_code} has no storage location"
                 )
                 storage_location_code = None
 
@@ -511,6 +573,12 @@ class BoxTransformer(BaseTransformer):
             }
             
             transformed_records.append(transformed_record)
+        
+        # Log summary statistics
+        logger.info(f"Transformed {len(transformed_records)} box records")
+        logger.info(f"Boxes with storage location: {boxes_with_location}")
+        logger.info(f"Boxes without storage location: {boxes_without_location}")
+        logger.info(f"Boxes with storage location reference not found: {boxes_with_location_not_found}")
             
         return transformed_records
 

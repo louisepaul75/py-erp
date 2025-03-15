@@ -345,10 +345,10 @@ class BoxSlot(SalesModel):
 
 class ProductStorage(SalesModel):
     """
-    Product storage model for tracking products in storage locations.
+    Product storage model that maps to the legacy Artikel_Lagerorte table.
     
-    This model allows multiple products to be stored in a single box slot,
-    enabling efficient use of storage space for small items.
+    This model represents the relationship between products and storage locations,
+    tracking inventory quantities at the location level.
     """
     class ReservationStatus(models.TextChoices):
         AVAILABLE = "AVAILABLE", _("Available")
@@ -362,20 +362,16 @@ class ProductStorage(SalesModel):
         related_name="storage_locations",
         help_text=_("Product stored in this location"),
     )
-    box_slot = models.ForeignKey(
-        BoxSlot,
+    storage_location = models.ForeignKey(
+        StorageLocation,
         on_delete=models.PROTECT,
         related_name="stored_products",
-        help_text=_("Box slot where the product is stored"),
-    )
-    position_in_slot = models.CharField(
-        max_length=20,
-        blank=True,
-        help_text=_("Position identifier within the slot (e.g., front, back, left, right)"),
+        null=True,
+        help_text=_("Storage location where the product is stored"),
     )
     quantity = models.IntegerField(
-        default=1,
-        help_text=_("Quantity of the product in this location"),
+        default=0,
+        help_text=_("Quantity of the product in this location (maps to Bestand in legacy system)"),
     )
     reservation_status = models.CharField(
         max_length=20,
@@ -387,6 +383,53 @@ class ProductStorage(SalesModel):
         max_length=100,
         blank=True,
         help_text=_("Reference for the reservation (e.g., order number)"),
+    )
+    
+    class Meta:
+        verbose_name = _("Product Storage")
+        verbose_name_plural = _("Product Storage")
+        app_label = "inventory"
+        indexes = [
+            models.Index(fields=["product"]),
+            models.Index(fields=["storage_location"]),
+            models.Index(fields=["reservation_status"]),
+        ]
+        unique_together = [
+            ("product", "storage_location")
+        ]
+    
+    def __str__(self):
+        """Return a string representation of the product storage."""
+        return f"{self.product} ({self.quantity}) @ {self.storage_location}"
+
+
+class BoxStorage(SalesModel):
+    """
+    Box storage model that maps to the legacy Lager_Schuetten table.
+    
+    This model represents the physical placement of products in specific boxes,
+    tracking the box assignments for products stored in locations.
+    """
+    product_storage = models.ForeignKey(
+        ProductStorage,
+        on_delete=models.CASCADE,
+        related_name="box_assignments",
+        help_text=_("Product storage record (maps to UUID_Artikel_Lagerorte in legacy system)"),
+    )
+    box_slot = models.ForeignKey(
+        BoxSlot,
+        on_delete=models.PROTECT,
+        related_name="box_storage_items",
+        help_text=_("Box slot where the product is stored"),
+    )
+    position_in_slot = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text=_("Position identifier within the slot (e.g., front, back, left, right)"),
+    )
+    quantity = models.IntegerField(
+        default=0,
+        help_text=_("Quantity of the product in this box slot"),
     )
     batch_number = models.CharField(
         max_length=100,
@@ -404,28 +447,27 @@ class ProductStorage(SalesModel):
     )
     
     class Meta:
-        verbose_name = _("Product Storage")
-        verbose_name_plural = _("Product Storage")
+        verbose_name = _("Box Storage")
+        verbose_name_plural = _("Box Storage")
         app_label = "inventory"
         ordering = ["-date_stored"]
         indexes = [
-            models.Index(fields=["product"]),
-            models.Index(fields=["reservation_status"]),
-            models.Index(fields=["batch_number"]),
+            models.Index(fields=["product_storage"]),
             models.Index(fields=["box_slot"]),
+            models.Index(fields=["batch_number"]),
         ]
-        # Allow multiple products in same slot but prevent duplicates of the same product/batch
         unique_together = [
-            ("box_slot", "product", "batch_number", "position_in_slot")
+            ("box_slot", "product_storage", "batch_number", "position_in_slot")
         ]
     
     def __str__(self):
-        """Return a string representation of the product storage."""
+        """Return a string representation of the box storage."""
         position_info = f" [{self.position_in_slot}]" if self.position_in_slot else ""
-        return f"{self.product} ({self.quantity}){position_info} @ {self.box_slot}"
+        product_info = f"{self.product_storage.product}" if self.product_storage else "Unknown product"
+        return f"{product_info} ({self.quantity}){position_info} @ {self.box_slot}"
     
     def save(self, *args, **kwargs):
-        """Update box slot status when saving product storage."""
+        """Update box slot status when saving box storage."""
         super().save(*args, **kwargs)
         # Update the occupied status of the box slot
         self.box_slot.update_occupied_status()

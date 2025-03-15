@@ -12,6 +12,7 @@ from .models import (
     BoxSlot,
     ProductStorage,
     InventoryMovement,
+    BoxStorage,
 )
 
 
@@ -140,16 +141,14 @@ class BoxAdmin(admin.ModelAdmin):
     available_slots.short_description = _('Available Slots')
 
 
-class ProductStorageInline(admin.TabularInline):
-    """Inline admin for products in a box slot."""
-    model = ProductStorage
+class BoxStorageInline(admin.TabularInline):
+    """Inline admin for box storage assignments."""
+    model = BoxStorage
     extra = 0
     fields = (
-        'product',
+        'product_storage',
         'position_in_slot',
         'quantity',
-        'reservation_status',
-        'reservation_reference',
         'batch_number',
     )
 
@@ -158,25 +157,48 @@ class ProductStorageInline(admin.TabularInline):
 class BoxSlotAdmin(admin.ModelAdmin):
     """Admin interface for box slots."""
     list_display = (
-        '__str__',
         'box',
+        'slot_number',
         'slot_code',
         'occupied',
-        'product_count',
-        'available_space',
     )
-    list_filter = ('occupied', 'box__box_type')
-    search_fields = ('slot_code', 'barcode', 'box__code')
-    fieldsets = (
-        (_('Basic Information'), {
-            'fields': ('box', 'slot_code', 'barcode')
-        }),
-        (_('Status'), {
-            'fields': ('occupied', 'max_products')
-        }),
+    list_filter = (
+        'occupied',
+        'box__storage_location__country',
     )
-    inlines = [ProductStorageInline]
-    readonly_fields = ('occupied',)
+    search_fields = (
+        'slot_code',
+        'box__code',
+    )
+    readonly_fields = (
+        'box',
+        'slot_number',
+        'barcode',
+        'occupied',
+    )
+    inlines = [BoxStorageInline]
+    
+    def occupied(self, obj):
+        """Return whether the box slot is occupied."""
+        return obj.is_occupied
+    occupied.boolean = True
+    
+    actions = ['mark_available', 'mark_reserved', 'mark_maintenance']
+    
+    def mark_available(self, request, queryset):
+        """Mark selected box slots as available."""
+        queryset.update(status=BoxSlot.Status.AVAILABLE)
+    mark_available.short_description = _('Mark selected box slots as available')
+    
+    def mark_reserved(self, request, queryset):
+        """Mark selected box slots as reserved."""
+        queryset.update(status=BoxSlot.Status.RESERVED)
+    mark_reserved.short_description = _('Mark selected box slots as reserved')
+    
+    def mark_maintenance(self, request, queryset):
+        """Mark selected box slots as in maintenance."""
+        queryset.update(status=BoxSlot.Status.MAINTENANCE)
+    mark_maintenance.short_description = _('Mark selected box slots as in maintenance')
 
 
 @admin.register(ProductStorage)
@@ -184,33 +206,67 @@ class ProductStorageAdmin(admin.ModelAdmin):
     """Admin interface for product storage."""
     list_display = (
         'product',
-        'box_slot',
+        'storage_location',
         'quantity',
         'reservation_status',
-        'batch_number',
-        'date_stored',
     )
     list_filter = (
         'reservation_status',
-        'date_stored',
-        'box_slot__box__storage_location__country',
+        'storage_location__country',
+        'storage_location__city_building',
     )
     search_fields = (
         'product__name',
         'product__sku',
-        'batch_number',
         'reservation_reference',
+        'storage_location__location_code',
+    )
+    fieldsets = (
+        (_('Product Information'), {
+            'fields': ('product', 'quantity')
+        }),
+        (_('Storage Location'), {
+            'fields': ('storage_location',)
+        }),
+        (_('Reservation'), {
+            'fields': ('reservation_status', 'reservation_reference')
+        }),
+    )
+    inlines = [BoxStorageInline]
+    
+    def get_inline_instances(self, request, obj=None):
+        """Only show inlines when editing an existing object."""
+        if obj is None:
+            return []
+        return super().get_inline_instances(request, obj)
+
+
+@admin.register(BoxStorage)
+class BoxStorageAdmin(admin.ModelAdmin):
+    """Admin interface for box storage."""
+    list_display = (
+        'product_storage',
+        'box_slot',
+        'quantity',
+        'batch_number',
+        'date_stored',
+    )
+    list_filter = (
+        'date_stored',
+        'box_slot__box__storage_location__country',
+    )
+    search_fields = (
+        'product_storage__product__name',
+        'product_storage__product__sku',
+        'batch_number',
         'box_slot__box__code',
     )
     fieldsets = (
         (_('Product Information'), {
-            'fields': ('product', 'quantity', 'batch_number', 'expiry_date')
+            'fields': ('product_storage', 'quantity', 'batch_number', 'expiry_date')
         }),
-        (_('Storage Location'), {
-            'fields': ('box_slot',)
-        }),
-        (_('Reservation'), {
-            'fields': ('reservation_status', 'reservation_reference')
+        (_('Box Location'), {
+            'fields': ('box_slot', 'position_in_slot')
         }),
     )
     readonly_fields = ('date_stored',)

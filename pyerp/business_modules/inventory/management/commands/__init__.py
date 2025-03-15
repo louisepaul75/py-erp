@@ -1,3 +1,3 @@
 """
-Management commands for the inventory module.
+Django management commands for inventory app.
 """ 

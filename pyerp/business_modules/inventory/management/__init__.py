@@ -1,3 +1,3 @@
 """
-Management package for inventory app.
+Django management modules for inventory app.
 """ 
