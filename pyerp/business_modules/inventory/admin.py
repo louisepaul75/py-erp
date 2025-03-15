@@ -146,6 +146,7 @@ class ProductStorageInline(admin.TabularInline):
     extra = 0
     fields = (
         'product',
+        'position_in_slot',
         'quantity',
         'reservation_status',
         'reservation_reference',
@@ -161,6 +162,8 @@ class BoxSlotAdmin(admin.ModelAdmin):
         'box',
         'slot_code',
         'occupied',
+        'product_count',
+        'available_space',
     )
     list_filter = ('occupied', 'box__box_type')
     search_fields = ('slot_code', 'barcode', 'box__code')
@@ -169,7 +172,7 @@ class BoxSlotAdmin(admin.ModelAdmin):
             'fields': ('box', 'slot_code', 'barcode')
         }),
         (_('Status'), {
-            'fields': ('occupied',)
+            'fields': ('occupied', 'max_products')
         }),
     )
     inlines = [ProductStorageInline]

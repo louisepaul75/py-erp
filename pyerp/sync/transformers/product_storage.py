@@ -187,15 +187,21 @@ class ProductStorageTransformer(BaseTransformer):
             # This matches with refOld in VariantProduct
             product_id = data.get("ID_Artikel_Stamm")
             
+
+
+
+
             # Ensure product_id is a string
             if product_id is not None:
                 product_id = str(product_id).strip()
                 
             if not product_id or product_id == "0":
+
                 self.log.info(
                     f"Skipping record with missing or zero product identifier: "
                     f"{data.get('UUID')}"
                 )
+
                 return None
 
             # Try to find the product by refOld (matching Artikel_Variante's refOld)
@@ -206,6 +212,7 @@ class ProductStorageTransformer(BaseTransformer):
                     f"Skipping record - product with ID {product_id} not found: "
                     f"{data.get('UUID')}"
                 )
+
                 return None
 
             # Handle quantity - explicitly check for null/NaN values
@@ -268,6 +275,9 @@ class ProductStorageTransformer(BaseTransformer):
         Transform data from Lager_Schuetten table and update existing ProductStorage
         records with box slot information.
         """
+        print(f"data: {data}")
+        # breakpoint()
+
         try:
             artikel_lagerorte_uuid = data.get("UUID_Artikel_Lagerorte")
             if not artikel_lagerorte_uuid:
@@ -407,6 +417,9 @@ class ProductStorageTransformer(BaseTransformer):
                         filter_query=filter_query
                     )
                     
+     
+
+
                     if not artikel_lagerorte_records.empty:
                         artikel_lagerorte_data = (
                             artikel_lagerorte_records.iloc[0].to_dict()

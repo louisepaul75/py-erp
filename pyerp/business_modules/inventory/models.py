@@ -233,6 +233,10 @@ class Box(SalesModel):
 class BoxSlot(SalesModel):
     """
     Box slot model for individual storage slots within a box.
+    
+    Each box slot can contain multiple products, allowing for efficient
+    use of storage space. The occupied status is updated automatically
+    when products are added or removed from the slot.
     """
     box = models.ForeignKey(
         Box,
@@ -287,6 +291,10 @@ class BoxSlot(SalesModel):
         default=False,
         help_text=_("Whether the slot is currently occupied"),
     )
+    max_products = models.IntegerField(
+        default=100,
+        help_text=_("Maximum number of different products that can be stored in this slot"),
+    )
     
     class Meta:
         verbose_name = _("Box Slot")
@@ -297,11 +305,46 @@ class BoxSlot(SalesModel):
     def __str__(self):
         """Return a string representation of the box slot."""
         return f"{self.box.code}.{self.slot_code}"
+    
+    def update_occupied_status(self):
+        """Update the occupied status based on whether there are products in the slot."""
+        has_products = self.stored_products.exists()
+        if self.occupied != has_products:
+            self.occupied = has_products
+            self.save(update_fields=['occupied'])
+    
+    @property
+    def product_count(self):
+        """Return the number of different products stored in this slot."""
+        return self.stored_products.values('product').distinct().count()
+    
+    @property
+    def is_full(self):
+        """Return whether the slot has reached its maximum product capacity."""
+        return self.product_count >= self.max_products
+    
+    @property
+    def available_space(self):
+        """Return the number of additional product types that can be added to this slot."""
+        return max(0, self.max_products - self.product_count)
+    
+    def get_products_summary(self):
+        """Return a summary of products stored in this slot."""
+        return self.stored_products.values(
+            'product__name', 
+            'product__sku',
+            'position_in_slot'
+        ).annotate(
+            total_quantity=models.Sum('quantity')
+        ).order_by('product__name')
 
 
 class ProductStorage(SalesModel):
     """
     Product storage model for tracking products in storage locations.
+    
+    This model allows multiple products to be stored in a single box slot,
+    enabling efficient use of storage space for small items.
     """
     class ReservationStatus(models.TextChoices):
         AVAILABLE = "AVAILABLE", _("Available")
@@ -320,6 +363,11 @@ class ProductStorage(SalesModel):
         on_delete=models.PROTECT,
         related_name="stored_products",
         help_text=_("Box slot where the product is stored"),
+    )
+    position_in_slot = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text=_("Position identifier within the slot (e.g., front, back, left, right)"),
     )
     quantity = models.IntegerField(
         default=1,
@@ -359,11 +407,23 @@ class ProductStorage(SalesModel):
             models.Index(fields=["product"]),
             models.Index(fields=["reservation_status"]),
             models.Index(fields=["batch_number"]),
+            models.Index(fields=["box_slot"]),
+        ]
+        # Allow multiple products in same slot but prevent duplicates of the same product/batch
+        unique_together = [
+            ("box_slot", "product", "batch_number", "position_in_slot")
         ]
     
     def __str__(self):
         """Return a string representation of the product storage."""
-        return f"{self.product} ({self.quantity}) @ {self.box_slot}"
+        position_info = f" [{self.position_in_slot}]" if self.position_in_slot else ""
+        return f"{self.product} ({self.quantity}){position_info} @ {self.box_slot}"
+    
+    def save(self, *args, **kwargs):
+        """Update box slot status when saving product storage."""
+        super().save(*args, **kwargs)
+        # Update the occupied status of the box slot
+        self.box_slot.update_occupied_status()
 
 
 class InventoryMovement(SalesModel):
