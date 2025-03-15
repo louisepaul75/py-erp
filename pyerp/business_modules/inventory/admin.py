@@ -17,7 +17,7 @@ from .models import (
 
 
 class BoxInline(admin.TabularInline):
-    """Inline admin for boxes in a storage location."""
+    """Inline admin for boxes."""
     model = Box
     extra = 0
     fields = ('code', 'box_type', 'status', 'barcode')
@@ -74,7 +74,6 @@ class StorageLocationAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
     )
-    inlines = [BoxInline]
 
 
 class BoxSlotInline(admin.TabularInline):
@@ -118,18 +117,14 @@ class BoxAdmin(admin.ModelAdmin):
     list_display = (
         'code',
         'box_type',
-        'storage_location',
         'status',
         'available_slots',
     )
-    list_filter = ('status', 'box_type', 'storage_location__country')
-    search_fields = ('code', 'barcode', 'notes', 'storage_location__name')
+    list_filter = ('status', 'box_type')
+    search_fields = ('code', 'barcode', 'notes')
     fieldsets = (
         (_('Basic Information'), {
             'fields': ('code', 'barcode', 'box_type', 'status', 'notes')
-        }),
-        (_('Location'), {
-            'fields': ('storage_location',)
         }),
     )
     inlines = [BoxSlotInline]
@@ -158,17 +153,15 @@ class BoxSlotAdmin(admin.ModelAdmin):
     """Admin interface for box slots."""
     list_display = (
         'box',
-        'slot_number',
         'slot_code',
         'occupied',
+        'product_count',
     )
-    list_filter = (
-        'occupied',
-        'box__storage_location__country',
-    )
+    list_filter = ('occupied', 'box__box_type')
     search_fields = (
-        'slot_code',
         'box__code',
+        'slot_code',
+        'barcode',
     )
     readonly_fields = (
         'box',
@@ -253,7 +246,7 @@ class BoxStorageAdmin(admin.ModelAdmin):
     )
     list_filter = (
         'date_stored',
-        'box_slot__box__storage_location__country',
+        'box_slot__box__box_type',
     )
     search_fields = (
         'product_storage__product__name',

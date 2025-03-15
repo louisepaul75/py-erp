@@ -232,14 +232,6 @@ class Box(SalesModel):
         related_name="boxes",
         help_text=_("Type of box"),
     )
-    storage_location = models.ForeignKey(
-        StorageLocation,
-        on_delete=models.PROTECT,
-        related_name="boxes",
-        null=True,
-        blank=True,
-        help_text=_("Storage location where the box is placed"),
-    )
     status = models.CharField(
         max_length=20,
         choices=BoxStatus.choices,

@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import logging
 
-from .models import BoxType, StorageLocation, Box, BoxSlot, ProductStorage
+from .models import BoxType, StorageLocation, Box, BoxSlot, ProductStorage, BoxStorage
 
 app_name = "inventory"
 logger = logging.getLogger(__name__)
@@ -149,55 +149,58 @@ def storage_locations_list(request):
 def products_by_location(request, location_id=None):
     """API endpoint to list products by storage location."""
     try:
-        # Get all box slots in the specified storage location
-        if location_id:
-            box_slots = BoxSlot.objects.filter(
-                box__storage_location_id=location_id
-            ).select_related('box', 'box__storage_location')
-        else:
+        if not location_id:
             return Response(
                 {"detail": "Storage location ID is required"},
                 status=400
             )
         
-        # Get products in these box slots
+        # Get products in the storage location
         product_storage_items = ProductStorage.objects.filter(
-            box_slot__in=box_slots
+            storage_location_id=location_id
         ).select_related(
-            'product', 
-            'box_slot', 
-            'box_slot__box', 
-            'box_slot__box__storage_location'
+            'product',
+            'storage_location'
+        )
+        
+        # Get box storage items for these products
+        box_storage_items = BoxStorage.objects.filter(
+            product_storage__in=product_storage_items
+        ).select_related(
+            'box_slot',
+            'box_slot__box'
         )
         
         # Group products by box and slot
         result = {}
-        for item in product_storage_items:
-            box_code = item.box_slot.box.code
-            slot_code = item.box_slot.slot_code
+        for box_item in box_storage_items:
+            box = box_item.box_slot.box
+            box_code = box.code
+            slot_code = box_item.box_slot.slot_code
+            product = box_item.product_storage.product
             
             if box_code not in result:
                 result[box_code] = {
-                    "box_id": item.box_slot.box.id,
+                    "box_id": box.id,
                     "box_code": box_code,
                     "slots": {}
                 }
             
             if slot_code not in result[box_code]["slots"]:
                 result[box_code]["slots"][slot_code] = {
-                    "slot_id": item.box_slot.id,
+                    "slot_id": box_item.box_slot.id,
                     "slot_code": slot_code,
                     "products": []
                 }
             
             result[box_code]["slots"][slot_code]["products"].append({
-                "id": item.product.id,
-                "sku": item.product.sku,
-                "name": item.product.name,
-                "quantity": item.quantity,
-                "reservation_status": item.reservation_status,
-                "batch_number": item.batch_number,
-                "date_stored": item.date_stored
+                "id": product.id,
+                "sku": product.sku,
+                "name": product.name,
+                "quantity": box_item.quantity,
+                "reservation_status": box_item.product_storage.reservation_status,
+                "batch_number": box_item.batch_number,
+                "date_stored": box_item.date_stored
             })
         
         # Convert to list format for easier consumption in frontend

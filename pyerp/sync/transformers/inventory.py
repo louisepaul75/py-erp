@@ -436,26 +436,32 @@ class BoxTransformer(BaseTransformer):
             box_code = data.get('Schuettencode', '')
             if not box_code:
                 # Generate a code if not provided
-                box_code = f"BOX-{legacy_id}"
+                box_code = f"SC{legacy_id}"
                 logger.info(f"Generated box code for legacy ID {legacy_id}: {box_code}")
             
             # Extract box type
-            box_type_name = data.get('Schuettentyp', 'Standard')
+            box_type_name = data.get('Schuettentyp', '')
+            
+            # If no box type is specified, use the "Unknown" box type
             if not box_type_name:
-                box_type_name = 'Standard'
-                
+                box_type_name = 'Unknown'
+                logger.info(f"Box {legacy_id} has no box type specified. Using 'Unknown' box type.")
+            
             # Validate box type exists
-            if box_type_name not in existing_box_types:
+            if box_type_name in existing_box_types:
+                box_type = existing_box_types.get(box_type_name)
+            else:
+                # If the specified box type doesn't exist, use the "Unknown" box type
                 logger.warning(
                     f"Box type '{box_type_name}' not found for box {legacy_id}. "
-                    "Using 'Standard' instead."
+                    f"Using 'Unknown' box type instead."
                 )
-                box_type_name = 'Standard'
+                box_type = existing_box_types.get('Unknown')
                 
-            box_type = existing_box_types.get(box_type_name)
+            # If we still don't have a box type, something is wrong
             if not box_type:
                 logger.error(
-                    f"Standard box type not found. Cannot proceed with import."
+                    f"'Unknown' box type not found. Cannot proceed with import."
                 )
                 continue
             
@@ -564,7 +570,7 @@ class BoxTransformer(BaseTransformer):
             transformed_record = {
                 'legacy_id': legacy_id,
                 'code': box_code,
-                'box_type': box_type,
+                'box_type': box_type,  # Now always has a value (either the actual box type or "Unknown")
                 'storage_location': storage_location,  # Use the actual StorageLocation object
                 'purpose': purpose,
                 'status': 'AVAILABLE',  # Default status
