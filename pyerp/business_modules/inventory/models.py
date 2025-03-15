@@ -312,7 +312,7 @@ class BoxSlot(SalesModel):
     
     def update_occupied_status(self):
         """Update the occupied status based on whether there are products in the slot."""
-        has_products = self.stored_products.exists()
+        has_products = self.box_storage_items.exists()
         if self.occupied != has_products:
             self.occupied = has_products
             self.save(update_fields=['occupied'])
@@ -320,7 +320,7 @@ class BoxSlot(SalesModel):
     @property
     def product_count(self):
         """Return the number of different products stored in this slot."""
-        return self.stored_products.values('product').distinct().count()
+        return self.box_storage_items.values('product_storage__product').distinct().count()
     
     @property
     def is_full(self):
@@ -334,13 +334,13 @@ class BoxSlot(SalesModel):
     
     def get_products_summary(self):
         """Return a summary of products stored in this slot."""
-        return self.stored_products.values(
-            'product__name', 
-            'product__sku',
+        return self.box_storage_items.values(
+            'product_storage__product__name', 
+            'product_storage__product__sku',
             'position_in_slot'
         ).annotate(
             total_quantity=models.Sum('quantity')
-        ).order_by('product__name')
+        ).order_by('product_storage__product__name')
 
 
 class ProductStorage(SalesModel):

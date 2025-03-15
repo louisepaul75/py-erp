@@ -30,7 +30,8 @@ class Command(BaseCommand):
                 "box_slots", 
                 "product_storage",
                 "product_storage_artikel_lagerorte",
-                "product_storage_lager_schuetten"
+                "product_storage_lager_schuetten",
+                "box_storage"
             ],
             help="Specific inventory component to sync",
         )
@@ -154,7 +155,8 @@ class Command(BaseCommand):
                 'box_slots', 
                 'product_storage',
                 'product_storage_artikel_lagerorte',
-                'product_storage_lager_schuetten'
+                'product_storage_lager_schuetten',
+                'box_storage'
             ]
             mappings = mappings.filter(entity_type__in=inventory_components)
             
@@ -207,7 +209,8 @@ if __name__ == "__main__":
             "box_slots", 
             "product_storage",
             "product_storage_artikel_lagerorte",
-            "product_storage_lager_schuetten"
+            "product_storage_lager_schuetten",
+            "box_storage"
         ],
         help="Specific inventory component to sync",
     )

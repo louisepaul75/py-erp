@@ -11,6 +11,7 @@ import json
 import logging
 import math
 import re
+from datetime import datetime
 
 from pyerp.business_modules.inventory.models import (
     ProductStorage, BoxSlot, Box, StorageLocation
@@ -20,45 +21,27 @@ from pyerp.sync.transformers.base import BaseTransformer
 from pyerp.sync.exceptions import TransformError
 
 
+logger = logging.getLogger(__name__)
+
+
 def parse_decimal(value: str) -> Decimal:
     """
-    Parse a string to a Decimal, handling various formats.
+    Parse a decimal value from a string, handling various formats.
     
     Args:
-        value: String representation of a decimal number
+        value: The string value to parse
         
     Returns:
-        Decimal value
+        Decimal value, or 0 if parsing fails
     """
-    # Handle None values
-    if value is None:
+    if not value:
         return Decimal('0')
         
-    # Handle float/int values directly
-    if isinstance(value, (float, int)):
-        # Check for NaN
-        if isinstance(value, float) and (value != value):  # NaN check
-            return Decimal('0')
-        return Decimal(str(value))
-    
-    # Handle string values
-    if not value or (isinstance(value, str) and value.lower() in ('null', 'nan')):
-        return Decimal('0')
-    
-    # Replace comma with dot for decimal separator
-    if isinstance(value, str):
-        value = value.replace(',', '.')
-        
-        # Remove any non-numeric characters except dot
-        value = ''.join(c for c in value if c.isdigit() or c == '.')
-    
     try:
-        decimal_value = Decimal(value)
-        # Check if the result is NaN
-        if decimal_value.is_nan():
-            return Decimal('0')
-        return decimal_value
-    except (ValueError, InvalidOperation):
+        # Remove any non-numeric characters except decimal point and minus sign
+        clean_value = re.sub(r'[^\d.-]', '', str(value))
+        return Decimal(clean_value)
+    except (ValueError, TypeError, decimal.InvalidOperation):
         return Decimal('0')
 
 
@@ -76,6 +59,7 @@ class ProductStorageTransformer(BaseTransformer):
         self._product_cache = {}
         self._storage_location_cache = {}
         self._box_slot_cache = {}
+        self.log = logger
 
     def _get_product(self, product_id: str) -> Optional[VariantProduct]:
         """
@@ -153,54 +137,101 @@ class ProductStorageTransformer(BaseTransformer):
             self.log.debug(f"Looking for storage location with UUID: '{location_uuid}'")
             
             try:
+                # First try to find by legacy_id (UUID)
                 self._storage_location_cache[location_uuid] = StorageLocation.objects.get(
                     legacy_id=location_uuid
                 )
                 self.log.debug(
-                    f"Found storage location: {self._storage_location_cache[location_uuid]}"
+                    f"Found storage location by UUID: {self._storage_location_cache[location_uuid]}"
                 )
             except StorageLocation.DoesNotExist:
-                self.log.warning(f"Storage location with UUID {location_uuid} not found")
-                return None
+                # If not found by UUID, try to find by ID
+                # Extract the ID from the UUID in the legacy database
+                try:
+                    # Get the ID from the legacy database
+                    from pyerp.external_api.legacy_erp.client import LegacyERPClient
+                    client = LegacyERPClient(environment="live")
+                    
+                    # Query the legacy database for the storage location
+                    df = client.fetch_table(
+                        table_name="Stamm_Lagerorte",
+                        filter_query=[["UUID", "==", location_uuid]]
+                    )
+                    
+                    if not df.empty:
+                        # Get the ID_Lagerort from the result
+                        id_lagerort = df['ID_Lagerort'].iloc[0]
+                        self.log.info(f"Found ID_Lagerort {id_lagerort} for UUID {location_uuid} in legacy database")
+                        
+                        # Try to find the storage location by ID
+                        try:
+                            self._storage_location_cache[location_uuid] = StorageLocation.objects.get(
+                                legacy_id=str(id_lagerort)
+                            )
+                            self.log.info(
+                                f"Found storage location by ID: {self._storage_location_cache[location_uuid]}"
+                            )
+                        except StorageLocation.DoesNotExist:
+                            self.log.warning(f"Storage location with ID {id_lagerort} not found")
+                            return None
+                    else:
+                        self.log.warning(f"Storage location with UUID {location_uuid} not found in legacy database")
+                        return None
+                except Exception as e:
+                    self.log.error(f"Error querying legacy database: {e}")
+                    return None
         
-        return self._storage_location_cache[location_uuid]
+        return self._storage_location_cache.get(location_uuid)
     
-    def _get_box_slot(self, box_id: Optional[str] = None) -> Optional[BoxSlot]:
+    def _get_box_slot(self, box_id: str, legacy_slot_id: Optional[str] = None) -> Optional['BoxSlot']:
         """
-        Get a box slot by box ID, with caching for performance.
+        Get a BoxSlot instance by box ID and optionally slot ID.
         
         Args:
-            box_id: ID of the box to find
+            box_id: The legacy ID of the box
+            legacy_slot_id: The legacy ID of the slot (optional)
             
         Returns:
             BoxSlot instance or None if not found
         """
         from pyerp.business_modules.inventory.models import Box, BoxSlot
-            
-        if not box_id:
-            return None
-            
-        if box_id not in self._box_slot_cache:
+        
+        # Create a cache key from both IDs
+        cache_key = f"{box_id}:{legacy_slot_id or '1'}"
+        
+        if cache_key not in self._box_slot_cache:
             try:
-                # Try to find the box
-                box = Box.objects.filter(legacy_id=box_id).first()
-                if not box:
-                    self.log.warning(f"Box with ID {box_id} not found")
-                    return None
-                    
-                # Get the first slot for this box
-                slot = box.slots.first()
-                if not slot:
-                    self.log.warning(f"Box {box_id} has no slots")
-            return None
-                    
-                self._box_slot_cache[box_id] = slot
-                self.log.debug(f"Found box slot: {self._box_slot_cache[box_id]}")
-        except Exception as e:
-                self.log.error(f"Error getting box slot for box {box_id}: {e}")
-            return None
-
-        return self._box_slot_cache[box_id]
+                # First try to find by box and slot legacy ID
+                if legacy_slot_id:
+                    self._box_slot_cache[cache_key] = BoxSlot.objects.get(
+                        box__legacy_id=box_id, 
+                        legacy_slot_id=legacy_slot_id
+                    )
+                    self.log.debug(
+                        f"Found BoxSlot by box and slot ID: {self._box_slot_cache[cache_key]}"
+                    )
+                else:
+                    # If no slot ID, try to find the first slot for this box
+                    try:
+                        box = Box.objects.get(legacy_id=box_id)
+                        self._box_slot_cache[cache_key] = box.slots.first()
+                        if self._box_slot_cache[cache_key]:
+                            self.log.debug(
+                                f"Found first slot for box: {self._box_slot_cache[cache_key]}"
+                            )
+                        else:
+                            self.log.warning(f"No slots found for box ID {box_id}")
+                            return None
+                    except Box.DoesNotExist:
+                        self.log.warning(f"Box with legacy_id={box_id} not found")
+                        return None
+            except BoxSlot.DoesNotExist:
+                self.log.warning(
+                    f"BoxSlot with box__legacy_id={box_id} and legacy_slot_id={legacy_slot_id} not found"
+                )
+                return None
+                
+        return self._box_slot_cache.get(cache_key)
     
     def _parse_quantity(self, quantity_str: Any) -> int:
         """
@@ -281,16 +312,16 @@ class ProductStorageTransformer(BaseTransformer):
         transformed_records = []
         
         for record in data:
-        try:
-            # Get product ID
+            try:
+                # Get product ID
                 product_id = record.get("ID_Artikel_Stamm")
-            if not product_id:
+                if not product_id:
                     self.log.warning(f"Missing product ID in record {record.get('UUID')}")
                     continue
                 
-            # Get product
-            product = self._get_product(product_id)
-            if not product:
+                # Get product
+                product = self._get_product(product_id)
+                if not product:
                     self.log.info(f"Product not found for ID {product_id}, skipping record")
                     continue
                     
@@ -305,14 +336,14 @@ class ProductStorageTransformer(BaseTransformer):
                     self.log.warning(f"Storage location not found for UUID {location_uuid}, skipping record")
                     continue
                 
-            # Parse quantity
+                # Parse quantity
                 quantity = self._parse_quantity(record.get("Bestand", 0))
-            
-            # Determine status
+                
+                # Determine status
                 status = self._determine_status(record)
                 
                 # Create transformed record
-            transformed = {
+                transformed = {
                     'legacy_id': record.get('UUID', ''),
                     'product': product,
                     'storage_location': storage_location,
@@ -327,7 +358,7 @@ class ProductStorageTransformer(BaseTransformer):
                 
                 transformed_records.append(transformed)
 
-        except Exception as e:
+            except Exception as e:
                 self.log.error(f"Error transforming record: {e}")
                 continue
         
@@ -375,7 +406,8 @@ class BoxStorageTransformer(BaseTransformer):
         super().__init__(*args, **kwargs)
         self._product_storage_cache = {}
         self._box_slot_cache = {}
-        
+        self.log = logger
+
     def _get_product_storage(self, uuid: str) -> Optional['ProductStorage']:
         """
         Get a ProductStorage instance by legacy ID.
@@ -443,7 +475,7 @@ class BoxStorageTransformer(BaseTransformer):
                         self.log.warning(f"Box with legacy_id={box_id} not found")
                         return None
             except BoxSlot.DoesNotExist:
-                            self.log.warning(
+                self.log.warning(
                     f"BoxSlot with box__legacy_id={box_id} and legacy_slot_id={legacy_slot_id} not found"
                 )
                 return None

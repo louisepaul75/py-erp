@@ -94,9 +94,24 @@ class SyncPipeline:
                     'timestamp_filter_format',
                     "'modified_date > '{value}'"  # Default format
                 )
-                params['filter'] = filter_format.format(
-                    value=modified_since.strftime('%Y-%m-%d')
-                )
+                
+                # Handle both string and list formats for timestamp_filter_format
+                if isinstance(filter_format, str):
+                    params['filter'] = filter_format.format(
+                        value=modified_since.strftime('%Y-%m-%d')
+                    )
+                elif isinstance(filter_format, list):
+                    # Handle the list format by constructing a filter query
+                    # Assuming the format is [['field', 'operator', 'value_template']]
+                    filter_query = []
+                    for filter_item in filter_format:
+                        if len(filter_item) >= 3:
+                            field, operator, value_template = filter_item
+                            value = value_template.format(value=modified_since.strftime('%Y-%m-%d'))
+                            filter_query.append([field, operator, value])
+                    params['filter'] = filter_query
+                else:
+                    logger.warning(f"Unsupported timestamp_filter_format type: {type(filter_format)}")
             
             log_data_sync_event(
                 source=self.mapping.source.name,

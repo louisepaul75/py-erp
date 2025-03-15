@@ -118,18 +118,76 @@ if __name__ == "__main__":
 
     client = LegacyERPClient(environment="live")
 
-
-    filter_query = [["alteNummer", "==", "11400-BE"]]
-        # Fetch sample records from the box master table
-    df = client.fetch_table(
-        table_name="Artikel_Variante",
-        filter_query=filter_query,
-
-    )
-
-    print("\nSample records:")
-    print(df.head())
+    # Fetch records from the Stamm_Lagerorte table using pagination
+    print("\nFetching Stamm_Lagerorte records to find ID 1663:")
     
-    # Display detailed info for first record
-    print("\nDetailed first record:")
-    print(df.iloc[0].to_dict())
+    all_records = []
+    skip = 0
+    page_size = 100
+    max_pages = 20  # Limit to 20 pages (2000 records)
+    target_id = "1663"
+    found = False
+    
+    for page in range(max_pages):
+        print(f"Fetching page {page+1} with skip={skip}, top={page_size}")
+        df_page = client.fetch_table(
+            table_name="Stamm_Lagerorte",
+            skip=skip,
+            top=page_size
+        )
+        
+        if df_page.empty:
+            print(f"No more records after page {page+1}")
+            break
+            
+        all_records.append(df_page)
+        print(f"Fetched page {page+1} with {len(df_page)} records")
+        
+        # Print the range of IDs in this page
+        if not df_page.empty:
+            min_id = df_page['ID_Lagerort'].min()
+            max_id = df_page['ID_Lagerort'].max()
+            print(f"ID range in page {page+1}: {min_id} to {max_id}")
+        
+        # Check if the target ID is in this page
+        matching_lagerorte = df_page[df_page['ID_Lagerort'] == target_id]
+        if not matching_lagerorte.empty:
+            print(f"\nFound record with ID_Lagerort = {target_id} on page {page+1}:")
+            print(matching_lagerorte)
+            
+            # Get the UUID of this record
+            uuid = matching_lagerorte['UUID'].iloc[0]
+            print(f"\nUUID of storage location with ID_Lagerort = {target_id}: {uuid}")
+            found = True
+            break
+            
+        skip += page_size
+    
+    if not found:
+        print(f"\nNo record found with ID_Lagerort = {target_id} after checking {len(all_records)} pages")
+        
+        # Combine all pages
+        if all_records:
+            df_lagerorte = pd.concat(all_records)
+            print(f"\nTotal Stamm_Lagerorte records fetched: {len(df_lagerorte)}")
+            
+            # Print the range of IDs
+            min_id = df_lagerorte['ID_Lagerort'].min()
+            max_id = df_lagerorte['ID_Lagerort'].max()
+            print(f"ID range: {min_id} to {max_id}")
+            
+            # Try a direct query for the ID
+            print(f"\nTrying direct query for ID_Lagerort = {target_id}")
+            try:
+                direct_query = client.fetch_table(
+                    table_name="Stamm_Lagerorte",
+                    filter_query=[["ID_Lagerort", "==", target_id]]
+                )
+                
+                if not direct_query.empty:
+                    print(f"Found record with direct query:")
+                    print(direct_query)
+                else:
+                    print(f"No record found with direct query")
+            except Exception as e:
+                print(f"Error with direct query: {e}")

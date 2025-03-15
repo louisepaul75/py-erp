@@ -41,7 +41,7 @@ storage_locations:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
 
 # Box Type Sync
 box_types:
@@ -74,7 +74,7 @@ box_types:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
 
 # Box Sync
 boxes:
@@ -101,26 +101,21 @@ boxes:
       unique_field: "legacy_id"
       update_strategy: "update_or_create"
       field_resolution:
-        box_type:
-          model: "inventory.BoxType"
-          lookup_field: "name"
-          source_field: "box_type_name"
         storage_location:
           model: "inventory.StorageLocation"
           lookup_field: "legacy_id"
-          source_field: "storage_location_uuid"
-          fallback_fields: ["UUID_Stamm_Lagerorte"]
-        parent_box:
-          model: "inventory.Box"
-          lookup_field: "legacy_id"
-          source_field: "parent_box_legacy_id"
+          source_field: "ID_Lagerort"
+        box_type:
+          model: "inventory.BoxType"
+          lookup_field: "name"
+          source_field: "Typ"
   schedule:
     frequency: "daily"
     time: "02:00"
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
   dependencies:
     - "box_types"
     - "storage_locations"
@@ -157,7 +152,7 @@ box_slots:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
   dependencies:
     - "boxes"
 
@@ -197,7 +192,7 @@ product_storage_artikel_lagerorte:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
   dependencies:
     - "products"
     - "storage_locations"
@@ -242,7 +237,7 @@ product_storage:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
   dependencies:
     - "products"
     - "storage_locations"
@@ -287,7 +282,7 @@ box_storage:
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
   dependencies:
     - "product_storage"
     - "box_slots"
@@ -324,16 +319,16 @@ product_storage_lager_schuetten:
           source_field: "box_slot_legacy_id"
   schedule:
     frequency: "daily"
-    time: "04:30"
+    time: "05:00"
   incremental:
     enabled: true
     timestamp_field: "modified_date"
-    timestamp_filter_format: [['modified_date', '>', '{value}']]
+    timestamp_filter_format: "modified_date > {value}"
   dependencies:
     - "product_storage_artikel_lagerorte"
     - "box_slots"
 
-# Combined Product Storage Sync for manual execution
+# Combined Product Storage Sync
 product_storage:
   name: "Product Storage Sync"
   description: "Combined product storage sync process"
