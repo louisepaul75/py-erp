@@ -99,6 +99,18 @@ class BoxType(SalesModel):
     """
     Box type model for defining different types of storage boxes.
     """
+    class BoxColor(models.TextChoices):
+        BLUE = "blue", _("Blue")
+        YELLOW = "yellow", _("Yellow")
+        GREEN = "green", _("Green")
+        RED = "red", _("Red")
+        GRAY = "gray", _("Gray")
+        ORANGE = "orange", _("Orange")
+        BLACK = "black", _("Black")
+        TRANSPARENT = "transparent", _("Transparent")
+        WHITE = "white", _("White")
+        OTHER = "other", _("Other")
+
     name = models.CharField(
         max_length=100,
         help_text=_("Name of the box type"),
@@ -106,6 +118,12 @@ class BoxType(SalesModel):
     description = models.TextField(
         blank=True,
         help_text=_("Description of the box type"),
+    )
+    color = models.CharField(
+        max_length=20,
+        choices=BoxColor.choices,
+        blank=True,
+        help_text=_("Color of the box type"),
     )
     length = models.DecimalField(
         max_digits=6,
