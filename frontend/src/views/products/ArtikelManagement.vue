@@ -62,6 +62,7 @@
             <!-- Loading state -->
             <div v-if="isLoadingProductList && !productData.length" class="artikel-loading">
               <p>Loading products...</p>
+              <div class="loading-spinner"></div>
             </div>
             <!-- Error state -->
             <div v-else-if="productListError && !productData.length" class="artikel-error">
@@ -355,7 +356,7 @@ const loadProducts = async (loadMore = false) => {
 
     // Create params object for filtering
     const params: Record<string, any> = {
-      page_size: 1000, // Increased to 1000 for maximum data per request
+      page_size: 100, // Reduced from 1000 to 100 for faster initial load
       page: currentPage.value,
       q: searchQuery.value, // Apply search query if any
       is_parent: true // Only fetch parent products
@@ -1275,5 +1276,20 @@ const checkIfShouldLoadAll = () => {
   border-radius: 4px;
   font-size: 12px;
   z-index: 1000;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 20px auto;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
