@@ -115,6 +115,7 @@ export default {
     productInventory: 'Product Inventory',
     movements: 'Inventory Movements',
     storageLocations: 'Storage Locations',
+    showOnlyWithProducts: 'Show only locations with products',
     boxManagement: 'Box Management',
     schuettenverwaltung: 'Schüttenverwaltung',
     warehouseMap: 'Warehouse Map',

@@ -112,6 +112,7 @@ export default {
     productInventory: 'Produktbestand',
     movements: 'Lagerbewegungen',
     storageLocations: 'Lagerorte',
+    showOnlyWithProducts: 'Nur Lagerorte mit Produkten anzeigen',
     boxManagement: 'Schüttenverwaltung',
     schuettenverwaltung: 'Schüttenverwaltung',
     warehouseMap: 'Lagerkarte',

@@ -10,6 +10,14 @@
                   {{ $t('inventory.storageLocations') }}
                 </span>
                 <div>
+                  <v-switch
+                    v-model="showOnlyWithProducts"
+                    :label="$t('inventory.showOnlyWithProducts')"
+                    hide-details
+                    density="compact"
+                    class="mr-4"
+                    style="display: inline-block"
+                  ></v-switch>
                   <v-text-field
                     v-model="searchQuery"
                     :label="$t('common.search')"
@@ -380,7 +388,8 @@ const productSearchQuery = ref('');
 const locationDialog = ref(false);
 const productsDialog = ref(false);
 const selectedLocation = ref(null);
-const refreshingLocationId = ref(null); // Track which location is being refreshed
+const refreshingLocationId = ref(null);
+const showOnlyWithProducts = ref(false);
 
 // Table headers
 const headers = [
@@ -409,41 +418,13 @@ const productHeaders = [
 ];
 
 // Computed properties
-const locationProductCounts = computed(() => {
-  const counts = {};
-  
-  // Initialize counts for all locations
-  inventoryStore.getStorageLocations.forEach(location => {
-    counts[location.id] = 0;
-  });
-  
-  // Count products in each location based on boxes
-  inventoryStore.getBoxes.forEach(box => {
-    if (box.storage_location) {
-      const locationId = box.storage_location.id;
-      if (!counts[locationId]) {
-        counts[locationId] = 0;
-      }
-      // Increment by 1 for each box in the location
-      // This is a simplification - ideally we'd count actual products
-      counts[locationId]++;
-    }
-  });
-  
-  return counts;
-});
-
-const locationsWithProductCount = computed(() => {
-  return inventoryStore.getStorageLocations.map(location => {
-    return {
-      ...location,
-      product_count: locationProductCounts.value[location.id] || 0
-    };
-  });
-});
-
 const filteredLocations = computed(() => {
-  let locations = locationsWithProductCount.value;
+  let locations = inventoryStore.getStorageLocations;
+  
+  // Filter locations with products if the toggle is on
+  if (showOnlyWithProducts.value) {
+    locations = locations.filter(location => location.product_count > 0);
+  }
   
   if (!searchQuery.value) {
     return locations;
@@ -487,7 +468,6 @@ const filteredBoxes = computed(() => {
 // Methods
 const fetchData = async () => {
   await inventoryStore.fetchStorageLocations();
-  await inventoryStore.fetchBoxes(1, 1000); // Fetch all boxes to get accurate product counts
 };
 
 const refreshData = async () => {
@@ -582,7 +562,7 @@ const getAccurateProductCount = async (locationId) => {
     });
     
     // Update the product count for this location
-    const updatedLocation = locationsWithProductCount.value.find(loc => loc.id === locationId);
+    const updatedLocation = inventoryStore.getStorageLocations.find(loc => loc.id === locationId);
     if (updatedLocation) {
       updatedLocation.product_count = count;
     }

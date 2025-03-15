@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import logging
+from django.db import models
 
 from .models import BoxType, StorageLocation, Box, BoxSlot, ProductStorage, BoxStorage
 
@@ -69,13 +70,24 @@ def boxes_list(request):
         total_count = Box.objects.count()
 
         # Get paginated boxes with related data
-        boxes = Box.objects.select_related(
-            'box_type', 'storage_location'
-        ).all()[offset:offset + limit]
+        boxes = Box.objects.select_related('box_type').prefetch_related('slots').all()[offset:offset + limit]
 
         data = []
         for box in boxes:
             try:
+                # Get the first slot with a storage location through box storage
+                storage_location = None
+                for slot in box.slots.all():
+                    box_storage = slot.box_storage_items.select_related(
+                        'product_storage__storage_location'
+                    ).first()
+                    if box_storage and box_storage.product_storage.storage_location:
+                        storage_location = {
+                            "id": box_storage.product_storage.storage_location.id,
+                            "name": box_storage.product_storage.storage_location.name,
+                        }
+                        break
+
                 box_data = {
                     "id": box.id,
                     "code": box.code,
@@ -84,10 +96,7 @@ def boxes_list(request):
                         "id": box.box_type.id,
                         "name": box.box_type.name,
                     },
-                    "storage_location": {
-                        "id": box.storage_location.id,
-                        "name": box.storage_location.name,
-                    } if box.storage_location else None,
+                    "storage_location": storage_location,
                     "status": box.status,
                     "purpose": box.purpose,
                     "notes": box.notes,
@@ -118,7 +127,14 @@ def boxes_list(request):
 def storage_locations_list(request):
     """API endpoint to list all storage locations."""
     try:
-        locations = StorageLocation.objects.all()
+        # Get all storage locations with product counts
+        locations = StorageLocation.objects.annotate(
+            product_count=models.Count(
+                'stored_products',
+                distinct=True
+            )
+        )
+        
         data = [
             {
                 "id": location.id,
@@ -132,6 +148,8 @@ def storage_locations_list(request):
                 "sale": location.sale,
                 "special_spot": location.special_spot,
                 "is_active": location.is_active,
+                "product_count": location.product_count,
+                "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip("-")
             }
             for location in locations
         ]
