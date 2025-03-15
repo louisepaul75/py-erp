@@ -248,6 +248,52 @@ def products_by_location(request, location_id=None):
         )
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def locations_by_product(request, product_id=None):
+    """API endpoint to list storage locations for a specific product."""
+    try:
+        if not product_id:
+            return Response(
+                {"detail": "Product ID is required"},
+                status=400
+            )
+        
+        # Get storage locations for the product
+        product_storage_items = ProductStorage.objects.filter(
+            product_id=product_id
+        ).select_related(
+            'product',
+            'storage_location'
+        )
+        
+        # Format the response
+        result = []
+        for item in product_storage_items:
+            if item.storage_location:
+                location = item.storage_location
+                result.append({
+                    "id": location.id,
+                    "name": location.name,
+                    "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip("-"),
+                    "quantity": item.quantity,
+                    "reservation_status": item.reservation_status,
+                    "country": location.country,
+                    "city_building": location.city_building,
+                    "unit": location.unit,
+                    "compartment": location.compartment,
+                    "shelf": location.shelf
+                })
+        
+        return Response(result)
+    except Exception as e:
+        logger.error(f"Error fetching locations by product: {e}")
+        return Response(
+            {"detail": f"Failed to fetch locations by product: {str(e)}"},
+            status=500
+        )
+
+
 # URL patterns for the inventory app
 urlpatterns = [
     path("status/", placeholder_view, name="status"),
@@ -263,5 +309,10 @@ urlpatterns = [
         "storage-locations/<int:location_id>/products/",
         products_by_location,
         name="products_by_location",
+    ),
+    path(
+        "products/<int:product_id>/locations/",
+        locations_by_product,
+        name="locations_by_product",
     ),
 ]

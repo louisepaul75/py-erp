@@ -85,6 +85,22 @@ export interface BoxWithProducts {
 }
 
 /**
+ * Interface for Product Storage Location data
+ */
+export interface ProductStorageLocation {
+  id: number;
+  name: string;
+  location_code: string;
+  quantity: number;
+  reservation_status: string;
+  country: string;
+  city_building: string;
+  unit: string;
+  compartment: string;
+  shelf: string;
+}
+
+/**
  * Inventory API service functions
  */
 export const inventoryService = {
@@ -174,6 +190,23 @@ export const inventoryService = {
       return response.data;
     }).catch(error => {
       console.error('Error in getProductsByLocation:', error);
+      console.error('Error response:', error.response);
+      throw error;
+    });
+  },
+
+  /**
+   * Get storage locations for a specific product
+   * @param productId Product ID
+   * @returns Promise with storage locations data for the product
+   */
+  getLocationsByProduct(productId: number): Promise<ProductStorageLocation[]> {
+    console.log(`Fetching storage locations for product ${productId}...`);
+    return api.get(`/inventory/products/${productId}/locations/`).then(response => {
+      console.log('Storage locations for product response:', response.data);
+      return response.data;
+    }).catch(error => {
+      console.error('Error in getLocationsByProduct:', error);
       console.error('Error response:', error.response);
       throw error;
     });

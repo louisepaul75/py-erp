@@ -143,57 +143,105 @@
             </button>
           </div>
           <div class="artikel-details-content">
-            <div class="artikel-form-section">
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Bezeichnung</div>
-                <input class="artikel-form-input" v-model="selectedProductData.bezeichnung" />
+            <div v-if="activeTab === 'mutter'">
+              <div class="artikel-form-section">
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Bezeichnung</div>
+                  <input class="artikel-form-input" v-model="selectedProductData.bezeichnung" />
+                </div>
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Beschreibung</div>
+                  <textarea
+                    class="artikel-form-textarea"
+                    v-model="selectedProductData.beschreibung"
+                  ></textarea>
+                </div>
               </div>
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Beschreibung</div>
-                <textarea
-                  class="artikel-form-textarea"
-                  v-model="selectedProductData.beschreibung"
-                ></textarea>
+              <div class="artikel-form-section">
+                <div class="artikel-form-row checkbox-row">
+                  <label class="artikel-checkbox-label">
+                    <input type="checkbox" v-model="selectedProductData.hangend" />
+                    <span>Hängend</span>
+                  </label>
+                  <label class="artikel-checkbox-label">
+                    <input type="checkbox" v-model="selectedProductData.einseitig" />
+                    <span>Einseitig</span>
+                  </label>
+                </div>
+              </div>
+              <div class="artikel-form-section">
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Breite</div>
+                  <input class="artikel-form-input" v-model="selectedProductData.breite" />
+                </div>
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Höhe</div>
+                  <input class="artikel-form-input" v-model="selectedProductData.hohe" />
+                </div>
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Tiefe</div>
+                  <input class="artikel-form-input" v-model="selectedProductData.tiefe" />
+                </div>
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Gewicht</div>
+                  <input class="artikel-form-input" v-model="selectedProductData.gewicht" />
+                </div>
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Boxgröße</div>
+                  <input class="artikel-form-input" v-model="selectedProductData.boxgrosse" />
+                </div>
+              </div>
+              <div class="artikel-form-section">
+                <div class="artikel-form-row">
+                  <div class="artikel-form-label">Tags</div>
+                  <input class="artikel-form-input" v-model="selectedProductData.tags" />
+                </div>
               </div>
             </div>
-            <div class="artikel-form-section">
-              <div class="artikel-form-row checkbox-row">
-                <label class="artikel-checkbox-label">
-                  <input type="checkbox" v-model="selectedProductData.hangend" />
-                  <span>Hängend</span>
-                </label>
-                <label class="artikel-checkbox-label">
-                  <input type="checkbox" v-model="selectedProductData.einseitig" />
-                  <span>Einseitig</span>
-                </label>
-              </div>
-            </div>
-            <div class="artikel-form-section">
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Breite</div>
-                <input class="artikel-form-input" v-model="selectedProductData.breite" />
-              </div>
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Höhe</div>
-                <input class="artikel-form-input" v-model="selectedProductData.hohe" />
-              </div>
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Tiefe</div>
-                <input class="artikel-form-input" v-model="selectedProductData.tiefe" />
-              </div>
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Gewicht</div>
-                <input class="artikel-form-input" v-model="selectedProductData.gewicht" />
-              </div>
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Boxgröße</div>
-                <input class="artikel-form-input" v-model="selectedProductData.boxgrosse" />
-              </div>
-            </div>
-            <div class="artikel-form-section">
-              <div class="artikel-form-row">
-                <div class="artikel-form-label">Tags</div>
-                <input class="artikel-form-input" v-model="selectedProductData.tags" />
+            
+            <div v-else-if="activeTab === 'varianten'">
+              <!-- Storage Locations Section -->
+              <div class="artikel-form-section">
+                <h3 class="section-title">Lagerorte</h3>
+                
+                <!-- Loading state -->
+                <div v-if="isLoadingStorageLocations" class="artikel-loading">
+                  <p>Loading storage locations...</p>
+                </div>
+                
+                <!-- Error state -->
+                <div v-else-if="storageLocationsError" class="artikel-error">
+                  <p>{{ storageLocationsError }}</p>
+                </div>
+                
+                <!-- Empty state -->
+                <div v-else-if="productStorageLocations.length === 0" class="artikel-empty">
+                  <p>No storage locations found for this product</p>
+                </div>
+                
+                <!-- Storage locations list -->
+                <div v-else class="storage-locations-list">
+                  <div class="storage-locations-header">
+                    <div class="storage-location-header-item">Location</div>
+                    <div class="storage-location-header-item">Code</div>
+                    <div class="storage-location-header-item">Quantity</div>
+                    <div class="storage-location-header-item">Status</div>
+                  </div>
+                  <div class="storage-locations-items">
+                    <div
+                      v-for="location in productStorageLocations"
+                      :key="location.id"
+                      class="storage-location-item"
+                    >
+                      <div class="storage-location-name">{{ location.name }}</div>
+                      <div class="storage-location-code">{{ location.location_code }}</div>
+                      <div class="storage-location-quantity">{{ location.quantity }}</div>
+                      <div class="storage-location-status" :class="location.reservation_status.toLowerCase()">
+                        {{ location.reservation_status }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -277,6 +325,7 @@ import {
   Settings as SettingsIcon
 } from 'lucide-vue-next';
 import { productApi } from '@/services/api';
+import { inventoryService, ProductStorageLocation } from '@/services/inventory';
 
 // Define props and emits
 const props = defineProps({
@@ -327,6 +376,11 @@ const selectedProductData = reactive({
   boxgrosse: '',
   tags: ''
 });
+
+// Storage locations for the selected product
+const productStorageLocations = ref<ProductStorageLocation[]>([]);
+const isLoadingStorageLocations = ref(false);
+const storageLocationsError = ref('');
 
 // Active tab
 const activeTab = ref('mutter');
@@ -574,12 +628,34 @@ const loadProductDetails = async (productId: number) => {
           ? product.tags.join(', ')
           : product.tags;
       }
+      
+      // Load storage locations for this product
+      await loadStorageLocations(productId);
     }
   } catch (err: any) {
     console.error('Error loading product details:', err);
     productLoadError.value = `Failed to load product details: ${err.message || 'Unknown error'}`;
   } finally {
     isLoadingProduct.value = false;
+  }
+};
+
+// Load storage locations for a product
+const loadStorageLocations = async (productId: number) => {
+  isLoadingStorageLocations.value = true;
+  storageLocationsError.value = '';
+  
+  try {
+    console.log('Loading storage locations for product ID:', productId);
+    const locations = await inventoryService.getLocationsByProduct(productId);
+    productStorageLocations.value = locations;
+    console.log('Storage locations loaded:', locations);
+  } catch (err: any) {
+    console.error('Error loading storage locations:', err);
+    storageLocationsError.value = `Failed to load storage locations: ${err.message || 'Unknown error'}`;
+    productStorageLocations.value = [];
+  } finally {
+    isLoadingStorageLocations.value = false;
   }
 };
 
@@ -640,6 +716,9 @@ const loadProductFromApi = async (productId: string | number) => {
           selectProduct(matchingProduct);
         }
       }
+      
+      // Load storage locations for this product
+      await loadStorageLocations(id);
     }
   } catch (err: any) {
     console.error('Error loading product:', err);
@@ -1291,5 +1370,97 @@ const checkIfShouldLoadAll = () => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Storage Locations Styles */
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.storage-locations-list {
+  border: 1px solid #eaeaea;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.storage-locations-header {
+  display: flex;
+  background-color: #f8f9fa;
+  padding: 10px;
+  font-weight: 600;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.storage-location-header-item {
+  flex: 1;
+  font-size: 14px;
+}
+
+.storage-locations-items {
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d2bc9b #f8f9fa;
+}
+
+.storage-locations-items::-webkit-scrollbar {
+  width: 8px;
+}
+
+.storage-locations-items::-webkit-scrollbar-track {
+  background: #f8f9fa;
+}
+
+.storage-locations-items::-webkit-scrollbar-thumb {
+  background-color: #d2bc9b;
+  border-radius: 4px;
+  border: 2px solid #f8f9fa;
+}
+
+.storage-location-item {
+  display: flex;
+  padding: 10px;
+  border-bottom: 1px solid #eaeaea;
+  transition: background-color 0.2s;
+}
+
+.storage-location-item:hover {
+  background-color: #f8f9fa;
+}
+
+.storage-location-item:last-child {
+  border-bottom: none;
+}
+
+.storage-location-name,
+.storage-location-code,
+.storage-location-quantity,
+.storage-location-status {
+  flex: 1;
+  font-size: 14px;
+}
+
+.storage-location-status {
+  font-weight: 500;
+}
+
+.storage-location-status.available {
+  color: #4caf50;
+}
+
+.storage-location-status.reserved {
+  color: #ff9800;
+}
+
+.storage-location-status.allocated {
+  color: #2196f3;
+}
+
+.storage-location-status.picked {
+  color: #f44336;
 }
 </style>
