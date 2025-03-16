@@ -35,7 +35,8 @@ import {
   TableRow,
   TableHead,
   TableCell,
-  StatusBadge
+  StatusBadge,
+  themeColors
 } from '@/components/ui';
 
 export default function UIComponentsPage() {
@@ -166,7 +167,7 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium">Other Form Controls</h3>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Select</label>
-                      <select className="w-full rounded-md border border-amber-800/30 bg-amber-950/20 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none">
+                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
                         <option value="option1">Option 1</option>
                         <option value="option2">Option 2</option>
                         <option value="option3">Option 3</option>
@@ -175,7 +176,7 @@ export default function UIComponentsPage() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Textarea</label>
                       <textarea 
-                        className="w-full rounded-md border border-amber-800/30 bg-amber-950/20 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none" 
+                        className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none" 
                         placeholder="Enter multiple lines of text..."
                         rows={3}
                       />
@@ -184,7 +185,7 @@ export default function UIComponentsPage() {
                       <input 
                         type="checkbox" 
                         id="checkbox" 
-                        className="h-4 w-4 rounded border-amber-800/30 text-amber-600 focus:ring-amber-500" 
+                        className="h-4 w-4 rounded border-amber-800/35 text-amber-600 focus:ring-orange-500" 
                       />
                       <label htmlFor="checkbox" className="text-sm font-medium">Checkbox</label>
                     </div>
@@ -316,7 +317,7 @@ export default function UIComponentsPage() {
                       <CardTitle icon={BarChart4}>Bar Chart</CardTitle>
                     </CardHeader>
                     <CardContent className="flex items-center justify-center p-6">
-                      <div className="h-40 w-40 flex items-center justify-center rounded-full bg-amber-900/20 text-amber-500">
+                      <div className="h-40 w-40 flex items-center justify-center rounded-full bg-amber-900/25 text-amber-500">
                         <BarChart4 className="h-16 w-16" />
                       </div>
                     </CardContent>
@@ -327,7 +328,7 @@ export default function UIComponentsPage() {
                       <CardTitle icon={PieChart}>Pie Chart</CardTitle>
                     </CardHeader>
                     <CardContent className="flex items-center justify-center p-6">
-                      <div className="h-40 w-40 flex items-center justify-center rounded-full bg-amber-900/20 text-amber-500">
+                      <div className="h-40 w-40 flex items-center justify-center rounded-full bg-amber-900/25 text-amber-500">
                         <PieChart className="h-16 w-16" />
                       </div>
                     </CardContent>
@@ -338,7 +339,7 @@ export default function UIComponentsPage() {
                       <CardTitle icon={LineChart}>Line Chart</CardTitle>
                     </CardHeader>
                     <CardContent className="flex items-center justify-center p-6">
-                      <div className="h-40 w-40 flex items-center justify-center rounded-full bg-amber-900/20 text-amber-500">
+                      <div className="h-40 w-40 flex items-center justify-center rounded-full bg-amber-900/25 text-amber-500">
                         <LineChart className="h-16 w-16" />
                       </div>
                     </CardContent>
@@ -371,7 +372,7 @@ export default function UIComponentsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="text-sm font-medium mb-1 block">Status</label>
-                      <select className="w-full rounded-md border border-amber-800/30 bg-amber-950/20 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none">
+                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
                         <option value="">All Statuses</option>
                         <option value="active">Active</option>
                         <option value="pending">Pending</option>
@@ -380,7 +381,7 @@ export default function UIComponentsPage() {
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-1 block">Category</label>
-                      <select className="w-full rounded-md border border-amber-800/30 bg-amber-950/20 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none">
+                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
                         <option value="">All Categories</option>
                         <option value="category1">Category 1</option>
                         <option value="category2">Category 2</option>
@@ -389,7 +390,7 @@ export default function UIComponentsPage() {
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-1 block">Date Range</label>
-                      <select className="w-full rounded-md border border-amber-800/30 bg-amber-950/20 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none">
+                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
                         <option value="today">Today</option>
                         <option value="yesterday">Yesterday</option>
                         <option value="last7days">Last 7 Days</option>
@@ -413,7 +414,7 @@ export default function UIComponentsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Color Palette</CardTitle>
-                <CardDescription>Warm light brown color scheme for the application</CardDescription>
+                <CardDescription>Rich warm brown color scheme for the application</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -421,24 +422,35 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium mb-4">Primary Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-500 mr-4"></div>
-                        <div>
-                          <p className="font-medium">Amber 500</p>
-                          <p className="text-sm text-gray-400">Primary</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
                         <div className="w-16 h-16 rounded-md bg-amber-600 mr-4"></div>
                         <div>
                           <p className="font-medium">Amber 600</p>
-                          <p className="text-sm text-gray-400">Primary Hover</p>
+                          <p className="text-sm text-gray-400">Primary</p>
+                          <p className="text-xs text-gray-500">{themeColors.amber500}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <div className="w-16 h-16 rounded-md bg-amber-700 mr-4"></div>
                         <div>
                           <p className="font-medium">Amber 700</p>
+                          <p className="text-sm text-gray-400">Primary Hover</p>
+                          <p className="text-xs text-gray-500">{themeColors.amber600}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-16 h-16 rounded-md bg-amber-800 mr-4"></div>
+                        <div>
+                          <p className="font-medium">Amber 800</p>
                           <p className="text-sm text-gray-400">Primary Active</p>
+                          <p className="text-xs text-gray-500">{themeColors.amber700}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-16 h-16 rounded-md bg-orange-500 mr-4"></div>
+                        <div>
+                          <p className="font-medium">Orange 500</p>
+                          <p className="text-sm text-gray-400">Focus Border</p>
+                          <p className="text-xs text-gray-500">{themeColors.focusBorder}</p>
                         </div>
                       </div>
                     </div>
@@ -448,24 +460,27 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium mb-4">Background Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-gray-900 mr-4 border border-gray-700"></div>
+                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 border border-gray-700"></div>
                         <div>
-                          <p className="font-medium">Gray 900</p>
+                          <p className="font-medium">Neutral 900</p>
                           <p className="text-sm text-gray-400">Background</p>
+                          <p className="text-xs text-gray-500">{themeColors.darkBg}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-950/20 mr-4 border border-gray-700"></div>
+                        <div className="w-16 h-16 rounded-md bg-amber-950/25 mr-4 border border-gray-700"></div>
                         <div>
-                          <p className="font-medium">Amber 950 (20%)</p>
+                          <p className="font-medium">Amber 950 (25%)</p>
                           <p className="text-sm text-gray-400">Card Background</p>
+                          <p className="text-xs text-gray-500">{themeColors.cardBg}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-900/20 mr-4 border border-gray-700"></div>
+                        <div className="w-16 h-16 rounded-md bg-amber-900/25 mr-4 border border-gray-700"></div>
                         <div>
-                          <p className="font-medium">Amber 900 (20%)</p>
+                          <p className="font-medium">Amber 900 (25%)</p>
                           <p className="text-sm text-gray-400">Highlight Background</p>
+                          <p className="text-xs text-gray-500">{themeColors.highlightBg}</p>
                         </div>
                       </div>
                     </div>
@@ -475,57 +490,68 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium mb-4">Text Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-gray-900 mr-4 flex items-center justify-center">
-                          <span className="text-white">Aa</span>
+                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 flex items-center justify-center">
+                          <span className="text-amber-50">Aa</span>
                         </div>
                         <div>
-                          <p className="font-medium">White</p>
+                          <p className="font-medium">Amber 50</p>
                           <p className="text-sm text-gray-400">Primary Text</p>
+                          <p className="text-xs text-gray-500">{themeColors.lightText}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-gray-900 mr-4 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 flex items-center justify-center">
                           <span className="text-amber-500">Aa</span>
                         </div>
                         <div>
                           <p className="font-medium">Amber 500</p>
                           <p className="text-sm text-gray-400">Accent Text</p>
+                          <p className="text-xs text-gray-500">{themeColors.accentText}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-gray-900 mr-4 flex items-center justify-center">
-                          <span className="text-gray-400">Aa</span>
+                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 flex items-center justify-center">
+                          <span className="text-amber-200/70">Aa</span>
                         </div>
                         <div>
-                          <p className="font-medium">Gray 400</p>
-                          <p className="text-sm text-gray-400">Secondary Text</p>
+                          <p className="font-medium">Amber 200 (70%)</p>
+                          <p className="text-sm text-gray-400">Muted Text</p>
+                          <p className="text-xs text-gray-500">{themeColors.mutedText}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Border Colors</h3>
+                    <h3 className="text-lg font-medium mb-4">Status Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-transparent mr-4 border-2 border-amber-800/30"></div>
+                        <div className="w-16 h-16 rounded-md bg-transparent mr-4 border-2 border-amber-800/35"></div>
                         <div>
-                          <p className="font-medium">Amber 800 (30%)</p>
+                          <p className="font-medium">Amber 800 (35%)</p>
                           <p className="text-sm text-gray-400">Border</p>
+                          <p className="text-xs text-gray-500">{themeColors.borderColor}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-transparent mr-4 border-2 border-amber-600"></div>
+                        <StatusBadge status="active" className="mr-4 py-2 px-4">Active</StatusBadge>
                         <div>
-                          <p className="font-medium">Amber 600</p>
-                          <p className="text-sm text-gray-400">Focus Border</p>
+                          <p className="font-medium">Green Status</p>
+                          <p className="text-sm text-gray-400">Active state</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-transparent mr-4 border-2 border-amber-700"></div>
+                        <StatusBadge status="pending" className="mr-4 py-2 px-4">Pending</StatusBadge>
                         <div>
-                          <p className="font-medium">Amber 700</p>
-                          <p className="text-sm text-gray-400">Active Border</p>
+                          <p className="font-medium">Yellow Status</p>
+                          <p className="text-sm text-gray-400">Pending state</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <StatusBadge status="inactive" className="mr-4 py-2 px-4">Inactive</StatusBadge>
+                        <div>
+                          <p className="font-medium">Red Status</p>
+                          <p className="text-sm text-gray-400">Inactive state</p>
                         </div>
                       </div>
                     </div>
