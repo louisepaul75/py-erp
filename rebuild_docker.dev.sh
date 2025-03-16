@@ -8,6 +8,7 @@ docker stop pyerp-dev || true
 echo "Removing existing pyerp-dev container..."
 docker rm pyerp-dev || true
 
+# Uncomment to clean up build cache if needed
 # docker buildx prune -a
 
 # Rebuild the Docker image without using cache
