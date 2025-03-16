@@ -1,0 +1,97 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "profile": "Profile",
+    "settings": "Settings",
+    "dashboard": "Dashboard",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "adminDashboard": "Admin Dashboard",
+    "language": "Language",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "goToHome": "Go to Home",
+    "noResults": "No results found",
+    "customize": "Customize"
+  },
+  "app": {
+    "title": "pyERP",
+    "version": "Version"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "dashboard_2": "Dashboard 2",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout",
+    "login": "Login",
+    "products": "Products",
+    "sales": "Sales",
+    "inventory": "Inventory",
+    "production": "Production",
+    "testing": "Testing",
+    "components": "UI Components",
+    "customers": "Customers",
+    "orders": "Orders",
+    "reports": "Reports"
+  },
+  "languages": {
+    "english": "English",
+    "german": "Deutsch",
+    "czech": "Čeština"
+  },
+  "dashboard": {
+    "overview": "Overview",
+    "statistics": "Statistics",
+    "recentOrders": "Recent Orders by Delivery Date",
+    "recentSales": "Recent Sales",
+    "stockAlerts": "Stock Alerts",
+    "menu": "Menu",
+    "quickLinks": "Quick Links",
+    "pinboard": "Pinboard",
+    "news": "News",
+    "notes": "Notes",
+    "addNote": "Add note...",
+    "metrics": {
+      "totalSales": "Total Sales",
+      "totalOrders": "Total Orders",
+      "averageOrder": "Average Order",
+      "lowStock": "Low Stock",
+      "topProducts": "Top Products",
+      "monthlyRevenue": "Monthly Revenue",
+      "dailySales": "Daily Sales"
+    },
+    "filters": {
+      "today": "Today",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "lastMonth": "Last Month",
+      "custom": "Custom"
+    },
+    "status": {
+      "pending": "Pending",
+      "processing": "Processing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
+    "table": {
+      "order": "Order",
+      "customer": "Customer",
+      "deliveryDate": "Delivery Date",
+      "status": "Status",
+      "amount": "Amount"
+    }
+  }
+} 

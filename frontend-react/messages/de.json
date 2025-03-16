@@ -1,0 +1,97 @@
+{
+  "common": {
+    "welcome": "Willkommen",
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "register": "Registrieren",
+    "profile": "Profil",
+    "settings": "Einstellungen",
+    "dashboard": "Dashboard",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "search": "Suchen",
+    "loading": "Laden...",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "adminDashboard": "Admin-Dashboard",
+    "language": "Sprache",
+    "lightMode": "Heller Modus",
+    "darkMode": "Dunkler Modus",
+    "goToHome": "Zur Startseite",
+    "noResults": "Keine Ergebnisse gefunden",
+    "customize": "Anpassen"
+  },
+  "app": {
+    "title": "pyERP",
+    "version": "Version"
+  },
+  "nav": {
+    "home": "Startseite",
+    "dashboard": "Dashboard",
+    "dashboard_2": "Dashboard 2",
+    "settings": "Einstellungen",
+    "profile": "Profil",
+    "logout": "Abmelden",
+    "login": "Anmelden",
+    "products": "Produkte",
+    "sales": "Vertrieb",
+    "inventory": "Lager",
+    "production": "Produktion",
+    "testing": "Testen",
+    "components": "UI-Komponenten",
+    "customers": "Kunden",
+    "orders": "Aufträge",
+    "reports": "Berichte"
+  },
+  "languages": {
+    "english": "English",
+    "german": "Deutsch",
+    "czech": "Čeština"
+  },
+  "dashboard": {
+    "overview": "Übersicht",
+    "statistics": "Statistiken",
+    "recentOrders": "Letzte Bestellungen nach Liefertermin",
+    "recentSales": "Aktuelle Verkäufe",
+    "stockAlerts": "Bestandsalarme",
+    "menu": "Menü",
+    "quickLinks": "Schnellzugriff",
+    "pinboard": "Pinnwand",
+    "news": "News",
+    "notes": "Notizen",
+    "addNote": "Notiz hinzufügen...",
+    "metrics": {
+      "totalSales": "Gesamtumsatz",
+      "totalOrders": "Gesamtbestellungen",
+      "averageOrder": "Durchschnittliche Bestellung",
+      "lowStock": "Niedriger Bestand",
+      "topProducts": "Top Produkte",
+      "monthlyRevenue": "Monatlicher Umsatz",
+      "dailySales": "Tagesverkäufe"
+    },
+    "filters": {
+      "today": "Heute",
+      "thisWeek": "Diese Woche",
+      "thisMonth": "Dieser Monat",
+      "lastMonth": "Letzter Monat",
+      "custom": "Benutzerdefiniert"
+    },
+    "status": {
+      "pending": "Ausstehend",
+      "processing": "In Bearbeitung",
+      "shipped": "Versendet",
+      "delivered": "Geliefert",
+      "cancelled": "Storniert"
+    },
+    "table": {
+      "order": "Bestellung",
+      "customer": "Kunde",
+      "deliveryDate": "Liefertermin",
+      "status": "Status",
+      "amount": "Betrag"
+    }
+  }
+} 
