@@ -300,9 +300,9 @@ def csrf_failure(request, reason=""):
 
 
 class VueAppView(TemplateView):
-    """View for rendering the Vue.js application as the main frontend."""
+    """View for rendering the React.js application as the main frontend."""
 
-    template_name = "base/vue_base.html"
+    template_name = "base/react_base.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

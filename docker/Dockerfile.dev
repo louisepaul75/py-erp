@@ -56,17 +56,17 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data \
     && chown -R root:root /var/run \
     && chmod -R 755 /app/logs
 
-# Set up frontend dependencies
-COPY frontend/package*.json /app/frontend/
-WORKDIR /app/frontend
-RUN npm install --legacy-peer-deps && npm install vuedraggable@next gridstack@latest
+# Set up React frontend dependencies
+COPY frontend-react/package*.json /app/frontend-react/
+WORKDIR /app/frontend-react
+RUN npm install
 
-# Copy frontend source files
-COPY frontend/ /app/frontend/
+# Copy React frontend source files
+COPY frontend-react/ /app/frontend-react/
 
 WORKDIR /app
 
-# Expose ports for Django and Redis
+# Expose ports for Django and React
 EXPOSE 8050 6379 3000 5173
 
 # Set environment variables
