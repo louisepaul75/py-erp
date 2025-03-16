@@ -298,7 +298,6 @@ const Dashboard = () => {
     },
   ]
 
-  // Handle drag and drop
   const handleDragStart = (e: DragEvent<HTMLDivElement>, id: string) => {
     setDraggedWidget(id)
   }
@@ -309,55 +308,53 @@ const Dashboard = () => {
 
   const handleDrop = (e: DragEvent<HTMLDivElement>, targetId: string) => {
     e.preventDefault()
+    if (!draggedWidget || draggedWidget === targetId) return
 
-    if (draggedWidget === targetId) return
+    setWidgets((prev) => {
+      const updatedWidgets = [...prev]
+      const draggedIndex = updatedWidgets.findIndex((w) => w.id === draggedWidget)
+      const targetIndex = updatedWidgets.findIndex((w) => w.id === targetId)
 
-    const updatedWidgets = [...widgets]
-    const draggedWidgetIndex = updatedWidgets.findIndex((w) => w.id === draggedWidget)
-    const targetWidgetIndex = updatedWidgets.findIndex((w) => w.id === targetId)
+      const draggedOrder = updatedWidgets[draggedIndex].order
+      const targetOrder = updatedWidgets[targetIndex].order
 
-    // Swap the order values
-    const draggedOrder = updatedWidgets[draggedWidgetIndex].order
-    updatedWidgets[draggedWidgetIndex].order = updatedWidgets[targetWidgetIndex].order
-    updatedWidgets[targetWidgetIndex].order = draggedOrder
+      updatedWidgets[draggedIndex].order = targetOrder
+      updatedWidgets[targetIndex].order = draggedOrder
 
-    // Sort by order
-    updatedWidgets.sort((a, b) => a.order - b.order)
+      return updatedWidgets
+    })
 
-    setWidgets(updatedWidgets)
     setDraggedWidget(null)
   }
 
-  // Handle resize
   const handleResizeStart = (id: string) => {
-    // Could add specific logic here if needed
+    // Handle resize start
   }
 
   const handleResizeMove = (id: string, size: WidgetSize) => {
-    // Could update state in real-time if needed
+    // Handle resize move
   }
 
   const handleResizeEnd = (id: string, size: WidgetSize) => {
-    // Save the new size to localStorage or state
-    console.log(`Widget ${id} resized to:`, size)
+    // Handle resize end
+    console.log(`Widget ${id} resized to ${size.width}x${size.height}`)
   }
 
-  // Toggle edit mode
   const toggleEditMode = () => {
     setIsEditMode(!isEditMode)
   }
 
-  // Save layout
   const saveLayout = () => {
-    // Here you would typically save the layout to localStorage or a backend
-    localStorage.setItem("dashboard-layout", JSON.stringify(widgets))
+    // Save layout to backend or localStorage
     setIsEditMode(false)
   }
 
   const toggleFavorite = (id: string) => {
-    const updatedTiles = menuTiles.map((tile) => (tile.id === id ? { ...tile, favorited: !tile.favorited } : tile))
-    setMenuTiles(updatedTiles)
-    localStorage.setItem("dashboard-favorites", JSON.stringify(updatedTiles))
+    setMenuTiles((prev) =>
+      prev.map((tile) =>
+        tile.id === id ? { ...tile, favorited: !tile.favorited } : tile
+      )
+    )
   }
 
   // Load saved layout on initial render

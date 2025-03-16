@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-amber-950/90 text-amber-50">
+      <body className="min-h-screen bg-amber-50 text-amber-950">
         <Navbar />
         <main className="pt-16 pb-[calc(var(--footer-height,2.75rem)+0.5rem)] flex-grow flex justify-center">
           <div className="w-full max-w-7xl mx-auto">
