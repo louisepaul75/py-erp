@@ -12,5 +12,8 @@ export * from './common/Input';
 // Data Display Components
 export * from './data/Table';
 
+// Feedback Components
+export { Badge } from './badge';
+
 // Re-export theme configuration
 export { themeColors, componentStyles, cn } from '@/lib/theme-config'; 

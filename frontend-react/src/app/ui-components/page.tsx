@@ -16,7 +16,12 @@ import {
   Download, 
   Upload, 
   RefreshCw,
-  Settings
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  ArrowUpDown,
+  X,
+  Check
 } from 'lucide-react';
 
 // Import our enhanced components
@@ -36,7 +41,8 @@ import {
   TableHead,
   TableCell,
   StatusBadge,
-  themeColors
+  themeColors,
+  Badge
 } from '@/components/ui';
 
 export default function UIComponentsPage() {
@@ -249,8 +255,8 @@ export default function UIComponentsPage() {
           <TabsContent value="tables" className="space-y-8">
             <Card>
               <CardHeader>
-                <CardTitle>Tables</CardTitle>
-                <CardDescription>Table styles for displaying data</CardDescription>
+                <CardTitle>Basic Table</CardTitle>
+                <CardDescription>Simple table for displaying data</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -299,6 +305,531 @@ export default function UIComponentsPage() {
                     </TableRow>
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Searchable Table</CardTitle>
+                <CardDescription>Table with search functionality</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input
+                      type="search"
+                      placeholder="Search users..."
+                      className="w-full pl-9"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm">Search</Button>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>John Doe</TableCell>
+                      <TableCell>john@example.com</TableCell>
+                      <TableCell>Admin</TableCell>
+                      <TableCell>
+                        <StatusBadge status="active">Active</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Jane Smith</TableCell>
+                      <TableCell>jane@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="pending">Pending</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Robert Johnson</TableCell>
+                      <TableCell>robert@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="inactive">Inactive</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Filterable Table</CardTitle>
+                <CardDescription>Table with filtering options</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input
+                      type="search"
+                      placeholder="Search users..."
+                      className="w-full pl-9"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <Filter className="h-4 w-4" />
+                      <span>Filter</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <span>Status</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <span>Role</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="flex items-center gap-1">
+                        <span>Name</span>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </TableHead>
+                      <TableHead className="flex items-center gap-1">
+                        <span>Email</span>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </TableHead>
+                      <TableHead className="flex items-center gap-1">
+                        <span>Role</span>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </TableHead>
+                      <TableHead className="flex items-center gap-1">
+                        <span>Status</span>
+                        <ArrowUpDown className="h-4 w-4" />
+                      </TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>John Doe</TableCell>
+                      <TableCell>john@example.com</TableCell>
+                      <TableCell>Admin</TableCell>
+                      <TableCell>
+                        <StatusBadge status="active">Active</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Jane Smith</TableCell>
+                      <TableCell>jane@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="pending">Pending</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Robert Johnson</TableCell>
+                      <TableCell>robert@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="inactive">Inactive</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    Showing <strong>1-3</strong> of <strong>10</strong> results
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled>Previous</Button>
+                    <Button variant="outline" size="sm">Next</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Compact Table</CardTitle>
+                <CardDescription>Smaller, more condensed table for space efficiency</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="h-8">
+                      <TableHead className="text-xs">Name</TableHead>
+                      <TableHead className="text-xs">Email</TableHead>
+                      <TableHead className="text-xs">Role</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="h-8">
+                      <TableCell className="py-1 text-xs">John Doe</TableCell>
+                      <TableCell className="py-1 text-xs">john@example.com</TableCell>
+                      <TableCell className="py-1 text-xs">Admin</TableCell>
+                      <TableCell className="py-1 text-xs">
+                        <StatusBadge status="active" className="text-xs py-0 px-2">Active</StatusBadge>
+                      </TableCell>
+                      <TableCell className="py-1 text-right">
+                        <Button variant="ghost" size="xs" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="h-8">
+                      <TableCell className="py-1 text-xs">Jane Smith</TableCell>
+                      <TableCell className="py-1 text-xs">jane@example.com</TableCell>
+                      <TableCell className="py-1 text-xs">User</TableCell>
+                      <TableCell className="py-1 text-xs">
+                        <StatusBadge status="pending" className="text-xs py-0 px-2">Pending</StatusBadge>
+                      </TableCell>
+                      <TableCell className="py-1 text-right">
+                        <Button variant="ghost" size="xs" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="h-8">
+                      <TableCell className="py-1 text-xs">Robert Johnson</TableCell>
+                      <TableCell className="py-1 text-xs">robert@example.com</TableCell>
+                      <TableCell className="py-1 text-xs">User</TableCell>
+                      <TableCell className="py-1 text-xs">
+                        <StatusBadge status="inactive" className="text-xs py-0 px-2">Inactive</StatusBadge>
+                      </TableCell>
+                      <TableCell className="py-1 text-right">
+                        <Button variant="ghost" size="xs" icon={Edit} aria-label="Edit" />
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Selectable Table</CardTitle>
+                <CardDescription>Table with row selection capabilities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <span>Bulk Actions</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" icon={Trash}>Delete Selected</Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input
+                        type="search"
+                        placeholder="Search..."
+                        className="w-[200px] pl-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40px]">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                          <Check className="h-3 w-3 text-amber-500" />
+                        </div>
+                      </TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                          <Check className="h-3 w-3 text-amber-500" />
+                        </div>
+                      </TableCell>
+                      <TableCell>John Doe</TableCell>
+                      <TableCell>john@example.com</TableCell>
+                      <TableCell>Admin</TableCell>
+                      <TableCell>
+                        <StatusBadge status="active">Active</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                        </div>
+                      </TableCell>
+                      <TableCell>Jane Smith</TableCell>
+                      <TableCell>jane@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="pending">Pending</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                          <Check className="h-3 w-3 text-amber-500" />
+                        </div>
+                      </TableCell>
+                      <TableCell>Robert Johnson</TableCell>
+                      <TableCell>robert@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="inactive">Inactive</StatusBadge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-500">
+                    <strong>2</strong> items selected
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled>Previous</Button>
+                    <Button variant="outline" size="sm">Next</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Grid</CardTitle>
+                <CardDescription>Advanced table with multiple features</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input
+                        type="search"
+                        placeholder="Search..."
+                        className="w-[200px] pl-9"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <Filter className="h-4 w-4" />
+                      <span>Filters</span>
+                      <Badge className="ml-1 bg-amber-500">3</Badge>
+                    </Button>
+                    <Button variant="outline" size="sm" icon={RefreshCw}>Refresh</Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" icon={Download}>Export</Button>
+                    <Button variant="outline" size="sm" icon={Settings}>Columns</Button>
+                    <Button size="sm" icon={Plus}>Add User</Button>
+                  </div>
+                </div>
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500">
+                    <span>Status: Active</span>
+                    <X className="h-3 w-3 cursor-pointer" />
+                  </div>
+                  <div className="flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500">
+                    <span>Role: Admin</span>
+                    <X className="h-3 w-3 cursor-pointer" />
+                  </div>
+                  <div className="flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500">
+                    <span>Created: Last 7 days</span>
+                    <X className="h-3 w-3 cursor-pointer" />
+                  </div>
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs">Clear all</Button>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40px]">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                        </div>
+                      </TableHead>
+                      <TableHead className="flex items-center gap-1">
+                        <span>Name</span>
+                        <ChevronUp className="h-4 w-4 text-amber-500" />
+                      </TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Last Login</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                          <Check className="h-3 w-3 text-amber-500" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">John Doe</TableCell>
+                      <TableCell>john@example.com</TableCell>
+                      <TableCell>Admin</TableCell>
+                      <TableCell>
+                        <StatusBadge status="active">Active</StatusBadge>
+                      </TableCell>
+                      <TableCell>2023-05-12</TableCell>
+                      <TableCell>2023-06-01</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">Jane Smith</TableCell>
+                      <TableCell>jane@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="pending">Pending</StatusBadge>
+                      </TableCell>
+                      <TableCell>2023-05-15</TableCell>
+                      <TableCell>2023-05-30</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                          <Check className="h-3 w-3 text-amber-500" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">Robert Johnson</TableCell>
+                      <TableCell>robert@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="inactive">Inactive</StatusBadge>
+                      </TableCell>
+                      <TableCell>2023-05-20</TableCell>
+                      <TableCell>2023-05-25</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">Emily Davis</TableCell>
+                      <TableCell>emily@example.com</TableCell>
+                      <TableCell>Admin</TableCell>
+                      <TableCell>
+                        <StatusBadge status="active">Active</StatusBadge>
+                      </TableCell>
+                      <TableCell>2023-05-22</TableCell>
+                      <TableCell>2023-06-02</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                          <Check className="h-3 w-3 text-amber-500" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">Michael Wilson</TableCell>
+                      <TableCell>michael@example.com</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>
+                        <StatusBadge status="active">Active</StatusBadge>
+                      </TableCell>
+                      <TableCell>2023-05-25</TableCell>
+                      <TableCell>2023-06-03</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>Showing</span>
+                    <select className="rounded border border-gray-300 px-2 py-1 text-sm">
+                      <option>10</option>
+                      <option>20</option>
+                      <option>50</option>
+                      <option>100</option>
+                    </select>
+                    <span>of <strong>42</strong> items</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" disabled>Previous</Button>
+                    <Button variant="outline" size="sm" className="bg-amber-500 text-white hover:bg-amber-600">1</Button>
+                    <Button variant="outline" size="sm">2</Button>
+                    <Button variant="outline" size="sm">3</Button>
+                    <Button variant="outline" size="sm">4</Button>
+                    <Button variant="outline" size="sm">Next</Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
