@@ -222,7 +222,7 @@ interface Widget {
   title: string | null;
 }
 
-export default function Dashboard() {
+const Dashboard = () => {
   const [isEditMode, setIsEditMode] = useState(false)
   const [widgets, setWidgets] = useState<Widget[]>([
     { id: "recent-orders", order: 1, title: "Letzte Bestellungen nach Liefertermin" },
@@ -640,4 +640,6 @@ export default function Dashboard() {
     </SidebarProvider>
   )
 }
+
+export default Dashboard
 
