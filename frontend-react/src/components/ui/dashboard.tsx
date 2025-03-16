@@ -48,7 +48,7 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="fixed top-4 left-4 z-50 h-10 w-10 rounded-full shadow-md bg-background"
+      className="fixed top-20 left-4 z-50 h-10 w-10 rounded-full shadow-md bg-background"
       onClick={toggleSidebar}
       style={{ display: isCollapsed ? "flex" : "none" }}
     >
@@ -508,23 +508,19 @@ const Dashboard = () => {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen flex-col">
-        <div className="flex flex-1 relative">
+        <div className="flex flex-1 relative pt-16">
           {/* Custom always-visible sidebar toggle */}
           <AlwaysVisibleSidebarToggle />
 
           {/* Sidebar */}
           <Sidebar>
             <SidebarHeader>
-              <div className="flex items-center justify-between px-2 py-2">
+              <div className="flex items-center justify-between px-2 py-2 mt-4">
                 <div className="flex items-center gap-2">
                   <SidebarTrigger className="flex md:flex" />
-                  <Link href="#" className="flex items-center gap-2 font-semibold">
-                    <Package className="h-6 w-6" />
-                    <span>ERP System</span>
-                  </Link>
                 </div>
               </div>
-              <div className="px-2 pb-2">
+              <div className="px-2 pb-2 mt-2">
                 <Input type="search" placeholder="Suchen..." className="h-9" />
               </div>
             </SidebarHeader>
@@ -591,7 +587,7 @@ const Dashboard = () => {
           </Sidebar>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-auto p-4 md:p-6 relative">
+          <main className="flex-1 overflow-auto p-4 md:p-6 relative mt-4">
             {/* Floating Edit Button */}
             <div className="absolute top-4 right-4 z-10 flex gap-2">
               {isEditMode ? (
