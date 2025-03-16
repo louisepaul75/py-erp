@@ -341,10 +341,10 @@ class PipelineFactory:
         transformer_class: Optional[Type[BaseTransformer]] = None,
         loader_class: Optional[Type[BaseLoader]] = None,
     ) -> SyncPipeline:
-        """Create a pipeline from a mapping and optional component classes.
+        """Create a sync pipeline from a mapping configuration.
         
         Args:
-            mapping: The sync mapping configuration
+            mapping: SyncMapping instance with configuration
             extractor_class: Optional extractor class override
             transformer_class: Optional transformer class override
             loader_class: Optional loader class override
@@ -370,14 +370,12 @@ class PipelineFactory:
             )
             logger.info(f"Created extractor: {extractor.__class__.__name__}")
             
-            # Get transformer class from transformation section
-            transformer_config = mapping_config.get('transformation', {})
+            # Get transformer class from mapping config
             transformer = cls._create_component(
-                transformer_class or cls._import_class(transformer_config.get('transformer_class')),
-                transformer_config
+                transformer_class or cls._import_class(mapping_config.get('transformer_class')),
+                mapping_config
             )
             logger.info(f"Created transformer: {transformer.__class__.__name__}")
-            logger.info(f"Transformer config: {transformer.config}")
             
             loader = cls._create_component(
                 loader_class or cls._import_class(target_config.get('loader_class')),

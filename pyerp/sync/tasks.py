@@ -3,10 +3,12 @@
 from typing import Dict, List, Optional, Union
 
 from celery import shared_task
+from celery.schedules import crontab
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .models import SyncMapping, SyncLog
 from .pipeline import PipelineFactory
+from .config.sales_record_sync import get_sales_record_mappings, create_sales_record_mappings
 
 
 logger = get_logger(__name__)
@@ -204,5 +206,99 @@ run_incremental_sync.periodic_task = {
 run_full_sync.periodic_task = {
     'name': 'sync.scheduled_full_sync',
     'schedule': {'cron': {'hour': 2, 'minute': 0}},  # Run at 2:00 AM
+    'options': {'expires': 3600.0}  # Expire if not executed within 1 hour
+}
+
+@shared_task(name="sync.run_sales_record_sync")
+def run_sales_record_sync(incremental: bool = True, batch_size: int = 100) -> List[Dict]:
+    """
+    Run sync for sales records and their line items.
+    
+    Args:
+        incremental: If True, only sync records modified since last sync
+        batch_size: Number of records to process in each batch
+        
+    Returns:
+        List of dicts with sync results
+    """
+    logger.info(f"Starting {'incremental' if incremental else 'full'} sales record sync")
+    log_data_sync_event(
+        "sales_record_sync_started", 
+        {"incremental": incremental, "batch_size": batch_size}
+    )
+    
+    results = []
+    
+    # Get or create mappings
+    sales_record_mapping, sales_record_item_mapping = get_sales_record_mappings()
+    
+    if not sales_record_mapping or not sales_record_item_mapping:
+        logger.info("Sales record mappings not found. Creating...")
+        sales_record_mapping, sales_record_item_mapping = create_sales_record_mappings()
+    
+    # Sync sales records
+    if sales_record_mapping:
+        logger.info(f"Running sales record sync (mapping ID: {sales_record_mapping.id})")
+        record_result = run_entity_sync(
+            mapping_id=sales_record_mapping.id,
+            incremental=incremental,
+            batch_size=batch_size
+        )
+        results.append(record_result)
+    
+    # Sync line items
+    if sales_record_item_mapping:
+        logger.info(f"Running sales record line item sync (mapping ID: {sales_record_item_mapping.id})")
+        item_result = run_entity_sync(
+            mapping_id=sales_record_item_mapping.id,
+            incremental=incremental,
+            batch_size=batch_size
+        )
+        results.append(item_result)
+    
+    log_data_sync_event(
+        "sales_record_sync_completed", 
+        {"results": results}
+    )
+    
+    return results
+
+
+@shared_task(name="sync.run_incremental_sales_record_sync")
+def run_incremental_sales_record_sync() -> List[Dict]:
+    """
+    Run incremental sync for sales records (scheduled task).
+    
+    Returns:
+        List of dicts with sync results
+    """
+    logger.info("Starting scheduled incremental sales record sync")
+    return run_sales_record_sync(incremental=True, batch_size=100)
+
+
+# Configure as a periodic task
+run_incremental_sales_record_sync.periodic_task = {
+    'name': 'sync.incremental_sales_record_sync',
+    'schedule': crontab(minute='*/15'),  # Run every 15 minutes
+    'options': {'expires': 900.0}  # Expire if not executed within 15 minutes
+}
+
+
+@shared_task(name="sync.run_full_sales_record_sync")
+def run_full_sales_record_sync() -> List[Dict]:
+    """
+    Run full sync for sales records (scheduled task).
+    
+    Returns:
+        List of dicts with sync results
+    """
+    logger.info("Starting scheduled full sales record sync")
+    return run_sales_record_sync(incremental=False, batch_size=100)
+
+
+# Configure as a periodic task
+run_full_sales_record_sync.periodic_task = {
+    'name': 'sync.full_sales_record_sync',
+    'schedule': crontab(hour=3, minute=0),  # Run at 3:00 AM
     'options': {'expires': 3600.0}  # Expire if not executed within 1 hour
 } 

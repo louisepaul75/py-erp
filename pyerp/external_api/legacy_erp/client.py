@@ -126,12 +126,6 @@ if __name__ == "__main__":
 
     absnr = str(list(belege['AbsNr'].unique().astype(str)))
     print(absnr)
-    auftraege = client.fetch_table(
-        table_name="Auftraege",
-        top=100000,
-        # filter_query = [['AbsNr', 'in', absnr]]
-    )
-    print(auftraege.loc[auftraege['AbsNr'] == 2660])
     belege_pos = client.fetch_table(
         table_name="Belege_Pos",
         filter_query=[['AbsNr', 'in', absnr]]
