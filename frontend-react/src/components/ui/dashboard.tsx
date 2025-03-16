@@ -506,131 +506,120 @@ const Dashboard = () => {
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen flex-col">
-        <div className="flex flex-1 relative pt-16">
-          {/* Custom always-visible sidebar toggle */}
-          <AlwaysVisibleSidebarToggle />
-
-          {/* Sidebar */}
-          <Sidebar>
-            <SidebarHeader>
-              <div className="flex items-center justify-between px-2 py-2 mt-4">
-                <div className="flex items-center gap-2">
-                  <SidebarTrigger className="flex md:flex" />
-                </div>
+    <SidebarProvider defaultOpen={true}>
+      <div className="flex h-full">
+        <Sidebar className="border-r">
+          <SidebarHeader>
+            <div className="flex items-center justify-between px-2 py-2 mt-4">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger className="flex md:flex" />
               </div>
-              <div className="px-2 pb-2 mt-2">
-                <Input type="search" placeholder="Suchen..." className="h-9" />
-              </div>
-            </SidebarHeader>
-
-            <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupLabel>Favoriten</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {menuTiles.filter((tile) => tile.favorited).length > 0 ? (
-                      menuTiles
-                        .filter((tile) => tile.favorited)
-                        .map((item) => (
-                          <SidebarMenuItem key={item.id}>
-                            <SidebarMenuButton asChild>
-                              <Link href="#">
-                                <item.icon className="h-4 w-4" />
-                                <span>{item.name}</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))
-                    ) : (
-                      <div className="px-2 py-1 text-sm text-muted-foreground">
-                        Keine Favoriten vorhanden. Klicken Sie auf den Stern bei einem Menüpunkt, um ihn zu den
-                        Favoriten hinzuzufügen.
-                      </div>
-                    )}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-
-              <SidebarGroup>
-                <SidebarGroupLabel>Zuletzt aufgerufen</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {recentAccessed.map((item) => (
-                      <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton asChild>
-                          <Link href="#">
-                            {item.type === "Kunde" ? (
-                              <Users className="h-4 w-4" />
-                            ) : (
-                              <ShoppingCart className="h-4 w-4" />
-                            )}
-                            <span>{item.name}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-
-            <SidebarFooter>
-              <div className="p-2">
-                <Button variant="outline" className="w-full">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Einstellungen
-                </Button>
-              </div>
-            </SidebarFooter>
-          </Sidebar>
-
-          {/* Main Content */}
-          <main className="flex-1 overflow-auto p-4 md:p-6 relative mt-4">
-            {/* Floating Edit Button */}
-            <div className="absolute top-4 right-4 z-10 flex gap-2">
-              {isEditMode ? (
-                <>
-                  <Button variant="outline" size="sm" onClick={saveLayout}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Speichern
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={toggleEditMode}>
-                    <X className="h-4 w-4 mr-2" />
-                    Abbrechen
-                  </Button>
-                </>
-              ) : (
-                <Button variant="outline" size="sm" onClick={toggleEditMode}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Bearbeiten
-                </Button>
-              )}
             </div>
-
-            <div className="grid gap-6 pt-10">
-              {/* Render widgets in their order */}
-              {widgets
-                .sort((a, b) => a.order - b.order)
-                .map((widget) => (
-                  <DashboardWidget
-                    key={widget.id}
-                    id={widget.id}
-                    title={widget.title}
-                    isEditMode={isEditMode}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    onResizeStart={handleResizeStart}
-                    onResizeMove={handleResizeMove}
-                    onResizeEnd={handleResizeEnd}
-                  >
-                    {renderWidgetContent(widget.id)}
-                  </DashboardWidget>
-                ))}
+            <div className="px-2 pb-2 mt-2">
+              <Input type="search" placeholder="Suchen..." className="h-9" />
             </div>
-          </main>
+          </SidebarHeader>
+
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Favoriten</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {menuTiles.filter((tile) => tile.favorited).length > 0 ? (
+                    menuTiles
+                      .filter((tile) => tile.favorited)
+                      .map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton asChild>
+                            <Link href="#">
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.name}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))
+                  ) : (
+                    <div className="px-2 py-1 text-sm text-muted-foreground">
+                      Keine Favoriten vorhanden. Klicken Sie auf den Stern bei einem Menüpunkt, um ihn zu den
+                      Favoriten hinzuzufügen.
+                    </div>
+                  )}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Zuletzt aufgerufen</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {recentAccessed.map((item) => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton asChild>
+                        <Link href="#">
+                          {item.type === "Kunde" ? (
+                            <Users className="h-4 w-4" />
+                          ) : (
+                            <ShoppingCart className="h-4 w-4" />
+                          )}
+                          <span>{item.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+        </Sidebar>
+        <div className="flex-1 overflow-auto">
+          <div className="flex justify-center">
+            <main className="container max-w-5xl w-full p-6 mx-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                {isEditMode ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={saveLayout}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Speichern
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={toggleEditMode}>
+                        <X className="h-4 w-4 mr-2" />
+                        Abbrechen
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={toggleEditMode}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Bearbeiten
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid gap-6 pt-10">
+                {/* Render widgets in their order */}
+                {widgets
+                  .sort((a, b) => a.order - b.order)
+                  .map((widget) => (
+                    <DashboardWidget
+                      key={widget.id}
+                      id={widget.id}
+                      title={widget.title}
+                      isEditMode={isEditMode}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onResizeStart={handleResizeStart}
+                      onResizeMove={handleResizeMove}
+                      onResizeEnd={handleResizeEnd}
+                    >
+                      {renderWidgetContent(widget.id)}
+                    </DashboardWidget>
+                  ))}
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </SidebarProvider>

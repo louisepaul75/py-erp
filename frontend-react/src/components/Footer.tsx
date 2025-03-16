@@ -1,0 +1,186 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Activity, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface HealthStatus {
+  status: string;
+  database: {
+    status: string;
+    message: string;
+  };
+  environment: string;
+  version: string;
+}
+
+interface GitBranchInfo {
+  branch: string;
+  error?: string;
+}
+
+export function Footer() {
+  const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [gitBranch, setGitBranch] = useState<GitBranchInfo | null>(null);
+  const [isDevBarExpanded, setIsDevBarExpanded] = useState(false);
+  const [apiAvailable, setApiAvailable] = useState(false);
+  
+  // Fetch health status
+  useEffect(() => {
+    const fetchHealthStatus = async () => {
+      try {
+        const response = await fetch('/core/health');
+        if (response.ok) {
+          const data = await response.json();
+          setHealthStatus(data);
+          setApiAvailable(true);
+        } else {
+          console.error('Failed to fetch health status');
+          setApiAvailable(false);
+        }
+      } catch (error) {
+        console.error('Error fetching health status:', error);
+        setApiAvailable(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchHealthStatus();
+    
+    // Refresh health status every 60 seconds
+    const interval = setInterval(fetchHealthStatus, 60000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Fetch git branch info
+  useEffect(() => {
+    const fetchGitBranch = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch('/core/git/branch', { 
+          signal: controller.signal 
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setGitBranch(data);
+        } else {
+          console.error('Failed to fetch git branch info');
+        }
+      } catch (error) {
+        // Silently handle the error - we'll use fallback values
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log('Git branch request timed out');
+        } else {
+          console.error('Error fetching git branch:', error);
+        }
+      }
+    };
+    
+    fetchGitBranch();
+  }, []);
+  
+  // Always show dev mode bar in development
+  const isDevelopment = process.env.NODE_ENV === 'development' || healthStatus?.environment === 'development';
+  
+  // Mock data for when API is not available
+  const mockHealthStatus = {
+    status: 'healthy',
+    database: { status: 'connected', message: 'Database is connected' },
+    environment: 'development',
+    version: '1.0.0-dev'
+  };
+  
+  // Use real data if available, otherwise use mock data
+  const displayHealthStatus = apiAvailable ? healthStatus : mockHealthStatus;
+  
+  return (
+    <>
+      {/* Dev Mode Bar */}
+      {isDevelopment && (
+        <div className="relative">
+          <button
+            onClick={() => setIsDevBarExpanded(!isDevBarExpanded)}
+            className="w-full bg-orange-500 text-white py-1 px-4 flex items-center justify-between"
+          >
+            <span className="font-medium">
+              DEV MODE {gitBranch?.branch ? `(${gitBranch.branch})` : '(local)'}
+            </span>
+            {isDevBarExpanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+          
+          {isDevBarExpanded && (
+            <div className="bg-orange-100 p-4 border-t border-orange-300">
+              <h3 className="font-semibold text-orange-800 mb-2">Debug Information</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-600">Environment:</div>
+                <div>{displayHealthStatus?.environment || 'Development'}</div>
+                
+                <div className="text-gray-600">Version:</div>
+                <div>{displayHealthStatus?.version || '1.0.0'}</div>
+                
+                <div className="text-gray-600">Database Status:</div>
+                <div className={cn(
+                  displayHealthStatus?.database?.status === 'connected' ? 'text-green-600' : 'text-red-600'
+                )}>
+                  {displayHealthStatus?.database?.status || 'Unknown'}
+                </div>
+                
+                <div className="text-gray-600">Git Branch:</div>
+                <div>{gitBranch?.branch || gitBranch?.error || 'local'}</div>
+                
+                <div className="text-gray-600">API Available:</div>
+                <div className={apiAvailable ? 'text-green-600' : 'text-red-600'}>
+                  {apiAvailable ? 'Yes' : 'No'}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Footer */}
+      <footer className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            &copy; {new Date().getFullYear()} pyERP System
+          </div>
+          
+          <Link 
+            href="/health-status" 
+            className="flex items-center gap-2 text-sm"
+          >
+            {isLoading ? (
+              <div className="h-4 w-4 rounded-full bg-gray-300 animate-pulse"></div>
+            ) : (
+              displayHealthStatus?.status === 'healthy' ? (
+                <Activity className="h-4 w-4 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+              )
+            )}
+            <span className={cn(
+              "font-medium",
+              isLoading ? "text-gray-500" : 
+                displayHealthStatus?.status === 'healthy' ? "text-green-600" : "text-red-600"
+            )}>
+              {isLoading ? 'Checking...' : 
+                displayHealthStatus?.status === 'healthy' ? 'System Healthy' : 'System Issues'}
+            </span>
+          </Link>
+        </div>
+      </footer>
+    </>
+  );
+} 
