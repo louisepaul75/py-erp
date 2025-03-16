@@ -12,6 +12,9 @@ const nextConfig = {
     });
     return config;
   },
+  // Add output configuration to ensure static files are generated correctly
+  output: 'standalone',
+  poweredByHeader: false,
   async rewrites() {
     return [
       {
