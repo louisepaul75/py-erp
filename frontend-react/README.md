@@ -1,6 +1,6 @@
 # pyERP Frontend
 
-This is the React frontend for the pyERP system, built with Next.js, TypeScript, and Tailwind CSS.
+This is the React frontend for the pyERP system. It's built with Next.js, TypeScript, Tailwind CSS, and shadcn/ui components.
 
 ## Features
 
@@ -60,10 +60,100 @@ yarn start
 
 ## Project Structure
 
-- `src/app`: Next.js app router pages and layouts
-- `src/components`: Reusable UI components
-- `src/lib`: Utility functions and shared code
-- `public`: Static assets
+```
+frontend-react/
+├── public/              # Static assets
+├── src/
+│   ├── app/             # Next.js app router pages
+│   │   ├── ui-components/   # UI Components / Style Guide page
+│   │   ├── example-page/    # Example implementation page
+│   │   └── ...
+│   ├── components/      # React components
+│   │   ├── ui/          # UI component library
+│   │   │   ├── common/      # Common UI components (Button, Card, Input)
+│   │   │   ├── data/        # Data display components (Table, Charts)
+│   │   │   ├── feedback/    # Feedback components (Alerts, Toasts)
+│   │   │   ├── layout/      # Layout components (Grid, Container)
+│   │   │   ├── index.ts     # Component library exports
+│   │   │   └── README.md    # Component library documentation
+│   │   └── ...          # Application-specific components
+│   ├── hooks/           # Custom React hooks
+│   ├── lib/             # Utility functions and configuration
+│   │   └── theme-config.ts  # Theme configuration
+│   └── ...
+└── ...
+```
+
+## Component Library
+
+The project includes a comprehensive UI component library with a consistent warm light brown color scheme. All components are designed to be:
+
+- **Consistent**: Following the same design language
+- **Accessible**: Meeting WCAG standards
+- **Responsive**: Working on all device sizes
+- **Themeable**: Supporting dark mode with warm light brown colors
+
+### Using Components
+
+Import components from the UI library:
+
+```tsx
+import { Button, Card, Input, Table } from '@/components/ui';
+```
+
+See the [Component Library Documentation](./src/components/ui/README.md) for detailed usage examples.
+
+### Theme Configuration
+
+The theme configuration is centralized in `src/lib/theme-config.ts`. This file contains:
+
+- Color definitions
+- Component styles
+- Helper functions
+
+You can import theme values directly:
+
+```tsx
+import { themeColors, componentStyles, cn } from '@/components/ui';
+```
+
+## Style Guide
+
+The UI Components / Style Guide page (`/ui-components`) provides a visual reference of all available components and their variants. Use this as a reference when building new pages.
+
+## Example Implementation
+
+The Example Page (`/example-page`) demonstrates how to use the component library in a real application. It shows:
+
+- Page layout structure
+- Component composition
+- State management
+- Responsive design patterns
+
+## Best Practices
+
+1. **Use the enhanced components** from `@/components/ui` instead of the base shadcn components
+2. **Follow the established patterns** when creating new components or pages
+3. **Maintain mobile compatibility** by using responsive design patterns
+4. **Document new components** with examples and prop descriptions
+5. **Keep the dark mode theme** consistent with the warm light brown color scheme
+6. **Centralize theme changes** in the theme-config.ts file
+
+## Adding New Components
+
+When adding new components to the library:
+
+1. Create the component in the appropriate category folder
+2. Export it in the index.ts file
+3. Add documentation with examples
+4. Add it to the Style Guide page
+
+## Development Workflow
+
+1. Start the development server: `npm run dev`
+2. Visit the Style Guide: `http://localhost:3000/ui-components`
+3. Build your page using the component library
+4. Test on different screen sizes and in dark mode
 
 ## Technologies Used
 
