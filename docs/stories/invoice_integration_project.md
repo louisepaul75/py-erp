@@ -23,6 +23,7 @@ Based on analysis of the 4D-based ERP system, the current sales record data mode
 | Field Name        | Data Type | Description                       | Sample Data                |
 |-------------------|-----------|-----------------------------------|----------------------------|
 | AbsNr             | Integer   | Record number (primary key)       | 2572                       |
+| created_date      | Date      | Record creation date             | 2024-03-01                 |
 | Papierart         | String    | Record type (R = invoice)         | R                         |
 | KundenNr          | Integer   | Customer ID                       | 1800028                    |
 | Datum             | Date      | Record date                       | 4!6!1992                   |
@@ -383,6 +384,7 @@ sales_records:
 | Legacy Field (Belege)   | New Field (SalesRecord)         | Transformation                                |
 |-------------------------|---------------------------------|----------------------------------------------|
 | AbsNr                   | legacy_id                       | Direct mapping                               |
+| created_date            | created_at                      | Format conversion from ISO to system format   |
 | Papierart               | record_type                     | Map 'R' to 'INVOICE', etc.                   |
 | KundenNr                | customer.legacy_id              | Foreign key lookup                           |
 | Datum                   | record_date                     | Format conversion from "D!M!Y" to ISO format |

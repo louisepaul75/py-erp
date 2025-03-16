@@ -112,7 +112,6 @@ if has_swagger:
 
 # Optional API modules (excluding products since we added it directly)
 OPTIONAL_API_MODULES = [
-    ("sales", "pyerp.sales.urls"),
     ("inventory", "pyerp.business_modules.inventory.urls"),
     ("production", "pyerp.production.urls"),
     ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),

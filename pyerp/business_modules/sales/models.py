@@ -43,6 +43,11 @@ class Customer(SalesModel):
         unique=True,
         help_text=_("Customer number (maps to KundenNr in legacy system)"),
     )
+    name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text=_("Customer name"),
+    )
     legacy_address_number = models.CharField(
         max_length=50,
         blank=True,
@@ -434,12 +439,16 @@ class SalesRecord(SalesModel):
         'Address',
         on_delete=models.PROTECT,
         related_name='shipping_records',
+        null=True,
+        blank=True,
         help_text=_("Shipping address (maps to Lief_Adr in legacy system)"),
     )
     billing_address = models.ForeignKey(
         'Address',
         on_delete=models.PROTECT,
         related_name='billing_records',
+        null=True,
+        blank=True,
         help_text=_("Billing address (maps to Rech_Adr in legacy system)"),
     )
 

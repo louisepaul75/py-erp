@@ -65,49 +65,35 @@ class LegacyAPIExtractor(BaseExtractor):
             ExtractError: If data extraction fails or if filter construction 
                 fails and fail_on_filter_error is True
         """
-        # Initialize filter parts list
-        filter_parts = []
-        filter_query = None
-        
-        try:
-            # Handle SKU filter
-            if query_params and "Nummer" in query_params:
-                filter_parts.append(
-                    f"Nummer eq '{query_params['Nummer']}'"
-                )
-                
-            # Handle date filter
-            if query_params and "modified_date" in query_params:
-                if "gt" in query_params["modified_date"]:
-                    date_val = query_params["modified_date"]["gt"]
-                    filter_parts.append(
-                        f"modified_date gt datetime'{date_val}'"
-                    )
-            
-            # Combine all filter parts with 'and'
-            if filter_parts:
-                filter_query = " and ".join(filter_parts)
-                
-        except (ValueError, KeyError) as e:
-            error_msg = f"Error constructing filter query: {e}"
-            logger.error(error_msg)
-            if fail_on_filter_error:
-                raise ExtractError(error_msg)
-        
         try:
             # Get client from connection manager
             client = self.connection
             
             # Get page size from config or use default
             page_size = self.config.get("page_size", 1000)
+            
+            # Override page_size with $top from query_params if present
+            if query_params and "$top" in query_params:
+                page_size = int(query_params["$top"])
+                logger.info(f"Using limit from query_params: {page_size}")
+            
             all_records = self.config.get("all_records", False)
             
             # Initialize variables for pagination
             skip = 0
             all_records_list = []
             
+            # If we have a limit, only do one fetch
+            limit_records = query_params and "$top" in query_params
+            
+            # Extract filter_query if present in query_params
+            filter_query = None
+            if query_params and "filter_query" in query_params:
+                filter_query = query_params["filter_query"]
+                logger.info(f"Using filter_query from query_params: {filter_query}")
+            
             while True:
-                # Fetch data using the constructed filter
+                # Fetch data using the filter query
                 df = client.fetch_table(
                     table_name=self.config["table_name"],
                     filter_query=filter_query,
@@ -127,6 +113,11 @@ class LegacyAPIExtractor(BaseExtractor):
                 logger.info(
                     f"Fetched {len(records)} records (total: {len(all_records_list)})"
                 )
+                
+                # If we're using a limit from query_params, break after first fetch
+                if limit_records:
+                    logger.info(f"Stopping after first fetch due to $top limit: {page_size}")
+                    break
                 
                 # If we got fewer records than page_size, we've reached the end
                 if len(records) < page_size:

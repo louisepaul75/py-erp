@@ -223,8 +223,15 @@ def run_sales_record_sync(incremental: bool = True, batch_size: int = 100) -> Li
     """
     logger.info(f"Starting {'incremental' if incremental else 'full'} sales record sync")
     log_data_sync_event(
-        "sales_record_sync_started", 
-        {"incremental": incremental, "batch_size": batch_size}
+        source="legacy_erp",
+        destination="pyerp",
+        record_count=0,
+        status="started",
+        details={
+            "sync_type": "sales_records", 
+            "incremental": incremental, 
+            "batch_size": batch_size
+        }
     )
     
     results = []
@@ -256,9 +263,19 @@ def run_sales_record_sync(incremental: bool = True, batch_size: int = 100) -> Li
         )
         results.append(item_result)
     
+    # Calculate total records processed
+    total_records = sum(result.get('records_processed', 0) for result in results)
+    
     log_data_sync_event(
-        "sales_record_sync_completed", 
-        {"results": results}
+        source="legacy_erp",
+        destination="pyerp",
+        record_count=total_records,
+        status="completed",
+        details={
+            "sync_type": "sales_records",
+            "incremental": incremental,
+            "results": results
+        }
     )
     
     return results
@@ -273,6 +290,17 @@ def run_incremental_sales_record_sync() -> List[Dict]:
         List of dicts with sync results
     """
     logger.info("Starting scheduled incremental sales record sync")
+    log_data_sync_event(
+        source="legacy_erp",
+        destination="pyerp",
+        record_count=0,
+        status="scheduled",
+        details={
+            "sync_type": "sales_records",
+            "incremental": True,
+            "schedule": "15min"
+        }
+    )
     return run_sales_record_sync(incremental=True, batch_size=100)
 
 
@@ -293,6 +321,17 @@ def run_full_sales_record_sync() -> List[Dict]:
         List of dicts with sync results
     """
     logger.info("Starting scheduled full sales record sync")
+    log_data_sync_event(
+        source="legacy_erp",
+        destination="pyerp",
+        record_count=0,
+        status="scheduled",
+        details={
+            "sync_type": "sales_records",
+            "incremental": False,
+            "schedule": "daily"
+        }
+    )
     return run_sales_record_sync(incremental=False, batch_size=100)
 
 
