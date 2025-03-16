@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { Navbar } from '@/components/Navbar'
 
 export const metadata: Metadata = {
   title: 'pyERP Frontend',
@@ -13,8 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        {children}
+      <body className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <Navbar />
+        <main className="pt-16">
+          {children}
+        </main>
       </body>
     </html>
   )
