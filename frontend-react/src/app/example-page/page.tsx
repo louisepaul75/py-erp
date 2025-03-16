@@ -52,7 +52,7 @@ export default function ExamplePage() {
   };
 
   // Get unique categories
-  const categories = [...new Set(SAMPLE_DATA.map(item => item.category))];
+  const categories = Array.from(new Set(SAMPLE_DATA.map(item => item.category)));
 
   return (
     <div className="container mx-auto py-20 px-4 md:px-6">

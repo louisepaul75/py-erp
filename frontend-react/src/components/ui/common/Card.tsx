@@ -25,7 +25,7 @@ export function Card({ variant = 'default', className, children, ...props }: Car
   const variantStyle = componentStyles.card[variant];
   
   return (
-    <ShadcnCard className={cn(variantStyle, className)} {...props}>
+    <ShadcnCard className={cn(variantStyle, className || '')} {...props}>
       {children}
     </ShadcnCard>
   );
@@ -41,8 +41,8 @@ export function CardHeader({ highlighted = false, className, children, ...props 
   return (
     <ShadcnCardHeader 
       className={cn(
-        highlighted && componentStyles.card.header,
-        className
+        highlighted ? componentStyles.card.header : '',
+        className || ''
       )} 
       {...props}
     >
@@ -59,7 +59,7 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
 
 export function CardTitle({ icon: Icon, className, children, ...props }: CardTitleProps) {
   return (
-    <ShadcnCardTitle className={cn("text-amber-500 flex items-center", className)} {...props}>
+    <ShadcnCardTitle className={cn("text-amber-500 flex items-center", className || '')} {...props}>
       {Icon && <Icon className="mr-2 h-5 w-5" />}
       {children}
     </ShadcnCardTitle>
@@ -86,8 +86,8 @@ export function CardFooter({ highlighted = false, className, children, ...props 
   return (
     <ShadcnCardFooter 
       className={cn(
-        highlighted && componentStyles.card.footer,
-        className
+        highlighted ? componentStyles.card.footer : '',
+        className || ''
       )} 
       {...props}
     >

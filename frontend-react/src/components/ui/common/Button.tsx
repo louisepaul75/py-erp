@@ -53,8 +53,8 @@ export function Button({
       size={size}
       className={cn(
         variantStyle,
-        fullWidth && 'w-full',
-        className
+        fullWidth ? 'w-full' : '',
+        className || ''
       )}
       disabled={props.disabled || loading}
       {...props}
@@ -67,13 +67,13 @@ export function Button({
       )}
       
       {Icon && iconPosition === 'left' && !loading && (
-        <Icon className={cn("h-4 w-4", children && "mr-2")} />
+        <Icon className={cn("h-4 w-4", children ? "mr-2" : "")} />
       )}
       
       {children}
       
       {Icon && iconPosition === 'right' && (
-        <Icon className={cn("h-4 w-4", children && "ml-2")} />
+        <Icon className={cn("h-4 w-4", children ? "ml-2" : "")} />
       )}
     </ShadcnButton>
   );

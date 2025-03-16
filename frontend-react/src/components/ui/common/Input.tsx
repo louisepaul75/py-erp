@@ -44,7 +44,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       : componentStyles.input.default;
     
     return (
-      <div className={cn("space-y-2", fullWidth && "w-full")}>
+      <div className={cn("space-y-2", fullWidth ? "w-full" : "")}>
         {label && (
           <label className="text-sm font-medium block">
             {label}
@@ -60,10 +60,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={cn(
               inputStyle,
-              error && "border-red-500 focus:border-red-500",
-              iconPosition === 'right' && Icon && "pr-8",
-              fullWidth && "w-full",
-              className
+              error ? "border-red-500 focus:border-red-500" : "",
+              iconPosition === 'right' && Icon ? "pr-8" : "",
+              fullWidth ? "w-full" : "",
+              className || ""
             )}
             {...props}
           />

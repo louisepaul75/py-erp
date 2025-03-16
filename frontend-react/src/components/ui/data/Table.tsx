@@ -13,7 +13,7 @@ interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
 export function Table({ className, children, ...props }: TableProps) {
   return (
     <div className={cn("rounded-md border overflow-hidden", componentStyles.table.border)}>
-      <table className={cn("w-full text-sm", className)} {...props}>
+      <table className={cn("w-full text-sm", className || '')} {...props}>
         {children}
       </table>
     </div>
@@ -26,7 +26,7 @@ interface TableHeaderProps extends React.HTMLAttributes<HTMLTableSectionElement>
 
 export function TableHeader({ className, children, ...props }: TableHeaderProps) {
   return (
-    <thead className={cn(componentStyles.table.header, className)} {...props}>
+    <thead className={cn(componentStyles.table.header, className || '')} {...props}>
       {children}
     </thead>
   );
@@ -38,10 +38,7 @@ interface TableBodyProps extends React.HTMLAttributes<HTMLTableSectionElement> {
 
 export function TableBody({ className, children, ...props }: TableBodyProps) {
   return (
-    <tbody 
-      className={cn("divide-y", componentStyles.table.divider, className)} 
-      {...props}
-    >
+    <tbody className={cn(className || '')} {...props}>
       {children}
     </tbody>
   );
@@ -53,7 +50,7 @@ interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
 
 export function TableRow({ className, children, ...props }: TableRowProps) {
   return (
-    <tr className={cn(componentStyles.table.row, className)} {...props}>
+    <tr className={cn(componentStyles.table.row, className || '')} {...props}>
       {children}
     </tr>
   );
@@ -69,7 +66,7 @@ export function TableHead({ className, children, ...props }: TableHeadProps) {
       className={cn(
         "px-4 py-3 text-left font-medium", 
         componentStyles.table.headerText,
-        className
+        className || ''
       )} 
       {...props}
     >
@@ -84,7 +81,7 @@ interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
 
 export function TableCell({ className, children, ...props }: TableCellProps) {
   return (
-    <td className={cn("px-4 py-3", className)} {...props}>
+    <td className={cn("px-4 py-3", className || '')} {...props}>
       {children}
     </td>
   );
@@ -96,12 +93,18 @@ interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 export function StatusBadge({ status, className, children, ...props }: StatusBadgeProps) {
+  const statusStyles = {
+    active: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    inactive: "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400"
+  };
+  
   return (
     <span 
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        componentStyles.status[status],
-        className
+        statusStyles[status],
+        className || ''
       )} 
       {...props}
     >
