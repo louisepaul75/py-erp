@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, MouseEvent, DragEvent } from "react"
 import Link from "next/link"
 import {
   BarChart3,
@@ -58,6 +58,24 @@ const AlwaysVisibleSidebarToggle = () => {
   )
 }
 
+interface WidgetSize {
+  width: number;
+  height: number;
+}
+
+interface DashboardWidgetProps {
+  id: string;
+  title: string | null;
+  children: React.ReactNode;
+  isEditMode: boolean;
+  onDragStart: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
+  onDrop: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onResizeStart?: (id: string) => void;
+  onResizeMove?: (id: string, size: WidgetSize) => void;
+  onResizeEnd?: (id: string, size: WidgetSize) => void;
+}
+
 // Dashboard widget component
 const DashboardWidget = ({
   id,
@@ -70,19 +88,21 @@ const DashboardWidget = ({
   onResizeStart,
   onResizeMove,
   onResizeEnd,
-}) => {
+}: DashboardWidgetProps) => {
   const [isResizing, setIsResizing] = useState(false)
-  const widgetRef = useRef(null)
+  const widgetRef = useRef<HTMLDivElement | null>(null)
   const resizeStartPos = useRef({ x: 0, y: 0 })
   const originalSize = useRef({ width: 0, height: 0 })
 
-  const handleResizeStart = (e) => {
+  const handleResizeStart = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsResizing(true)
     resizeStartPos.current = { x: e.clientX, y: e.clientY }
-    originalSize.current = {
-      width: widgetRef.current.offsetWidth,
-      height: widgetRef.current.offsetHeight,
+    if (widgetRef.current) {
+      originalSize.current = {
+        width: widgetRef.current.offsetWidth,
+        height: widgetRef.current.offsetHeight,
+      }
     }
     onResizeStart && onResizeStart(id)
 
@@ -91,7 +111,7 @@ const DashboardWidget = ({
     document.addEventListener("mouseup", handleResizeEnd)
   }
 
-  const handleResizeMove = (e) => {
+  const handleResizeMove = (e: MouseEvent | any) => {
     if (!isResizing) return
 
     const deltaX = e.clientX - resizeStartPos.current.x
@@ -100,19 +120,22 @@ const DashboardWidget = ({
     const newWidth = originalSize.current.width + deltaX
     const newHeight = originalSize.current.height + deltaY
 
-    widgetRef.current.style.width = `${newWidth}px`
-    widgetRef.current.style.height = `${newHeight}px`
+    if (widgetRef.current) {
+      widgetRef.current.style.width = `${newWidth}px`
+      widgetRef.current.style.height = `${newHeight}px`
+    }
 
     onResizeMove && onResizeMove(id, { width: newWidth, height: newHeight })
   }
 
   const handleResizeEnd = () => {
     setIsResizing(false)
-    onResizeEnd &&
+    if (widgetRef.current && onResizeEnd) {
       onResizeEnd(id, {
         width: widgetRef.current.offsetWidth,
         height: widgetRef.current.offsetHeight,
       })
+    }
 
     // Remove event listeners
     document.removeEventListener("mousemove", handleResizeMove)
@@ -155,18 +178,62 @@ const DashboardWidget = ({
   )
 }
 
+// Define types for menu tiles
+interface MenuTile {
+  id: string;
+  name: string;
+  icon: React.ComponentType<any>;
+  favorited: boolean;
+}
+
+// Define types for orders
+interface Order {
+  id: string;
+  customer: string;
+  date: string;
+  status: string;
+  amount: string;
+}
+
+// Define types for recent accessed items
+interface RecentItem {
+  id: string;
+  name: string;
+  type: string;
+}
+
+// Define types for quick links
+interface QuickLink {
+  name: string;
+  url: string;
+}
+
+// Define types for news items
+interface NewsItem {
+  title: string;
+  date: string;
+  content: string;
+}
+
+// Define types for widgets
+interface Widget {
+  id: string;
+  order: number;
+  title: string | null;
+}
+
 export default function Dashboard() {
   const [isEditMode, setIsEditMode] = useState(false)
-  const [widgets, setWidgets] = useState([
+  const [widgets, setWidgets] = useState<Widget[]>([
     { id: "recent-orders", order: 1, title: "Letzte Bestellungen nach Liefertermin" },
     { id: "menu-tiles", order: 2, title: "Menü" },
     { id: "quick-links", order: 3, title: null },
     { id: "news-pinboard", order: 4, title: null },
   ])
-  const [draggedWidget, setDraggedWidget] = useState(null)
+  const [draggedWidget, setDraggedWidget] = useState<string | null>(null)
 
   // Recent orders data
-  const recentOrders = [
+  const recentOrders: Order[] = [
     { id: "ORD-7352", customer: "Müller GmbH", date: "2025-03-20", status: "Pending", amount: "€1,240.00" },
     { id: "ORD-7351", customer: "Schmidt AG", date: "2025-03-18", status: "Processing", amount: "€2,156.00" },
     { id: "ORD-7350", customer: "Weber KG", date: "2025-03-17", status: "Shipped", amount: "€865.50" },
@@ -175,7 +242,7 @@ export default function Dashboard() {
   ]
 
   // Recent accessed items
-  const recentAccessed = [
+  const recentAccessed: RecentItem[] = [
     { id: "KD-1234", name: "Müller GmbH", type: "Kunde" },
     { id: "ORD-7345", name: "Auftrag #7345", type: "Auftrag" },
     { id: "KD-1156", name: "Schmidt AG", type: "Kunde" },
@@ -183,7 +250,7 @@ export default function Dashboard() {
     { id: "KD-1089", name: "Weber KG", type: "Kunde" },
   ]
 
-  const [menuTiles, setMenuTiles] = useState([
+  const [menuTiles, setMenuTiles] = useState<MenuTile[]>([
     { id: "customers", name: "Kunden", icon: Users, favorited: false },
     { id: "orders", name: "Aufträge", icon: ShoppingCart, favorited: false },
     { id: "products", name: "Produkte", icon: Package, favorited: false },
@@ -199,7 +266,7 @@ export default function Dashboard() {
   ])
 
   // Quick links
-  const quickLinks = [
+  const quickLinks: QuickLink[] = [
     { name: "Handbuch", url: "#" },
     { name: "Support-Ticket erstellen", url: "#" },
     { name: "Schulungsvideos", url: "#" },
@@ -213,7 +280,7 @@ export default function Dashboard() {
   ]
 
   // News items
-  const newsItems = [
+  const newsItems: NewsItem[] = [
     {
       title: "Neue Funktionen im ERP-System",
       date: "15.03.2025",
@@ -232,15 +299,15 @@ export default function Dashboard() {
   ]
 
   // Handle drag and drop
-  const handleDragStart = (e, id) => {
+  const handleDragStart = (e: DragEvent<HTMLDivElement>, id: string) => {
     setDraggedWidget(id)
   }
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
   }
 
-  const handleDrop = (e, targetId) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>, targetId: string) => {
     e.preventDefault()
 
     if (draggedWidget === targetId) return
@@ -262,15 +329,15 @@ export default function Dashboard() {
   }
 
   // Handle resize
-  const handleResizeStart = (id) => {
+  const handleResizeStart = (id: string) => {
     // Could add specific logic here if needed
   }
 
-  const handleResizeMove = (id, size) => {
+  const handleResizeMove = (id: string, size: WidgetSize) => {
     // Could update state in real-time if needed
   }
 
-  const handleResizeEnd = (id, size) => {
+  const handleResizeEnd = (id: string, size: WidgetSize) => {
     // Save the new size to localStorage or state
     console.log(`Widget ${id} resized to:`, size)
   }
@@ -287,7 +354,7 @@ export default function Dashboard() {
     setIsEditMode(false)
   }
 
-  const toggleFavorite = (id) => {
+  const toggleFavorite = (id: string) => {
     const updatedTiles = menuTiles.map((tile) => (tile.id === id ? { ...tile, favorited: !tile.favorited } : tile))
     setMenuTiles(updatedTiles)
     localStorage.setItem("dashboard-favorites", JSON.stringify(updatedTiles))
@@ -317,7 +384,7 @@ export default function Dashboard() {
   }, [])
 
   // Render widget content based on ID
-  const renderWidgetContent = (widgetId) => {
+  const renderWidgetContent = (widgetId: string) => {
     switch (widgetId) {
       case "recent-orders":
         return (
