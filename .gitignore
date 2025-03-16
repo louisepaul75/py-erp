@@ -105,13 +105,6 @@ backups/
 *dump.rdb
 */.global_session_cookie
 
-# Pinegrow
-_pgbackup/
-_pgexport/
-.history/  # If using VSCode with History plugin
-*pinegrow_[0-9]*.json  # Pinegrow files with timestamps
-*_[0-9]*.vue           # Backup Vue files with timestamps
-
 # Logs
 logs/
 logs/*

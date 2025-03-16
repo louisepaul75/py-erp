@@ -37,7 +37,7 @@ docker run -d \
   -p 80:80 \
   -v $(pwd):/app \
   pyerp-dev-image \
-  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
 # Show the last 50 lines of container logs
 echo "Showing last 50 lines of container logs..."

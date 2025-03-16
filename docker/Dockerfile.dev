@@ -59,7 +59,8 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data \
 # Set up React frontend dependencies
 COPY frontend-react/package*.json /app/frontend-react/
 WORKDIR /app/frontend-react
-RUN npm install
+RUN npm install && \
+    npm install --save-dev autoprefixer postcss tailwindcss
 
 # Copy React frontend source files
 COPY frontend-react/ /app/frontend-react/

@@ -17,7 +17,7 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 
-from pyerp.core.views import VueAppView
+from pyerp.core.views import ReactAppView
 
 # Check if drf_yasg is available
 try:
@@ -133,9 +133,9 @@ urlpatterns += [
     path("", include("pyerp.core.urls")),
 ]
 
-# Vue.js application route - now as the root URL
+# Root URL for React application
 urlpatterns += [
-    path("", VueAppView.as_view(), name="vue_app"),
+    path("", ReactAppView.as_view(), name="react_app"),
 ]
 
 # Serve static and media files in development

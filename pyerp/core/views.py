@@ -299,25 +299,12 @@ def csrf_failure(request, reason=""):
     return render(request, "csrf_failure.html", context)
 
 
-class VueAppView(TemplateView):
+class ReactAppView(TemplateView):
     """View for rendering the React.js application as the main frontend."""
 
     template_name = "base/react_base.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         context["debug"] = settings.DEBUG
-
-        # Parse Vue.js manifest for correct asset paths in production
-        if not settings.DEBUG:
-            manifest_path = os.path.join(settings.STATIC_ROOT, "vue", "manifest.json")
-            if os.path.exists(manifest_path):
-                with open(manifest_path) as f:
-                    try:
-                        manifest = json.load(f)
-                        context["vue_manifest"] = manifest
-                    except json.JSONDecodeError:
-                        pass
-
         return context
