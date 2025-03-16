@@ -118,16 +118,26 @@ if __name__ == "__main__":
 
     client = LegacyERPClient(environment="live")
 
-    df = client.fetch_table(
-        table_name="parameter",
-        filter_query=[['scope', '==', 'Schüttentypen']]
+    belege = client.fetch_table(
+        table_name="Belege",
+        # skip = 10000,
+        top=100,
     )
-    print(pd.DataFrame(df['data_'].values[0]['Schüttentypen']))
 
-
-    df = client.fetch_table(
-        table_name="Stamm_Lager_Schuetten",
-
+    absnr = str(list(belege['AbsNr'].unique().astype(str)))
+    print(absnr)
+    auftraege = client.fetch_table(
+        table_name="Auftraege",
+        top=100000,
+        # filter_query = [['AbsNr', 'in', absnr]]
     )
-    print(df['data_'].values[0])
+    print(auftraege.loc[auftraege['AbsNr'] == 2660])
+    belege_pos = client.fetch_table(
+        table_name="Belege_Pos",
+        filter_query=[['AbsNr', 'in', absnr]]
+    )
+
+    print(belege.tail())
+    print(belege_pos.tail())
+    # breakpoint()
 

@@ -681,14 +681,16 @@ class BaseAPIClient:
                             field = filter_item[0]
                             operator = filter_item[1]
                             value = filter_item[2]
-                            
+
+                            print(field, operator, value)
+                            # breakpoint()
                             # Format date values if needed
                             if hasattr(value, 'strftime'):
                                 value = value.strftime("%Y-%m-%d")
                                 
 
                             
-                            filter_parts.append(f"'{field}{operator}{value}'")
+                            filter_parts.append(f"'{field} {operator} {value}'")
                         except Exception as e:
                             error_msg = f"Error processing filter item {filter_item}: {str(e)}"
                             logger.error(error_msg)
