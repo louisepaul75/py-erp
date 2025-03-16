@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    appDir: true,
+    // appDir is now the default in Next.js 14+
   },
   // Add this to disable favicon requests
   webpack: (config) => {
