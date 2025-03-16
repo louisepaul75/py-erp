@@ -6,6 +6,12 @@ import { Footer } from '@/components/Footer'
 export const metadata: Metadata = {
   title: 'pyERP Frontend',
   description: 'React frontend for pyERP system',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon.png' }
+    ],
+  },
 }
 
 export default function RootLayout({

@@ -21,7 +21,21 @@ import {
   ChevronUp,
   ArrowUpDown,
   X,
-  Check
+  Check,
+  User,
+  Home,
+  ShoppingCart,
+  FileText,
+  Bell,
+  Calendar,
+  Mail,
+  Phone,
+  CreditCard,
+  HelpCircle,
+  Info,
+  AlertTriangle,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 
 // Import our enhanced components
@@ -55,13 +69,14 @@ export default function UIComponentsPage() {
         <p className="text-gray-400 mb-8">A collection of UI components for the pyERP system</p>
 
         <Tabs defaultValue="buttons" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 mb-8">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-8">
             <TabsTrigger value="buttons">Buttons</TabsTrigger>
             <TabsTrigger value="inputs">Inputs</TabsTrigger>
             <TabsTrigger value="cards">Cards</TabsTrigger>
             <TabsTrigger value="tables">Tables</TabsTrigger>
             <TabsTrigger value="charts">Charts</TabsTrigger>
             <TabsTrigger value="filters">Filters</TabsTrigger>
+            <TabsTrigger value="icons">Icons</TabsTrigger>
             <TabsTrigger value="colors">Colors</TabsTrigger>
           </TabsList>
 
@@ -1086,6 +1101,210 @@ export default function UIComponentsPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Icons Section */}
+          <TabsContent value="icons" className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Icons</CardTitle>
+                <CardDescription>Lucide icons used throughout the application</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Common Icons</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <User className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">User</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Home className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Home</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Settings className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Settings</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Search className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Search</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <ShoppingCart className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">ShoppingCart</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <FileText className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">FileText</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Action Icons</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Plus className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Plus</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Edit className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Edit</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Trash className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Trash</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Save className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Save</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Download className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Download</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Upload className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Upload</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Notification Icons</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Bell className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Bell</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Mail className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Mail</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Calendar className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Calendar</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Phone className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">Phone</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <CreditCard className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">CreditCard</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <HelpCircle className="h-8 w-8 text-amber-500 mb-2" />
+                        <span className="text-xs text-center">HelpCircle</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Status Icons</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Info className="h-8 w-8 text-blue-500 mb-2" />
+                        <span className="text-xs text-center">Info</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <AlertTriangle className="h-8 w-8 text-yellow-500 mb-2" />
+                        <span className="text-xs text-center">AlertTriangle</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
+                        <span className="text-xs text-center">CheckCircle</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <XCircle className="h-8 w-8 text-red-500 mb-2" />
+                        <span className="text-xs text-center">XCircle</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <Check className="h-8 w-8 text-green-500 mb-2" />
+                        <span className="text-xs text-center">Check</span>
+                      </div>
+                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                        <X className="h-8 w-8 text-red-500 mb-2" />
+                        <span className="text-xs text-center">X</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Usage Examples</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="text-md font-medium">In Buttons</h4>
+                        <div className="flex flex-wrap gap-2">
+                          <Button icon={Plus}>Add Item</Button>
+                          <Button variant="secondary" icon={Edit}>Edit</Button>
+                          <Button variant="outline" icon={Trash}>Delete</Button>
+                          <Button size="icon" icon={Settings} aria-label="Settings" />
+                        </div>
+                        <div className="bg-amber-950/10 p-4 rounded-md">
+                          <pre className="text-xs overflow-x-auto">
+{`<Button icon={Plus}>Add Item</Button>
+<Button variant="secondary" icon={Edit}>Edit</Button>
+<Button variant="outline" icon={Trash}>Delete</Button>
+<Button size="icon" icon={Settings} aria-label="Settings" />`}
+                          </pre>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h4 className="text-md font-medium">In Inputs</h4>
+                        <div className="space-y-2">
+                          <Input icon={Search} placeholder="Search..." />
+                          <Input icon={Mail} placeholder="Email address..." />
+                          <Input icon={User} placeholder="Username..." />
+                        </div>
+                        <div className="bg-amber-950/10 p-4 rounded-md">
+                          <pre className="text-xs overflow-x-auto">
+{`<Input icon={Search} placeholder="Search..." />
+<Input icon={Mail} placeholder="Email address..." />
+<Input icon={User} placeholder="Username..." />`}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-amber-950/10 p-6 rounded-md">
+                    <h3 className="text-lg font-medium mb-4">How to Use Icons</h3>
+                    <p className="text-sm mb-4">
+                      This project uses Lucide React for icons. Import the icons you need from the lucide-react package:
+                    </p>
+                    <pre className="text-xs bg-amber-950/20 p-4 rounded-md overflow-x-auto mb-4">
+{`import { Search, User, Settings } from 'lucide-react';`}
+                    </pre>
+                    <p className="text-sm mb-4">
+                      You can use icons directly in your components:
+                    </p>
+                    <pre className="text-xs bg-amber-950/20 p-4 rounded-md overflow-x-auto mb-4">
+{`<Search className="h-4 w-4 text-amber-500" />`}
+                    </pre>
+                    <p className="text-sm">
+                      Or use them with our enhanced components that have built-in icon support:
+                    </p>
+                    <pre className="text-xs bg-amber-950/20 p-4 rounded-md overflow-x-auto">
+{`<Button icon={Plus}>Add Item</Button>
+<Input icon={Search} placeholder="Search..." />
+<CardTitle icon={Settings}>Card Title</CardTitle>`}
+                    </pre>
                   </div>
                 </div>
               </CardContent>

@@ -13,6 +13,7 @@ export * from './common/Input';
 export * from './data/Table';
 
 // Feedback Components
+export { StatusBadge } from './data/StatusBadge';
 export { Badge } from './badge';
 
 // Re-export theme configuration
