@@ -25,6 +25,10 @@
     --ring: 240 5.9% 10%;
     --radius: 0.5rem;
 
+    /* Dev bar */
+    --dev-bar-height: 0px;
+    --footer-height: 2.75rem;
+
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;

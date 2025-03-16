@@ -27,6 +27,40 @@ export function Footer() {
   const [isDevBarExpanded, setIsDevBarExpanded] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false);
   
+  // Measure footer height and set CSS variable
+  useEffect(() => {
+    const updateFooterHeight = () => {
+      const footer = document.querySelector('footer');
+      if (footer) {
+        const height = footer.getBoundingClientRect().height;
+        document.documentElement.style.setProperty('--footer-height', `${height}px`);
+      }
+    };
+    
+    // Initial measurement
+    updateFooterHeight();
+    
+    // Update on window resize
+    window.addEventListener('resize', updateFooterHeight);
+    return () => window.removeEventListener('resize', updateFooterHeight);
+  }, []);
+  
+  // Update CSS variable for dev bar height when expanded/collapsed
+  useEffect(() => {
+    if (isDevBarExpanded) {
+      // Set a small delay to ensure the DOM has updated
+      setTimeout(() => {
+        const devBarContent = document.querySelector('.dev-bar-content');
+        if (devBarContent) {
+          const height = devBarContent.getBoundingClientRect().height;
+          document.documentElement.style.setProperty('--dev-bar-height', `${height}px`);
+        }
+      }, 10);
+    } else {
+      document.documentElement.style.setProperty('--dev-bar-height', '0px');
+    }
+  }, [isDevBarExpanded]);
+  
   // Fetch health status
   useEffect(() => {
     const fetchHealthStatus = async () => {
@@ -103,55 +137,8 @@ export function Footer() {
   
   return (
     <>
-      {/* Dev Mode Bar */}
-      {isDevelopment && (
-        <div className="relative">
-          <button
-            onClick={() => setIsDevBarExpanded(!isDevBarExpanded)}
-            className="w-full bg-orange-500 text-white py-1 px-4 flex items-center justify-between"
-          >
-            <span className="font-medium">
-              DEV MODE {gitBranch?.branch ? `(${gitBranch.branch})` : '(local)'}
-            </span>
-            {isDevBarExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-          
-          {isDevBarExpanded && (
-            <div className="bg-orange-100 p-4 border-t border-orange-300">
-              <h3 className="font-semibold text-orange-800 mb-2">Debug Information</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-600">Environment:</div>
-                <div>{displayHealthStatus?.environment || 'Development'}</div>
-                
-                <div className="text-gray-600">Version:</div>
-                <div>{displayHealthStatus?.version || '1.0.0'}</div>
-                
-                <div className="text-gray-600">Database Status:</div>
-                <div className={cn(
-                  displayHealthStatus?.database?.status === 'connected' ? 'text-green-600' : 'text-red-600'
-                )}>
-                  {displayHealthStatus?.database?.status || 'Unknown'}
-                </div>
-                
-                <div className="text-gray-600">Git Branch:</div>
-                <div>{gitBranch?.branch || gitBranch?.error || 'local'}</div>
-                
-                <div className="text-gray-600">API Available:</div>
-                <div className={apiAvailable ? 'text-green-600' : 'text-red-600'}>
-                  {apiAvailable ? 'Yes' : 'No'}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-      
       {/* Footer */}
-      <footer className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+      <footer className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 fixed bottom-0 w-full z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="text-sm text-gray-600 dark:text-gray-400">
             &copy; {new Date().getFullYear()} pyERP System
@@ -181,6 +168,55 @@ export function Footer() {
           </Link>
         </div>
       </footer>
+      
+      {/* Dev Mode Bar - Positioned above footer */}
+      {isDevelopment && (
+        <div className="fixed w-full z-20" style={{
+          bottom: `var(--footer-height, 2.75rem)`
+        }}>
+          <button
+            onClick={() => setIsDevBarExpanded(!isDevBarExpanded)}
+            className="w-full bg-orange-500 text-white py-1 px-4 flex items-center justify-between"
+          >
+            <span className="font-medium">
+              DEV MODE {gitBranch?.branch ? `(${gitBranch.branch})` : '(local)'}
+            </span>
+            {isDevBarExpanded ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+          
+          {isDevBarExpanded && (
+            <div className="bg-orange-100 p-4 border-t border-orange-300 dev-bar-content absolute bottom-full w-full">
+              <h3 className="font-semibold text-orange-800 mb-2">Debug Information</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="text-gray-600">Environment:</div>
+                <div>{displayHealthStatus?.environment || 'Development'}</div>
+                
+                <div className="text-gray-600">Version:</div>
+                <div>{displayHealthStatus?.version || '1.0.0'}</div>
+                
+                <div className="text-gray-600">Database Status:</div>
+                <div className={cn(
+                  displayHealthStatus?.database?.status === 'connected' ? 'text-green-600' : 'text-red-600'
+                )}>
+                  {displayHealthStatus?.database?.status || 'Unknown'}
+                </div>
+                
+                <div className="text-gray-600">Git Branch:</div>
+                <div>{gitBranch?.branch || gitBranch?.error || 'local'}</div>
+                
+                <div className="text-gray-600">API Available:</div>
+                <div className={apiAvailable ? 'text-green-600' : 'text-red-600'}>
+                  {apiAvailable ? 'Yes' : 'No'}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 } 
