@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import draggable from 'vuedraggable';
 import { GridStack } from 'gridstack';
 import 'gridstack/dist/gridstack.min.css';
@@ -290,20 +290,46 @@ const enableEditMode = () => {
 };
 
 const cancelEditMode = () => {
+  // Cancel any pending auto-save
+  if (autoSaveTimeout) {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = null;
+  }
+  
   dashboardModules.value = JSON.parse(JSON.stringify(originalModules.value));
   editMode.value = false;
+  
+  // Also update localStorage to match the original state
+  localStorage.setItem('dashboardConfig', JSON.stringify(originalModules.value));
 };
 
 const saveDashboardConfig = async () => {
   try {
-    await api.patch('/dashboard/', {
-      modules: dashboardModules.value
-    });
-    editMode.value = false;
-    // Save successful notification would go here
+    // First, make sure any layout changes are applied to the modules
+    if (grid.value) {
+      saveGridLayout();
+    }
+    
+    // Always save to localStorage first for redundancy
+    localStorage.setItem('dashboardConfig', JSON.stringify(dashboardModules.value));
+    
+    // Use our improved auto-save function with immediate=true
+    const saveResult = await autoSaveChanges(true);
+    
+    if (saveResult) {
+      // Update originalModules to match current modules
+      originalModules.value = JSON.parse(JSON.stringify(dashboardModules.value));
+      
+      editMode.value = false;
+      console.log('Dashboard configuration saved successfully');
+    } else {
+      throw new Error('Server save failed but localStorage backup succeeded');
+    }
   } catch (error) {
     console.error('Failed to save dashboard configuration:', error);
-    // Error notification would go here
+    
+    // Even if the API call fails, we still have the data in localStorage
+    alert('Die Änderungen wurden lokal gespeichert, aber die Serveraktualisierung ist fehlgeschlagen. Bitte versuche es später erneut.');
   }
 };
 
@@ -386,15 +412,63 @@ const availableModules = [
 // Initialize GridStack
 onMounted(async () => {
   try {
-    const response = await api.get('/dashboard/');
-    if (response.data && response.data.dashboard_modules) {
-      dashboardModules.value = response.data.dashboard_modules;
-      // Sort modules by position
-      dashboardModules.value.sort((a, b) => a.position - b.position);
+    // First check if we have saved configuration in localStorage
+    const savedConfig = localStorage.getItem('dashboardConfig');
+    let localConfigLoaded = false;
+    
+    if (savedConfig) {
+      try {
+        const parsedConfig = JSON.parse(savedConfig);
+        // Only use localStorage if it's valid and not empty
+        if (parsedConfig && Array.isArray(parsedConfig) && parsedConfig.length > 0) {
+          dashboardModules.value = parsedConfig;
+          console.log('Loaded dashboard configuration from localStorage');
+          localConfigLoaded = true;
+          
+          // Also immediately send this configuration to the server to sync
+          try {
+            await api.patch('/dashboard/', {
+              modules: parsedConfig
+            });
+            console.log('Synced localStorage configuration with server');
+          } catch (syncError) {
+            console.error('Failed to sync localStorage configuration with server:', syncError);
+          }
+        }
+      } catch (parseError) {
+        console.error('Failed to parse saved dashboard configuration:', parseError);
+      }
+    }
+    
+    // If we couldn't load from localStorage or if we need fresh data
+    if (!localConfigLoaded) {
+      const response = await api.get('/dashboard/');
+      if (response.data && response.data.dashboard_modules) {
+        dashboardModules.value = response.data.dashboard_modules;
+        // Sort modules by position
+        dashboardModules.value.sort((a, b) => a.position - b.position);
+        
+        // Update localStorage with the server data for backup
+        localStorage.setItem('dashboardConfig', JSON.stringify(dashboardModules.value));
+      }
     }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error);
+    
+    // Try to load from localStorage as a fallback if not already loaded
+    const savedConfig = localStorage.getItem('dashboardConfig');
+    if (savedConfig) {
+      try {
+        dashboardModules.value = JSON.parse(savedConfig);
+        console.log('Loaded dashboard configuration from localStorage as fallback');
+      } catch (parseError) {
+        console.error('Failed to parse saved dashboard configuration:', parseError);
+      }
+    }
   } finally {
+    // Keep a backup of current modules
+    originalModules.value = JSON.parse(JSON.stringify(dashboardModules.value));
+    
     loading.value = false;
     // Initialize GridStack after loading is complete and DOM is updated
     await nextTick();
@@ -469,7 +543,62 @@ const saveGridLayout = () => {
     return module;
   });
 
+  // Update the modules with the new layout
   dashboardModules.value = updatedModules;
+  
+  // Always save to localStorage, whether in edit mode or not
+  localStorage.setItem('dashboardConfig', JSON.stringify(dashboardModules.value));
+  
+  // Auto-save changes to the backend without requiring the save button
+  if (editMode.value) {
+    // Auto-save to backend after changes with debouncing
+    autoSaveChanges();
+  }
+};
+
+// Implement auto-save with simple "debouncing" to avoid too many API calls
+let autoSaveTimeout = null;
+const autoSaveChanges = (immediate = false) => {
+  // Clear any existing timeout
+  if (autoSaveTimeout) {
+    clearTimeout(autoSaveTimeout);
+  }
+  
+  const saveToServer = async () => {
+    try {
+      const response = await api.patch('/dashboard/', {
+        modules: dashboardModules.value
+      });
+      console.log('Dashboard configuration auto-saved successfully');
+      
+      // If the server returned updated modules, synchronize them
+      if (response.data && response.data.dashboard_modules) {
+        // Ensure we're using the latest data
+        dashboardModules.value = response.data.dashboard_modules;
+        // Update localStorage with this approved data
+        localStorage.setItem('dashboardConfig', JSON.stringify(dashboardModules.value));
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      // Silent fail since we already have the data in localStorage
+      return false;
+    }
+  };
+  
+  if (immediate) {
+    // Save immediately without delay and return promise
+    return saveToServer();
+  } else {
+    // Set a new timeout to save after a delay
+    return new Promise((resolve) => {
+      autoSaveTimeout = setTimeout(async () => {
+        const result = await saveToServer();
+        resolve(result);
+      }, 2000); // 2-second delay before saving
+    });
+  }
 };
 
 // Recent access items
@@ -494,6 +623,14 @@ const navigateToFavorite = (item) => {
     router.push(item.route);
   }
 };
+
+// Clean up on component unmount
+onUnmounted(() => {
+  if (autoSaveTimeout) {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = null;
+  }
+});
 </script>
 
 <style>
