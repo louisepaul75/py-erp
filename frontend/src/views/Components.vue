@@ -35,6 +35,52 @@
     </div>
 
     <div class="component-section">
+      <h2>Icons</h2>
+      <div class="component-group">
+        <div class="component-item">
+          <h3>Basic Icons</h3>
+          <div class="d-flex gap-4">
+            <v-icon icon="mdi-home"></v-icon>
+            <v-icon icon="mdi-account"></v-icon>
+            <v-icon icon="mdi-cog"></v-icon>
+            <v-icon icon="mdi-bell"></v-icon>
+          </div>
+          <code>v-icon icon="mdi-[icon-name]"</code>
+        </div>
+        <div class="component-item">
+          <h3>Colored Icons</h3>
+          <div class="d-flex gap-4">
+            <v-icon color="primary" icon="mdi-check-circle"></v-icon>
+            <v-icon color="error" icon="mdi-alert-circle"></v-icon>
+            <v-icon color="warning" icon="mdi-alert"></v-icon>
+            <v-icon color="success" icon="mdi-check"></v-icon>
+          </div>
+          <code>v-icon color="[color]" icon="mdi-[icon-name]"</code>
+        </div>
+        <div class="component-item">
+          <h3>Icon Sizes</h3>
+          <div class="d-flex align-center gap-4">
+            <v-icon size="x-small" icon="mdi-star"></v-icon>
+            <v-icon size="small" icon="mdi-star"></v-icon>
+            <v-icon icon="mdi-star"></v-icon>
+            <v-icon size="large" icon="mdi-star"></v-icon>
+            <v-icon size="x-large" icon="mdi-star"></v-icon>
+          </div>
+          <code>v-icon size="[x-small|small|default|large|x-large]"</code>
+        </div>
+        <div class="component-item">
+          <h3>Button with Icons</h3>
+          <div class="d-flex gap-4">
+            <v-btn prepend-icon="mdi-download">Download</v-btn>
+            <v-btn append-icon="mdi-arrow-right">Next</v-btn>
+            <v-btn icon="mdi-refresh"></v-btn>
+          </div>
+          <code>v-btn prepend-icon="mdi-[icon-name]" or append-icon="mdi-[icon-name]"</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-section">
       <h2>Text Fields</h2>
       <div class="component-group">
         <div class="component-item">
@@ -281,12 +327,16 @@
 
     <div class="component-section">
       <h2>Color Palette</h2>
+      <p class="section-description">The pyERP color system uses a consistent palette to create visual hierarchy, ensure accessibility, and maintain brand consistency.</p>
+      
+      <h3 class="subsection-title">Brand Colors</h3>
       <div class="color-grid">
         <div class="color-item primary">
           <div class="color-swatch"></div>
           <div class="color-info">
             <h3>Primary</h3>
             <code>color="primary"</code>
+            <p class="color-usage">Used for primary actions, key navigation elements, and highlighting important information.</p>
           </div>
         </div>
         <div class="color-item secondary">
@@ -294,13 +344,19 @@
           <div class="color-info">
             <h3>Secondary</h3>
             <code>color="secondary"</code>
+            <p class="color-usage">Used for secondary actions, supporting elements, and alternative emphasis.</p>
           </div>
         </div>
+      </div>
+
+      <h3 class="subsection-title mt-6">System Colors</h3>
+      <div class="color-grid">
         <div class="color-item success">
           <div class="color-swatch"></div>
           <div class="color-info">
             <h3>Success</h3>
             <code>color="success"</code>
+            <p class="color-usage">Indicates successful actions, completions, and positive states.</p>
           </div>
         </div>
         <div class="color-item info">
@@ -308,6 +364,7 @@
           <div class="color-info">
             <h3>Info</h3>
             <code>color="info"</code>
+            <p class="color-usage">Used for informational messages, help text, and neutral states.</p>
           </div>
         </div>
         <div class="color-item warning">
@@ -315,6 +372,7 @@
           <div class="color-info">
             <h3>Warning</h3>
             <code>color="warning"</code>
+            <p class="color-usage">Indicates warnings, pending actions, or states requiring attention.</p>
           </div>
         </div>
         <div class="color-item error">
@@ -322,6 +380,60 @@
           <div class="color-info">
             <h3>Error</h3>
             <code>color="error"</code>
+            <p class="color-usage">Used for error states, destructive actions, and critical alerts.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="subsection-title mt-6">Background Colors</h3>
+      <div class="color-grid">
+        <div class="color-item bg-surface">
+          <div class="color-swatch"></div>
+          <div class="color-info">
+            <h3>Surface</h3>
+            <code>bg-color="surface"</code>
+            <p class="color-usage">Default background for cards and elevated surfaces.</p>
+          </div>
+        </div>
+        <div class="color-item bg-background">
+          <div class="color-swatch"></div>
+          <div class="color-info">
+            <h3>Background</h3>
+            <code>bg-color="background"</code>
+            <p class="color-usage">Main application background color.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="subsection-title mt-6">Usage Examples</h3>
+      <div class="example-grid">
+        <div class="example-item">
+          <h4>Text Colors</h4>
+          <div class="d-flex flex-column gap-2">
+            <span class="text-primary">Primary Text</span>
+            <span class="text-secondary">Secondary Text</span>
+            <span class="text-success">Success Text</span>
+            <span class="text-error">Error Text</span>
+            <code>text-[color]</code>
+          </div>
+        </div>
+        <div class="example-item">
+          <h4>Background Colors</h4>
+          <div class="d-flex flex-column gap-2">
+            <div class="pa-2 bg-primary text-white">Primary Background</div>
+            <div class="pa-2 bg-secondary text-white">Secondary Background</div>
+            <div class="pa-2 bg-success text-white">Success Background</div>
+            <div class="pa-2 bg-error text-white">Error Background</div>
+            <code>bg-[color]</code>
+          </div>
+        </div>
+        <div class="example-item">
+          <h4>Component Examples</h4>
+          <div class="d-flex flex-column gap-2">
+            <v-btn color="primary">Primary Button</v-btn>
+            <v-chip color="success">Success Chip</v-chip>
+            <v-alert color="warning" variant="tonal" class="mt-2">Warning Alert</v-alert>
+            <code>color="[color]"</code>
           </div>
         </div>
       </div>
@@ -568,44 +680,61 @@ onMounted(() => {
 
 .color-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
 .color-item {
   display: flex;
-  align-items: center;
-  gap: 15px;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background-color: white;
 }
 
 .color-swatch {
-  width: 60px;
-  height: 60px;
-  border-radius: 4px;
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .color-item.primary .color-swatch {
-  background-color: var(--v-theme-primary);
+  background-color: rgb(210, 188, 155); /* #d2bc9b */
 }
 
 .color-item.secondary .color-swatch {
-  background-color: var(--v-theme-secondary);
+  background-color: rgb(52, 58, 64); /* #343a40 */
 }
 
 .color-item.success .color-swatch {
-  background-color: var(--v-theme-success);
+  background-color: rgb(76, 175, 80); /* #4CAF50 */
 }
 
 .color-item.info .color-swatch {
-  background-color: var(--v-theme-info);
+  background-color: rgb(33, 150, 243); /* #2196F3 */
 }
 
 .color-item.warning .color-swatch {
-  background-color: var(--v-theme-warning);
+  background-color: rgb(251, 140, 0); /* #FB8C00 */
 }
 
 .color-item.error .color-swatch {
-  background-color: var(--v-theme-error);
+  background-color: rgb(176, 0, 32); /* #B00020 */
+}
+
+.color-item.bg-surface .color-swatch {
+  background-color: rgb(255, 255, 255); /* #ffffff */
+  border: 1px solid #eee;
+}
+
+.color-item.bg-background .color-swatch {
+  background-color: rgb(248, 249, 250); /* #f8f9fa */
+  border: 1px solid #eee;
 }
 
 .color-info {
@@ -613,6 +742,46 @@ onMounted(() => {
 }
 
 .color-info h3 {
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.color-usage {
+  font-size: 0.875rem;
+  color: #666;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.subsection-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.section-description {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 24px;
+}
+
+.example-item {
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background-color: white;
+}
+
+.example-item h4 {
+  margin-bottom: 16px;
+  font-weight: 600;
 }
 </style>
