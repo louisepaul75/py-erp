@@ -2,6 +2,12 @@
   <div class="dashboard">
     <!-- Navigation Drawer -->
     <v-navigation-drawer v-model="drawer" permanent class="bg-grey-lighten-4" :width="240">
+      <!-- Global search -->
+      <div class="px-4 py-4">
+        <GlobalSearch placeholder="Search..." />
+      </div>
+
+      <!-- Favorites header -->
       <div class="d-flex align-center px-4 py-3 border-b">
         <v-icon icon="mdi-star" color="warning" class="mr-2"></v-icon>
         <span class="text-body-2 font-weight-medium text-grey-darken-3">Favoriten</span>
@@ -213,7 +219,8 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import draggable from 'vuedraggable';
 import { GridStack } from 'gridstack';
 import 'gridstack/dist/gridstack.min.css';
-import api from '../services/api';
+import api from '@/services/api';
+import GlobalSearch from '@/components/GlobalSearch.vue';
 import {
   VHover,
   VIcon,
@@ -243,18 +250,20 @@ import {
   VProgressCircular
 } from 'vuetify/components';
 import { useRouter } from 'vue-router';
-import { useFavoritesStore } from '../store/favorites';
-import { useAuthStore } from '../store/auth';
+import { useFavoritesStore } from '@/store/favorites';
+import { useAuthStore } from '@/store/auth';
+import { useSearchStore } from '@/store/search';
 
 // Import module components
-import QuickAccessModule from '../components/dashboard/QuickAccessModule.vue';
-import RecentOrdersModule from '../components/dashboard/RecentOrdersModule.vue';
-import ImportantLinksModule from '../components/dashboard/ImportantLinksModule.vue';
-import NewsBoardModule from '../components/dashboard/NewsBoardModule.vue';
+import QuickAccessModule from '@/components/dashboard/QuickAccessModule.vue';
+import RecentOrdersModule from '@/components/dashboard/RecentOrdersModule.vue';
+import ImportantLinksModule from '@/components/dashboard/ImportantLinksModule.vue';
+import NewsBoardModule from '@/components/dashboard/NewsBoardModule.vue';
 
 // Initialize stores
 const favoritesStore = useFavoritesStore();
 const authStore = useAuthStore();
+const searchStore = useSearchStore();
 const router = useRouter();
 
 // UI state

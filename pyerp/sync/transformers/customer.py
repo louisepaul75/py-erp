@@ -3,6 +3,7 @@
 import logging
 from datetime import datetime
 from typing import Any, Dict, List
+from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 from .base import BaseTransformer
@@ -122,11 +123,15 @@ class CustomerTransformer(BaseTransformer):
 
         try:
             # Legacy timestamps are in format: "2025-03-06T04:13:17.687Z"
-            return datetime.strptime(
+            dt = datetime.strptime(
                 timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ"
-            ).replace(tzinfo=timezone.utc)
-        except (ValueError, TypeError):
-            logger.warning(
-                f"Failed to parse legacy timestamp: {timestamp_str}"
             )
-            return timezone.now() 
+            # Use Europe/Berlin timezone (German time)
+            german_tz = ZoneInfo("Europe/Berlin")
+            return dt.replace(tzinfo=german_tz)
+        except (ValueError, TypeError) as e:
+            logger.warning(
+                f"Failed to parse legacy timestamp: {timestamp_str} - {str(e)}"
+            )
+            # Return current time in German timezone
+            return timezone.now().astimezone(ZoneInfo("Europe/Berlin")) 

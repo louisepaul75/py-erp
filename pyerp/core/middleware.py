@@ -2,7 +2,6 @@
 Middleware for the Core app.
 """
 
-import logging
 import os
 
 from django.conf import settings
@@ -11,8 +10,10 @@ from django.http import HttpResponse, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 from rest_framework import status
 
-# Set up logging
-logger = logging.getLogger("pyerp.core")
+from pyerp.utils.logging import get_logger
+
+# Set up logging using the centralized logging system
+logger = get_logger(__name__)
 
 
 class DatabaseConnectionMiddleware:

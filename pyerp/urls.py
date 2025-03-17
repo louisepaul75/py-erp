@@ -9,8 +9,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.views.generic import RedirectView
 from django.views.i18n import JavaScriptCatalog, set_language
-from rest_framework import permissions
+from rest_framework import permissions, routers
+from rest_framework.documentation import include_docs_urls
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -18,6 +20,7 @@ from rest_framework_simplejwt.views import (
 )
 
 from pyerp.core.views import VueAppView
+from pyerp.external_api.search.views import GlobalSearchViewSet
 
 # Check if drf_yasg is available
 try:
@@ -40,6 +43,12 @@ except ImportError:
     has_swagger = False
     print("WARNING: drf_yasg not available, API documentation will be disabled")
 
+# Create a router for API endpoints
+router = routers.DefaultRouter()
+
+# Register API viewsets here
+router.register(r'search', GlobalSearchViewSet, basename='search')
+
 # Define URL patterns
 urlpatterns = [
     path("set-language/", set_language, name="set_language"),
@@ -52,7 +61,7 @@ urlpatterns = [
     # Django admin URLs
     path("admin/", admin.site.urls),
     # API URLs
-    path("api/", include("pyerp.core.api_urls")),
+    path("api/", include(router.urls)),
     path(
         "api/token/",
         TokenObtainPairView.as_view(permission_classes=[]),
@@ -91,6 +100,12 @@ urlpatterns = [
     path("api/products/", include("pyerp.business_modules.products.api_urls")),
     # Add sales API URLs
     path("api/sales/", include("pyerp.business_modules.sales.urls")),
+    # Add inventory API URLs
+    path("api/inventory/", include("pyerp.business_modules.inventory.urls")),
+    # API documentation
+    path('api/docs/', include_docs_urls(title='pyERP API Documentation')),
+    # Redirect root to admin interface for now
+    path('', RedirectView.as_view(url='/admin/', permanent=False)),
 ]
 
 # Add API documentation URLs if available
@@ -110,8 +125,7 @@ if has_swagger:
 
 # Optional API modules (excluding products since we added it directly)
 OPTIONAL_API_MODULES = [
-    ("sales", "pyerp.sales.urls"),
-    ("inventory", "pyerp.inventory.urls"),
+    ("inventory", "pyerp.business_modules.inventory.urls"),
     ("production", "pyerp.production.urls"),
     ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),
 ]
@@ -131,6 +145,11 @@ for url_prefix, module_path in OPTIONAL_API_MODULES:
 # Include core URLs at root level (for health check and other core functionality)
 urlpatterns += [
     path("", include("pyerp.core.urls")),
+]
+
+# Include core API URLs
+urlpatterns += [
+    path("api/", include("pyerp.core.api_urls")),
 ]
 
 # Vue.js application route - now as the root URL

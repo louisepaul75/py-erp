@@ -31,6 +31,11 @@ class Command(BaseCommand):
             help='Only run customer-related sync workflows'
         )
         parser.add_argument(
+            '--inventory-only',
+            action='store_true',
+            help='Only run inventory-related sync workflows'
+        )
+        parser.add_argument(
             '--debug',
             action='store_true',
             help='Enable debug logging'
@@ -46,10 +51,15 @@ class Command(BaseCommand):
         self.stdout.write(f"Starting all sync workflows at {start_time}...")
         
         # Determine which workflows to run
-        run_products = not options['customers_only']
-        run_customers = not options['products_only']
+        customers_or_inventory = options['customers_only'] or options['inventory_only']
+        products_or_inventory = options['products_only'] or options['inventory_only']
+        products_or_customers = options['products_only'] or options['customers_only']
         
-        if not run_products and not run_customers:
+        run_products = not customers_or_inventory
+        run_customers = not products_or_inventory
+        run_inventory = not products_or_customers
+        
+        if not run_products and not run_customers and not run_inventory:
             self.stdout.write(self.style.ERROR(
                 "No workflows selected to run. "
                 "Please specify at least one workflow."
@@ -63,6 +73,10 @@ class Command(BaseCommand):
         # Run customer-related sync workflows
         if run_customers:
             self._run_customer_workflows(options)
+            
+        # Run inventory-related sync workflows
+        if run_inventory:
+            self._run_inventory_workflows(options)
             
         end_time = timezone.now()
         duration = (end_time - start_time).total_seconds()
@@ -95,12 +109,13 @@ class Command(BaseCommand):
         """Run customer-related sync workflows."""
         self.stdout.write("\n=== Running Customer Sync Workflows ===")
         
-        # Run customer and address sync
+        # Run customers sync
         self.stdout.write("\nRunning customers sync...")
         try:
             call_command(
-                'sync_customers',
-                force_update=options['full'],
+                'run_sync',
+                entity_type='customer',
+                full=options['full'],
                 debug=options['debug']
             )
             self.stdout.write(self.style.SUCCESS(
@@ -109,4 +124,24 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.ERROR(
                 f"Customers sync failed: {e}"
+            ))
+            
+    def _run_inventory_workflows(self, options):
+        """Run inventory-related sync workflows."""
+        self.stdout.write("\n=== Running Inventory Sync Workflows ===")
+        
+        # Run inventory sync
+        self.stdout.write("\nRunning inventory sync...")
+        try:
+            call_command(
+                'sync_inventory',
+                full=options['full'],
+                debug=options['debug']
+            )
+            self.stdout.write(self.style.SUCCESS(
+                "Inventory sync completed successfully"
+            ))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(
+                f"Inventory sync failed: {e}"
             )) 

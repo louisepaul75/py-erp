@@ -1,0 +1,368 @@
+---
+# Inventory Sync Configuration
+
+# Storage Location Sync (Stamm_Lagerorte)
+storage_locations:
+  name: "Storage Locations Sync"
+  description: "Synchronize storage locations from legacy Stamm_Lagerorte table"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Stamm_Lagerorte"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.inventory.StammLagerorteTransformer"
+    config:
+      field_mappings:
+        legacy_id: "ID_Lagerort"
+        location_code: "Lagerort"
+        country: "Land_LKZ"
+        city_building: "Ort_Gebaeude"
+        sale: "Abverkauf"
+        special_spot: "Sonderlager"
+        unit: "Regal"
+        compartment: "Fach"
+        shelf: "Boden"
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "StorageLocation"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+  schedule:
+    frequency: "daily"
+    time: "01:00"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+
+# Box Type Sync
+box_types:
+  name: "Box Types Sync"
+  description: "Synchronize box types from legacy parameter table"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "parameter"
+      page_size: 1000
+      all_records: true
+      filter_query: [['scope', '==', 'Schüttentypen']]
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.inventory.BoxTypeTransformer"
+    config: {}
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "BoxType"
+      unique_field: "name"
+      update_strategy: "update_or_create"
+  schedule:
+    frequency: "daily"
+    time: "01:30"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+
+# Box Sync
+boxes:
+  name: "Boxes Sync"
+  description: "Synchronize boxes from Stamm_Lager_Schuetten"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Stamm_Lager_Schuetten"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.inventory.BoxTransformer"
+    config: {}
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "Box"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+      field_resolution:
+        storage_location:
+          model: "inventory.StorageLocation"
+          lookup_field: "legacy_id"
+          source_field: "ID_Lagerort"
+        box_type:
+          model: "inventory.BoxType"
+          lookup_field: "name"
+          source_field: "Typ"
+  schedule:
+    frequency: "daily"
+    time: "02:00"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+  dependencies:
+    - "box_types"
+    - "storage_locations"
+
+# Box Slot Sync
+box_slots:
+  name: "Box Slots Sync"
+  description: "Synchronize box slots from Stamm_Lager_Schuetten_Slots"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Stamm_Lager_Schuetten_Slots"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.inventory.BoxSlotTransformer"
+    config:
+      field_mappings:
+        legacy_id: "ID"
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "BoxSlot"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+  schedule:
+    frequency: "daily"
+    time: "03:00"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+  dependencies:
+    - "boxes"
+
+# Product Storage Sync - Artikel_Lagerorte
+product_storage_artikel_lagerorte:
+  name: "Product Storage Sync - Artikel_Lagerorte"
+  description: "Synchronize product storage data from Artikel_Lagerorte"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Artikel_Lagerorte"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.product_storage.ProductStorageTransformer"
+    config:
+      source: "Artikel_Lagerorte"
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "ProductStorage"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+      field_resolution:
+        product:
+          model: "products.VariantProduct"
+          lookup_field: "refOld"
+          source_field: "ID_Artikel_Stamm"
+  schedule:
+    frequency: "daily"
+    time: "04:00"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+  dependencies:
+    - "products"
+    - "storage_locations"
+
+# Product Storage Sync - Artikel_Lagerorte
+product_storage:
+  name: "Product Storage Sync"
+  description: "Synchronize product-location relationships from Artikel_Lagerorte"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Artikel_Lagerorte"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.product_storage.ProductStorageTransformer"
+    config:
+      source: "Artikel_Lagerorte"
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "ProductStorage"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+      field_resolution:
+        product:
+          model: "products.VariantProduct"
+          lookup_field: "refOld"
+          source_field: "ID_Artikel_Stamm"
+        storage_location:
+          model: "inventory.StorageLocation"
+          lookup_field: "legacy_id"
+          source_field: "UUID_Stamm_Lagerorte"
+  schedule:
+    frequency: "daily"
+    time: "04:00"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+  dependencies:
+    - "products"
+    - "storage_locations"
+
+# Box Storage Sync - Lager_Schuetten
+box_storage:
+  name: "Box Storage Sync"
+  description: "Synchronize box storage assignments from Lager_Schuetten"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Lager_Schuetten"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.product_storage.BoxStorageTransformer"
+    config:
+      source: "Lager_Schuetten"
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "BoxStorage"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+      field_resolution:
+        product_storage:
+          model: "inventory.ProductStorage"
+          lookup_field: "legacy_id"
+          source_field: "UUID_Artikel_Lagerorte"
+        box_slot:
+          model: "inventory.BoxSlot"
+          lookup_field: "legacy_id"
+          source_field: "box_slot_legacy_id"
+  schedule:
+    frequency: "daily"
+    time: "04:30"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+  dependencies:
+    - "product_storage"
+    - "box_slots"
+
+# Product Storage Sync - Lager_Schuetten
+product_storage_lager_schuetten:
+  name: "Product Storage Sync - Lager_Schuetten"
+  description: "Update product storage data with box slot information from Lager_Schuetten"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Lager_Schuetten"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.product_storage.ProductStorageTransformer"
+    config:
+      source: "Lager_Schuetten"
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "ProductStorage"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+      field_resolution:
+        box_slot:
+          model: "inventory.BoxSlot"
+          lookup_field: "legacy_id"
+          source_field: "box_slot_legacy_id"
+  schedule:
+    frequency: "daily"
+    time: "05:00"
+  incremental:
+    enabled: true
+    timestamp_field: "modified_date"
+    timestamp_filter_format: "modified_date > {value}"
+  dependencies:
+    - "product_storage_artikel_lagerorte"
+    - "box_slots"
+
+# Combined Product Storage Sync
+product_storage:
+  name: "Product Storage Sync"
+  description: "Combined product storage sync process"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Artikel_Lagerorte"
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.product_storage.ProductStorageTransformer"
+    config:
+      source: "combined"
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: "inventory"
+      model_name: "ProductStorage"
+      unique_field: "legacy_id"
+      update_strategy: "update_or_create"
+      field_resolution:
+        box_slot:
+          model: "inventory.BoxSlot"
+          lookup_field: "legacy_id"
+          source_field: "box_slot_legacy_id"
+        product:
+          model: "products.VariantProduct"
+          lookup_field: "refOld"
+          source_field: "ID_Artikel_Stamm"
+  dependencies:
+    - "storage_locations"
+    - "boxes"
+    - "box_slots" 

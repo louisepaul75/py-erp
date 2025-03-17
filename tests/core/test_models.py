@@ -4,7 +4,7 @@ Tests for core models in the pyERP system.
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.test import TestCase
+from django.test import TransactionTestCase
 from django.utils import timezone
 
 from pyerp.core.models import AuditLog
@@ -13,7 +13,7 @@ from pyerp.core.models import AuditLog
 User = get_user_model()
 
 
-class TestAuditLogModel(TestCase):
+class TestAuditLogModel(TransactionTestCase):
     """
     Tests for the AuditLog model which stores security and audit events.
     """
@@ -97,7 +97,10 @@ class TestAuditLogModel(TestCase):
             user=self.user,
             username="specified_username"
         )
-        self.assertEqual(log_with_manual_username.username, "specified_username")
+        self.assertEqual(
+            log_with_manual_username.username,
+            "specified_username"
+        )
 
     def test_related_object_tracking(self):
         """Test that related objects are properly tracked."""
@@ -169,6 +172,9 @@ class TestAuditLogModel(TestCase):
         ]
         
         for event_type in event_types:
+            # Delete any existing logs to ensure clean state
+            AuditLog.objects.filter(event_type=event_type).delete()
+            
             log = AuditLog.objects.create(
                 event_type=event_type,
                 message=f"Test for {event_type}"

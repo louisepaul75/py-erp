@@ -126,6 +126,63 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true }
   },
 
+  // Inventory routes
+  {
+    path: '/inventory',
+    component: () => import('../views/inventory/InventoryBase.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'InventoryDashboard',
+        component: () => import('../views/inventory/InventoryDashboard.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'warehouse',
+        component: () => import('../views/inventory/warehouse/WarehouseManagement.vue'),
+        meta: { requiresAuth: true },
+        children: [
+          {
+            path: '',
+            name: 'WarehouseManagement',
+            redirect: { name: 'StorageLocations' }
+          },
+          {
+            path: 'locations',
+            name: 'StorageLocations',
+            component: () => import('../views/inventory/warehouse/StorageLocations.vue'),
+            meta: { requiresAuth: true }
+          },
+          {
+            path: 'boxes',
+            name: 'BoxManagement',
+            component: () => import('../views/inventory/warehouse/BoxManagement.vue'),
+            meta: { requiresAuth: true }
+          },
+          {
+            path: 'map',
+            name: 'WarehouseMap',
+            component: () => import('../views/inventory/warehouse/WarehouseMap.vue'),
+            meta: { requiresAuth: true }
+          }
+        ]
+      },
+      {
+        path: 'products',
+        name: 'ProductInventory',
+        component: () => import('../views/inventory/ProductInventory.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'movements',
+        name: 'InventoryMovements',
+        component: () => import('../views/inventory/InventoryMovements.vue'),
+        meta: { requiresAuth: true }
+      }
+    ]
+  },
+
   // Testing routes
   {
     path: '/testing',

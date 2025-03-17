@@ -7,6 +7,11 @@ Uses SQLite as the database and in-memory options for Redis/Celery.
 
 import os
 from pathlib import Path  # noqa: F401
+from dotenv import load_dotenv
+
+# Load environment variables from .env.dev
+env_path = os.path.join(Path(__file__).resolve().parent.parent.parent.parent, 'config', 'env', '.env.dev')
+load_dotenv(env_path)
 
 from .base import *  # noqa
 
@@ -21,6 +26,26 @@ DEBUG = True
 
 # Allow all hosts for local development
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"]
+
+# Legacy API settings
+LEGACY_API_BASE_URL = os.environ.get('LEGACY_ERP_API_LIVE', 'http://192.168.73.28:8080')
+LEGACY_API_TEST_URL = os.environ.get('LEGACY_ERP_API_TEST', 'http://192.168.73.26:8090')
+LEGACY_API_USERNAME = os.environ.get('LEGACY_API_USERNAME', 'admin')
+LEGACY_API_PASSWORD = os.environ.get('LEGACY_API_PASSWORD', 'admin')
+
+# Legacy API environment configuration
+LEGACY_API_ENVIRONMENTS = {
+    'live': {
+        'base_url': LEGACY_API_BASE_URL,
+        'username': LEGACY_API_USERNAME,
+        'password': LEGACY_API_PASSWORD,
+    },
+    'test': {
+        'base_url': LEGACY_API_TEST_URL,
+        'username': LEGACY_API_USERNAME,
+        'password': LEGACY_API_PASSWORD,
+    }
+}
 
 # Database configuration
 DATABASES = {

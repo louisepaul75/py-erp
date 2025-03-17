@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from django.urls import path, include
 from rest_framework.decorators import api_view
 from rest_framework.routers import DefaultRouter
-from .views import CustomerViewSet, AddressViewSet
+from .views import CustomerViewSet, AddressViewSet, SalesRecordViewSet, SalesRecordItemViewSet
 
 app_name = "sales"
 
@@ -10,6 +10,8 @@ app_name = "sales"
 router = DefaultRouter()
 router.register(r'customers', CustomerViewSet)
 router.register(r'addresses', AddressViewSet)
+router.register(r'records', SalesRecordViewSet)
+router.register(r'record-items', SalesRecordItemViewSet)
 
 # Simple view that returns a placeholder response
 @api_view(["GET"])

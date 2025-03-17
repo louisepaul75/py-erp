@@ -1,9 +1,12 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from datetime import datetime
 
 from django.test import TestCase
 
-from pyerp.business_modules.products.models import VariantProduct
+from pyerp.business_modules.products.models import (
+    VariantProduct,
+    ParentProduct,
+)
 from pyerp.business_modules.products.signals import variant_product_pre_save
 
 
@@ -12,9 +15,12 @@ class TestVariantProductSignals(TestCase):
 
     def setUp(self):
         """Set up the test environment"""
-        self.parent_product = MagicMock()
-        self.parent_product.sku = "PARENT-SKU"
-        self.parent_product.legacy_id = 12345
+        # Create a real parent product instance instead of a mock
+        self.parent_product = ParentProduct.objects.create(
+            sku="PARENT-SKU",
+            name="Test Parent Product",
+            legacy_id="12345"
+        )
 
         self.variant = VariantProduct()
         self.variant.parent = self.parent_product

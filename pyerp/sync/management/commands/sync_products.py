@@ -183,7 +183,13 @@ class Command(BaseCommand):
                         self.style.WARNING("\nParent product sync errors:")
                     )
                     for error in parent_result.error_details:
-                        self.stdout.write(f"- {error['error']}")
+                        # Check if error_message exists, otherwise use a default message
+                        error_msg = error.get(
+                            'error_message', 'Unknown error'
+                        )
+                        self.stdout.write(
+                            f"- {error_msg}"
+                        )
 
             # Sync variants if not skipped
             if not options["skip_variants"]:
@@ -213,7 +219,13 @@ class Command(BaseCommand):
                         self.style.WARNING("\nVariant product sync errors:")
                     )
                     for error in variant_result.error_details:
-                        self.stdout.write(f"- {error['error']}")
+                        # Check if error_message exists, otherwise use a default message
+                        error_msg = error.get(
+                            'error_message', 'Unknown error'
+                        )
+                        self.stdout.write(
+                            f"- {error_msg}"
+                        )
 
             # Print total duration
             end_time = timezone.now()

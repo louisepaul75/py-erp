@@ -2,14 +2,14 @@
 System health checks for the Core app.
 """
 
-import logging
-
 from django.core.checks import Warning, register
 from django.db import connections
 from django.db.utils import DatabaseError, InterfaceError, OperationalError
 
-# Set up logging
-logger = logging.getLogger("pyerp.core")
+from pyerp.utils.logging import get_logger
+
+# Set up logging using the centralized logging system
+logger = get_logger(__name__)
 
 
 @register()

@@ -1,12 +1,12 @@
 """Pipeline orchestration for sync operations."""
 
-import logging
 import traceback
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
 import math
 from django.utils import timezone
+from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .extractors.base import BaseExtractor
 from .transformers.base import BaseTransformer
@@ -19,21 +19,7 @@ from .models import (
 )
 
 
-# Configure logger
-logger = logging.getLogger("pyerp.sync.pipeline")
-logger.setLevel(logging.INFO)
-
-# Remove existing handlers
-for handler in logger.handlers[:]:
-    logger.removeHandler(handler)
-
-# Add console handler with custom formatter
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(levelname)s: %(message)s')
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-logger.propagate = False
+logger = get_logger(__name__)
 
 
 class SyncPipeline:
@@ -108,11 +94,36 @@ class SyncPipeline:
                     'timestamp_filter_format',
                     "'modified_date > '{value}'"  # Default format
                 )
-                params['filter'] = filter_format.format(
-                    value=modified_since.strftime('%Y-%m-%d')
-                )
+                
+                # Handle both string and list formats for timestamp_filter_format
+                if isinstance(filter_format, str):
+                    params['filter'] = filter_format.format(
+                        value=modified_since.strftime('%Y-%m-%d')
+                    )
+                elif isinstance(filter_format, list):
+                    # Handle the list format by constructing a filter query
+                    # Assuming the format is [['field', 'operator', 'value_template']]
+                    filter_query = []
+                    for filter_item in filter_format:
+                        if len(filter_item) >= 3:
+                            field, operator, value_template = filter_item
+                            value = value_template.format(value=modified_since.strftime('%Y-%m-%d'))
+                            filter_query.append([field, operator, value])
+                    params['filter'] = filter_query
+                else:
+                    logger.warning(f"Unsupported timestamp_filter_format type: {type(filter_format)}")
             
-            logger.info("Starting data extraction...")
+            log_data_sync_event(
+                source=self.mapping.source.name,
+                destination=self.mapping.target.name,
+                record_count=0,
+                status="started",
+                details={
+                    "entity_type": self.mapping.entity_type,
+                    "incremental": incremental,
+                    "batch_size": batch_size
+                }
+            )
             
             try:
                 # Extract data
@@ -122,7 +133,16 @@ class SyncPipeline:
                         fail_on_filter_error=fail_on_filter_error
                     )
                     
-                logger.info(f"Extracted {len(source_data)} records")
+                log_data_sync_event(
+                    source=self.mapping.source.name,
+                    destination=self.mapping.target.name,
+                    record_count=len(source_data),
+                    status="extracted",
+                    details={
+                        "entity_type": self.mapping.entity_type,
+                        "incremental": incremental
+                    }
+                )
                 
                 # Process data in batches
                 total_processed = 0
@@ -131,7 +151,10 @@ class SyncPipeline:
                 
                 for i in range(0, len(source_data), batch_size):
                     batch = source_data[i:i+batch_size]
-                    logger.info(f"Processing batch {i//batch_size + 1} ({len(batch)} records)")
+                    logger.info(
+                        f"Processing batch {i//batch_size + 1} "
+                        f"({len(batch)} records)"
+                    )
                     
                     # Process batch
                     batch_success, batch_failed = self._process_batch(batch)
@@ -150,6 +173,20 @@ class SyncPipeline:
                 self.sync_log.mark_completed(total_success, total_failed)
                 self.sync_state.update_sync_completed(success=total_failed == 0)
                 
+                # Log final status
+                status = "completed" if total_failed == 0 else "completed_with_errors"
+                log_data_sync_event(
+                    source=self.mapping.source.name,
+                    destination=self.mapping.target.name,
+                    record_count=total_processed,
+                    status=status,
+                    details={
+                        "entity_type": self.mapping.entity_type,
+                        "succeeded": total_success,
+                        "failed": total_failed
+                    }
+                )
+                
                 return self.sync_log
                 
             except Exception as e:
@@ -159,6 +196,19 @@ class SyncPipeline:
                     error_message=str(e),
                     trace=traceback.format_exc()
                 )
+                
+                # Log failure event
+                log_data_sync_event(
+                    source=self.mapping.source.name,
+                    destination=self.mapping.target.name,
+                    record_count=0,
+                    status="failed",
+                    details={
+                        "entity_type": self.mapping.entity_type,
+                        "error": str(e)
+                    }
+                )
+                
                 return self.sync_log
                 
         except Exception as e:
@@ -203,7 +253,7 @@ class SyncPipeline:
                 for record, transformed in zip(batch, transformed_data):
                     cleaned_record = self._clean_for_json(record)
                     cleaned_transformed = self._clean_for_json(transformed)
-                    cleaned_result = self._clean_for_json(result.to_dict())
+                    cleaned_result = self._clean_for_json(result)
                     SyncLogDetail.objects.create(
                         sync_log=self.sync_log,
                         record_id=record.get('id', str(record)),
@@ -270,6 +320,12 @@ class SyncPipeline:
             if isinstance(data, float) and math.isnan(data):
                 return None
             return data
+        elif hasattr(data, '_asdict') and callable(data._asdict):
+            # Handle NamedTuple objects like LoadResult
+            return self._clean_for_json(data._asdict())
+        elif hasattr(data, 'to_dict') and callable(data.to_dict):
+            # Handle objects with to_dict method like LoadResult from base.py
+            return self._clean_for_json(data.to_dict())
         else:
             return str(data)
 
@@ -285,10 +341,10 @@ class PipelineFactory:
         transformer_class: Optional[Type[BaseTransformer]] = None,
         loader_class: Optional[Type[BaseLoader]] = None,
     ) -> SyncPipeline:
-        """Create a pipeline from a mapping and optional component classes.
+        """Create a sync pipeline from a mapping configuration.
         
         Args:
-            mapping: The sync mapping configuration
+            mapping: SyncMapping instance with configuration
             extractor_class: Optional extractor class override
             transformer_class: Optional transformer class override
             loader_class: Optional loader class override
@@ -314,14 +370,12 @@ class PipelineFactory:
             )
             logger.info(f"Created extractor: {extractor.__class__.__name__}")
             
-            # Get transformer class from transformation section
-            transformer_config = mapping_config.get('transformation', {})
+            # Get transformer class from mapping config
             transformer = cls._create_component(
-                transformer_class or cls._import_class(transformer_config.get('transformer_class')),
-                transformer_config
+                transformer_class or cls._import_class(mapping_config.get('transformer_class')),
+                mapping_config
             )
             logger.info(f"Created transformer: {transformer.__class__.__name__}")
-            logger.info(f"Transformer config: {transformer.config}")
             
             loader = cls._create_component(
                 loader_class or cls._import_class(target_config.get('loader_class')),

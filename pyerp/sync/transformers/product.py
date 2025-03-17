@@ -2,10 +2,7 @@
 
 import logging
 from typing import Any, Dict, List, Optional
-import pandas as pd
 from datetime import datetime
-
-from django.utils import timezone
 
 from .base import BaseTransformer, ValidationError
 
@@ -21,7 +18,9 @@ logger.setLevel(logging.DEBUG)
 if not logger.handlers:
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(name)s - %(levelname)s - %(message)s'
+    )
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     logger.propagate = False
@@ -30,140 +29,190 @@ if not logger.handlers:
 class ProductTransformer(BaseTransformer):
     """Transformer for product data."""
 
+    _pending_variants = []  # Store variants with missing parents
+
     def transform(
         self, source_data: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Transform product data from legacy format.
-        
-        Args:
-            source_data: List of source product records
-            
-        Returns:
-            List of transformed product records
-            
-        Raises:
-            ValueError: If source data is invalid
-        """
-        logger.info(f"Starting transformation of {len(source_data)} records")
-        logger.info(f"Field mappings: {self.field_mappings}")
-        
+        """Transform product data from legacy format."""
         transformed_records = []
+        
+        # Log transformer configuration
+        logger.debug(
+            "Transformer config: field_mappings=%s",
+            self.field_mappings
+        )
         
         for record in source_data:
             try:
-                logger.info(f"Processing record: {record}")
-                
-                # Apply base field mappings
-                transformed = self.apply_field_mappings(record)
-                logger.info(f"After field mappings: {transformed}")
-                
-                # Handle release_date field
-                if 'release_date' in transformed:
-                    transformed['release_date'] = self._parse_legacy_date(
-                        transformed.get('release_date')
-                    )
-                
-                # Handle modified_time field - ensure it's a valid datetime or None
-                if 'modified_time' in transformed:
-                    try:
-                        if pd.isna(transformed['modified_time']):
-                            transformed['modified_time'] = None
-                        else:
-                            # Try to parse as datetime if it's a string
-                            if isinstance(
-                                transformed['modified_time'], str
-                            ):
-                                transformed['modified_time'] = pd.to_datetime(
-                                    transformed['modified_time']
-                                )
-                    except Exception as e:
-                        logger.warning(
-                            f"Error processing modified_time: {e}"
-                        )
-                        transformed['modified_time'] = None
-                
-                # Handle empty or null name field
-                if not transformed.get('name'):
-                    # Try to generate a name from SKU or legacy_id
-                    if transformed.get('sku'):
-                        transformed['name'] = (
-                            f"Product {transformed['sku']}"
-                        )
-                    elif transformed.get('legacy_id'):
-                        transformed['name'] = (
-                            f"Product {transformed['legacy_id']}"
-                        )
-                    else:
-                        transformed['name'] = "Unnamed Product"
-                    logger.info(
-                        f"Generated default name: {transformed['name']}"
-                    )
-                
-                # Extract SKU components if needed
-                sku = transformed.get('sku')
-                logger.info(f"SKU value: {sku}")
-                
-                if sku is not None:
-                    try:
-                        sku_parts = self._parse_sku(sku)
-                        logger.info(f"SKU parts: {sku_parts}")
-                        transformed.update(sku_parts)
-                    except Exception as e:
-                        logger.warning(
-                            "Error parsing SKU: %s",
-                            str(e),
-                            extra={
-                                'record': record,
-                                'sku': sku
-                            }
-                        )
-                        # Set default values if SKU parsing fails
-                        transformed.update({
-                            'base_sku': str(sku).strip() if sku else '',
-                            'variant_code': ''
-                        })
-                else:
-                    logger.warning(
-                        "No SKU found in transformed record",
-                        extra={'record': record}
-                    )
-                    transformed.update({
-                        'base_sku': '',
-                        'variant_code': ''
-                    })
-                
-                # Apply price transformations
-                if 'Preise' in record:
-                    price_data = self._transform_prices(record['Preise'])
-                    transformed.update(price_data)
-                
-                # Apply custom transformations
-                transformed = self.apply_custom_transformers(
-                    transformed, record
+                # Log the complete source record for debugging
+                logger.debug(
+                    "Processing source record: %s",
+                    record
                 )
                 
+                # Apply field mappings from config
+                transformed = {}
+                for src_field, tgt_field in self.field_mappings.items():
+                    if src_field in record:
+                        value = record[src_field]
+                        # Ensure description fields are never None
+                        desc_fields = [
+                            'description', 'description_en',
+                            'short_description', 'short_description_en'
+                        ]
+                        if tgt_field in desc_fields:
+                            value = value if value is not None else ''
+                        transformed[tgt_field] = value
+                        logger.debug(
+                            "Mapped field %s -> %s: %s",
+                            src_field,
+                            tgt_field,
+                            value
+                        )
+                
+                # Ensure required text fields have default values
+                required_text_fields = [
+                    'description', 'description_en',
+                    'short_description', 'short_description_en',
+                    'keywords', 'dimensions'
+                ]
+                for field in required_text_fields:
+                    if field not in transformed:
+                        transformed[field] = ''
+                        logger.debug(
+                            "Set default empty string for %s",
+                            field
+                        )
+                
+                # Handle SKU and variant information
+                if 'Nummer' in record:
+                    transformed['sku'] = str(record['Nummer']).strip()
+                
+                # Get base_sku from fk_ArtNr if available
+                if 'fk_ArtNr' in record and record['fk_ArtNr']:
+                    base_sku = str(record['fk_ArtNr']).strip()
+                    transformed['base_sku'] = base_sku
+                    logger.debug(
+                        "Using fk_ArtNr for base_sku: %s",
+                        base_sku
+                    )
+                # Otherwise try alteNummer
+                elif 'alteNummer' in record and record['alteNummer']:
+                    alte_nr = str(record['alteNummer']).strip()
+                    sku_parts = self._parse_sku(alte_nr)
+                    transformed['base_sku'] = sku_parts['base_sku']
+                    logger.debug(
+                        "Using alteNummer for base_sku: %s",
+                        sku_parts['base_sku']
+                    )
+                
+                # Get variant_code from ArtikelArt if available
+                if 'ArtikelArt' in record and record['ArtikelArt']:
+                    var_code = str(record['ArtikelArt']).strip()
+                    transformed['variant_code'] = var_code
+                    logger.debug(
+                        "Using ArtikelArt for variant_code: %s",
+                        var_code
+                    )
+                # If no ArtikelArt, try alteNummer
+                elif 'alteNummer' in record and record['alteNummer']:
+                    alte_nr = str(record['alteNummer']).strip()
+                    sku_parts = self._parse_sku(alte_nr)
+                    if sku_parts['variant_code']:
+                        var_code = sku_parts['variant_code']
+                        transformed['variant_code'] = var_code
+                        logger.debug(
+                            "Using alteNummer for variant_code: %s",
+                            var_code
+                        )
+                
+                # Set legacy_id from __KEY if available
+                if '__KEY' in record:
+                    transformed['legacy_id'] = str(record['__KEY'])
+                
+                # Handle refOld field
+                if 'refOld' in record:
+                    transformed['refOld'] = str(record['refOld'])
+                    logger.debug(
+                        "Set refOld from source: %s",
+                        transformed['refOld']
+                    )
+                
+                # Handle Familie_ field for variants
+                if 'Familie_' in record:
+                    parent_id = str(record['Familie_'])
+                    transformed['legacy_parent_id'] = parent_id
+                    logger.debug(
+                        "Set legacy_parent_id from Familie_: %s",
+                        parent_id
+                    )
+                
+                # Ensure required fields for parent products
+                if not transformed.get('name') and 'Bezeichnung' in record:
+                    transformed['name'] = record['Bezeichnung']
+                
+                # Handle release date
+                if 'Release_date' in record:
+                    transformed['release_date'] = self._parse_legacy_date(
+                        record['Release_date']
+                    )
+                
+                # Log transformed record for debugging
+                logger.debug(
+                    "After field mappings: %s",
+                    transformed
+                )
+                
+                # Skip records with missing required fields
+                if not transformed.get('sku') or not transformed.get('name'):
+                    logger.warning(
+                        "Skipping record with missing required fields",
+                        extra={
+                            'sku': transformed.get('sku'),
+                            'name': transformed.get('name'),
+                        }
+                    )
+                    continue
+                
+                # Try to establish parent relationship for variants
+                if 'legacy_parent_id' in transformed:
+                    transformed = self.transform_parent_relationship(
+                        transformed, record
+                    )
+                    if transformed is None:
+                        continue
+                
+                # Add the transformed record
                 transformed_records.append(transformed)
-                logger.info(f"Final transformed record: {transformed}")
+                logger.debug(
+                    "Successfully transformed record: %s",
+                    transformed
+                )
                 
             except Exception as e:
                 logger.error(
                     "Error transforming record: %s",
                     str(e),
+                    exc_info=True,
                     extra={'record': record}
                 )
                 continue
         
-        logger.info(f"Completed transformation of {len(transformed_records)} records")
+        logger.info(
+            "Transformed %d records successfully",
+            len(transformed_records)
+        )
         return transformed_records
 
     def _parse_sku(self, sku: str) -> Dict[str, str]:
         """Parse SKU into components.
         
         Args:
-            sku: Product SKU to parse
+            sku: Product SKU to parse (e.g. '11400-BE')
             
         Returns:
-            Dictionary with SKU components
+            Dictionary with base_sku and variant_code
         """
         result = {
             'base_sku': '',
@@ -189,23 +238,33 @@ class ProductTransformer(BaseTransformer):
             if '-' in sku:
                 parts = sku.rsplit('-', 1)
                 if len(parts) == 2 and all(parts):
+                    # For legacy SKUs like '11400-BE'
                     result['base_sku'] = parts[0]
                     result['variant_code'] = parts[1]
+                    logger.debug(
+                        "Split legacy SKU: %s -> base=%s, variant=%s",
+                        sku,
+                        result['base_sku'],
+                        result['variant_code']
+                    )
                 else:
                     result['base_sku'] = sku
             else:
+                # No variant code, treat entire SKU as base
                 result['base_sku'] = sku
         except Exception as e:
-            logger.warning(f"Error splitting SKU {sku}: {e}")
+            logger.warning(
+                f"Error splitting SKU {sku}: {e}"
+            )
             result['base_sku'] = sku
         
         return result
 
-    def _transform_prices(self, price_data: str) -> Dict[str, float]:
+    def _transform_prices(self, price_data: Dict[str, Any]) -> Dict[str, float]:
         """Transform price data from legacy format.
         
         Args:
-            price_data: Price data string from legacy system
+            price_data: Price data dictionary from legacy system
             
         Returns:
             Dictionary with transformed price fields
@@ -213,18 +272,20 @@ class ProductTransformer(BaseTransformer):
         prices = {}
         
         try:
-            # Parse price string (format: "Laden:10.00|Handel:8.00|...")
-            if isinstance(price_data, str):
-                for price_item in price_data.split('|'):
-                    if ':' in price_item:
-                        key, value = price_item.split(':', 1)
-                        try:
-                            prices[f"price_{key.lower()}"] = float(value)
-                        except ValueError:
-                            logger.warning(
-                                f"Invalid price value: {value}",
-                                extra={'price_item': price_item}
-                            )
+            # Parse price data from the Coll array
+            if isinstance(price_data, dict) and 'Coll' in price_data:
+                for price_item in price_data['Coll']:
+                    if isinstance(price_item, dict):
+                        art = price_item.get('Art')
+                        preis = price_item.get('Preis')
+                        if art and preis is not None:
+                            try:
+                                prices[f"price_{art.lower()}"] = float(preis)
+                            except (ValueError, TypeError):
+                                logger.warning(
+                                    f"Invalid price value: {preis}",
+                                    extra={'price_item': price_item}
+                                )
         except Exception as e:
             logger.error(
                 f"Error parsing price data: {e}",
@@ -255,72 +316,194 @@ class ProductTransformer(BaseTransformer):
                     message=f"Required field '{field}' is missing or empty"
                 ))
         
-        # Validate SKU format
-        if record.get('sku'):
-            if not self._is_valid_sku(record['sku']):
-                errors.append(ValidationError(
-                    field='sku',
-                    message="Invalid SKU format"
-                ))
-        
-        # Validate prices
-        price_fields = [
-            key for key in record.keys() if key.startswith('price_')
-        ]
-        for field in price_fields:
-            price = record[field]
-            if not isinstance(price, (int, float)) or price < 0:
-                errors.append(ValidationError(
-                    field=field,
-                    message="Price must be a non-negative number",
-                    context={'value': price}
-                ))
-        
         return errors
 
-    def _is_valid_sku(self, sku: str) -> bool:
-        """Check if SKU format is valid.
-        
-        Args:
-            sku: SKU to validate
-            
-        Returns:
-            True if SKU is valid, False otherwise
-        """
-        if not isinstance(sku, str):
-            return False
-            
-        # SKU must be non-empty and contain only allowed characters
-        if not sku or not all(c.isalnum() or c == '-' for c in sku):
-            return False
-            
-        # If SKU contains variant code, validate format
-        if '-' in sku:
-            base_sku, variant_code = sku.rsplit('-', 1)
-            if not base_sku or not variant_code:
-                return False
-                
-        return True
-
     def _parse_legacy_date(self, date_str: str) -> Optional[datetime]:
-        """Parse a date string from the legacy system format (DD!MM!YYYY).
+        """Parse a legacy date string into a datetime object.
         
         Args:
-            date_str: Date string in DD!MM!YYYY format
+            date_str: Date string in legacy format (e.g. '1!1!1991')
             
         Returns:
-            Parsed timezone-aware datetime or None if parsing fails
+            Parsed datetime object or None if parsing fails
         """
-        if not date_str or date_str == "0!0!0":
+        if not date_str or date_str == '0!0!0':
             return None
+            
         try:
-            day, month, year = map(int, date_str.split("!"))
-            # Create a naive datetime
-            naive_dt = datetime(year, month, day)
-            # Make it timezone-aware using the default timezone
-            return timezone.make_aware(naive_dt)
-        except (ValueError, AttributeError):
+            # Split the date string into components
+            day, month, year = date_str.split('!')
+            # Convert to integers
+            day = int(day)
+            month = int(month)
+            year = int(year)
+            # Create datetime object
+            return datetime(year, month, day)
+        except (ValueError, TypeError, AttributeError) as e:
             logger.warning(
-                f"Failed to parse legacy date: {date_str}"
+                f"Error parsing legacy date: {e}",
+                extra={'date_str': date_str}
             )
             return None 
+
+    def transform_parent_relationship(
+        self, transformed: Dict[str, Any], source: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Transform parent relationship for variant products.
+        
+        Args:
+            transformed: The transformed record
+            source: The source record
+            
+        Returns:
+            Updated transformed record with parent relationship
+        """
+        from pyerp.business_modules.products.models import ParentProduct
+        
+        if 'legacy_parent_id' in transformed:
+            try:
+                # Try to find parent by legacy_id
+                parent = ParentProduct.objects.get(
+                    legacy_id=transformed['legacy_parent_id']
+                )
+                transformed['parent'] = parent
+                logger.info(
+                    "Found parent product for variant. "
+                    f"Variant SKU: {transformed.get('sku')}, "
+                    f"Variant legacy_id: {transformed.get('legacy_id')}, "
+                    f"Parent SKU: {parent.sku}, "
+                    f"Parent legacy_id: {parent.legacy_id}"
+                )
+            except ParentProduct.DoesNotExist:
+                # Try to find parent by base_sku if available
+                base_sku = transformed.get('base_sku')
+                if base_sku:
+                    try:
+                        parent = ParentProduct.objects.get(base_sku=base_sku)
+                        transformed['parent'] = parent
+                        logger.info(
+                            "Found parent product by base_sku. "
+                            f"Variant SKU: {transformed.get('sku')}, "
+                            f"Base SKU: {base_sku}, "
+                            f"Parent SKU: {parent.sku}"
+                        )
+                    except ParentProduct.DoesNotExist:
+                        logger.warning(
+                            "Parent product not found by legacy_id or base_sku. "
+                            f"Variant SKU: {transformed.get('sku')}, "
+                            f"Legacy ID: {transformed.get('legacy_id')}, "
+                            f"Parent ID: {transformed['legacy_parent_id']}, "
+                            f"Base SKU: {base_sku}"
+                        )
+                        # Store for retry
+                        if not hasattr(self, '_pending_variants'):
+                            self._pending_variants = []
+                        self._pending_variants.append({
+                            'transformed': transformed.copy(),
+                            'source': source.copy()
+                        })
+                        return None
+                else:
+                    logger.warning(
+                        "Parent product not found and no base_sku available. "
+                        f"Variant SKU: {transformed.get('sku')}, "
+                        f"Legacy ID: {transformed.get('legacy_id')}, "
+                        f"Parent ID: {transformed['legacy_parent_id']}"
+                    )
+                    # Store for retry
+                    if not hasattr(self, '_pending_variants'):
+                        self._pending_variants = []
+                    self._pending_variants.append({
+                        'transformed': transformed.copy(),
+                        'source': source.copy()
+                    })
+                    return None
+        
+        return transformed
+
+    def post_transform(
+        self, transformed_records: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Process any pending variants after all records are transformed.
+        
+        Args:
+            transformed_records: List of transformed records
+            
+        Returns:
+            Updated list of transformed records
+        """
+        from pyerp.business_modules.products.models import ParentProduct
+        
+        if not hasattr(self, '_pending_variants'):
+            return transformed_records
+
+        # Try to process pending variants
+        retry_count = 3  # Number of retries for finding parents
+        for attempt in range(retry_count):
+            if not self._pending_variants:
+                break
+            
+            pending_count = len(self._pending_variants)
+            logger.info(
+                f"Retry attempt {attempt + 1}: "
+                f"Processing {pending_count} pending variants"
+            )
+            
+            remaining_variants = []
+            for variant in self._pending_variants:
+                try:
+                    # Try by legacy_id first
+                    parent = ParentProduct.objects.get(
+                        legacy_id=variant['transformed']['legacy_parent_id']
+                    )
+                    variant['transformed']['parent'] = parent
+                    transformed_records.append(variant['transformed'])
+                    logger.info(
+                        "Successfully linked variant "
+                        f"{variant['transformed'].get('sku')} "
+                        f"to parent {parent.sku} by legacy_id"
+                    )
+                except ParentProduct.DoesNotExist:
+                    # Try by base_sku if available
+                    base_sku = variant['transformed'].get('base_sku')
+                    if base_sku:
+                        try:
+                            parent = ParentProduct.objects.get(base_sku=base_sku)
+                            variant['transformed']['parent'] = parent
+                            transformed_records.append(variant['transformed'])
+                            logger.info(
+                                "Successfully linked variant "
+                                f"{variant['transformed'].get('sku')} "
+                                f"to parent {parent.sku} by base_sku"
+                            )
+                        except ParentProduct.DoesNotExist:
+                            remaining_variants.append(variant)
+                    else:
+                        remaining_variants.append(variant)
+            
+            self._pending_variants = remaining_variants
+            if remaining_variants:
+                logger.warning(
+                    f"Still have {len(remaining_variants)} "
+                    "variants with missing parents"
+                )
+                import time
+                time.sleep(2)  # Wait a bit before retrying
+        
+        # Log any remaining unlinked variants
+        if self._pending_variants:
+            logger.error(
+                f"Failed to link {len(self._pending_variants)} "
+                "variants to their parents after all retries"
+            )
+            for variant in self._pending_variants:
+                transformed = variant['transformed']
+                logger.error(
+                    "Unlinked variant: "
+                    f"SKU={transformed.get('sku')}, "
+                    f"Legacy ID={transformed.get('legacy_id')}, "
+                    f"Parent ID={transformed.get('legacy_parent_id')}, "
+                    f"Base SKU={transformed.get('base_sku')}"
+                )
+        
+        return transformed_records 

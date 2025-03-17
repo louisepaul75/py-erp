@@ -1,92 +1,103 @@
-name: customers_sync
-description: Synchronize customers and addresses from legacy system
+---
+# Customers Sync Configuration
 
-source:
-  type: api
-  extractor_class: pyerp.sync.extractors.legacy_api.LegacyAPIExtractor
-  environment: live
-  table_name: Kunden
-  filters:
-    active: true
-  page_size: 100
-  all_records: true
-
-transformation:
-  transformer_class: pyerp.sync.transformers.customer.CustomerTransformer
-  field_mappings:
-    __KEY: legacy_id
-    KundenNr: customer_number
-    AdrNr: legacy_address_number
-    Kundengr: customer_group
-    Liefersperre: delivery_block
-    Preisgru: price_group
-    USt_IdNr: vat_id
-    Zahlungsart: payment_method
-    Versandart: shipping_method
-    Kreditlimit: credit_limit
-    Rabatt: discount_percentage
-    SkontoTage: payment_terms_discount_days
-    NettoTage: payment_terms_net_days
-  validation_rules:
-    - field: customer_number
-      validator: validate_not_empty
-      error_message: Customer number cannot be empty
-
-target:
-  loader_class: pyerp.sync.loaders.customer.CustomerLoader
-  app_name: business_modules.sales
-  model_name: Customer
-  unique_field: customer_number
-  conflict_strategy: newest_wins
-
-scheduling:
-  frequency: daily
-  time: '02:00'
-
-incremental:
-  enabled: true
-  timestamp_field: last_modified
-  full_sync_fallback: true
-
-# Address configuration
-addresses:
+# Customer data sync
+customers:
+  name: "customers_sync"
+  description: "Synchronize customers and addresses from legacy system"
   source:
     type: api
     extractor_class: pyerp.sync.extractors.legacy_api.LegacyAPIExtractor
-    environment: live
-    table_name: Adressen
-    filters:
-      active: true
-    page_size: 100
-    all_records: true
+    config:
+      environment: live
+      table_name: Kunden
+      filters:
+        active: true
+      all_records: true
+      page_size: 1000
+  transformer:
+    type: "custom"
+    class: pyerp.sync.transformers.customer.CustomerTransformer
+    config:
+      field_mappings:
+        __KEY: legacy_id
+        KundenNr: customer_number
+        AdrNr: legacy_address_number
+        Kundengr: customer_group
+        Liefersperre: delivery_block
+        Preisgru: price_group
+        USt_IdNr: vat_id
+        Zahlungsart: payment_method
+        Versandart: shipping_method
+        Kreditlimit: credit_limit
+        Rabatt: discount_percentage
+        SkontoTage: payment_terms_discount_days
+        NettoTage: payment_terms_net_days
+      validation_rules:
+        - field: customer_number
+          validator: validate_not_empty
+          error_message: Customer number cannot be empty
+  loader:
+    type: "django_model"
+    class: pyerp.sync.loaders.django_model.DjangoModelLoader
+    config:
+      app_name: sales
+      model_name: Customer
+      unique_field: customer_number
+      update_strategy: update
+  schedule:
+    frequency: daily
+    time: '02:00'
+  incremental:
+    enabled: true
+    timestamp_field: last_modified
+    full_sync_fallback: true
 
-  transformation:
-    transformer_class: pyerp.sync.transformers.address.AddressTransformer
-    field_mappings:
-      __KEY: legacy_id
-      AdrNr: address_number
-      KundenNr: customer_number
-      Firma: company_name
-      Strasse: street
-      PLZ: postal_code
-      Ort: city
-      Land: country
-      Telefon: phone
-      Email: email
-      IstLieferadresse: is_shipping_address
-      IstRechnungsadresse: is_billing_address
-      IstHauptadresse: is_primary_address
-    validation_rules:
-      - field: address_number
-        validator: validate_not_empty
-        error_message: Address number cannot be empty
-      - field: email
-        validator: validate_email_format
-        error_message: Invalid email format
-
-  target:
-    loader_class: pyerp.sync.loaders.address.AddressLoader
-    app_name: business_modules.sales
-    model_name: Address
-    unique_field: legacy_id
-    conflict_strategy: newest_wins 
+# Address configuration
+addresses:
+  name: "Customer Addresses Sync"
+  description: "Synchronize customer addresses from legacy system"
+  source:
+    type: api
+    extractor_class: pyerp.sync.extractors.legacy_api.LegacyAPIExtractor
+    config:
+      environment: live
+      table_name: Adressen
+      filters:
+        active: true
+      all_records: true
+  transformer:
+    type: "custom"
+    class: pyerp.sync.transformers.address.AddressTransformer
+    config:
+      field_mappings:
+        __KEY: legacy_id
+        AdrNr: address_number
+        KundenNr: customer_number
+        Firma: company_name
+        Strasse: street
+        PLZ: postal_code
+        Ort: city
+        Land: country
+        Telefon: phone
+        Email: email
+        IstLieferadresse: is_shipping_address
+        IstRechnungsadresse: is_billing_address
+        IstHauptadresse: is_primary_address
+      validation_rules:
+        - field: address_number
+          validator: validate_not_empty
+          error_message: Address number cannot be empty
+        - field: email
+          validator: validate_email_format
+          error_message: Invalid email format
+  loader:
+    type: "django_model"
+    class: pyerp.sync.loaders.django_model.DjangoModelLoader
+    config:
+      app_name: sales
+      model_name: Address
+      unique_field: legacy_id
+      update_strategy: newest_wins
+  dependencies:
+    - "customers" 

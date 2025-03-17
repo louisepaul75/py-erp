@@ -2,15 +2,14 @@
 Signal handlers for the products app.
 """
 
-import logging
-
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
 from pyerp.business_modules.products.models import VariantProduct
+from pyerp.utils.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @receiver(pre_save, sender=VariantProduct)

@@ -8,7 +8,6 @@ and parsing of API responses.
 """
 
 import json
-import logging
 import requests
 import urllib3
 from urllib3.util import Retry
@@ -19,6 +18,7 @@ from django.conf import settings
 from django.core.cache import cache
 
 from pyerp.business_modules.products.models import ParentProduct, Product
+from pyerp.utils.logging import get_logger
 from .constants import (
     MIN_THUMBNAIL_RESOLUTION,
     MAX_THUMBNAIL_RESOLUTION,
@@ -38,7 +38,8 @@ from .exceptions import (
 )
 from pyerp.external_api import connection_manager
 
-logger = logging.getLogger(__name__)
+# Configure logging using the centralized logging system
+logger = get_logger(__name__)
 
 
 class ImageAPIClient:
