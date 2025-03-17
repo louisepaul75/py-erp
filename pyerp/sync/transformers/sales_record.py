@@ -25,28 +25,28 @@ class SalesRecordTransformer(BaseTransformer):
         """
         super().__init__(config)
 
-    def transform(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def transform(self, data: Any) -> Dict[str, Any]:
         """
-        Transform a sales record from legacy format to Django model format.
+        Transform data from legacy format to Django model format.
         
         Args:
-            data: Raw data from the legacy system (can be a dict or a list of dicts)
+            data: Raw data from the legacy system (single record or list)
             
         Returns:
-            Transformed data ready for loading into Django models or a list of transformed data
+            Transformed data ready for loading into Django models
         """
-        # Handle case when data is a list
-        if isinstance(data, list):
-            logger.info(f"Received a list of {len(data)} records to transform")
-            transformed_records = []
-            for record in data:
-                transformed_record = self._transform_single_record(record)
-                if transformed_record:
-                    transformed_records.append(transformed_record)
-            return transformed_records
-        else:
-            # Handle single record case
+        # Handle string inputs
+        if isinstance(data, str):
+            logger.warning(f"Received string data instead of dictionary: {data[:100]}...")
+            return {}
+            
+        # Handle dictionary inputs
+        if isinstance(data, dict):
             return self._transform_single_record(data)
+            
+        # Handle any other unexpected input
+        logger.warning(f"Received unexpected data type: {type(data)}")
+        return {}
             
     def _transform_single_record(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -218,7 +218,7 @@ class SalesRecordTransformer(BaseTransformer):
             return transformed
             
         except Exception as e:
-            logger.error(f"Error transforming sales record {data.get('AbsNr')}: {str(e)}")
+            logger.error(f"Error transforming sales record {data.get('AbsNr', 'unknown')}: {str(e)}")
             logger.exception("Transformation error details:")
             
             # Log transformation error
@@ -229,7 +229,7 @@ class SalesRecordTransformer(BaseTransformer):
                 status="transform_exception",
                 details={
                     "entity_type": "sales_record",
-                    "record_id": data.get('AbsNr'),
+                    "record_id": data.get('AbsNr', 'unknown'),
                     "error": str(e)
                 }
             )

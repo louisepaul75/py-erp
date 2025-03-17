@@ -106,8 +106,30 @@ class LegacyAPIExtractor(BaseExtractor):
                     break
                     
                 # Convert DataFrame to list of dictionaries and append
-                records = df.to_dict(orient="records")
-                all_records_list.extend(records)
+                # Handle case where DataFrame might have column issues
+                try:
+                    records = df.to_dict(orient="records")
+                    
+                    # Ensure records are properly formatted as dictionaries
+                    valid_records = []
+                    for record in records:
+                        if isinstance(record, dict):
+                            valid_records.append(record)
+                        else:
+                            logger.warning(f"Skipping non-dictionary record: {type(record)}")
+                    
+                    all_records_list.extend(valid_records)
+                except Exception as e:
+                    logger.error(f"Error converting DataFrame to records: {e}")
+                    # Try to extract raw data if possible
+                    if hasattr(df, 'values') and hasattr(df, 'columns'):
+                        try:
+                            columns = df.columns.tolist()
+                            for row in df.values:
+                                record = {columns[i]: row[i] for i in range(len(columns))}
+                                all_records_list.append(record)
+                        except Exception as conversion_error:
+                            logger.error(f"Failed to manually convert DataFrame: {conversion_error}")
                 
                 # Log progress
                 logger.info(
@@ -164,56 +186,32 @@ class LegacyAPIExtractor(BaseExtractor):
         # Create filter conditions in the new format: [[field, operator, value], ...]
         filter_conditions = []
         
-        # Handle various filter formats
-        if isinstance(modified_date, dict):
-            # Process operators: gt, gte, lt, lte
-            
-            # Greater than
-            if 'gt' in modified_date:
-                date_val = modified_date['gt']
-                logger.info(
-                    f"Adding 'gt' filter condition: {date_field} > {date_val}"
-                )
-                filter_conditions.append([date_field, ">", date_val])
-                
-            # Greater than or equal
-            if 'gte' in modified_date:
-                date_val = modified_date['gte']
-                logger.info(
-                    f"Adding 'gte' filter condition: {date_field} >= {date_val}"
-                )
-                filter_conditions.append([date_field, ">=", date_val])
-                
-            # Less than
-            if 'lt' in modified_date:
-                date_val = modified_date['lt']
-                logger.info(
-                    f"Adding 'lt' filter condition: {date_field} < {date_val}"
-                )
-                filter_conditions.append([date_field, "<", date_val])
-                
-            # Less than or equal
-            if 'lte' in modified_date:
-                date_val = modified_date['lte']
-                logger.info(
-                    f"Adding 'lte' filter condition: {date_field} <= {date_val}"
-                )
-                filter_conditions.append([date_field, "<=", date_val])
-                
-            if filter_conditions:
-                logger.info(f"Created filter conditions: {filter_conditions}")
-                return filter_conditions
-            return None
+        # Common operators mapping
+        operator_map = {
+            'gt': '>',
+            'lt': '<',
+            'gte': '>=',
+            'lte': '<=',
+            'eq': '=',
+            'ne': '!='
+        }
         
-        # Handle direct value (equality)
-        elif isinstance(modified_date, str):
-            date_val = modified_date
-            logger.info(
-                f"Adding equality filter condition: {date_field} = {date_val}"
-            )
-            return [[date_field, "=", date_val]]
+        # Process each filter operator
+        for filter_op, value in modified_date.items():
+            # Map the operator
+            operator = operator_map.get(filter_op)
+            if not operator:
+                logger.warning(f"Unknown operator '{filter_op}', skipping")
+                continue
+                
+            # Format the value if it's a datetime
+            if hasattr(value, 'strftime'):
+                value = value.strftime('%Y-%m-%d')
+                
+            # Add the condition
+            filter_conditions.append([date_field, operator, value])
             
-        return None
+        return filter_conditions or None
     
     def _format_date_for_api(self, date_str: str) -> str:
         """Format a date string for the legacy API.
