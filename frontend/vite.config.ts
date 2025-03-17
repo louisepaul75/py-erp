@@ -29,15 +29,13 @@ export default defineConfig(({ mode }) => {
   const isSpecificIP = localIpAddress === '192.168.73.65';
 
   // Determine if we're running in a local development environment
-  const isLocalDev =
-    process.env.NODE_ENV === 'development' &&
-    (!process.env.VITE_API_HOST || process.env.VITE_API_HOST === 'localhost');
+  const isLocalDev = process.env.NODE_ENV === 'development' &&
+                    (!process.env.VITE_API_HOST || process.env.VITE_API_HOST === 'localhost');
 
   // Get API URL based on the detected IP
   let apiUrl;
   if (isSpecificIP) {
-    // Use HTTPS instead of HTTP to avoid Mixed Content errors
-    apiUrl = 'https://192.168.73.65';
+    apiUrl = 'http://192.168.73.65:8050';
   } else if (isLocalDev) {
     apiUrl = 'http://localhost:8050';
   } else {
@@ -55,11 +53,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      vue(),
       liveDesigner({
-        iconPreferredCase: 'unocss', // default value is 'unocss'
-        devtoolsKey: 'devtoolsKey'
-      })
+        // Customize plugin options as needed
+      }),
+      vue()
     ],
     resolve: {
       alias: {
@@ -74,10 +71,8 @@ export default defineConfig(({ mode }) => {
       // Clean output directory before build
       emptyOutDir: true,
       rollupOptions: {
-        // Specify entry points
-        input: {
-          main: fileURLToPath(new URL('./index.html', import.meta.url))
-        },
+        // Use index.html as the entry point
+        input: fileURLToPath(new URL('./index.html', import.meta.url)),
         output: {
           // Configure output filenames
           entryFileNames: 'js/[name].[hash].js',
@@ -100,37 +95,29 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
+      // Development server configuration
+      host: '0.0.0.0',
       port: 5173,
-      host: '0.0.0.0', // Listen on all interfaces
-      strictPort: true, // Don't try other ports if 5173 is taken
+      // Proxy API requests to Django server
       proxy: {
-        // Proxy API requests to Django backend
+        '^/api/token': {
+          target: apiBaseUrl,
+          changeOrigin: true
+        },
         '/api': {
           target: apiBaseUrl,
+          changeOrigin: true
+        },
+        '/products': {
+          target: apiBaseUrl,
           changeOrigin: true,
-          secure: false,
-          ws: true,
-          configure: (proxy, _options) => {
-            proxy.on('error', (err, _req, _res) => {
-              console.log('proxy error', err);
-            });
-            proxy.on('proxyReq', (proxyReq, req, _res) => {
-              console.log('Sending Request:', req.method, req.url);
-              // Add CORS headers
-              proxyReq.setHeader('Origin', 'http://localhost:5173');
-              if (req.headers.cookie) {
-                proxyReq.setHeader('Cookie', req.headers.cookie);
-              }
-            });
-            proxy.on('proxyRes', (proxyRes, req, _res) => {
-              console.log('Received Response:', proxyRes.statusCode, req.url);
-            });
-          }
+          rewrite: (path) => path.replace(/^\/products/, '/api/products')
+        },
+        '/sales': {
+          target: apiBaseUrl,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/sales/, '/api/sales')
         }
-      },
-      cors: {
-        origin: true,
-        credentials: true
       }
     }
   };
