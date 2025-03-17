@@ -155,4 +155,4 @@ const searchService = {
   }
 };
 
-export default searchService; 
+export default searchService;

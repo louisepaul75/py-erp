@@ -102,13 +102,13 @@ const searchResults = computed(() => {
   if (!searchResponse.value) return [];
 
   const results: any[] = [];
-  
+
   // Process each category of results
   Object.entries(searchResponse.value.results).forEach(([category, items]) => {
     if (items.length === 0) return;
-    
+
     const categoryLabel = t(`search.categories.${category}`);
-    
+
     // Add each result with formatted display text
     items.forEach(item => {
       results.push({
@@ -121,19 +121,19 @@ const searchResults = computed(() => {
       });
     });
   });
-  
+
   return results;
 });
 
 // Methods
 const onSearchUpdate = (val: string) => {
   searchQuery.value = val;
-  
+
   // Debounce search to avoid too many requests
   if (debounceTimeout.value) {
     clearTimeout(debounceTimeout.value);
   }
-  
+
   if (val && val.length >= 2) {
     debounceTimeout.value = setTimeout(() => {
       searchStore.performSearch(val);
@@ -145,13 +145,13 @@ const onSearchUpdate = (val: string) => {
 
 const onSelect = (item: any) => {
   if (!item) return;
-  
+
   const result = item.original;
   const route = searchService.getRouteForResult(result);
-  
+
   // Navigate to the appropriate route
   router.push(route);
-  
+
   // Reset the search
   searchQuery.value = '';
   selected.value = null;
@@ -193,4 +193,4 @@ watch(searchQuery, (newVal) => {
 :deep(.v-field__prepend-inner) {
   padding-right: 8px;
 }
-</style> 
+</style>

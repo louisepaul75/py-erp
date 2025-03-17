@@ -1,3 +1,3 @@
 """
 Search module initialization.
-""" 
+"""

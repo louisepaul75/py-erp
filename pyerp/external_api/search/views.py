@@ -20,7 +20,7 @@ class GlobalSearchViewSet(viewsets.ViewSet):
     API viewset for global search functionality.
     Allows searching across multiple models in the system.
     """
-    
+
     @action(detail=False, methods=['get'])
     def search(self, request):
         """
@@ -29,10 +29,10 @@ class GlobalSearchViewSet(viewsets.ViewSet):
         query = request.query_params.get('q', '').strip()
         if not query:
             return Response(
-                {"error": "Search query is required"}, 
+                {"error": "Search query is required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Perform search on each model
         results = {
             'customers': self._search_customers(query),
@@ -42,27 +42,27 @@ class GlobalSearchViewSet(viewsets.ViewSet):
             'box_slots': self._search_box_slots(query),
             'storage_locations': self._search_storage_locations(query),
         }
-        
+
         # Add counts for each result type
         counts = {key: len(value) for key, value in results.items()}
         total_count = sum(counts.values())
-        
+
         response_data = {
             'query': query,
             'total_count': total_count,
             'counts': counts,
             'results': results,
         }
-        
+
         return Response(response_data)
-    
+
     def _search_customers(self, query):
         """Search customers by customer_number and name."""
         customers = Customer.objects.filter(
-            Q(customer_number__icontains=query) | 
+            Q(customer_number__icontains=query) |
             Q(name__icontains=query)
         )[:10]  # Limit to 10 results
-        
+
         return [
             {
                 'id': customer.id,
@@ -72,13 +72,13 @@ class GlobalSearchViewSet(viewsets.ViewSet):
             }
             for customer in customers
         ]
-    
+
     def _search_sales_records(self, query):
         """Search sales records by record_number."""
         records = SalesRecord.objects.filter(
             record_number__icontains=query
         )[:10]  # Limit to 10 results
-        
+
         return [
             {
                 'id': record.id,
@@ -90,14 +90,14 @@ class GlobalSearchViewSet(viewsets.ViewSet):
             }
             for record in records
         ]
-    
+
     def _search_parent_products(self, query):
         """Search parent products by sku and name."""
         products = ParentProduct.objects.filter(
-            Q(sku__icontains=query) | 
+            Q(sku__icontains=query) |
             Q(name__icontains=query)
         )[:10]  # Limit to 10 results
-        
+
         return [
             {
                 'id': product.id,
@@ -107,15 +107,15 @@ class GlobalSearchViewSet(viewsets.ViewSet):
             }
             for product in products
         ]
-    
+
     def _search_variant_products(self, query):
         """Search variant products by sku, name, and legacy_sku."""
         products = VariantProduct.objects.filter(
-            Q(sku__icontains=query) | 
-            Q(name__icontains=query) | 
+            Q(sku__icontains=query) |
+            Q(name__icontains=query) |
             Q(legacy_sku__icontains=query)
         )[:10]  # Limit to 10 results
-        
+
         return [
             {
                 'id': product.id,
@@ -126,13 +126,13 @@ class GlobalSearchViewSet(viewsets.ViewSet):
             }
             for product in products
         ]
-    
+
     def _search_box_slots(self, query):
         """Search box slots by barcode."""
         box_slots = BoxSlot.objects.filter(
             barcode__icontains=query
         )[:10]  # Limit to 10 results
-        
+
         return [
             {
                 'id': box_slot.id,
@@ -143,13 +143,13 @@ class GlobalSearchViewSet(viewsets.ViewSet):
             }
             for box_slot in box_slots
         ]
-    
+
     def _search_storage_locations(self, query):
         """Search storage locations by legacy_id."""
         locations = StorageLocation.objects.filter(
             legacy_id__icontains=query
         )[:10]  # Limit to 10 results
-        
+
         return [
             {
                 'id': location.id,
@@ -159,4 +159,4 @@ class GlobalSearchViewSet(viewsets.ViewSet):
                 'type': 'storage_location',
             }
             for location in locations
-        ] 
+        ]

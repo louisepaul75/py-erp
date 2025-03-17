@@ -6,7 +6,7 @@
       <div class="px-4 py-4">
         <GlobalSearch placeholder="Search..." />
       </div>
-      
+
       <!-- Favorites header -->
       <div class="d-flex align-center px-4 py-3 border-b">
         <v-icon icon="mdi-star" color="warning" class="mr-2"></v-icon>
