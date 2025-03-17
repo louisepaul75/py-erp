@@ -20,6 +20,8 @@ from pyerp.sync.pipeline import PipelineFactory
 from pyerp.sync.extractors import LegacyAPIExtractor
 from pyerp.sync.transformers import SalesRecordTransformer
 from pyerp.sync.loaders import DjangoModelLoader
+from pyerp.business_modules.sales.models import SalesRecord
+from pyerp.business_modules.products.models import VariantProduct
 
 
 logger = get_logger(__name__)
@@ -97,7 +99,7 @@ class Command(BaseCommand):
             if not options.get('limit'):
                 # Fallback: Get all legacy IDs from the database
                 from pyerp.business_modules.sales.models import SalesRecord
-                synced_legacy_ids = list(SalesRecord.objects.values_list('legacy_id', flat=True).astype(str))
+                synced_legacy_ids = [str(legacy_id) for legacy_id in SalesRecord.objects.values_list('legacy_id', flat=True)]
                 self.stdout.write(f"Using all {len(synced_legacy_ids)} legacy IDs from database for line items")
             else:
                 self.stdout.write("No records were synced and a limit was specified, skipping line items sync")
@@ -548,6 +550,30 @@ class Command(BaseCommand):
                                         continue
                                     
                                     try:
+                                        # Try to find product by legacy_sku
+                                        product = None
+                                        product_code = item.get('ArtNr', '')
+                                        if product_code:
+                                            try:
+                                                # First try exact match on legacy_sku
+                                                product = VariantProduct.objects.get(legacy_sku=product_code)
+                                                if debug:
+                                                    self.stdout.write(f"Found product by legacy_sku: {product.id} ({product.name}) for {product_code}")
+                                            except VariantProduct.DoesNotExist:
+                                                # Try by SKU as fallback
+                                                try:
+                                                    product = VariantProduct.objects.get(sku=product_code)
+                                                    if debug:
+                                                        self.stdout.write(f"Found product by SKU: {product.id} ({product.name}) for {product_code}")
+                                                except VariantProduct.DoesNotExist:
+                                                    if debug:
+                                                        self.stdout.write(f"No product found for legacy_sku or SKU {product_code}")
+                                            except VariantProduct.MultipleObjectsReturned:
+                                                # If multiple found, get the most recently updated one
+                                                product = VariantProduct.objects.filter(legacy_sku=product_code).order_by('-modified_date').first()
+                                                if debug:
+                                                    self.stdout.write(f"Multiple products found for legacy_sku {product_code}, using most recent: {product.id}")
+
                                         # Calculate line subtotal and tax amount
                                         line_subtotal = self._to_decimal(item.get('Pos_Betrag', 0))
                                         tax_rate = Decimal('19.0')
@@ -558,7 +584,7 @@ class Command(BaseCommand):
                                             'legacy_id': f"{item.get('AbsNr')}_{item.get('PosNr')}",
                                             'sales_record': sales_record,  # Use actual object, not just ID
                                             'position': item.get('PosNr'),
-                                            'product_code': item.get('ArtNr', ''),
+                                            'legacy_sku': product_code,
                                             'description': item.get('Bezeichnung', ''),
                                             'quantity': self._to_decimal(item.get('Menge', 0)),
                                             'unit_price': self._to_decimal(item.get('Preis', 0)),
@@ -569,6 +595,15 @@ class Command(BaseCommand):
                                             'line_subtotal': line_subtotal,
                                             'tax_amount': tax_amount,
                                         }
+                                        
+                                        # Add product reference if found
+                                        if product:
+                                            transformed_item['product'] = product
+                                            if debug:
+                                                self.stdout.write(f"Added product reference: ID={product.id}, SKU={product.sku} to item {transformed_item['legacy_id']}")
+                                        else:
+                                            if debug:
+                                                self.stdout.write(f"No product reference added for item {transformed_item['legacy_id']} with legacy_sku {product_code}")
                                         
                                         transformed_items.append(transformed_item)
                                         

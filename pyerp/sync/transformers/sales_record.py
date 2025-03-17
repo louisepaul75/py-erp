@@ -9,6 +9,8 @@ from django.utils.text import slugify
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .base import BaseTransformer
+from pyerp.business_modules.products.models import VariantProduct
+from django.db.models import Q
 
 
 logger = get_logger(__name__)
@@ -237,106 +239,65 @@ class SalesRecordTransformer(BaseTransformer):
             return {}
             
     def transform_line_items(self, data: List[Dict[str, Any]], parent_id: int) -> List[Dict[str, Any]]:
-        """
-        Transform sales record line items from legacy format to Django model format.
-        
-        Args:
-            data: List of raw line item data from the legacy system
-            parent_id: ID of the parent sales record in the Django system
-            
-        Returns:
-            List of transformed line items ready for loading
-        """
+        """Transform line items for a sales record."""
         transformed_items = []
-        
-        if not data:
-            logger.warning(f"No line items found for parent_id {parent_id}")
-            log_data_sync_event(
-                source="legacy_erp",
-                destination="pyerp",
-                record_count=0,
-                status="transform_warning",
-                details={
-                    "entity_type": "sales_record_item",
-                    "parent_id": parent_id,
-                    "warning": "No line items found"
-                }
-            )
-            return []
-            
-        # Verify parent record exists
-        from pyerp.business_modules.sales.models import SalesRecord
-        try:
-            parent_record = SalesRecord.objects.get(id=parent_id)
-            logger.info(f"Found parent record with ID {parent_id} (legacy_id: {parent_record.legacy_id})")
-        except SalesRecord.DoesNotExist:
-            logger.error(f"Parent sales record with ID {parent_id} not found")
-            log_data_sync_event(
-                source="legacy_erp",
-                destination="pyerp",
-                record_count=0,
-                status="transform_error",
-                details={
-                    "entity_type": "sales_record_item",
-                    "parent_id": parent_id,
-                    "error": "Parent record not found"
-                }
-            )
-            return []
-        
-        # Handle case when data is a list of lists
-        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], list):
-            logger.info(f"Received a list of lists for line items, converting to list of dicts")
-            # Convert list of lists to list of dicts
-            new_data = []
-            for item_list in data:
-                if isinstance(item_list, dict):
-                    new_data.append(item_list)
-                else:
-                    logger.warning(f"Unexpected data format for line item: {item_list}")
-            data = new_data
-        
-        # Filter items to match parent record's legacy_id
-        parent_legacy_id = parent_record.legacy_id
-        filtered_data = []
-        for item in data:
-            if item.get('AbsNr') == parent_legacy_id:
-                filtered_data.append(item)
-            
-        if not filtered_data:
-            logger.warning(f"No matching line items found for parent legacy_id {parent_legacy_id}")
-            return []
-            
-        logger.info(f"Processing {len(filtered_data)} line items for parent_id {parent_id} (legacy_id: {parent_legacy_id})")
-        
         successful_items = 0
         failed_items = 0
         
-        for item in filtered_data:
+        for item in data:
             try:
-                if not item or 'AbsNr' not in item or 'PosNr' not in item:
-                    logger.warning(f"Invalid line item data for parent_id {parent_id}: {item}")
-                    failed_items += 1
-                    continue
-                    
+                # Get product code from ArtNr
+                product_code = item.get('ArtNr', '')
+                
+                # Try to find product by legacy_sku
+                product = None
+                if product_code:
+                    try:
+                        # First try exact match on legacy_sku
+                        product = VariantProduct.objects.get(legacy_sku=product_code)
+                        logger.info(f"Found product by legacy_sku: {product.id} ({product.name}) for {product_code}")
+                    except VariantProduct.DoesNotExist:
+                        # Try by SKU as fallback
+                        try:
+                            product = VariantProduct.objects.get(sku=product_code)
+                            logger.info(f"Found product by SKU: {product.id} ({product.name}) for {product_code}")
+                        except VariantProduct.DoesNotExist:
+                            logger.warning(f"No product found for legacy_sku or SKU {product_code}")
+                    except VariantProduct.MultipleObjectsReturned:
+                        # If multiple found, get the most recently updated one
+                        product = VariantProduct.objects.filter(legacy_sku=product_code).order_by('-modified_date').first()
+                        logger.warning(f"Multiple products found for legacy_sku {product_code}, using most recent: {product.id}")
+                
+                # Calculate line item values
+                line_subtotal = self._to_decimal(item.get('Pos_Betrag', 0))
+                tax_rate = Decimal('19.0')  # Default tax rate
+                tax_amount = self._to_decimal((line_subtotal * tax_rate / Decimal('100')))
+                
+                # Create transformed item
                 transformed_item = {
                     'legacy_id': f"{item.get('AbsNr')}_{item.get('PosNr')}",
                     'sales_record_id': parent_id,
                     'position': item.get('PosNr'),
-                    'product_code': item.get('ArtNr', ''),
+                    'legacy_sku': product_code,
                     'description': item.get('Bezeichnung', ''),
                     'quantity': self._to_decimal(item.get('Menge', 0)),
                     'unit_price': self._to_decimal(item.get('Preis', 0)),
                     'discount_percentage': self._to_decimal(item.get('Rabatt', 0)),
-                    'tax_rate': self._extract_line_item_tax_rate(item),
-                    'tax_amount': self._calculate_line_item_tax(item),
-                    'line_subtotal': self._calculate_line_subtotal(item),
+                    'tax_rate': tax_rate,
+                    'tax_amount': tax_amount,
+                    'line_subtotal': line_subtotal,
                     'line_total': self._to_decimal(item.get('Pos_Betrag', 0)),
-                    'item_type': self._map_item_type(item.get('Art')),
-                    'notes': '',
+                    'notes': item.get('Anmerkung', ''),
                     'fulfillment_status': self._map_fulfillment_status(item),
                     'fulfilled_quantity': self._to_decimal(item.get('Pick_Menge', 0)),
                 }
+                
+                # Add product reference if found
+                if product:
+                    transformed_item['product_id'] = product.id
+                    logger.info(f"Added product reference: ID={product.id}, SKU={product.sku} to item {transformed_item['legacy_id']}")
+                else:
+                    logger.warning(f"No product reference added for item {transformed_item['legacy_id']} with legacy_sku {product_code}")
                 
                 transformed_items.append(transformed_item)
                 successful_items += 1

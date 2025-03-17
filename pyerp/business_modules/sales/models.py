@@ -499,7 +499,7 @@ class SalesRecordItem(SalesModel):
     position = models.IntegerField(
         help_text=_("Position in the sales record (maps to PosNr in legacy system)"),
     )
-    product_code = models.CharField(
+    legacy_sku = models.CharField(
         max_length=50,
         blank=True,
         help_text=_("Product code (maps to ArtNr in legacy system)"),
@@ -586,7 +586,7 @@ class SalesRecordItem(SalesModel):
         app_label = "sales"
         indexes = [
             models.Index(fields=["sales_record"]),
-            models.Index(fields=["product_code"]),
+            models.Index(fields=["legacy_sku"]),
             models.Index(fields=["legacy_id"]),
         ]
         unique_together = [('sales_record', 'position')]

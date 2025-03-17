@@ -131,7 +131,7 @@ sales_record_items:
       transform_method: "transform_line_items"
       field_mappings:
         position: "PosNr"
-        product_code: "ArtNr"
+        legacy_sku: "ArtNr"
         description: "Bezeichnung"
         quantity:
           field: "Menge"
@@ -153,9 +153,9 @@ sales_record_items:
           transform: "to_decimal"
       lookups:
         product:
-          model: "pyerp.business_modules.products.models.Product"
+          model: "pyerp.business_modules.products.models.VariantProduct"
           fields:
-            product_code: "ArtNr"
+            legacy_sku: "ArtNr"
           get_or_create: false
           required: false
       composite_key: ["AbsNr", "PosNr"]
@@ -169,6 +169,11 @@ sales_record_items:
       update_strategy: "update_or_create"
       parent_field: "sales_record"
       parent_mapping: "sales_records"
+      field_resolution:
+        product:
+          model: "products.VariantProduct"
+          lookup_field: "legacy_sku"
+          source_field: "legacy_sku"
   schedule:
     frequency: "hourly"
     time: "*/15"  # Every 15 minutes
@@ -191,6 +196,23 @@ sales_record_sync:
   components:
     - "sales_records"
     - "sales_record_items"
+  source:
+    type: "meta"
+    extractor_class: "pyerp.sync.extractors.meta.MetaExtractor"
+    config:
+      components:
+        - "sales_records"
+        - "sales_record_items"
+  transformer:
+    type: "meta"
+    class: "pyerp.sync.transformers.meta.MetaTransformer"
+    config: {}
+  loader:
+    type: "meta"
+    class: "pyerp.sync.loaders.meta.MetaLoader"
+    config:
+      app_name: "sync"
+      model_name: "MetaSync"
   schedule:
     frequency: "daily"
     time: "03:00"  # 3 AM
