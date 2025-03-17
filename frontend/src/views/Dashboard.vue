@@ -72,7 +72,7 @@
     <v-btn
       v-show="!drawer"
       icon="mdi-chevron-right"
-      variant="flat"
+      variant="plain"
       size="small"
       color="primary"
       class="sidebar-toggle-btn"

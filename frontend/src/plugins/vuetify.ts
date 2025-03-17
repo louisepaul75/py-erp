@@ -23,10 +23,14 @@ export default createVuetify({
           'secondary-darken-1': '#212529',
           background: '#f8f9fa',
           surface: '#ffffff',
-          error: '#B00020',
-          info: '#2196F3',
-          success: '#4CAF50',
-          warning: '#FB8C00'
+          error: '#dc3545',
+          info: '#0dcaf0',
+          success: '#198754',
+          warning: '#ffc107',
+          'on-primary': '#ffffff',
+          'on-secondary': '#ffffff',
+          'on-surface': '#212529',
+          'on-background': '#212529'
         }
       },
       dark: {
@@ -38,10 +42,14 @@ export default createVuetify({
           'secondary-darken-1': '#212529',
           background: '#121212',
           surface: '#212121',
-          error: '#CF6679',
-          info: '#2196F3',
-          success: '#4CAF50',
-          warning: '#FB8C00'
+          error: '#dc3545',
+          info: '#0dcaf0',
+          success: '#198754',
+          warning: '#ffc107',
+          'on-primary': '#ffffff',
+          'on-secondary': '#ffffff',
+          'on-surface': '#ffffff',
+          'on-background': '#ffffff'
         }
       }
     }

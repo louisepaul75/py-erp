@@ -8,28 +8,37 @@
       <div class="component-group">
         <div class="component-item">
           <h3>Primary Button</h3>
-          <v-btn color="primary">Primary Button</v-btn>
-          <code>v-btn color="primary"</code>
+          <app-button color="primary">Primary Button</app-button>
+          <code>app-button color="primary"</code>
         </div>
         <div class="component-item">
           <h3>Secondary Button</h3>
-          <v-btn color="secondary">Secondary Button</v-btn>
-          <code>v-btn color="secondary"</code>
+          <app-button color="secondary">Secondary Button</app-button>
+          <code>app-button color="secondary"</code>
         </div>
         <div class="component-item">
           <h3>Outlined Button</h3>
-          <v-btn variant="outlined" color="primary">Outlined Button</v-btn>
-          <code>v-btn variant="outlined" color="primary"</code>
+          <app-button variant="outlined" color="primary">Outlined Button</app-button>
+          <code>app-button variant="outlined" color="primary"</code>
         </div>
         <div class="component-item">
           <h3>Text Button</h3>
-          <v-btn variant="text" color="primary">Text Button</v-btn>
-          <code>v-btn variant="text" color="primary"</code>
+          <app-button variant="text" color="primary">Text Button</app-button>
+          <code>app-button variant="text" color="primary"</code>
         </div>
         <div class="component-item">
           <h3>Icon Button</h3>
-          <v-btn icon="mdi-plus" color="primary"></v-btn>
-          <code>v-btn icon="mdi-plus" color="primary"</code>
+          <app-button icon="mdi-plus" color="primary"></app-button>
+          <code>app-button icon="mdi-plus" color="primary"</code>
+        </div>
+        <div class="component-item">
+          <h3>Button with Icons</h3>
+          <div class="d-flex gap-4">
+            <app-button prepend-icon="mdi-download">Download</app-button>
+            <app-button append-icon="mdi-arrow-right">Next</app-button>
+            <app-button icon="mdi-refresh"></app-button>
+          </div>
+          <code>app-button prepend-icon="mdi-[icon-name]" or append-icon="mdi-[icon-name]"</code>
         </div>
       </div>
     </div>
@@ -40,42 +49,33 @@
         <div class="component-item">
           <h3>Basic Icons</h3>
           <div class="d-flex gap-4">
-            <v-icon icon="mdi-home"></v-icon>
-            <v-icon icon="mdi-account"></v-icon>
-            <v-icon icon="mdi-cog"></v-icon>
-            <v-icon icon="mdi-bell"></v-icon>
+            <app-icon icon="mdi-home"></app-icon>
+            <app-icon icon="mdi-account"></app-icon>
+            <app-icon icon="mdi-cog"></app-icon>
+            <app-icon icon="mdi-bell"></app-icon>
           </div>
-          <code>v-icon icon="mdi-[icon-name]"</code>
+          <code>app-icon icon="mdi-[icon-name]"</code>
         </div>
         <div class="component-item">
           <h3>Colored Icons</h3>
           <div class="d-flex gap-4">
-            <v-icon color="primary" icon="mdi-check-circle"></v-icon>
-            <v-icon color="error" icon="mdi-alert-circle"></v-icon>
-            <v-icon color="warning" icon="mdi-alert"></v-icon>
-            <v-icon color="success" icon="mdi-check"></v-icon>
+            <app-icon color="primary" icon="mdi-check-circle"></app-icon>
+            <app-icon color="error" icon="mdi-alert-circle"></app-icon>
+            <app-icon color="warning" icon="mdi-alert"></app-icon>
+            <app-icon color="success" icon="mdi-check"></app-icon>
           </div>
-          <code>v-icon color="[color]" icon="mdi-[icon-name]"</code>
+          <code>app-icon color="[color]" icon="mdi-[icon-name]"</code>
         </div>
         <div class="component-item">
           <h3>Icon Sizes</h3>
           <div class="d-flex align-center gap-4">
-            <v-icon size="x-small" icon="mdi-star"></v-icon>
-            <v-icon size="small" icon="mdi-star"></v-icon>
-            <v-icon icon="mdi-star"></v-icon>
-            <v-icon size="large" icon="mdi-star"></v-icon>
-            <v-icon size="x-large" icon="mdi-star"></v-icon>
+            <app-icon size="x-small" icon="mdi-star"></app-icon>
+            <app-icon size="small" icon="mdi-star"></app-icon>
+            <app-icon icon="mdi-star"></app-icon>
+            <app-icon size="large" icon="mdi-star"></app-icon>
+            <app-icon size="x-large" icon="mdi-star"></app-icon>
           </div>
-          <code>v-icon size="[x-small|small|default|large|x-large]"</code>
-        </div>
-        <div class="component-item">
-          <h3>Button with Icons</h3>
-          <div class="d-flex gap-4">
-            <v-btn prepend-icon="mdi-download">Download</v-btn>
-            <v-btn append-icon="mdi-arrow-right">Next</v-btn>
-            <v-btn icon="mdi-refresh"></v-btn>
-          </div>
-          <code>v-btn prepend-icon="mdi-[icon-name]" or append-icon="mdi-[icon-name]"</code>
+          <code>app-icon size="[x-small|small|default|large|x-large]"</code>
         </div>
       </div>
     </div>
@@ -85,23 +85,23 @@
       <div class="component-group">
         <div class="component-item">
           <h3>Basic Input</h3>
-          <v-text-field label="Basic Input" placeholder="Enter text"></v-text-field>
-          <code>v-text-field label="Basic Input" placeholder="Enter text"</code>
+          <app-text-field label="Basic Input" placeholder="Enter text"></app-text-field>
+          <code>app-text-field label="Basic Input" placeholder="Enter text"</code>
         </div>
         <div class="component-item">
           <h3>With Icon</h3>
-          <v-text-field label="With Icon" prepend-icon="mdi-account"></v-text-field>
-          <code>v-text-field label="With Icon" prepend-icon="mdi-account"</code>
+          <app-text-field label="With Icon" prepend-icon="mdi-account"></app-text-field>
+          <code>app-text-field label="With Icon" prepend-icon="mdi-account"</code>
         </div>
         <div class="component-item">
           <h3>Required Field</h3>
-          <v-text-field label="Required Field" required></v-text-field>
-          <code>v-text-field label="Required Field" required</code>
+          <app-text-field label="Required Field" required></app-text-field>
+          <code>app-text-field label="Required Field" required</code>
         </div>
         <div class="component-item">
           <h3>Textarea</h3>
-          <v-textarea label="Textarea" rows="3"></v-textarea>
-          <code>v-textarea label="Textarea" rows="3"</code>
+          <app-textarea label="Textarea" rows="3"></app-textarea>
+          <code>app-textarea label="Textarea" rows="3"</code>
         </div>
       </div>
     </div>
@@ -185,6 +185,60 @@
             item-value="id"
           ></v-data-table>
           <code>v-data-table with sorting and selection</code>
+        </div>
+        
+        <div class="component-item wide">
+          <h3>Searchable Data Table (Small)</h3>
+          <app-data-table
+            :headers="tableHeaders"
+            :items="tableItems"
+            size="small"
+            searchable
+          ></app-data-table>
+          <code>app-data-table size="small" searchable</code>
+        </div>
+        
+        <div class="component-item wide">
+          <h3>Searchable Data Table (Default)</h3>
+          <app-data-table
+            :headers="tableHeaders"
+            :items="tableItems"
+            searchable
+          ></app-data-table>
+          <code>app-data-table searchable</code>
+        </div>
+        
+        <div class="component-item wide">
+          <h3>Searchable Data Table (Large)</h3>
+          <app-data-table
+            :headers="tableHeaders"
+            :items="tableItems"
+            size="large"
+            searchable
+          ></app-data-table>
+          <code>app-data-table size="large" searchable</code>
+        </div>
+        
+        <div class="component-item wide">
+          <h3>Filterable Data Table</h3>
+          <app-filter-table
+            :headers="filterTableHeaders"
+            :items="tableItems"
+          ></app-filter-table>
+          <code>app-filter-table with filterable headers</code>
+        </div>
+        
+        <div class="component-item wide">
+          <h3>Server-side Data Table</h3>
+          <app-server-table
+            :headers="tableHeaders"
+            :items="tableItems.slice(0, serverTableOptions.itemsPerPage)"
+            :total-items="tableItems.length"
+            :loading="serverTableLoading"
+            @update:options="handleServerTableOptions"
+            @search="handleServerTableSearch"
+          ></app-server-table>
+          <code>app-server-table with server-side pagination, sorting, and search</code>
         </div>
       </div>
     </div>
@@ -430,7 +484,7 @@
         <div class="example-item">
           <h4>Component Examples</h4>
           <div class="d-flex flex-column gap-2">
-            <v-btn color="primary">Primary Button</v-btn>
+            <app-button color="primary">Primary Button</app-button>
             <v-chip color="success">Success Chip</v-chip>
             <v-alert color="warning" variant="tonal" class="mt-2">Warning Alert</v-alert>
             <code>color="[color]"</code>
@@ -444,6 +498,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { Chart, registerables } from 'chart.js';
+import { 
+  AppButton, 
+  AppDataTable, 
+  AppFilterTable, 
+  AppServerTable,
+  AppIcon,
+  AppTextField,
+  AppTextarea
+} from '@/components/ui';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -455,6 +518,24 @@ const tableHeaders = [
   { title: 'Email', key: 'email' },
   { title: 'Status', key: 'status' },
   { title: 'Date', key: 'date' }
+];
+
+// Enhanced headers with filter options
+const filterTableHeaders = [
+  { title: 'ID', key: 'id', filterable: false },
+  { title: 'Name', key: 'name', filterType: 'text' },
+  { 
+    title: 'Status', 
+    key: 'status', 
+    filterType: 'select',
+    filterOptions: [
+      { title: 'Active', value: 'Active' },
+      { title: 'Pending', value: 'Pending' },
+      { title: 'Inactive', value: 'Inactive' }
+    ]
+  },
+  { title: 'Email', key: 'email', filterType: 'text' },
+  { title: 'Date', key: 'date', filterType: 'date' }
 ];
 
 const tableItems = [
@@ -469,8 +550,44 @@ const tableItems = [
     status: 'Active',
     date: '2023-02-28'
   },
-  { id: 6, name: 'Diana Miller', email: 'diana@example.com', status: 'Pending', date: '2023-03-12' }
+  { id: 6, name: 'Diana Miller', email: 'diana@example.com', status: 'Pending', date: '2023-03-12' },
+  { id: 7, name: 'Edward Davis', email: 'edward@example.com', status: 'Active', date: '2023-01-25' },
+  { id: 8, name: 'Fiona Clark', email: 'fiona@example.com', status: 'Inactive', date: '2023-02-05' },
+  { id: 9, name: 'George White', email: 'george@example.com', status: 'Pending', date: '2023-03-18' },
+  { id: 10, name: 'Hannah Green', email: 'hannah@example.com', status: 'Active', date: '2023-01-30' },
+  { id: 11, name: 'Ian Black', email: 'ian@example.com', status: 'Active', date: '2023-02-12' },
+  { id: 12, name: 'Julia Reed', email: 'julia@example.com', status: 'Inactive', date: '2023-03-22' }
 ];
+
+// Server table options
+const serverTableOptions = ref({
+  page: 1,
+  itemsPerPage: 5,
+  sortBy: []
+});
+const serverTableLoading = ref(false);
+const serverTableSearch = ref('');
+
+// Handle server table options change
+function handleServerTableOptions(options) {
+  serverTableOptions.value = options;
+  simulateServerRequest();
+}
+
+// Handle server table search
+function handleServerTableSearch(query) {
+  serverTableSearch.value = query;
+  serverTableOptions.value.page = 1; // Reset to first page on new search
+  simulateServerRequest();
+}
+
+// Simulate server request with loading state
+function simulateServerRequest() {
+  serverTableLoading.value = true;
+  setTimeout(() => {
+    serverTableLoading.value = false;
+  }, 500);
+}
 
 // Sample data for charts
 const salesData = {
@@ -618,146 +735,127 @@ onMounted(() => {
 
 <style scoped>
 .components-page {
-  padding: 20px;
+  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  background-color: #ffffff;
+}
+
+h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  color: var(--v-primary-base);
+  font-weight: 500;
 }
 
 .subtitle {
-  color: #666;
-  font-size: 1.2rem;
-  margin-bottom: 2rem;
+  font-size: 1.1rem;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 32px;
 }
 
 .component-section {
-  margin-bottom: 3rem;
-  border: 1px solid #eee;
+  margin-bottom: 48px;
+  background-color: #ffffff;
   border-radius: 8px;
-  padding: 20px;
-  background-color: #fff;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.component-section h2 {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
-  margin-bottom: 20px;
+h2 {
+  font-size: 1.5rem;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  color: #333;
+  font-weight: 500;
 }
 
 .component-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.component-item {
-  flex: 1 1 300px;
-  padding: 15px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.component-item.wide {
-  flex: 1 1 600px;
-}
-
-.component-item h3 {
-  margin-bottom: 10px;
-  font-size: 1rem;
-}
-
-.component-item code {
-  margin-top: 10px;
-  display: block;
-  padding: 8px;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #333;
-}
-
-.color-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
-  margin-bottom: 24px;
 }
 
-.color-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid #eee;
+.component-item {
+  background: #fff;
+  padding: 24px;
   border-radius: 8px;
-  background-color: white;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.component-item h3 {
+  font-size: 1rem;
+  margin-bottom: 16px;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.component-item code {
+  display: block;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 12px;
+  border-radius: 4px;
+  font-family: monospace;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: #333;
+  word-break: break-all;
+}
+
+.d-flex {
+  display: flex;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.align-center {
+  align-items: center;
+}
+
+/* Button specific styles */
+:deep(.app-button) {
+  margin: 4px;
+}
+
+:deep(.v-btn) {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+:deep(.v-btn__content) {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+:deep(.v-icon) {
+  font-size: 20px;
 }
 
 .color-swatch {
-  width: 80px;
+  width: 100%;
   height: 80px;
-  border-radius: 8px;
-  flex-shrink: 0;
+  border-radius: 4px;
+  margin-bottom: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.color-item.primary .color-swatch {
-  background-color: rgb(210, 188, 155); /* #d2bc9b */
-}
-
-.color-item.secondary .color-swatch {
-  background-color: rgb(52, 58, 64); /* #343a40 */
-}
-
-.color-item.success .color-swatch {
-  background-color: rgb(76, 175, 80); /* #4CAF50 */
-}
-
-.color-item.info .color-swatch {
-  background-color: rgb(33, 150, 243); /* #2196F3 */
-}
-
-.color-item.warning .color-swatch {
-  background-color: rgb(251, 140, 0); /* #FB8C00 */
-}
-
-.color-item.error .color-swatch {
-  background-color: rgb(176, 0, 32); /* #B00020 */
-}
-
-.color-item.bg-surface .color-swatch {
-  background-color: rgb(255, 255, 255); /* #ffffff */
-  border: 1px solid #eee;
-}
-
-.color-item.bg-background .color-swatch {
-  background-color: rgb(248, 249, 250); /* #f8f9fa */
-  border: 1px solid #eee;
-}
-
 .color-info {
-  flex: 1;
-}
-
-.color-info h3 {
-  margin-bottom: 8px;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .color-usage {
-  font-size: 0.875rem;
-  color: #666;
-  margin-top: 8px;
-  line-height: 1.4;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .subsection-title {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.2rem;
+  margin-top: 24px;
   margin-bottom: 16px;
-  color: #333;
 }
 
 .section-description {
@@ -769,19 +867,36 @@ onMounted(() => {
 
 .example-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
 }
 
 .example-item {
-  padding: 16px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  background-color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.example-item h4 {
-  margin-bottom: 16px;
-  font-weight: 600;
+/* Table component styles */
+:deep(.v-data-table) {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+:deep(.app-data-table),
+:deep(.app-filter-table),
+:deep(.app-server-table) {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+:deep(.v-text-field .v-field__outline),
+:deep(.v-textarea .v-field__outline) {
+  --v-field-border-width: 1px;
+}
+
+.component-item.wide {
+  margin-bottom: 32px;
 }
 </style>
