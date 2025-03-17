@@ -55,14 +55,14 @@ echo -e "- Elasticsearch: http://localhost:9200"
 echo -e "- Kibana: http://localhost:5601"
 echo -e "- Sentry: Integrated with Django application"
 
-# Frage den Benutzer, ob das Remote-Monitoring eingerichtet werden soll
+# Ask the user if they want to set up remote monitoring
 echo ""
-read -p "Möchten Sie das Monitoring-System auf dem Remote-Server (192.168.73.65) einrichten? (j/n): " setup_remote
+read -p "Would you like to set up the monitoring system on the remote server (192.168.73.65)? (y/n): " setup_remote
 
 if [[ $setup_remote == "j" || $setup_remote == "J" || $setup_remote == "y" || $setup_remote == "Y" ]]; then
-    # Führe das setup_monitoring_complete.sh Skript aus
-    echo "Starte Remote-Monitoring-Setup..."
+    # Run the setup_monitoring_complete.sh script
+    echo "Starting remote monitoring setup..."
     bash ./setup_monitoring_complete.sh
 else
-    echo "Remote-Monitoring-Setup übersprungen."
+    echo "Remote monitoring setup skipped."
 fi
