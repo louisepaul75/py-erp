@@ -1,121 +1,133 @@
-name: products_sync
-description: Synchronize all products (parents and variants) from legacy system
+---
+# Products Sync Configuration
 
-source:
-  type: api
-  extractor_class: pyerp.sync.extractors.legacy_api.LegacyAPIExtractor
-  environment: live
-  table_name: Artikel_Familie
-  page_size: 1000
-  all_records: true
-
-transformation:
-  transformer_class: pyerp.sync.transformers.product.ProductTransformer
-  field_mappings:
-    __KEY: legacy_id
-    Nummer: sku
-    Bezeichnung: name
-    Bezeichnung_ENG: name_en
-    Beschreibung: description
-    Beschreibung_ENG: description_en
-    Beschreibung_kurz: short_description
-    Beschreibung_kurz_ENG: short_description_en
-    Gewicht: weight
-    ArtGr: category_code
-    Haengend: is_hanging
-    Einseitig: is_one_sided
-    Release_date: release_date
-    Neu: is_new
-  custom_transformers:
-    - transform_dimensions
-    - transform_boolean_flags
-  validation_rules:
-    - field: sku
-      validator: validate_sku_format
-      error_message: Invalid SKU format
-    - field: name
-      validator: validate_not_empty
-      error_message: Name cannot be empty
-    - field: weight
-      validator: validate_non_negative
-      error_message: Weight must be non-negative
-
-target:
-  loader_class: pyerp.sync.loaders.django_model.DjangoModelLoader
-  app_name: products
-  model_name: ParentProduct
-  unique_field: sku
-  conflict_strategy: newest_wins
-
-scheduling:
-  frequency: daily
-  time: '02:00'
-  dependencies:
-    - category_sync
-
-incremental:
-  enabled: true
-  timestamp_field: modified_date
-  timestamp_filter_format: "'modified_date > '{value}'"
-  full_sync_fallback: true
-
-# Variant products configuration
-variants:
+# Parent products sync
+parent_products:
+  name: "products_sync"
+  description: "Synchronize all products (parents and variants) from legacy system"
   source:
     type: api
     extractor_class: pyerp.sync.extractors.legacy_api.LegacyAPIExtractor
-    environment: live
-    table_name: Artikel_Variante
-    filters:
-      active: true
-    page_size: 1000
-    all_records: true
+    config:
+      environment: live
+      table_name: Artikel_Familie
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: pyerp.sync.transformers.product.ProductTransformer
+    config:
+      field_mappings:
+        __KEY: legacy_id
+        Nummer: sku
+        Bezeichnung: name
+        Bezeichnung_ENG: name_en
+        Beschreibung: description
+        Beschreibung_ENG: description_en
+        Beschreibung_kurz: short_description
+        Beschreibung_kurz_ENG: short_description_en
+        Gewicht: weight
+        ArtGr: category_code
+        Haengend: is_hanging
+        Einseitig: is_one_sided
+        Release_date: release_date
+        Neu: is_new
+      custom_transformers:
+        - transform_dimensions
+        - transform_boolean_flags
+      validation_rules:
+        - field: sku
+          validator: validate_sku_format
+          error_message: Invalid SKU format
+        - field: name
+          validator: validate_not_empty
+          error_message: Name cannot be empty
+        - field: weight
+          validator: validate_non_negative
+          error_message: Weight must be non-negative
+  loader:
+    type: "django_model"
+    class: pyerp.sync.loaders.django_model.DjangoModelLoader
+    config:
+      app_name: products
+      model_name: ParentProduct
+      unique_field: sku
+      update_strategy: newest_wins
+  schedule:
+    frequency: daily
+    time: '02:00'
+    dependencies:
+      - category_sync
+  incremental:
+    enabled: true
+    timestamp_field: modified_date
+    timestamp_filter_format: "'modified_date > '{value}'"
+    full_sync_fallback: true
 
-  transformation:
-    transformer_class: pyerp.sync.transformers.product.ProductTransformer
-    field_mappings:
-      __KEY: legacy_id
-      Nummer: sku
-      alteNummer: legacy_sku
-      Bezeichnung: name
-      Bezeichnung_ENG: name_en
-      Beschreibung: description
-      Beschreibung_ENG: description_en
-      Beschreibung_kurz: short_description
-      Beschreibung_kurz_ENG: short_description_en
-      Gewicht: weight
-      Familie_: legacy_parent_id
-      ArtikelArt: variant_code
-      Farbe: color
-      Groesse: size
-      Verkaufsartikel: is_sales_article
-      Release_date: release_date
-      Auslaufdatum: discontinuation_date
-    custom_transformers:
-      - transform_dimensions
-      - transform_boolean_flags
-      - transform_parent_relationship
-      - transform_prices
-    validation_rules:
-      - field: sku
-        validator: validate_sku_format
-        error_message: Invalid SKU format
-      - field: name
-        validator: validate_not_empty
-        error_message: Name cannot be empty
-      - field: weight
-        validator: validate_non_negative
-        error_message: Weight must be non-negative
-
-  target:
-    loader_class: pyerp.sync.loaders.django_model.DjangoModelLoader
-    app_name: products
-    model_name: VariantProduct
-    unique_field: sku
-    conflict_strategy: newest_wins
-
+# Variant products configuration
+variants:
+  name: "Product Variants Sync"
+  description: "Synchronize product variants from legacy system"
+  source:
+    type: api
+    extractor_class: pyerp.sync.extractors.legacy_api.LegacyAPIExtractor
+    config:
+      environment: live
+      table_name: Artikel_Variante
+      filters:
+        active: true
+      page_size: 1000
+      all_records: true
+  transformer:
+    type: "custom"
+    class: pyerp.sync.transformers.product.ProductTransformer
+    config:
+      field_mappings:
+        __KEY: legacy_id
+        Nummer: sku
+        alteNummer: legacy_sku
+        refOld: refOld
+        Bezeichnung: name
+        Bezeichnung_ENG: name_en
+        Beschreibung: description
+        Beschreibung_ENG: description_en
+        Beschreibung_kurz: short_description
+        Beschreibung_kurz_ENG: short_description_en
+        Gewicht: weight
+        Familie_: legacy_parent_id
+        ArtikelArt: variant_code
+        Farbe: color
+        Groesse: size
+        Verkaufsartikel: is_sales_article
+        Release_date: release_date
+        Auslaufdatum: discontinuation_date
+      custom_transformers:
+        - transform_dimensions
+        - transform_boolean_flags
+        - transform_parent_relationship
+        - transform_prices
+      validation_rules:
+        - field: sku
+          validator: validate_sku_format
+          error_message: Invalid SKU format
+        - field: name
+          validator: validate_not_empty
+          error_message: Name cannot be empty
+        - field: weight
+          validator: validate_non_negative
+          error_message: Weight must be non-negative
+  loader:
+    type: "django_model"
+    class: pyerp.sync.loaders.django_model.DjangoModelLoader
+    config:
+      app_name: products
+      model_name: VariantProduct
+      unique_field: sku
+      update_strategy: newest_wins
   incremental:
     enabled: true
     timestamp_field: modified_date
     timestamp_filter_format: "filter='{timestamp_field} gt \"{value}\"'"
-    full_sync_fallback: true 
+    full_sync_fallback: true
+  dependencies:
+    - "parent_products" 

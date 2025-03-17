@@ -6,5 +6,19 @@ and structures during synchronization.
 """
 
 from .product import ProductTransformer
+from .inventory import (
+    StammLagerorteTransformer,
+    BoxTransformer,
+    BoxSlotTransformer,
+    ProductInventoryTransformer,
+)
+from .sales_record import SalesRecordTransformer
 
-__all__ = ['ProductTransformer'] 
+__all__ = [
+    'ProductTransformer',
+    'StammLagerorteTransformer',
+    'BoxTransformer',
+    'BoxSlotTransformer',
+    'ProductInventoryTransformer',
+    'SalesRecordTransformer',
+] 

@@ -116,12 +116,21 @@ export default defineConfig(({ mode }) => {
             });
             proxy.on('proxyReq', (proxyReq, req, _res) => {
               console.log('Sending Request:', req.method, req.url);
+              // Add CORS headers
+              proxyReq.setHeader('Origin', 'http://localhost:5173');
+              if (req.headers.cookie) {
+                proxyReq.setHeader('Cookie', req.headers.cookie);
+              }
             });
             proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log('Received Response:', proxyRes.statusCode, req.url);
             });
           }
         }
+      },
+      cors: {
+        origin: true,
+        credentials: true
       }
     }
   };

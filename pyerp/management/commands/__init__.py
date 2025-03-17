@@ -1,3 +1,3 @@
 """
-Management commands for pyERP.
+Django management commands for pyERP.
 """

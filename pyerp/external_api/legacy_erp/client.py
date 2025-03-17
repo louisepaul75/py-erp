@@ -82,7 +82,7 @@ class LegacyERPClient(BaseAPIClient):
                 though the API server may still apply a default limit, 
                 typically 100 records)
             skip: Number of records to skip (for pagination)
-            filter_query: OData filter query string
+            filter_query: [['field', 'operator', 'value']]
             all_records: Whether to fetch all records (may take a long time)
             new_data_only: If True, only fetch new records
             date_created_start: Start date for filtering by creation date
@@ -112,20 +112,30 @@ class LegacyERPClient(BaseAPIClient):
 
 
 if __name__ == "__main__":
-    from datetime import datetime as dt
-
     pd.set_option('display.max_columns', None)
+    # pd.set_option('display.max_rows', 10)
+    # pd.set_option('display.width', 1000)
 
     client = LegacyERPClient(environment="live")
 
-    # Filter query for records modified after March 11, 2025
-    filter_query = [
-        # ["modified_date", ">", dt(2025, 1, 10)],
-    ]
-    print(filter_query)
-    # Fetch records from the "Kunden" table
-    df = client.fetch_table(
-        table_name="Kunden", top=15000, filter_query=filter_query
+
+    filter_query = [['created_date', '>=', '2025-03-01']]
+
+    belege = client.fetch_table(
+        table_name="Belege",
+        # skip = 10000,
+        top=100,
+        filter_query=filter_query
+    )
+    print(belege.tail())
+    absnr = str(list(belege['AbsNr'].unique().astype(str)))
+    print(absnr)
+    belege_pos = client.fetch_table(
+        table_name="Belege_Pos",
+        filter_query=[['AbsNr', 'in', absnr]]
     )
 
-    print(df)
+    print(belege.tail())
+    print(belege_pos.tail())
+    # breakpoint()
+

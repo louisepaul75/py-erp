@@ -590,6 +590,8 @@ class BaseAPIClient:
             'MODIFICATIONDATE',
             'UStID_Dat',
             'letzteLieferung',
+            'Druckdatum',
+            'Release_Date'
 
         }
         
@@ -630,7 +632,7 @@ class BaseAPIClient:
                 though the API server may still apply a default limit, 
                 typically 100 records)
             skip: Number of records to skip
-            filter_query: Optional OData filter query
+            filter_query: [['field', 'operator', 'value']]
             all_records: Whether to fetch all records (may take a long time)
             new_data_only: Only fetch records newer than last sync
             date_created_start: Optional start date for filtering
@@ -661,6 +663,8 @@ class BaseAPIClient:
                 params["$top"] = top
             
             if filter_query:
+                print(f"filter_query: {filter_query}")
+                
                 # Check if filter_query is already a list format
                 if isinstance(filter_query, list):
                     filter_parts = []
@@ -677,14 +681,16 @@ class BaseAPIClient:
                             field = filter_item[0]
                             operator = filter_item[1]
                             value = filter_item[2]
-                            
+
+                            print(field, operator, value)
+                            # breakpoint()
                             # Format date values if needed
                             if hasattr(value, 'strftime'):
                                 value = value.strftime("%Y-%m-%d")
                                 
 
                             
-                            filter_parts.append(f"{field} {operator} {value}")
+                            filter_parts.append(f"'{field} {operator} {value}'")
                         except Exception as e:
                             error_msg = f"Error processing filter item {filter_item}: {str(e)}"
                             logger.error(error_msg)
@@ -702,7 +708,6 @@ class BaseAPIClient:
                 # params["$filter"] = '"' + params["$filter"] + '"'
             
 
-            
 
             # Make the request
             response = self._make_request(
@@ -711,6 +716,7 @@ class BaseAPIClient:
                 params=params,
                 timeout=self.timeout,
             )
+
             
             if response.status_code != 200:
                 error_msg = (
@@ -742,7 +748,7 @@ class BaseAPIClient:
                 self._transform_dates_in_record(record)
                 for record in records
             ]
-            
+
             return pd.DataFrame(records)
             
         except Exception as e:

@@ -49,7 +49,7 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="live"):
         ).strftime("%Y-%m-%d")
         
         # Construct the filter query with the entire expression in quotes
-        filter_query = f"'modified_date > \'{date_threshold}\''"
+        filter_query = [['modified_date', '>', date_threshold]]
         logger.info(f"Using date filter: {filter_query}")
         
         # Fetch a sample without filter to verify connection

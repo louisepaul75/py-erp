@@ -35,7 +35,10 @@ class DjangoModelLoader(BaseLoader):
             ValueError: If model cannot be found
         """
         try:
-            return apps.get_model(self.config["app_name"], self.config["model_name"])
+            return apps.get_model(
+                self.config["app_name"],
+                self.config["model_name"]
+            )
         except Exception as e:
             raise ValueError(
                 f"Failed to get model {self.config['app_name']}."
@@ -59,7 +62,9 @@ class DjangoModelLoader(BaseLoader):
         # Get unique field from config
         unique_field = self.config["unique_field"]
         if unique_field not in record:
-            raise ValueError(f"Record missing unique field: {unique_field}")
+            raise ValueError(
+                f"Record missing unique field: {unique_field}"
+            )
 
         # Create lookup criteria
         lookup_criteria = {unique_field: record[unique_field]}
@@ -67,12 +72,21 @@ class DjangoModelLoader(BaseLoader):
         # Prepare record data
         prepared_record = record.copy()
 
-        # Remove any fields that don't exist on the model
+        # Remove any fields that don't exist on the model or are auto-managed
         model_class = self._get_model_class()
         model_fields = {f.name: f for f in model_class._meta.get_fields()}
 
         for field in list(prepared_record.keys()):
+            # Skip if field doesn't exist or is auto-managed
             if field not in model_fields:
+                prepared_record.pop(field)
+                continue
+                
+            field_obj = model_fields[field]
+            is_pk = getattr(field_obj, 'primary_key', False)  # Primary key
+            is_auto = getattr(field_obj, 'auto_created', False)  # Auto-created
+            
+            if is_pk or is_auto:
                 prepared_record.pop(field)
 
         return lookup_criteria, prepared_record
@@ -82,6 +96,7 @@ class DjangoModelLoader(BaseLoader):
         lookup_criteria: Dict[str, Any],
         record: Dict[str, Any],
         update_existing: bool = True,
+        create_new: bool = True,
     ) -> Optional[Model]:
         """Load a single record into Django model.
 
@@ -89,6 +104,7 @@ class DjangoModelLoader(BaseLoader):
             lookup_criteria: Criteria to find existing record
             record: Record data to load
             update_existing: Whether to update existing records
+            create_new: Whether to create new records
 
         Returns:
             Created or updated model instance, or None if skipped
@@ -102,7 +118,9 @@ class DjangoModelLoader(BaseLoader):
         try:
             with transaction.atomic():
                 # Check for existing record
-                instance = model_class.objects.filter(**lookup_criteria).first()
+                instance = model_class.objects.filter(
+                    **lookup_criteria
+                ).first()
 
                 if instance:
                     if not update_existing:
@@ -112,8 +130,36 @@ class DjangoModelLoader(BaseLoader):
                     for field, value in record.items():
                         setattr(instance, field, value)
                 else:
-                    # Create new instance
-                    instance = model_class(**record)
+                    if not create_new:
+                        return None
+
+                    # Create new instance - exclude auto-managed fields
+                    model_fields = {
+                        f.name: f for f in model_class._meta.get_fields()
+                    }
+                    filtered_record = {}
+                    for field, value in record.items():
+                        # Explicitly exclude 'id' field
+                        if field == 'id':
+                            continue
+                            
+                        if field not in model_fields:
+                            continue
+                            
+                        field_obj = model_fields[field]
+                        is_pk = getattr(field_obj, 'primary_key', False)
+                        is_auto = getattr(field_obj, 'auto_created', False)
+                        
+                        if not (is_pk or is_auto):
+                            filtered_record[field] = value
+                    
+                    # Log the filtered record for debugging
+                    logger.debug(
+                        f"Creating new {model_class.__name__} "
+                        f"with data: {filtered_record}"
+                    )
+                            
+                    instance = model_class(**filtered_record)
 
                 # Validate and save
                 try:
@@ -140,10 +186,28 @@ class DjangoModelLoader(BaseLoader):
         Args:
             records: List of records to load
             update_existing: Whether to update existing records
+                (ignored if update_strategy is set)
 
         Returns:
             LoadResult containing operation statistics
         """
+        # Check update_strategy from config
+        update_strategy = self.config.get(
+            "update_strategy", "update_or_create"
+        )
+        if update_strategy == "update":
+            # Only update existing records, don't create new ones
+            update_existing = True
+            create_new = False
+        elif update_strategy == "create":
+            # Only create new records, don't update existing ones
+            update_existing = False
+            create_new = True
+        else:  # "update_or_create" (default)
+            # Update existing records and create new ones
+            update_existing = True
+            create_new = True
+
         result = LoadResult()
         if not records:
             return result
@@ -166,9 +230,14 @@ class DjangoModelLoader(BaseLoader):
                 record_map[unique_value] = record
             except Exception as e:
                 result.add_error(
-                    record=record, error=e, context={"stage": "preparation"}
+                    record=record,
+                    error=e,
+                    context={"stage": "preparation"}
                 )
-                logger.error(f"Error preparing record: {e}", extra={"record": record})
+                logger.error(
+                    f"Error preparing record: {e}",
+                    extra={"record": record}
+                )
 
         if not prepared_records:
             return result
@@ -184,83 +253,33 @@ class DjangoModelLoader(BaseLoader):
             # Fall back to individual processing if bulk fetch fails
             return super().load(records, update_existing)
 
-        # Step 3: Prefilter records into create and update lists
-        records_to_create = []
-        records_to_update = []
-
+        # Step 3: Process each record individually
         for unique_value, prepared_record in prepared_records:
-            if unique_value in existing_records:
-                if update_existing:
-                    records_to_update.append((unique_value, prepared_record))
-                else:
+            try:
+                lookup_dict = {unique_field: unique_value}
+                instance = self.load_record(
+                    lookup_dict,
+                    prepared_record,
+                    update_existing=update_existing,
+                    create_new=create_new
+                )
+                
+                if instance is None:
                     result.skipped += 1
-            else:
-                records_to_create.append((unique_value, prepared_record))
-
-        logger.info(
-            f"Records to create: {len(records_to_create)}, Records to update: {len(records_to_update)}"
-        )
-
-        # Step 4: Process records to create
-        for unique_value, prepared_record in records_to_create:
-            try:
-                with transaction.atomic():
-                    # Double-check that the record doesn't exist
-                    # This prevents race conditions and issues with prefiltering
-                    lookup_dict = {unique_field: unique_value}
-                    if model_class.objects.filter(**lookup_dict).exists():
-                        logger.warning(
-                            f"Record with {unique_field}={unique_value} already exists, "
-                            f"skipping creation attempt"
-                        )
-                        result.skipped += 1
-                        continue
-
-                    # Create new instance
-                    instance = model_class(**prepared_record)
-
-                    # Validate and save
-                    try:
-                        instance.full_clean()
-                    except DjangoValidationError as e:
-                        raise ValueError(f"Validation failed: {e}") from e
-
-                    instance.save()
+                elif instance._state.adding:
                     result.created += 1
-            except Exception as e:
-                original_record = record_map.get(unique_value, prepared_record)
-                result.add_error(
-                    record=original_record, error=e, context={"stage": "creation"}
-                )
-                logger.error(
-                    f"Error creating record: {e}", extra={"record": prepared_record}
-                )
-
-        # Step 5: Process records to update
-        for unique_value, prepared_record in records_to_update:
-            try:
-                with transaction.atomic():
-                    instance = existing_records[unique_value]
-
-                    # Update existing instance
-                    for field, value in prepared_record.items():
-                        setattr(instance, field, value)
-
-                    # Validate and save
-                    try:
-                        instance.full_clean()
-                    except DjangoValidationError as e:
-                        raise ValueError(f"Validation failed: {e}") from e
-
-                    instance.save()
+                else:
                     result.updated += 1
             except Exception as e:
                 original_record = record_map.get(unique_value, prepared_record)
                 result.add_error(
-                    record=original_record, error=e, context={"stage": "update"}
+                    record=original_record,
+                    error=e,
+                    context={"stage": "load"}
                 )
                 logger.error(
-                    f"Error updating record: {e}", extra={"record": prepared_record}
+                    f"Error loading record: {e}",
+                    extra={"record": prepared_record}
                 )
 
         return result
@@ -285,7 +304,10 @@ class DjangoModelLoader(BaseLoader):
         if strategy == "newest_wins":
             return new_data
         elif strategy == "keep_existing":
-            return {field: getattr(existing_record, field) for field in new_data.keys()}
+            return {
+                field: getattr(existing_record, field)
+                for field in new_data.keys()
+            }
         else:
             raise ValueError(f"Unknown conflict strategy: {strategy}")
 
@@ -309,7 +331,8 @@ class DjangoModelLoader(BaseLoader):
                 if isinstance(field, models.IntegerField):
                     if not isinstance(value, (int, type(None))):
                         raise ValueError(
-                            f"Field {field_name} expects int, " f"got {type(value)}"
+                            f"Field {field_name} expects int, "
+                            f"got {type(value)}"
                         )
                 elif isinstance(field, models.FloatField):
                     if not isinstance(value, (float, int, type(None))):
@@ -320,7 +343,8 @@ class DjangoModelLoader(BaseLoader):
                 elif isinstance(field, models.CharField):
                     if not isinstance(value, (str, type(None))):
                         raise ValueError(
-                            f"Field {field_name} expects string, " f"got {type(value)}"
+                            f"Field {field_name} expects string, "
+                            f"got {type(value)}"
                         )
 
             except models.FieldDoesNotExist:

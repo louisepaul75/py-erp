@@ -117,20 +117,6 @@ The WSZ_api package provides three main functionalities:
 
 ### Phase 3: Enhanced Filtering Capabilities
 
-1. **OData-Compatible Filtering**
-   - Implement support for OData-style filter expressions
-   - Support for equality, text search, numeric comparison, boolean, and date filters
-   - Support for combined filters with AND/OR operators
-   ```python
-   # Example filter expressions
-   filter_query = "Artikel_Nr = '115413'"  # Equality filter
-   filter_query = "Bezeichnung LIKE '%Test%'"  # Text search
-   filter_query = "Preis > 10"  # Numeric comparison
-   filter_query = "aktiv = true"  # Boolean filter
-   filter_query = "CREATIONDATE >= '2023-01-01'"  # Date filter
-   filter_query = "Preis > 5 AND aktiv = true"  # Combined filter
-   filter_query = "Artikel_Nr = '115413' OR Artikel_Nr = '115414'"  # OR filter
-   ```
 
 2. **Graceful Error Handling for Filters**
    - Implement automatic retry without filters when filter-related errors occur

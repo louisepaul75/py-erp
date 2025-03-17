@@ -94,9 +94,24 @@ class SyncPipeline:
                     'timestamp_filter_format',
                     "'modified_date > '{value}'"  # Default format
                 )
-                params['filter'] = filter_format.format(
-                    value=modified_since.strftime('%Y-%m-%d')
-                )
+                
+                # Handle both string and list formats for timestamp_filter_format
+                if isinstance(filter_format, str):
+                    params['filter'] = filter_format.format(
+                        value=modified_since.strftime('%Y-%m-%d')
+                    )
+                elif isinstance(filter_format, list):
+                    # Handle the list format by constructing a filter query
+                    # Assuming the format is [['field', 'operator', 'value_template']]
+                    filter_query = []
+                    for filter_item in filter_format:
+                        if len(filter_item) >= 3:
+                            field, operator, value_template = filter_item
+                            value = value_template.format(value=modified_since.strftime('%Y-%m-%d'))
+                            filter_query.append([field, operator, value])
+                    params['filter'] = filter_query
+                else:
+                    logger.warning(f"Unsupported timestamp_filter_format type: {type(filter_format)}")
             
             log_data_sync_event(
                 source=self.mapping.source.name,
@@ -326,10 +341,10 @@ class PipelineFactory:
         transformer_class: Optional[Type[BaseTransformer]] = None,
         loader_class: Optional[Type[BaseLoader]] = None,
     ) -> SyncPipeline:
-        """Create a pipeline from a mapping and optional component classes.
+        """Create a sync pipeline from a mapping configuration.
         
         Args:
-            mapping: The sync mapping configuration
+            mapping: SyncMapping instance with configuration
             extractor_class: Optional extractor class override
             transformer_class: Optional transformer class override
             loader_class: Optional loader class override
@@ -355,14 +370,12 @@ class PipelineFactory:
             )
             logger.info(f"Created extractor: {extractor.__class__.__name__}")
             
-            # Get transformer class from transformation section
-            transformer_config = mapping_config.get('transformation', {})
+            # Get transformer class from mapping config
             transformer = cls._create_component(
-                transformer_class or cls._import_class(transformer_config.get('transformer_class')),
-                transformer_config
+                transformer_class or cls._import_class(mapping_config.get('transformer_class')),
+                mapping_config
             )
             logger.info(f"Created transformer: {transformer.__class__.__name__}")
-            logger.info(f"Transformer config: {transformer.config}")
             
             loader = cls._create_component(
                 loader_class or cls._import_class(target_config.get('loader_class')),
