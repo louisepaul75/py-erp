@@ -1,6 +1,9 @@
 # Production dependencies
 -r requirements.prod.txt
 
+# API Documentation
+coreapi==2.3.3
+
 # Debugging
 django-debug-toolbar==4.3.0
 django-extensions==3.2.3

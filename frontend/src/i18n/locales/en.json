@@ -1,0 +1,16 @@
+{
+  "search": {
+    "placeholder": "Search...",
+    "noResults": "No results found for \"{query}\"",
+    "startTyping": "Start typing to search",
+    "searching": "Searching...",
+    "categories": {
+      "customers": "Customers",
+      "sales_records": "Sales Records",
+      "parent_products": "Parent Products",
+      "variant_products": "Variant Products",
+      "box_slots": "Box Slots",
+      "storage_locations": "Storage Locations"
+    }
+  }
+} 

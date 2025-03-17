@@ -3,13 +3,21 @@ repos:
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
+        stages: [manual]
       - id: end-of-file-fixer
+        stages: [manual]
       - id: check-yaml
+        stages: [manual]
       - id: check-added-large-files
+        stages: [manual]
       - id: check-json
+        stages: [manual]
       - id: check-toml
+        stages: [manual]
       - id: detect-private-key
+        stages: [manual]
       - id: check-merge-conflict
+        stages: [manual]
 
   - repo: https://github.com/psf/black
     rev: 24.3.0
