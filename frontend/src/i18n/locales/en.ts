@@ -198,5 +198,57 @@ export default {
       transport: 'Transport',
       workshop: 'Workshop'
     }
+  },
+  sales: {
+    records: {
+      title: 'Sales Records',
+      noRecords: 'No sales records found',
+      loading: 'Loading sales records...',
+      error: 'Error loading sales records',
+      headers: {
+        recordNumber: 'Record #',
+        date: 'Date',
+        type: 'Type',
+        customer: 'Customer',
+        total: 'Total',
+        paymentStatus: 'Payment Status',
+        actions: 'Actions'
+      },
+      types: {
+        INVOICE: 'Invoice',
+        PROPOSAL: 'Proposal',
+        DELIVERY_NOTE: 'Delivery Note',
+        CREDIT_NOTE: 'Credit Note',
+        ORDER_CONFIRMATION: 'Order Confirmation'
+      },
+      paymentStatus: {
+        PAID: 'Paid',
+        PENDING: 'Pending',
+        OVERDUE: 'Overdue',
+        CANCELLED: 'Cancelled'
+      },
+      itemsDialog: {
+        title: 'Record Items',
+        noItems: 'No items found for this record',
+        headers: {
+          position: 'Position',
+          description: 'Description',
+          quantity: 'Quantity',
+          unitPrice: 'Unit Price',
+          taxAmount: 'Tax Amount',
+          subtotal: 'Subtotal',
+          total: 'Total',
+          status: 'Status'
+        },
+        fulfillmentStatus: {
+          FULFILLED: 'Fulfilled',
+          PARTIAL: 'Partially Fulfilled',
+          PENDING: 'Pending',
+          CANCELLED: 'Cancelled'
+        },
+        close: 'Close'
+      },
+      viewDetails: 'View Details'
+    }
   }
 };

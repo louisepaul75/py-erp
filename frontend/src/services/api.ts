@@ -258,6 +258,21 @@ export const salesApi = {
     return api.delete(`/sales/orders/${id}/`);
   },
 
+  // Get all sales records with optional filters
+  getSalesRecords: async (params = {}) => {
+    return api.get('/sales/records/', { params });
+  },
+
+  // Get sales record details by ID
+  getSalesRecord: async (id: number) => {
+    return api.get(`/sales/records/${id}/`);
+  },
+
+  // Get items for a specific sales record
+  getSalesRecordItems: async (recordId: number, params = {}) => {
+    return api.get(`/sales/records/${recordId}/items/`, { params });
+  },
+
   // Get all customers
   getCustomers: async (params = {}) => {
     return api.get('/sales/customers/', { params });

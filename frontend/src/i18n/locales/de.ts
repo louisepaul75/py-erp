@@ -184,5 +184,71 @@ export default {
       transport: 'Transport',
       workshop: 'Werkstatt'
     }
+  },
+  search: {
+    placeholder: "Suchen...",
+    noResults: "Keine Ergebnisse gefunden für \"{query}\"",
+    startTyping: "Beginnen Sie mit der Eingabe",
+    searching: "Suche läuft...",
+    categories: {
+      customers: "Kunden",
+      sales_records: "Verkaufsbelege",
+      parent_products: "Hauptprodukte",
+      variant_products: "Produktvarianten",
+      box_slots: "Box-Slots",
+      storage_locations: "Lagerorte"
+    }
+  },
+  sales: {
+    records: {
+      title: "Verkaufsbelege",
+      noRecords: "Keine Verkaufsbelege gefunden",
+      loading: "Verkaufsbelege werden geladen...",
+      error: "Fehler beim Laden der Verkaufsbelege",
+      headers: {
+        recordNumber: "Beleg-Nr.",
+        date: "Datum",
+        type: "Typ",
+        customer: "Kunde",
+        total: "Gesamt",
+        paymentStatus: "Zahlungsstatus",
+        actions: "Aktionen"
+      },
+      types: {
+        INVOICE: "Rechnung",
+        PROPOSAL: "Angebot",
+        DELIVERY_NOTE: "Lieferschein",
+        CREDIT_NOTE: "Gutschrift",
+        ORDER_CONFIRMATION: "Auftragsbestätigung"
+      },
+      paymentStatus: {
+        PAID: "Bezahlt",
+        PENDING: "Ausstehend",
+        OVERDUE: "Überfällig",
+        CANCELLED: "Storniert"
+      },
+      itemsDialog: {
+        title: "Belegpositionen",
+        noItems: "Keine Positionen für diesen Beleg gefunden",
+        headers: {
+          position: "Position",
+          description: "Beschreibung",
+          quantity: "Menge",
+          unitPrice: "Einzelpreis",
+          taxAmount: "MwSt.",
+          subtotal: "Nettobetrag",
+          total: "Gesamtbetrag",
+          status: "Status"
+        },
+        fulfillmentStatus: {
+          FULFILLED: "Erfüllt",
+          PARTIAL: "Teilweise erfüllt",
+          PENDING: "Ausstehend",
+          CANCELLED: "Storniert"
+        },
+        close: "Schließen"
+      },
+      viewDetails: "Details anzeigen"
+    }
   }
 };
