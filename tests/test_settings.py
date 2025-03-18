@@ -6,9 +6,28 @@ from django.conf import settings
 
 # Configure Django settings before importing anything else
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.test")
+
+# Skip Celery and related apps for testing to avoid import issues
+if os.environ.get("SKIP_CELERY_IMPORT") == "1":
+    # First get the current list
+    from pyerp.config.settings.test import INSTALLED_APPS
+    
+    # Filter out celery-related apps
+    filtered_apps = [
+        app for app in INSTALLED_APPS 
+        if 'celery' not in app.lower() and 'kombu' not in app.lower()
+    ]
+    
+    # Set the filtered apps back
+    os.environ["DJANGO_FILTERED_INSTALLED_APPS"] = ",".join(filtered_apps)
+
+# Now setup Django
 django.setup()
 
-# Now we can safely import and configure Django settings
+# If we're skipping Celery, modify the installed apps
+if os.environ.get("SKIP_CELERY_IMPORT") == "1" and os.environ.get("DJANGO_FILTERED_INSTALLED_APPS"):
+    filtered_apps = os.environ.get("DJANGO_FILTERED_INSTALLED_APPS").split(",")
+    settings.INSTALLED_APPS = filtered_apps
 
 # REST Framework settings
 settings.REST_FRAMEWORK = {

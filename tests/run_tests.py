@@ -9,6 +9,7 @@ coverage reports.
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -49,49 +50,161 @@ def parse_args():
         action="store_true",
         help="Generate JSON report for test results",
     )
+    parser.add_argument(
+        "--skip-celery",
+        action="store_true",
+        help="Skip Celery imports to avoid circular import issues",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Show more detailed debug output",
+    )
     return parser.parse_args()
+
+
+def setup_env(skip_celery=False):
+    """Set up the test environment."""
+    # Configure Django settings before running tests
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.test")
+    
+    # Skip Celery import if needed (to avoid circular imports)
+    if skip_celery:
+        os.environ.setdefault("SKIP_CELERY_IMPORT", "1")
+        
+    # Set PYTEST_RUNNING flag
+    os.environ.setdefault("PYTEST_RUNNING", "1")
+    
+    # Add project root to Python path if needed
+    project_root = Path(__file__).parent.parent.absolute()
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
 
 
 def get_test_categories():
     """Return a list of test categories based on directory structure."""
-    test_dir = Path("tests")
-    categories = [
+    test_dir = Path("tests").absolute()
+    
+    # Get top-level categories
+    top_categories = [
         d.name
         for d in test_dir.iterdir()
-        if (d.is_dir() and not d.name.startswith((".", "__")))
+        if (d.is_dir() and not d.name.startswith((".", "__", "coverage", "htmlcov", "logs", ".pytest_cache")))
     ]
-    return sorted(categories)
+    
+    # Also check for subcategories in unit tests
+    subcategories = []
+    if "unit" in top_categories:
+        unit_dir = test_dir / "unit"
+        for d in unit_dir.iterdir():
+            if d.is_dir() and not d.name.startswith((".", "__")):
+                subcategories.append(f"unit/{d.name}")
+    
+    return sorted(top_categories + subcategories)
+
+
+def print_test_files(category_path):
+    """List all python test files in the given path."""
+    path = Path(category_path)
+    test_files = []
+    
+    if path.is_dir():
+        for file in path.glob("**/*.py"):
+            if file.name.startswith("test_") or file.name.endswith("_test.py"):
+                test_files.append(str(file))
+    
+    return test_files
+
+
+def run_direct_pytest(category_path, args):
+    """Run pytest directly to test a specific path."""
+    # Build command
+    cmd = [sys.executable, "-m", "pytest"]
+    
+    # Add test path
+    cmd.append(category_path)
+    
+    # Add verbosity
+    cmd.append("-v")
+    
+    # Add Django settings
+    cmd.append("--ds=pyerp.config.settings.test")
+    
+    # Add coverage options if requested
+    if args.coverage:
+        cmd.extend(["--cov=pyerp", "--cov-report=term"])
+    
+    print(f"Running direct pytest command: {' '.join(cmd)}")
+    
+    # Run the command
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    
+    # Print output
+    print("STDOUT:")
+    print(result.stdout)
+    print("STDERR:")
+    print(result.stderr)
+    
+    return result.returncode == 0
 
 
 def run_category_tests(category, args, cmd_base):
     """Run tests for a specific category and return results."""
     category_path = f"tests/{category}"
     if not Path(category_path).exists():
+        print(f"Path {category_path} does not exist")
         return None
 
+    # Print test files for debugging
+    if args.debug:
+        print(f"Test files in {category_path}:")
+        test_files = print_test_files(category_path)
+        for tf in test_files:
+            print(f"  - {tf}")
+        print(f"Found {len(test_files)} test files")
+
+    # Create category-specific results directory if needed
+    Path("tests/coverage").mkdir(parents=True, exist_ok=True)
+    
     # Build category-specific command
     cmd = cmd_base.copy()
     cmd.extend(
         [
             category_path,
             "--json-report",
-            f"--json-report-file=tests/coverage/{category}-results.json",
+            f"--json-report-file=tests/coverage/{category.replace('/', '-')}-results.json",
         ]
     )
+    
+    # Print the command being executed for debugging
+    print(f"Running command: {' '.join(cmd)}")
 
     # Run tests for this category
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    
+    if args.debug and result.returncode != 0:
+        print("Command failed with the following output:")
+        print("STDOUT:")
+        print(result.stdout)
+        print("STDERR:")
+        print(result.stderr)
+        
+        # Try direct pytest for more info
+        print("Trying direct pytest command for more info...")
+        run_direct_pytest(category_path, args)
 
     try:
         # Try to read the JSON results
-        with open(f"tests/coverage/{category}-results.json") as f:
+        with open(f"tests/coverage/{category.replace('/', '-')}-results.json") as f:
             json_results = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error reading JSON results: {e}")
         json_results = None
 
     return {
         "returncode": result.returncode,
         "output": result.stdout,
+        "error": result.stderr,
         "json_results": json_results,
     }
 
@@ -99,20 +212,39 @@ def run_category_tests(category, args, cmd_base):
 def get_coverage_for_category(category):
     """Get coverage information for a specific category."""
     try:
+        if '/' in category:
+            # For subcategories like unit/core, include all files in that directory
+            main_category, subcategory = category.split('/')
+            include_pattern = f"pyerp/{subcategory}/*"
+        else:
+            # For top-level categories
+            include_pattern = f"pyerp/{category}/*"
+        
         cmd = [
             sys.executable,
             "-m",
             "coverage",
             "report",
-            "--include=pyerp/*",
-            f"--include=scripts/{category}/*",
-            "--omit=*/migrations/*,*/tests/*",
+            f"--include={include_pattern}",
+            "--omit=*/migrations/*,*/tests/*,*/__pycache__/*",
             "--format=json",
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        coverage_data = json.loads(result.stdout)
-        return coverage_data.get("totals", {}).get("percent_covered", 0)
-    except (json.JSONDecodeError, subprocess.SubprocessError):
+        try:
+            coverage_data = json.loads(result.stdout)
+            return coverage_data.get("totals", {}).get("percent_covered", 0)
+        except json.JSONDecodeError:
+            # Fall back to parsing the percentage from the text output
+            for line in result.stdout.splitlines():
+                if "TOTAL" in line:
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        try:
+                            return float(parts[-1].rstrip('%'))
+                        except ValueError:
+                            pass
+            return 0
+    except subprocess.SubprocessError:
         return 0
 
 
@@ -120,6 +252,11 @@ def print_category_summary(category, results, coverage):
     """Print a summary for a specific test category."""
     if not results or not results.get("json_results"):
         print(f"\n{category.upper()} Tests: No results available")
+        if results:
+            print("Command exit code:", results.get("returncode"))
+            if results.get("error"):
+                print("Error output:")
+                print(results.get("error"))
         return
 
     json_results = results["json_results"]
@@ -148,8 +285,18 @@ def print_category_summary(category, results, coverage):
 
 def run_tests(args):
     """Run the tests with the specified arguments."""
+    # Set up the environment
+    setup_env(skip_celery=args.skip_celery)
+    
     # Create coverage directory if it doesn't exist
     Path("tests/coverage").mkdir(parents=True, exist_ok=True)
+
+    # Print python and pytest versions for debugging
+    if args.debug:
+        subprocess.run([sys.executable, "--version"], check=False)
+        subprocess.run([sys.executable, "-m", "pytest", "--version"], check=False)
+        print(f"Python path: {sys.path}")
+        print(f"Working directory: {Path.cwd()}")
 
     # Build the base pytest command
     cmd_base = [sys.executable, "-m", "pytest"]
@@ -168,9 +315,21 @@ def run_tests(args):
     # Add verbosity
     if args.verbose:
         cmd_base.append("-v")
+        
+    # Always collect test output
+    cmd_base.append("-v")
+        
+    # Add the Django settings module explicitly
+    cmd_base.extend(["--ds=pyerp.config.settings.test"])
 
-    # Get test categories
-    categories = get_test_categories()
+    # Get test categories - if specific paths were provided, use those
+    if args.test_paths and args.test_paths != ["tests/"]:
+        categories = args.test_paths
+    else:
+        categories = get_test_categories()
+        
+    if args.debug:
+        print(f"Categories to test: {categories}")
 
     # Store results for each category
     category_results = {}
@@ -181,6 +340,7 @@ def run_tests(args):
 
     # Run tests for each category
     for category in categories:
+        print(f"\nRunning tests for {category}...")
         results = run_category_tests(category, args, cmd_base)
         if results:
             category_results[category] = results
@@ -236,9 +396,9 @@ def run_tests(args):
     status = "✅ PASSED" if overall_passed else "❌ FAILED"
     print("\nTest Execution Status:", status)
 
-    if args.coverage:
+    if args.coverage and args.html:
         print(
-            f"\nDetailed coverage report available at: " f"{args.output_dir}/index.html"
+            f"\nDetailed coverage report available at: {args.output_dir}/index.html"
         )
 
     return 0 if overall_passed else 1

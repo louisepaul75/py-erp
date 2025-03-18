@@ -18,7 +18,16 @@ import pytest
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.test")
 
 # Add project root to Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+# Handle Celery imports if SKIP_CELERY_IMPORT is set
+if os.environ.get("SKIP_CELERY_IMPORT") == "1":
+    # Use our mock celery implementation
+    from tests.mock_celery import MockCelery
+    mock_celery = MockCelery()
+    mock_celery.install()
+    print("Using MockCelery for testing")
 
 # Initialize Django
 import django
