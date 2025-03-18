@@ -51,13 +51,15 @@ class BaseTransformer(ABC):
         """Validate the transformer configuration.
 
         Raises:
-            ValueError: If required configuration is missing or invalid
+            TransformError: If required configuration is missing or invalid
         """
+        from pyerp.sync.exceptions import TransformError
+        
         if not isinstance(self.field_mappings, dict):
-            raise ValueError("field_mappings must be a dictionary")
+            raise TransformError("field_mappings must be a dictionary")
 
         if not isinstance(self.validation_rules, list):
-            raise ValueError("validation_rules must be a list")
+            raise TransformError("validation_rules must be a list")
 
     def register_custom_transformer(
         self, field: str, transformer: Callable[[Any], Any]
@@ -79,12 +81,16 @@ class BaseTransformer(ABC):
         Returns:
             Transformed record with mapped fields
         """
-        result = {}
+        # Start with a copy of the source record to preserve unmapped fields
+        result = source_record.copy()
 
         # Apply field mappings
         for target_field, source_field in self.field_mappings.items():
             if source_field in source_record:
                 result[target_field] = source_record[source_field]
+                # Remove the original field if it's different from the target
+                if source_field != target_field and source_field in result:
+                    del result[source_field]
 
         return result
 
@@ -99,13 +105,19 @@ class BaseTransformer(ABC):
 
         Returns:
             Transformed record
+        
+        Raises:
+            TransformError: If a transformer fails
         """
         for field, transformer in self.custom_transformers.items():
             if field in record:
                 try:
-                    record[field] = transformer(record[field], source_record)
+                    record[field] = transformer(record[field])
                 except Exception as e:
-                    logger.error(f"Error applying custom transformer for {field}: {e}")
+                    from pyerp.sync.exceptions import TransformError
+                    error_msg = f"Error applying custom transformer for field '{field}': {e}"
+                    logger.error(error_msg)
+                    raise TransformError(error_msg)
 
         return record
 
@@ -121,18 +133,30 @@ class BaseTransformer(ABC):
         errors = []
         for rule in self.validation_rules:
             field = rule.get("field")
-            validator = rule.get("validator")
-            error_message = rule.get("error_message", "Validation failed")
+            check = rule.get("check")
+            value_to_check = rule.get("value")
+            error_message = rule.get("message", "Validation failed")
 
-            if not field or not validator:
+            if not field or field not in record:
                 continue
 
-            if field in record and not validator(record[field]):
+            field_value = record[field]
+            
+            # Perform validation based on the check type
+            is_valid = True
+            if check == "greater_than" and not field_value > value_to_check:
+                is_valid = False
+            elif check == "less_than" and not field_value < value_to_check:
+                is_valid = False
+            elif check == "equals" and not field_value == value_to_check:
+                is_valid = False
+            
+            if not is_valid:
                 errors.append(
                     ValidationError(
                         field=field,
                         message=error_message,
-                        context={"value": record.get(field)},
+                        context={"value": field_value},
                     )
                 )
         return errors
@@ -154,54 +178,36 @@ class BaseTransformer(ABC):
             key_field: Field name to use as the key (defaults to first field in mappings)
 
         Returns:
-            Tuple of (new_records, existing_records)
+            Tuple of (records_to_update, records_to_create)
         """
-        if not existing_keys or not key_field:
-            # If no existing keys or key field provided, return all as new
+        if existing_keys is None:
+            existing_keys = set()
+        
+        if not key_field or not source_data:
+            # If no key field provided, return all as to_update
             return source_data, []
 
-        # Determine source field that maps to the key field
-        source_field = None
-        for target, source in self.field_mappings.items():
-            if target == key_field:
-                source_field = source
-                break
+        # Create normalized existing keys for comparison
+        normalized_existing_keys = {str(k).strip().lower() if k is not None else None for k in existing_keys}
+        
+        to_update = []
+        to_create = []
 
-        if not source_field:
-            # If no mapping found for key field, return all as new
-            return source_data, []
-
-        # Normalize existing keys for more robust comparison
-        # Convert all keys to strings and normalize case and whitespace
-        normalized_existing_keys = set()
-        for key in existing_keys:
-            if key is not None:
-                # Convert to string, strip whitespace, and convert to lowercase
-                normalized_key = str(key).strip().lower()
-                normalized_existing_keys.add(normalized_key)
-
-        new_records = []
-        existing_records = []
-
-        # Separate records based on whether they exist in the target system
+        # Filter records based on whether their key exists in existing_keys
         for record in source_data:
-            if source_field in record and record[source_field] is not None:
-                # Normalize the source key for comparison
-                source_key = str(record[source_field]).strip().lower()
-                if source_key in normalized_existing_keys:
-                    existing_records.append(record)
-                else:
-                    new_records.append(record)
+            if key_field not in record:
+                continue
+            
+            key_value = record[key_field]
+            # Check if the key exists in either original or normalized form
+            normalized_key = str(key_value).strip().lower() if key_value is not None else None
+            
+            if key_value in existing_keys or normalized_key in normalized_existing_keys:
+                to_update.append(record)
             else:
-                # If the key field is missing or None, treat as new
-                new_records.append(record)
+                to_create.append(record)
 
-        logger.info(
-            f"Prefiltered records: {len(new_records)} new, "
-            f"{len(existing_records)} existing"
-        )
-
-        return new_records, existing_records
+        return to_update, to_create
 
     @abstractmethod
     def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -235,11 +241,12 @@ class BaseTransformer(ABC):
             transformed_data: List of transformed records to validate
 
         Returns:
-            List of validation errors by record
+            List of valid records
         """
-        validation_results = []
+        valid_records = []
         for record in transformed_data:
             errors = self.validate_record(record)
-            if errors:
-                validation_results.append({"record": record, "errors": errors})
-        return validation_results
+            if not errors:
+                valid_records.append(record)
+        
+        return valid_records

@@ -72,20 +72,38 @@ class Command(BaseCommand):
         if validator is None:
             validator = self.create_product_validator()
         valid_products = []
+        all_errors = []
 
         for row in data:
             is_valid, validated_data, result = validator.validate_row(row)
             if is_valid:
                 valid_products.append(validated_data)
+            else:
+                all_errors.append({
+                    'row': row,
+                    'errors': result.errors
+                })
 
-        return valid_products
+        return valid_products, all_errors
 
     def get_products_from_file(self, file_path):
         """Read and parse the input file."""
+        import csv
+        
         if not file_path:
             raise FileNotFoundError("No file path provided")
-        # This would be implemented to read the actual file
-        raise FileNotFoundError(f"File not found: {file_path}")
+        
+        try:
+            products = []
+            with open(file_path, 'r', newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    products.append(row)
+            return products
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File not found: {file_path}")
+        except Exception as e:
+            raise Exception(f"Error reading file: {e}")
 
     def create_or_update_product(self, product_data, default_category=None):
         """Create or update a product."""
@@ -112,7 +130,7 @@ class Command(BaseCommand):
                 default_category=default_category,
             )
 
-            valid_products = self.validate_products(data, validator)
+            valid_products, all_errors = self.validate_products(data, validator)
 
             if not valid_products:
                 self.stderr.write("No valid products found")
