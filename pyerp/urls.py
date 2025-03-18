@@ -108,6 +108,8 @@ urlpatterns = [
     path('', RedirectView.as_view(url='/admin/', permanent=False)),
     # Users API
     path("api/users/", include("users.urls")),
+    # Admin tools API
+    path("api/admin/", include("admin_tools.urls")),
 ]
 
 # Add API documentation URLs if available

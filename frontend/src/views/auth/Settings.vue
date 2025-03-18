@@ -146,6 +146,28 @@
                     </v-card-text>
                   </v-card>
 
+                  <!-- Data Viewer Card -->
+                  <v-card variant="outlined" class="mb-6">
+                    <v-card-title>
+                      <v-icon icon="mdi-table" class="mr-2"></v-icon>
+                      Database Data Viewer
+                    </v-card-title>
+                    <v-card-text>
+                      <p class="mb-4">
+                        View, filter, search, and download data from database tables. This tool allows 
+                        administrators to directly access database information.
+                      </p>
+                      <v-btn
+                        color="primary"
+                        variant="outlined"
+                        prepend-icon="mdi-database-search"
+                        to="/settings/data-viewer"
+                      >
+                        Data Viewer
+                      </v-btn>
+                    </v-card-text>
+                  </v-card>
+
                   <v-row>
                     <v-col cols="12" md="6">
                       <v-card variant="outlined" class="mb-4">

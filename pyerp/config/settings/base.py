@@ -69,6 +69,7 @@ LOCAL_APPS = [
     "pyerp.monitoring",
     "pyerp.sync",
     "pyerp.external_api",
+    "admin_tools",  # Admin tools app for database table view
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

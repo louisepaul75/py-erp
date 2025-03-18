@@ -56,6 +56,14 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
 
+  // Data Viewer route
+  {
+    path: '/settings/data-viewer',
+    name: 'DataViewer',
+    component: () => import('../views/settings/DataViewer.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+
   // Users & Permissions routes are now integrated in the admin settings page
 
   // Product routes
