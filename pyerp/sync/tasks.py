@@ -393,3 +393,177 @@ run_full_sales_record_sync.periodic_task = {
     "schedule": crontab(hour=3, minute=0),  # Run at 3:00 AM
     "options": {"expires": 3600.0},  # Expire if not executed within 1 hour
 }
+
+
+def _load_production_yaml() -> Dict:
+    """Load production sync configuration from YAML file."""
+    config_path = os.path.join(
+        os.path.dirname(__file__), "config", "production_sync.yaml"
+    )
+    try:
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"Failed to load production sync config: {e}")
+        return {}
+
+
+def get_production_mappings():
+    """Get production order mappings from YAML configuration.
+    
+    Returns:
+        Tuple containing (production_order_mapping, production_order_item_mapping)
+    """
+    config = _load_production_yaml()
+    mappings = config.get("mappings", [])
+    
+    # Extract the production order and item mappings
+    production_order_mapping = None
+    production_order_item_mapping = None
+    
+    for mapping in mappings:
+        if mapping.get("entity_type") == "production_order":
+            production_order_mapping = mapping
+        elif mapping.get("entity_type") == "production_order_item":
+            production_order_item_mapping = mapping
+    
+    return production_order_mapping, production_order_item_mapping
+
+
+def create_production_mappings():
+    """Create or update production related sync mappings in the database.
+    
+    Returns:
+        Tuple containing (production_order_mapping_id, production_order_item_mapping_id)
+    """
+    try:
+        production_order_config, production_order_item_config = get_production_mappings()
+        
+        if not production_order_config or not production_order_item_config:
+            logger.error("Production mapping configuration incomplete")
+            return None, None
+        
+        # Create or update production order mapping
+        production_order_mapping, _ = SyncMapping.objects.update_or_create(
+            source__name=production_order_config["source"],
+            target__name=production_order_config["target"],
+            entity_type=production_order_config["entity_type"],
+            defaults={"mapping_config": production_order_config["mapping_config"]},
+        )
+        
+        # Create or update production order item mapping
+        production_order_item_mapping, _ = SyncMapping.objects.update_or_create(
+            source__name=production_order_item_config["source"],
+            target__name=production_order_item_config["target"],
+            entity_type=production_order_item_config["entity_type"],
+            defaults={"mapping_config": production_order_item_config["mapping_config"]},
+        )
+        
+        return production_order_mapping.id, production_order_item_mapping.id
+    except Exception as e:
+        logger.error(f"Failed to create production mappings: {e}")
+        return None, None
+
+
+@shared_task(name="sync.run_production_sync")
+def run_production_sync(
+    incremental: bool = True, batch_size: int = 100
+) -> List[Dict]:
+    """Run synchronization for production data.
+    
+    This task synchronizes both production orders and production order items
+    using the mappings defined in the production_sync.yaml configuration file.
+    
+    Args:
+        incremental: If True, only sync new/updated records
+        batch_size: Number of records to process in each batch
+    
+    Returns:
+        List of results from each sync operation
+    """
+    try:
+        # Create or update mappings
+        production_order_mapping_id, production_order_item_mapping_id = create_production_mappings()
+        
+        if not production_order_mapping_id or not production_order_item_mapping_id:
+            logger.error("Unable to create production mappings")
+            return [
+                {"status": "error", "message": "Unable to create production mappings"}
+            ]
+        
+        results = []
+        
+        # First, sync production orders
+        logger.info("Starting production order sync")
+        log_data_sync_event(
+            source="legacy_erp",
+            destination="pyerp",
+            record_count=0,
+            status="started",
+            details={
+                "entity_type": "production_order",
+                "incremental": incremental,
+                "batch_size": batch_size,
+            },
+        )
+        
+        production_order_result = run_entity_sync(
+            mapping_id=production_order_mapping_id,
+            incremental=incremental,
+            batch_size=batch_size,
+        )
+        
+        results.append(production_order_result)
+        
+        # Then, sync production order items
+        logger.info("Starting production order item sync")
+        log_data_sync_event(
+            source="legacy_erp",
+            destination="pyerp",
+            record_count=0,
+            status="started",
+            details={
+                "entity_type": "production_order_item",
+                "incremental": incremental,
+                "batch_size": batch_size,
+            },
+        )
+        
+        production_order_item_result = run_entity_sync(
+            mapping_id=production_order_item_mapping_id,
+            incremental=incremental,
+            batch_size=batch_size,
+        )
+        
+        results.append(production_order_item_result)
+        
+        return results
+    except Exception as e:
+        logger.error(f"Production sync failed: {e}")
+        return [{"status": "error", "message": str(e)}]
+
+
+@shared_task(name="sync.run_incremental_production_sync")
+def run_incremental_production_sync() -> List[Dict]:
+    """Run incremental synchronization for production data.
+    
+    Synchronizes only new/updated records from the last successful sync.
+    
+    Returns:
+        List of results from each sync operation
+    """
+    logger.info("Starting incremental production sync")
+    return run_production_sync(incremental=True)
+
+
+@shared_task(name="sync.run_full_production_sync")
+def run_full_production_sync() -> List[Dict]:
+    """Run full synchronization for production data.
+    
+    Synchronizes all records regardless of when they were last updated.
+    
+    Returns:
+        List of results from each sync operation
+    """
+    logger.info("Starting full production sync")
+    return run_production_sync(incremental=False)

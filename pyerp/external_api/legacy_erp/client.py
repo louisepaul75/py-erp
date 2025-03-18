@@ -123,9 +123,20 @@ if __name__ == "__main__":
 
     )
     print(production_orders.tail())
+
+
+    items = list(production_orders['WerkAufNr'].unique().astype(str))
+    print(items)
+
     # breakpoint()
 
     production_orders_line_items = client.fetch_table(
-        table_name="WerksauftrPos")
+        table_name="WerksauftrPos",
+        filter_query=[["W_Auftr_Nr", "in", items]]
+    )
     
     print(production_orders_line_items.tail())
+
+    merged = production_orders_line_items.merge(production_orders, left_on='W_Auftr_Nr', right_on='WerkAufNr', how='left')
+    print(merged.tail())
+

@@ -577,6 +577,11 @@ class BaseAPIClient:
             "letzteLieferung",
             "Druckdatum",
             "Release_Date",
+            'Termin',
+            'eingestellt',
+            'Artikel_Termin',
+            'Datum_begin',
+            
         }
 
         for key, value in record.items():
