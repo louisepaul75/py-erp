@@ -27,17 +27,50 @@ def _load_sales_record_yaml() -> Dict:
         return {}
 
 
-def get_sales_record_mappings() -> List[Dict]:
-    """Get sales record mappings from YAML configuration."""
+def get_sales_record_mappings():
+    """Get sales record mappings from YAML configuration.
+    
+    Returns:
+        Tuple containing (sales_record_mapping, sales_record_item_mapping)
+    """
     config = _load_sales_record_yaml()
-    return config.get("mappings", [])
+    mappings = config.get("mappings", [])
+    
+    # Extract the sales record and item mappings
+    sales_record_mapping = None
+    sales_record_item_mapping = None
+    
+    for mapping in mappings:
+        if mapping.get("entity_type") == "sales_record":
+            sales_record_mapping = mapping
+        elif mapping.get("entity_type") == "sales_record_item":
+            sales_record_item_mapping = mapping
+    
+    return sales_record_mapping, sales_record_item_mapping
 
 
-def create_sales_record_mappings() -> List[Dict]:
-    """Create sales record mappings from YAML configuration."""
-    mappings = get_sales_record_mappings()
-    # TODO: Create mappings in database
-    return mappings
+def create_sales_record_mappings():
+    """Create sales record mappings from YAML configuration.
+    
+    Returns:
+        Tuple containing (sales_record_mapping, sales_record_item_mapping)
+    """
+    config = _load_sales_record_yaml()
+    mappings = config.get("mappings", [])
+    
+    # Create the mappings in database (TODO: Implement this)
+    
+    # Extract the sales record and item mappings
+    sales_record_mapping = None
+    sales_record_item_mapping = None
+    
+    for mapping in mappings:
+        if mapping.get("entity_type") == "sales_record":
+            sales_record_mapping = mapping
+        elif mapping.get("entity_type") == "sales_record_item":
+            sales_record_item_mapping = mapping
+    
+    return sales_record_mapping, sales_record_item_mapping
 
 
 @shared_task(
