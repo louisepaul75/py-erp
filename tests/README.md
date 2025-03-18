@@ -26,6 +26,13 @@ tests/
 │   ├── test_rest_api.py  # REST API endpoints
 │   └── test_wsgi.py     # WSGI interface
 │
+├── unit/             # Unit Tests
+│   ├── users/        # User app unit tests
+│   │   ├── test_models.py      # User model tests
+│   │   ├── test_services.py    # User service tests
+│   │   └── test_serializers.py # User serializer tests
+│   └── test_core_checks.py     # Core checks tests
+│
 └── core/             # Core Business Logic Tests
     ├── business/
     │   ├── test_products.py    # Product management
@@ -104,6 +111,12 @@ python tests/run_tests.py --coverage tests/ui/test_forms.py
 - Production processes
 - System configuration
 - Utility functions
+
+### Unit Tests
+- User model tests
+- User service tests
+- User serializer tests
+- Core checks tests
 
 ## Writing Tests
 

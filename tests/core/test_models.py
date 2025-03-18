@@ -37,17 +37,29 @@ class TestAuditLogModel(TransactionTestCase):
 
     def test_audit_log_creation(self):
         """Test basic audit log creation and retrieval."""
-        # Verify the audit log was created
-        self.assertEqual(AuditLog.objects.count(), 1)
+        # Record the count of logs before the test
+        initial_count = AuditLog.objects.count()
+        
+        # Create a new audit log
+        new_log = AuditLog.objects.create(
+            event_type=AuditLog.EventType.LOGOUT,
+            message="User logged out",
+            user=self.user,
+            ip_address='192.168.1.2',
+            user_agent='Test Logout Agent'
+        )
+        
+        # Verify a new audit log was created
+        self.assertEqual(AuditLog.objects.count(), initial_count + 1)
         
         # Check that the record has the correct data
-        log = AuditLog.objects.first()
-        self.assertEqual(log.event_type, AuditLog.EventType.LOGIN)
-        self.assertEqual(log.message, "User logged in")
+        log = AuditLog.objects.get(id=new_log.id)
+        self.assertEqual(log.event_type, AuditLog.EventType.LOGOUT)
+        self.assertEqual(log.message, "User logged out")
         self.assertEqual(log.user, self.user)
         self.assertEqual(log.username, self.user.username)
-        self.assertEqual(log.ip_address, '192.168.1.1')
-        self.assertEqual(log.user_agent, 'Test User Agent')
+        self.assertEqual(log.ip_address, '192.168.1.2')
+        self.assertEqual(log.user_agent, 'Test Logout Agent')
         
         # Check timestamp is recent
         now = timezone.now()

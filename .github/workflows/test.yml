@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test-group: [ui, backend, core]
+        test-group: [ui, backend, core, unit]
       fail-fast: false
 
     services:
@@ -85,8 +85,71 @@ jobs:
           path: coverage/*-coverage.xml
           retention-days: 14
 
-  upload-results:
+  django-unit-tests:
+    runs-on: ubuntu-latest
     needs: test
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pyerp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements.dev.txt
+
+      - name: Run Django User Model Tests 
+        env:
+          DJANGO_SETTINGS_MODULE: tests.settings
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Create coverage directory
+          mkdir -p coverage
+          
+          # Run Django tests for users models
+          python manage.py test tests.unit.users.test_models --keepdb
+          
+      - name: Run Django User Services Tests
+        env:
+          DJANGO_SETTINGS_MODULE: tests.settings
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Run Django tests for users services
+          python manage.py test tests.unit.users.test_services --keepdb
+          
+      - name: Run Django User Serializers Tests
+        env:
+          DJANGO_SETTINGS_MODULE: tests.settings
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Run Django tests for users serializers
+          python manage.py test tests.unit.users.test_serializers --keepdb
+          
+  upload-results:
+    needs: [test, django-unit-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +165,7 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: artifacts/test-results-*/junit.xml
+          file: artifacts/*-junit.xml
           name: pyerp-test-results
           fail_ci_if_error: false
 
@@ -111,7 +174,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Wilhelm-Schweizer/pyERP
-          directory: artifacts/coverage-results-*/
+          directory: artifacts/
           fail_ci_if_error: false
           
       - name: Archive all results
