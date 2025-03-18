@@ -85,25 +85,23 @@ class UserServiceTest(TransactionTestCase):
         self.assertIn(self.group2, self.user1.groups.all())
 
     def test_remove_user_from_groups(self):
-        """Test removing a user from multiple groups."""
-        # First add user to groups
+        """Test removing a user from groups."""
+        # Add user to groups first
         self.user1.groups.add(self.group1, self.group2, self.group3)
+        self.assertEqual(self.user1.groups.count(), 3)
         
-        # Remove from specific groups
-        groups = UserService.remove_user_from_groups(
-            self.user1, 
-            [self.group1.id, self.group3.id]
+        # Remove user from two groups
+        removed_groups = UserService.remove_user_from_groups(
+            user=self.user1,
+            group_ids=[self.group1.id, self.group3.id]
         )
         
-        # Check results
-        self.assertEqual(len(groups), 2)
-        self.assertIn(self.group1, groups)
-        self.assertIn(self.group3, groups)
-        
-        # Check user's groups
-        self.assertNotIn(self.group1, self.user1.groups.all())
-        self.assertIn(self.group2, self.user1.groups.all())
-        self.assertNotIn(self.group3, self.user1.groups.all())
+        # Check groups were removed
+        self.assertEqual(len(removed_groups), 2)
+        self.assertEqual(self.user1.groups.count(), 1)
+        self.assertTrue(self.user1.groups.filter(id=self.group2.id).exists())
+        self.assertFalse(self.user1.groups.filter(id=self.group1.id).exists())
+        self.assertFalse(self.user1.groups.filter(id=self.group3.id).exists())
 
     def test_get_users_by_department(self):
         """Test getting users by department."""
@@ -163,6 +161,47 @@ class UserServiceTest(TransactionTestCase):
         self.assertEqual(new_user.profile.phone, '555-1234')
         self.assertEqual(new_user.profile.language_preference, 'fr')
         self.assertEqual(new_user.profile.status, 'pending')
+
+    def test_get_users_by_permission(self):
+        """Test getting users by permission."""
+        # Create test permission
+        permission = Permission.objects.create(
+            codename='test_permission',
+            name='Test Permission',
+            content_type=self.content_type
+        )
+        
+        # Add permission to group 1
+        self.group1.permissions.add(permission)
+        
+        # Add user1 to group1 (should have permission)
+        self.user1.groups.add(self.group1)
+        
+        # Add permission directly to user2
+        self.user2.user_permissions.add(permission)
+        
+        # Get users with the permission
+        users = UserService.get_users_by_permission('test_permission')
+        
+        # Test results
+        self.assertEqual(users.count(), 2)
+        self.assertIn(self.user1, users)
+        self.assertIn(self.user2, users)
+        
+        # Test with non-existent permission
+        users = UserService.get_users_by_permission('non_existent_permission')
+        self.assertEqual(users.count(), 0)
+        
+        # Create another user without the permission
+        user3 = User.objects.create_user(
+            username='user3',
+            email='user3@example.com',
+            password='password3'
+        )
+        
+        # Verify user3 is not in the results
+        users = UserService.get_users_by_permission('test_permission')
+        self.assertNotIn(user3, users)
 
 
 class RoleServiceTest(TransactionTestCase):
@@ -364,36 +403,98 @@ class PermissionServiceTest(TransactionTestCase):
         self.assertNotIn(self.delete_user_perm, permissions)
     
     def test_check_object_permission(self):
-        """Test checking permissions for a specific object."""
-        # Create data permission for testing
-        data_permission = DataPermission.objects.create(
+        """Test checking permissions on a specific object."""
+        # Test with user that has object permission
+        result = PermissionService.check_object_permission(
+            self.admin_user,
+            self.regular_user,
+            'view'
+        )
+        self.assertTrue(result)
+        
+        # Test with user that doesn't have object permission
+        result = PermissionService.check_object_permission(
+            self.regular_user,
+            self.admin_user,
+            'edit'
+        )
+        self.assertFalse(result)
+        
+        # Test with superuser (should always return True)
+        result = PermissionService.check_object_permission(
+            self.admin_user,
+            self.regular_user,
+            'delete'
+        )
+        self.assertTrue(result)
+        
+        # Test with invalid permission type
+        result = PermissionService.check_object_permission(
+            self.regular_user,
+            self.admin_user,
+            'invalid_perm'
+        )
+        self.assertFalse(result)
+    
+    def test_get_objects_with_permission(self):
+        """Test getting all objects a user has permission for."""
+        # Create additional test objects
+        test_object2 = User.objects.create(username='testuser2')
+        test_object3 = User.objects.create(username='testuser3')
+        
+        # Create data permissions for user
+        DataPermission.objects.create(
             user=self.regular_user,
-            content_type=ContentType.objects.get_for_model(User),
-            object_id=self.admin_user.id,
+            content_type=self.user_ct,
+            object_id=test_object2.id,
             permission_type='view'
         )
         
-        # User should have permission
-        self.assertTrue(
-            PermissionService.check_object_permission(
-                self.regular_user, 
-                self.admin_user, 
-                'view'
-            )
+        DataPermission.objects.create(
+            user=self.regular_user,
+            content_type=self.user_ct,
+            object_id=test_object3.id,
+            permission_type='view'
         )
         
-        # User should not have edit permission
-        self.assertFalse(
-            PermissionService.check_object_permission(
-                self.regular_user, 
-                self.admin_user, 
-                'edit'
-            )
+        # Get objects user has view permission for
+        objects = PermissionService.get_objects_with_permission(
+            self.regular_user,
+            User,
+            'view'
         )
         
-        # Clean up
-        data_permission.delete()
-    
+        # Should have permission for test_object, test_object2, and test_object3
+        self.assertEqual(objects.count(), 3)
+        self.assertIn(self.regular_user, objects)
+        self.assertIn(test_object2, objects)
+        self.assertIn(test_object3, objects)
+        
+        # Test with edit permission (only has permission for test_object)
+        objects = PermissionService.get_objects_with_permission(
+            self.regular_user,
+            User,
+            'edit'
+        )
+        self.assertEqual(objects.count(), 1)
+        self.assertIn(self.regular_user, objects)
+        
+        # Test with superuser (should get all objects)
+        all_objects = PermissionService.get_objects_with_permission(
+            self.admin_user,
+            User,
+            'view'
+        )
+        self.assertEqual(all_objects.count(), User.objects.count())
+        
+        # Test with invalid permission type
+        objects = PermissionService.get_objects_with_permission(
+            self.regular_user,
+            User,
+            'invalid_perm'
+        )
+        self.assertEqual(objects.count(), 0)
+
     def test_organize_permissions_by_category(self):
         """Test organizing permissions by category."""
         categorized = PermissionService.organize_permissions_by_category()
