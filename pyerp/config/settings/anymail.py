@@ -10,6 +10,10 @@ https://anymail.readthedocs.io/en/stable/installation/
 
 import os
 
+# Ensure logs directory exists
+log_dir = os.environ.get("LOG_DIR", "logs")
+os.makedirs(log_dir, exist_ok=True)
+
 # Anymail settings
 ANYMAIL = {
     # Default ESP (Email Service Provider)
@@ -87,7 +91,7 @@ LOGGING = {
         "file": {
             "level": "DEBUG",
             "class": "logging.FileHandler",
-            "filename": os.path.join(os.environ.get("LOG_DIR", "logs"), "anymail.log"),
+            "filename": os.path.join(log_dir, "anymail.log"),
             "formatter": "verbose",
         },
         "console": {
