@@ -60,6 +60,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    "users",  # Our custom users app
     "pyerp.core",
     "pyerp.business_modules.products",
     "pyerp.business_modules.sales",

@@ -106,6 +106,8 @@ urlpatterns = [
     path('api/docs/', include_docs_urls(title='pyERP API Documentation')),
     # Redirect root to admin interface for now
     path('', RedirectView.as_view(url='/admin/', permanent=False)),
+    # Users API
+    path("api/users/", include("users.urls")),
 ]
 
 # Add API documentation URLs if available

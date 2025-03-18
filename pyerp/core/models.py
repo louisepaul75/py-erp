@@ -162,10 +162,21 @@ class UserPreference(models.Model):
         """
         return [
             {
+                'id': 'users-permissions',
+                'title': 'Benutzer & Berechtigungen',
+                'type': 'users-permissions',
+                'position': 0,
+                'enabled': True,
+                'settings': {
+                    'show_stats': True,
+                    'show_recent_users': True
+                }
+            },
+            {
                 'id': 'quick-access',
                 'title': 'Schnellzugriff',
                 'type': 'quick-access',
-                'position': 0,
+                'position': 1,
                 'enabled': True,
                 'settings': {}
             },
@@ -173,7 +184,7 @@ class UserPreference(models.Model):
                 'id': 'recent-orders',
                 'title': 'Bestellungen nach Liefertermin',
                 'type': 'recent-orders',
-                'position': 1,
+                'position': 2,
                 'enabled': True,
                 'settings': {}
             },
@@ -181,7 +192,7 @@ class UserPreference(models.Model):
                 'id': 'important-links',
                 'title': 'Wichtige Links',
                 'type': 'important-links',
-                'position': 2,
+                'position': 3,
                 'enabled': True,
                 'settings': {}
             },
@@ -189,7 +200,7 @@ class UserPreference(models.Model):
                 'id': 'news-board',
                 'title': 'Interne Pinnwand',
                 'type': 'news-board',
-                'position': 3,
+                'position': 4,
                 'enabled': True,
                 'settings': {}
             }

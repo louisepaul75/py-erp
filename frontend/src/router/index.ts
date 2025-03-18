@@ -56,6 +56,8 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true, requiresAdmin: true }
   },
 
+  // Users & Permissions routes are now integrated in the admin settings page
+
   // Product routes
   {
     path: '/products',
