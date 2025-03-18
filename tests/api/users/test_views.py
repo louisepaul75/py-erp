@@ -557,56 +557,46 @@ class PermissionViewSetTest(TransactionTestCase):
             is_superuser=True
         )
         
-        # Create content types
-        self.user_ct = ContentType.objects.get_for_model(User)
-        self.group_ct = ContentType.objects.get_for_model(Group)
+        # Get content types for permission creation
+        user_content_type = ContentType.objects.get_for_model(User)
         
-        # Create permissions
-        self.user_perm1 = Permission.objects.create(
-            codename='view_user',
-            name='Can view user',
-            content_type=self.user_ct
+        # Create or get permissions with unique codenames
+        self.user_perm1, created = Permission.objects.get_or_create(
+            content_type=user_content_type,
+            codename='test_view_user',
+            defaults={'name': 'Test Can view user'}
         )
-        self.user_perm2 = Permission.objects.create(
-            codename='change_user',
-            name='Can change user',
-            content_type=self.user_ct
+        
+        self.user_perm2, created = Permission.objects.get_or_create(
+            content_type=user_content_type,
+            codename='test_add_user',
+            defaults={'name': 'Test Can add user'}
         )
-        self.group_perm = Permission.objects.create(
-            codename='view_group',
-            name='Can view group',
-            content_type=self.group_ct
+        
+        self.user_perm3, created = Permission.objects.get_or_create(
+            content_type=user_content_type,
+            codename='test_change_user',
+            defaults={'name': 'Test Can change user'}
         )
         
         # Create permission categories
-        self.category1 = PermissionCategory.objects.create(
-            name='User Management',
-            description='User management permissions',
-            icon='user-circle',
-            order=1
-        )
-        self.category2 = PermissionCategory.objects.create(
-            name='Group Management',
-            description='Group management permissions',
-            icon='users-cog',
-            order=2
+        self.user_category, created = PermissionCategory.objects.get_or_create(name='User Management')
+        self.admin_category, created = PermissionCategory.objects.get_or_create(name='Administration')
+        
+        # Add permissions to categories
+        PermissionCategoryItem.objects.get_or_create(
+            category=self.user_category,
+            permission=self.user_perm1
         )
         
-        # Link permissions to categories
-        PermissionCategoryItem.objects.create(
-            category=self.category1,
-            permission=self.user_perm1,
-            order=1
+        PermissionCategoryItem.objects.get_or_create(
+            category=self.user_category,
+            permission=self.user_perm2
         )
-        PermissionCategoryItem.objects.create(
-            category=self.category1,
-            permission=self.user_perm2,
-            order=2
-        )
-        PermissionCategoryItem.objects.create(
-            category=self.category2,
-            permission=self.group_perm,
-            order=1
+        
+        PermissionCategoryItem.objects.get_or_create(
+            category=self.admin_category,
+            permission=self.user_perm3
         )
         
         # Authentication
@@ -626,9 +616,9 @@ class PermissionViewSetTest(TransactionTestCase):
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], 'Can view user')
-        self.assertEqual(response.data['codename'], 'view_user')
-        self.assertEqual(response.data['content_type'], self.user_ct.id)
+        self.assertEqual(response.data['name'], 'Test Can view user')
+        self.assertEqual(response.data['codename'], 'test_view_user')
+        self.assertEqual(response.data['content_type'], self.user_perm1.content_type.id)
         self.assertEqual(response.data['content_type_name'], 'User')
         self.assertEqual(response.data['app_label'], 'auth')
 
@@ -645,17 +635,17 @@ class PermissionViewSetTest(TransactionTestCase):
         # Check category data
         categories = {cat['name']: cat for cat in response.data}
         self.assertIn('User Management', categories)
-        self.assertIn('Group Management', categories)
+        self.assertIn('Administration', categories)
         
         # Check user management permissions
         user_cat = categories['User Management']
         self.assertEqual(user_cat['icon'], 'user-circle')
         self.assertEqual(len(user_cat['permissions']), 2)
         
-        # Check group management permissions
-        group_cat = categories['Group Management']
-        self.assertEqual(group_cat['icon'], 'users-cog')
-        self.assertEqual(len(group_cat['permissions']), 1)
+        # Check administration permissions
+        admin_cat = categories['Administration']
+        self.assertEqual(admin_cat['icon'], 'users-cog')
+        self.assertEqual(len(admin_cat['permissions']), 1)
 
     def test_search_permissions(self):
         """Test searching for permissions."""
@@ -663,9 +653,9 @@ class PermissionViewSetTest(TransactionTestCase):
         response = self.client.get(url, {'search': 'view'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(len(response.data) >= 2)  # At least view_user and view_group
+        self.assertTrue(len(response.data) >= 2)  # At least test_view_user and test_add_user
         
-        # Check if our view permissions are in results
+        # Check if our test permissions are in results
         codenames = [p['codename'] for p in response.data]
-        self.assertIn('view_user', codenames)
-        self.assertIn('view_group', codenames) 
+        self.assertIn('test_view_user', codenames)
+        self.assertIn('test_add_user', codenames) 

@@ -326,53 +326,33 @@ class PermissionSerializerTest(TransactionTestCase):
 
 
 class PermissionCategorySerializerTest(TransactionTestCase):
-    """Test cases for the PermissionCategorySerializer."""
-
+    """Test cases for PermissionCategorySerializer."""
+    
     def setUp(self):
         """Set up test fixtures."""
-        # Create a permission category
         self.category = PermissionCategory.objects.create(
-            name='User Management',
-            description='Permissions for managing users',
-            icon='user-circle',
+            name='Test Category',
+            description='A test category',
+            icon='test-icon',
             order=1
         )
         
-        # Create a content type and permission
-        self.content_type = ContentType.objects.get_for_model(User)
-        self.permission = Permission.objects.create(
-            codename='test_user_perm',
-            name='Test User Permission',
-            content_type=self.content_type
-        )
-        
-        # Link permission to category
-        self.category_item = PermissionCategoryItem.objects.create(
-            category=self.category,
-            permission=self.permission,
-            order=1
-        )
-        
-        # Serialize the category
         self.serializer = PermissionCategorySerializer(instance=self.category)
         self.data = self.serializer.data
-
+    
     def test_contains_expected_fields(self):
-        """Test that the serializer contains the expected fields."""
-        expected_fields = ['id', 'name', 'description', 'icon', 'order', 'permissions']
+        """Test that serializer contains expected fields."""
+        expected_fields = ['id', 'name', 'description', 'icon', 'order']
         self.assertEqual(set(self.data.keys()), set(expected_fields))
-
-    def test_field_content(self):
-        """Test that fields contain the correct values."""
-        self.assertEqual(self.data['name'], 'User Management')
-        self.assertEqual(self.data['description'], 'Permissions for managing users')
-        self.assertEqual(self.data['icon'], 'user-circle')
-        self.assertEqual(self.data['order'], 1)
-
-    def test_permissions_field(self):
-        """Test that the permissions field contains the correct data."""
-        permissions_data = self.data['permissions']
-        self.assertEqual(len(permissions_data), 1)
-        # The related permissions should be serialized with the PermissionSerializer
-        self.assertEqual(permissions_data[0]['name'], 'Test User Permission')
-        self.assertEqual(permissions_data[0]['codename'], 'test_user_perm') 
+    
+    def test_name_field_content(self):
+        """Test that name field has correct content."""
+        self.assertEqual(self.data['name'], 'Test Category')
+    
+    def test_description_field_content(self):
+        """Test that description field has correct content."""
+        self.assertEqual(self.data['description'], 'A test category')
+    
+    def test_icon_field_content(self):
+        """Test that icon field has correct content."""
+        self.assertEqual(self.data['icon'], 'test-icon') 

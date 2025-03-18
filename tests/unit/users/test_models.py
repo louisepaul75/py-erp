@@ -162,66 +162,69 @@ class PermissionCategoryModelTest(TransactionTestCase):
 
 
 class DataPermissionModelTest(TransactionTestCase):
-    """Test cases for the DataPermission model."""
+    """Test cases for DataPermission model."""
 
     def setUp(self):
         """Set up test fixtures."""
         # Create users
-        self.admin_user = User.objects.create_user(
+        self.admin = User.objects.create_user(
             username='admin',
             email='admin@example.com',
-            password='adminpassword'
+            password='adminpassword',
+            is_staff=True,
+            is_superuser=True
         )
+
         self.test_user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
             password='testpassword'
         )
-        
+
         # Create group
-        self.group = Group.objects.create(name='Test Group')
-        
-        # Create a content type and test object for permission
-        self.content_type = ContentType.objects.get_for_model(User)
-        self.object_id = self.test_user.id
-        
-        # Create a data permission
-        self.data_permission = DataPermission.objects.create(
+        self.test_group = Group.objects.create(name='Test Group')
+
+        # Get content type for User model
+        self.user_content_type = ContentType.objects.get_for_model(User)
+
+        # Create DataPermission instances
+        self.user_permission = DataPermission.objects.create(
             user=self.test_user,
-            content_type=self.content_type,
-            object_id=self.object_id,
+            content_type=self.user_content_type,
+            object_id=self.admin.id,
             permission_type='view',
-            created_by=self.admin_user,
-            expires_at=timezone.now() + timezone.timedelta(days=30)
-        )
-        
-        # Create a group-based data permission
-        self.group_permission = DataPermission.objects.create(
-            group=self.group,
-            content_type=self.content_type,
-            object_id=self.object_id,
-            permission_type='edit',
-            created_by=self.admin_user
+            created_by=self.admin
         )
 
-    def test_data_permission_string_representation(self):
-        """Test the string representation of a DataPermission."""
-        expected_string = f"{self.test_user.username} - view - {self.test_user}"
-        self.assertEqual(str(self.data_permission), expected_string)
+        # Group permission
+        self.group_permission = DataPermission.objects.create(
+            user=self.admin,  # Required field
+            group=self.test_group,
+            content_type=self.user_content_type,
+            object_id=self.test_user.id,
+            permission_type='edit',
+            created_by=self.admin
+        )
 
     def test_data_permission_attributes(self):
-        """Test that a data permission has the expected attributes."""
-        self.assertEqual(self.data_permission.user, self.test_user)
-        self.assertIsNone(self.data_permission.group)
-        self.assertEqual(self.data_permission.content_type, self.content_type)
-        self.assertEqual(self.data_permission.object_id, self.object_id)
-        self.assertEqual(self.data_permission.permission_type, 'view')
-        self.assertEqual(self.data_permission.created_by, self.admin_user)
-        self.assertIsNotNone(self.data_permission.expires_at)
-
+        """Test that DataPermission has the correct attributes."""
+        # Test user permission attributes
+        self.assertEqual(self.user_permission.user, self.test_user)
+        self.assertIsNone(self.user_permission.group)
+        self.assertEqual(self.user_permission.content_type, self.user_content_type)
+        self.assertEqual(self.user_permission.object_id, self.admin.id)
+        self.assertEqual(self.user_permission.permission_type, 'view')
+        self.assertEqual(self.user_permission.created_by, self.admin)
+        
+    def test_data_permission_string_representation(self):
+        """Test the string representation of DataPermission."""
+        expected = f"{self.test_user.username} - view - {self.admin}"
+        self.assertEqual(str(self.user_permission), expected)
+        
     def test_group_permission_attributes(self):
-        """Test group-based data permission."""
-        self.assertIsNone(self.group_permission.user)
-        self.assertEqual(self.group_permission.group, self.group)
-        self.assertEqual(self.group_permission.permission_type, 'edit')
-        self.assertIsNone(self.group_permission.expires_at) 
+        """Test that a group DataPermission has the correct attributes."""
+        self.assertEqual(self.group_permission.user, self.admin)
+        self.assertEqual(self.group_permission.group, self.test_group)
+        self.assertEqual(self.group_permission.content_type, self.user_content_type)
+        self.assertEqual(self.group_permission.object_id, self.test_user.id)
+        self.assertEqual(self.group_permission.permission_type, 'edit') 

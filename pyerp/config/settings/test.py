@@ -43,7 +43,7 @@ DATABASES = {
 }
 
 # Disable migrations during tests to avoid field type issues
-MIGRATION_MODULES = None  # This tells Django to create the tables directly
+MIGRATION_MODULES = {}  # Empty dictionary instead of None
 
 # Configure test-specific model settings
 DATABASE_ROUTERS = []
@@ -86,5 +86,5 @@ REST_FRAMEWORK = {
 }
 
 # Ensure models are created without migrations
-DJANGO_MIGRATION_MODULES = {}
+# This is handled by MIGRATION_MODULES now
 

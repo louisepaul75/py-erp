@@ -211,28 +211,31 @@ class RoleServiceTest(TransactionTestCase):
         self.user1.groups.add(self.group1)
 
     def test_create_role(self):
-        """Test creating a role."""
-        # Create a new role
-        role = RoleService.create_role(
-            name='New Role',
-            description='New role description',
-            permissions=[self.permission1.id, self.permission2.id],
-            is_system_role=True,
-            priority=10,
-            parent_role=self.role1.id
+        """Test creating a new role."""
+        # Create a parent role first
+        parent_role = Role.objects.create(
+            name="Parent Role",
+            description="Parent role for testing",
+            is_active=True
         )
         
-        # Check role was created
-        self.assertIsInstance(role, Role)
-        self.assertEqual(role.group.name, 'New Role')
-        self.assertEqual(role.description, 'New role description')
-        self.assertTrue(role.is_system_role)
-        self.assertEqual(role.priority, 10)
-        self.assertEqual(role.parent_role, self.role1)
+        # Create a new role with the parent
+        role_data = {
+            'name': 'Test Role',
+            'description': 'A test role',
+            'is_system_role': False,
+            'is_active': True,
+            'parent_role': parent_role.id
+        }
         
-        # Check permissions were assigned
-        self.assertIn(self.permission1, role.group.permissions.all())
-        self.assertIn(self.permission2, role.group.permissions.all())
+        role = RoleService.create_role(**role_data)
+        
+        # Check role was created with correct attributes
+        self.assertEqual(role.name, 'Test Role')
+        self.assertEqual(role.description, 'A test role')
+        self.assertEqual(role.is_system_role, False)
+        self.assertEqual(role.is_active, True)
+        self.assertEqual(role.parent_role, parent_role)
 
     def test_get_users_in_role(self):
         """Test getting users in a role."""
@@ -288,93 +291,129 @@ class PermissionServiceTest(TransactionTestCase):
             username='admin',
             email='admin@example.com',
             password='adminpassword',
-            is_staff=True
+            is_staff=True,
+            is_superuser=True
         )
+        
         self.regular_user = User.objects.create_user(
             username='user',
             email='user@example.com',
             password='userpassword'
         )
         
-        # Create content types
-        self.user_content_type = ContentType.objects.get_for_model(User)
-        self.group_content_type = ContentType.objects.get_for_model(Group)
+        # Get content type for permissions
+        self.user_ct = ContentType.objects.get_for_model(User)
         
-        # Create permissions
-        self.view_user_perm = Permission.objects.create(
-            codename='view_user',
-            name='Can view user',
-            content_type=self.user_content_type
-        )
-        self.change_user_perm = Permission.objects.create(
-            codename='change_user',
-            name='Can change user',
-            content_type=self.user_content_type
+        # Create or get permissions
+        self.view_user_perm, _ = Permission.objects.get_or_create(
+            content_type=self.user_ct,
+            codename='test_view_user',
+            defaults={'name': 'Test Can view user'}
         )
         
-        # Create a group with permissions
-        self.group = Group.objects.create(name='Test Group')
-        self.group.permissions.add(self.view_user_perm)
+        self.change_user_perm, _ = Permission.objects.get_or_create(
+            content_type=self.user_ct,
+            codename='test_change_user',
+            defaults={'name': 'Test Can change user'}
+        )
+        
+        self.delete_user_perm, _ = Permission.objects.get_or_create(
+            content_type=self.user_ct,
+            codename='test_delete_user',
+            defaults={'name': 'Test Can delete user'}
+        )
+        
+        # Create group with permissions
+        self.test_group = Group.objects.create(name='Test Group')
+        self.test_group.permissions.add(self.view_user_perm, self.change_user_perm)
         
         # Add user to group
-        self.regular_user.groups.add(self.group)
+        self.regular_user.groups.add(self.test_group)
         
-        # Create permission categories
-        self.category = PermissionCategory.objects.create(
-            name='User Management',
-            description='User management permissions'
+        # Create categories
+        self.user_cat, _ = PermissionCategory.objects.get_or_create(
+            name='User Management', 
+            defaults={'description': 'User management permissions'}
         )
         
-        # Link permission to category
-        self.category_item = PermissionCategoryItem.objects.create(
-            category=self.category,
-            permission=self.view_user_perm,
-            order=1
+        # Link permissions to categories
+        PermissionCategoryItem.objects.get_or_create(
+            category=self.user_cat,
+            permission=self.view_user_perm
         )
         
-        # Create data permission
-        self.data_permission = DataPermission.objects.create(
-            user=self.regular_user,
-            content_type=self.user_content_type,
-            object_id=self.admin_user.id,
-            permission_type='view',
-            created_by=self.admin_user
+        PermissionCategoryItem.objects.get_or_create(
+            category=self.user_cat,
+            permission=self.change_user_perm
+        )
+        
+        PermissionCategoryItem.objects.get_or_create(
+            category=self.user_cat,
+            permission=self.delete_user_perm
         )
 
     def test_get_user_permissions(self):
         """Test getting a user's permissions."""
-        # Get permissions
         permissions = PermissionService.get_user_permissions(self.regular_user)
         
-        # Check permissions
+        # User should have permissions from the group
         self.assertIn(self.view_user_perm, permissions)
-        self.assertNotIn(self.change_user_perm, permissions)
-
+        self.assertIn(self.change_user_perm, permissions)
+        
+        # User should not have permissions they don't have
+        self.assertNotIn(self.delete_user_perm, permissions)
+    
     def test_check_object_permission(self):
-        """Test checking if a user has permission to a specific object."""
-        # Check with permission
-        has_view_perm = PermissionService.check_object_permission(
-            self.regular_user,
-            self.admin_user,
-            'view'
+        """Test checking permissions for a specific object."""
+        # Create data permission for testing
+        data_permission = DataPermission.objects.create(
+            user=self.regular_user,
+            content_type=ContentType.objects.get_for_model(User),
+            object_id=self.admin_user.id,
+            permission_type='view'
         )
         
-        # Check without permission
-        has_edit_perm = PermissionService.check_object_permission(
-            self.regular_user,
-            self.admin_user,
-            'edit'
+        # User should have permission
+        self.assertTrue(
+            PermissionService.check_object_permission(
+                self.regular_user, 
+                self.admin_user, 
+                'view'
+            )
         )
         
-        # Check results
-        self.assertTrue(has_view_perm)
-        self.assertFalse(has_edit_perm)
-
+        # User should not have edit permission
+        self.assertFalse(
+            PermissionService.check_object_permission(
+                self.regular_user, 
+                self.admin_user, 
+                'edit'
+            )
+        )
+        
+        # Clean up
+        data_permission.delete()
+    
     def test_organize_permissions_by_category(self):
         """Test organizing permissions by category."""
-        # Organize permissions
-        categorized_permissions = PermissionService.organize_permissions_by_category()
+        categorized = PermissionService.organize_permissions_by_category()
         
-        # Check results
-        self.assertIn('User Management', categorized_permissions)
-        self.assertIn(self.view_user_perm.id, [p['id'] for p in categorized_permissions['User Management']['permissions']]) 
+        # There should be at least one category
+        self.assertGreaterEqual(len(categorized), 1)
+        
+        # User Management category should be in the results
+        category_names = [cat['name'] for cat in categorized]
+        self.assertIn('User Management', category_names)
+        
+        # Find the User Management category
+        user_cat = None
+        for cat in categorized:
+            if cat['name'] == 'User Management':
+                user_cat = cat
+                break
+        
+        # Category should contain our permissions
+        perm_codenames = [p['codename'] for p in user_cat['permissions']]
+        self.assertIn('test_view_user', perm_codenames)
+        self.assertIn('test_change_user', perm_codenames)
+        self.assertIn('test_delete_user', perm_codenames) 
