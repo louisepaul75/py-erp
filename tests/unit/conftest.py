@@ -5,7 +5,6 @@ This module sets up fixtures and configuration specific to unit tests.
 """
 
 import pytest
-from django.conf import settings
 
 # Mark all tests in this directory with the 'unit' marker
 pytestmark = pytest.mark.unit
@@ -14,12 +13,12 @@ pytestmark = pytest.mark.unit
 def django_settings():
     """Ensure Django settings are properly configured for unit tests."""
     # Make sure we're using the test settings
-    if 'pyerp.settings.test' not in settings.SETTINGS_MODULE and 'tests.settings' not in settings.SETTINGS_MODULE:
-        pytest.importorskip("django")
-        settings_module = 'tests.settings'
-        from django.conf import settings
-        
-        if not settings.configured:
+    pytest.importorskip("django")
+    from django.conf import settings
+    
+    if not settings.configured:
+        if hasattr(settings, 'SETTINGS_MODULE') and 'pyerp.settings.test' not in settings.SETTINGS_MODULE and 'tests.settings' not in settings.SETTINGS_MODULE:
+            settings_module = 'tests.settings'
             import django
             settings.configure()
             django.setup()

@@ -158,6 +158,8 @@ class TestDatabaseConnectionMiddleware(TestCase):
         type(mock_settings).DJANGO_SETTINGS_MODULE = PropertyMock(
             side_effect=AttributeError
         )
+        # Configure APP_VERSION to be string, not MagicMock
+        type(mock_settings).APP_VERSION = PropertyMock(return_value="1.0.0")
         mock_env_get.return_value = 'pyerp.settings.test'
         
         request = self.factory.get('/health/')

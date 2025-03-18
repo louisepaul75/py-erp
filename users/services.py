@@ -3,9 +3,10 @@ Service layer for user, role, and permission management.
 """
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import Group, Permission, User
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.db import models
 
 from .models import UserProfile, Role, PermissionCategory, PermissionCategoryItem, DataPermission
 
@@ -162,12 +163,13 @@ class RoleService:
     """
     
     @staticmethod
-    def create_role(name, description="", permissions=None, is_system_role=False, priority=0, parent_role=None):
+    def create_role(group=None, name=None, description="", permissions=None, is_system_role=False, priority=0, parent_role=None):
         """
         Create a new role with associated group.
         
         Args:
-            name: Name for the role/group
+            group: Existing Group object (takes precedence if provided)
+            name: Name for the role/group (used to create a group if group not provided)
             description: Optional description
             permissions: List of Permission objects or IDs
             is_system_role: Whether this is a system-defined role
@@ -177,8 +179,11 @@ class RoleService:
         Returns:
             Newly created Role instance
         """
-        # Create the group first
-        group = Group.objects.create(name=name)
+        # Create the group if not provided
+        if not group:
+            if not name:
+                raise ValueError("Either group or name must be provided")
+            group = Group.objects.create(name=name)
         
         # Add permissions if provided
         if permissions:
@@ -241,17 +246,15 @@ class PermissionService:
             user: User instance
             
         Returns:
-            Set of Permission objects
+            QuerySet of Permission objects
         """
         if user.is_superuser:
             return Permission.objects.all()
         
         # Get permissions from user and groups
-        user_perms = user.user_permissions.all()
-        group_perms = Permission.objects.filter(group__user=user)
-        
-        # Combine and remove duplicates
-        return user_perms.union(group_perms)
+        return Permission.objects.filter(
+            Q(user=user) | Q(group__user=user)
+        ).distinct()
     
     @staticmethod
     def check_object_permission(user, obj, permission_type):
@@ -339,20 +342,21 @@ class PermissionService:
         Organize all permissions by category for UI display.
         
         Returns:
-            Dictionary of categories with their permissions
+            List of category dictionaries with their permissions
         """
-        result = {}
+        categories = []
         
         for category in PermissionCategory.objects.all():
             perms = Permission.objects.filter(
                 permissioncategoryitem__category=category
             ).values('id', 'name', 'codename')
             
-            result[category.name] = {
+            categories.append({
+                'name': category.name,
                 'description': category.description,
                 'icon': category.icon,
                 'permissions': list(perms)
-            }
+            })
         
         # Add uncategorized permissions
         categorized_perm_ids = PermissionCategoryItem.objects.values_list(
@@ -364,10 +368,11 @@ class PermissionService:
         ).values('id', 'name', 'codename')
         
         if uncategorized.exists():
-            result['Uncategorized'] = {
+            categories.append({
+                'name': 'Uncategorized',
                 'description': 'Permissions not assigned to any category',
                 'icon': 'question-mark',
                 'permissions': list(uncategorized)
-            }
-        
-        return result 
+            })
+            
+        return categories 

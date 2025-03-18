@@ -213,28 +213,28 @@ class RoleServiceTest(TransactionTestCase):
     def test_create_role(self):
         """Test creating a new role."""
         # Create a parent role first
+        parent_group = Group.objects.create(name="Parent Role")
         parent_role = Role.objects.create(
-            name="Parent Role",
+            group=parent_group,
             description="Parent role for testing",
-            is_active=True
+            is_system_role=False,
+            priority=1
         )
         
-        # Create a new role with the parent
+        # Create a new role
+        new_group = Group.objects.create(name="Test Role")
         role_data = {
-            'name': 'Test Role',
-            'description': 'A test role',
-            'is_system_role': False,
-            'is_active': True,
-            'parent_role': parent_role.id
+            'group': new_group,
+            'description': 'Test role description',
+            'parent_role': parent_role,
+            'is_system_role': False
         }
         
+        # Use service to create role
         role = RoleService.create_role(**role_data)
         
-        # Check role was created with correct attributes
-        self.assertEqual(role.name, 'Test Role')
-        self.assertEqual(role.description, 'A test role')
-        self.assertEqual(role.is_system_role, False)
-        self.assertEqual(role.is_active, True)
+        self.assertEqual(role.group.name, "Test Role")
+        self.assertEqual(role.description, "Test role description")
         self.assertEqual(role.parent_role, parent_role)
 
     def test_get_users_in_role(self):

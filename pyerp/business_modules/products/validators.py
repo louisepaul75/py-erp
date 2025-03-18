@@ -6,7 +6,7 @@ This module provides validators specific to product data, including import valid
 
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as translate
@@ -20,6 +20,8 @@ from pyerp.core.validators import (
     SkuValidator,
     ValidationResult,
 )
+
+# Import models directly for runtime, but use string for type checking to avoid circular imports
 from pyerp.business_modules.products.models import Product, ProductCategory
 
 logger = logging.getLogger(__name__)
@@ -405,22 +407,22 @@ class ProductImportValidator(ImportValidator):
         value: Any,
         row_data: dict[str, Any],
         row_index: int | None = None,
-    ) -> tuple[Optional["ProductCategory"], ValidationResult]:
+    ) -> tuple[Optional[ProductCategory], ValidationResult]:
         """
-        Validate the category field.
+        Validate product category.
 
         Args:
-            value: The field value (category instance or code)
+            value: The category code or object to validate
             row_data: The complete row data
-            row_index: Optional index of the row being validated
+            row_index: Optional row index for reporting
 
         Returns:
-            Tuple of (transformed_value, ValidationResult)
+            Tuple of (category, result)
         """
         result = ValidationResult()
 
         # If already a ProductCategory instance, use it
-        if isinstance(value, ProductCategory):
+        if hasattr(value, '_meta') and value._meta.model_name == 'productcategory':
             return value, result
 
         # Try to use ArtGruppe from legacy data if category is not provided
@@ -442,16 +444,21 @@ class ProductImportValidator(ImportValidator):
             try:
                 category = ProductCategory.objects.get(code=value)
                 return category, result
-            except ProductCategory.DoesNotExist:
-                result.add_warning(
-                    "category",
-                    translate("Category with code '%(code)s' does not exist")
-                    % {"code": value},
-                )
+            except Exception as e:
+                # Handle any exception that might occur when fetching the category
+                if 'DoesNotExist' in str(type(e).__name__):
+                    result.add_warning(
+                        "category",
+                        translate("Category with code '%(code)s' does not exist")
+                        % {"code": value},
+                    )
 
-                # Use default category as fallback
-                if self.default_category:
-                    return self.default_category, result
+                    # Use default category as fallback
+                    if self.default_category:
+                        return self.default_category, result
+                else:
+                    # Re-raise unexpected exceptions
+                    raise
 
         return None, result
 

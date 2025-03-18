@@ -76,6 +76,24 @@ class UserDetailSerializer(serializers.ModelSerializer):
             for group in obj.groups.all()
         ]
     
+    def create(self, validated_data):
+        """Create a User with associated UserProfile."""
+        profile_data = validated_data.pop('profile', {})
+        user = User.objects.create_user(**validated_data)
+        
+        # Check if profile already exists (created by signal) and update it
+        # instead of creating a new one
+        if hasattr(user, 'profile'):
+            profile = user.profile
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+        else:
+            # Create profile if it doesn't exist
+            UserProfile.objects.create(user=user, **profile_data)
+        
+        return user
+    
     def update(self, instance, validated_data):
         """Update the User and UserProfile together."""
         profile_data = validated_data.pop('profile', None)
@@ -177,7 +195,7 @@ class RoleSerializer(serializers.ModelSerializer):
     """
     Serializer for the Role model.
     """
-    group_name = serializers.CharField(source='group.name')
+    group_name = serializers.CharField(source='group.name', read_only=True)
     
     class Meta:
         model = Role
@@ -186,6 +204,33 @@ class RoleSerializer(serializers.ModelSerializer):
             'is_system_role', 'priority', 'parent_role'
         ]
         read_only_fields = ['group_name']
+        
+    def create(self, validated_data):
+        """Create a new role using the RoleService."""
+        from .services import RoleService
+        
+        group = validated_data.get('group')
+        description = validated_data.get('description', '')
+        is_system_role = validated_data.get('is_system_role', False)
+        priority = validated_data.get('priority', 0)
+        parent_role = validated_data.get('parent_role', None)
+        
+        return RoleService.create_role(
+            group=group,
+            description=description,
+            is_system_role=is_system_role,
+            priority=priority,
+            parent_role=parent_role
+        )
+        
+    def update(self, instance, validated_data):
+        """Update an existing role."""
+        instance.description = validated_data.get('description', instance.description)
+        instance.is_system_role = validated_data.get('is_system_role', instance.is_system_role)
+        instance.priority = validated_data.get('priority', instance.priority)
+        instance.parent_role = validated_data.get('parent_role', instance.parent_role)
+        instance.save()
+        return instance
 
 
 class PermissionSerializer(serializers.ModelSerializer):

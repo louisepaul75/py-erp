@@ -334,36 +334,46 @@ class RoleViewSet(viewsets.ModelViewSet):
         Add a child role.
         """
         parent_role = self.get_object()
+        
+        # Check if the request is to link an existing role
         child_role_id = request.data.get('child_role_id')
         
-        if not child_role_id:
-            return Response(
-                {"detail": "No child role ID provided"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            child_role = get_object_or_404(Role, id=child_role_id)
-            # Prevent circular references
-            if parent_role.id == child_role.id:
-                return Response(
-                    {"detail": "Cannot add role as child of itself"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+        if child_role_id:
+            try:
+                child_role = get_object_or_404(Role, id=child_role_id)
+                # Prevent circular references
+                if parent_role.id == child_role.id:
+                    return Response(
+                        {"detail": "Cannot add role as child of itself"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                    
+                # Check if this would create a cycle
+                if parent_role in RoleService.get_all_child_roles(child_role):
+                    return Response(
+                        {"detail": "Cannot add role as child because it would create a cycle"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                    
+                child_role.parent_role = parent_role
+                child_role.save()
                 
-            # Check if this would create a cycle
-            if parent_role in RoleService.get_all_child_roles(child_role):
+                return Response(RoleSerializer(child_role).data)
+            except Role.DoesNotExist:
                 return Response(
-                    {"detail": "Cannot add role as child because it would create a cycle"},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "Child role not found"},
+                    status=status.HTTP_404_NOT_FOUND
                 )
-                
-            child_role.parent_role = parent_role
-            child_role.save()
+        else:
+            # Create a new role as a child
+            # Copy relevant data from request
+            role_data = request.data.copy()
             
-            return Response(RoleSerializer(child_role).data)
-        except Role.DoesNotExist:
-            return Response(
-                {"detail": "Child role not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            # Set the parent role
+            role_data['parent_role'] = parent_role.id
+            
+            serializer = self.get_serializer(data=role_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

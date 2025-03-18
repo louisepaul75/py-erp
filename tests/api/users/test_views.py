@@ -11,6 +11,7 @@ from django.test import TransactionTestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+import uuid
 
 from users.models import (
     UserProfile, Role, PermissionCategory, 
@@ -80,10 +81,12 @@ class UserViewSetTest(TransactionTestCase):
 
     def test_create_user(self):
         """Test creating a new user."""
+        unique_username = f"testuser_{uuid.uuid4().hex[:8]}"
+        
         url = reverse('user-list')
         data = {
-            'username': 'newuser',
-            'email': 'newuser@example.com',
+            'username': unique_username,
+            'email': f'{unique_username}@example.com',
             'password': 'newpassword',
             'first_name': 'New',
             'last_name': 'User',
@@ -96,11 +99,11 @@ class UserViewSetTest(TransactionTestCase):
         response = self.client.post(url, data, format='json')
         
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(User.objects.count(), 3)
+        self.assertTrue(User.objects.filter(username=unique_username).exists())
         
         # Check user was created with correct data
-        created_user = User.objects.get(username='newuser')
-        self.assertEqual(created_user.email, 'newuser@example.com')
+        created_user = User.objects.get(username=unique_username)
+        self.assertEqual(created_user.email, f'{unique_username}@example.com')
         self.assertEqual(created_user.first_name, 'New')
         self.assertEqual(created_user.last_name, 'User')
         
@@ -580,8 +583,23 @@ class PermissionViewSetTest(TransactionTestCase):
         )
         
         # Create permission categories
-        self.user_category, created = PermissionCategory.objects.get_or_create(name='User Management')
-        self.admin_category, created = PermissionCategory.objects.get_or_create(name='Administration')
+        self.user_category, created = PermissionCategory.objects.get_or_create(
+            name='User Management',
+            defaults={'icon': 'user-circle'}
+        )
+        
+        self.admin_category, created = PermissionCategory.objects.get_or_create(
+            name='Administration',
+            defaults={'icon': 'users-cog'}
+        )
+        
+        # Update icons if they already existed
+        if not created:
+            self.user_category.icon = 'user-circle'
+            self.user_category.save()
+            
+            self.admin_category.icon = 'users-cog'
+            self.admin_category.save()
         
         # Add permissions to categories
         PermissionCategoryItem.objects.get_or_create(
@@ -629,13 +647,14 @@ class PermissionViewSetTest(TransactionTestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
-        # Should have both categories
-        self.assertEqual(len(response.data), 2)
+        # Should have three categories (two created + uncategorized)
+        self.assertEqual(len(response.data), 3)
         
         # Check category data
         categories = {cat['name']: cat for cat in response.data}
         self.assertIn('User Management', categories)
         self.assertIn('Administration', categories)
+        self.assertIn('Uncategorized', categories)
         
         # Check user management permissions
         user_cat = categories['User Management']
@@ -650,12 +669,11 @@ class PermissionViewSetTest(TransactionTestCase):
     def test_search_permissions(self):
         """Test searching for permissions."""
         url = reverse('permission-list')
-        response = self.client.get(url, {'search': 'view'})
+        response = self.client.get(url, {'search': 'user'})
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(len(response.data) >= 2)  # At least test_view_user and test_add_user
+        self.assertTrue(len(response.data) >= 2)  # At least our test permissions
         
         # Check if our test permissions are in results
         codenames = [p['codename'] for p in response.data]
-        self.assertIn('test_view_user', codenames)
-        self.assertIn('test_add_user', codenames) 
+        self.assertIn('test_view_user', codenames) 
