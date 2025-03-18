@@ -6,6 +6,9 @@ from datetime import datetime
 
 from .base import BaseTransformer, ValidationError
 
+# Import ParentProduct model
+from pyerp.business_modules.products.models import ParentProduct
+
 # Configure logger
 logger = logging.getLogger("pyerp.sync.transformers.production")
 logger.setLevel(logging.DEBUG)
@@ -172,7 +175,32 @@ class ProductionOrderItemTransformer(BaseTransformer):
                 
                 # Set product information
                 if "Art_Nr" in record:
-                    transformed["product_sku"] = str(record["Art_Nr"]).strip()
+                    art_nr = str(record["Art_Nr"]).strip()
+                    transformed["product_sku"] = art_nr
+                    
+                    # Look up parent product by legacy_base_sku
+                    try:
+                        parent_product = ParentProduct.objects.filter(
+                            legacy_base_sku=art_nr
+                        ).first()
+                        
+                        if parent_product:
+                            transformed["parent_product"] = parent_product
+                            logger.info(
+                                "Found parent product by legacy_base_sku: %s, "
+                                "Parent ID: %s, Parent SKU: %s",
+                                art_nr, parent_product.id, parent_product.sku
+                            )
+                        else:
+                            logger.warning(
+                                "No parent product found with legacy_base_sku: %s", 
+                                art_nr
+                            )
+                    except Exception as e:
+                        logger.error(
+                            "Error finding parent product for Art_Nr: %s - %s", 
+                            art_nr, str(e)
+                        )
                 
                 # Convert quantities
                 self._set_numeric_field(transformed, record, "St_Soll", "target_quantity")

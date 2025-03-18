@@ -82,7 +82,8 @@ class ProductionOrderItemAdmin(admin.ModelAdmin):
     list_display = (
         'item_number',
         'production_order', 
-        'operation_type', 
+        'operation_type',
+        'parent_product',
         'product_sku',
         'target_quantity',
         'completed_quantity',
@@ -90,8 +91,8 @@ class ProductionOrderItemAdmin(admin.ModelAdmin):
         'status'
     )
     list_display_links = ('item_number', 'operation_type')
-    list_filter = ('status', 'operation_type', 'start_date')
-    search_fields = ('production_order__order_number', 'product_sku', 'legacy_id', 'operation_type')
+    list_filter = ('status', 'operation_type', 'start_date', 'parent_product')
+    search_fields = ('production_order__order_number', 'product_sku', 'legacy_id', 'operation_type', 'parent_product__sku', 'parent_product__legacy_base_sku')
     readonly_fields = ('remaining_quantity', 'created_at', 'updated_at')
     
     def get_operation_type_display(self, obj):
@@ -124,6 +125,7 @@ class ProductionOrderItemAdmin(admin.ModelAdmin):
         }),
         (_('Product Information'), {
             'fields': (
+                'parent_product',
                 'product_sku',
                 'product_share'
             )

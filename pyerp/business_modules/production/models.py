@@ -7,6 +7,13 @@ and related entities.
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+import logging
+
+# Add import for ParentProduct
+from pyerp.business_modules.products.models import ParentProduct
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class ProductionOrder(models.Model):
@@ -127,6 +134,18 @@ class ProductionOrderItem(models.Model):
         related_name='items',
         verbose_name=_('Production Order')
     )
+    
+    # Add parent_product foreign key relationship
+    parent_product = models.ForeignKey(
+        ParentProduct,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='production_items',
+        verbose_name=_('Parent Product'),
+        help_text=_('Reference to parent product (maps to Art_Nr in WerksauftrPos)')
+    )
+    
     operation_type = models.CharField(
         max_length=10, 
         verbose_name=_('Operation Type'),

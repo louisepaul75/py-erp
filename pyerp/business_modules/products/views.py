@@ -6,19 +6,23 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch, Count
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, CreateView, UpdateView, DeleteView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.urls import reverse_lazy
+from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 
-from pyerp.business_modules.products.forms import ProductSearchForm
+from pyerp.business_modules.products.forms import ProductSearchForm, TagInheritanceForm
 from pyerp.business_modules.products.models import (
     ParentProduct,
     ProductCategory,
     VariantProduct,
 )
+from pyerp.business_modules.products.tag_models import Tag
 
 
 class ProductListView(LoginRequiredMixin, ListView):
@@ -671,3 +675,120 @@ class CategoryListAPIView(ProductAPIView):
                 "results": categories_data,
             },
         )
+
+
+class TagListView(LoginRequiredMixin, ListView):
+    """
+    View for listing all tags
+    """
+    model = Tag
+    template_name = 'products/tag_list.html'
+    context_object_name = 'tags'
+
+
+class TagCreateView(LoginRequiredMixin, CreateView):
+    """
+    View for creating a new tag
+    """
+    model = Tag
+    template_name = 'products/tag_form.html'
+    fields = ['name', 'description']
+    success_url = reverse_lazy('products:tag_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Tag created successfully."))
+        return super().form_valid(form)
+
+
+class TagUpdateView(LoginRequiredMixin, UpdateView):
+    """
+    View for updating an existing tag
+    """
+    model = Tag
+    template_name = 'products/tag_form.html'
+    fields = ['name', 'description']
+    success_url = reverse_lazy('products:tag_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, _("Tag updated successfully."))
+        return super().form_valid(form)
+
+
+class TagDeleteView(LoginRequiredMixin, DeleteView):
+    """
+    View for deleting a tag
+    """
+    model = Tag
+    template_name = 'products/tag_confirm_delete.html'
+    success_url = reverse_lazy('products:tag_list')
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, _("Tag deleted successfully."))
+        return super().delete(request, *args, **kwargs)
+
+
+class VariantProductTagUpdateView(LoginRequiredMixin, UpdateView):
+    """
+    View for managing tags on a variant product
+    """
+    model = VariantProduct
+    form_class = TagInheritanceForm
+    template_name = 'products/variant_product_tags_form.html'
+    
+    def get_success_url(self):
+        return reverse_lazy('products:variant_detail', kwargs={'pk': self.object.pk})
+    
+    def form_valid(self, form):
+        messages.success(self.request, _("Product tags updated successfully."))
+        return super().form_valid(form)
+
+
+class ProductListWithTagFilterView(ListView):
+    """
+    View for listing products filtered by tag
+    """
+    template_name = 'products/product_list.html'
+    context_object_name = 'products'
+    
+    def get_queryset(self):
+        tag_slug = self.kwargs.get('tag_slug')
+        
+        if tag_slug:
+            tag = get_object_or_404(Tag, slug=tag_slug)
+            
+            # Get parent products with this tag
+            parent_products = ParentProduct.objects.filter(tags=tag)
+            
+            # Get variant products with this tag directly assigned
+            direct_variants = VariantProduct.objects.filter(tags=tag)
+            
+            # Get variant products that inherit this tag from parent
+            inheriting_variants = VariantProduct.objects.filter(
+                parent__in=parent_products
+            ).exclude(
+                id__in=direct_variants
+            )
+            
+            # Filter inheriting variants to only those that actually inherit
+            inheriting_variants_filtered = [
+                variant for variant in inheriting_variants
+                if variant.inherits_tags()
+            ]
+            
+            # Combine the two sets of variants
+            variant_ids = list(direct_variants.values_list('id', flat=True))
+            variant_ids.extend([v.id for v in inheriting_variants_filtered])
+            
+            return VariantProduct.objects.filter(id__in=variant_ids)
+        else:
+            return VariantProduct.objects.filter(is_active=True)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        tag_slug = self.kwargs.get('tag_slug')
+        if tag_slug:
+            context['filter_tag'] = get_object_or_404(Tag, slug=tag_slug)
+        
+        context['tags'] = Tag.objects.all()
+        return context
