@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import useTheme from '@/hooks/useTheme';
 import useLanguage from '@/hooks/useLanguage';
 import LanguageSelector from './LanguageSelector';
+import { useLogout } from '@/lib/auth/authHooks';
 
 // Mock user data - replace with actual auth implementation
 const mockUser = {
@@ -32,6 +33,7 @@ export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { language } = useLanguage();
   const [user, setUser] = useState(mockUser);
+  const logout = useLogout();
 
   // Toggle dropdown
   const toggleDropdown = () => setIsOpen(!isOpen);
@@ -62,6 +64,10 @@ export function Navbar() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleLogout = () => {
+    logout.mutate();
+  };
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-10">
@@ -184,7 +190,7 @@ export function Navbar() {
                     {user.isAdmin ? 'Admin Settings' : 'Settings'}
                   </DropdownItem>
 
-                  <DropdownItem href="/logout">
+                  <DropdownItem onClick={handleLogout}>
                     <LogOut className="mr-3 h-5 w-5" />
                     Logout
                   </DropdownItem>
@@ -259,7 +265,7 @@ export function Navbar() {
                 {user.isAdmin ? 'Admin Settings' : 'Settings'}
               </MobileDropdownItem>
               
-              <MobileDropdownItem href="/logout">
+              <MobileDropdownItem onClick={handleLogout}>
                 <LogOut className="mr-3 h-5 w-5" />
                 Logout
               </MobileDropdownItem>
