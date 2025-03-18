@@ -19,4 +19,4 @@ class TestViewSet(unittest.TestCase):
 
     def test_docstring(self):
         """Test that SalesViewSet has a docstring"""
-        self.assertIsNotNone(SalesViewSet.__doc__) 
+        self.assertIsNotNone(SalesViewSet.__doc__)

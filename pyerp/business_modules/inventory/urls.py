@@ -6,7 +6,7 @@ from rest_framework.response import Response
 import logging
 from django.db import models
 
-from .models import BoxType, StorageLocation, Box, BoxSlot, ProductStorage, BoxStorage
+from .models import BoxType, StorageLocation, Box, ProductStorage, BoxStorage
 
 app_name = "inventory"
 logger = logging.getLogger(__name__)
@@ -47,10 +47,7 @@ def box_types_list(request):
         return Response(data)
     except Exception as e:
         logger.error(f"Error fetching box types: {e}")
-        return Response(
-            {"detail": "Failed to fetch box types"},
-            status=500
-        )
+        return Response({"detail": "Failed to fetch box types"}, status=500)
 
 
 @api_view(["GET"])
@@ -59,8 +56,8 @@ def boxes_list(request):
     """API endpoint to list all boxes."""
     try:
         # Get page number and size from query parameters
-        page = int(request.GET.get('page', 1))
-        page_size = int(request.GET.get('page_size', 10))
+        page = int(request.GET.get("page", 1))
+        page_size = int(request.GET.get("page_size", 10))
 
         # Calculate offset and limit
         offset = (page - 1) * page_size
@@ -70,7 +67,11 @@ def boxes_list(request):
         total_count = Box.objects.count()
 
         # Get paginated boxes with related data
-        boxes = Box.objects.select_related('box_type').prefetch_related('slots').all()[offset:offset + limit]
+        boxes = (
+            Box.objects.select_related("box_type")
+            .prefetch_related("slots")
+            .all()[offset : offset + limit]
+        )
 
         data = []
         for box in boxes:
@@ -79,7 +80,7 @@ def boxes_list(request):
                 storage_location = None
                 for slot in box.slots.all():
                     box_storage = slot.box_storage_items.select_related(
-                        'product_storage__storage_location'
+                        "product_storage__storage_location"
                     ).first()
                     if box_storage and box_storage.product_storage.storage_location:
                         storage_location = {
@@ -106,20 +107,19 @@ def boxes_list(request):
             except Exception as box_error:
                 logger.error(f"Error processing box {box.id}: {box_error}")
                 continue
-        
-        return Response({
-            'results': data,
-            'total': total_count,
-            'page': page,
-            'page_size': page_size,
-            'total_pages': (total_count + page_size - 1) // page_size
-        })
+
+        return Response(
+            {
+                "results": data,
+                "total": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total_count + page_size - 1) // page_size,
+            }
+        )
     except Exception as e:
         logger.error(f"Error fetching boxes: {e}")
-        return Response(
-            {"detail": "Failed to fetch boxes"},
-            status=500
-        )
+        return Response({"detail": "Failed to fetch boxes"}, status=500)
 
 
 @api_view(["GET"])
@@ -129,12 +129,9 @@ def storage_locations_list(request):
     try:
         # Get all storage locations with product counts
         locations = StorageLocation.objects.annotate(
-            product_count=models.Count(
-                'stored_products',
-                distinct=True
-            )
+            product_count=models.Count("stored_products", distinct=True)
         )
-        
+
         data = [
             {
                 "id": location.id,
@@ -149,17 +146,16 @@ def storage_locations_list(request):
                 "special_spot": location.special_spot,
                 "is_active": location.is_active,
                 "product_count": location.product_count,
-                "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip("-")
+                "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip(
+                    "-"
+                ),
             }
             for location in locations
         ]
         return Response(data)
     except Exception as e:
         logger.error(f"Error fetching storage locations: {e}")
-        return Response(
-            {"detail": "Failed to fetch storage locations"},
-            status=500
-        )
+        return Response({"detail": "Failed to fetch storage locations"}, status=500)
 
 
 @api_view(["GET"])
@@ -168,27 +164,18 @@ def products_by_location(request, location_id=None):
     """API endpoint to list products by storage location."""
     try:
         if not location_id:
-            return Response(
-                {"detail": "Storage location ID is required"},
-                status=400
-            )
-        
+            return Response({"detail": "Storage location ID is required"}, status=400)
+
         # Get products in the storage location
         product_storage_items = ProductStorage.objects.filter(
             storage_location_id=location_id
-        ).select_related(
-            'product',
-            'storage_location'
-        )
-        
+        ).select_related("product", "storage_location")
+
         # Get box storage items for these products
         box_storage_items = BoxStorage.objects.filter(
             product_storage__in=product_storage_items
-        ).select_related(
-            'box_slot',
-            'box_slot__box'
-        )
-        
+        ).select_related("box_slot", "box_slot__box")
+
         # Group products by box and slot
         result = {}
         for box_item in box_storage_items:
@@ -196,55 +183,50 @@ def products_by_location(request, location_id=None):
             box_code = box.code
             slot_code = box_item.box_slot.slot_code
             product = box_item.product_storage.product
-            
+
             if box_code not in result:
-                result[box_code] = {
-                    "box_id": box.id,
-                    "box_code": box_code,
-                    "slots": {}
-                }
-            
+                result[box_code] = {"box_id": box.id, "box_code": box_code, "slots": {}}
+
             if slot_code not in result[box_code]["slots"]:
                 result[box_code]["slots"][slot_code] = {
                     "slot_id": box_item.box_slot.id,
                     "slot_code": slot_code,
-                    "products": []
+                    "products": [],
                 }
-            
-            result[box_code]["slots"][slot_code]["products"].append({
-                "id": product.id,
-                "sku": product.sku,
-                "name": product.name,
-                "quantity": box_item.quantity,
-                "reservation_status": box_item.product_storage.reservation_status,
-                "batch_number": box_item.batch_number,
-                "date_stored": box_item.date_stored
-            })
-        
+
+            result[box_code]["slots"][slot_code]["products"].append(
+                {
+                    "id": product.id,
+                    "sku": product.sku,
+                    "name": product.name,
+                    "quantity": box_item.quantity,
+                    "reservation_status": box_item.product_storage.reservation_status,
+                    "batch_number": box_item.batch_number,
+                    "date_stored": box_item.date_stored,
+                }
+            )
+
         # Convert to list format for easier consumption in frontend
         formatted_result = []
         for box_code, box_data in result.items():
-            box_item = {
-                "box_id": box_data["box_id"],
-                "box_code": box_code,
-                "slots": []
-            }
-            
+            box_item = {"box_id": box_data["box_id"], "box_code": box_code, "slots": []}
+
             for slot_code, slot_data in box_data["slots"].items():
-                box_item["slots"].append({
-                    "slot_id": slot_data["slot_id"],
-                    "slot_code": slot_code,
-                    "products": slot_data["products"]
-                })
-            
+                box_item["slots"].append(
+                    {
+                        "slot_id": slot_data["slot_id"],
+                        "slot_code": slot_code,
+                        "products": slot_data["products"],
+                    }
+                )
+
             formatted_result.append(box_item)
-        
+
         return Response(formatted_result)
     except Exception as e:
         logger.error(f"Error fetching products by location: {e}")
         return Response(
-            {"detail": f"Failed to fetch products by location: {str(e)}"},
-            status=500
+            {"detail": f"Failed to fetch products by location: {str(e)}"}, status=500
         )
 
 
@@ -254,43 +236,40 @@ def locations_by_product(request, product_id=None):
     """API endpoint to list storage locations for a specific product."""
     try:
         if not product_id:
-            return Response(
-                {"detail": "Product ID is required"},
-                status=400
-            )
-        
+            return Response({"detail": "Product ID is required"}, status=400)
+
         # Get storage locations for the product
         product_storage_items = ProductStorage.objects.filter(
             product_id=product_id
-        ).select_related(
-            'product',
-            'storage_location'
-        )
-        
+        ).select_related("product", "storage_location")
+
         # Format the response
         result = []
         for item in product_storage_items:
             if item.storage_location:
                 location = item.storage_location
-                result.append({
-                    "id": location.id,
-                    "name": location.name,
-                    "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip("-"),
-                    "quantity": item.quantity,
-                    "reservation_status": item.reservation_status,
-                    "country": location.country,
-                    "city_building": location.city_building,
-                    "unit": location.unit,
-                    "compartment": location.compartment,
-                    "shelf": location.shelf
-                })
-        
+                result.append(
+                    {
+                        "id": location.id,
+                        "name": location.name,
+                        "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip(
+                            "-"
+                        ),
+                        "quantity": item.quantity,
+                        "reservation_status": item.reservation_status,
+                        "country": location.country,
+                        "city_building": location.city_building,
+                        "unit": location.unit,
+                        "compartment": location.compartment,
+                        "shelf": location.shelf,
+                    }
+                )
+
         return Response(result)
     except Exception as e:
         logger.error(f"Error fetching locations by product: {e}")
         return Response(
-            {"detail": f"Failed to fetch locations by product: {str(e)}"},
-            status=500
+            {"detail": f"Failed to fetch locations by product: {str(e)}"}, status=500
         )
 
 

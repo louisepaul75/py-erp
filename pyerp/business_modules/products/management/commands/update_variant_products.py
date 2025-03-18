@@ -25,7 +25,7 @@ from pyerp.utils.logging import get_logger, get_category_logger
 logger = get_logger(__name__)
 
 # Use category logger for database operations
-db_logger = get_category_logger('database')
+db_logger = get_category_logger("database")
 db_logger.setLevel(logging.ERROR)
 
 
@@ -73,7 +73,7 @@ class Command(BaseCommand):
         """Execute the command."""
         # Store original logging level
         original_log_level = db_logger.level
-        
+
         try:
             env = options.get("env", "dev")
             limit = options.get("limit")
@@ -120,9 +120,7 @@ class Command(BaseCommand):
                 )
 
                 stats["total"] = len(df)
-                self.stdout.write(
-                    f"Fetched {stats['total']} variant products"
-                )
+                self.stdout.write(f"Fetched {stats['total']} variant products")
 
                 # Print the field names from the first record
                 if len(df) > 0:
@@ -142,20 +140,15 @@ class Command(BaseCommand):
                     try:
                         with transaction.atomic():
                             # Extract data from the row
-                            variant_id = (
-                                str(row["__KEY"]) if "__KEY" in row else None
-                            )
-                            nummer = (
-                                str(row["Nummer"]) if "Nummer" in row else None
-                            )
+                            variant_id = str(row["__KEY"]) if "__KEY" in row else None
+                            nummer = str(row["Nummer"]) if "Nummer" in row else None
                             familie_id = (
                                 str(row["Familie_"]) if "Familie_" in row else None
                             )
 
                             if not variant_id or not nummer:
                                 self.stdout.write(
-                                    "Skipping row - Missing ID or SKU: "
-                                    f"{row}"
+                                    "Skipping row - Missing ID or SKU: " f"{row}"
                                 )
                                 stats["skipped"] += 1
                                 continue
@@ -179,7 +172,7 @@ class Command(BaseCommand):
                             name_en = row.get("Bezeichnung_ENG", "")
                             description = row.get("Beschreibung", "")
                             if description is None:
-                                description = {'DE': ''}
+                                description = {"DE": ""}
                             description_en = row.get("Beschreibung_ENG", "")
                             short_description = row.get("Bez_kurz", "")
                             base_sku = row.get("fk_ArtNr", nummer)
@@ -250,12 +243,8 @@ class Command(BaseCommand):
                             is_verkaufsartikel = bool_to_int(
                                 row.get("Verkaufsartikel", False)
                             )
-                            release_date = parse_legacy_date(
-                                row.get("Release_Date")
-                            )
-                            auslaufdatum = parse_legacy_date(
-                                row.get("Auslaufdatum")
-                            )
+                            release_date = parse_legacy_date(row.get("Release_Date"))
+                            auslaufdatum = parse_legacy_date(row.get("Auslaufdatum"))
 
                             # Check if variant product exists
                             existing_variant = VariantProduct.objects.filter(
@@ -312,9 +301,7 @@ class Command(BaseCommand):
 
                     except Exception as e:
                         stats["errors"] += 1
-                        self.stderr.write(
-                            f"Error processing variant product: {e}"
-                        )
+                        self.stderr.write(f"Error processing variant product: {e}")
                         if debug:
                             self.stderr.write(f"Row data: {row}")
                         continue
@@ -333,4 +320,4 @@ class Command(BaseCommand):
             self.stdout.write(f"Errors: {stats['errors']}")
         finally:
             # Restore original logging level
-            db_logger.setLevel(original_log_level) 
+            db_logger.setLevel(original_log_level)

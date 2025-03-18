@@ -130,18 +130,27 @@ class DatabaseConnectionMiddleware:
 
         # Check for static file extensions that don't need database access
         static_extensions = [
-            '.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg',
-            '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map'
+            ".js",
+            ".css",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".svg",
+            ".ico",
+            ".woff",
+            ".woff2",
+            ".ttf",
+            ".eot",
+            ".map",
         ]
-        
+
         # Check if path is optional or has a static extension
-        is_optional = any(
-            request.path.startswith(path) for path in db_optional_paths
-        )
+        is_optional = any(request.path.startswith(path) for path in db_optional_paths)
         has_static_extension = any(
             request.path.endswith(ext) for ext in static_extensions
         )
-        
+
         if is_optional or has_static_extension:
             return self.get_response(request)
 

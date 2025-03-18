@@ -15,4 +15,4 @@ urlpatterns = [
         views.update_connection,
         name="update_connection",
     ),
-] 
+]

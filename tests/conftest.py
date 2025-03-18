@@ -22,19 +22,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Initialize Django
 import django
+
 django.setup()
 
 # Now we can safely import Django components
 from django.test import Client
 from django.conf import settings
-from django.urls import include, path
 from rest_framework.test import APIClient
 
 # Configure URL patterns for tests
-from tests import test_urls
 
 # Append our test URLs to the ROOT_URLCONF
-settings.ROOT_URLCONF = 'tests.test_urls'
+settings.ROOT_URLCONF = "tests.test_urls"
+
 
 # UI Testing Fixtures
 @pytest.fixture
@@ -61,13 +61,7 @@ def sample_db(db):
 @pytest.fixture
 def mock_api_response():
     """Sample API response data for testing."""
-    return {
-        "status": "success",
-        "data": {
-            "id": 1,
-            "name": "Test Item"
-        }
-    }
+    return {"status": "success", "data": {"id": 1, "name": "Test Item"}}
 
 
 # Business Logic Fixtures

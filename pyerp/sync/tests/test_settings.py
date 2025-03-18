@@ -29,6 +29,7 @@ if not settings.configured:
 
     try:
         import django
+
         django.setup()
     except AttributeError:
-        pass  # Django < 1.7 
+        pass  # Django < 1.7

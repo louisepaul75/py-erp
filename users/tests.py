@@ -8,6 +8,4 @@ Actual tests are organized in the tests directory:
 - tests/api/users/ - API tests for views and endpoints
 """
 
-from django.test import TestCase
-
 # Create your tests here.

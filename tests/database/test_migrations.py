@@ -24,10 +24,10 @@ def test_migrations_can_be_applied():
     executor = MigrationExecutor(connection)
     # Get all app labels from the migration graph
     app_labels = {node[0] for node in executor.loader.graph.nodes}
-    
+
     # Try to apply migrations for each app
     for app_label in app_labels:
         try:
             executor.migrate([app_label])
         except Exception as e:
-            pytest.fail(f"Failed to apply migrations for {app_label}: {str(e)}") 
+            pytest.fail(f"Failed to apply migrations for {app_label}: {str(e)}")

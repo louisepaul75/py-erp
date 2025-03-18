@@ -342,7 +342,7 @@ class ProductAPIView(APIView):
             if isinstance(product, ParentProduct):
                 try:
                     # Skip the query if we already have the count from annotation
-                    if hasattr(product, 'variants_count'):
+                    if hasattr(product, "variants_count"):
                         product_data["variants_count"] = product.variants_count
                     else:
                         variants_count = VariantProduct.objects.filter(
@@ -447,9 +447,9 @@ class ProductListAPIView(ProductAPIView):
         """Handle GET request for product listing"""
         # Start with an optimized queryset that includes related data
         products = ParentProduct.objects.select_related("category")
-        
+
         # Use annotation to count variants in a single query instead of N+1 queries
-        products = products.annotate(variants_count=Count('variants'))
+        products = products.annotate(variants_count=Count("variants"))
 
         # Check if we need to include variants early to optimize the query
         include_variants = request.GET.get("include_variants", "").lower() in (
@@ -457,7 +457,7 @@ class ProductListAPIView(ProductAPIView):
             "1",
             "yes",
         )
-        
+
         # Consolidate prefetch_related calls to avoid conflicts
         if include_variants:
             variant_qs = VariantProduct.objects.select_related(
@@ -468,7 +468,7 @@ class ProductListAPIView(ProductAPIView):
             )
         else:
             # Only prefetch images for variants if we're not including full variant data
-            products = products.prefetch_related('variants__images')
+            products = products.prefetch_related("variants__images")
 
         # Apply filters from query parameters
         category_id = request.GET.get("category")
@@ -518,9 +518,9 @@ class ProductListAPIView(ProductAPIView):
         products_data = []
         for product in products:
             product_data = self.get_product_data(product)
-            
+
             # Use the annotated variants_count instead of making a separate query
-            if hasattr(product, 'variants_count'):
+            if hasattr(product, "variants_count"):
                 product_data["variants_count"] = product.variants_count
 
             # Add variants data if requested

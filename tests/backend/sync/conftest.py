@@ -4,6 +4,7 @@ Pytest configuration for sync module tests.
 This file configures the test environment for sync module tests
 and provides fixtures for testing sync functionality.
 """
+
 import pytest
 from unittest import mock
 from django.utils import timezone
@@ -15,7 +16,7 @@ from pyerp.sync.models import (
     SyncMapping,
     SyncState,
     SyncLog,
-    SyncLogDetail
+    SyncLogDetail,
 )
 
 
@@ -44,9 +45,7 @@ def sync_mapping(sync_source, sync_target):
     mapping.source = sync_source
     mapping.target = sync_target
     mapping.entity_type = "test_entity"
-    mapping.__str__.return_value = (
-        f"{sync_source} → {sync_target} (test_entity)"
-    )
+    mapping.__str__.return_value = f"{sync_source} → {sync_target} (test_entity)"
     return mapping
 
 
@@ -91,4 +90,4 @@ def sync_log_detail(sync_log):
     sync_log_detail.status = "success"
     sync_log_detail.details = {"field1": "value1"}
     sync_log_detail.__str__.return_value = f"{sync_log} - 456"
-    return sync_log_detail 
+    return sync_log_detail

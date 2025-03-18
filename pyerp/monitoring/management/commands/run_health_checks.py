@@ -77,8 +77,12 @@ class Command(BaseCommand):
             self.stdout.write("\n")
 
         # Print a summary
-        success_count = sum(1 for r in results_dict.values() if r["status"] == "success")
-        warning_count = sum(1 for r in results_dict.values() if r["status"] == "warning")
+        success_count = sum(
+            1 for r in results_dict.values() if r["status"] == "success"
+        )
+        warning_count = sum(
+            1 for r in results_dict.values() if r["status"] == "warning"
+        )
         error_count = sum(1 for r in results_dict.values() if r["status"] == "error")
 
         self.stdout.write(_("Summary:"))

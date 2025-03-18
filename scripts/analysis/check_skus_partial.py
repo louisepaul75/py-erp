@@ -6,7 +6,6 @@ Script to check for partial matches between product SKUs and article numbers.
 import os
 
 import django
-from django.core.management.base import BaseCommand
 
 # Set up Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings")

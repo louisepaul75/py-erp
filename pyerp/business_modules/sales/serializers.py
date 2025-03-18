@@ -5,39 +5,70 @@ from .models import Customer, Address, SalesRecord, SalesRecordItem
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = '__all__'
+        fields = "__all__"
 
 
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = '__all__'
+        fields = "__all__"
 
 
 class SalesRecordItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesRecordItem
         fields = [
-            'id', 'legacy_id', 'sales_record', 'position', 'legacy_sku',
-            'description', 'quantity', 'unit_price', 'discount_percentage',
-            'tax_rate', 'tax_amount', 'line_subtotal', 'line_total',
-            'item_type', 'notes', 'fulfillment_status', 'fulfilled_quantity',
-            'product'
+            "id",
+            "legacy_id",
+            "sales_record",
+            "position",
+            "legacy_sku",
+            "description",
+            "quantity",
+            "unit_price",
+            "discount_percentage",
+            "tax_rate",
+            "tax_amount",
+            "line_subtotal",
+            "line_total",
+            "item_type",
+            "notes",
+            "fulfillment_status",
+            "fulfilled_quantity",
+            "product",
         ]
 
 
 class SalesRecordSerializer(serializers.ModelSerializer):
     line_items = SalesRecordItemSerializer(many=True, read_only=True)
-    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
 
     class Meta:
         model = SalesRecord
         fields = [
-            'id', 'legacy_id', 'record_number', 'record_date', 'record_type',
-            'customer', 'customer_name', 'subtotal', 'tax_amount', 'shipping_cost',
-            'handling_fee', 'total_amount', 'payment_status', 'payment_date',
-            'currency', 'tax_type', 'notes', 'payment_terms', 'payment_method',
-            'shipping_method', 'shipping_address', 'billing_address', 'line_items'
+            "id",
+            "legacy_id",
+            "record_number",
+            "record_date",
+            "record_type",
+            "customer",
+            "customer_name",
+            "subtotal",
+            "tax_amount",
+            "shipping_cost",
+            "handling_fee",
+            "total_amount",
+            "payment_status",
+            "payment_date",
+            "currency",
+            "tax_type",
+            "notes",
+            "payment_terms",
+            "payment_method",
+            "shipping_method",
+            "shipping_address",
+            "billing_address",
+            "line_items",
         ]
 
 

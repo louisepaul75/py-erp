@@ -17,9 +17,10 @@ class ProductsConfig(AppConfig):
 
     def ready(self):
         """
-        Initialize app when Django starts.
+        Import signals to register them.
         """
         try:
-            import pyerp.business_modules.products.signals
+            # Using import inside a function to avoid circular imports
+            import pyerp.business_modules.products.signals  # noqa: F401
         except ImportError:
             pass

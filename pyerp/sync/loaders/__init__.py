@@ -7,4 +7,4 @@ systems during synchronization.
 
 from .django_model import DjangoModelLoader
 
-__all__ = ['DjangoModelLoader'] 
+__all__ = ["DjangoModelLoader"]

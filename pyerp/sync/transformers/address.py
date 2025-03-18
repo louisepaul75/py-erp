@@ -35,7 +35,7 @@ class AddressTransformer(BaseTransformer):
             "formal_salutation": "Briefanrede",
             "legacy_id": "__KEY",
         }
-        
+
         # Merge default mappings with any provided in config
         if "field_mappings" in config:
             default_mappings.update(config["field_mappings"])
@@ -43,36 +43,32 @@ class AddressTransformer(BaseTransformer):
 
         super().__init__(config)
 
-    def transform(
-        self, source_data: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Transform address records from legacy format.
-        
+
         Args:
             source_data: List of address records from legacy system
-            
+
         Returns:
             List of transformed address records
         """
         transformed_records = []
-        
+
         # Get the Customer model
         try:
-            Customer = apps.get_model('sales', 'Customer')
+            Customer = apps.get_model("sales", "Customer")
         except LookupError:
             logger.error("Could not find Customer model in sales app")
             Customer = None
             return transformed_records
-        
+
         # Get all existing address numbers for prefiltering
         existing_address_numbers: Set[str] = set()
         if Customer:
             try:
                 # Fetch all legacy address numbers from the database
                 existing_address_numbers = set(
-                    Customer.objects.values_list(
-                        'legacy_address_number', flat=True
-                    )
+                    Customer.objects.values_list("legacy_address_number", flat=True)
                 )
                 logger.info(
                     f"Found {len(existing_address_numbers)} existing "
@@ -80,24 +76,24 @@ class AddressTransformer(BaseTransformer):
                 )
             except Exception as e:
                 logger.error(f"Error fetching address numbers: {e}")
-        
+
         # Prepare records with address numbers for prefiltering
         records_with_address_numbers = []
         for source_record in source_data:
             # Extract address number from the record
             address_number = source_record.get("AdrNr", "")
-            
+
             # Add address_number to the record for prefiltering
             source_record["_address_number"] = address_number
             records_with_address_numbers.append(source_record)
-        
+
         # Prefilter records based on existing address numbers
         valid_records, invalid_records = self.prefilter_records(
             records_with_address_numbers,
             existing_keys=existing_address_numbers,
-            key_field="_address_number"
+            key_field="_address_number",
         )
-        
+
         if invalid_records:
             logger.info(
                 f"Skipping {len(invalid_records)} addresses with "
@@ -108,7 +104,7 @@ class AddressTransformer(BaseTransformer):
                     f"Address not found for number: "
                     f"{record.get('_address_number', 'unknown')}"
                 )
-        
+
         # Process only records with valid address numbers
         for source_record in valid_records:
             try:
@@ -117,7 +113,7 @@ class AddressTransformer(BaseTransformer):
 
                 # Add address_number field
                 record["address_number"] = source_record.get("AdrNr", "")
-                
+
                 # Look up customer by address_number
                 customer_found = False
                 if Customer and "address_number" in record:
@@ -125,9 +121,8 @@ class AddressTransformer(BaseTransformer):
                         # Match on legacy_address_number
                         lookup_value = record["address_number"]
                         logger.info(
-                            "Looking up customer with "
-                            "legacy_address_number: %s",
-                            lookup_value
+                            "Looking up customer with " "legacy_address_number: %s",
+                            lookup_value,
                         )
                         customer = Customer.objects.get(
                             legacy_address_number=lookup_value
@@ -140,32 +135,29 @@ class AddressTransformer(BaseTransformer):
                             "for address: %s",
                             customer.id,
                             customer.customer_number,
-                            lookup_value
+                            lookup_value,
                         )
                     except Customer.DoesNotExist:
                         logger.error(
                             "No customer found with legacy_address_number: %s",
-                            lookup_value
+                            lookup_value,
                         )
                     except Exception as e:
                         extra = {
                             "address_number": record["address_number"],
-                            "error_type": type(e).__name__
+                            "error_type": type(e).__name__,
                         }
                         logger.error(
-                            "Error looking up customer: %s", str(e),
-                            extra=extra
+                            "Error looking up customer: %s", str(e), extra=extra
                         )
-                
+
                 # Skip records without a valid customer
                 if not customer_found:
                     continue
 
                 # Clean up country code
                 if "country" in record:
-                    record["country"] = self._clean_country_code(
-                        record["country"]
-                    )
+                    record["country"] = self._clean_country_code(record["country"])
 
                 # Clean up email
                 if "email" in record:
@@ -185,20 +177,18 @@ class AddressTransformer(BaseTransformer):
             except Exception as e:
                 logger.error(
                     f"Failed to transform address record: {e}",
-                    extra={"record": source_record}
+                    extra={"record": source_record},
                 )
                 continue
 
         return transformed_records
 
-    def _parse_legacy_timestamp(
-        self, timestamp_str: str
-    ) -> datetime:
+    def _parse_legacy_timestamp(self, timestamp_str: str) -> datetime:
         """Parse legacy system timestamp into datetime object.
-        
+
         Args:
             timestamp_str: Timestamp string from legacy system
-            
+
         Returns:
             Parsed datetime or current time if parsing fails
         """
@@ -207,36 +197,32 @@ class AddressTransformer(BaseTransformer):
 
         try:
             # Legacy timestamps are in format: "2025-03-06T04:13:17.687Z"
-            dt = datetime.strptime(
-                timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ"
-            )
+            dt = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ")
             # Use UTC timezone
             return dt.replace(tzinfo=ZoneInfo("UTC"))
         except (ValueError, TypeError):
-            logger.warning(
-                f"Failed to parse legacy timestamp: {timestamp_str}"
-            )
+            logger.warning(f"Failed to parse legacy timestamp: {timestamp_str}")
             return timezone.now()
 
     def _clean_country_code(self, country: str) -> str:
         """Clean and validate country code.
-        
+
         Args:
             country: Raw country code from legacy system
-            
+
         Returns:
             Cleaned 2-letter country code or empty string
         """
         if not country:
             return ""
-            
+
         # Convert to uppercase and strip whitespace
         code = country.strip().upper()
-        
+
         # Validate it's a 2-letter code
         if len(code) == 2 and code.isalpha():
             return code
-            
+
         # Map common variations
         country_map = {
             "DEU": "DE",
@@ -254,21 +240,21 @@ class AddressTransformer(BaseTransformer):
 
     def _clean_email(self, email: str) -> str:
         """Clean and validate email address.
-        
+
         Args:
             email: Raw email from legacy system
-            
+
         Returns:
             Cleaned email address or empty string
         """
         if not email:
             return ""
-            
+
         # Strip whitespace and convert to lowercase
         email = email.strip().lower()
-        
+
         # Basic validation - must contain @ and at least one dot after @
         if "@" in email and "." in email.split("@")[1]:
             return email
-            
-        return "" 
+
+        return ""

@@ -55,9 +55,9 @@ class TestProductValidation:
         # In a real form, this would add an error to the form
         if is_parent and variant_code:
             error_message = "Parent products should not have variant codes."
-            assert error_message, (
-                "Should raise an error for parent products with variant codes"
-            )
+            assert (
+                error_message
+            ), "Should raise an error for parent products with variant codes"
 
     def test_price_validation(self):
         """Test validation of price relationship."""
@@ -68,9 +68,9 @@ class TestProductValidation:
         # In a real form, this would add an error to the form
         if list_price and cost_price and list_price < cost_price:
             error_message = "List price should not be less than cost price."
-            assert error_message, (
-                "Should raise an error when list price is less than cost price"
-            )
+            assert (
+                error_message
+            ), "Should raise an error when list price is less than cost price"
 
     def test_price_range_validation(self):
         """Test validation of price range in search form."""
@@ -81,9 +81,9 @@ class TestProductValidation:
         # In a real form, this would add an error to the form
         if min_price and max_price and min_price > max_price:
             error_message = "Minimum price must be less than maximum price."
-            assert error_message, (
-                "Should raise an error when min price is greater than max price"
-            )
+            assert (
+                error_message
+            ), "Should raise an error when min price is greater than max price"
 
 
 class TestProductCategoryValidation:

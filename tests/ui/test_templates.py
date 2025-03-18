@@ -97,9 +97,7 @@ class TestViewExample:
         # request.method = 'GET'
         # return request
 
-    @patch(
-        "pyerp.business_modules.products.models.ProductCategory.objects.filter"
-    )
+    @patch("pyerp.business_modules.products.models.ProductCategory.objects.filter")
     def test_list_view(self, mock_filter, mock_request):
         """Test that a list view returns expected objects."""
         # Example:
@@ -112,9 +110,7 @@ class TestViewExample:
         # assert response.status_code == 200
         # assert mock_filter.called
 
-    @patch(
-        "pyerp.business_modules.products.models.ProductCategory.objects.get"
-    )
+    @patch("pyerp.business_modules.products.models.ProductCategory.objects.get")
     def test_detail_view(self, mock_get, mock_request):
         """Test that a detail view returns the expected object."""
         # Example:
@@ -142,9 +138,7 @@ class TestApiExample:
         # from rest_framework.test import APIClient
         # return APIClient()
 
-    @patch(
-        "pyerp.business_modules.products.models.ProductCategory.objects.all"
-    )
+    @patch("pyerp.business_modules.products.models.ProductCategory.objects.all")
     def test_list_api(self, mock_all, api_client):
         """Test API list endpoint."""
         # Example:
@@ -160,9 +154,7 @@ class TestApiExample:
         # assert response.status_code == 200
         # assert len(response.json()) == 2
 
-    @patch(
-        "pyerp.business_modules.products.models.ProductCategory.objects.create"
-    )
+    @patch("pyerp.business_modules.products.models.ProductCategory.objects.create")
     def test_create_api(self, mock_create, api_client):
         """Test API create endpoint."""
         # Example:

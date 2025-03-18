@@ -15,7 +15,7 @@ from django.utils import timezone
 from pyerp.utils.logging import get_category_logger
 
 # Set up logger for security events
-logger = get_category_logger('security')
+logger = get_category_logger("security")
 
 User = get_user_model()
 
@@ -24,7 +24,7 @@ User = get_user_model()
 def handle_user_logged_in(sender, request, user, **kwargs):
     """Log when a user logs in successfully."""
     logger.info(f"User {user.username} logged in successfully")
-    
+
     # You can add additional functionality here, like:
     # - Update last login tracking
     # - Check for security policies (password expiration, etc.)
@@ -42,9 +42,9 @@ def handle_user_logged_out(sender, request, user, **kwargs):
 def handle_user_login_failed(sender, credentials, request, **kwargs):
     """Log failed login attempts."""
     # Be careful not to log passwords
-    username = credentials.get('username', 'unknown')
+    username = credentials.get("username", "unknown")
     logger.warning(f"Failed login attempt for user {username}")
-    
+
     # In a real implementation, you might:
     # - Increment a counter for failed attempts
     # - Lock accounts after X failures
@@ -78,4 +78,4 @@ def handle_user_save(sender, instance, created, **kwargs):
         logger.info(f"User updated: {instance.username}")
         # Handle status changes or other important updates
 
-    # You can add additional user setup tasks here 
+    # You can add additional user setup tasks here

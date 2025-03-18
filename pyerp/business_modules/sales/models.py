@@ -7,6 +7,7 @@ class SalesModel(models.Model):
     """
     Base model for sales-related models.
     """
+
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     legacy_id = models.CharField(
@@ -18,15 +19,11 @@ class SalesModel(models.Model):
     legacy_modified = models.DateTimeField(
         null=True,
         blank=True,
-        help_text=_(
-            "Last modification timestamp in legacy system"
-        ),
+        help_text=_("Last modification timestamp in legacy system"),
     )
     is_synchronized = models.BooleanField(
         default=False,
-        help_text=_(
-            "Whether this record is synchronized with the legacy system"
-        ),
+        help_text=_("Whether this record is synchronized with the legacy system"),
     )
 
     class Meta:
@@ -38,6 +35,7 @@ class Customer(SalesModel):
     Customer model representing business partners and clients.
     Maps to the Kunden table in the legacy system.
     """
+
     customer_number = models.CharField(
         max_length=50,
         unique=True,
@@ -132,6 +130,7 @@ class Address(SalesModel):
     Maps to the Adressen table in the legacy system.
     One customer can have multiple addresses.
     """
+
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
@@ -210,9 +209,7 @@ class Address(SalesModel):
     formal_salutation = models.CharField(
         max_length=200,
         blank=True,
-        help_text=_(
-            "Formal salutation (maps to Briefanrede in legacy system)"
-        ),
+        help_text=_("Formal salutation (maps to Briefanrede in legacy system)"),
     )
 
     class Meta:
@@ -230,9 +227,7 @@ class Address(SalesModel):
             models.UniqueConstraint(
                 fields=["customer"],
                 condition=models.Q(is_primary=True),
-                name=(
-                    "unique_primary_address_per_customer"
-                ),
+                name=("unique_primary_address_per_customer"),
             ),
         ]
 
@@ -261,6 +256,7 @@ def get_sales_status():
 
 class PaymentTerms(SalesModel):
     """Payment terms for sales records."""
+
     name = models.CharField(max_length=50)
     days_due = models.IntegerField()
     discount_days = models.IntegerField(default=0)
@@ -271,7 +267,7 @@ class PaymentTerms(SalesModel):
         verbose_name = _("Payment Terms")
         verbose_name_plural = _("Payment Terms")
         app_label = "sales"
-        unique_together = [('days_due', 'discount_days', 'discount_percent')]
+        unique_together = [("days_due", "discount_days", "discount_percent")]
 
     def __str__(self):
         if self.discount_percent > 0:
@@ -281,6 +277,7 @@ class PaymentTerms(SalesModel):
 
 class PaymentMethod(SalesModel):
     """Payment method for sales records."""
+
     name = models.CharField(max_length=50)
     code = models.CharField(max_length=20)
     active = models.BooleanField(default=True)
@@ -291,7 +288,7 @@ class PaymentMethod(SalesModel):
         verbose_name = _("Payment Method")
         verbose_name_plural = _("Payment Methods")
         app_label = "sales"
-        unique_together = [('name', 'code')]
+        unique_together = [("name", "code")]
 
     def __str__(self):
         return self.name
@@ -299,6 +296,7 @@ class PaymentMethod(SalesModel):
 
 class ShippingMethod(SalesModel):
     """Shipping method for sales records."""
+
     name = models.CharField(max_length=50)
     code = models.CharField(max_length=20)
     description = models.TextField(blank=True, null=True)
@@ -309,7 +307,7 @@ class ShippingMethod(SalesModel):
         verbose_name = _("Shipping Method")
         verbose_name_plural = _("Shipping Methods")
         app_label = "sales"
-        unique_together = [('name', 'code')]
+        unique_together = [("name", "code")]
 
     def __str__(self):
         return self.name
@@ -320,21 +318,22 @@ class SalesRecord(SalesModel):
     Sales record model representing invoices, proposals, delivery notes, etc.
     Maps to the Belege table in the legacy system.
     """
+
     RECORD_TYPE_CHOICES = [
-        ('INVOICE', _('Invoice')),
-        ('PROPOSAL', _('Proposal')),
-        ('DELIVERY_NOTE', _('Delivery Note')),
-        ('CREDIT_NOTE', _('Credit Note')),
-        ('ORDER_CONFIRMATION', _('Order Confirmation')),
+        ("INVOICE", _("Invoice")),
+        ("PROPOSAL", _("Proposal")),
+        ("DELIVERY_NOTE", _("Delivery Note")),
+        ("CREDIT_NOTE", _("Credit Note")),
+        ("ORDER_CONFIRMATION", _("Order Confirmation")),
     ]
-    
+
     PAYMENT_STATUS_CHOICES = [
-        ('PENDING', _('Pending')),
-        ('PAID', _('Paid')),
-        ('OVERDUE', _('Overdue')),
-        ('CANCELLED', _('Cancelled')),
+        ("PENDING", _("Pending")),
+        ("PAID", _("Paid")),
+        ("OVERDUE", _("Overdue")),
+        ("CANCELLED", _("Cancelled")),
     ]
-    
+
     record_number = models.CharField(
         max_length=50,
         help_text=_("Document number (maps to PapierNr in legacy system)"),
@@ -345,13 +344,13 @@ class SalesRecord(SalesModel):
     record_type = models.CharField(
         max_length=20,
         choices=RECORD_TYPE_CHOICES,
-        default='INVOICE',
+        default="INVOICE",
         help_text=_("Type of document (maps to Papierart in legacy system)"),
     )
     customer = models.ForeignKey(
-        'Customer',
+        "Customer",
         on_delete=models.PROTECT,
-        related_name='sales_records',
+        related_name="sales_records",
         null=True,
         blank=True,
         help_text=_("Customer associated with this record"),
@@ -389,7 +388,7 @@ class SalesRecord(SalesModel):
     payment_status = models.CharField(
         max_length=20,
         choices=PAYMENT_STATUS_CHOICES,
-        default='PENDING',
+        default="PENDING",
         help_text=_("Payment status (derived from bezahlt in legacy system)"),
     )
     payment_date = models.DateField(
@@ -399,7 +398,7 @@ class SalesRecord(SalesModel):
     )
     currency = models.CharField(
         max_length=3,
-        default='EUR',
+        default="EUR",
         help_text=_("Currency code (maps to Währung in legacy system)"),
     )
     tax_type = models.CharField(
@@ -412,41 +411,41 @@ class SalesRecord(SalesModel):
         help_text=_("Notes (maps to Text in legacy system)"),
     )
     payment_terms = models.ForeignKey(
-        'PaymentTerms',
+        "PaymentTerms",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='sales_records',
+        related_name="sales_records",
         help_text=_("Payment terms for this record"),
     )
     payment_method = models.ForeignKey(
-        'PaymentMethod',
+        "PaymentMethod",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='sales_records',
+        related_name="sales_records",
         help_text=_("Payment method for this record"),
     )
     shipping_method = models.ForeignKey(
-        'ShippingMethod',
+        "ShippingMethod",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='sales_records',
+        related_name="sales_records",
         help_text=_("Shipping method for this record"),
     )
     shipping_address = models.ForeignKey(
-        'Address',
+        "Address",
         on_delete=models.PROTECT,
-        related_name='shipping_records',
+        related_name="shipping_records",
         null=True,
         blank=True,
         help_text=_("Shipping address (maps to Lief_Adr in legacy system)"),
     )
     billing_address = models.ForeignKey(
-        'Address',
+        "Address",
         on_delete=models.PROTECT,
-        related_name='billing_records',
+        related_name="billing_records",
         null=True,
         blank=True,
         help_text=_("Billing address (maps to Rech_Adr in legacy system)"),
@@ -463,7 +462,7 @@ class SalesRecord(SalesModel):
             models.Index(fields=["payment_status"]),
             models.Index(fields=["legacy_id"]),
         ]
-        unique_together = [('record_number', 'record_type')]
+        unique_together = [("record_number", "record_type")]
 
     def __str__(self):
         return f"{self.get_record_type_display()} {self.record_number} ({self.record_date})"
@@ -474,26 +473,27 @@ class SalesRecordItem(SalesModel):
     Sales record item model representing line items in sales records.
     Maps to the Belege_Pos table in the legacy system.
     """
+
     ITEM_TYPE_CHOICES = [
-        ('PRODUCT', _('Product')),
-        ('SERVICE', _('Service')),
-        ('TEXT', _('Text')),
-        ('DISCOUNT', _('Discount')),
-        ('SHIPPING', _('Shipping')),
-        ('FEE', _('Fee')),
+        ("PRODUCT", _("Product")),
+        ("SERVICE", _("Service")),
+        ("TEXT", _("Text")),
+        ("DISCOUNT", _("Discount")),
+        ("SHIPPING", _("Shipping")),
+        ("FEE", _("Fee")),
     ]
-    
+
     FULFILLMENT_STATUS_CHOICES = [
-        ('PENDING', _('Pending')),
-        ('PARTIAL', _('Partially Fulfilled')),
-        ('FULFILLED', _('Fulfilled')),
-        ('CANCELLED', _('Cancelled')),
+        ("PENDING", _("Pending")),
+        ("PARTIAL", _("Partially Fulfilled")),
+        ("FULFILLED", _("Fulfilled")),
+        ("CANCELLED", _("Cancelled")),
     ]
-    
+
     sales_record = models.ForeignKey(
-        'SalesRecord',
+        "SalesRecord",
         on_delete=models.CASCADE,
-        related_name='line_items',
+        related_name="line_items",
         help_text=_("Sales record this item belongs to"),
     )
     position = models.IntegerField(
@@ -552,7 +552,7 @@ class SalesRecordItem(SalesModel):
     item_type = models.CharField(
         max_length=20,
         choices=ITEM_TYPE_CHOICES,
-        default='PRODUCT',
+        default="PRODUCT",
         help_text=_("Type of item (maps to Art in legacy system)"),
     )
     notes = models.TextField(
@@ -562,7 +562,7 @@ class SalesRecordItem(SalesModel):
     fulfillment_status = models.CharField(
         max_length=20,
         choices=FULFILLMENT_STATUS_CHOICES,
-        default='PENDING',
+        default="PENDING",
         help_text=_("Fulfillment status (derived from Picking_ok in legacy system)"),
     )
     fulfilled_quantity = models.DecimalField(
@@ -572,11 +572,11 @@ class SalesRecordItem(SalesModel):
         help_text=_("Fulfilled quantity (maps to Pick_Menge in legacy system)"),
     )
     product = models.ForeignKey(
-        'products.VariantProduct',
+        "products.VariantProduct",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='sales_record_items',
+        related_name="sales_record_items",
         help_text=_("Product associated with this item"),
     )
 
@@ -589,8 +589,8 @@ class SalesRecordItem(SalesModel):
             models.Index(fields=["legacy_sku"]),
             models.Index(fields=["legacy_id"]),
         ]
-        unique_together = [('sales_record', 'position')]
-        ordering = ['sales_record', 'position']
+        unique_together = [("sales_record", "position")]
+        ordering = ["sales_record", "position"]
 
     def __str__(self):
         return f"{self.sales_record} - Line {self.position}: {self.description} ({self.quantity} x {self.unit_price})"

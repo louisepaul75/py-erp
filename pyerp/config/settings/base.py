@@ -28,10 +28,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-producti
 APP_VERSION = get_version()
 
 # Image API settings
-IMAGE_API_URL = os.environ.get(
-    "IMAGE_API_URL",
-    "http://db07.wsz.local/api/"
-)
+IMAGE_API_URL = os.environ.get("IMAGE_API_URL", "http://db07.wsz.local/api/")
 IMAGE_API_USERNAME = os.environ.get("IMAGE_API_USERNAME", "admin")
 IMAGE_API_PASSWORD = os.environ.get("IMAGE_API_PASSWORD", "")
 IMAGE_API_TIMEOUT = int(os.environ.get("IMAGE_API_TIMEOUT", "30"))

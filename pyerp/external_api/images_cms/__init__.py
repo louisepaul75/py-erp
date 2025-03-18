@@ -7,4 +7,4 @@ image content management system.
 
 from .client import ImageAPIClient
 
-__all__ = ['ImageAPIClient'] 
+__all__ = ["ImageAPIClient"]

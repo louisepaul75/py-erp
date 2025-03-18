@@ -30,28 +30,28 @@ logger = logging.getLogger(__name__)
 def test_date_filter(table_name="Kunden", days_ago=30, environment="live"):
     """
     Test date filtering by fetching records modified within the last N days.
-    
+
     Args:
         table_name (str): Name of the table to query
         days_ago (int): Number of days to look back
         environment (str): API environment to use
-    
+
     Returns:
         pandas.DataFrame: Filtered records
     """
     try:
         # Initialize API client using the proper LegacyERPClient
         client = LegacyERPClient(environment=environment)
-        
+
         # Calculate the date threshold
-        date_threshold = (
-            datetime.now() - timedelta(days=days_ago)
-        ).strftime("%Y-%m-%d")
-        
+        date_threshold = (datetime.now() - timedelta(days=days_ago)).strftime(
+            "%Y-%m-%d"
+        )
+
         # Construct the filter query with the entire expression in quotes
-        filter_query = [['modified_date', '>', date_threshold]]
+        filter_query = [["modified_date", ">", date_threshold]]
         logger.info(f"Using date filter: {filter_query}")
-        
+
         # Fetch a sample without filter to verify connection
         df_full_sample = client.fetch_table(
             table_name=table_name,
@@ -67,12 +67,10 @@ def test_date_filter(table_name="Kunden", days_ago=30, environment="live"):
             top=1000,  # Limit results for testing
             filter_query=filter_query,
         )
-        
-        logger.info(
-            f"Retrieved {len(df)} records modified after {date_threshold}"
-        )
+
+        logger.info(f"Retrieved {len(df)} records modified after {date_threshold}")
         return df
-        
+
     except LegacyERPError as e:
         logger.error(f"Legacy ERP API error during date filter test: {e}")
         raise
@@ -106,25 +104,24 @@ def main():
                 # Mask the actual values for security
                 value = os.getenv(key)
                 print(f"{key}={value}")
-        
+
         # Test with different time periods
         periods = [90]  # Try last 90 days
-        
+
         for days in periods:
             print(f"\n=== Testing {days} day filter ===")
             try:
                 df = test_date_filter(days_ago=days, environment="live")
                 if not df.empty:
-                    print(f"\nFound {len(df)} records modified in last "
-                          f"{days} days")
+                    print(f"\nFound {len(df)} records modified in last " f"{days} days")
                     print("\nSample of retrieved data:")
-                    pd.set_option('display.max_columns', None)
+                    pd.set_option("display.max_columns", None)
                     print(df.head())
                 else:
                     print(f"No records found modified in the last {days} days")
             except Exception as e:
                 print(f"Live environment failed: {e}")
-                
+
     except Exception as e:
         print(f"Test failed: {e}")
         sys.exit(1)

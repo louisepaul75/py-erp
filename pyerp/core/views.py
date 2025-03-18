@@ -5,12 +5,10 @@ Views for the Core app.
 import json
 import os
 import subprocess
-
-from django.conf import settings
 from django.db import connection
 from django.db.utils import OperationalError
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
@@ -18,16 +16,16 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.conf import settings
 
 # Set up logging using the centralized logging system
 from pyerp.utils.logging import get_logger
+from pyerp.core.models import UserPreference
+
 logger = get_logger(__name__)
 
 # Language session key constant (compatible with Django 5.1+)
 LANGUAGE_SESSION_KEY = "django_language"
-
-from pyerp.core.models import UserPreference
-from pyerp.core.serializers import UserPreferenceSerializer
 
 
 @require_GET
@@ -189,10 +187,8 @@ class DashboardSummaryView(APIView):
         logger.debug(msg)
 
         # Get or create user preferences
-        user_pref, created = UserPreference.objects.get_or_create(
-            user=request.user
-        )
-        
+        user_pref, created = UserPreference.objects.get_or_create(user=request.user)
+
         # Get dashboard modules configuration
         dashboard_modules = user_pref.get_dashboard_modules()
 
@@ -207,27 +203,27 @@ class DashboardSummaryView(APIView):
         }
 
         return Response(response_data)
-        
+
     def patch(self, request):
         """Update user's dashboard configuration."""
         msg = f"Dashboard config update requested by {request.user.username}"
         logger.debug(msg)
-        
+
         # Get or create user preferences
-        user_pref, created = UserPreference.objects.get_or_create(
-            user=request.user
-        )
-        
-        if 'modules' in request.data:
+        user_pref, created = UserPreference.objects.get_or_create(user=request.user)
+
+        if "modules" in request.data:
             # Save dashboard modules configuration
-            modules = request.data['modules']
+            modules = request.data["modules"]
             user_pref.save_dashboard_config(modules)
-            
-            return Response({
-                "message": "Dashboard configuration updated successfully",
-                "dashboard_modules": modules
-            })
-        
+
+            return Response(
+                {
+                    "message": "Dashboard configuration updated successfully",
+                    "dashboard_modules": modules,
+                }
+            )
+
         return Response(
             {"message": "No valid configuration data provided"},
             status=status.HTTP_400_BAD_REQUEST,

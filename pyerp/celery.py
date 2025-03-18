@@ -1,28 +1,20 @@
 """
-Celery configuration entry point.
-This module imports the configured Celery app from settings.
+Celery app configuration for pyERP.
 """
 
 import os
-
-# Load environment variables using centralized loader
-from pyerp.utils.env_loader import load_environment_variables
-
-load_environment_variables()
-
-# Set the default Django settings module for the 'celery' program.
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
-
 from celery import Celery
+
+# Set the Django settings module
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
 
 # Create Celery instance
 app = Celery("pyerp")
 
-# Using a string here means the worker doesn't have to serialize
-# the configuration object to child processes
+# Use Django settings for Celery
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
-# Load task modules from all registered Django apps
+# Load tasks from all registered apps
 app.autodiscover_tasks()
 
 

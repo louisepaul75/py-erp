@@ -14,7 +14,7 @@ class BaseExtractor(ABC):
 
     def __init__(self, config: Dict[str, Any]):
         """Initialize the extractor with configuration.
-        
+
         Args:
             config: Dictionary containing extractor configuration
         """
@@ -24,14 +24,12 @@ class BaseExtractor(ABC):
 
     def _validate_config(self) -> None:
         """Validate the extractor configuration.
-        
+
         Raises:
             ValueError: If required configuration is missing
         """
         required_fields = self.get_required_config_fields()
-        missing = [
-            field for field in required_fields if field not in self.config
-        ]
+        missing = [field for field in required_fields if field not in self.config]
         if missing:
             raise ValueError(
                 f"Missing required configuration fields: {', '.join(missing)}"
@@ -40,7 +38,7 @@ class BaseExtractor(ABC):
     @abstractmethod
     def get_required_config_fields(self) -> List[str]:
         """Get list of required configuration fields.
-        
+
         Returns:
             List of field names that must be present in config
         """
@@ -49,7 +47,7 @@ class BaseExtractor(ABC):
     @abstractmethod
     def connect(self) -> None:
         """Establish connection to data source.
-        
+
         Raises:
             ConnectionError: If connection cannot be established
         """
@@ -60,13 +58,13 @@ class BaseExtractor(ABC):
         self, query_params: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """Extract data from source system.
-        
+
         Args:
             query_params: Optional parameters to filter or limit extraction
-            
+
         Returns:
             List of extracted records as dictionaries
-            
+
         Raises:
             ConnectionError: If not connected to data source
             ValueError: If query parameters are invalid
@@ -90,4 +88,4 @@ class BaseExtractor(ABC):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
-        self.close() 
+        self.close()

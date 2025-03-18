@@ -34,16 +34,17 @@ INSTALLED_APPS = [
 
 # Use a simple database setup
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
     }
 }
 
 # Ensure tests don't make real external requests
 MIDDLEWARE += [
-    'django.middleware.csrf.CsrfViewMiddleware',
+    "django.middleware.csrf.CsrfViewMiddleware",
 ]
+
 
 # Disable migrations
 class DisableMigrations:
@@ -53,4 +54,5 @@ class DisableMigrations:
     def __getitem__(self, item):
         return None
 
-MIGRATION_MODULES = DisableMigrations() 
+
+MIGRATION_MODULES = DisableMigrations()

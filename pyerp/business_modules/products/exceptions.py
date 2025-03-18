@@ -23,4 +23,4 @@ class MissingFieldsError(ImageAPIError):
     """Raised when required fields are missing in the API response."""
 
     def __init__(self):
-        super().__init__("Missing required fields in API response") 
+        super().__init__("Missing required fields in API response")

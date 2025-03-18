@@ -15,10 +15,10 @@ from .inventory import (
 from .sales_record import SalesRecordTransformer
 
 __all__ = [
-    'ProductTransformer',
-    'StammLagerorteTransformer',
-    'BoxTransformer',
-    'BoxSlotTransformer',
-    'ProductInventoryTransformer',
-    'SalesRecordTransformer',
-] 
+    "ProductTransformer",
+    "StammLagerorteTransformer",
+    "BoxTransformer",
+    "BoxSlotTransformer",
+    "ProductInventoryTransformer",
+    "SalesRecordTransformer",
+]

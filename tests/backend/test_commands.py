@@ -65,21 +65,21 @@ class MockImportCommand:
             {"sku": "TEST1", "name": "Test Product 1"},
             {"sku": "TEST2", "name": "Test Product 2"},
         ]
-        validator = self.create_product_validator(
-            strict=options.get('strict', False)
-        )
-        
+        validator = self.create_product_validator(strict=options.get("strict", False))
+
         # In the test_handle_product_validation we expect a validation failure
-        if 'file_path' in options and options['file_path'] == "test.json":
-            validator.validate.return_value = False  # Simulate validation failure for the test
+        if "file_path" in options and options["file_path"] == "test.json":
+            validator.validate.return_value = (
+                False  # Simulate validation failure for the test
+            )
             validated_products = []
         else:
             validator.validate.return_value = True
             validated_products = self.validate_products(products_data, validator)
-        
-        if options.get('strict', False) and not validated_products:
+
+        if options.get("strict", False) and not validated_products:
             raise ValueError("Validation failed in strict mode")
-            
+
         return f"Successfully imported {len(validated_products)} products"
 
 

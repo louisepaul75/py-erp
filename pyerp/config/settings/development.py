@@ -7,7 +7,6 @@ These settings extend the base settings with development-specific configurations
 import os
 import sys
 from datetime import timedelta
-from pathlib import Path
 
 import dj_database_url  # noqa: F401
 import psycopg2

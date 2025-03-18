@@ -47,7 +47,7 @@ except ImportError:
 router = routers.DefaultRouter()
 
 # Register API viewsets here
-router.register(r'search', GlobalSearchViewSet, basename='search')
+router.register(r"search", GlobalSearchViewSet, basename="search")
 
 # Define URL patterns
 urlpatterns = [
@@ -103,11 +103,11 @@ urlpatterns = [
     # Add inventory API URLs
     path("api/inventory/", include("pyerp.business_modules.inventory.urls")),
     # API documentation
-    path('api/docs/', include_docs_urls(title='pyERP API Documentation')),
+    path("api/docs/", include_docs_urls(title="pyERP API Documentation")),
     # Redirect root to admin interface for now
-    path('', RedirectView.as_view(url='/admin/', permanent=False)),
+    path("", RedirectView.as_view(url="/admin/", permanent=False)),
     # Users API
-    path("api/users/", include("users.urls")),
+    path("api/users/", include("users.urls", namespace="users")),
     # Admin tools API
     path("api/admin/", include("admin_tools.urls")),
 ]

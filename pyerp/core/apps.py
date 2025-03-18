@@ -23,4 +23,5 @@ class CoreConfig(AppConfig):
 
         # Initialize the centralized logging system
         from pyerp.utils.logging.logging_init import initialize_logging
+
         initialize_logging()

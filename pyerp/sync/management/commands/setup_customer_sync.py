@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     """Set up customer sync mapping."""
 
-    help = 'Set up sync mapping for customers'
+    help = "Set up sync mapping for customers"
 
     def handle(self, *args, **options):
         """Execute the command."""
@@ -23,8 +23,9 @@ class Command(BaseCommand):
 
         # Load sync configuration
         config_path = (
-            Path(__file__).resolve().parent.parent.parent /
-            'config' / 'customers_sync.yaml'
+            Path(__file__).resolve().parent.parent.parent
+            / "config"
+            / "customers_sync.yaml"
         )
         self.stdout.write(f"Looking for config file at: {config_path}")
         try:
@@ -38,26 +39,26 @@ class Command(BaseCommand):
 
         # Set up customer sync
         self._setup_customer_sync(config)
-        
+
         # Set up address sync
         self._setup_address_sync(config)
 
     def _setup_customer_sync(self, config: dict) -> None:
         """Set up customer sync mapping.
-        
+
         Args:
             config: Configuration dictionary
         """
         # Create or update source
-        source_name = config.get('name', 'customers_sync')
-        source_config = config.get('source', {})
+        source_name = config.get("name", "customers_sync")
+        source_config = config.get("source", {})
         source, created = SyncSource.objects.update_or_create(
             name=source_name,
             defaults={
-                'description': config.get('description', ''),
-                'config': source_config,
-                'active': True,
-            }
+                "description": config.get("description", ""),
+                "config": source_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync source: {source}")
@@ -65,17 +66,17 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync source: {source}")
 
         # Create or update target
-        target_config = config.get('target', {})
-        app_name = target_config.get('app_name', 'sales')
-        model_name = target_config.get('model_name', 'Customer')
+        target_config = config.get("target", {})
+        app_name = target_config.get("app_name", "sales")
+        model_name = target_config.get("model_name", "Customer")
         target_name = f"{app_name}.{model_name}"
         target, created = SyncTarget.objects.update_or_create(
             name=target_name,
             defaults={
-                'description': f"Target for {source_name}",
-                'config': target_config,
-                'active': True,
-            }
+                "description": f"Target for {source_name}",
+                "config": target_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync target: {target}")
@@ -84,18 +85,18 @@ class Command(BaseCommand):
 
         # Create or update mapping
         mapping_config = {
-            'transformation': config.get('transformation', {}),
-            'scheduling': config.get('scheduling', {}),
-            'incremental': config.get('incremental', {}),
+            "transformation": config.get("transformation", {}),
+            "scheduling": config.get("scheduling", {}),
+            "incremental": config.get("incremental", {}),
         }
         mapping, created = SyncMapping.objects.update_or_create(
             source=source,
             target=target,
-            entity_type='customer',
+            entity_type="customer",
             defaults={
-                'mapping_config': mapping_config,
-                'active': True,
-            }
+                "mapping_config": mapping_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync mapping: {mapping}")
@@ -103,27 +104,25 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync mapping: {mapping}")
 
         self.stdout.write(
-            self.style.SUCCESS(
-                "Customer sync mapping setup completed successfully"
-            )
+            self.style.SUCCESS("Customer sync mapping setup completed successfully")
         )
 
     def _setup_address_sync(self, config: dict) -> None:
         """Set up address sync mapping.
-        
+
         Args:
             config: Configuration dictionary
         """
         # Create or update source for addresses
-        source_name = 'customers_sync_addresses'
-        source_config = config.get('addresses', {}).get('source', {})
+        source_name = "customers_sync_addresses"
+        source_config = config.get("addresses", {}).get("source", {})
         source, created = SyncSource.objects.update_or_create(
             name=source_name,
             defaults={
-                'description': 'Synchronize customer addresses from legacy system',
-                'config': source_config,
-                'active': True,
-            }
+                "description": "Synchronize customer addresses from legacy system",
+                "config": source_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync source: {source}")
@@ -131,17 +130,17 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync source: {source}")
 
         # Create or update target for addresses
-        target_config = config.get('addresses', {}).get('target', {})
-        app_name = target_config.get('app_name', 'sales')
-        model_name = target_config.get('model_name', 'Address')
+        target_config = config.get("addresses", {}).get("target", {})
+        app_name = target_config.get("app_name", "sales")
+        model_name = target_config.get("model_name", "Address")
         target_name = f"{app_name}.{model_name}"
         target, created = SyncTarget.objects.update_or_create(
             name=target_name,
             defaults={
-                'description': f"Target for {source_name}",
-                'config': target_config,
-                'active': True,
-            }
+                "description": f"Target for {source_name}",
+                "config": target_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync target: {target}")
@@ -150,18 +149,18 @@ class Command(BaseCommand):
 
         # Create or update mapping for addresses
         mapping_config = {
-            'transformation': config.get('addresses', {}).get('transformation', {}),
-            'scheduling': config.get('addresses', {}).get('scheduling', {}),
-            'incremental': config.get('addresses', {}).get('incremental', {}),
+            "transformation": config.get("addresses", {}).get("transformation", {}),
+            "scheduling": config.get("addresses", {}).get("scheduling", {}),
+            "incremental": config.get("addresses", {}).get("incremental", {}),
         }
         mapping, created = SyncMapping.objects.update_or_create(
             source=source,
             target=target,
-            entity_type='address',
+            entity_type="address",
             defaults={
-                'mapping_config': mapping_config,
-                'active': True,
-            }
+                "mapping_config": mapping_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync mapping: {mapping}")
@@ -169,7 +168,5 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync mapping: {mapping}")
 
         self.stdout.write(
-            self.style.SUCCESS(
-                "Address sync mapping setup completed successfully"
-            )
-        ) 
+            self.style.SUCCESS("Address sync mapping setup completed successfully")
+        )

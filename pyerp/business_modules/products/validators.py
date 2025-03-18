@@ -6,7 +6,7 @@ This module provides validators specific to product data, including import valid
 
 import logging
 from decimal import Decimal, InvalidOperation
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, Optional
 
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as translate
@@ -422,7 +422,7 @@ class ProductImportValidator(ImportValidator):
         result = ValidationResult()
 
         # If already a ProductCategory instance, use it
-        if hasattr(value, '_meta') and value._meta.model_name == 'productcategory':
+        if hasattr(value, "_meta") and value._meta.model_name == "productcategory":
             return value, result
 
         # Try to use ArtGruppe from legacy data if category is not provided
@@ -446,7 +446,7 @@ class ProductImportValidator(ImportValidator):
                 return category, result
             except Exception as e:
                 # Handle any exception that might occur when fetching the category
-                if 'DoesNotExist' in str(type(e).__name__):
+                if "DoesNotExist" in str(type(e).__name__):
                     result.add_warning(
                         "category",
                         translate("Category with code '%(code)s' does not exist")
