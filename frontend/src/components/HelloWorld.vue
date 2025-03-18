@@ -3,9 +3,7 @@
     <v-card-text class="pa-4">
       <h2 class="text-h4 text-primary mb-2">{{ title }}</h2>
       <p class="text-body-1 mb-4">{{ message }}</p>
-      <v-btn color="primary" @click="incrementCount">
-        Count: {{ count }}
-      </v-btn>
+      <v-btn color="primary" @click="incrementCount"> Count: {{ count }} </v-btn>
     </v-card-text>
   </v-card>
 </template>

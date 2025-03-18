@@ -5,7 +5,6 @@ Script to check for articles in the API response.
 
 import json
 import os
-import sys
 import django
 
 # Set up Django environment

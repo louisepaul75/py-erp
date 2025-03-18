@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test-group: [ui, backend, core]
+        test-group: [ui, backend, core, unit]
       fail-fast: false
 
     services:
@@ -86,7 +86,7 @@ jobs:
           retention-days: 14
 
   upload-results:
-    needs: test
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: artifacts/test-results-*/junit.xml
+          file: artifacts/*-junit.xml
           name: pyerp-test-results
           fail_ci_if_error: false
 
@@ -111,7 +111,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Wilhelm-Schweizer/pyERP
-          directory: artifacts/coverage-results-*/
+          directory: artifacts/
           fail_ci_if_error: false
           
       - name: Archive all results

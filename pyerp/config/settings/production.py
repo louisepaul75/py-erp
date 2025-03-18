@@ -26,6 +26,12 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": os.environ.get("DB_HOST", "192.168.73.64"),
         "PORT": os.environ.get("DB_PORT", "5432"),
+        "OPTIONS": {
+            "connect_timeout": 10,  # Connection timeout in seconds
+            "client_encoding": "UTF8",
+            "sslmode": "prefer",
+            "auth_method": "md5",  # Use MD5 authentication
+        },
     },
 }
 
@@ -101,16 +107,28 @@ if os.environ.get("USE_S3", "False").lower() == "true":
     DEFAULT_FILE_STORAGE = "pyerp.core.storage_backends.MediaStorage"
 
 # Email configuration for production
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-try:
+if os.environ.get("ANYMAIL_ESP", "").lower() == "smtp":
+    # Use logging SMTP backend for SMTP
+    EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
+else:
+    # Use logging anymail backend for other ESPs
+    EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingAnymailBackend"
+
+# Import anymail settings
+from .anymail import *  # noqa
+
+# Add email_system to installed apps
+INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
+
+# Legacy email settings (kept for backwards compatibility)
+# These will be used if ANYMAIL_ESP is not set
+if os.environ.get("ANYMAIL_ESP") is None and os.environ.get("EMAIL_HOST"):
+    EMAIL_HOST = os.environ.get("EMAIL_HOST")
     EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
-except ValueError:
-    EMAIL_PORT = 587
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
 
 # Celery settings for production
 CELERY_TASK_ALWAYS_EAGER = False

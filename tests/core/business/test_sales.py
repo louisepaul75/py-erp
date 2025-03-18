@@ -58,4 +58,4 @@ class TestSalesStatusFunction(unittest.TestCase):
 
         # Verify results
         self.assertEqual(result, "Sales module error: Some error")
-        mock_connection.cursor.assert_called_once() 
+        mock_connection.cursor.assert_called_once()

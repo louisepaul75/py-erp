@@ -28,10 +28,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-producti
 APP_VERSION = get_version()
 
 # Image API settings
-IMAGE_API_URL = os.environ.get(
-    "IMAGE_API_URL",
-    "http://db07.wsz.local/api/"
-)
+IMAGE_API_URL = os.environ.get("IMAGE_API_URL", "http://db07.wsz.local/api/")
 IMAGE_API_USERNAME = os.environ.get("IMAGE_API_USERNAME", "admin")
 IMAGE_API_PASSWORD = os.environ.get("IMAGE_API_PASSWORD", "")
 IMAGE_API_TIMEOUT = int(os.environ.get("IMAGE_API_TIMEOUT", "30"))
@@ -60,6 +57,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    "users",  # Our custom users app
     "pyerp.core",
     "pyerp.business_modules.products",
     "pyerp.business_modules.sales",
@@ -68,6 +66,7 @@ LOCAL_APPS = [
     "pyerp.monitoring",
     "pyerp.sync",
     "pyerp.external_api",
+    "admin_tools",  # Admin tools app for database table view
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -192,7 +191,7 @@ REST_FRAMEWORK = {
 
 # JWT Settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=240),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -215,6 +214,10 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+
+# Ensure logs directory exists
+logs_dir = BASE_DIR / "logs"
+logs_dir.mkdir(exist_ok=True)
 
 # Logging Configuration
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()

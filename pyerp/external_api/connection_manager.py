@@ -7,12 +7,13 @@ JSON file that is excluded from version control.
 """
 
 import json
-import logging
 from pathlib import Path
 from typing import Dict
 
-# Set up logging
-logger = logging.getLogger("pyerp.external_api")
+from pyerp.utils.logging import get_logger
+
+# Set up logging using the centralized logging system
+logger = get_logger(__name__)
 
 # Define the path to the connection settings file
 # Place it in a location that is .gitignore'd
@@ -29,7 +30,7 @@ DEFAULT_CONNECTIONS = {
 def get_connections() -> Dict[str, bool]:
     """
     Get current connection settings.
-    
+
     Returns:
         Dict[str, bool]: A dictionary mapping connection names to their
         enabled status.
@@ -40,9 +41,9 @@ def get_connections() -> Dict[str, bool]:
         # Initialize with default settings
         save_connections(DEFAULT_CONNECTIONS)
         return DEFAULT_CONNECTIONS
-    
+
     try:
-        with open(CONNECTIONS_FILE, 'r') as f:
+        with open(CONNECTIONS_FILE, "r") as f:
             return json.load(f)
     except (json.JSONDecodeError, IOError) as e:
         logger.error(f"Error reading connections file: {e}")
@@ -53,18 +54,18 @@ def get_connections() -> Dict[str, bool]:
 def save_connections(connections: Dict[str, bool]) -> bool:
     """
     Save connection settings to file.
-    
+
     Args:
         connections (Dict[str, bool]): Connection settings to save
-    
+
     Returns:
         bool: True if successful, False otherwise
     """
     try:
         # Create the directory if it doesn't exist
         CONNECTIONS_FILE.parent.mkdir(exist_ok=True)
-        
-        with open(CONNECTIONS_FILE, 'w') as f:
+
+        with open(CONNECTIONS_FILE, "w") as f:
             json.dump(connections, f, indent=2)
         return True
     except IOError as e:
@@ -75,10 +76,10 @@ def save_connections(connections: Dict[str, bool]) -> bool:
 def is_connection_enabled(connection_name: str) -> bool:
     """
     Check if a specific connection is enabled.
-    
+
     Args:
         connection_name (str): Name of the connection to check
-    
+
     Returns:
         bool: True if the connection is enabled, False otherwise
     """
@@ -89,23 +90,24 @@ def is_connection_enabled(connection_name: str) -> bool:
 def set_connection_status(connection_name: str, enabled: bool) -> bool:
     """
     Enable or disable a specific connection.
-    
+
     Args:
         connection_name (str): Name of the connection to modify
         enabled (bool): Whether to enable or disable the connection
-    
+
     Returns:
         bool: True if successful, False otherwise
     """
     connections = get_connections()
-    if (connection_name not in connections and 
-            connection_name not in DEFAULT_CONNECTIONS):
+    if (
+        connection_name not in connections
+        and connection_name not in DEFAULT_CONNECTIONS
+    ):
         logger.error(
-            f"Attempted to set status for unknown connection: "
-            f"{connection_name}"
+            f"Attempted to set status for unknown connection: " f"{connection_name}"
         )
         return False
-    
+
     connections[connection_name] = enabled
     return save_connections(connections)
 
@@ -113,11 +115,11 @@ def set_connection_status(connection_name: str, enabled: bool) -> bool:
 def add_connection(connection_name: str, enabled: bool = False) -> bool:
     """
     Add a new connection to the configuration.
-    
+
     Args:
         connection_name (str): Name of the new connection
         enabled (bool): Whether the connection should be enabled initially
-    
+
     Returns:
         bool: True if successful, False otherwise
     """
@@ -125,6 +127,6 @@ def add_connection(connection_name: str, enabled: bool = False) -> bool:
     if connection_name in connections:
         logger.warning(f"Connection {connection_name} already exists")
         return False
-    
+
     connections[connection_name] = enabled
-    return save_connections(connections) 
+    return save_connections(connections)

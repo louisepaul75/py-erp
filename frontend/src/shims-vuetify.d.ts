@@ -1,6 +1,6 @@
 declare module 'vuetify' {
   import { Component } from 'vue';
-  
+
   export const createVuetify: any;
   export const useTheme: any;
   export const useDisplay: any;
@@ -73,4 +73,4 @@ declare module 'vuetify/blueprints' {
 declare module 'vue-i18n' {
   export const createI18n: any;
   export const useI18n: any;
-} 
+}

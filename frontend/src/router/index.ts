@@ -47,7 +47,25 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/auth/Settings.vue'),
     meta: { requiresAuth: true }
   },
-  
+
+  // SMTP Settings route
+  {
+    path: '/settings/smtp',
+    name: 'SMTPSettings',
+    component: () => import('../views/settings/SMTPSettings.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+
+  // Data Viewer route
+  {
+    path: '/settings/data-viewer',
+    name: 'DataViewer',
+    component: () => import('../views/settings/DataViewer.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+
+  // Users & Permissions routes are now integrated in the admin settings page
+
   // Product routes
   {
     path: '/products',
@@ -88,7 +106,7 @@ const routes: Array<RouteRecordRaw> = [
     props: true,
     meta: { requiresAuth: true }
   },
-  
+
   // Sales routes
   {
     path: '/sales',
@@ -118,6 +136,77 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true }
   },
 
+  // Inventory routes
+  {
+    path: '/inventory',
+    component: () => import('../views/inventory/InventoryBase.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'InventoryDashboard',
+        component: () => import('../views/inventory/InventoryDashboard.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'warehouse',
+        component: () => import('../views/inventory/warehouse/WarehouseManagement.vue'),
+        meta: { requiresAuth: true },
+        children: [
+          {
+            path: '',
+            name: 'WarehouseManagement',
+            redirect: { name: 'StorageLocations' }
+          },
+          {
+            path: 'locations',
+            name: 'StorageLocations',
+            component: () => import('../views/inventory/warehouse/StorageLocations.vue'),
+            meta: { requiresAuth: true }
+          },
+          {
+            path: 'boxes',
+            name: 'BoxManagement',
+            component: () => import('../views/inventory/warehouse/BoxManagement.vue'),
+            meta: { requiresAuth: true }
+          },
+          {
+            path: 'map',
+            name: 'WarehouseMap',
+            component: () => import('../views/inventory/warehouse/WarehouseMap.vue'),
+            meta: { requiresAuth: true }
+          }
+        ]
+      },
+      {
+        path: 'products',
+        name: 'ProductInventory',
+        component: () => import('../views/inventory/ProductInventory.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'movements',
+        name: 'InventoryMovements',
+        component: () => import('../views/inventory/InventoryMovements.vue'),
+        meta: { requiresAuth: true }
+      }
+    ]
+  },
+
+  // Testing routes
+  {
+    path: '/testing',
+    name: 'Testing',
+    component: () => import('../views/Testing.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/testing/components',
+    name: 'Components',
+    component: () => import('../views/Components.vue'),
+    meta: { requiresAuth: true }
+  },
+
   // Catch-all route for 404
   {
     path: '/:pathMatch(.*)*',
@@ -135,7 +224,7 @@ const router = createRouter({
 // Global navigation guard
 router.beforeEach((to, from, next) => {
   // Check if the route requires authentication
-  if (to.matched.some(record => record.meta.requiresAuth)) {
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
     // Return the Promise from authGuard
     return authGuard(to, from, next);
   } else {

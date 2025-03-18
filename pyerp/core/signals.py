@@ -2,8 +2,6 @@
 Signal handlers for the core app.
 """
 
-import logging
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import (
     user_logged_in,
@@ -13,9 +11,11 @@ from django.contrib.auth.signals import (
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from pyerp.utils.logging import get_category_logger
 from .services import AuditService
 
-logger = logging.getLogger("pyerp.security")
+# Use category logger for security-related logs
+logger = get_category_logger("security")
 User = get_user_model()
 
 

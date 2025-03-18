@@ -1,7 +1,7 @@
 from django.db import connections
 from django.test import TestCase
 
-from pyerp.products.models import ImageSyncLog
+from pyerp.business_modules.products.models import ImageSyncLog
 
 
 class ImageSyncLogTest(TestCase):

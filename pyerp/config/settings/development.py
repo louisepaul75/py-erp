@@ -7,7 +7,6 @@ These settings extend the base settings with development-specific configurations
 import os
 import sys
 from datetime import timedelta
-from pathlib import Path
 
 import dj_database_url  # noqa: F401
 import psycopg2
@@ -43,7 +42,6 @@ PG_PARAMS = {
         "connect_timeout": 10,  # Connection timeout in seconds
         "client_encoding": "UTF8",
         "sslmode": "prefer",
-        "gssencmode": "disable",  # Disable GSSAPI/Kerberos encryption
     },
 }
 
@@ -86,10 +84,13 @@ CORS_ALLOW_ALL_ORIGINS = (
 CORS_ALLOW_CREDENTIALS = (
     os.environ.get("CORS_ALLOW_CREDENTIALS", "True").lower() == "true"
 )
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000",
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://0.0.0.0:5173",
+    "http://localhost:8050",
+    "http://127.0.0.1:8050",
+]
 
 CORS_ALLOW_METHODS = [
     "DELETE",
@@ -110,6 +111,13 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
+]
+
+CORS_EXPOSE_HEADERS = [
+    "access-control-allow-origin",
+    "access-control-allow-credentials",
 ]
 
 # Logging configuration for development
@@ -168,7 +176,32 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 # Email backend for development
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
+
+# 1Password Connect settings
+EMAIL_USE_1PASSWORD = os.environ.get("EMAIL_USE_1PASSWORD", "").lower() == "true"
+EMAIL_1PASSWORD_ITEM_NAME = os.environ.get("EMAIL_1PASSWORD_ITEM_NAME", "")
+OP_CONNECT_HOST = os.environ.get("OP_CONNECT_HOST", "http://192.168.73.65:8080")
+OP_CONNECT_TOKEN = os.environ.get("OP_CONNECT_TOKEN", "")
+OP_CONNECT_VAULT = os.environ.get("OP_CONNECT_VAULT", "dev")
+
+# Import anymail settings for reference, but use console backend
+from .anymail import *  # noqa
+
+# Override anymail settings for development
+ANYMAIL = {
+    **ANYMAIL,
+    "DEBUG_API_REQUESTS": True,
+}
+
+# Add email_system to installed apps
+INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
+
+# Set this to True to actually send emails in development (using the configured ESP)
+USE_ANYMAIL_IN_DEV = os.environ.get("USE_ANYMAIL_IN_DEV", "").lower() == "true"
+if USE_ANYMAIL_IN_DEV:
+    # Always use the logging email backend for simplicity in development
+    EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
 
 # Disable password validators during development
 AUTH_PASSWORD_VALIDATORS = []

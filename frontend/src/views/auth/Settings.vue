@@ -6,25 +6,19 @@
           <v-card-title class="text-white bg-primary">
             <h2>{{ authStore.isAdmin ? 'Admin Dashboard' : 'User Settings' }}</h2>
           </v-card-title>
-          
+
           <v-card-text>
             <div v-if="authStore.isLoading" class="text-center py-4">
-              <v-progress-circular
-                indeterminate
-                color="primary"
-                size="64"
-              ></v-progress-circular>
+              <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
             </div>
 
             <div v-else-if="authStore.user">
-              <v-alert
-                type="info"
-                variant="tonal"
-                class="mb-4"
-              >
-                {{ authStore.isAdmin 
-                  ? 'Welcome to the Admin Dashboard. Here you can manage system settings and user accounts.' 
-                  : 'This is the settings page where you can manage your account preferences.' }}
+              <v-alert type="info" variant="tonal" class="mb-4">
+                {{
+                  authStore.isAdmin
+                    ? 'Welcome to the Admin Dashboard. Here you can manage system settings and user accounts.'
+                    : 'This is the settings page where you can manage your account preferences.'
+                }}
               </v-alert>
 
               <v-tabs v-model="activeTab" class="mb-6">
@@ -47,7 +41,7 @@
                       <v-list-item-title>Username</v-list-item-title>
                       <v-list-item-subtitle>{{ authStore.user.username }}</v-list-item-subtitle>
                     </v-list-item>
-                    
+
                     <v-list-item>
                       <template v-slot:prepend>
                         <v-icon icon="mdi-email" class="mr-3"></v-icon>
@@ -55,38 +49,45 @@
                       <v-list-item-title>Email</v-list-item-title>
                       <v-list-item-subtitle>{{ authStore.user.email }}</v-list-item-subtitle>
                     </v-list-item>
-                    
+
                     <v-list-item>
                       <template v-slot:prepend>
                         <v-icon icon="mdi-shield-account" class="mr-3"></v-icon>
                       </template>
                       <v-list-item-title>Role</v-list-item-title>
-                      <v-list-item-subtitle>{{ authStore.isAdmin ? 'Administrator' : 'User' }}</v-list-item-subtitle>
+                      <v-list-item-subtitle>{{
+                        authStore.isAdmin ? 'Administrator' : 'User'
+                      }}</v-list-item-subtitle>
                     </v-list-item>
                   </v-list>
-                  
+
                   <v-divider class="my-4"></v-divider>
-                  
-                  <v-btn 
-                    color="primary" 
-                    variant="outlined" 
+
+                  <v-btn
+                    color="primary"
+                    variant="outlined"
                     prepend-icon="mdi-account-edit"
                     to="/profile"
                   >
                     Edit Profile
                   </v-btn>
                 </v-window-item>
-                
+
                 <!-- Appearance Settings Tab -->
                 <v-window-item value="appearance">
                   <h3 class="text-h5 mb-4">Appearance Settings</h3>
                   <v-list>
                     <v-list-item>
                       <template v-slot:prepend>
-                        <v-icon :icon="themeStore.isDark ? 'mdi-weather-night' : 'mdi-weather-sunny'" class="mr-3"></v-icon>
+                        <v-icon
+                          :icon="themeStore.isDark ? 'mdi-weather-night' : 'mdi-weather-sunny'"
+                          class="mr-3"
+                        ></v-icon>
                       </template>
                       <v-list-item-title>Theme</v-list-item-title>
-                      <v-list-item-subtitle>{{ themeStore.isDark ? 'Dark Mode' : 'Light Mode' }}</v-list-item-subtitle>
+                      <v-list-item-subtitle>{{
+                        themeStore.isDark ? 'Dark Mode' : 'Light Mode'
+                      }}</v-list-item-subtitle>
                       <template v-slot:append>
                         <v-switch
                           v-model="themeStore.isDark"
@@ -100,15 +101,11 @@
                     </v-list-item>
                   </v-list>
                 </v-window-item>
-                
+
                 <!-- Notifications Settings Tab -->
                 <v-window-item value="notifications">
                   <h3 class="text-h5 mb-4">Notification Settings</h3>
-                  <v-alert
-                    type="info"
-                    variant="tonal"
-                    class="mb-4"
-                  >
+                  <v-alert type="info" variant="tonal" class="mb-4">
                     Notification settings will be implemented in a future update.
                   </v-alert>
                 </v-window-item>
@@ -117,77 +114,60 @@
                 <v-window-item v-if="authStore.isAdmin" value="users">
                   <h3 class="text-h5 mb-4">User Management</h3>
                   
-                  <v-card variant="outlined" class="mb-4">
-                    <v-card-title class="d-flex align-center">
-                      <v-icon icon="mdi-account-group" class="mr-2"></v-icon>
-                      User Accounts
-                      <v-spacer></v-spacer>
-                      <v-btn color="primary" prepend-icon="mdi-account-plus" size="small">
-                        Add User
-                      </v-btn>
-                    </v-card-title>
-                    
-                    <v-card-text>
-                      <v-table>
-                        <thead>
-                          <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>admin</td>
-                            <td>admin@example.com</td>
-                            <td>Administrator</td>
-                            <td><v-chip color="success" size="small">Active</v-chip></td>
-                            <td>
-                              <v-btn icon="mdi-pencil" variant="text" density="compact" color="primary"></v-btn>
-                              <v-btn icon="mdi-lock-reset" variant="text" density="compact" color="warning"></v-btn>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>user1</td>
-                            <td>user1@example.com</td>
-                            <td>User</td>
-                            <td><v-chip color="success" size="small">Active</v-chip></td>
-                            <td>
-                              <v-btn icon="mdi-pencil" variant="text" density="compact" color="primary"></v-btn>
-                              <v-btn icon="mdi-lock-reset" variant="text" density="compact" color="warning"></v-btn>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>user2</td>
-                            <td>user2@example.com</td>
-                            <td>User</td>
-                            <td><v-chip color="error" size="small">Inactive</v-chip></td>
-                            <td>
-                              <v-btn icon="mdi-pencil" variant="text" density="compact" color="primary"></v-btn>
-                              <v-btn icon="mdi-lock-reset" variant="text" density="compact" color="warning"></v-btn>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </v-table>
-                      
-                      <div class="text-center mt-4">
-                        <v-alert type="info" variant="tonal">
-                          This is a placeholder. User management functionality will be implemented in a future update.
-                        </v-alert>
-                      </div>
-                    </v-card-text>
-                  </v-card>
+                  <UserPermissionsDashboard />
                 </v-window-item>
 
                 <!-- Admin Only: System Settings Tab -->
                 <v-window-item v-if="authStore.isAdmin" value="system">
                   <h3 class="text-h5 mb-4">System Settings</h3>
-                  
+
                   <!-- External Connections -->
                   <ExternalConnectionsSettings class="mb-6" />
-                  
+
+                  <!-- Email Settings Card -->
+                  <v-card variant="outlined" class="mb-6">
+                    <v-card-title>
+                      <v-icon icon="mdi-email" class="mr-2"></v-icon>
+                      Email Settings
+                    </v-card-title>
+                    <v-card-text>
+                      <p class="mb-4">
+                        Configure email settings for the system, including SMTP server configuration
+                        for sending emails.
+                      </p>
+                      <v-btn
+                        color="primary"
+                        variant="outlined"
+                        prepend-icon="mdi-email-outline"
+                        to="/settings/smtp"
+                      >
+                        SMTP Settings
+                      </v-btn>
+                    </v-card-text>
+                  </v-card>
+
+                  <!-- Data Viewer Card -->
+                  <v-card variant="outlined" class="mb-6">
+                    <v-card-title>
+                      <v-icon icon="mdi-table" class="mr-2"></v-icon>
+                      Database Data Viewer
+                    </v-card-title>
+                    <v-card-text>
+                      <p class="mb-4">
+                        View, filter, search, and download data from database tables. This tool allows 
+                        administrators to directly access database information.
+                      </p>
+                      <v-btn
+                        color="primary"
+                        variant="outlined"
+                        prepend-icon="mdi-database-search"
+                        to="/settings/data-viewer"
+                      >
+                        Data Viewer
+                      </v-btn>
+                    </v-card-text>
+                  </v-card>
+
                   <v-row>
                     <v-col cols="12" md="6">
                       <v-card variant="outlined" class="mb-4">
@@ -216,13 +196,18 @@
                               </template>
                             </v-list-item>
                           </v-list>
-                          <v-btn color="primary" variant="outlined" class="mt-3" prepend-icon="mdi-backup-restore">
+                          <v-btn
+                            color="primary"
+                            variant="outlined"
+                            class="mt-3"
+                            prepend-icon="mdi-backup-restore"
+                          >
                             Backup Now
                           </v-btn>
                         </v-card-text>
                       </v-card>
                     </v-col>
-                    
+
                     <v-col cols="12" md="6">
                       <v-card variant="outlined" class="mb-4">
                         <v-card-title>
@@ -277,16 +262,24 @@
                               </template>
                             </v-list-item>
                           </v-list>
-                          <v-btn color="primary" variant="outlined" class="mt-3" prepend-icon="mdi-refresh" @click="refreshHostResources" :loading="hostResources.loading">
+                          <v-btn
+                            color="primary"
+                            variant="outlined"
+                            class="mt-3"
+                            prepend-icon="mdi-refresh"
+                            @click="refreshHostResources"
+                            :loading="hostResources.loading"
+                          >
                             Refresh
                           </v-btn>
                         </v-card-text>
                       </v-card>
                     </v-col>
                   </v-row>
-                  
+
                   <v-alert type="info" variant="tonal" class="mt-4">
-                    This is a placeholder. System management functionality will be implemented in a future update.
+                    This is a placeholder. System management functionality will be implemented in a
+                    future update.
                   </v-alert>
                 </v-window-item>
               </v-window>
@@ -304,6 +297,7 @@ import { useAuthStore } from '../../store/auth';
 import { useThemeStore } from '../../store/theme';
 import api from '../../services/api';
 import ExternalConnectionsSettings from '../../components/ExternalConnectionsSettings.vue';
+import UserPermissionsDashboard from '../../components/UserPermissionsDashboard.vue';
 
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
@@ -336,7 +330,7 @@ const getResourceColor = (value: number) => {
 // Function to format timestamp
 const formatTimestamp = (timestamp: Date | null) => {
   if (!timestamp) return 'Unknown';
-  
+
   if (typeof timestamp === 'string') {
     timestamp = new Date(timestamp);
   }
@@ -349,16 +343,16 @@ const refreshHostResources = async () => {
   try {
     // Set loading state
     hostResources.value.loading = true;
-    
+
     // Make API call to get host resources
     const response = await api.get('/monitoring/host-resources/', {
       timeout: 10000 // 10 second timeout
     });
-    
+
     if (response.data && response.data.success) {
       // Extract data from the response
       const data = response.data.data;
-      
+
       // Update host resources with data from API
       hostResources.value = {
         cpu_usage: data?.cpu?.percent || 35,
@@ -413,4 +407,4 @@ onMounted(() => {
   border-radius: 4px;
   overflow: hidden;
 }
-</style> 
+</style>

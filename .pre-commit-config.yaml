@@ -1,44 +1,57 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
-    hooks: []
-#       - id: trailing-whitespace
-#       - id: end-of-file-fixer
-#       - id: check-yaml
-#       - id: check-added-large-files
-#       - id: check-json
-#       - id: check-toml
-#       - id: detect-private-key
-#       - id: check-merge-conflict
+    hooks:
+      - id: trailing-whitespace
+        stages: [manual]
+      - id: end-of-file-fixer
+        stages: [manual]
+      - id: check-yaml
+        stages: [manual]
+      - id: check-added-large-files
+        stages: [manual]
+      - id: check-json
+        stages: [manual]
+      - id: check-toml
+        stages: [manual]
+      - id: detect-private-key
+        stages: [manual]
+      - id: check-merge-conflict
+        stages: [manual]
 
   - repo: https://github.com/psf/black
     rev: 24.3.0
-    hooks: []
-#       - id: black
-#         language_version: python3
+    hooks:
+      - id: black
+        language_version: python3
+        stages: [manual]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.9
-    hooks: []
-#       # Run the linter
-#       - id: ruff
-#         args: [--fix, --exit-zero]  # Add --exit-zero to report but not fail
-#       # Run the formatter
-#       - id: ruff-format
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        stages: [manual]
+      # Run the formatter
+      - id: ruff-format
+        stages: [manual]
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
-    hooks: []
-#       - id: mypy
-#         additional_dependencies:
-#           - django-stubs
-#           - djangorestframework-stubs
-#           - pydantic
-#         exclude: ^migrations/
-#         stages: [manual]  # This makes it only run when explicitly called
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - django-stubs
+          - djangorestframework-stubs
+          - pydantic
+        exclude: ^migrations/
+        stages: [manual]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.7
-    hooks: []
-#       - id: bandit
-#         args: ["-c", "pyproject.toml", "--exit-zero"]  # Add --exit-zero
-#         additional_dependencies: ["bandit[toml]"]
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml"]
+        additional_dependencies: ["bandit[toml]"]
+        stages: [manual]

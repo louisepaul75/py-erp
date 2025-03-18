@@ -26,25 +26,25 @@ class MockProduct:
         self.cost_price = None
         self.base_sku = None
         self.category = None
-        
+
         # Create a minimal mock for model metadata
         self._meta = MagicMock()
         self._meta.fields = []
-        self._meta.db_table = 'products_product'
-        
+        self._meta.db_table = "products_product"
+
         # Create a minimal mock for model state
         self._state = MagicMock()
         self._state.adding = True
-        
+
         # Create a minimal mock for primary key field
         class BigAutoField:
             def __init__(self):
-                self.__module__ = 'django.db.models'
-                self.__class__ = type('BigAutoField', (), {})
+                self.__module__ = "django.db.models"
+                self.__class__ = type("BigAutoField", (), {})
                 self._subclasses = (object,)
                 self.__bases__ = (object,)
                 self.__mro__ = (object,)
-            
+
             def __subclasscheck__(self, subclass):
                 return True
 

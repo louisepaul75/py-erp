@@ -5,7 +5,6 @@ These settings extend the development settings with test-specific configurations
 """
 
 from .development import *  # noqa
-import sys
 import socket  # noqa: F401
 from pathlib import Path  # noqa: F401
 from .base import *
@@ -33,17 +32,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Configure database for tests - use file-based SQLite for better compatibility
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'test_db.sqlite3',
-        'TEST': {
-            'NAME': BASE_DIR / 'test_db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "test_db.sqlite3",
+        "TEST": {
+            "NAME": BASE_DIR / "test_db.sqlite3",
         },
     }
 }
 
 # Disable migrations during tests to avoid field type issues
-MIGRATION_MODULES = None  # This tells Django to create the tables directly
+MIGRATION_MODULES = {}  # Empty dictionary instead of None
 
 # Configure test-specific model settings
 DATABASE_ROUTERS = []
@@ -51,22 +50,22 @@ TEST_NON_SERIALIZED_APPS = []
 
 # Disable password hashing for faster tests
 PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.MD5PasswordHasher',
+    "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
 # Configure logging for tests
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'level': 'DEBUG',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
     },
 }
 
@@ -86,5 +85,4 @@ REST_FRAMEWORK = {
 }
 
 # Ensure models are created without migrations
-DJANGO_MIGRATION_MODULES = {}
-
+# This is handled by MIGRATION_MODULES now

@@ -6,14 +6,10 @@
           <v-card-title class="text-white bg-primary">
             <h2>{{ $t('common.profile') }}</h2>
           </v-card-title>
-          
+
           <v-card-text>
             <div v-if="authStore.isLoading" class="text-center py-4">
-              <v-progress-circular
-                indeterminate
-                color="primary"
-                size="64"
-              ></v-progress-circular>
+              <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
             </div>
 
             <div v-else-if="authStore.user">
@@ -128,12 +124,7 @@
               </v-form>
             </div>
 
-            <v-alert
-              v-else
-              type="warning"
-              variant="tonal"
-              class="mt-4"
-            >
+            <v-alert v-else type="warning" variant="tonal" class="mt-4">
               You need to be logged in to view your profile.
             </v-alert>
           </v-card-text>
@@ -211,10 +202,7 @@ const changePassword = async () => {
   passwordMessage.value = '';
 
   try {
-    await authStore.changePassword(
-      passwordData.value.oldPassword,
-      passwordData.value.newPassword
-    );
+    await authStore.changePassword(passwordData.value.oldPassword, passwordData.value.newPassword);
 
     // Clear password fields
     passwordData.value.oldPassword = '';

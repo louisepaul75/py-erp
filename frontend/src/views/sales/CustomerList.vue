@@ -3,7 +3,7 @@
     <v-row>
       <v-col cols="12">
         <h1 class="text-h4 font-weight-bold mb-6">Kundenübersicht</h1>
-        
+
         <!-- Quick and Advanced Search -->
         <v-card class="mb-6">
           <v-card-text>
@@ -32,7 +32,7 @@
                 </v-btn>
               </v-col>
             </v-row>
-            
+
             <!-- Advanced Search Panel -->
             <v-expand-transition>
               <div v-if="showAdvancedSearch">
@@ -96,7 +96,7 @@
             </v-expand-transition>
           </v-card-text>
         </v-card>
-        
+
         <!-- Filters -->
         <v-card class="mb-6">
           <v-card-text>
@@ -116,7 +116,7 @@
                   <v-radio label="Privatkunden (B2C)" value="b2c"></v-radio>
                 </v-radio-group>
               </v-col>
-              
+
               <!-- Country Filter -->
               <v-col cols="12" md="3">
                 <v-select
@@ -129,7 +129,7 @@
                   @update:model-value="applyFilters"
                 ></v-select>
               </v-col>
-              
+
               <!-- Last Order Filter -->
               <v-col cols="12" md="3">
                 <v-select
@@ -141,7 +141,7 @@
                   @update:model-value="applyFilters"
                 ></v-select>
               </v-col>
-              
+
               <!-- Revenue Filter -->
               <v-col cols="12" md="3">
                 <v-row>
@@ -170,7 +170,7 @@
             </v-row>
           </v-card-text>
         </v-card>
-        
+
         <!-- Results Count and Reset -->
         <div class="d-flex justify-space-between align-center mb-4">
           <p class="text-grey-darken-1">{{ filteredCustomers.length }} Kunden gefunden</p>
@@ -183,7 +183,7 @@
             Filter zurücksetzen
           </v-btn>
         </div>
-        
+
         <!-- Customer Table -->
         <v-card>
           <v-data-table
@@ -221,7 +221,7 @@
                   >
                     Details
                   </v-btn>
-                  
+
                   <v-menu location="bottom end">
                     <template v-slot:activator="{ props }">
                       <v-btn
@@ -231,7 +231,7 @@
                         v-bind="props"
                       ></v-btn>
                     </template>
-                    
+
                     <v-list density="comfortable">
                       <v-list-item @click="editCustomer(item)">
                         <v-list-item-title>Bearbeiten</v-list-item-title>
@@ -257,49 +257,49 @@
 
 <script>
 import { salesApi } from '@/services/api';
-import { 
-  VContainer, 
-  VRow, 
-  VCol, 
-  VCard, 
-  VCardText, 
-  VTextField, 
-  VBtn, 
-  VIcon, 
+import {
+  VContainer,
+  VRow,
+  VCol,
+  VCard,
+  VCardText,
+  VTextField,
+  VBtn,
+  VIcon,
   VExpandTransition,
-  VRadioGroup, 
-  VRadio, 
-  VSelect, 
-  VDataTable, 
-  VChip, 
-  VMenu, 
-  VList, 
-  VListItem, 
-  VListItemTitle, 
+  VRadioGroup,
+  VRadio,
+  VSelect,
+  VDataTable,
+  VChip,
+  VMenu,
+  VList,
+  VListItem,
+  VListItemTitle,
   VDivider
-} from 'vuetify/components'
+} from 'vuetify/components';
 
 export default {
   name: 'CustomerOverview',
   components: {
-    VContainer, 
-    VRow, 
-    VCol, 
-    VCard, 
-    VCardText, 
-    VTextField, 
-    VBtn, 
-    VIcon, 
+    VContainer,
+    VRow,
+    VCol,
+    VCard,
+    VCardText,
+    VTextField,
+    VBtn,
+    VIcon,
     VExpandTransition,
-    VRadioGroup, 
-    VRadio, 
-    VSelect, 
-    VDataTable, 
-    VChip, 
-    VMenu, 
-    VList, 
-    VListItem, 
-    VListItemTitle, 
+    VRadioGroup,
+    VRadio,
+    VSelect,
+    VDataTable,
+    VChip,
+    VMenu,
+    VList,
+    VListItem,
+    VListItemTitle,
     VDivider
   },
   data() {
@@ -338,12 +338,12 @@ export default {
       loading: false,
       totalCustomers: 0,
       error: null
-    }
+    };
   },
-  
+
   computed: {
     filteredCustomers() {
-      return this.customers.filter(customer => {
+      return this.customers.filter((customer) => {
         // Quick search
         if (this.quickSearch) {
           const searchTerm = this.quickSearch.toLowerCase();
@@ -354,37 +354,55 @@ export default {
             customer.customerNumber.toLowerCase(),
             customer.phone.toLowerCase()
           ];
-          
-          if (!searchableFields.some(field => field.includes(searchTerm))) {
+
+          if (!searchableFields.some((field) => field.includes(searchTerm))) {
             return false;
           }
         }
-        
+
         // Advanced search
-        if (this.advancedSearch.name && !customer.name.toLowerCase().includes(this.advancedSearch.name.toLowerCase())) {
-          return false;
-        }
-        
-        if (this.advancedSearch.email && !customer.email.toLowerCase().includes(this.advancedSearch.email.toLowerCase())) {
-          return false;
-        }
-        
-        if (this.advancedSearch.city && !customer.city.toLowerCase().includes(this.advancedSearch.city.toLowerCase())) {
-          return false;
-        }
-        
-        if (this.advancedSearch.postalCode && !customer.postalCode.includes(this.advancedSearch.postalCode)) {
+        if (
+          this.advancedSearch.name &&
+          !customer.name.toLowerCase().includes(this.advancedSearch.name.toLowerCase())
+        ) {
           return false;
         }
 
-        if (this.advancedSearch.documentNumber && !customer.customerNumber.includes(this.advancedSearch.documentNumber)) {
+        if (
+          this.advancedSearch.email &&
+          !customer.email.toLowerCase().includes(this.advancedSearch.email.toLowerCase())
+        ) {
           return false;
         }
 
-        if (this.advancedSearch.shopNumber && !customer.shopNumber.includes(this.advancedSearch.shopNumber)) {
+        if (
+          this.advancedSearch.city &&
+          !customer.city.toLowerCase().includes(this.advancedSearch.city.toLowerCase())
+        ) {
           return false;
         }
-        
+
+        if (
+          this.advancedSearch.postalCode &&
+          !customer.postalCode.includes(this.advancedSearch.postalCode)
+        ) {
+          return false;
+        }
+
+        if (
+          this.advancedSearch.documentNumber &&
+          !customer.customerNumber.includes(this.advancedSearch.documentNumber)
+        ) {
+          return false;
+        }
+
+        if (
+          this.advancedSearch.shopNumber &&
+          !customer.shopNumber.includes(this.advancedSearch.shopNumber)
+        ) {
+          return false;
+        }
+
         // Customer type filter
         if (this.filters.customerType !== 'all' && customer.type !== this.filters.customerType) {
           return false;
@@ -394,7 +412,7 @@ export default {
         if (this.filters.country !== 'all' && customer.country !== this.filters.country) {
           return false;
         }
-        
+
         // Last order filter
         if (this.filters.lastOrderYears !== 'all') {
           const now = new Date();
@@ -412,7 +430,7 @@ export default {
             }
           }
         }
-        
+
         // Revenue filter
         if (this.filters.minRevenue && customer.revenue365Days < this.filters.minRevenue) {
           return false;
@@ -420,19 +438,19 @@ export default {
         if (this.filters.maxRevenue && customer.revenue365Days > this.filters.maxRevenue) {
           return false;
         }
-        
+
         return true;
       });
     },
-    
+
     countryItems() {
-      const countries = [...new Set(this.customers.map(c => c.country))].sort();
+      const countries = [...new Set(this.customers.map((c) => c.country))].sort();
       return [
         { title: 'Alle Länder', value: 'all' },
-        ...countries.map(country => ({ title: country, value: country }))
+        ...countries.map((country) => ({ title: country, value: country }))
       ];
     },
-    
+
     lastOrderItems() {
       return [
         { title: 'Alle', value: 'all' },
@@ -445,22 +463,23 @@ export default {
       ];
     }
   },
-  
+
   mounted() {
     this.loadCustomers();
   },
-  
+
   methods: {
     async loadCustomers() {
       this.loading = true;
       this.error = null;
-      
+
       try {
         const params = {
           page: this.currentPage,
           page_size: this.pageSize,
           search: this.quickSearch,
-          customer_type: this.filters.customerType !== 'all' ? this.filters.customerType : undefined,
+          customer_type:
+            this.filters.customerType !== 'all' ? this.filters.customerType : undefined,
           country: this.filters.country !== 'all' ? this.filters.country : undefined,
           min_revenue: this.filters.minRevenue,
           max_revenue: this.filters.maxRevenue,
@@ -469,11 +488,11 @@ export default {
           email: this.advancedSearch.email || undefined,
           city: this.advancedSearch.city || undefined,
           postal_code: this.advancedSearch.postalCode || undefined,
-          customer_number: this.advancedSearch.documentNumber || undefined,
+          customer_number: this.advancedSearch.documentNumber || undefined
         };
 
         const response = await salesApi.getCustomers(params);
-        this.customers = response.data.results.map(customer => {
+        this.customers = response.data.results.map((customer) => {
           const formatDate = (dateString) => {
             if (!dateString) return null;
             const date = new Date(dateString);
@@ -482,9 +501,15 @@ export default {
 
           return {
             id: customer.id,
-            name: customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+            name:
+              customer.company_name ||
+              `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
             email: customer.email || '',
-            type: customer.customer_group ? (customer.customer_group.toLowerCase().includes('b2b') ? 'b2b' : 'b2c') : 'b2c',
+            type: customer.customer_group
+              ? customer.customer_group.toLowerCase().includes('b2b')
+                ? 'b2b'
+                : 'b2c'
+              : 'b2c',
             phone: customer.phone || '',
             city: customer.addresses?.[0]?.city || '',
             postalCode: customer.addresses?.[0]?.postal_code || '',
@@ -503,12 +528,12 @@ export default {
         this.loading = false;
       }
     },
-    
+
     applyFilters() {
       this.currentPage = 1;
       this.loadCustomers();
     },
-    
+
     resetFilters() {
       this.quickSearch = '';
       this.advancedSearch = {
@@ -529,24 +554,24 @@ export default {
       this.currentPage = 1;
       this.loadCustomers();
     },
-    
+
     viewCustomerDetails(customer) {
-      console.log('View details:', customer);
+      this.$router.push({ name: 'CustomerDetail', params: { id: customer.id } });
     },
-    
+
     editCustomer(customer) {
       console.log('Edit customer:', customer);
     },
-    
+
     viewOrders(customer) {
       console.log('View orders:', customer);
     },
-    
+
     async deleteCustomer(customer) {
       if (confirm(`Sind Sie sicher, dass Sie ${customer.name} löschen möchten?`)) {
         try {
           await salesApi.deleteCustomer(customer.id);
-          const index = this.customers.findIndex(c => c.id === customer.id);
+          const index = this.customers.findIndex((c) => c.id === customer.id);
           if (index !== -1) {
             this.customers.splice(index, 1);
           }
@@ -556,7 +581,7 @@ export default {
         }
       }
     },
-    
+
     formatDate(date) {
       return new Intl.DateTimeFormat('de-DE', {
         day: '2-digit',
@@ -564,7 +589,7 @@ export default {
         year: 'numeric'
       }).format(new Date(date));
     },
-    
+
     formatCurrency(amount) {
       return new Intl.NumberFormat('de-DE', {
         style: 'currency',
@@ -574,7 +599,7 @@ export default {
       }).format(amount);
     }
   }
-}
+};
 </script>
 
 <style>

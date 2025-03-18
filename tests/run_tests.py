@@ -16,9 +16,7 @@ from pathlib import Path
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Run tests for pyERP"
-    )
+    parser = argparse.ArgumentParser(description="Run tests for pyERP")
     parser.add_argument(
         "test_paths",
         nargs="*",
@@ -58,10 +56,9 @@ def get_test_categories():
     """Return a list of test categories based on directory structure."""
     test_dir = Path("tests")
     categories = [
-        d.name 
-        for d in test_dir.iterdir() 
-        if (d.is_dir() and 
-            not d.name.startswith((".", "__")))
+        d.name
+        for d in test_dir.iterdir()
+        if (d.is_dir() and not d.name.startswith((".", "__")))
     ]
     return sorted(categories)
 
@@ -74,15 +71,17 @@ def run_category_tests(category, args, cmd_base):
 
     # Build category-specific command
     cmd = cmd_base.copy()
-    cmd.extend([
-        category_path,
-        "--json-report",
-        f"--json-report-file=tests/coverage/{category}-results.json",
-    ])
+    cmd.extend(
+        [
+            category_path,
+            "--json-report",
+            f"--json-report-file=tests/coverage/{category}-results.json",
+        ]
+    )
 
     # Run tests for this category
     result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    
+
     try:
         # Try to read the JSON results
         with open(f"tests/coverage/{category}-results.json") as f:
@@ -110,9 +109,7 @@ def get_coverage_for_category(category):
             "--omit=*/migrations/*,*/tests/*",
             "--format=json",
         ]
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, check=False
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         coverage_data = json.loads(result.stdout)
         return coverage_data.get("totals", {}).get("percent_covered", 0)
     except (json.JSONDecodeError, subprocess.SubprocessError):
@@ -138,16 +135,14 @@ def print_category_summary(category, results, coverage):
     print(f"❌ Failed: {tests_failed}")
     print(f"⚠️ Skipped: {tests_skipped}")
     print(f"📊 Coverage: {coverage:.1f}%")
-    
+
     # Print failed test details if any
     if tests_failed > 0 and "tests" in json_results:
         print("\nFailed Tests:")
         for test in json_results["tests"]:
             if test.get("outcome") == "failed":
                 test_id = test.get("nodeid", "Unknown test")
-                error_msg = test.get("call", {}).get(
-                    "longrepr", "No details available"
-                )
+                error_msg = test.get("call", {}).get("longrepr", "No details available")
                 print(f"  - {test_id}: {error_msg}")
 
 
@@ -176,7 +171,7 @@ def run_tests(args):
 
     # Get test categories
     categories = get_test_categories()
-    
+
     # Store results for each category
     category_results = {}
     overall_passed = True
@@ -235,7 +230,7 @@ def run_tests(args):
                 "--include=pyerp/*,scripts/*",
                 "--omit=*/migrations/*,*/tests/*",
             ],
-            check=False
+            check=False,
         )
 
     status = "✅ PASSED" if overall_passed else "❌ FAILED"
@@ -243,8 +238,7 @@ def run_tests(args):
 
     if args.coverage:
         print(
-            f"\nDetailed coverage report available at: "
-            f"{args.output_dir}/index.html"
+            f"\nDetailed coverage report available at: " f"{args.output_dir}/index.html"
         )
 
     return 0 if overall_passed else 1

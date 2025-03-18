@@ -1,15 +1,15 @@
 <template>
-    <div class="home">
-        <h1>Welcome to pyERP</h1>
-        <p>A comprehensive ERP system for managing your business operations.</p>
-        <div class="modules">
-            <div class="module-card" @click="navigateTo('/products')">
-                <h3>Products</h3>
-                <p>Manage your product catalog, variants, and categories</p>
-            </div>
-            <!-- Add more module cards as needed -->
-        </div>
+  <div class="home">
+    <h1>Welcome to pyERP</h1>
+    <p>A comprehensive ERP system for managing your business operations.</p>
+    <div class="modules">
+      <div class="module-card" @click="navigateTo('/products')">
+        <h3>Products</h3>
+        <p>Manage your product catalog, variants, and categories</p>
+      </div>
+      <!-- Add more module cards as needed -->
     </div>
+  </div>
 </template>
 <script setup lang="ts">
 import { useRouter } from 'vue-router';

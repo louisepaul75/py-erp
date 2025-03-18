@@ -13,15 +13,11 @@ import django  # noqa: E402
 load_environment_variables(verbose=True)
 
 # Set up Django
-os.environ.setdefault(
-    "DJANGO_SETTINGS_MODULE",
-    "pyerp.config.settings.development"
-)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
 django.setup()
 
 # Import the necessary models and the ImageAPIClient
 from django.db import transaction
-from django.core.management.base import BaseCommand
 
 from pyerp.external_api.images_cms.client import ImageAPIClient
 from pyerp.products.models import ProductImage, VariantProduct

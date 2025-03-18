@@ -2,15 +2,14 @@
 Signal handlers for the products app.
 """
 
-import logging
-
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
 from pyerp.business_modules.products.models import VariantProduct
+from pyerp.utils.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @receiver(pre_save, sender=VariantProduct)
@@ -22,8 +21,13 @@ def variant_product_pre_save(_sender=None, instance=None, **_kwargs):
     - Set timestamps appropriately
     """
     if instance.parent and instance.variant_code and not instance.sku:
-        parent_sku = instance.parent.sku or str(instance.parent.legacy_id)
-        instance.sku = f"{parent_sku}-{instance.variant_code}"
+        # Only set SKU if parent has a valid identifier
+        if instance.parent.sku or instance.parent.legacy_id:
+            parent_sku = instance.parent.sku or str(instance.parent.legacy_id)
+            instance.sku = f"{parent_sku}-{instance.variant_code}"
+        else:
+            # If parent has no identifier, leave SKU empty
+            instance.sku = ""
 
     # Handle timestamp logic (equivalent to auto_now and auto_now_add)
     if not instance.pk:  # New instance

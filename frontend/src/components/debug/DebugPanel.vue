@@ -2,8 +2,10 @@
 <template>
   <div class="debug-panel" v-if="isDev">
     <div class="debug-header" @click="toggleExpanded">
-      <div class="debug-badge">DEV MODE (Port: {{ currentPort }}) - {{ currentBranch || 'Unknown Branch' }}</div>
-      <div class="debug-chevron" :class="{ 'expanded': isExpanded }">▼</div>
+      <div class="debug-badge">
+        DEV MODE (Port: {{ currentPort }}) - {{ currentBranch || 'Unknown Branch' }}
+      </div>
+      <div class="debug-chevron" :class="{ expanded: isExpanded }">▼</div>
     </div>
     <div class="debug-content" v-if="isExpanded">
       <div class="debug-info">
@@ -36,16 +38,17 @@ const memoryUsage = ref('');
 const currentBranch = ref('');
 
 // Get current port
-const currentPort = computed(() => typeof window !== 'undefined' ? window.location.port : '');
+const currentPort = computed(() => (typeof window !== 'undefined' ? window.location.port : ''));
 const isDevServer = computed(() => currentPort.value === '5173');
 
 // Check if running in Docker
 const isDocker = computed(() => {
   // Check for common Docker environment indicators
-  return typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname.includes('docker') ||
-    window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/) // IP address format
+  return (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname.includes('docker') ||
+      window.location.hostname.match(/^(\d{1,3}\.){3}\d{1,3}$/)) // IP address format
   );
 });
 
@@ -73,11 +76,13 @@ const toggleExpanded = () => {
   isExpanded.value = !isExpanded.value;
 
   // Dispatch custom event for the footer to listen to
-  window.dispatchEvent(new CustomEvent('debug-panel-toggle', {
-    detail: {
-      expanded: isExpanded.value
-    }
-  }));
+  window.dispatchEvent(
+    new CustomEvent('debug-panel-toggle', {
+      detail: {
+        expanded: isExpanded.value
+      }
+    })
+  );
 };
 
 // Get current branch name
@@ -124,7 +129,7 @@ onMounted(() => {
   color: white;
   z-index: 10000; /* Lower z-index than footer to ensure it's below */
   font-family: monospace;
-  box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
   /* Force hardware acceleration to fix stacking issues in some environments */
   transform: translateZ(0);
   will-change: transform;

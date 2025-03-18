@@ -2,13 +2,13 @@
 Core services for the ERP system.
 """
 
-import logging
-
 from django.contrib.contenttypes.models import ContentType
 
+from pyerp.utils.logging import get_category_logger
 from .models import AuditLog
 
-logger = logging.getLogger("pyerp.security")
+# Use category logger for security-related logs
+logger = get_category_logger("security")
 
 
 class AuditService:

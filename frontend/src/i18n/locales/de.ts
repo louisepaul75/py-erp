@@ -39,7 +39,8 @@ export default {
     sales: 'Vertrieb',
     inventory: 'Lager',
     production: 'Produktion',
-    test: 'Testseite'
+    testing: 'Testen',
+    components: 'UI-Komponenten'
   },
   languages: {
     english: 'English',
@@ -102,5 +103,152 @@ export default {
       completed: 'Abgeschlossen',
       cancelled: 'Storniert'
     }
+  },
+  inventory: {
+    title: 'Lagerverwaltung',
+    dashboard: 'Dashboard',
+    warehouseManagement: 'Lagerverwaltung',
+    lagerverwaltung: 'Lagerverwaltung',
+    productInventory: 'Produktbestand',
+    movements: 'Lagerbewegungen',
+    storageLocations: 'Lagerorte',
+    showOnlyWithProducts: 'Nur Lagerorte mit Produkten anzeigen',
+    boxManagement: 'Schüttenverwaltung',
+    schuettenverwaltung: 'Schüttenverwaltung',
+    warehouseMap: 'Lagerkarte',
+    name: 'Name',
+    dimensions: 'Abmessungen',
+    weightCapacity: 'Gewichtskapazität',
+    slotCount: 'Anzahl der Slots',
+    slotNamingScheme: 'Slot-Benennungsschema',
+    locationCode: 'Standortcode',
+    country: 'Land',
+    cityBuilding: 'Stadt/Gebäude',
+    unit: 'Einheit',
+    compartment: 'Fach',
+    shelf: 'Regal',
+    errorFetchingBoxTypes: 'Fehler beim Abrufen der Schüttentypen',
+    errorFetchingLocations: 'Fehler beim Abrufen der Lagerorte',
+    totalBoxes: 'Gesamtanzahl Schütten',
+    totalLocations: 'Gesamtanzahl Lagerorte',
+    totalProducts: 'Gesamtanzahl Produkte',
+    recentMovements: 'Aktuelle Bewegungen',
+    boxesDescription: 'Gesamtanzahl der Schütten im System',
+    locationsDescription: 'Gesamtanzahl der Lagerorte',
+    productsDescription: 'Gesamtanzahl der Produkte im Lager',
+    movementsDescription: 'Bewegungen in den letzten 7 Tagen',
+    inventoryDashboard: 'Lager-Dashboard',
+    dashboardDescription: 'Detaillierte Lagerstatistiken und Analysen werden hier in Kürze verfügbar sein',
+    productInventoryDescription: 'Produktbestandsverwaltung wird hier in Kürze verfügbar sein',
+    movementsPageDescription: 'Lagerbewegungsverfolgung wird hier in Kürze verfügbar sein',
+    warehouseMapDescription: 'Interaktive Lagerkarte wird hier in Kürze verfügbar sein',
+    boxCode: 'Schüttencode',
+    boxType: 'Schüttentyp',
+    storageLocation: 'Lagerort',
+    statusLabel: 'Status',
+    purposeLabel: 'Zweck',
+    availableSlots: 'Verfügbare Slots',
+    noLocation: 'Kein Lagerort',
+    statusAVAILABLE: 'Verfügbar',
+    statusIN_USE: 'In Verwendung',
+    statusRESERVED: 'Reserviert',
+    statusDAMAGED: 'Beschädigt',
+    statusRETIRED: 'Ausgemustert',
+    purposeSTORAGE: 'Lagerung',
+    purposePICKING: 'Kommissionierung',
+    purposeTRANSPORT: 'Transport',
+    purposeWORKSHOP: 'Werkstatt',
+    boxes: 'Schütten',
+    boxTypes: 'Schüttentypen',
+    noNotes: 'Keine Notizen',
+    barcode: 'Barcode',
+    location: 'Standort',
+    overview: 'Übersicht',
+    productMovements: 'Produktbewegungen',
+    position: 'Position',
+    flags: 'Kennzeichnungen',
+    saleLocation: 'Verkaufsstandort',
+    specialSpot: 'Sonderplatz',
+    viewInventory: 'Bestand anzeigen',
+    sale: 'Verkauf',
+    status: {
+      available: 'Verfügbar',
+      in_use: 'In Verwendung',
+      reserved: 'Reserviert',
+      damaged: 'Beschädigt',
+      retired: 'Ausgemustert'
+    },
+    purpose: {
+      storage: 'Lagerung',
+      picking: 'Kommissionierung',
+      transport: 'Transport',
+      workshop: 'Werkstatt'
+    }
+  },
+  search: {
+    placeholder: "Suchen...",
+    noResults: "Keine Ergebnisse gefunden für \"{query}\"",
+    startTyping: "Beginnen Sie mit der Eingabe",
+    searching: "Suche läuft...",
+    categories: {
+      customers: "Kunden",
+      sales_records: "Verkaufsbelege",
+      parent_products: "Hauptprodukte",
+      variant_products: "Produktvarianten",
+      box_slots: "Box-Slots",
+      storage_locations: "Lagerorte"
+    }
+  },
+  sales: {
+    records: {
+      title: "Verkaufsbelege",
+      noRecords: "Keine Verkaufsbelege gefunden",
+      loading: "Verkaufsbelege werden geladen...",
+      error: "Fehler beim Laden der Verkaufsbelege",
+      headers: {
+        recordNumber: "Beleg-Nr.",
+        date: "Datum",
+        type: "Typ",
+        customer: "Kunde",
+        total: "Gesamt",
+        paymentStatus: "Zahlungsstatus",
+        actions: "Aktionen"
+      },
+      types: {
+        INVOICE: "Rechnung",
+        PROPOSAL: "Angebot",
+        DELIVERY_NOTE: "Lieferschein",
+        CREDIT_NOTE: "Gutschrift",
+        ORDER_CONFIRMATION: "Auftragsbestätigung"
+      },
+      paymentStatus: {
+        PAID: "Bezahlt",
+        PENDING: "Ausstehend",
+        OVERDUE: "Überfällig",
+        CANCELLED: "Storniert"
+      },
+      itemsDialog: {
+        title: "Belegpositionen",
+        noItems: "Keine Positionen für diesen Beleg gefunden",
+        headers: {
+          position: "Position",
+          description: "Beschreibung",
+          quantity: "Menge",
+          unitPrice: "Einzelpreis",
+          taxAmount: "MwSt.",
+          subtotal: "Nettobetrag",
+          total: "Gesamtbetrag",
+          status: "Status"
+        },
+        fulfillmentStatus: {
+          FULFILLED: "Erfüllt",
+          PARTIAL: "Teilweise erfüllt",
+          PENDING: "Ausstehend",
+          CANCELLED: "Storniert"
+        },
+        close: "Schließen"
+      },
+      viewDetails: "Details anzeigen"
+    }
   }
-} 
+};

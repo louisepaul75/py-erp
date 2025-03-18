@@ -9,7 +9,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.test")
 django.setup()
 
 # Now we can safely import and configure Django settings
-from django.conf import settings
 
 # REST Framework settings
 settings.REST_FRAMEWORK = {
@@ -42,6 +41,7 @@ settings.PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
+
 # Disable migrations for tests
 class DisableMigrations:
     def __contains__(self, item):
@@ -50,28 +50,29 @@ class DisableMigrations:
     def __getitem__(self, item):
         return None
 
+
 settings.MIGRATION_MODULES = DisableMigrations()
 
 # Configure Django model fields for Python 3.12
-settings.DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+settings.DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 settings.FIELD_TYPES = {
-    'AutoField': 'django.db.models.BigAutoField',
-    'BigAutoField': 'django.db.models.BigAutoField',
-    'SmallAutoField': 'django.db.models.SmallAutoField',
+    "AutoField": "django.db.models.BigAutoField",
+    "BigAutoField": "django.db.models.BigAutoField",
+    "SmallAutoField": "django.db.models.SmallAutoField",
 }
 
 # Configure model field types for Python 3.12
 settings.MODELS = {
-    'DEFAULT_AUTO_FIELD': 'django.db.models.BigAutoField',
-    'FIELD_TYPES': {
-        'AutoField': 'django.db.models.BigAutoField',
-        'BigAutoField': 'django.db.models.BigAutoField',
-        'SmallAutoField': 'django.db.models.SmallAutoField',
-    }
+    "DEFAULT_AUTO_FIELD": "django.db.models.BigAutoField",
+    "FIELD_TYPES": {
+        "AutoField": "django.db.models.BigAutoField",
+        "BigAutoField": "django.db.models.BigAutoField",
+        "SmallAutoField": "django.db.models.SmallAutoField",
+    },
 }
 
 # Configure test database
-settings.TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+settings.TEST_RUNNER = "django.test.runner.DiscoverRunner"
 settings.TEST_NON_SERIALIZED_APPS = []
 settings.FIXTURE_DIRS = []
-settings.SERIALIZATION_MODULES = {} 
+settings.SERIALIZATION_MODULES = {}

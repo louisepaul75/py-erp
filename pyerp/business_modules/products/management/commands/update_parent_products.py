@@ -11,7 +11,6 @@ import logging
 import pandas as pd
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Q
 
 from pyerp.business_modules.products.models import (
     ParentProduct,
@@ -23,7 +22,7 @@ from pyerp.external_api.legacy_erp.client import LegacyERPClient
 logger = logging.getLogger(__name__)
 
 # Disable SQL logging
-db_logger = logging.getLogger('django.db.backends')
+db_logger = logging.getLogger("django.db.backends")
 db_logger.setLevel(logging.ERROR)
 
 
@@ -53,7 +52,7 @@ class Command(BaseCommand):
         """Execute the command."""
         # Store original logging level
         original_log_level = db_logger.level
-        
+
         try:
             env = options.get("env", "dev")
             limit = options.get("limit")
@@ -100,9 +99,7 @@ class Command(BaseCommand):
                     )
                     self.stdout.write("Created default category")
                 except Exception as e:
-                    self.stderr.write(
-                        f"Failed to create default category: {e}"
-                    )
+                    self.stderr.write(f"Failed to create default category: {e}")
                     return
 
             # Fetch parent products from the legacy system
@@ -135,58 +132,46 @@ class Command(BaseCommand):
                     try:
                         with transaction.atomic():
                             # Extract data from the row
-                            familie_id = (
-                                str(row["__KEY"]) if "__KEY" in row else None
-                            )
-                            nummer = (
-                                str(row["Nummer"]) if "Nummer" in row else None
-                            )
+                            familie_id = str(row["__KEY"]) if "__KEY" in row else None
+                            nummer = str(row["Nummer"]) if "Nummer" in row else None
 
                             if not familie_id or not nummer:
                                 self.stdout.write(
-                                    "Skipping row - Missing ID or SKU: "
-                                    f"{row}"
+                                    "Skipping row - Missing ID or SKU: " f"{row}"
                                 )
                                 stats["skipped"] += 1
                                 continue
 
                             # Extract additional fields
-                            name = row.get("Bezeichnung", "")
-                            name_en = row.get("Bezeichnung_ENG", "")
-                            description = row.get("Beschreibung", "")
-                            if description is None:
-                                description = {'DE': ''}
-                            description_en = row.get("Beschreibung_ENG", "")
-                            short_description = row.get("Bez_kurz", "")
-                            art_gr = row.get("ArtGr", "")
-
-                            # Physical attributes
-                            weight = (
+                            bezeichnung = row.get("Bezeichnung", "")
+                            bezeichnung_fs = row.get("Bezeichnung_ENG", {})
+                            beschreibung = row.get("Beschreibung", {})
+                            gewicht = (
                                 float(row["Gewicht"])
                                 if pd.notna(row.get("Gewicht"))
                                 else 0
                             )
-                            width = (
+                            masse_breite = (
                                 float(row["Masse_Breite"])
                                 if pd.notna(row.get("Masse_Breite"))
                                 else None
                             )
-                            height = (
+                            masse_hoehe = (
                                 float(row["Masse_Hoehe"])
                                 if pd.notna(row.get("Masse_Hoehe"))
                                 else None
                             )
-                            depth = (
+                            masse_tiefe = (
                                 float(row["Masse_Tiefe"])
                                 if pd.notna(row.get("Masse_Tiefe"))
                                 else None
                             )
-
-                            # Boolean flags
-                            is_active = True  # Default to active
+                            release_date = row.get("Release_date")
+                            neu = row.get("neu", False)
+                            aktiv = True  # Default to active
 
                             # Map Haengend to is_hanging
-                            is_hanging = bool(row.get("Haengend", False))
+                            haengend = bool(row.get("Haengend", False))
                             if debug:
                                 self.stdout.write(
                                     f"Haengend field value: "
@@ -194,7 +179,7 @@ class Command(BaseCommand):
                                 )
 
                             # Map Einseitig to is_one_sided
-                            is_one_sided = bool(row.get("Einseitig", False))
+                            einseitig = bool(row.get("Einseitig", False))
                             if debug:
                                 self.stdout.write(
                                     f"Einseitig field value: "
@@ -205,16 +190,16 @@ class Command(BaseCommand):
                             if debug:
                                 self.stdout.write(
                                     f"Product {nummer} - "
-                                    f"is_hanging: {is_hanging}, "
-                                    f"is_one_sided: {is_one_sided}"
+                                    f"is_hanging: {haengend}, "
+                                    f"is_one_sided: {einseitig}"
                                 )
                                 self.stdout.write(
-                                    "Available fields: "
-                                    f"{list(row.keys())}"
+                                    "Available fields: " f"{list(row.keys())}"
                                 )
 
                             # Try to find category from ArtGr
                             category = default_category
+                            art_gr = row.get("ArtGr")
                             if art_gr:
                                 try:
                                     category = ProductCategory.objects.get(code=art_gr)
@@ -237,58 +222,58 @@ class Command(BaseCommand):
                                         )
                                         category = default_category
 
-                            # Check if parent product exists
-                            existing_parent = ParentProduct.objects.filter(
-                                Q(sku=nummer) | Q(legacy_id=familie_id)
-                            ).first()
-
-                            # Create parent product data dictionary
+                            # Prepare data for parent product
                             parent_data = {
-                                "sku": nummer,
-                                "base_sku": nummer,
-                                "legacy_id": familie_id,
-                                "name": name,
-                                "name_en": name_en,
-                                "short_description": short_description,
-                                "description": description,
-                                "description_en": description_en,
-                                "weight": weight,
-                                "is_active": is_active,
-                                "is_one_sided": is_one_sided,
-                                "is_hanging": is_hanging,
+                                "name": bezeichnung,
+                                "description": (
+                                    beschreibung.get("DE", "")
+                                    if isinstance(beschreibung, dict)
+                                    else beschreibung
+                                ),
+                                "description_en": bezeichnung_fs.get("EN", ""),
+                                "weight": gewicht,
+                                "dimensions": (
+                                    f"{masse_tiefe}x{masse_breite}x{masse_hoehe}"
+                                    if all([masse_tiefe, masse_breite, masse_hoehe])
+                                    else ""
+                                ),
+                                "is_active": aktiv,
+                                "is_hanging": haengend,
+                                "is_one_sided": einseitig,
                                 "category": category,
+                                "release_date": release_date,
+                                "is_new": neu,
                             }
 
-                            # Add dimensions if available
-                            if all(x is not None for x in [width, height, depth]):
-                                parent_data["dimensions"] = (
-                                    f"{width}x{height}x{depth}"
+                            # Try to get existing parent product by legacy_id and sku
+                            try:
+                                parent_product, created = (
+                                    ParentProduct.objects.get_or_create(
+                                        legacy_id=familie_id,
+                                        sku=nummer,
+                                        defaults=parent_data,
+                                    )
                                 )
 
-                            # Create or update parent product
-                            if existing_parent:
-                                for key, value in parent_data.items():
-                                    setattr(existing_parent, key, value)
-                                existing_parent.save()
-                                stats["updated"] += 1
-                                if debug:
-                                    self.stdout.write(
-                                        f"Updated parent product: {nummer}"
-                                    )
-                            else:
-                                parent = ParentProduct(**parent_data)
-                                parent.save()
-                                stats["created"] += 1
-                                if debug:
-                                    self.stdout.write(
-                                        f"Created parent product: {nummer}"
-                                    )
+                                if not created:
+                                    # Update existing product with new data
+                                    for key, value in parent_data.items():
+                                        setattr(parent_product, key, value)
+                                    parent_product.save()
+                                    stats["updated"] += 1
+                                else:
+                                    stats["created"] += 1
+
+                            except Exception as e:
+                                error_msg = f"Error processing parent product: {str(e)}"
+                                logger.error(error_msg)
+                                logger.error(f"Row data: {row}")
+                                stats["errors"] += 1
+                                continue
 
                     except Exception as e:
                         stats["errors"] += 1
-                        self.stderr.write(
-                            f"Error processing parent product: {e}"
-                        )
+                        self.stderr.write(f"Error processing parent product: {e}")
                         if debug:
                             self.stderr.write(f"Row data: {row}")
                         continue

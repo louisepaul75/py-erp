@@ -57,4 +57,4 @@ class SessionError(LegacyERPError):
 
 
 class ConfigurationError(LegacyERPError):
-    """Raised when there's an issue with the API configuration.""" 
+    """Raised when there's an issue with the API configuration."""

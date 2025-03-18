@@ -16,14 +16,19 @@
   },
   "dependencies": {
     "@builder.io/sdk-vue": "^4.0.3",
+    "@mdi/font": "^7.4.47",
     "axios": "^1.6.2",
+    "chart.js": "^4.4.2",
+    "gridstack": "^10.1.1",
+    "lodash": "^4.17.21",
+    "lodash-types": "^4.17.1",
     "lucide-vue-next": "^0.477.0",
     "pinia": "^2.1.7",
     "vue": "^3.3.8",
-    "vue-router": "^4.2.5",
-    "vuetify": "^3.5.6",
     "vue-i18n": "^9.8.0",
-    "@mdi/font": "^7.4.47"
+    "vue-router": "^4.2.5",
+    "vuedraggable": "^4.1.0",
+    "vuetify": "^3.5.6"
   },
   "devDependencies": {
     "@pinegrow/vite-plugin": "^3.0.69",

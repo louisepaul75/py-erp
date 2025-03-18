@@ -1,115 +1,113 @@
 <template>
-    <div class="product-list">
-        <h1>Products</h1>
-        <!-- Search and filter form -->
-        <div class="filters">
-            <div class="search-box">
-                <input type="text" v-model="searchQuery" placeholder="Search products..." @input="debounceSearch"/>
-            </div>
-            <div class="filter-options">
-                <select v-model="selectedCategory" @change="loadProducts">
-                    <option value="">All Categories</option>
-                    <option v-for="category in categories" :key="category.id" :value="category.id">
-                        {{ category.name }}
-</option>
-                </select>
-                <label>
-                    <input type="checkbox" v-model="inStock" @change="loadProducts"/>
-                    In Stock Only
-                </label>
-                <label>
-                    <input type="checkbox" v-model="isActive" @change="loadProducts"/>
-                    Active Only
-                </label>
-                <button @click="openArtikelManagement" class="artikel-button">
-                    Artikel Management
-                </button>
-                <button @click="navigateToArtikelManagement" class="artikel-button-alt">
-                    Artikel (New Tab)
-                </button>
-            </div>
-        </div>
-        <!-- Loading indicator -->
-        <div v-if="loading" class="loading">
-            <p>Loading products...</p>
-        </div>
-        <!-- Error message -->
-        <div v-else-if="error" class="error">
-            <p>{{ error }}</p>
-            <div class="error-actions">
-                <button @click="loadProducts" class="retry-button">
-                    Retry
-</button>
-                <button @click="testApiConnection" class="test-button">
-                    Test API
-</button>
-            </div>
-            <div class="api-debug" v-if="showApiDebug">
-                <h4>Debug API Connection</h4>
-                <div class="api-url-input">
-                    <label for="apiUrl">API URL:</label>
-                    <input type="text" id="apiUrl" v-model="apiUrl" placeholder="http://localhost:8050"/>
-                    <button @click="updateApiUrl" class="update-button">Update</button>
-                </div>
-            </div>
-            <button @click="showApiDebug = !showApiDebug" class="debug-toggle">
-                {{ showApiDebug ? 'Hide Debug Options' : 'Show Debug Options' }}
-</button>
-        </div>
-        <!-- Product grid -->
-        <div v-else class="product-grid">
-            <div v-for="product in products" :key="product.id" class="product-card">
-                <div class="product-image" @click="viewProductDetails(product.id)">
-                    <img 
-                        :src="getProductImage(product)" 
-                        :alt="product.name"
-                        @error="handleImageError"
-                    />
-                </div>
-                <div class="product-info" @click="viewProductDetails(product.id)">
-                    <h3>{{ product.name }}</h3>
-                    <p class="sku">SKU: {{ product.sku }}</p>
-                    <p v-if="product.variants_count" class="variants-badge">
-                        {{ product.variants_count }} variants
-                    </p>
-                    <p v-if="product.category" class="category">
-                        {{ product.category.name }}
-                    </p>
-                </div>
-                <div class="product-actions">
-                    <button @click="openArtikelManagementForProduct(product)" class="artikel-action-button">
-                        Artikel
-                    </button>
-                    <button @click="navigateToArtikelManagementWithProduct(product)" class="artikel-action-button-alt">
-                        Artikel (New Tab)
-                    </button>
-                </div>
-            </div>
-        </div>
-        <!-- Pagination -->
-        <div v-if="products.length > 0" class="pagination">
-            <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">
-                Previous
-</button><span>Page {{ currentPage }} of {{ totalPages }}</span>
-            <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
-                Next
-</button>
-        </div>
-        <!-- No results message -->
-        <div v-if="products.length === 0 && !loading" class="no-results">
-            <p>No products found matching your criteria.</p>
-        </div>
-
-        <!-- ArtikelManagement Modal -->
-        <div v-if="showArtikelManagement" class="artikel-modal-overlay" @click.self="closeArtikelManagement">
-            <div class="artikel-modal">
-                <ArtikelManagement 
-                    :product="selectedProductForArtikel" 
-                    @close="closeArtikelManagement"
-                />
-            </div>
-        </div>
+  <div class="product-list">
+    <h1>Products</h1>
+    <!-- Search and filter form -->
+    <div class="filters">
+      <div class="search-box">
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Search products..."
+          @input="debounceSearch"
+        />
+      </div>
+      <div class="filter-options">
+        <select v-model="selectedCategory" @change="loadProducts">
+          <option value="">All Categories</option>
+          <option v-for="category in categories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+        <label>
+          <input type="checkbox" v-model="inStock" @change="loadProducts" />
+          In Stock Only
+        </label>
+        <label>
+          <input type="checkbox" v-model="isActive" @change="loadProducts" />
+          Active Only
+        </label>
+        <button @click="openArtikelManagement" class="artikel-button">Artikel Management</button>
+        <button @click="navigateToArtikelManagement" class="artikel-button-alt">
+          Artikel (New Tab)
+        </button>
+      </div>
     </div>
+    <!-- Loading indicator -->
+    <div v-if="loading" class="loading">
+      <p>Loading products...</p>
+    </div>
+    <!-- Error message -->
+    <div v-else-if="error" class="error">
+      <p>{{ error }}</p>
+      <div class="error-actions">
+        <button @click="loadProducts" class="retry-button">Retry</button>
+        <button @click="testApiConnection" class="test-button">Test API</button>
+      </div>
+      <div class="api-debug" v-if="showApiDebug">
+        <h4>Debug API Connection</h4>
+        <div class="api-url-input">
+          <label for="apiUrl">API URL:</label>
+          <input type="text" id="apiUrl" v-model="apiUrl" placeholder="http://localhost:8050" />
+          <button @click="updateApiUrl" class="update-button">Update</button>
+        </div>
+      </div>
+      <button @click="showApiDebug = !showApiDebug" class="debug-toggle">
+        {{ showApiDebug ? 'Hide Debug Options' : 'Show Debug Options' }}
+      </button>
+    </div>
+    <!-- Product grid -->
+    <div v-else class="product-grid">
+      <div v-for="product in products" :key="product.id" class="product-card">
+        <div class="product-image" @click="viewProductDetails(product.id)">
+          <img :src="getProductImage(product)" :alt="product.name" @error="handleImageError" />
+        </div>
+        <div class="product-info" @click="viewProductDetails(product.id)">
+          <h3>{{ product.name }}</h3>
+          <p class="sku">SKU: {{ product.sku }}</p>
+          <p v-if="product.variants_count" class="variants-badge">
+            {{ product.variants_count }} variants
+          </p>
+          <p v-if="product.category" class="category">
+            {{ product.category.name }}
+          </p>
+        </div>
+        <div class="product-actions">
+          <button @click="openArtikelManagementForProduct(product)" class="artikel-action-button">
+            Artikel
+          </button>
+          <button
+            @click="navigateToArtikelManagementWithProduct(product)"
+            class="artikel-action-button-alt"
+          >
+            Artikel (New Tab)
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Pagination -->
+    <div v-if="products.length > 0" class="pagination">
+      <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">Previous</button
+      ><span>Page {{ currentPage }} of {{ totalPages }}</span>
+      <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
+        Next
+      </button>
+    </div>
+    <!-- No results message -->
+    <div v-if="products.length === 0 && !loading" class="no-results">
+      <p>No products found matching your criteria.</p>
+    </div>
+
+    <!-- ArtikelManagement Modal -->
+    <div
+      v-if="showArtikelManagement"
+      class="artikel-modal-overlay"
+      @click.self="closeArtikelManagement"
+    >
+      <div class="artikel-modal">
+        <ArtikelManagement :product="selectedProductForArtikel" @close="closeArtikelManagement" />
+      </div>
+    </div>
+  </div>
 </template>
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
@@ -216,9 +214,10 @@ const mockProducts = [
     primary_image: {
       id: 1,
       url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 2,
@@ -229,9 +228,10 @@ const mockProducts = [
     primary_image: {
       id: 2,
       url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 3,
@@ -242,9 +242,10 @@ const mockProducts = [
     primary_image: {
       id: 3,
       url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 4,
@@ -255,9 +256,10 @@ const mockProducts = [
     primary_image: {
       id: 4,
       url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 5,
@@ -268,9 +270,10 @@ const mockProducts = [
     primary_image: {
       id: 5,
       url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 6,
@@ -281,9 +284,10 @@ const mockProducts = [
     primary_image: {
       id: 6,
       url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 7,
@@ -294,9 +298,10 @@ const mockProducts = [
     primary_image: {
       id: 7,
       url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 8,
@@ -307,10 +312,11 @@ const mockProducts = [
     primary_image: {
       id: 8,
       url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
-  },
+    is_active: true
+  }
 ];
 
 // Load products with current filters
@@ -367,7 +373,7 @@ const loadProducts = async () => {
     }
   } catch (err: any) {
     console.error('Error loading products:', err);
-    
+
     // Clear products list and total on error
     products.value = [];
     totalProducts.value = 0;
@@ -543,24 +549,30 @@ const checkServerStatus = async (): Promise<boolean> => {
     console.log('Checking server status...');
 
     // Try to fetch the API status
-    let response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/status`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-      mode: 'cors',
-    });
+    let response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/status`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json'
+        },
+        mode: 'cors'
+      }
+    );
 
     // If status endpoint doesn't exist, try the products endpoint
     if (response.status === 404) {
       console.log('Status endpoint not found, trying products endpoint...');
-      response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/products/`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        mode: 'cors',
-      });
+      response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050'}/products/`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json'
+          },
+          mode: 'cors'
+        }
+      );
     }
 
     console.log('Server status response:', response);
@@ -580,89 +592,79 @@ const checkServerStatus = async (): Promise<boolean> => {
 
 // Update the getProductImage function to use getNoImageUrl
 const getProductImage = (product: Product) => {
-    // First try to get images from variants if they exist
-    if (product.variants && product.variants.length > 0) {
-        // Try to find BE variant first
-        const beVariant = product.variants.find(v =>
-            v.attributes?.some(attr =>
-                attr.name.toLowerCase() === 'type' &&
-                attr.value.toLowerCase() === 'be'
-            ) ||
-            v.sku?.toLowerCase().includes('be')
-        );
+  // First try to get images from variants if they exist
+  if (product.variants && product.variants.length > 0) {
+    // Try to find BE variant first
+    const beVariant = product.variants.find(
+      (v) =>
+        v.attributes?.some(
+          (attr) => attr.name.toLowerCase() === 'type' && attr.value.toLowerCase() === 'be'
+        ) || v.sku?.toLowerCase().includes('be')
+    );
 
-        if (beVariant) {
-            // If BE variant has images, use the best one
-            if (beVariant.images && beVariant.images.length > 0) {
-                const bestImage = beVariant.images.find(img =>
-                    img.image_type === 'Produktfoto' && img.is_front
-                ) || beVariant.images.find(img =>
-                    img.image_type === 'Produktfoto'
-                ) || beVariant.images.find(img =>
-                    img.is_front
-                ) || beVariant.images.find(img =>
-                    img.is_primary
-                ) || beVariant.images[0];
-
-                if (bestImage) {
-                    return getValidImageUrl({ url: bestImage.url });
-                }
-            }
-
-            // If BE variant has primary_image, use it
-            if (beVariant.primary_image) {
-                return getValidImageUrl(beVariant.primary_image);
-            }
-        }
-
-        // If no BE variant or BE variant has no images, try other variants
-        for (const variant of product.variants) {
-            if (variant.images && variant.images.length > 0) {
-                const bestImage = variant.images.find(img =>
-                    img.image_type === 'Produktfoto' && img.is_front
-                ) || variant.images.find(img =>
-                    img.image_type === 'Produktfoto'
-                ) || variant.images.find(img =>
-                    img.is_front
-                ) || variant.images.find(img =>
-                    img.is_primary
-                ) || variant.images[0];
-
-                if (bestImage) {
-                    return getValidImageUrl({ url: bestImage.url });
-                }
-            }
-
-            if (variant.primary_image) {
-                return getValidImageUrl(variant.primary_image);
-            }
-        }
-    }
-
-    // If product has images, use the best one
-    if (product.images && product.images.length > 0) {
-        const bestImage = product.images.find(img =>
-            img.image_type === 'Produktfoto' && img.is_front
-        ) || product.images.find(img =>
-            img.image_type === 'Produktfoto'
-        ) || product.images.find(img =>
-            img.is_front
-        ) || product.images.find(img =>
-            img.is_primary
-        ) || product.images[0];
+    if (beVariant) {
+      // If BE variant has images, use the best one
+      if (beVariant.images && beVariant.images.length > 0) {
+        const bestImage =
+          beVariant.images.find((img) => img.image_type === 'Produktfoto' && img.is_front) ||
+          beVariant.images.find((img) => img.image_type === 'Produktfoto') ||
+          beVariant.images.find((img) => img.is_front) ||
+          beVariant.images.find((img) => img.is_primary) ||
+          beVariant.images[0];
 
         if (bestImage) {
-            return getValidImageUrl({ url: bestImage.url });
+          return getValidImageUrl({ url: bestImage.url });
         }
+      }
+
+      // If BE variant has primary_image, use it
+      if (beVariant.primary_image) {
+        return getValidImageUrl(beVariant.primary_image);
+      }
     }
 
-    // If product has primary image, use it
-    if (product.primary_image) {
-        return getValidImageUrl(product.primary_image);
-    }
+    // If no BE variant or BE variant has no images, try other variants
+    for (const variant of product.variants) {
+      if (variant.images && variant.images.length > 0) {
+        const bestImage =
+          variant.images.find((img) => img.image_type === 'Produktfoto' && img.is_front) ||
+          variant.images.find((img) => img.image_type === 'Produktfoto') ||
+          variant.images.find((img) => img.is_front) ||
+          variant.images.find((img) => img.is_primary) ||
+          variant.images[0];
 
-    // Fallback to no-image
-    return getNoImageUrl();
+        if (bestImage) {
+          return getValidImageUrl({ url: bestImage.url });
+        }
+      }
+
+      if (variant.primary_image) {
+        return getValidImageUrl(variant.primary_image);
+      }
+    }
+  }
+
+  // If product has images, use the best one
+  if (product.images && product.images.length > 0) {
+    const bestImage =
+      product.images.find((img) => img.image_type === 'Produktfoto' && img.is_front) ||
+      product.images.find((img) => img.image_type === 'Produktfoto') ||
+      product.images.find((img) => img.is_front) ||
+      product.images.find((img) => img.is_primary) ||
+      product.images[0];
+
+    if (bestImage) {
+      return getValidImageUrl({ url: bestImage.url });
+    }
+  }
+
+  // If product has primary image, use it
+  if (product.primary_image) {
+    return getValidImageUrl(product.primary_image);
+  }
+
+  // Fallback to no-image
+  return getNoImageUrl();
 };
 
 // ArtikelManagement functions
@@ -688,9 +690,9 @@ const navigateToArtikelManagement = () => {
 };
 
 const navigateToArtikelManagementWithProduct = (product: Product) => {
-  router.push({ 
-    name: 'ArtikelManagementWithProduct', 
-    params: { id: product.id.toString() } 
+  router.push({
+    name: 'ArtikelManagementWithProduct',
+    params: { id: product.id.toString() }
   });
 };
 </script>
@@ -738,7 +740,9 @@ h1 {
   background-color: white;
 }
 
-.loading, .error, .no-results {
+.loading,
+.error,
+.no-results {
   text-align: center;
   padding: 30px;
 }
@@ -754,7 +758,8 @@ h1 {
   margin-top: 15px;
 }
 
-.retry-button, .test-button {
+.retry-button,
+.test-button {
   padding: 8px 15px;
   background-color: #d2bc9b;
   color: white;
@@ -764,7 +769,8 @@ h1 {
   transition: background-color 0.3s;
 }
 
-.retry-button:hover, .test-button:hover {
+.retry-button:hover,
+.test-button:hover {
   background-color: #c0a989;
 }
 
@@ -779,7 +785,9 @@ h1 {
   border: 1px solid #eaeaea;
   border-radius: 8px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   cursor: pointer;
   background-color: white;
 }

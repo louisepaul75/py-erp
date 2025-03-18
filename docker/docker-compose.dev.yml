@@ -12,7 +12,7 @@ services:
     container_name: pyerp-dev
     ports:
       - "8050:8050"
-      - "3000:3000"  # Vue.js development server
+      - "5173:5173"  # Vue.js development server (Vite)
     volumes:
       - ..:/app  # Mount local code directory to /app for hot reloading
       - pyerp_data:/app/data

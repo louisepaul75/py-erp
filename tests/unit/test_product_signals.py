@@ -31,7 +31,7 @@ def test_variant_product_pre_save_new_instance_no_parent():
     instance.created_at = None
     instance.updated_at = None
 
-    with patch('django.utils.timezone.now') as mock_now:
+    with patch("django.utils.timezone.now") as mock_now:
         now = timezone.now()
         mock_now.return_value = now
         variant_product_pre_save(instance=instance)
@@ -50,7 +50,7 @@ def test_variant_product_pre_save_existing_instance():
     old_created_at = instance.created_at
     instance.updated_at = None
 
-    with patch('django.utils.timezone.now') as mock_now:
+    with patch("django.utils.timezone.now") as mock_now:
         now = timezone.now()
         mock_now.return_value = now
         variant_product_pre_save(instance=instance)
@@ -74,7 +74,7 @@ def test_variant_product_pre_save_with_parent_and_variant():
     instance.created_at = None
     instance.updated_at = None
 
-    with patch('django.utils.timezone.now') as mock_now:
+    with patch("django.utils.timezone.now") as mock_now:
         now = timezone.now()
         mock_now.return_value = now
         variant_product_pre_save(instance=instance)
@@ -98,11 +98,11 @@ def test_variant_product_pre_save_with_parent_legacy_id():
     instance.created_at = None
     instance.updated_at = None
 
-    with patch('django.utils.timezone.now') as mock_now:
+    with patch("django.utils.timezone.now") as mock_now:
         now = timezone.now()
         mock_now.return_value = now
         variant_product_pre_save(instance=instance)
 
         assert instance.sku == "12345-VAR1"
         assert instance.created_at == now
-        assert instance.updated_at == now 
+        assert instance.updated_at == now

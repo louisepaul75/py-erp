@@ -14,7 +14,6 @@ from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.test import TestCase
 
 from pyerp.business_modules.products.validators import (
     ProductImportValidator,
@@ -122,43 +121,33 @@ class TestProductValidation:
             """Reset mocks before each test."""
             MockProductCategory.objects.reset_mock()
 
-        def test_validate_category_valid(self, validator):
+        @patch("pyerp.business_modules.products.validators.ProductCategory")
+        def test_validate_category_valid(self, mock_category_model, validator):
             """Test validation of a valid category."""
             # Create a mock category
             category = MockProductCategory(code="CAT1", name="Category 1")
             # Set up the mock to return our category when get() is called
-            with patch(
-                "pyerp.business_modules.products.models.ProductCategory",
-                MockProductCategory,
-            ):
-                MockProductCategory.objects.get.return_value = category
-                # Call the validate_category method
-                value, result = validator.validate_category("CAT1", {})
-                # Verify the mock was called correctly
-                MockProductCategory.objects.get.assert_called_once_with(
-                    code="CAT1",
-                )
-                assert value == category
-                assert result.is_valid
+            mock_category_model.objects.get.return_value = category
+            # Call the validate_category method
+            value, result = validator.validate_category("CAT1", {})
+            # Verify the mock was called correctly
+            mock_category_model.objects.get.assert_called_once_with(code="CAT1")
+            assert value == category
+            assert result.is_valid
 
-        def test_validate_category_not_found(self, validator):
+        @patch("pyerp.business_modules.products.validators.ProductCategory")
+        def test_validate_category_not_found(self, mock_category_model, validator):
             """Test validation of a category that doesn't exist."""
             # Set up the mock to raise DoesNotExist
-            with patch(
-                "pyerp.business_modules.products.models.ProductCategory",
-                MockProductCategory,
-            ):
-                MockProductCategory.objects.get.side_effect = (
-                    MockProductCategory.DoesNotExist()
-                )
-                # Call the validate_category method
-                value, result = validator.validate_category("NONEXISTENT", {})
-                # Verify the mock was called correctly
-                MockProductCategory.objects.get.assert_called_once_with(
-                    code="NONEXISTENT",
-                )
-                assert value == validator.default_category
-                assert result.is_valid
+            mock_category_model.objects.get.side_effect = (
+                MockProductCategory.DoesNotExist()
+            )
+            # Call the validate_category method
+            value, result = validator.validate_category("NONEXISTENT", {})
+            # Verify the mock was called correctly
+            mock_category_model.objects.get.assert_called_once_with(code="NONEXISTENT")
+            assert value == validator.default_category
+            assert result.is_valid
 
 
 class TestProductModelValidation:
@@ -174,15 +163,15 @@ class TestProductModelValidation:
                 raise ValidationError({"sku": ["Invalid SKU format"]})
 
             if product.is_parent and product.variant_code:
-                raise ValidationError({
-                    "variant_code": ["Parent products cannot have variant codes"]
-                })
+                raise ValidationError(
+                    {"variant_code": ["Parent products cannot have variant codes"]}
+                )
 
             if product.list_price and product.cost_price:
                 if product.list_price < product.cost_price:
-                    raise ValidationError({
-                        "list_price": ["List price cannot be less than cost"]
-                    })
+                    raise ValidationError(
+                        {"list_price": ["List price cannot be less than cost"]}
+                    )
             return True
 
         validators_module.validate_product_model = patched_validate_product_model
@@ -209,10 +198,7 @@ class TestProductModelValidation:
             validate_product_model(product)
         assert "sku" in exc_info.value.error_dict
         error_list = exc_info.value.error_dict["sku"]
-        assert any(
-            "Invalid SKU format" in str(error)
-            for error in error_list
-        )
+        assert any("Invalid SKU format" in str(error) for error in error_list)
 
     def test_validate_product_model_parent_with_variant(self):
         """Test validation of parent product with variant code."""

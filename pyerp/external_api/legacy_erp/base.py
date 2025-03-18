@@ -5,29 +5,38 @@ This module provides base classes and common functionality for interacting
 with the legacy ERP system.
 """
 
-import logging
 import os
 import json
 from datetime import datetime
 from typing import Optional, Dict, Any
+import time
 
 import pandas as pd
 import requests
-from requests.auth import HTTPBasicAuth
-
 from pyerp.external_api.legacy_erp.settings import (
     API_ENVIRONMENTS,
     API_REQUEST_TIMEOUT,
+    API_REST_ENDPOINT,
+)
+from pyerp.external_api.legacy_erp.auth import (
+    read_cookie_file_safe,
+    write_cookie_file_safe,
+)
+from pyerp.utils.logging import (
+    get_logger,
+    log_api_request,
+    log_performance,
 )
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Get logger for this module
+logger = get_logger(__name__)
 
 # File for storing the session cookie globally
 COOKIE_FILE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     ".global_session_cookie",
 )
+
 
 class BaseAPIClient:
     """Base class for legacy ERP API clients."""
@@ -44,52 +53,158 @@ class BaseAPIClient:
         self.timeout = timeout or API_REQUEST_TIMEOUT
         self.session = requests.Session()
         self.session_id = None
-        
+
         # Validate environment configuration
         if environment not in API_ENVIRONMENTS:
             available_envs = list(API_ENVIRONMENTS.keys())
-            raise ValueError(
-                f"Invalid environment: '{environment}'. "
-                f"Available: {available_envs}",
+            error_msg = (
+                f"Invalid environment: '{environment}'. " f"Available: {available_envs}"
             )
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         env_config = API_ENVIRONMENTS[environment]
         if "base_url" not in env_config:
-            raise ValueError(
-                f"Missing URL configuration for environment '{environment}'"
-            )
+            error_msg = f"Missing URL configuration for environment '{environment}'"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         self.base_url = env_config["base_url"]
         self.username = env_config.get("username")
         self.password = env_config.get("password")
-        
+
         if not self.username or not self.password:
-            raise ValueError(
-                f"Missing credentials for environment '{environment}'"
-            )
-        
-        logger.debug(
+            error_msg = f"Missing credentials for environment '{environment}'"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        logger.info(
             "Initialized %s for environment: %s",
             self.__class__.__name__,
             environment,
         )
 
+    def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
+        """Make an HTTP request to the API with logging and timing."""
+        # Always prefix with REST endpoint
+        endpoint = f"{API_REST_ENDPOINT}/{endpoint.lstrip('/')}"
+
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+
+        # Log the session cookie being used (safely showing only part of it)
+        if self.session_id:
+            safe_id = (
+                f"{self.session_id[:5]}...{self.session_id[-5:]}"
+                if len(self.session_id) > 10
+                else self.session_id
+            )
+            logger.info(f"Using session cookie WASID4D={safe_id}")
+        else:
+            logger.info("No session cookie available")
+
+        # Construct and log the full URL with parameters for better debugging
+        if "params" in kwargs and kwargs["params"]:
+            from urllib.parse import urlencode
+
+            # Create a copy of params to avoid modifying the original
+            params_for_logging = kwargs["params"].copy()
+
+            # Handle the $filter parameter specially to avoid double encoding
+            # This ensures the filter is properly formatted in the URL
+            query_params = []
+            for key, value in params_for_logging.items():
+                if key == "$filter":
+                    # Add the filter parameter directly without additional encoding
+                    query_params.append(f"{key}={value}")
+                else:
+                    # Use urlencode for other parameters
+                    encoded_param = urlencode({key: value}, doseq=True)
+                    param_value = encoded_param.split("=", 1)[1]
+                    query_params.append(f"{key}={param_value}")
+
+            # Join all parameters with &
+            query_string = "&".join(query_params)
+            full_url = f"{url}?{query_string}"
+            logger.info(f"Full URL: {full_url}")
+
+            # Remove params from kwargs since we're using the manually
+            # constructed URL
+            params = kwargs.pop("params", None)
+        else:
+            full_url = url
+            params = None
+
+        start_time = time.time()
+
+        try:
+            print(method, url, kwargs)
+
+            # Extract timeout from kwargs as it's not valid for Request constructor
+            timeout = None
+            if "timeout" in kwargs:
+                timeout = kwargs.pop("timeout", self.timeout)
+            else:
+                timeout = self.timeout
+
+            # Use the manually constructed URL directly instead of relying on
+            # prepare_request to handle the parameters, which would apply automatic
+            # encoding
+            response = self.session.request(
+                method=method, url=full_url, **kwargs, timeout=timeout
+            )
+
+            print("Exact full URL:", full_url)
+
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            # Log the API request using our centralized logging
+            log_api_request(
+                api_name="legacy_erp",
+                endpoint=endpoint,
+                status_code=response.status_code,
+                response_time_ms=duration_ms,
+                extra_context={
+                    "method": method,
+                    "environment": self.environment,
+                    "url": url,
+                    "params": params if params else {},
+                },
+            )
+
+            # Log performance metrics for slow requests
+            if duration_ms > 1000:  # Log requests taking more than 1 second
+                log_performance(
+                    name=f"legacy_erp_{method}_{endpoint}",
+                    duration_ms=duration_ms,
+                    extra_context={"url": url, "params": params if params else {}},
+                )
+            print(response)
+
+            return response
+
+        except requests.RequestException as e:
+            error_msg = f"API request failed: {str(e)}"
+            logger.error(
+                error_msg,
+                extra={
+                    "method": method,
+                    "url": url,
+                    "error": str(e),
+                },
+            )
+            raise
+
     def _set_session_header(self, request_kwargs):
         """Set the session cookie in the request headers if available."""
         if self.session_id:
             headers = request_kwargs.get("headers", {})
-
-            # Create the cookie header with WASID4D=value format
             cookie_header = f"WASID4D={self.session_id}"
-
-            # Add to existing cookies if present
             if "Cookie" in headers:
                 headers["Cookie"] += f"; {cookie_header}"
             else:
                 headers["Cookie"] = cookie_header
-
             request_kwargs["headers"] = headers
-
+            logger.debug("Added session cookie to request headers")
         return request_kwargs
 
     def _log_cookies(self, prefix="Current cookies"):
@@ -98,7 +213,6 @@ class BaseAPIClient:
         if not cookies:
             logger.info(f"{prefix}: No cookies")
             return
-
         logger.info(f"{prefix}: {len(cookies)} cookie(s)")
 
     def _log_response_cookies(self, response, prefix="Response cookies"):
@@ -106,7 +220,6 @@ class BaseAPIClient:
         if not response.cookies:
             logger.info(f"{prefix}: No cookies")
             return
-
         cookies = response.cookies.get_dict()
         logger.info(f"{prefix}: {len(cookies)} cookie(s)")
 
@@ -116,28 +229,59 @@ class BaseAPIClient:
             logger.info("No session cookie file found")
             return False
 
-        try:
-            with open(COOKIE_FILE_PATH) as f:
-                cookie_data = json.load(f)
+        if not hasattr(self, "base_url") or not self.base_url:
+            logger.warning("Base URL not initialized")
+            return False
 
-                if "value" in cookie_data:
-                    # Extract the cookie value
-                    self.session_id = cookie_data["value"]
+        # Use thread-safe function to read cookie data
+        cookie_data = read_cookie_file_safe()
+        if cookie_data is None:
+            return False
 
-                    # Clear any existing WASID4D cookies to prevent duplicates
-                    self._clear_cookies("WASID4D")
+        # Handle old format (single cookie object)
+        if isinstance(cookie_data, dict) and "value" in cookie_data:
+            logger.info("Found cookie file in old format, converting to new format")
+            # Convert to new format
+            timestamp = cookie_data.get("timestamp", datetime.now().isoformat())
+            new_format = [
+                {
+                    "base_url": self.base_url,
+                    "session_id": cookie_data["value"],
+                    "timestamp": timestamp,
+                }
+            ]
 
-                    # Set the WASID4D cookie with the loaded value
-                    self.session.cookies.set("WASID4D", self.session_id)
-
-                    logger.info(f"Loaded session ID from {COOKIE_FILE_PATH}")
-                    return True
-                logger.warning("Cookie file has invalid format (missing 'value' field)")
+            # Save in new format using thread-safe function
+            if not write_cookie_file_safe(new_format):
+                logger.warning("Failed to convert cookie file format")
                 return False
 
-        except Exception as e:
-            logger.warning(f"Failed to load session cookie: {e}")
+            # Set the session cookie
+            self.session_id = cookie_data["value"]
+            self._clear_cookies("WASID4D")
+            self.session.cookies.set("WASID4D", self.session_id)
+            logger.info("Converted and loaded session ID")
+            return True
+
+        # Handle new format (list of sessions)
+        if isinstance(cookie_data, list):
+            # Find the session for the current base URL
+            for entry in cookie_data:
+                if not isinstance(entry, dict):
+                    continue
+
+                if entry.get("base_url") == self.base_url and "session_id" in entry:
+                    self.session_id = entry["session_id"]
+                    self._clear_cookies("WASID4D")
+                    self.session.cookies.set("WASID4D", self.session_id)
+                    logger.info(f"Loaded session ID for base URL: {self.base_url}")
+                    return True
+
+            logger.info(f"No session found for base URL: {self.base_url}")
             return False
+
+        logger.warning(f"Cookie file has invalid format: {type(cookie_data)}")
+        return False
 
     def _clear_cookies(self, cookie_name):
         """Clear all cookies with the specified name to prevent duplicates."""
@@ -181,52 +325,88 @@ class BaseAPIClient:
             logger.warning("No session ID found in cookies")
             return False
 
-        # Store just the value, not the name=value format
-        self.session_id = session_id
+        # Create the new session entry
+        new_entry = {
+            "base_url": self.base_url,
+            "session_id": session_id,
+            "timestamp": datetime.now().isoformat(),
+        }
 
-        # Create the cookie data in the simpler format that worked before
-        cookie_data = {"timestamp": datetime.now().isoformat(), "value": session_id}
+        # Read existing sessions using thread-safe function
+        cookie_data = read_cookie_file_safe()
+        existing_sessions = []
 
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(COOKIE_FILE_PATH), exist_ok=True)
+        # Convert old format or use existing sessions
+        if cookie_data is None:
+            # No data or error reading - start with empty list
+            existing_sessions = []
+        elif isinstance(cookie_data, dict) and "value" in cookie_data:
+            # Old format - convert to new format
+            existing_sessions = []
+        elif isinstance(cookie_data, list):
+            # New format - use as is
+            existing_sessions = cookie_data
+        else:
+            logger.warning(f"Invalid cookie file format: {type(cookie_data)}")
+            existing_sessions = []
 
-        # Save the cookie data
-        try:
-            with open(COOKIE_FILE_PATH, "w") as f:
-                json.dump(cookie_data, f)
-            logger.info(f"Saved session ID to {COOKIE_FILE_PATH}")
-            return True
-        except Exception as e:
-            logger.warning(f"Failed to save session ID: {e}")
-            return False
+        # Update or add new session
+        updated = False
+        for entry in existing_sessions:
+            if isinstance(entry, dict) and entry.get("base_url") == self.base_url:
+                entry.update(new_entry)
+                updated = True
+                break
+
+        if not updated:
+            existing_sessions.append(new_entry)
+        logger.info(f"existing_sessions : {existing_sessions}")
+        # Save using thread-safe function
+        success = write_cookie_file_safe(existing_sessions)
+        if success:
+            logger.info(f"Saved session ID for base URL: {self.base_url}")
+        return success
 
     def validate_session(self):
-        """Validate the current session by making a simple API request."""
+        """
+        Validate the current session by making a test request to the $info endpoint.
+
+        Returns:
+            bool: True if the session is valid, False otherwise
+        """
+        logger.debug("Validating current session")
+
+        if not self.session_id:
+            logger.debug("No session ID available")
+            return False
+
         try:
-            logger.info("------ VALIDATING SESSION ------")
-            self._log_cookies("Cookies before validation")
+            # Make a lightweight request to $info endpoint to validate the session
+            response = self._make_request(
+                "GET",
+                "$info",
+                timeout=self.timeout,
+            )
+            if not self.load_session_cookie():
+                logger.info(
+                    "No valid session found for this base URL, attempting login"
+                )
+                return self.login()
 
-            # Try a simple API request to check if our session is valid
-            url = f"{self.base_url}/rest/$info"
-            logger.info(f"Validation request URL: {url}")
-
-            # Make the request, ensuring the session cookie is used
-            response = self.session.get(url)
-
-            # Log response and cookies
-            logger.info(f"Validation response status: {response.status_code}")
             self._log_response_cookies(response)
 
-            # Check if we got a successful response
-            if response.status_code == 200:
-                logger.info("Session validated successfully")
+            is_valid = response.status_code == 200
+            if is_valid:
+                logger.debug("Session is valid")
 
-                # Get the new session cookie from the response
+                # Check for new session cookie in the response
                 wasid_cookie = None
                 for cookie in response.cookies:
                     if cookie.name == "WASID4D":
                         wasid_cookie = cookie.value
-                        logger.info("Found new session cookie in response")
+                        logger.info(
+                            f"Found new session cookie in response: {cookie.name}"
+                        )
                         break
 
                 # If we received a new cookie, update our session
@@ -238,156 +418,189 @@ class BaseAPIClient:
                     # Set the new cookie value
                     self.session_id = wasid_cookie
                     self.session.cookies.set("WASID4D", wasid_cookie)
-                    logger.info("Set single new cookie WASID4D")
-                    return True
+                    logger.info(
+                        "Set single new cookie WASID4D with value from response"
+                    )
+
+                    # Save the updated cookie
+                    self.save_session_cookie()
                 else:
-                    logger.info("No new session cookie in response")
-                    return True
+                    logger.info("No new session cookie received, keeping existing one")
+                    if self.session_id and not self.session.cookies.get("WASID4D"):
+                        logger.info("Re-adding existing session cookie")
+                        self.session.cookies.clear()
+                        self.session.cookies.set("WASID4D", self.session_id)
             else:
                 logger.warning(
-                    f"Session validation failed with status {response.status_code}"
+                    "Session validation failed with status code %d",
+                    response.status_code,
                 )
-                return False
+            return is_valid
 
-        except Exception as e:
-            logger.error(f"Error validating session: {e}")
+        except requests.RequestException as e:
+            logger.warning("Session validation request failed: %s", str(e))
             return False
 
     def login(self):
-        """Attempt to log in and get a new session cookie."""
+        """Log in to the legacy ERP system and obtain a session cookie."""
+        logger.info("Attempting login to legacy ERP system")
         try:
-            logger.info("------ LOGGING IN ------")
+
             self.session.cookies.clear()
             logger.info("Cleared existing cookies")
 
-            # Attempt to access an endpoint that will set a cookie
-            url = f"{self.base_url}/rest/$info"
-            logger.info(f"Login request URL: {url}")
-
-            # Make the request with basic auth
-            auth = HTTPBasicAuth(self.username, self.password)
-            response = self.session.get(url, auth=auth)
-
-            # Log response details
-            logger.info(f"Login response status: {response.status_code}")
-            self._log_response_cookies(response)
-
-            # Check if we got cookies in the response
-            wasid_cookie = None
-            for cookie in response.cookies:
-                if cookie.name == "WASID4D":
-                    wasid_cookie = cookie.value
-                    break
-
-            dsid_cookie = self.session.cookies.get("4DSID_WSZ-DB")
-
-            # Log what we found
-            logger.info(f"Found WASID4D cookie: {'Yes' if wasid_cookie else 'No'}")
-            logger.info(f"Found 4DSID_WSZ-DB cookie: {'Yes' if dsid_cookie else 'No'}")
-
-            # Use either cookie (prefer WASID4D)
-            if wasid_cookie:
-                self.session.cookies.clear()
-                self.session_id = wasid_cookie
-                self.session.cookies.set("WASID4D", wasid_cookie)
-                safe_id = (
-                    f"{wasid_cookie[:5]}...{wasid_cookie[-5:]}"
-                    if len(wasid_cookie) > 10
-                    else wasid_cookie
-                )
-                logger.info(f"Set single WASID4D cookie: {safe_id}")
-                self.save_session_cookie()
+            # Check if a session already exists for this base URL
+            if self.load_session_cookie():
+                logger.info("Existing session found for this base URL, reusing it")
                 return True
-            if dsid_cookie:
-                self.session.cookies.clear()
-                self.session_id = dsid_cookie
-                self.session.cookies.set("WASID4D", dsid_cookie)
-                safe_id = (
-                    f"{dsid_cookie[:5]}...{dsid_cookie[-5:]}"
-                    if len(dsid_cookie) > 10
-                    else dsid_cookie
+
+            response = self._make_request(
+                "GET",
+                "$info",
+                timeout=self.timeout,
+            )
+
+            if response.status_code == 200:
+                # Extract session ID from cookies
+                wasid_cookie = self.session.cookies.get("WASID4D")
+                dsid_cookie = self.session.cookies.get("4DSID_WSZ-DB")
+
+                if wasid_cookie or dsid_cookie:
+                    self.session_id = wasid_cookie or dsid_cookie
+                    self.save_session_cookie()
+                    logger.info("Successfully logged in and saved session cookie")
+                    return True
+                else:
+                    logger.error("Login successful but no session cookie received")
+                    return False
+            else:
+                logger.error(
+                    "Login failed with status code %d: %s",
+                    response.status_code,
+                    response.text,
                 )
-                logger.info(f"Set single WASID4D cookie using 4DSID value: {safe_id}")
-                self.save_session_cookie()
-                return True
-            logger.warning("No session cookies received during login attempt")
-            return False
-        except Exception as e:
-            logger.warning(f"Login failed: {e}")
+                return False
+
+        except requests.RequestException as e:
+            logger.error("Login request failed: %s", str(e))
             return False
 
     def ensure_session(self):
-        """Ensure we have a valid session, attempting login if needed."""
-        if not self.session_id:
-            logger.info("No session ID loaded, attempting login")
-            return self.login()
+        """
+        Ensure we have a valid session, creating one if necessary.
 
-        # Clear all cookies and start fresh
-        self.session.cookies.clear()
+        Returns:
+            bool: True if a valid session is available, False otherwise
+        """
+        logger.debug("Ensuring valid session is available")
 
-        # Set just our session ID cookie
-        self.session.cookies.set("WASID4D", self.session_id)
-        safe_id = (
-            f"{self.session_id[:5]}...{self.session_id[-5:]}"
-            if len(self.session_id) > 10
-            else self.session_id
-        )
-        logger.info(f"Set single WASID4D cookie: {safe_id}")
+        # First try loading an existing session
+        if not self.session_id and self.load_session_cookie():
+            logger.info("Loaded existing session from cookie file")
 
-        # Validate the session
-        if self.validate_session():
+        # Validate the current session if we have one
+        if self.session_id and self.validate_session():
+            logger.debug("Current session is valid")
             return True
 
-        # If validation failed, try to log in
-        logger.info("Session validation failed, attempting to get a new session")
+        # Try to establish a new session
+        logger.info("Current session invalid or missing, attempting to login")
         return self.login()
 
     def _parse_legacy_date(self, date_str: str) -> Optional[datetime]:
-        """Parse a date string from the legacy system format (DD!MM!YYYY).
-        
-        Args:
-            date_str: Date string in DD!MM!YYYY format
-            
-        Returns:
-            Parsed datetime or None if parsing fails
         """
-        if not date_str or date_str == "0!0!0":
-            return None
-        try:
-            day, month, year = map(int, date_str.split("!"))
-            return datetime(year, month, day)
-        except (ValueError, AttributeError):
-            logger.warning(f"Failed to parse legacy date: {date_str}")
+        Parse a date string from the legacy ERP system.
+
+        The legacy system uses various date formats, this method attempts to
+        parse them into a standard datetime object.
+
+        Args:
+            date_str: The date string to parse
+
+        Returns:
+            datetime object if parsing succeeds, None otherwise
+        """
+        if not date_str or not isinstance(date_str, str):
             return None
 
-    def _transform_dates_in_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform all date fields in a record from legacy format.
-        
-        Args:
-            record: Record containing potential date fields
-            
-        Returns:
-            Record with transformed date fields
-        """
-        # Common date field names in the legacy system
-        date_fields = [
-            'Release_date', 'Release_Date',  # Different cases observed
-            'Auslaufdatum', 'modified_date',
-            'CREATIONDATE', 'MODIFICATIONDATE'
+        # Handle DD!MM!YYYY format (primary legacy format)
+        if "!" in date_str:
+            try:
+                day, month, year = map(int, date_str.split("!"))
+                if year > 0 and month > 0 and day > 0:
+                    return datetime(year, month, day)
+            except (ValueError, IndexError):
+                pass
+
+        # Common date formats in the legacy system
+        formats = [
+            "%Y-%m-%d",
+            "%Y-%m-%d %H:%M:%S",
+            "%d.%m.%Y",
+            "%d.%m.%Y %H:%M:%S",
+            "%Y%m%d",
         ]
-        
-        for field in date_fields:
-            if field in record and record[field]:
-                parsed_date = self._parse_legacy_date(record[field])
-                if parsed_date:
-                    record[field] = parsed_date.isoformat()
-        
-        return record
+
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str.strip(), fmt)
+            except ValueError:
+                continue
+
+        logger.debug("Could not parse date string '%s' with any known format", date_str)
+        return None
+
+    def _transform_dates_in_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Transform date strings in a record to datetime objects.
+        Only transforms fields that are known to contain dates.
+
+        Args:
+            record: Dictionary containing record data
+
+        Returns:
+            Dictionary with date strings converted to datetime objects
+        """
+        if not isinstance(record, dict):
+            logger.warning(
+                "Expected dict for date transformation, got %s", type(record).__name__
+            )
+            return record
+
+        transformed = {}
+        # Fields that are known to contain dates
+        date_fields = {
+            "__TIMESTAMP",  # Standard timestamp field
+            "modified_date",
+            "created_date",
+            "Release_date",
+            "Auslaufdatum",  # Discontinuation date
+            "last_modified",
+            "CREATIONDATE",
+            "MODIFICATIONDATE",
+            "UStID_Dat",
+            "letzteLieferung",
+            "Druckdatum",
+            "Release_Date",
+        }
+
+        for key, value in record.items():
+            if key in date_fields and isinstance(value, str):
+                try:
+                    parsed_date = self._parse_legacy_date(value)
+                    transformed[key] = parsed_date if parsed_date is not None else value
+                except ValueError as e:
+                    logger.debug("Failed to parse date for field %s: %s", key, str(e))
+                    transformed[key] = value
+            else:
+                transformed[key] = value
+
+        return transformed
 
     def fetch_table(
         self,
         table_name: str,
-        top: int,
+        top: Optional[int] = None,
         skip: int = 0,
         filter_query: Optional[str] = None,
         all_records: bool = False,
@@ -396,514 +609,128 @@ class BaseAPIClient:
         fail_on_filter_error: bool = False,
     ) -> pd.DataFrame:
         """
-        Fetch data from the specified table.
+        Fetch records from a table in the legacy ERP system.
 
         Args:
-            table_name: Name of the table to fetch
-            top: Maximum number of records to fetch
+            table_name: Name of the table to fetch from
+            top: Number of records to fetch per request (None for no limit,
+                though the API server may still apply a default limit,
+                typically 100 records)
             skip: Number of records to skip
-            all_records: If True, fetch all records (may take a long time)
-            filter_query: OData filter query
-            new_data_only: If True, only fetch new records
-            date_created_start: Start date for filtering by creation date
-            fail_on_filter_error: If True, raise an error if filter doesn't work
+            filter_query: [['field', 'operator', 'value']]
+            all_records: Whether to fetch all records (may take a long time)
+            new_data_only: Only fetch records newer than last sync
+            date_created_start: Optional start date for filtering
+            fail_on_filter_error: Whether to raise an error on filter issues
 
         Returns:
-            pandas.DataFrame: The fetched data
+            DataFrame containing the fetched records
         """
-        if not self.ensure_session():
-            raise Exception("Failed to establish a valid session")
+        logger.info(
+            "Fetching table %s (top=%s, skip=%d, filter=%s)",
+            table_name,
+            top if top is not None else "None",
+            skip,
+            filter_query or "None",
+        )
 
-        # Log cookies before making the table request
-        logger.info("------ FETCHING TABLE ------")
-        self._log_cookies("Cookies for table request")
-
-        # Ensure we have exactly one cookie with the correct session ID
-        self.session.cookies.clear()
-        if self.session_id:
-            self.session.cookies.set("WASID4D", self.session_id)
-            logger.info("Reset to a single session cookie for table request")
-            self._log_cookies("Cookies after reset")
-        else:
-            logger.error("No session ID available for table request")
-            raise Exception("No valid session ID available")
-
-        # Prepare the request URL and parameters
-        url = f"{self.base_url}/rest/{table_name}"
-
-        # Handle pagination
-        if all_records:
-            logger.info(f"Fetching all records from {table_name}")
-            return self._fetch_all_records(
-                url,
-                filter_query,
-                new_data_only,
-                date_created_start,
-                fail_on_filter_error,
-            )
-
-        # Build query parameters
-        params = {"$top": top, "$skip": skip}
-
-        # Handle filter query with the correct syntax
-        filter_requested = False
-        if filter_query:
-            filter_requested = True
-            # If filter query is already in the correct format, use as is
-            if filter_query.startswith("&$filter="):
-                # Remove the leading & and $filter=
-                filter_query = filter_query[1:]
-                params["$filter"] = filter_query[7:]
-            else:
-                # Extract the field name and value from the filter query
-                parts = filter_query.split(' ')
-                if len(parts) >= 3:
-                    field = parts[0]
-                    operator = parts[1]
-                    value = parts[2].strip("'")
-                    # Construct the filter in the exact format required
-                    params["$filter"] = (
-                        f"'{field} {operator} '{value}'"
-                    )
-            logger.info(f"Using filter query: {filter_query}")
-
-        # Handle date filtering
-        if new_data_only and date_created_start:
-            filter_requested = True
-            date_filter = (
-                f"CREATIONDATE > '{date_created_start}'"
-            )
-            if "$filter" in params:
-                params["$filter"] = (
-                    f"{params['$filter']} AND {date_filter}"
-                )
-            else:
-                params["$filter"] = f"'{date_filter}'"
-            logger.info(f"Using date filter: {date_filter}")
-
-        logger.info(f"Full request URL: {url}")
-        logger.info(f"Query parameters: {params}")
-
-        # Build the full URL with parameters
-        full_url = url
-        param_strings = []
-        for key, value in params.items():
-            param_strings.append(f"{key}={value}")
-        if param_strings:
-            full_url = f"{url}?{'&'.join(param_strings)}"
-
-        # Make the request
         try:
-            response = self.session.get(full_url)
-        except Exception as e:
-            logger.error(f"Request failed: {e}")
-            raise
+            # Ensure we have a valid session
+            if not self.ensure_session():
+                raise RuntimeError("Failed to establish a valid session")
 
-        # Check for successful response
-        if response.status_code != 200:
-            msg = (
-                f"API request failed with status code "
-                f"{response.status_code}: {response.text}"
-            )
-            raise Exception(msg)
+            # Build the URL and parameters
+            url = table_name
+            params = {"$skip": skip}
 
-        # Parse the response
-        data = response.json()
+            # Only add top parameter if it's specified
+            if top is not None:
+                params["$top"] = top
 
-        # Transform dates in the response data
-        if isinstance(data, dict):
-            if "value" in data and isinstance(data["value"], list):
-                data["value"] = [
-                    self._transform_dates_in_record(record) 
-                    for record in data["value"]
-                ]
-            elif "__ENTITIES" in data and isinstance(
-                data["__ENTITIES"], list
-            ):
-                data["__ENTITIES"] = [
-                    self._transform_dates_in_record(record) 
-                    for record in data["__ENTITIES"]
-                ]
-        elif isinstance(data, list):
-            data = [
-                self._transform_dates_in_record(record) 
-                for record in data
-            ]
+            if filter_query:
+                print(f"filter_query: {filter_query}")
 
-        # Convert to DataFrame
-        df = None
-        if "value" in data and isinstance(data["value"], list):
-            df = pd.DataFrame(data["value"])
-            logger.info(f"Retrieved {len(df)} records")
-        elif "__ENTITIES" in data and isinstance(
-            data["__ENTITIES"], list
-        ):
-            df = pd.DataFrame(data["__ENTITIES"])
-            logger.info(
-                f"Retrieved {len(df)} records from __ENTITIES"
-            )
-        elif isinstance(data, list):
-            df = pd.DataFrame(data)
-            logger.info(
-                f"Retrieved {len(df)} records from direct list response"
-            )
-        elif isinstance(data, dict) and len(data) > 0:
-            try:
-                df = pd.DataFrame([data])
-                logger.info(
-                    "Retrieved 1 record from direct dict response"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Failed to convert response dict to DataFrame: {e}"
-                )
-                logger.warning(
-                    f"Response keys: {list(data.keys())}"
-                )
-                df = pd.DataFrame()
-        else:
-            df = pd.DataFrame()
-
-        # Check if filter was properly applied
-        if filter_requested and fail_on_filter_error:
-            # If we got a full page of results on the first request,
-            # this might indicate the filter wasn't applied
-            if len(df) >= top:
-                msg = (
-                    "Got maximum number of records when filter was "
-                    "requested. Filter may not have been applied."
-                )
-                logger.warning(msg)
-                if "$filter" in params:
-                    msg = (
-                        f"Filter may not have been applied correctly. "
-                        f"Got {len(df)} records with filter: "
-                        f"{params['$filter']}"
-                    )
-                    raise RuntimeError(msg)
-
-            # If we got any records, verify they match our filter criteria
-            if not df.empty and "$filter" in params:
-                filter_parts = params["$filter"].strip("'").split(" ")
-                if len(filter_parts) >= 3:
-                    field = filter_parts[0]
-                    operator = filter_parts[1]
-                    value = " ".join(filter_parts[2:]).strip("'")
-                    
-                    if field in df.columns:
-                        # Convert value to appropriate type if needed
-                        if operator in ['>', '>=', '<', '<=']:
-                            try:
-                                value = pd.to_datetime(value)
-                                df[field] = pd.to_datetime(
-                                    df[field], errors='coerce'
-                                )
-                            except:
-                                try:
-                                    value = float(value)
-                                    df[field] = pd.to_numeric(
-                                        df[field], errors='coerce'
-                                    )
-                                except:
-                                    pass
-                        
-                        # Check if any records don't match the filter
-                        invalid_records = None
-                        if operator == '>':
-                            invalid_records = df[field] <= value
-                        elif operator == '>=':
-                            invalid_records = df[field] < value
-                        elif operator == '<':
-                            invalid_records = df[field] >= value
-                        elif operator == '<=':
-                            invalid_records = df[field] > value
-                        elif operator == '=':
-                            invalid_records = df[field] != value
-                        
-                        if invalid_records is not None and invalid_records.any():
-                            msg = (
-                                f"Filter not applied correctly. Found "
-                                f"records that don't match filter: "
-                                f"{params['$filter']}"
-                            )
-                            raise RuntimeError(msg)
-
-        return df
-
-    def _fetch_all_records(
-        self,
-        url: str,
-        filter_query: Optional[str] = None,
-        new_data_only: bool = True,
-        date_created_start: Optional[str] = None,
-        fail_on_filter_error: bool = False,
-    ) -> pd.DataFrame:
-        """Fetch all records from a table using pagination."""
-        params = {"$top": 1000, "$skip": 0}
-        filter_requested = False
-
-        # Handle filter query with the correct syntax
-        if filter_query:
-            filter_requested = True
-            # Log the raw filter query for debugging
-            logger.info(f"Raw filter query: {filter_query}")
-            
-            # If filter query is already in the correct format (starts with &$filter=), use as is
-            if filter_query.startswith("&$filter="):
-                filter_query = filter_query[1:]  # Remove the leading &
-                params["$filter"] = filter_query[7:]  # Remove "$filter="
-                logger.info(f"Processed filter query (from &$filter format): {params['$filter']}")
-            else:
-                # Extract the field name and value from the filter query
-                parts = filter_query.split(' ')
-                logger.info(f"Filter query parts: {parts}")
-                if len(parts) >= 3:
-                    field = parts[0]
-                    operator = parts[1]
-                    value = parts[2].strip("'")
-                    # Construct the filter in the exact format required
-                    params["$filter"] = f"'{field} {operator} '{value}'"
-                    logger.info(f"Constructed filter query: {params['$filter']}")
-
-        # Handle date filtering
-        if new_data_only and date_created_start:
-            date_filter = f"CREATIONDATE > '{date_created_start}'"
-            if "$filter" in params:
-                params["$filter"] = f"{params['$filter']} AND {date_filter}"
-            else:
-                params["$filter"] = f"'{date_filter}'"
-            logger.info(f"Added date filter: {date_filter}")
-
-        # Fetch data using pagination
-        all_data = []
-        total_fetched = 0
-        retry_count = 0
-        max_retries = 3
-        filter_error_detected = False
-        
-        # Log the base URL
-        logger.info(f"Base URL for fetching all records: {url}")
-
-        while True:
-            self.session.cookies.clear()
-            if not self.session_id:
-                logger.error("No session ID available for paginated request")
-                raise Exception("No valid session ID available")
-
-            self.session.cookies.set("WASID4D", self.session_id)
-            if retry_count > 0:
-                logger.info(
-                    f"Reset to single session cookie for retry attempt {retry_count}"
-                )
-
-            # Make the request with error handling for filter failures
-            logger.info(f"Making paginated request: {url}")
-            logger.info(f"With parameters: {params}")
-            try:
-                current_params = params.copy()
-                if filter_error_detected and "$filter" in current_params:
-                    logger.info(
-                        "Filter error previously detected, removing filter for this request"
-                    )
-                    current_params.pop("$filter", None)
-
-                # Build the full URL with parameters
-                full_url = url
-                param_strings = []
-                for key, value in current_params.items():
-                    param_strings.append(f"{key}={value}")
-                if param_strings:
-                    full_url = f"{url}?{'&'.join(param_strings)}"
-                
-                # Log the full URL for debugging
-                logger.info(f"Full request URL with parameters: {full_url}")
-                
-                # Make the request - use the full_url directly instead of passing params separately
-                try:
-                    response = self.session.get(full_url)
-                except Exception as e:
-                    logger.error(f"Request failed: {e}")
-                    raise
-                
-                # Check for filter-related errors
-                if response.status_code != 200 and "$filter" in full_url:
-                    logger.warning(
-                        f"Request failed with status code {response.status_code}. "
-                        f"This might be a filter error."
-                    )
-                    logger.warning(f"Response text: {response.text[:200]}...")
-                    
-                    # If we're supposed to fail on filter errors, raise an exception
-                    if fail_on_filter_error:
-                        raise Exception(
-                            f"Filter error: Request failed with status code {response.status_code}. "
-                            f"Response: {response.text[:200]}... "
-                            f"The command was configured to fail on filter errors."
-                        )
-                    
-                    # Only retry without filter if we're not configured to fail
-                    logger.warning("Attempting to retry without filter...")
-                    base_url = full_url.split("&$filter=")[0]
-                    if not base_url.endswith("?"):
-                        base_url = base_url.split("?")[0]
-                    logger.info(
-                        f"Retrying request without filter: {base_url}"
-                    )
-                    response = self.session.get(base_url)
-
-                    # Mark that we've detected a filter error
-                    filter_error_detected = True
-
-                # Check for successful response
-                if response.status_code != 200:
-                    error_msg = (
-                        f"API request failed with status code {response.status_code}"
-                    )
-
-                    # Check if this is a 'maximum sessions' error
-                    if (
-                        response.status_code == 402
-                        and "Maximum number of sessions" in response.text
-                    ):
-                        if retry_count < max_retries:
-                            logger.warning(
-                                "Maximum sessions error detected. "
-                                "Attempting to login with a new session..."
-                            )
-                            self.session.cookies.clear()
-                            if self.login():
-                                retry_count += 1
-                                logger.info(
-                                    f"Re-login successful. Retrying request "
-                                    f"(attempt {retry_count}/{max_retries})"
+                # Check if filter_query is already a list format
+                if isinstance(filter_query, list):
+                    filter_parts = []
+                    for filter_item in filter_query:
+                        try:
+                            # Handle both list and tuple formats
+                            if len(filter_item) != 3:
+                                logger.warning(
+                                    f"Invalid filter item format: {filter_item}. "
+                                    "Expected [field, operator, value]."
                                 )
                                 continue
-                        error_msg += (
-                            ": Maximum number of sessions reached and retry failed"
-                        )
 
-                    error_msg += f": {response.text}"
-                    raise Exception(error_msg)
+                            field = filter_item[0]
+                            operator = filter_item[1]
+                            value = filter_item[2]
 
-                # Parse the response
-                data = response.json()
+                            print(field, operator, value)
+                            # breakpoint()
+                            # Format date values if needed
+                            if hasattr(value, "strftime"):
+                                value = value.strftime("%Y-%m-%d")
 
-                # If we're configured to fail on filter errors and we detect that
-                # the filter was ignored (by getting a successful response without
-                # the filter being applied), raise an exception
-                if (fail_on_filter_error and "$filter" in full_url and
-                    filter_error_detected):
-                    raise Exception(
-                        "Filter was ignored by the API. The command was "
-                        "configured to fail on filter errors."
-                    )
-
-                # Extract the records based on the actual response structure
-                if "value" in data and isinstance(data["value"], list):
-                    records = data["value"]
-                    all_data.extend(records)
-                    total_fetched += len(records)
-                    logger.info(
-                        f"Fetched {len(records)} records (total: {total_fetched})"
-                    )
-
-                    # Check if we've received fewer records than requested
-                    if len(records) < current_params.get("$top", 1000):
-                        break
-
-                    # Update skip for next page
-                    params["$skip"] += params.get("$top", 1000)
-                elif "__ENTITIES" in data and isinstance(data["__ENTITIES"], list):
-                    records = data["__ENTITIES"]
-                    all_data.extend(records)
-                    total_fetched += len(records)
-                    logger.info(
-                        f"Fetched {len(records)} records from __ENTITIES "
-                        f"(total: {total_fetched})"
-                    )
-
-                    # Check if there are more records
-                    if "__COUNT" in data and total_fetched >= int(data["__COUNT"]):
-                        logger.info(f"Reached total count of {data['__COUNT']} records")
-                        break
-
-                    # Update skip for next page
-                    params["$skip"] += params.get("$top", 1000)
-                elif isinstance(data, list):
-                    all_data.extend(data)
-                    total_fetched += len(data)
-                    logger.info(
-                        f"Fetched {len(data)} records from direct list response "
-                        f"(total: {total_fetched})"
-                    )
-                    break
-                else:
-                    logger.warning("Response does not contain expected data format")
-                    logger.warning(
-                        f"Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}"
-                    )
-                    break
-
-                # Reset retry counter after successful request
-                retry_count = 0
-
-            except Exception as e:
-                if "Maximum number of sessions" in str(e) and retry_count < max_retries:
-                    continue
-                raise
-
-        # Convert all data to DataFrame
-        df = pd.DataFrame(all_data)
-        logger.info(f"Total records retrieved: {len(df)}")
-
-        # Validate filter was properly applied
-        if (filter_requested and fail_on_filter_error and 
-            "$filter" in params):
-            filter_parts = params["$filter"].strip("'").split(" ")
-            if len(filter_parts) >= 3:
-                field = filter_parts[0]
-                operator = filter_parts[1]
-                value = " ".join(filter_parts[2:]).strip("'")
-                
-                if field in df.columns:
-                    # Convert value to appropriate type if needed
-                    if operator in ['>', '>=', '<', '<=']:
-                        try:
-                            value = pd.to_datetime(value)
-                            df[field] = pd.to_datetime(
-                                df[field],
-                                errors='coerce'
+                            filter_parts.append(f"'{field} {operator} {value}'")
+                        except Exception as e:
+                            error_msg = (
+                                f"Error processing filter item {filter_item}: {str(e)}"
                             )
-                        except:
-                            try:
-                                value = float(value)
-                                df[field] = pd.to_numeric(
-                                    df[field],
-                                    errors='coerce'
-                                )
-                            except:
-                                pass
-                    
-                    # Check if any records don't match the filter
-                    invalid_records = None
-                    if operator == '>':
-                        invalid_records = df[field] <= value
-                    elif operator == '>=':
-                        invalid_records = df[field] < value
-                    elif operator == '<':
-                        invalid_records = df[field] >= value
-                    elif operator == '<=':
-                        invalid_records = df[field] > value
-                    elif operator == '=':
-                        invalid_records = df[field] != value
-                    
-                    if (invalid_records is not None and 
-                        invalid_records.any()):
-                        msg = (
-                            "Filter not applied correctly. Found "
-                            "records that don't match filter: "
-                            f"{params['$filter']}"
-                        )
-                        raise RuntimeError(msg)
+                            logger.error(error_msg)
+                            if fail_on_filter_error:
+                                raise RuntimeError(error_msg) from e
 
-        return df 
+                    if not filter_parts:
+                        logger.warning("No valid filter parts found in filter query")
+                    else:
+                        # Join all filter parts with 'and'
+                        params["$filter"] = " and ".join(filter_parts)
+                else:
+                    # Handle legacy string format
+                    params["$filter"] = filter_query
+                # params["$filter"] = '"' + params["$filter"] + '"'
+
+            # Make the request
+            response = self._make_request(
+                "GET",
+                url,
+                params=params,
+                timeout=self.timeout,
+            )
+
+            if response.status_code != 200:
+                error_msg = (
+                    f"Failed to fetch table {table_name}: "
+                    f"Status {response.status_code}"
+                )
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+
+            # Parse the response
+            try:
+                data = response.json()
+            except json.JSONDecodeError as e:
+                error_msg = f"Failed to parse JSON response: {str(e)}"
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+            # print(pd.DataFrame(data))
+            # breakpoint()
+            # Convert to DataFrame
+            if not data or "__ENTITIES" not in data:
+                logger.warning("No records found in response")
+                return pd.DataFrame()
+
+            records = data["__ENTITIES"]
+            logger.info("Successfully fetched %d records", len(records))
+
+            # Transform dates in records
+            records = [self._transform_dates_in_record(record) for record in records]
+
+            return pd.DataFrame(records)
+
+        except Exception as e:
+            error_msg = f"Error fetching table {table_name}: {str(e)}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg) from e

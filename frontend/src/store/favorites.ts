@@ -13,25 +13,25 @@ export interface FavoriteItem {
 export const useFavoritesStore = defineStore('favorites', () => {
   const authStore = useAuthStore();
   const favorites = ref<FavoriteItem[]>([]);
-  
+
   // Load favorites from localStorage based on user ID
   function loadFavorites() {
     if (!authStore.user) {
       favorites.value = [];
       return;
     }
-    
+
     const userId = authStore.user.id || authStore.user.username || 'anonymous';
     const storageKey = `favorites_${userId}`;
     const storedFavorites = localStorage.getItem(storageKey);
-    
+
     favorites.value = storedFavorites ? JSON.parse(storedFavorites) : [];
   }
 
   // Save favorites to localStorage with user-specific key
   function saveFavorites() {
     if (!authStore.user) return;
-    
+
     const userId = authStore.user.id || authStore.user.username || 'anonymous';
     const storageKey = `favorites_${userId}`;
     localStorage.setItem(storageKey, JSON.stringify(favorites.value));
@@ -40,7 +40,7 @@ export const useFavoritesStore = defineStore('favorites', () => {
   // Add an item to favorites
   function addFavorite(item: FavoriteItem) {
     // Check if item already exists in favorites
-    if (!favorites.value.some(fav => fav.id === item.id)) {
+    if (!favorites.value.some((fav) => fav.id === item.id)) {
       favorites.value.push(item);
       saveFavorites();
     }
@@ -48,7 +48,7 @@ export const useFavoritesStore = defineStore('favorites', () => {
 
   // Remove an item from favorites
   function removeFavorite(id: string) {
-    const index = favorites.value.findIndex(item => item.id === id);
+    const index = favorites.value.findIndex((item) => item.id === id);
     if (index !== -1) {
       favorites.value.splice(index, 1);
       saveFavorites();
@@ -57,7 +57,7 @@ export const useFavoritesStore = defineStore('favorites', () => {
 
   // Check if an item is in favorites
   function isFavorite(id: string): boolean {
-    return favorites.value.some(item => item.id === id);
+    return favorites.value.some((item) => item.id === id);
   }
 
   // Toggle favorite status
@@ -73,9 +73,12 @@ export const useFavoritesStore = defineStore('favorites', () => {
   loadFavorites();
 
   // Watch for auth changes to reload favorites
-  watch(() => authStore.user, () => {
-    loadFavorites();
-  });
+  watch(
+    () => authStore.user,
+    () => {
+      loadFavorites();
+    }
+  );
 
   return {
     favorites,
@@ -84,4 +87,4 @@ export const useFavoritesStore = defineStore('favorites', () => {
     isFavorite,
     toggleFavorite
   };
-}); 
+});

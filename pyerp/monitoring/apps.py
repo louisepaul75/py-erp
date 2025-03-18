@@ -14,10 +14,10 @@ class MonitoringAppConfig(AppConfig):
 
     def ready(self):
         """
-        Initialize app when Django starts.
-        This is where we can register signal handlers or perform other initialization.  # noqa: E501
+        Import signals to register them.
         """
         try:
-            import pyerp.monitoring.signals
+            # Using import inside a function to avoid circular imports
+            import pyerp.monitoring.signals  # noqa: F401
         except ImportError:
             pass

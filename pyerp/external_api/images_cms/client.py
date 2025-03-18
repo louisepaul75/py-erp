@@ -8,7 +8,6 @@ and parsing of API responses.
 """
 
 import json
-import logging
 import requests
 import urllib3
 from urllib3.util import Retry
@@ -16,29 +15,19 @@ from requests.adapters import HTTPAdapter
 from requests.auth import HTTPBasicAuth
 
 from django.conf import settings
-from django.core.cache import cache
 
-from pyerp.business_modules.products.models import ParentProduct, Product
+from pyerp.utils.logging import get_logger
 from .constants import (
-    MIN_THUMBNAIL_RESOLUTION,
-    MAX_THUMBNAIL_RESOLUTION,
-    MIN_RESOLUTION_ARRAY_LENGTH,
-    DEFAULT_TIMEOUT,
-    DEFAULT_CACHE_TIMEOUT,
     DEFAULT_PAGE_SIZE,
-    MAX_RETRIES,
-    BACKOFF_FACTOR,
-    RETRY_STATUS_CODES,
     HTTP_OK,
 )
 from .exceptions import (
-    NoResponseError,
     InvalidResponseFormatError,
-    MissingFieldsError,
 )
 from pyerp.external_api import connection_manager
 
-logger = logging.getLogger(__name__)
+# Configure logging using the centralized logging system
+logger = get_logger(__name__)
 
 
 class ImageAPIClient:
@@ -77,57 +66,51 @@ class ImageAPIClient:
         if not self.verify_ssl:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-        logger.debug(
-            "ImageAPIClient initialized with username: %s",
-            self.username
-        )
-        
+        logger.debug("ImageAPIClient initialized with username: %s", self.username)
+
     def check_connection(self) -> bool:
         """
         Check if the connection to the Images CMS API is working.
-        
-        This method is used by the health check system to verify 
+
+        This method is used by the health check system to verify
         that the API is accessible and responding correctly.
-        
+
         Returns:
             bool: True if connection is successful, False otherwise
-            
+
         Raises:
             Exception: If an unexpected error occurs during validation
         """
         try:
             logger.info("Checking connection to Images CMS API")
-            
+
             # First check if the connection is enabled
             if not connection_manager.is_connection_enabled("images_cms"):
                 logger.info("Images CMS API connection is disabled")
                 return False
-            
+
             # Use a simple API endpoint to test connection
             endpoint = "all-files-and-articles/"
-            params = {
-                "page": 1,
-                "page_size": 1
-            }
-            
+            params = {"page": 1, "page_size": 1}
+
             response = self.session.get(
                 f"{self.base_url}{endpoint}",
                 params=params,
                 verify=self.verify_ssl,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
-            
+
             if response.status_code != HTTP_OK:
                 logger.error(
                     "Connection check failed. Status: %d, Response: %s",
                     response.status_code,
-                    response.text
+                    response.text,
                 )
                 return False
-                
+
             # If we made it here, connection is working
             return True
-            
+
         except Exception as e:
             logger.error(f"Connection check failed with exception: {e}")
             raise
@@ -144,32 +127,27 @@ class ImageAPIClient:
             dict: API response containing 'count' and 'results' fields
         """
         endpoint = "all-files-and-articles/"
-        params = {
-            "page": page,
-            "page_size": page_size
-        }
+        params = {"page": page, "page_size": page_size}
 
         try:
             response = self.session.get(
                 f"{self.base_url}{endpoint}",
                 params=params,
                 verify=self.verify_ssl,
-                timeout=self.timeout
+                timeout=self.timeout,
             )
 
             if response.status_code != HTTP_OK:
                 logger.error(
                     "Failed to fetch files. Status: %d, Response: %s",
                     response.status_code,
-                    response.text
+                    response.text,
                 )
                 return None
 
             data = response.json()
-            if not isinstance(data, dict) or 'count' not in data:
-                raise InvalidResponseFormatError(
-                    "Response missing required fields"
-                )
+            if not isinstance(data, dict) or "count" not in data:
+                raise InvalidResponseFormatError("Response missing required fields")
 
             return data
 
@@ -181,4 +159,4 @@ class ImageAPIClient:
             return None
         except Exception as e:
             logger.error("Unexpected error: %s", str(e))
-            return None 
+            return None

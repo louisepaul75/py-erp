@@ -3,11 +3,8 @@ Views for the Core app.
 """
 
 import json
-import logging
 import os
 import subprocess
-
-from django.conf import settings
 from django.db import connection
 from django.db.utils import OperationalError
 from django.http import JsonResponse
@@ -19,9 +16,13 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.conf import settings
 
-# Set up logging
-logger = logging.getLogger("pyerp.core")
+# Set up logging using the centralized logging system
+from pyerp.utils.logging import get_logger
+from pyerp.core.models import UserPreference
+
+logger = get_logger(__name__)
 
 # Language session key constant (compatible with Django 5.1+)
 LANGUAGE_SESSION_KEY = "django_language"
@@ -176,14 +177,20 @@ class UserProfileView(APIView):
 
 
 class DashboardSummaryView(APIView):
-    """View to retrieve summary data for the dashboard."""
+    """View to retrieve and update dashboard data."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Get summary data for the dashboard."""
+        """Get summary data and user's dashboard configuration."""
         msg = f"Dashboard summary requested by {request.user.username}"
         logger.debug(msg)
+
+        # Get or create user preferences
+        user_pref, created = UserPreference.objects.get_or_create(user=request.user)
+
+        # Get dashboard modules configuration
+        dashboard_modules = user_pref.get_dashboard_modules()
 
         # Example summary data - this would be fetched from the database
         response_data = {
@@ -192,9 +199,35 @@ class DashboardSummaryView(APIView):
             "sales_today": 0,
             "production_status": "normal",
             "recent_activities": [],
+            "dashboard_modules": dashboard_modules,
         }
 
         return Response(response_data)
+
+    def patch(self, request):
+        """Update user's dashboard configuration."""
+        msg = f"Dashboard config update requested by {request.user.username}"
+        logger.debug(msg)
+
+        # Get or create user preferences
+        user_pref, created = UserPreference.objects.get_or_create(user=request.user)
+
+        if "modules" in request.data:
+            # Save dashboard modules configuration
+            modules = request.data["modules"]
+            user_pref.save_dashboard_config(modules)
+
+            return Response(
+                {
+                    "message": "Dashboard configuration updated successfully",
+                    "dashboard_modules": modules,
+                }
+            )
+
+        return Response(
+            {"message": "No valid configuration data provided"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class SystemSettingsView(APIView):

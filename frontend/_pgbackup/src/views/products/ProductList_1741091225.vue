@@ -37,23 +37,14 @@
     <div v-else-if="error" class="error">
       <p>{{ error }}</p>
       <div class="error-actions">
-        <button @click="loadProducts" class="retry-button">
-          Retry
-        </button>
-        <button @click="testApiConnection" class="test-button">
-          Test API
-        </button>
+        <button @click="loadProducts" class="retry-button">Retry</button>
+        <button @click="testApiConnection" class="test-button">Test API</button>
       </div>
       <div class="api-debug" v-if="showApiDebug">
         <h4>Debug API Connection</h4>
         <div class="api-url-input">
           <label for="apiUrl">API URL:</label>
-          <input
-            type="text"
-            id="apiUrl"
-            v-model="apiUrl"
-            placeholder="http://localhost:8050/api"
-          />
+          <input type="text" id="apiUrl" v-model="apiUrl" placeholder="http://localhost:8050/api" />
           <button @click="updateApiUrl" class="update-button">Update</button>
         </div>
       </div>
@@ -91,17 +82,9 @@
 
     <!-- Pagination -->
     <div v-if="products.length > 0" class="pagination">
-      <button
-        :disabled="currentPage === 1"
-        @click="changePage(currentPage - 1)"
-      >
-        Previous
-      </button>
+      <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">Previous</button>
       <span>Page {{ currentPage }} of {{ totalPages }}</span>
-      <button
-        :disabled="currentPage === totalPages"
-        @click="changePage(currentPage + 1)"
-      >
+      <button :disabled="currentPage === totalPages" @click="changePage(currentPage + 1)">
         Next
       </button>
     </div>
@@ -189,9 +172,10 @@ const mockProducts = [
     primary_image: {
       id: 1,
       url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 2,
@@ -202,9 +186,10 @@ const mockProducts = [
     primary_image: {
       id: 2,
       url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 3,
@@ -215,9 +200,10 @@ const mockProducts = [
     primary_image: {
       id: 3,
       url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1588279102080-a8333fd4dc10?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 4,
@@ -228,9 +214,10 @@ const mockProducts = [
     primary_image: {
       id: 4,
       url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 5,
@@ -241,9 +228,10 @@ const mockProducts = [
     primary_image: {
       id: 5,
       url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 6,
@@ -254,9 +242,10 @@ const mockProducts = [
     primary_image: {
       id: 6,
       url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 7,
@@ -267,9 +256,10 @@ const mockProducts = [
     primary_image: {
       id: 7,
       url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1531346878377-a5be20888e57?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
+    is_active: true
   },
   {
     id: 8,
@@ -280,10 +270,11 @@ const mockProducts = [
     primary_image: {
       id: 8,
       url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-      thumbnail_url: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
+      thumbnail_url:
+        'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=60'
     },
-    is_active: true,
-  },
+    is_active: true
+  }
 ];
 
 // Load products with current filters
@@ -294,7 +285,7 @@ const loadProducts = async () => {
   try {
     // Create params object with only defined values
     const params: Record<string, any> = {
-      page: currentPage.value,
+      page: currentPage.value
     };
 
     // Only add parameters that have values
@@ -478,24 +469,30 @@ const checkServerStatus = async (): Promise<boolean> => {
     console.log('Checking server status...');
 
     // Try to fetch the API status
-    let response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api'}/status`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-      mode: 'cors',
-    });
+    let response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api'}/status`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json'
+        },
+        mode: 'cors'
+      }
+    );
 
     // If status endpoint doesn't exist, try the products endpoint
     if (response.status === 404) {
       console.log('Status endpoint not found, trying products endpoint...');
-      response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api'}/products/`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        mode: 'cors',
-      });
+      response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8050/api'}/products/`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json'
+          },
+          mode: 'cors'
+        }
+      );
     }
 
     console.log('Server status response:', response);
@@ -558,7 +555,9 @@ h1 {
   background-color: white;
 }
 
-.loading, .error, .no-results {
+.loading,
+.error,
+.no-results {
   text-align: center;
   padding: 30px;
 }
@@ -576,7 +575,9 @@ h1 {
   margin-top: 15px;
 }
 
-.retry-button, .test-button, .mock-button {
+.retry-button,
+.test-button,
+.mock-button {
   padding: 8px 15px;
   background-color: #d2bc9b;
   color: white;
@@ -586,7 +587,9 @@ h1 {
   transition: background-color 0.3s;
 }
 
-.retry-button:hover, .test-button:hover, .mock-button:hover {
+.retry-button:hover,
+.test-button:hover,
+.mock-button:hover {
   background-color: #c0a989;
 }
 
@@ -610,7 +613,9 @@ h1 {
   border: 1px solid #eaeaea;
   border-radius: 8px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
   cursor: pointer;
   position: relative;
   background-color: white;

@@ -15,9 +15,10 @@ export const determineBaseUrl = () => {
   }
 
   // Then check if we're running locally
-  const isLocalhost = window.location.hostname === 'localhost' ||
-                     window.location.hostname === '127.0.0.1' ||
-                     window.location.hostname === '0.0.0.0';
+  const isLocalhost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0';
 
   // If we're running locally, use localhost URL
   if (isLocalhost) {
@@ -25,26 +26,32 @@ export const determineBaseUrl = () => {
   }
 
   // Otherwise use the configured network URL or fallback to window.location.origin
-  return import.meta.env.VITE_API_NETWORK_URL || import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  return (
+    import.meta.env.VITE_API_NETWORK_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    window.location.origin
+  );
 };
 
 const apiBaseUrl = determineBaseUrl();
 
 // Log the API base URL being used
 console.log('API Base URL:', apiBaseUrl);
-console.log('Running on hostname:', window.location.hostname);
-console.log('Is specific IP:', window.location.hostname === '192.168.73.65');
-console.log('Is localhost:', window.location.hostname === 'localhost' ||
-                          window.location.hostname === '127.0.0.1' ||
-                          window.location.hostname === '0.0.0.0');
+console.log(
+  'Is localhost:',
+  window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '0.0.0.0'
+);
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: apiBaseUrl + '/api',  // Add /api prefix to all requests
+  baseURL: apiBaseUrl + '/api', // Add /api prefix to all requests
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json'
   },
   withCredentials: true, // Required for cookies/CORS
+  timeout: 30000 // Set a 30 second timeout
 });
 
 // Flag to prevent multiple simultaneous token refreshes
@@ -52,14 +59,14 @@ let isRefreshing = false;
 let failedQueue: any[] = [];
 
 const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
       prom.resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
@@ -78,9 +85,20 @@ api.interceptors.request.use(
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Log request for debugging
+    console.log('Making request:', {
+      method: config.method,
+      url: config.url,
+      baseURL: config.baseURL || '',
+      fullURL: (config.baseURL || '') + (config.url || ''),
+      headers: config.headers,
+      token: token ? 'Present' : 'Not present'
+    });
+
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
@@ -91,18 +109,35 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Log the error for debugging
-    console.debug('API Error:', {
+    // If error is network-related, log it and reject
+    if (!error.response) {
+      console.error('Network error:', {
+        message: error.message,
+        config: {
+          url: originalRequest?.url,
+          baseURL: originalRequest?.baseURL,
+          method: originalRequest?.method,
+          headers: originalRequest?.headers
+        },
+        error: error
+      });
+      return Promise.reject(error);
+    }
+
+    // Log response error for debugging
+    console.error('Response error:', {
       status: error.response?.status,
-      url: originalRequest?.url,
-      method: originalRequest?.method,
-      isRetry: originalRequest?._retry,
+      url: originalRequest.url,
+      baseURL: originalRequest.baseURL,
+      fullURL: originalRequest.baseURL + originalRequest.url,
+      error: error.response?.data,
+      headers: originalRequest.headers,
+      response: error.response
     });
 
-    // If error is 401 and we haven't tried refreshing token yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Handle 401 Unauthorized error
+    if (error.response.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // If a token refresh is already in progress, add this request to the queue
         try {
           const token = await new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
@@ -110,7 +145,6 @@ api.interceptors.response.use(
           originalRequest.headers['Authorization'] = `Bearer ${token}`;
           return api(originalRequest);
         } catch (err) {
-          console.error('Failed to process queued request:', err);
           return Promise.reject(err);
         }
       }
@@ -119,50 +153,35 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Try to refresh the token
         const refreshToken = localStorage.getItem('refresh_token');
         if (!refreshToken) {
           throw new Error('No refresh token available');
         }
 
-        console.debug('Attempting to refresh token...');
         const response = await api.post('/token/refresh/', {
           refresh: refreshToken
         });
 
-        const newAccessToken = response.data.access;
-        console.debug('Token refresh successful');
+        const { access } = response.data;
+        localStorage.setItem('access_token', access);
 
-        // Store the new token
-        localStorage.setItem('access_token', newAccessToken);
+        api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
+        originalRequest.headers['Authorization'] = `Bearer ${access}`;
 
-        // Update the Authorization header
-        originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-        api.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-
-        // Process any queued requests
-        processQueue(null, newAccessToken);
-
-        // Retry the original request
+        processQueue(null, access);
         return api(originalRequest);
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        // If refresh fails, clear tokens and reject all queued requests
+        processQueue(refreshError, null);
+        // Clear tokens and redirect to login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        processQueue(refreshError, null);
-        
-        // Get auth store and logout
-        const authStore = useAuthStore();
-        await authStore.logout();
-        
+        window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    // For other errors or if refresh failed, reject the promise
     return Promise.reject(error);
   }
 );
@@ -237,6 +256,21 @@ export const salesApi = {
   // Delete a sales order
   deleteSalesOrder: async (id: number) => {
     return api.delete(`/sales/orders/${id}/`);
+  },
+
+  // Get all sales records with optional filters
+  getSalesRecords: async (params = {}) => {
+    return api.get('/sales/records/', { params });
+  },
+
+  // Get sales record details by ID
+  getSalesRecord: async (id: number) => {
+    return api.get(`/sales/records/${id}/`);
+  },
+
+  // Get items for a specific sales record
+  getSalesRecordItems: async (recordId: number, params = {}) => {
+    return api.get(`/sales/records/${recordId}/items/`, { params });
   },
 
   // Get all customers

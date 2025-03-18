@@ -3,7 +3,6 @@ Views for the monitoring app.
 """
 
 from datetime import datetime
-import logging
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -14,9 +13,10 @@ from pyerp.monitoring.services import (
     get_host_resources,
     run_all_health_checks,
 )
+from pyerp.utils.logging import get_logger
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # Apply decorators to exempt this view from authentication and CSRF protection
@@ -42,9 +42,7 @@ def run_health_checks(request):
             "success": True,
             "results": results,
             "authenticated": (
-                request.user.is_authenticated
-                if hasattr(request, "user")
-                else False
+                request.user.is_authenticated if hasattr(request, "user") else False
             ),
             "server_time": datetime.now().isoformat(),
         }
@@ -148,21 +146,19 @@ def get_host_resources_view(request):
     try:
         # Get host resource metrics
         resources = get_host_resources()
-        
+
         # Create response data
         response_data = {
             "success": True,
             "data": resources,
             "authenticated": (
-                request.user.is_authenticated
-                if hasattr(request, "user")
-                else False
+                request.user.is_authenticated if hasattr(request, "user") else False
             ),
             "server_time": datetime.now().isoformat(),
         }
-        
+
         return JsonResponse(response_data)
-    
+
     except Exception as e:
         logger.exception("Error retrieving host resources")
         return JsonResponse(
