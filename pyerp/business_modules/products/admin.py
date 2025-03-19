@@ -113,58 +113,39 @@ class VariantProductAdmin(admin.ModelAdmin):
         "legacy_id",
         "legacy_sku",
     )
-    fieldsets = (
-        (
-            _("Basic Information"),
-            {
-                "fields": (
-                    "sku",
-                    "parent",
-                    "variant_code",
-                    "legacy_base_sku",
-                    "legacy_id",
-                    "legacy_sku",
-                    "name",
-                ),
-            },
-        ),
-        (
-            _("Status"),
-            {
-                "fields": (
-                    "is_active",
-                    "is_verkaufsartikel",
-                    "is_featured", 
-                    "is_new", 
-                    "is_bestseller"
-                ),
-            },
-        ),
-        (
-            _("Pricing"),
-            {
-                "fields": (
-                    "retail_price",
-                    "wholesale_price",
-                    "retail_unit",
-                    "wholesale_unit",
-                ),
-            },
-        ),
-        (
-            _("Dates"),
-            {
-                "fields": (
-                    "release_date",
-                    "auslaufdatum",
-                ),
-            },
-        ),
-        (
-            _("Categorization"),
-            {
-                "fields": ("tags",),
-            },
-        ),
+    
+    # Explicitly define fields to exclude the weight field from the admin interface
+    # Since weight is defined in BaseProduct but doesn't exist in the database for VariantProduct
+    fields = (
+        "sku",
+        "parent",
+        "variant_code",
+        "legacy_base_sku",
+        "legacy_id",
+        "legacy_sku",
+        "name",
+        "name_en",
+        "description",
+        "description_en",
+        "short_description",
+        "short_description_en",
+        "keywords",
+        "is_active",
+        "is_verkaufsartikel",
+        "is_featured",
+        "is_new",
+        "is_bestseller",
+        "is_discontinued",
+        "retail_price",
+        "wholesale_price",
+        "retail_unit",
+        "wholesale_unit",
+        "release_date",
+        "auslaufdatum",
+        "width_mm",
+        "color",
+        "tags",
+        "category_id",
     )
+    
     filter_horizontal = ('tags',)
