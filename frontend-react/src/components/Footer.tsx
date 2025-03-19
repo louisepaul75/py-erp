@@ -68,7 +68,7 @@ export function Footer() {
   useEffect(() => {
     const fetchHealthStatus = async () => {
       try {
-        const response = await fetch(`${API_URL}/core/health`);
+        const response = await fetch(`${API_URL}/health`);
         if (response.ok) {
           const data = await response.json();
           setHealthStatus(data);
@@ -99,7 +99,7 @@ export function Footer() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const response = await fetch(`${API_URL}/core/git/branch`, { 
+        const response = await fetch(`${API_URL}/git/branch`, { 
           signal: controller.signal 
         });
         

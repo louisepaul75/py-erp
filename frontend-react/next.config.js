@@ -18,11 +18,11 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/core/health',
+        source: '/api/core/health',
         destination: 'http://localhost:8050/health/',
       },
       {
-        source: '/core/git/branch',
+        source: '/api/core/git/branch',
         destination: 'http://localhost:8050/api/git/branch/',
       },
       {
