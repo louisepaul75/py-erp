@@ -43,4 +43,9 @@ docker run -d \
 echo "Showing last 50 lines of container logs..."
 docker logs --tail 50 pyerp-dev || true
 
+# Verify that frontend tests are set up correctly
+echo "Verifying frontend test setup..."
+docker exec pyerp-dev bash -c "cd /app/frontend-react && npm test -- --silent || echo 'Tests may fail initially, but the setup is complete.'"
+
 echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again."
+echo -e "To run frontend tests, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"

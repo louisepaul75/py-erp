@@ -70,6 +70,7 @@
 - React 18.3.1 - UI library
 - Next.js 14.2.24 - React framework
 - TypeScript 5.3.3 - Type-safe JavaScript
+- Jest 6.x - Testing
 
 ### State Management
 - React Query (TanStack Query) 5.69.0 - Server state management and data fetching

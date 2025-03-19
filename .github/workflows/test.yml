@@ -52,7 +52,34 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.dev.txt
 
+      - name: Set up Node.js
+        if: matrix.test-group == 'ui'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend-react/package-lock.json'
+
+      - name: Install React dependencies
+        if: matrix.test-group == 'ui'
+        working-directory: frontend-react
+        run: npm ci
+
+      - name: Run React UI tests
+        if: matrix.test-group == 'ui'
+        working-directory: frontend-react
+        run: |
+          # Run Jest tests and generate coverage
+          npm test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=text --coverageReporters=cobertura
+          # Create coverage directory in root for artifact upload
+          mkdir -p ../coverage
+          # Copy test results to expected location
+          cp ./jest-junit.xml ../coverage/ui-junit.xml
+          # Copy coverage to expected location
+          cp ./coverage/cobertura-coverage.xml ../coverage/ui-coverage.xml
+
       - name: Run ${{ matrix.test-group }} tests
+        if: matrix.test-group != 'ui'
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_test
           REDIS_URL: redis://localhost:6379/0
