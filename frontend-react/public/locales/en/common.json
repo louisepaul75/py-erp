@@ -26,5 +26,19 @@
     "success": "Success",
     "saved": "Saved",
     "deleted": "Deleted"
+  },
+  "common": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "health": {
+    "systemHealthy": "System Healthy",
+    "systemIssues": "System Issues",
+    "debugInfo": "Debug Information",
+    "environment": "Environment",
+    "version": "Version",
+    "databaseStatus": "Database Status",
+    "gitBranch": "Git Branch",
+    "apiAvailable": "API Available"
   }
 } 

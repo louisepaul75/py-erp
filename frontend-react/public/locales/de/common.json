@@ -26,5 +26,19 @@
     "success": "Erfolgreich",
     "saved": "Gespeichert",
     "deleted": "Gelöscht"
+  },
+  "common": {
+    "yes": "Ja",
+    "no": "Nein"
+  },
+  "health": {
+    "systemHealthy": "System Gesund",
+    "systemIssues": "System Probleme",
+    "debugInfo": "Debug-Informationen",
+    "environment": "Umgebung",
+    "version": "Version",
+    "databaseStatus": "Datenbank-Status",
+    "gitBranch": "Git Branch",
+    "apiAvailable": "API Verfügbar"
   }
 } 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Activity, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { API_URL } from '@/lib/config';
+import useAppTranslation from '@/hooks/useTranslationWrapper';
 
 interface HealthStatus {
   status: string;
@@ -27,6 +28,7 @@ export function Footer() {
   const [gitBranch, setGitBranch] = useState<GitBranchInfo | null>(null);
   const [isDevBarExpanded, setIsDevBarExpanded] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(false);
+  const { t } = useAppTranslation();
   
   // Measure footer height and set CSS variable
   useEffect(() => {
@@ -163,8 +165,8 @@ export function Footer() {
               isLoading ? "text-gray-500" : 
                 displayHealthStatus?.status === 'healthy' ? "text-green-600" : "text-red-600"
             )}>
-              {isLoading ? 'Checking...' : 
-                displayHealthStatus?.status === 'healthy' ? 'System Healthy' : 'System Issues'}
+              {isLoading ? t('messages.loading') : 
+                displayHealthStatus?.status === 'healthy' ? t('health.systemHealthy') : t('health.systemIssues')}
             </span>
           </Link>
         </div>
@@ -191,27 +193,27 @@ export function Footer() {
           
           {isDevBarExpanded && (
             <div className="bg-orange-100 p-4 border-t border-orange-300 dev-bar-content absolute bottom-full w-full">
-              <h3 className="font-semibold text-orange-800 mb-2">Debug Information</h3>
+              <h3 className="font-semibold text-orange-800 mb-2">{t('health.debugInfo')}</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-600">Environment:</div>
+                <div className="text-gray-600">{t('health.environment')}:</div>
                 <div>{displayHealthStatus?.environment || 'Development'}</div>
                 
-                <div className="text-gray-600">Version:</div>
+                <div className="text-gray-600">{t('health.version')}:</div>
                 <div>{displayHealthStatus?.version || '1.0.0'}</div>
                 
-                <div className="text-gray-600">Database Status:</div>
+                <div className="text-gray-600">{t('health.databaseStatus')}:</div>
                 <div className={cn(
                   displayHealthStatus?.database?.status === 'connected' ? 'text-green-600' : 'text-red-600'
                 )}>
                   {displayHealthStatus?.database?.status || 'Unknown'}
                 </div>
                 
-                <div className="text-gray-600">Git Branch:</div>
+                <div className="text-gray-600">{t('health.gitBranch')}:</div>
                 <div>{gitBranch?.branch || gitBranch?.error || 'local'}</div>
                 
-                <div className="text-gray-600">API Available:</div>
+                <div className="text-gray-600">{t('health.apiAvailable')}:</div>
                 <div className={apiAvailable ? 'text-green-600' : 'text-red-600'}>
-                  {apiAvailable ? 'Yes' : 'No'}
+                  {apiAvailable ? t('common.yes') : t('common.no')}
                 </div>
               </div>
             </div>
