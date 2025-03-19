@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Activity, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { API_URL } from '@/lib/config';
 import useAppTranslation from '@/hooks/useTranslationWrapper';
@@ -149,25 +149,17 @@ export function Footer() {
           
           <Link 
             href="/health-status" 
-            className="flex items-center gap-2 text-sm"
+            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
           >
+            <span>v{displayHealthStatus?.version || '0.0.0'}</span>
             {isLoading ? (
-              <div className="h-4 w-4 rounded-full bg-gray-300 animate-pulse"></div>
+              <div className="h-3 w-3 rounded-full bg-gray-300 animate-pulse"></div>
             ) : (
-              displayHealthStatus?.status === 'healthy' ? (
-                <Activity className="h-4 w-4 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-              )
+              <div className={cn(
+                "h-3 w-3 rounded-full",
+                displayHealthStatus?.status === 'healthy' ? "bg-green-500" : "bg-red-500"
+              )}></div>
             )}
-            <span className={cn(
-              "font-medium",
-              isLoading ? "text-gray-500" : 
-                displayHealthStatus?.status === 'healthy' ? "text-green-600" : "text-red-600"
-            )}>
-              {isLoading ? t('messages.loading') : 
-                displayHealthStatus?.status === 'healthy' ? t('health.systemHealthy') : t('health.systemIssues')}
-            </span>
           </Link>
         </div>
       </footer>
