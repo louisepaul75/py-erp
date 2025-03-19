@@ -50,7 +50,8 @@ RUN pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 # Copy frontend files first and build React
 COPY frontend-react/package*.json /app/frontend-react/
 WORKDIR /app/frontend-react
-RUN npm install
+RUN npm install && \
+    npm install --save-dev jest-junit
 
 # Copy the rest of the frontend code
 COPY frontend-react/ /app/frontend-react/

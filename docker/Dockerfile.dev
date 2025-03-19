@@ -61,7 +61,7 @@ COPY frontend-react/package*.json /app/frontend-react/
 WORKDIR /app/frontend-react
 RUN npm install && \
     npm install --save-dev autoprefixer postcss tailwindcss && \
-    npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom @babel/preset-env @babel/preset-react @babel/preset-typescript jest-transform-stub identity-obj-proxy ts-jest
+    npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom @babel/preset-env @babel/preset-react @babel/preset-typescript jest-transform-stub identity-obj-proxy ts-jest jest-junit
 
 # Copy React frontend source files
 COPY frontend-react/ /app/frontend-react/

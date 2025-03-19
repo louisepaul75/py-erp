@@ -153,7 +153,7 @@ export function Footer() {
           >
             <span>v{displayHealthStatus?.version || '0.0.0'}</span>
             {isLoading ? (
-              <div className="h-3 w-3 rounded-full bg-gray-300 animate-pulse"></div>
+              <div className="h-3 w-3 rounded-full bg-gray-300 animate-pulse" data-testid="loading-indicator"></div>
             ) : (
               <div className={cn(
                 "h-3 w-3 rounded-full",

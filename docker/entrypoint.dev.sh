@@ -50,6 +50,15 @@ fi
 # Create and ensure all required directories exist with proper permissions
 mkdir -p /app/media /app/static /app/data /app/pyerp/static
 
+# Run frontend tests if CI environment variable is set
+if [ "${CI:-false}" = "true" ]; then
+    echo "Running frontend tests in CI mode..."
+    cd /app/frontend-react
+    npm run test:ci
+    echo "Frontend tests completed."
+    cd /app
+fi
+
 # Initialize React frontend dependencies
 if [ -d "/app/frontend-react" ]; then
     echo "Initializing React frontend dependencies..."
