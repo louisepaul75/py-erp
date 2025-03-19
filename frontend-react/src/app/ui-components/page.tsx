@@ -55,9 +55,9 @@ import {
   TableHead,
   TableCell,
   StatusBadge,
-  themeColors,
   Badge
 } from '@/components/ui';
+import { themeColors } from '@/lib/theme-config';
 
 export default function UIComponentsPage() {
   const [activeTab, setActiveTab] = useState('buttons');
@@ -65,8 +65,8 @@ export default function UIComponentsPage() {
   return (
     <div className="container mx-auto py-20 px-4 md:px-6">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2 text-amber-500">UI Components / Style Guide</h1>
-        <p className="text-gray-400 mb-8">A collection of UI components for the pyERP system</p>
+        <h1 className="text-3xl font-bold mb-2 text-primary">UI Components / Style Guide</h1>
+        <p className="text-muted-foreground mb-8">A collection of UI components for the pyERP system</p>
 
         <Tabs defaultValue="buttons" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-8">
@@ -188,7 +188,7 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium">Other Form Controls</h3>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Select</label>
-                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
+                      <select className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:border-ring focus:outline-none">
                         <option value="option1">Option 1</option>
                         <option value="option2">Option 2</option>
                         <option value="option3">Option 3</option>
@@ -197,7 +197,7 @@ export default function UIComponentsPage() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Textarea</label>
                       <textarea 
-                        className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none" 
+                        className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:border-ring focus:outline-none" 
                         placeholder="Enter multiple lines of text..."
                         rows={3}
                       />
@@ -206,7 +206,7 @@ export default function UIComponentsPage() {
                       <input 
                         type="checkbox" 
                         id="checkbox" 
-                        className="h-4 w-4 rounded border-amber-800/35 text-amber-600 focus:ring-orange-500" 
+                        className="h-4 w-4 rounded border-border text-primary focus:ring-ring" 
                       />
                       <label htmlFor="checkbox" className="text-sm font-medium">Checkbox</label>
                     </div>
@@ -968,35 +968,35 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium mb-4">Primary Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-600 mr-4"></div>
+                        <div className="w-16 h-16 rounded-md bg-primary mr-4"></div>
                         <div>
-                          <p className="font-medium">Amber 600</p>
-                          <p className="text-sm text-gray-400">Primary</p>
-                          <p className="text-xs text-gray-500">{themeColors.amber500}</p>
+                          <p className="font-medium">Primary</p>
+                          <p className="text-sm text-muted-foreground">Primary Color</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.primary}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-700 mr-4"></div>
+                        <div className="w-16 h-16 rounded-md bg-primary/80 mr-4"></div>
                         <div>
-                          <p className="font-medium">Amber 700</p>
-                          <p className="text-sm text-gray-400">Primary Hover</p>
-                          <p className="text-xs text-gray-500">{themeColors.amber600}</p>
+                          <p className="font-medium">Primary (80%)</p>
+                          <p className="text-sm text-muted-foreground">Primary Hover</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.primaryHover}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-800 mr-4"></div>
+                        <div className="w-16 h-16 rounded-md bg-primary/60 mr-4"></div>
                         <div>
-                          <p className="font-medium">Amber 800</p>
-                          <p className="text-sm text-gray-400">Primary Active</p>
-                          <p className="text-xs text-gray-500">{themeColors.amber700}</p>
+                          <p className="font-medium">Primary (60%)</p>
+                          <p className="text-sm text-muted-foreground">Primary Active</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.primaryActive}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-orange-500 mr-4"></div>
+                        <div className="w-16 h-16 rounded-md bg-ring mr-4"></div>
                         <div>
-                          <p className="font-medium">Orange 500</p>
-                          <p className="text-sm text-gray-400">Focus Border</p>
-                          <p className="text-xs text-gray-500">{themeColors.focusBorder}</p>
+                          <p className="font-medium">Ring</p>
+                          <p className="text-sm text-muted-foreground">Focus Ring</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.ring}</p>
                         </div>
                       </div>
                     </div>
@@ -1006,27 +1006,27 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium mb-4">Background Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 border border-gray-700"></div>
+                        <div className="w-16 h-16 rounded-md bg-background mr-4 border border-border"></div>
                         <div>
-                          <p className="font-medium">Neutral 900</p>
-                          <p className="text-sm text-gray-400">Background</p>
-                          <p className="text-xs text-gray-500">{themeColors.darkBg}</p>
+                          <p className="font-medium">Background</p>
+                          <p className="text-sm text-muted-foreground">Page Background</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.background}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-950/25 mr-4 border border-gray-700"></div>
+                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border"></div>
                         <div>
-                          <p className="font-medium">Amber 950 (25%)</p>
-                          <p className="text-sm text-gray-400">Card Background</p>
-                          <p className="text-xs text-gray-500">{themeColors.cardBg}</p>
+                          <p className="font-medium">Card</p>
+                          <p className="text-sm text-muted-foreground">Card Background</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.card}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-amber-900/25 mr-4 border border-gray-700"></div>
+                        <div className="w-16 h-16 rounded-md bg-muted mr-4 border border-border"></div>
                         <div>
-                          <p className="font-medium">Amber 900 (25%)</p>
-                          <p className="text-sm text-gray-400">Highlight Background</p>
-                          <p className="text-xs text-gray-500">{themeColors.highlightBg}</p>
+                          <p className="font-medium">Muted</p>
+                          <p className="text-sm text-muted-foreground">Muted Background</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.muted}</p>
                         </div>
                       </div>
                     </div>
@@ -1036,33 +1036,33 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium mb-4">Text Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 flex items-center justify-center">
-                          <span className="text-amber-50">Aa</span>
+                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border flex items-center justify-center">
+                          <span className="text-foreground">Aa</span>
                         </div>
                         <div>
-                          <p className="font-medium">Amber 50</p>
-                          <p className="text-sm text-gray-400">Primary Text</p>
-                          <p className="text-xs text-gray-500">{themeColors.lightText}</p>
+                          <p className="font-medium">Foreground</p>
+                          <p className="text-sm text-muted-foreground">Primary Text</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.foreground}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 flex items-center justify-center">
-                          <span className="text-amber-500">Aa</span>
+                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border flex items-center justify-center">
+                          <span className="text-primary">Aa</span>
                         </div>
                         <div>
-                          <p className="font-medium">Amber 500</p>
-                          <p className="text-sm text-gray-400">Accent Text</p>
-                          <p className="text-xs text-gray-500">{themeColors.accentText}</p>
+                          <p className="font-medium">Primary</p>
+                          <p className="text-sm text-muted-foreground">Accent Text</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.primary}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-neutral-900 mr-4 flex items-center justify-center">
-                          <span className="text-amber-200/70">Aa</span>
+                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border flex items-center justify-center">
+                          <span className="text-muted-foreground">Aa</span>
                         </div>
                         <div>
-                          <p className="font-medium">Amber 200 (70%)</p>
-                          <p className="text-sm text-gray-400">Muted Text</p>
-                          <p className="text-xs text-gray-500">{themeColors.mutedText}</p>
+                          <p className="font-medium">Muted</p>
+                          <p className="text-sm text-muted-foreground">Muted Text</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.mutedForeground}</p>
                         </div>
                       </div>
                     </div>
@@ -1072,32 +1072,32 @@ export default function UIComponentsPage() {
                     <h3 className="text-lg font-medium mb-4">Status Colors</h3>
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-transparent mr-4 border-2 border-amber-800/35"></div>
+                        <div className="w-16 h-16 rounded-md bg-transparent mr-4 border-2 border-border"></div>
                         <div>
-                          <p className="font-medium">Amber 800 (35%)</p>
-                          <p className="text-sm text-gray-400">Border</p>
-                          <p className="text-xs text-gray-500">{themeColors.borderColor}</p>
+                          <p className="font-medium">Border</p>
+                          <p className="text-sm text-muted-foreground">Border Color</p>
+                          <p className="text-xs text-muted-foreground">{themeColors.border}</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <StatusBadge status="active" className="mr-4 py-2 px-4">Active</StatusBadge>
                         <div>
                           <p className="font-medium">Green Status</p>
-                          <p className="text-sm text-gray-400">Active state</p>
+                          <p className="text-sm text-muted-foreground">Active state</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <StatusBadge status="pending" className="mr-4 py-2 px-4">Pending</StatusBadge>
                         <div>
                           <p className="font-medium">Yellow Status</p>
-                          <p className="text-sm text-gray-400">Pending state</p>
+                          <p className="text-sm text-muted-foreground">Pending state</p>
                         </div>
                       </div>
                       <div className="flex items-center">
                         <StatusBadge status="inactive" className="mr-4 py-2 px-4">Inactive</StatusBadge>
                         <div>
-                          <p className="font-medium">Red Status</p>
-                          <p className="text-sm text-gray-400">Inactive state</p>
+                          <p className="font-medium">Gray Status</p>
+                          <p className="text-sm text-muted-foreground">Inactive state</p>
                         </div>
                       </div>
                     </div>
@@ -1119,28 +1119,28 @@ export default function UIComponentsPage() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Common Icons</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <User className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <User className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">User</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Home className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Home className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Home</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Settings className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Settings className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Settings</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Search className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Search className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Search</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <ShoppingCart className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <ShoppingCart className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">ShoppingCart</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <FileText className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <FileText className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">FileText</span>
                       </div>
                     </div>
@@ -1151,28 +1151,28 @@ export default function UIComponentsPage() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Action Icons</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Plus className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Plus className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Plus</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Edit className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Edit className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Edit</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Trash className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Trash className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Trash</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Save className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Save className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Save</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Download className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Download className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Download</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Upload className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Upload className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Upload</span>
                       </div>
                     </div>
@@ -1183,28 +1183,28 @@ export default function UIComponentsPage() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Notification Icons</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Bell className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Bell className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Bell</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Mail className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Mail className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Mail</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Calendar className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Calendar className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Calendar</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <Phone className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <Phone className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">Phone</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <CreditCard className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <CreditCard className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">CreditCard</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
-                        <HelpCircle className="h-8 w-8 text-amber-500 mb-2" />
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
+                        <HelpCircle className="h-8 w-8 text-primary mb-2" />
                         <span className="text-xs text-center">HelpCircle</span>
                       </div>
                     </div>
@@ -1215,27 +1215,27 @@ export default function UIComponentsPage() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Status Icons</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
                         <Info className="h-8 w-8 text-blue-500 mb-2" />
                         <span className="text-xs text-center">Info</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
                         <AlertTriangle className="h-8 w-8 text-yellow-500 mb-2" />
                         <span className="text-xs text-center">AlertTriangle</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
                         <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
                         <span className="text-xs text-center">CheckCircle</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
                         <XCircle className="h-8 w-8 text-red-500 mb-2" />
                         <span className="text-xs text-center">XCircle</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
                         <Check className="h-8 w-8 text-green-500 mb-2" />
                         <span className="text-xs text-center">Check</span>
                       </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-amber-950/10 rounded-md">
+                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
                         <X className="h-8 w-8 text-red-500 mb-2" />
                         <span className="text-xs text-center">X</span>
                       </div>
@@ -1255,8 +1255,8 @@ export default function UIComponentsPage() {
                           <Button variant="outline" icon={Trash}>Delete</Button>
                           <Button size="icon" icon={Settings} aria-label="Settings" />
                         </div>
-                        <div className="bg-amber-950/10 p-4 rounded-md">
-                          <pre className="text-xs overflow-x-auto">
+                        <div className="bg-card p-4 rounded-md">
+                          <pre className="text-xs overflow-x-auto text-muted-foreground">
 {`<Button icon={Plus}>Add Item</Button>
 <Button variant="secondary" icon={Edit}>Edit</Button>
 <Button variant="outline" icon={Trash}>Delete</Button>
@@ -1272,8 +1272,8 @@ export default function UIComponentsPage() {
                           <Input icon={Mail} placeholder="Email address..." />
                           <Input icon={User} placeholder="Username..." />
                         </div>
-                        <div className="bg-amber-950/10 p-4 rounded-md">
-                          <pre className="text-xs overflow-x-auto">
+                        <div className="bg-card p-4 rounded-md">
+                          <pre className="text-xs overflow-x-auto text-muted-foreground">
 {`<Input icon={Search} placeholder="Search..." />
 <Input icon={Mail} placeholder="Email address..." />
 <Input icon={User} placeholder="Username..." />`}
@@ -1283,24 +1283,24 @@ export default function UIComponentsPage() {
                     </div>
                   </div>
 
-                  <div className="bg-amber-950/10 p-6 rounded-md">
+                  <div className="bg-card p-6 rounded-md">
                     <h3 className="text-lg font-medium mb-4">How to Use Icons</h3>
                     <p className="text-sm mb-4">
                       This project uses Lucide React for icons. Import the icons you need from the lucide-react package:
                     </p>
-                    <pre className="text-xs bg-amber-950/20 p-4 rounded-md overflow-x-auto mb-4">
+                    <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto mb-4">
 {`import { Search, User, Settings } from 'lucide-react';`}
                     </pre>
                     <p className="text-sm mb-4">
                       You can use icons directly in your components:
                     </p>
-                    <pre className="text-xs bg-amber-950/20 p-4 rounded-md overflow-x-auto mb-4">
-{`<Search className="h-4 w-4 text-amber-500" />`}
+                    <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto mb-4">
+{`<Search className="h-4 w-4 text-primary" />`}
                     </pre>
                     <p className="text-sm">
                       Or use them with our enhanced components that have built-in icon support:
                     </p>
-                    <pre className="text-xs bg-amber-950/20 p-4 rounded-md overflow-x-auto">
+                    <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto">
 {`<Button icon={Plus}>Add Item</Button>
 <Input icon={Search} placeholder="Search..." />
 <CardTitle icon={Settings}>Card Title</CardTitle>`}

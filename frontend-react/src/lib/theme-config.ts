@@ -1,0 +1,124 @@
+import { cn } from './utils';
+
+// Theme colors configuration
+export const themeColors = {
+  // Amber palette
+  amber50: '#fffbeb',
+  amber100: '#fef3c7',
+  amber200: '#fde68a',
+  amber300: '#fcd34d',
+  amber400: '#fbbf24',
+  amber500: '#f59e0b',
+  amber600: '#d97706',
+  amber700: '#b45309',
+  amber800: '#92400e',
+  amber900: '#78350f',
+  amber950: '#451a03',
+
+  // Gray palette
+  gray50: '#f9fafb',
+  gray100: '#f3f4f6',
+  gray200: '#e5e7eb',
+  gray300: '#d1d5db',
+  gray400: '#9ca3af',
+  gray500: '#6b7280',
+  gray600: '#4b5563',
+  gray700: '#374151',
+  gray800: '#1f2937',
+  gray900: '#111827',
+  gray950: '#030712',
+
+  // Status colors
+  success: '#22c55e',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  info: '#3b82f6'
+} as const;
+
+// Component styles configuration
+export const componentStyles = {
+  // Button styles
+  button: {
+    base: 'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background',
+    variants: {
+      primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+      outline: 'border border-input hover:bg-accent hover:text-accent-foreground',
+      ghost: 'hover:bg-accent hover:text-accent-foreground',
+      link: 'underline-offset-4 hover:underline text-primary',
+      destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+    },
+    sizes: {
+      default: 'h-10 py-2 px-4',
+      sm: 'h-9 px-3',
+      lg: 'h-11 px-8',
+      icon: 'h-10 w-10',
+    },
+  },
+
+  // Card styles
+  card: {
+    default: 'bg-card shadow-sm border border-border',
+    highlighted: 'bg-muted shadow-md border border-primary/20',
+    header: 'bg-muted border-b border-border',
+    footer: 'bg-muted border-t border-border'
+  },
+
+  // Input styles
+  input: {
+    default: 'flex h-10 w-auto rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+    withIcon: 'flex h-10 w-auto rounded-md border border-gray-200 bg-white pl-8 pr-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+    error: 'border-red-500 focus-visible:ring-red-500',
+    label: 'text-sm font-medium block',
+    container: 'space-y-2',
+    errorText: 'text-xs text-red-500 mt-1'
+  },
+
+  // Table styles
+  table: {
+    container: 'w-full border-collapse',
+    header: 'bg-gray-50 border-b border-gray-200',
+    headerCell: 'h-12 px-4 text-left align-middle font-medium text-gray-500 [&:has([role=checkbox])]:pr-0',
+    row: 'border-b border-gray-200 transition-colors hover:bg-gray-50/50',
+    cell: 'p-4 align-middle [&:has([role=checkbox])]:pr-0',
+    footer: 'bg-gray-50 border-t border-gray-200'
+  },
+
+  // Status badge styles
+  statusBadge: {
+    base: 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+    active: 'bg-green-100 text-green-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    inactive: 'bg-gray-100 text-gray-800',
+    error: 'bg-red-100 text-red-800'
+  },
+
+  // Filter styles
+  filter: {
+    container: 'flex flex-wrap items-center gap-2',
+    tag: 'flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500',
+    clearButton: 'h-auto p-0 text-xs text-amber-500 hover:text-amber-600'
+  },
+
+  // Icon styles
+  icon: {
+    base: 'h-4 w-4',
+    sm: 'h-3 w-3',
+    lg: 'h-5 w-5',
+    xl: 'h-6 w-6',
+    primary: 'text-amber-500',
+    secondary: 'text-gray-500',
+    success: 'text-green-500',
+    warning: 'text-yellow-500',
+    error: 'text-red-500',
+    info: 'text-blue-500'
+  },
+
+  // Separator styles
+  separator: {
+    horizontal: 'h-[1px] w-full bg-gray-200',
+    vertical: 'h-full w-[1px] bg-gray-200'
+  }
+} as const;
+
+export { cn }; 

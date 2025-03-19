@@ -59,7 +59,7 @@ interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
 
 export function CardTitle({ icon: Icon, className, children, ...props }: CardTitleProps) {
   return (
-    <ShadcnCardTitle className={cn("text-amber-500 flex items-center", className || '')} {...props}>
+    <ShadcnCardTitle className={cn("text-primary flex items-center", className || '')} {...props}>
       {Icon && <Icon className="mr-2 h-5 w-5" />}
       {children}
     </ShadcnCardTitle>

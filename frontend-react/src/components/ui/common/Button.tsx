@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Button as ShadcnButton } from '@/components/ui/button';
-import { componentStyles, cn } from '@/lib/theme-config';
+import { cn } from '@/lib/utils';
+import { componentStyles } from '@/lib/theme-config';
 import { LucideIcon } from 'lucide-react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'destructive';
@@ -44,15 +45,19 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  // Get the appropriate style based on variant
-  const variantStyle = componentStyles.button[variant as keyof typeof componentStyles.button] || '';
+  // Get the appropriate styles
+  const baseStyle = componentStyles.button.base;
+  const variantStyle = componentStyles.button.variants[variant];
+  const sizeStyle = componentStyles.button.sizes[size];
   
   return (
     <ShadcnButton
       variant={variant === 'primary' ? 'default' : variant}
       size={size}
       className={cn(
+        baseStyle,
         variantStyle,
+        sizeStyle,
         fullWidth ? 'w-full' : '',
         className || ''
       )}

@@ -149,8 +149,8 @@ export function Navbar() {
                   onClick={toggleDropdown}
                 >
                   <span className="sr-only">Open user menu</span>
+                  <span className="mr-2 text-gray-700 dark:text-gray-200">{user?.username || 'Guest'}</span>
                   <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
-                  <span className="ml-2 text-gray-700 dark:text-gray-200">{user?.username || 'Guest'}</span>
                   <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
               </div>
