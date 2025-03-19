@@ -71,6 +71,11 @@
 - Next.js 14.2.24 - React framework
 - TypeScript 5.3.3 - Type-safe JavaScript
 
+### State Management
+- React Query (TanStack Query) 5.69.0 - Server state management and data fetching
+- React Context API - UI state management for components
+- React useState - Local component state management
+
 ### Internationalization
 - react-i18next 14.1.0 - React UI translation framework with useTranslation hook
 - i18next 23.10.1 - Core i18n system
