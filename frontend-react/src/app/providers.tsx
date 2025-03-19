@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { I18nextProvider } from 'react-i18next';
@@ -16,11 +16,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       },
     },
   }));
-
-  // Ensure i18n is initialized on the client side
-  useEffect(() => {
-    // i18n is already initialized in the i18n.ts file
-  }, []);
 
   return (
     <I18nextProvider i18n={i18n}>
