@@ -19,12 +19,7 @@ import useTheme from '@/hooks/useTheme';
 import LanguageSelector from './LanguageSelector';
 import { useLogout } from '@/lib/auth/authHooks';
 import useAppTranslation from '@/hooks/useTranslationWrapper';
-
-// Mock user data - replace with actual auth implementation
-const mockUser = {
-  name: 'John Doe',
-  isAdmin: true
-};
+import { useIsAuthenticated } from '@/lib/auth/authHooks';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +27,7 @@ export function Navbar() {
   const [testMenuOpen, setTestMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { t } = useAppTranslation();
-  const [user, setUser] = useState(mockUser);
+  const { user } = useIsAuthenticated();
   const logout = useLogout();
 
   // Toggle dropdown
@@ -155,7 +150,7 @@ export function Navbar() {
                 >
                   <span className="sr-only">Open user menu</span>
                   <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
-                  <span className="ml-2 text-gray-700 dark:text-gray-200">{user.name}</span>
+                  <span className="ml-2 text-gray-700 dark:text-gray-200">{user?.username || 'Guest'}</span>
                   <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
               </div>
@@ -182,7 +177,7 @@ export function Navbar() {
 
                   <DropdownItem href="/settings">
                     <Settings className="mr-3 h-5 w-5" />
-                    {user.isAdmin ? t('navigation.settings') : t('navigation.settings')}
+                    {user?.isAdmin ? t('navigation.settings') : t('navigation.settings')}
                   </DropdownItem>
 
                   <DropdownItem onClick={handleLogout}>
@@ -238,7 +233,7 @@ export function Navbar() {
                 <User className="h-10 w-10 rounded-full text-gray-600 dark:text-gray-300" />
               </div>
               <div className="ml-3">
-                <div className="text-base font-medium text-gray-800 dark:text-white">{user.name}</div>
+                <div className="text-base font-medium text-gray-800 dark:text-white">{user?.username || 'Guest'}</div>
               </div>
             </div>
             <div className="mt-3 px-2 space-y-1">
@@ -257,7 +252,7 @@ export function Navbar() {
               
               <MobileDropdownItem href="/settings">
                 <Settings className="mr-3 h-5 w-5" />
-                {user.isAdmin ? t('navigation.settings') : t('navigation.settings')}
+                {user?.isAdmin ? t('navigation.settings') : t('navigation.settings')}
               </MobileDropdownItem>
               
               <MobileDropdownItem onClick={handleLogout}>

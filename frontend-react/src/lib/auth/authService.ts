@@ -60,7 +60,7 @@ export const authService = {
       }
       
       // Benutzerdetails von API abrufen
-      return await api.get('users/me/').json<User>();
+      return await api.get('profile/').json<User>();
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;
@@ -137,13 +137,13 @@ export const authService = {
   },
   
   updateProfile: async (userData: Partial<User>): Promise<User> => {
-    return await api.patch('users/me/', {
+    return await api.patch('profile/', {
       json: userData
     }).json<User>();
   },
   
   changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
-    await api.post('users/me/change-password/', {
+    await api.post('profile/change-password/', {
       json: { old_password: oldPassword, new_password: newPassword }
     });
   }
