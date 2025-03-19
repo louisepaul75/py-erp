@@ -3,13 +3,13 @@ from pyerp.business_modules.inventory.models import StorageLocation
 
 
 class Command(BaseCommand):
-    help = 'Check the StorageLocation table in the database'
+    help = "Check the StorageLocation table in the database"
 
     def handle(self, *args, **options):
         # Count total records
         total_count = StorageLocation.objects.count()
         self.stdout.write(f"Total StorageLocation records: {total_count}")
-        
+
         # Display a sample of records
         if total_count > 0:
             self.stdout.write("\nSample records:")
@@ -21,12 +21,10 @@ class Command(BaseCommand):
                     f"Name: {loc.name}"
                 )
         else:
-            self.stdout.write(
-                "\nNo records found in the StorageLocation table."
-            )
-        
+            self.stdout.write("\nNo records found in the StorageLocation table.")
+
         # Check for records with specific legacy IDs
-        sample_legacy_ids = ['201', '199', '170', '1511', '1641']
+        sample_legacy_ids = ["201", "199", "170", "1511", "1641"]
         self.stdout.write("\nChecking for specific legacy IDs:")
         for legacy_id in sample_legacy_ids:
             locations = StorageLocation.objects.filter(legacy_id=legacy_id)
@@ -44,19 +42,20 @@ class Command(BaseCommand):
                     )
             else:
                 self.stdout.write(f"Legacy ID {legacy_id}: No records found")
-        
+
         # Check for potential duplicates (same unique constraint fields)
         self.stdout.write("\nChecking for potential duplicate constraints:")
         # Get counts by unique constraint combination
         from django.db.models import Count
+
         duplicates = (
             StorageLocation.objects.values(
-                'country', 'city_building', 'unit', 'compartment', 'shelf'
+                "country", "city_building", "unit", "compartment", "shelf"
             )
-            .annotate(count=Count('id'))
+            .annotate(count=Count("id"))
             .filter(count__gt=1)
         )
-        
+
         if duplicates.exists():
             self.stdout.write(
                 f"Found {duplicates.count()} potentially problematic "
@@ -70,11 +69,11 @@ class Command(BaseCommand):
                 )
                 # Show the specific records
                 matches = StorageLocation.objects.filter(
-                    country=dup['country'],
-                    city_building=dup['city_building'],
-                    unit=dup['unit'],
-                    compartment=dup['compartment'],
-                    shelf=dup['shelf']
+                    country=dup["country"],
+                    city_building=dup["city_building"],
+                    unit=dup["unit"],
+                    compartment=dup["compartment"],
+                    shelf=dup["shelf"],
                 )
                 for match in matches:
                     self.stdout.write(
@@ -82,4 +81,4 @@ class Command(BaseCommand):
                         f"Name: {match.name}"
                     )
         else:
-            self.stdout.write("No duplicate combinations found - all good!") 
+            self.stdout.write("No duplicate combinations found - all good!")

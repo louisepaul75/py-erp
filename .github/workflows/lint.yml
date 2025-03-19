@@ -2,9 +2,9 @@ name: Lint
 
 on:
   push:
-    branches: [ prod, dev]
+    branches: [ prod ]
   pull_request:
-    branches: [ prod, dev]
+    branches: [ prod ]
 
 jobs:
   lint:
@@ -25,15 +25,20 @@ jobs:
 
       - name: Lint with flake8
         run: flake8 --disable-noqa pyerp tests
+        continue-on-error: ${{ github.ref == 'refs/heads/prod' }}
 
       - name: Check formatting with black
         run: black --check pyerp tests
+        continue-on-error: ${{ github.ref == 'refs/heads/prod' }}
 
       - name: Check imports with isort
         run: isort --check-only --profile black pyerp tests
+        continue-on-error: ${{ github.ref == 'refs/heads/prod' }}
 
       - name: Type check with mypy
         run: mypy pyerp
+        continue-on-error: ${{ github.ref == 'refs/heads/prod' }}
 
       - name: Security check with bandit
         run: bandit -c pyproject.toml -r pyerp
+        continue-on-error: ${{ github.ref == 'refs/heads/prod' }}

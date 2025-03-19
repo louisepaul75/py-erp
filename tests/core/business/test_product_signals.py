@@ -17,9 +17,7 @@ class TestVariantProductSignals(TestCase):
         """Set up the test environment"""
         # Create a real parent product instance instead of a mock
         self.parent_product = ParentProduct.objects.create(
-            sku="PARENT-SKU",
-            name="Test Parent Product",
-            legacy_id="12345"
+            sku="PARENT-SKU", name="Test Parent Product", legacy_id="12345"
         )
 
         self.variant = VariantProduct()
@@ -60,7 +58,7 @@ class TestVariantProductSignals(TestCase):
         # Verify SKU wasn't changed
         self.assertEqual(self.variant.sku, "EXISTING-SKU")
 
-    @patch('pyerp.business_modules.products.signals.timezone')
+    @patch("pyerp.business_modules.products.signals.timezone")
     def test_variant_product_pre_save_sets_timestamps(self, mock_timezone):
         """Test that pre_save handler sets timestamps for new instances"""
         # Set up mock timezone
@@ -74,7 +72,7 @@ class TestVariantProductSignals(TestCase):
         self.assertEqual(self.variant.created_at, now)
         self.assertEqual(self.variant.updated_at, now)
 
-    @patch('pyerp.business_modules.products.signals.timezone')
+    @patch("pyerp.business_modules.products.signals.timezone")
     def test_variant_product_pre_save_existing_instance(self, mock_timezone):
         """Test updating only updated_at for existing instances"""
         # Set up mock timezone
@@ -91,7 +89,7 @@ class TestVariantProductSignals(TestCase):
 
         # Verify only updated_at was changed
         self.assertEqual(self.variant.created_at, created_at)  # Unchanged
-        self.assertEqual(self.variant.updated_at, now)  # Updated 
+        self.assertEqual(self.variant.updated_at, now)  # Updated
 
     def test_variant_product_pre_save_no_parent_no_variant(self):
         """Test pre_save handler when neither parent nor variant code is
@@ -120,7 +118,7 @@ class TestVariantProductSignals(TestCase):
         # Verify SKU remains empty
         self.assertEqual(self.variant.sku, "")
 
-    @patch('pyerp.business_modules.products.signals.timezone')
+    @patch("pyerp.business_modules.products.signals.timezone")
     def test_variant_product_pre_save_existing_created_at(self, mock_timezone):
         """Test that pre_save handler preserves existing created_at for new
         instances"""
@@ -150,4 +148,4 @@ class TestVariantProductSignals(TestCase):
         variant_product_pre_save(instance=self.variant)
 
         # Verify SKU remains empty since no parent identifier is available
-        self.assertEqual(self.variant.sku, "") 
+        self.assertEqual(self.variant.sku, "")

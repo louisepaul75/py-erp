@@ -12,20 +12,17 @@ class InventoryModel(models.Model):
     """
     Base model for inventory-related models that don't need legacy IDs.
     """
+
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     legacy_modified = models.DateTimeField(
         null=True,
         blank=True,
-        help_text=_(
-            "Last modification timestamp in legacy system"
-        ),
+        help_text=_("Last modification timestamp in legacy system"),
     )
     is_synchronized = models.BooleanField(
         default=False,
-        help_text=_(
-            "Whether this record is synchronized with the legacy system"
-        ),
+        help_text=_("Whether this record is synchronized with the legacy system"),
     )
 
     class Meta:
@@ -35,10 +32,11 @@ class InventoryModel(models.Model):
 class StorageLocation(SalesModel):
     """
     Storage location model for warehouse management.
-    
+
     This model represents physical storage locations in warehouses,
     mapped from the legacy Stamm_Lagerorte table.
     """
+
     # Legacy system fields
     country = models.CharField(
         max_length=2,
@@ -52,11 +50,15 @@ class StorageLocation(SalesModel):
     )
     sale = models.BooleanField(
         default=False,
-        help_text=_("Whether products in this location are for sale (maps to Abverkauf in legacy system)"),
+        help_text=_(
+            "Whether products in this location are for sale (maps to Abverkauf in legacy system)"
+        ),
     )
     special_spot = models.BooleanField(
         default=False,
-        help_text=_("Whether this is a special storage spot (maps to Sonderlager in legacy system)"),
+        help_text=_(
+            "Whether this is a special storage spot (maps to Sonderlager in legacy system)"
+        ),
     )
     unit = models.CharField(
         max_length=50,
@@ -78,7 +80,7 @@ class StorageLocation(SalesModel):
         blank=True,
         help_text=_("Formatted location code (maps to Lagerort in legacy system)"),
     )
-    
+
     # Additional fields
     name = models.CharField(
         max_length=100,
@@ -97,7 +99,7 @@ class StorageLocation(SalesModel):
         blank=True,
         help_text=_("Maximum capacity of the storage location (number of boxes)"),
     )
-    
+
     class Meta:
         verbose_name = _("Storage Location")
         verbose_name_plural = _("Storage Locations")
@@ -111,7 +113,7 @@ class StorageLocation(SalesModel):
         unique_together = (
             ("country", "city_building", "unit", "compartment", "shelf"),
         )
-    
+
     def __str__(self):
         """Return a string representation of the storage location."""
         if self.location_code:
@@ -123,6 +125,7 @@ class BoxType(InventoryModel):
     """
     Box type model for defining different types of storage boxes.
     """
+
     class BoxColor(models.TextChoices):
         BLUE = "blue", _("Blue")
         YELLOW = "yellow", _("Yellow")
@@ -187,14 +190,16 @@ class BoxType(InventoryModel):
         default="numeric",
         help_text=_("Scheme for naming slots (e.g., numeric, alphabetic)"),
     )
-    
+
     class Meta:
         verbose_name = _("Box Type")
         verbose_name_plural = _("Box Types")
         app_label = "inventory"
         ordering = ["name"]
-        unique_together = (("name", "slot_count", "height", "length", "width", "color"),)
-    
+        unique_together = (
+            ("name", "slot_count", "height", "length", "width", "color"),
+        )
+
     def __str__(self):
         """Return a string representation of the box type."""
         return self.name
@@ -204,19 +209,20 @@ class Box(SalesModel):
     """
     Box model for physical storage containers.
     """
+
     class BoxStatus(models.TextChoices):
         AVAILABLE = "AVAILABLE", _("Available")
         IN_USE = "IN_USE", _("In Use")
         RESERVED = "RESERVED", _("Reserved")
         DAMAGED = "DAMAGED", _("Damaged")
         RETIRED = "RETIRED", _("Retired")
-    
+
     class BoxPurpose(models.TextChoices):
         STORAGE = "STORAGE", _("Storage")
         PICKING = "PICKING", _("Picking")
         TRANSPORT = "TRANSPORT", _("Transport")
         WORKSHOP = "WORKSHOP", _("Workshop")
-    
+
     code = models.CharField(
         max_length=50,
         help_text=_("Unique code for the box"),
@@ -248,7 +254,7 @@ class Box(SalesModel):
         blank=True,
         help_text=_("Additional notes about the box"),
     )
-    
+
     class Meta:
         verbose_name = _("Box")
         verbose_name_plural = _("Boxes")
@@ -258,11 +264,11 @@ class Box(SalesModel):
             models.Index(fields=["code"]),
             models.Index(fields=["status"]),
         ]
-    
+
     def __str__(self):
         """Return a string representation of the box."""
         return f"{self.code} ({self.box_type})"
-    
+
     @property
     def available_slots(self):
         """Return the number of available slots in this box."""
@@ -272,11 +278,12 @@ class Box(SalesModel):
 class BoxSlot(SalesModel):
     """
     Box slot model for individual storage slots within a box.
-    
+
     Each box slot can contain multiple products, allowing for efficient
     use of storage space. The occupied status is updated automatically
     when products are added or removed from the slot.
     """
+
     box = models.ForeignKey(
         Box,
         on_delete=models.CASCADE,
@@ -287,9 +294,7 @@ class BoxSlot(SalesModel):
         max_length=50,
         null=True,
         blank=True,
-        help_text=_(
-            "Unique identifier from legacy system (ID_Lager_Schuetten_Slots)"
-        ),
+        help_text=_("Unique identifier from legacy system (ID_Lager_Schuetten_Slots)"),
     )
     slot_number = models.IntegerField(
         default=1,
@@ -310,16 +315,12 @@ class BoxSlot(SalesModel):
     color_code = models.CharField(
         max_length=20,
         blank=True,
-        help_text=_(
-            "Color code identifier (maps to Einheitenfabe in legacy system)"
-        ),
+        help_text=_("Color code identifier (maps to Einheitenfabe in legacy system)"),
     )
     order_number = models.CharField(
         max_length=50,
         blank=True,
-        help_text=_(
-            "Associated order number (maps to Auftrags_Nr in legacy system)"
-        ),
+        help_text=_("Associated order number (maps to Auftrags_Nr in legacy system)"),
     )
     barcode = models.CharField(
         max_length=100,
@@ -332,66 +333,73 @@ class BoxSlot(SalesModel):
     )
     max_products = models.IntegerField(
         default=100,
-        help_text=_("Maximum number of different products that can be stored in this slot"),
+        help_text=_(
+            "Maximum number of different products that can be stored in this slot"
+        ),
     )
-    
+
     class Meta:
         verbose_name = _("Box Slot")
         verbose_name_plural = _("Box Slots")
         app_label = "inventory"
         ordering = ["box", "slot_code"]
         unique_together = (("box", "slot_code"),)
-    
+
     def __str__(self):
         """Return a string representation of the box slot."""
         return f"{self.box.code}.{self.slot_code}"
-    
+
     def update_occupied_status(self):
         """Update the occupied status based on whether there are products in the slot."""
         has_products = self.box_storage_items.exists()
         if self.occupied != has_products:
             self.occupied = has_products
-            self.save(update_fields=['occupied'])
-    
+            self.save(update_fields=["occupied"])
+
     @property
     def product_count(self):
         """Return the number of different products stored in this slot."""
-        return self.box_storage_items.values('product_storage__product').distinct().count()
-    
+        return (
+            self.box_storage_items.values("product_storage__product").distinct().count()
+        )
+
     @property
     def is_full(self):
         """Return whether the slot has reached its maximum product capacity."""
         return self.product_count >= self.max_products
-    
+
     @property
     def available_space(self):
         """Return the number of additional product types that can be added to this slot."""
         return max(0, self.max_products - self.product_count)
-    
+
     def get_products_summary(self):
         """Return a summary of products stored in this slot."""
-        return self.box_storage_items.values(
-            'product_storage__product__name', 
-            'product_storage__product__sku',
-            'position_in_slot'
-        ).annotate(
-            total_quantity=models.Sum('quantity')
-        ).order_by('product_storage__product__name')
+        return (
+            self.box_storage_items.values(
+                "product_storage__product__name",
+                "product_storage__product__sku",
+                "position_in_slot",
+            )
+            .annotate(total_quantity=models.Sum("quantity"))
+            .order_by("product_storage__product__name")
+        )
 
 
 class ProductStorage(SalesModel):
     """
     Product storage model that maps to the legacy Artikel_Lagerorte table.
-    
+
     This model represents the relationship between products and storage locations,
     tracking inventory quantities at the location level.
     """
+
     class ReservationStatus(models.TextChoices):
         AVAILABLE = "AVAILABLE", _("Available")
         RESERVED = "RESERVED", _("Reserved")
         ALLOCATED = "ALLOCATED", _("Allocated")
         PICKED = "PICKED", _("Picked")
-    
+
     product = models.ForeignKey(
         "products.VariantProduct",
         on_delete=models.PROTECT,
@@ -407,7 +415,9 @@ class ProductStorage(SalesModel):
     )
     quantity = models.IntegerField(
         default=0,
-        help_text=_("Quantity of the product in this location (maps to Bestand in legacy system)"),
+        help_text=_(
+            "Quantity of the product in this location (maps to Bestand in legacy system)"
+        ),
     )
     reservation_status = models.CharField(
         max_length=20,
@@ -420,7 +430,7 @@ class ProductStorage(SalesModel):
         blank=True,
         help_text=_("Reference for the reservation (e.g., order number)"),
     )
-    
+
     class Meta:
         verbose_name = _("Product Storage")
         verbose_name_plural = _("Product Storage")
@@ -430,10 +440,8 @@ class ProductStorage(SalesModel):
             models.Index(fields=["storage_location"]),
             models.Index(fields=["reservation_status"]),
         ]
-        unique_together = [
-            ("product", "storage_location")
-        ]
-    
+        unique_together = [("product", "storage_location")]
+
     def __str__(self):
         """Return a string representation of the product storage."""
         return f"{self.product} ({self.quantity}) @ {self.storage_location}"
@@ -442,15 +450,18 @@ class ProductStorage(SalesModel):
 class BoxStorage(SalesModel):
     """
     Box storage model that maps to the legacy Lager_Schuetten table.
-    
+
     This model represents the physical placement of products in specific boxes,
     tracking the box assignments for products stored in locations.
     """
+
     product_storage = models.ForeignKey(
         ProductStorage,
         on_delete=models.CASCADE,
         related_name="box_assignments",
-        help_text=_("Product storage record (maps to UUID_Artikel_Lagerorte in legacy system)"),
+        help_text=_(
+            "Product storage record (maps to UUID_Artikel_Lagerorte in legacy system)"
+        ),
     )
     box_slot = models.ForeignKey(
         BoxSlot,
@@ -461,7 +472,9 @@ class BoxStorage(SalesModel):
     position_in_slot = models.CharField(
         max_length=20,
         blank=True,
-        help_text=_("Position identifier within the slot (e.g., front, back, left, right)"),
+        help_text=_(
+            "Position identifier within the slot (e.g., front, back, left, right)"
+        ),
     )
     quantity = models.IntegerField(
         default=0,
@@ -481,7 +494,7 @@ class BoxStorage(SalesModel):
         auto_now_add=True,
         help_text=_("Date and time when the product was stored"),
     )
-    
+
     class Meta:
         verbose_name = _("Box Storage")
         verbose_name_plural = _("Box Storage")
@@ -495,13 +508,17 @@ class BoxStorage(SalesModel):
         unique_together = [
             ("box_slot", "product_storage", "batch_number", "position_in_slot")
         ]
-    
+
     def __str__(self):
         """Return a string representation of the box storage."""
         position_info = f" [{self.position_in_slot}]" if self.position_in_slot else ""
-        product_info = f"{self.product_storage.product}" if self.product_storage else "Unknown product"
+        product_info = (
+            f"{self.product_storage.product}"
+            if self.product_storage
+            else "Unknown product"
+        )
         return f"{product_info} ({self.quantity}){position_info} @ {self.box_slot}"
-    
+
     def save(self, *args, **kwargs):
         """Update box slot status when saving box storage."""
         super().save(*args, **kwargs)
@@ -513,6 +530,7 @@ class InventoryMovement(SalesModel):
     """
     Inventory movement model for tracking product movements.
     """
+
     class MovementType(models.TextChoices):
         RECEIPT = "RECEIPT", _("Receipt")
         TRANSFER = "TRANSFER", _("Transfer")
@@ -520,7 +538,7 @@ class InventoryMovement(SalesModel):
         RETURN = "RETURN", _("Return")
         ADJUSTMENT = "ADJUSTMENT", _("Adjustment")
         DISPOSAL = "DISPOSAL", _("Disposal")
-    
+
     product = models.ForeignKey(
         "products.VariantProduct",
         on_delete=models.PROTECT,
@@ -564,7 +582,7 @@ class InventoryMovement(SalesModel):
         auto_now_add=True,
         help_text=_("Date and time of the movement"),
     )
-    
+
     class Meta:
         verbose_name = _("Inventory Movement")
         verbose_name_plural = _("Inventory Movements")
@@ -575,7 +593,7 @@ class InventoryMovement(SalesModel):
             models.Index(fields=["movement_type"]),
             models.Index(fields=["timestamp"]),
         ]
-    
+
     def __str__(self):
         """Return a string representation of the inventory movement."""
-        return f"{self.movement_type}: {self.product} ({self.quantity})" 
+        return f"{self.movement_type}: {self.product} ({self.quantity})"

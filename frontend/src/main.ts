@@ -4,6 +4,7 @@ import App from './App.vue';
 import router from './router';
 import vuetify from './plugins/vuetify';
 import i18n from './plugins/i18n';
+import componentsPlugin from './plugins/components';
 
 // Declare app property on Window interface
 declare global {
@@ -27,6 +28,9 @@ app.use(vuetify);
 
 // Use i18n
 app.use(i18n);
+
+// Use global components
+app.use(componentsPlugin);
 
 // Mount the app to the DOM
 app.mount('#vue-app');

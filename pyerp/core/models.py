@@ -3,7 +3,6 @@ Core models for the ERP system.
 """
 
 import uuid
-import json
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -132,14 +131,12 @@ class UserPreference(models.Model):
     """
     Store user preferences including dashboard configuration.
     """
+
     user = models.OneToOneField(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='preferences'
+        User, on_delete=models.CASCADE, related_name="preferences"
     )
     dashboard_config = models.JSONField(
-        default=dict, 
-        help_text="JSON configuration of user's dashboard layout"
+        default=dict, help_text="JSON configuration of user's dashboard layout"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -152,9 +149,9 @@ class UserPreference(models.Model):
         Returns the user's dashboard module configuration.
         If none exists, returns the default configuration.
         """
-        if not self.dashboard_config or 'modules' not in self.dashboard_config:
+        if not self.dashboard_config or "modules" not in self.dashboard_config:
             return self.get_default_dashboard_modules()
-        return self.dashboard_config.get('modules', [])
+        return self.dashboard_config.get("modules", [])
 
     def get_default_dashboard_modules(self):
         """
@@ -162,37 +159,45 @@ class UserPreference(models.Model):
         """
         return [
             {
-                'id': 'quick-access',
-                'title': 'Schnellzugriff',
-                'type': 'quick-access',
-                'position': 0,
-                'enabled': True,
-                'settings': {}
+                "id": "users-permissions",
+                "title": "Benutzer & Berechtigungen",
+                "type": "users-permissions",
+                "position": 0,
+                "enabled": True,
+                "settings": {"show_stats": True, "show_recent_users": True},
             },
             {
-                'id': 'recent-orders',
-                'title': 'Bestellungen nach Liefertermin',
-                'type': 'recent-orders',
-                'position': 1,
-                'enabled': True,
-                'settings': {}
+                "id": "quick-access",
+                "title": "Schnellzugriff",
+                "type": "quick-access",
+                "position": 1,
+                "enabled": True,
+                "settings": {},
             },
             {
-                'id': 'important-links',
-                'title': 'Wichtige Links',
-                'type': 'important-links',
-                'position': 2,
-                'enabled': True,
-                'settings': {}
+                "id": "recent-orders",
+                "title": "Bestellungen nach Liefertermin",
+                "type": "recent-orders",
+                "position": 2,
+                "enabled": True,
+                "settings": {},
             },
             {
-                'id': 'news-board',
-                'title': 'Interne Pinnwand',
-                'type': 'news-board',
-                'position': 3,
-                'enabled': True,
-                'settings': {}
-            }
+                "id": "important-links",
+                "title": "Wichtige Links",
+                "type": "important-links",
+                "position": 3,
+                "enabled": True,
+                "settings": {},
+            },
+            {
+                "id": "news-board",
+                "title": "Interne Pinnwand",
+                "type": "news-board",
+                "position": 4,
+                "enabled": True,
+                "settings": {},
+            },
         ]
 
     def save_dashboard_config(self, modules):
@@ -201,7 +206,7 @@ class UserPreference(models.Model):
         """
         if not self.dashboard_config:
             self.dashboard_config = {}
-        
-        self.dashboard_config['modules'] = modules
+
+        self.dashboard_config["modules"] = modules
         self.save()
         return self.dashboard_config

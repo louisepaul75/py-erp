@@ -130,7 +130,7 @@
             v-for="(result, componentKey) in filteredHealthResults"
             :key="componentKey"
             :class="['connection-card', result.status]"
-            variant="flat"
+            variant="plain"
           >
             <v-card-item class="connection-card-header">
               <div class="connection-card-title">

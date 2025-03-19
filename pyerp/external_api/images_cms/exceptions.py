@@ -25,4 +25,4 @@ class MissingFieldsError(ImageAPIError):
     """Raised when required fields are missing from the API response."""
 
     def __str__(self):
-        return "The image API response is missing required fields." 
+        return "The image API response is missing required fields."

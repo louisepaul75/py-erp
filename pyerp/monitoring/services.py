@@ -24,12 +24,14 @@ from pyerp.external_api import connection_manager
 # Import the API clients from the new structure
 try:
     from pyerp.external_api.images_cms import ImageAPIClient
+
     IMAGES_CMS_AVAILABLE = True
 except ImportError:
     IMAGES_CMS_AVAILABLE = False
 
 try:
     from pyerp.external_api.legacy_erp import LegacyERPClient
+
     LEGACY_ERP_AVAILABLE = True
 except ImportError:
     LEGACY_ERP_AVAILABLE = False
@@ -53,9 +55,7 @@ def check_database_connection():
     start_time = time.time()
     # Default to error since we're using SQLite fallback
     status = HealthCheckResult.STATUS_ERROR
-    details = (
-        "Using SQLite fallback - primary database connection is not available"
-    )
+    details = "Using SQLite fallback - primary database connection is not available"
 
     try:
         db_engine = connections["default"].vendor
@@ -113,16 +113,12 @@ def check_legacy_erp_connection():
     if not connection_manager.is_connection_enabled("legacy_erp"):
         status = HealthCheckResult.STATUS_WARNING
         details = "Legacy ERP API connection is disabled"
-        logger.info(
-            "Legacy ERP health check: Connection is disabled"
-        )
+        logger.info("Legacy ERP health check: Connection is disabled")
         response_time = 0
     elif not LEGACY_ERP_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Legacy ERP API module is not available"
-        logger.warning(
-            "Legacy ERP health check: Module not available"
-        )
+        logger.warning("Legacy ERP health check: Module not available")
         response_time = 0
     else:
         try:
@@ -135,9 +131,7 @@ def check_legacy_erp_connection():
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Legacy ERP API error: {e!s}"
-            logger.error(
-                f"Legacy ERP health check failed: {e!s}"
-            )
+            logger.error(f"Legacy ERP health check failed: {e!s}")
             response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
@@ -165,24 +159,18 @@ def check_images_cms_connection():
     if not connection_manager.is_connection_enabled("images_cms"):
         status = HealthCheckResult.STATUS_WARNING
         details = "Images CMS API connection is disabled"
-        logger.info(
-            "Images CMS health check: Connection is disabled"
-        )
+        logger.info("Images CMS health check: Connection is disabled")
         response_time = 0
     elif not IMAGES_CMS_AVAILABLE:
         status = HealthCheckResult.STATUS_WARNING
         details = "Images CMS API module is not available"
         response_time = 0
-        logger.warning(
-            "Images CMS health check: Module not available"
-        )
+        logger.warning("Images CMS health check: Module not available")
     else:
         try:
             # Log the API URL being used for debugging
-            api_url = settings.IMAGE_API.get('BASE_URL')
-            logger.debug(
-                f"Images CMS API URL from settings: {api_url}"
-            )
+            api_url = settings.IMAGE_API.get("BASE_URL")
+            logger.debug(f"Images CMS API URL from settings: {api_url}")
 
             # Create client and check connection
             client = ImageAPIClient()
@@ -194,9 +182,7 @@ def check_images_cms_connection():
         except Exception as e:
             status = HealthCheckResult.STATUS_ERROR
             details = f"Images CMS API error: {e!s}"
-            logger.error(
-                f"Images CMS API health check failed: {e!s}"
-            )
+            logger.error(f"Images CMS API health check failed: {e!s}")
             response_time = (time.time() - start_time) * 1000
 
     # Return the health check result without saving to database
@@ -325,11 +311,13 @@ def get_database_statistics():
         with connections["default"].cursor() as cursor:
             if connections["default"].vendor == "postgresql":
                 # Get connection statistics
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT state, count(*) 
                     FROM pg_stat_activity 
                     GROUP BY state
-                """)
+                """
+                )
                 for state, count in cursor.fetchall():
                     if state == "active":
                         stats["connections"]["active"] = count
@@ -341,65 +329,77 @@ def get_database_statistics():
                 )
 
                 # Get transaction statistics
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT 
                         sum(xact_commit) as committed, 
                         sum(xact_rollback) as rolled_back
                     FROM pg_stat_database
-                """)
+                """
+                )
                 result = cursor.fetchone()
                 if result:
                     stats["transactions"]["committed"] = result[0] or 0
                     stats["transactions"]["rolled_back"] = result[1] or 0
 
                 # Get active transactions
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT count(*) 
                     FROM pg_stat_activity 
                     WHERE state = 'active' AND xact_start IS NOT NULL
-                """)
+                """
+                )
                 stats["transactions"]["active"] = cursor.fetchone()[0] or 0
 
                 # Get slow queries count (queries taking more than 1 second)
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT count(*) 
                     FROM pg_stat_activity 
                     WHERE state = 'active' AND query_start IS NOT NULL 
                     AND NOW() - query_start > interval '1 second'
-                """)
+                """
+                )
                 stats["performance"]["slow_queries"] = cursor.fetchone()[0] or 0
 
                 # Get cache hit ratio
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT 
                         sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read) + 0.001) * 100 as hit_ratio
                     FROM pg_statio_user_tables
-                """)
+                """
+                )
                 stats["performance"]["cache_hit_ratio"] = round(
                     cursor.fetchone()[0] or 0, 2
                 )
 
                 # Get database and index size
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT 
                         pg_database_size(current_database()) / (1024*1024) as db_size_mb, 
                         (SELECT sum(pg_relation_size(indexrelid)) / (1024*1024) 
                          FROM pg_index) as index_size_mb
-                """)
+                """
+                )
                 result = cursor.fetchone()
                 if result:
                     stats["disk"]["size_mb"] = round(result[0] or 0, 2)
                     stats["disk"]["index_size_mb"] = round(result[1] or 0, 2)
 
                 # Get query counts by type (since database start)
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT 
                         sum(n_tup_ins) as inserts, 
                         sum(n_tup_upd) as updates, 
                         sum(n_tup_del) as deletes, 
                         sum(n_live_tup + n_dead_tup) as total_rows
                     FROM pg_stat_user_tables
-                """)
+                """
+                )
                 result = cursor.fetchone()
                 if result:
                     stats["queries"]["insert_count"] = result[0] or 0
@@ -407,18 +407,22 @@ def get_database_statistics():
                     stats["queries"]["delete_count"] = result[2] or 0
 
                 # Get select query count (approximation)
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT sum(seq_scan + idx_scan) as selects
                     FROM pg_stat_user_tables
-                """)
+                """
+                )
                 stats["queries"]["select_count"] = cursor.fetchone()[0] or 0
 
                 # Calculate average query time
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT extract(epoch from avg(now() - query_start)) as avg_time
                     FROM pg_stat_activity 
                     WHERE state = 'active' AND query_start IS NOT NULL
-                """)
+                """
+                )
                 avg_time = cursor.fetchone()[0]
                 stats["performance"]["avg_query_time"] = round(
                     avg_time * 1000 if avg_time else 0, 2
@@ -512,85 +516,78 @@ def run_all_health_checks(as_array=True):
 def get_host_resources():
     """
     Collect host resource metrics including CPU, memory, and disk usage.
-    
+
     Returns:
         dict: A dictionary containing host resource metrics
     """
     import psutil
     import platform
     from datetime import datetime
-    
+
     try:
         # Get CPU information
         cpu_percent = psutil.cpu_percent(interval=1)
         cpu_count = psutil.cpu_count()
         cpu_freq = psutil.cpu_freq()
-        
+
         # Get memory information
         memory = psutil.virtual_memory()
-        
+
         # Get disk information
-        disk = psutil.disk_usage('/')
-        
+        disk = psutil.disk_usage("/")
+
         # Get system information
         system_info = {
-            'system': platform.system(),
-            'release': platform.release(),
-            'version': platform.version(),
-            'machine': platform.machine(),
-            'processor': platform.processor(),
-            'hostname': platform.node(),
-            'uptime': int(time.time() - psutil.boot_time())
+            "system": platform.system(),
+            "release": platform.release(),
+            "version": platform.version(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "hostname": platform.node(),
+            "uptime": int(time.time() - psutil.boot_time()),
         }
-        
+
         # Get network information
         net_io = psutil.net_io_counters()
-        
+
         # Format the results
         result = {
-            'timestamp': datetime.now().isoformat(),
-            'cpu': {
-                'percent': cpu_percent,
-                'count': cpu_count,
-                'frequency': {
-                    'current': cpu_freq.current if cpu_freq else None,
-                    'min': (
-                        cpu_freq.min 
-                        if cpu_freq and hasattr(cpu_freq, 'min') 
-                        else None
+            "timestamp": datetime.now().isoformat(),
+            "cpu": {
+                "percent": cpu_percent,
+                "count": cpu_count,
+                "frequency": {
+                    "current": cpu_freq.current if cpu_freq else None,
+                    "min": (
+                        cpu_freq.min if cpu_freq and hasattr(cpu_freq, "min") else None
                     ),
-                    'max': (
-                        cpu_freq.max 
-                        if cpu_freq and hasattr(cpu_freq, 'max') 
-                        else None
-                    )
-                }
+                    "max": (
+                        cpu_freq.max if cpu_freq and hasattr(cpu_freq, "max") else None
+                    ),
+                },
             },
-            'memory': {
-                'total': memory.total,
-                'available': memory.available,
-                'used': memory.used,
-                'percent': memory.percent
+            "memory": {
+                "total": memory.total,
+                "available": memory.available,
+                "used": memory.used,
+                "percent": memory.percent,
             },
-            'disk': {
-                'total': disk.total,
-                'used': disk.used,
-                'free': disk.free,
-                'percent': disk.percent
+            "disk": {
+                "total": disk.total,
+                "used": disk.used,
+                "free": disk.free,
+                "percent": disk.percent,
             },
-            'network': {
-                'bytes_sent': net_io.bytes_sent,
-                'bytes_recv': net_io.bytes_recv,
-                'packets_sent': net_io.packets_sent,
-                'packets_recv': net_io.packets_recv
+            "network": {
+                "bytes_sent": net_io.bytes_sent,
+                "bytes_recv": net_io.bytes_recv,
+                "packets_sent": net_io.packets_sent,
+                "packets_recv": net_io.packets_recv,
             },
-            'system': system_info
+            "system": system_info,
         }
-        
+
         return result
     except Exception as e:
         logger.error(f"Error collecting host resources: {str(e)}")
-        return {
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }
+        return {"error": str(e), "timestamp": datetime.now().isoformat()}

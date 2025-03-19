@@ -53,9 +53,7 @@ MIDDLEWARE = [  # noqa: F405
 
 # Remove ddtrace middleware if present
 MIDDLEWARE = [  # noqa: F405
-    middleware
-    for middleware in MIDDLEWARE
-    if "ddtrace" not in middleware  # noqa: F405
+    middleware for middleware in MIDDLEWARE if "ddtrace" not in middleware  # noqa: F405
 ]
 
 # Remove ddtrace from INSTALLED_APPS if present

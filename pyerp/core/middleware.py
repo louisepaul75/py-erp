@@ -1,165 +1,79 @@
 """
-Middleware for the Core app.
+Middleware components for pyERP.
+
+This module contains custom middleware components used by the pyERP application
+to handle various cross-cutting concerns like authentication, database connections,
+and logging.
 """
 
 import os
-
+import logging
 from django.conf import settings
-from django.db.utils import DatabaseError, InterfaceError, OperationalError
 from django.http import HttpResponse, JsonResponse
-from django.utils.deprecation import MiddlewareMixin
+from django.db.utils import DatabaseError, InterfaceError, OperationalError
 from rest_framework import status
+from django.utils.deprecation import MiddlewareMixin
 
+# Set up logging
 from pyerp.utils.logging import get_logger
-
-# Set up logging using the centralized logging system
 logger = get_logger(__name__)
 
 
 class DatabaseConnectionMiddleware:
     """
-    Middleware to handle database connection errors gracefully.
-
-    This middleware catches database connection errors and returns a friendly
-    response instead of crashing the application. It allows certain endpoints
-    (like health check) to function normally even when database is unavailable.
+    Middleware to handle database connection issues gracefully.
+    
+    This middleware catches database connection exceptions and provides
+    helpful error messages.
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
+        self.db_connection_tested = False
 
     def __call__(self, request):
-        # Special handling for health check endpoint
-        if request.path.endswith("/health/"):
-            try:
-                response = self.get_response(request)
-                # Return if we already have a JsonResponse
-                if isinstance(response, JsonResponse):
-                    return response
+        # Only test connection once per initialization
+        if not self.db_connection_tested:
+            self._test_db_connection()
+            self.db_connection_tested = True
 
-                # Generate our own response for non-JSON responses
-                try:
-                    env_module = settings.DJANGO_SETTINGS_MODULE
-                    env = env_module.split(".")[-1]
-                except AttributeError:
-                    # Handle missing DJANGO_SETTINGS_MODULE
-                    django_settings = os.environ.get(
-                        "DJANGO_SETTINGS_MODULE", "unknown"
-                    )
-                    env = django_settings.split(".")[-1]
+        return self.get_response(request)
 
-                try:
-                    from django.db import connection
+    def _test_db_connection(self):
+        """Test the database connection on startup."""
+        from django.db import connections
+        from django.conf import settings
+        import psycopg2
 
-                    with connection.cursor() as cursor:
-                        cursor.execute("SELECT 1")
-                        cursor.fetchone()
-                    db_status = "ok"
-                    error_msg = None
-                except Exception as e:
-                    db_status = "error"
-                    error_msg = str(e)
-                    msg = "Database health check failed: {}"
-                    logger.error(msg.format(e))
+        # Only check PostgreSQL connections
+        if settings.DATABASES['default']['ENGINE'] != 'django.db.backends.postgresql':
+            return
 
-                status_code = (
-                    status.HTTP_200_OK
-                    if db_status == "ok"
-                    else status.HTTP_503_SERVICE_UNAVAILABLE
-                )
-
-                health_status = "healthy" if db_status == "ok" else "unhealthy"
-                db_conn_status = "connected" if db_status == "ok" else "error"
-                msg = error_msg if error_msg else "Database is connected"
-
-                return JsonResponse(
-                    {
-                        "status": health_status,
-                        "database": {
-                            "status": db_conn_status,
-                            "message": msg,
-                        },
-                        "environment": env,
-                        "version": getattr(settings, "APP_VERSION", "unknown"),
-                    },
-                    status=status_code,
-                )
-            except Exception as e:
-                try:
-                    env_module = settings.DJANGO_SETTINGS_MODULE
-                    env = env_module.split(".")[-1]
-                except AttributeError:
-                    # Handle missing DJANGO_SETTINGS_MODULE
-                    django_settings = os.environ.get(
-                        "DJANGO_SETTINGS_MODULE", "unknown"
-                    )
-                    env = django_settings.split(".")[-1]
-
-                return JsonResponse(
-                    {
-                        "status": "unhealthy",
-                        "database": {
-                            "status": "error",
-                            "message": str(e),
-                        },
-                        "environment": env,
-                        "version": getattr(settings, "APP_VERSION", "unknown"),
-                    },
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-
-        # Handle other paths that don't require database access
-        db_optional_paths = [
-            "/health/",
-            "/api/health/",
-            "/admin/login/",
-            "/login/",
-            "/static/",
-            "/media/",
-            "/staticfiles/",
-            "/assets/",
-            "/favicon.ico",
-            "/robots.txt",
-            "/manifest.json",
-            "/service-worker.js",
-            "/.well-known/",
-            "/sitemap.xml",
-            "/monitoring/health-check/public/",
-            "/monitoring/health-checks/",
-        ]
-
-        # Check for static file extensions that don't need database access
-        static_extensions = [
-            '.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg',
-            '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map'
-        ]
-        
-        # Check if path is optional or has a static extension
-        is_optional = any(
-            request.path.startswith(path) for path in db_optional_paths
-        )
-        has_static_extension = any(
-            request.path.endswith(ext) for ext in static_extensions
-        )
-        
-        if is_optional or has_static_extension:
-            return self.get_response(request)
-
-        # Handle database errors for all other paths
         try:
-            return self.get_response(request)
-        except (DatabaseError, InterfaceError, OperationalError) as e:
-            msg = "Database error: {}"
-            logger.error(msg.format(e))
-            if request.path.startswith("/api/"):
-                return JsonResponse(
-                    {"error": "Database connection error"},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-            return HttpResponse(
-                "Database connection error",
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            # Attempt to connect to PostgreSQL
+            db_settings = settings.DATABASES['default']
+            print(f"Attempting to connect to PostgreSQL at {db_settings['HOST']}:{db_settings['PORT']}")
+            
+            # Get password from environment variable if not set in settings
+            password = db_settings['PASSWORD'] or os.environ.get('DB_PASSWORD', '')
+            
+            # Test connection directly with psycopg2 for clearer error messages
+            conn = psycopg2.connect(
+                dbname=db_settings['NAME'],
+                user=db_settings['USER'],
+                password=password,
+                host=db_settings['HOST'],
+                port=db_settings['PORT'],
+                connect_timeout=5
             )
+            conn.close()
+            
+            # If we got here, connection succeeded
+            print("PostgreSQL connection successful!")
+            
+        except Exception as e:
+            print(f"ERROR: Could not connect to PostgreSQL: {str(e)}")
+            logger.error(f"Database connection error: {str(e)}")
 
 
 class AuthExemptMiddleware(MiddlewareMixin):
@@ -202,8 +116,6 @@ class AuthExemptMiddleware(MiddlewareMixin):
 
             # Set the anonymous user on the request
             request.user = AnonymousUser()
-
-    # Always return None to continue processing
 
     def process_response(self, request, response):
         is_exempt = getattr(request, "_auth_exempt", False)

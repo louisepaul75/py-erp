@@ -107,5 +107,57 @@ export default {
       completed: 'Dokončeno',
       cancelled: 'Zrušeno'
     }
+  },
+  sales: {
+    records: {
+      title: 'Prodejní doklady',
+      noRecords: 'Nebyly nalezeny žádné prodejní doklady',
+      loading: 'Načítání prodejních dokladů...',
+      error: 'Chyba při načítání prodejních dokladů',
+      headers: {
+        recordNumber: 'Číslo dokladu',
+        date: 'Datum',
+        type: 'Typ',
+        customer: 'Zákazník',
+        total: 'Celkem',
+        paymentStatus: 'Stav platby',
+        actions: 'Akce'
+      },
+      types: {
+        INVOICE: 'Faktura',
+        PROPOSAL: 'Nabídka',
+        DELIVERY_NOTE: 'Dodací list',
+        CREDIT_NOTE: 'Dobropis',
+        ORDER_CONFIRMATION: 'Potvrzení objednávky'
+      },
+      paymentStatus: {
+        PAID: 'Zaplaceno',
+        PENDING: 'Čeká na platbu',
+        OVERDUE: 'Po splatnosti',
+        CANCELLED: 'Stornováno'
+      },
+      itemsDialog: {
+        title: 'Položky dokladu',
+        noItems: 'Pro tento doklad nebyly nalezeny žádné položky',
+        headers: {
+          position: 'Pozice',
+          description: 'Popis',
+          quantity: 'Množství',
+          unitPrice: 'Jednotková cena',
+          taxAmount: 'DPH',
+          subtotal: 'Mezisoučet',
+          total: 'Celkem',
+          status: 'Stav'
+        },
+        fulfillmentStatus: {
+          FULFILLED: 'Splněno',
+          PARTIAL: 'Částečně splněno',
+          PENDING: 'Čeká na vyřízení',
+          CANCELLED: 'Stornováno'
+        },
+        close: 'Zavřít'
+      },
+      viewDetails: 'Zobrazit detail'
+    }
   }
 };

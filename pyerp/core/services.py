@@ -8,7 +8,7 @@ from pyerp.utils.logging import get_category_logger
 from .models import AuditLog
 
 # Use category logger for security-related logs
-logger = get_category_logger('security')
+logger = get_category_logger("security")
 
 
 class AuditService:

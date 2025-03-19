@@ -1,28 +1,74 @@
 from rest_framework import serializers
-from .models import Customer, Address
+from .models import Customer, Address, SalesRecord, SalesRecordItem
 
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = Address
-        fields = [
-            'id', 'is_primary', 'salutation', 'first_name', 'last_name',
-            'company_name', 'street', 'country', 'postal_code', 'city',
-            'phone', 'fax', 'email', 'contact_person', 'formal_salutation'
-        ]
+        fields = "__all__"
 
 
 class CustomerSerializer(serializers.ModelSerializer):
-    addresses = AddressSerializer(many=True, read_only=True)
-    
     class Meta:
         model = Customer
+        fields = "__all__"
+
+
+class SalesRecordItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalesRecordItem
         fields = [
-            'id', 'customer_number', 'legacy_address_number', 'customer_group',
-            'delivery_block', 'price_group', 'vat_id', 'payment_method',
-            'shipping_method', 'credit_limit', 'discount_percentage',
-            'payment_terms_discount_days', 'payment_terms_net_days',
-            'notes', 'addresses'
+            "id",
+            "legacy_id",
+            "sales_record",
+            "position",
+            "legacy_sku",
+            "description",
+            "quantity",
+            "unit_price",
+            "discount_percentage",
+            "tax_rate",
+            "tax_amount",
+            "line_subtotal",
+            "line_total",
+            "item_type",
+            "notes",
+            "fulfillment_status",
+            "fulfilled_quantity",
+            "product",
+        ]
+
+
+class SalesRecordSerializer(serializers.ModelSerializer):
+    line_items = SalesRecordItemSerializer(many=True, read_only=True)
+    customer_name = serializers.CharField(source="customer.name", read_only=True)
+
+    class Meta:
+        model = SalesRecord
+        fields = [
+            "id",
+            "legacy_id",
+            "record_number",
+            "record_date",
+            "record_type",
+            "customer",
+            "customer_name",
+            "subtotal",
+            "tax_amount",
+            "shipping_cost",
+            "handling_fee",
+            "total_amount",
+            "payment_status",
+            "payment_date",
+            "currency",
+            "tax_type",
+            "notes",
+            "payment_terms",
+            "payment_method",
+            "shipping_method",
+            "shipping_address",
+            "billing_address",
+            "line_items",
         ]
 
 

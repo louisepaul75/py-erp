@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     """Set up inventory sync mapping."""
 
-    help = 'Set up sync mapping for inventory components'
+    help = "Set up sync mapping for inventory components"
 
     def handle(self, *args, **options):
         """Execute the command."""
@@ -24,7 +24,11 @@ class Command(BaseCommand):
 
         # Load sync configuration
         config_path = (
-            Path(settings.BASE_DIR).parent / 'pyerp' / 'sync' / 'config' / 'inventory_sync.yaml'
+            Path(settings.BASE_DIR).parent
+            / "pyerp"
+            / "sync"
+            / "config"
+            / "inventory_sync.yaml"
         )
         try:
             with open(config_path) as f:
@@ -35,44 +39,44 @@ class Command(BaseCommand):
 
         # Process each component in the configuration
         for component_key, component_config in config.items():
-            if component_key.startswith('_'):
+            if component_key.startswith("_"):
                 # Skip metadata entries
                 continue
-                
+
             self.stdout.write(f"\nSetting up {component_key} sync...")
             self._setup_component_sync(component_key, component_config)
-            
+
         self.stdout.write(
             self.style.SUCCESS("Inventory sync mapping setup completed successfully")
         )
 
     def _setup_component_sync(self, component_key: str, config: dict) -> None:
         """Set up sync mapping for a component.
-        
+
         Args:
             component_key: Key identifying the component
             config: Configuration dictionary for the component
         """
         # Create or update source
-        source_name = config.get('name', f'{component_key}_sync')
-        source_config = config.get('source', {}).get('config', {})
-        source_type = config.get('source', {}).get('type', 'legacy_api')
-        
+        source_name = config.get("name", f"{component_key}_sync")
+        source_config = config.get("source", {}).get("config", {})
+        source_type = config.get("source", {}).get("type", "legacy_api")
+
         # Add source type to config
-        source_config['type'] = source_type
-        
+        source_config["type"] = source_type
+
         # Add extractor class to config if present
-        extractor_class = config.get('source', {}).get('extractor_class')
+        extractor_class = config.get("source", {}).get("extractor_class")
         if extractor_class:
-            source_config['extractor_class'] = extractor_class
-        
+            source_config["extractor_class"] = extractor_class
+
         source, created = SyncSource.objects.update_or_create(
             name=source_name,
             defaults={
-                'description': config.get('description', ''),
-                'config': source_config,
-                'active': True,
-            }
+                "description": config.get("description", ""),
+                "config": source_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync source: {source}")
@@ -80,23 +84,23 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync source: {source}")
 
         # Create or update target
-        target_config = config.get('loader', {}).get('config', {})
-        app_name = target_config.get('app_name', 'inventory')
-        model_name = target_config.get('model_name', component_key.title())
+        target_config = config.get("loader", {}).get("config", {})
+        app_name = target_config.get("app_name", "inventory")
+        model_name = target_config.get("model_name", component_key.title())
         target_name = f"{app_name}.{model_name}"
-        
+
         # Add loader class to target config if present
-        loader_class = config.get('loader', {}).get('class')
+        loader_class = config.get("loader", {}).get("class")
         if loader_class:
-            target_config['loader_class'] = loader_class
-        
+            target_config["loader_class"] = loader_class
+
         target, created = SyncTarget.objects.update_or_create(
             name=target_name,
             defaults={
-                'description': f"Target for {source_name}",
-                'config': target_config,
-                'active': True,
-            }
+                "description": f"Target for {source_name}",
+                "config": target_config,
+                "active": True,
+            },
         )
         if created:
             self.stdout.write(f"Created sync target: {target}")
@@ -104,31 +108,31 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync target: {target}")
 
         # Create or update mapping
-        transformer_config = config.get('transformer', {})
-        
+        transformer_config = config.get("transformer", {})
+
         # Add transformer class to transformation section
-        transformer_class = transformer_config.get('class')
+        transformer_class = transformer_config.get("class")
         if transformer_class:
-            transformer_config['transformer_class'] = transformer_class
-        
+            transformer_config["transformer_class"] = transformer_class
+
         mapping_config = {
-            'transformation': transformer_config,
-            'scheduling': config.get('schedule', {}),
-            'incremental': config.get('incremental', {}),
-            'dependencies': config.get('dependencies', []),
+            "transformation": transformer_config,
+            "scheduling": config.get("schedule", {}),
+            "incremental": config.get("incremental", {}),
+            "dependencies": config.get("dependencies", []),
         }
-        
+
         mapping, created = SyncMapping.objects.update_or_create(
             source=source,
             target=target,
             entity_type=component_key,
             defaults={
-                'mapping_config': mapping_config,
-                'active': True,
-            }
+                "mapping_config": mapping_config,
+                "active": True,
+            },
         )
-        
+
         if created:
             self.stdout.write(f"Created sync mapping for {component_key}: {mapping}")
         else:
-            self.stdout.write(f"Updated sync mapping for {component_key}: {mapping}") 
+            self.stdout.write(f"Updated sync mapping for {component_key}: {mapping}")

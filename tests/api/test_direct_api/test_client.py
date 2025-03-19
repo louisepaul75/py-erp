@@ -73,10 +73,12 @@ class TestLegacyERPClient(unittest.TestCase):
     def test_fetch_table_pagination(self, mock_fetch_table):
         """Test table fetch with pagination."""
         # Setup first response
-        first_df = pd.DataFrame([
-            {"__KEY": "key1", "UID": "uid1", "Bezeichnung": "Item 1"},
-            {"__KEY": "key2", "UID": "uid2", "Bezeichnung": "Item 2"},
-        ])
+        first_df = pd.DataFrame(
+            [
+                {"__KEY": "key1", "UID": "uid1", "Bezeichnung": "Item 1"},
+                {"__KEY": "key2", "UID": "uid2", "Bezeichnung": "Item 2"},
+            ]
+        )
 
         # Configure mock to return the same response (no pagination)
         mock_fetch_table.return_value = first_df
@@ -86,7 +88,9 @@ class TestLegacyERPClient(unittest.TestCase):
 
         # Verify the result
         self.assertIsInstance(result, pd.DataFrame)
-        self.assertEqual(len(result), 2)  # Should have 2 records as pagination is not implemented
+        self.assertEqual(
+            len(result), 2
+        )  # Should have 2 records as pagination is not implemented
         self.assertEqual(result.iloc[0]["Bezeichnung"], "Item 1")
 
         # Verify request was made once
@@ -106,7 +110,7 @@ class TestLegacyERPClient(unittest.TestCase):
 
     def test_check_connection(self):
         """Test connection check functionality."""
-        with patch.object(self.client, 'validate_session') as mock_validate:
+        with patch.object(self.client, "validate_session") as mock_validate:
             # Test successful connection
             mock_validate.return_value = True
             self.assertTrue(self.client.check_connection())

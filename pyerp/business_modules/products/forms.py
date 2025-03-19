@@ -2,13 +2,15 @@
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from django.contrib.contenttypes.models import ContentType
 
-from .models import (
+from pyerp.business_modules.products.models import (
     ParentProduct,
     ProductCategory,
     UnifiedProduct,
     VariantProduct,
 )
+from pyerp.business_modules.products.tag_models import Tag, M2MOverride
 
 
 class ProductCategoryForm(forms.ModelForm):
@@ -79,7 +81,7 @@ class ParentProductForm(forms.ModelForm):
         model = ParentProduct
         fields = [
             "sku",
-            "base_sku",
+            "legacy_base_sku",
             "name",
             "is_active",
         ]
@@ -201,3 +203,59 @@ class ProductSearchForm(forms.Form):
             )
 
         return cleaned_data
+
+
+class TagInheritanceForm(forms.ModelForm):
+    """
+    Form for managing variant product tags and inheritance settings.
+    """
+    inherit_tags = forms.BooleanField(
+        label=_("Inherit tags from parent"),
+        required=False,
+        help_text=_("When enabled, this variant will display tags from its parent product in addition to its own tags.")
+    )
+    
+    class Meta:
+        model = VariantProduct
+        fields = ['tags', 'inherit_tags']
+        widgets = {
+            'tags': forms.CheckboxSelectMultiple(),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance')
+        initial = kwargs.get('initial', {})
+        
+        # If we have an instance, populate the inherit_tags field
+        if instance and instance.id:
+            content_type = ContentType.objects.get_for_model(VariantProduct)
+            try:
+                override = M2MOverride.objects.get(
+                    content_type=content_type,
+                    object_id=instance.id,
+                    relationship_name='tags'
+                )
+                initial['inherit_tags'] = override.inherit
+            except M2MOverride.DoesNotExist:
+                initial['inherit_tags'] = True  # Default to inherit if not set
+        
+        kwargs['initial'] = initial
+        super().__init__(*args, **kwargs)
+        
+        # If no parent, disable inheritance option
+        if instance and not instance.parent:
+            self.fields['inherit_tags'].disabled = True
+            self.fields['inherit_tags'].help_text = _("Tag inheritance requires a parent product.")
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        if commit:
+            instance.save()
+            self.save_m2m()
+            
+            # Save the inheritance setting
+            if instance.parent:
+                instance.set_tags_inheritance(self.cleaned_data['inherit_tags'])
+        
+        return instance

@@ -385,7 +385,7 @@ sales_records:
 |-------------------------|---------------------------------|----------------------------------------------|
 | AbsNr                   | legacy_id                       | Direct mapping                               |
 | created_date            | created_at                      | Format conversion from ISO to system format   |
-| Papierart               | record_type                     | Map 'R' to 'INVOICE', etc.                   |
+| Papierart               | record_type                     | Direct mapping                               |
 | KundenNr                | customer.legacy_id              | Foreign key lookup                           |
 | Datum                   | record_date                     | Format conversion from "D!M!Y" to ISO format |
 | PapierNr                | record_number                   | Direct mapping                               |

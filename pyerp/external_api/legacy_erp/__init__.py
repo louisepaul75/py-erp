@@ -7,4 +7,4 @@ system API.
 
 from .client import LegacyERPClient
 
-__all__ = ['LegacyERPClient'] 
+__all__ = ["LegacyERPClient"]

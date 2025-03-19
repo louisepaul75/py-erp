@@ -1,6 +1,7 @@
 """
 Pytest configuration for sync module tests.
 """
+
 import pytest
 
 # Import test settings to configure Django before tests run
@@ -14,4 +15,4 @@ def django_db_setup():
     Configure Django DB for tests.
     This overrides the pytest-django fixture to use our in-memory DB.
     """
-    pass  # Settings are already configured in test_settings.py 
+    pass  # Settings are already configured in test_settings.py

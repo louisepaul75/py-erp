@@ -7,8 +7,11 @@ including field validations, relationships, and model methods.
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.db import connection
-from pyerp.business_modules.products.models import ImageSyncLog, ParentProduct, VariantProduct
+from pyerp.business_modules.products.models import (
+    ImageSyncLog,
+    ParentProduct,
+    VariantProduct,
+)
 
 
 @pytest.mark.django_db
@@ -35,11 +38,7 @@ class TestProductModels:
 
     def test_parent_product_creation(self):
         """Test creating a parent product."""
-        product = ParentProduct(
-            sku="PARENT001",
-            name="Test Parent",
-            base_sku="BASE001"
-        )
+        product = ParentProduct(sku="PARENT001", name="Test Parent", base_sku="BASE001")
         product.save()
         assert product.id is not None
         assert product.sku == "PARENT001"
@@ -47,24 +46,15 @@ class TestProductModels:
     def test_variant_product_creation(self):
         """Test creating a variant product."""
         parent = ParentProduct.objects.create(
-            sku="PARENT001",
-            name="Test Parent",
-            base_sku="BASE001"
+            sku="PARENT001", name="Test Parent", base_sku="BASE001"
         )
-        variant = VariantProduct(
-            sku="VAR001",
-            name="Test Variant",
-            parent=parent
-        )
+        variant = VariantProduct(sku="VAR001", name="Test Variant", parent=parent)
         variant.save()
         assert variant.id is not None
         assert variant.parent == parent
 
     def test_variant_requires_parent(self):
         """Test that variant products require a parent."""
-        variant = VariantProduct(
-            sku="VAR001",
-            name="Test Variant"
-        )
+        variant = VariantProduct(sku="VAR001", name="Test Variant")
         with pytest.raises(ValidationError):
-            variant.full_clean() 
+            variant.full_clean()

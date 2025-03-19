@@ -39,24 +39,24 @@ class LegacyERPClient(BaseAPIClient):
     def check_connection(self) -> bool:
         """
         Check if the connection to the legacy ERP API is working.
-        
-        This method is used by the health check system to verify 
+
+        This method is used by the health check system to verify
         that the API is accessible and responding correctly.
-        
+
         Returns:
             bool: True if connection is successful, False otherwise
-            
+
         Raises:
             LegacyERPError: If an unexpected error occurs during validation
         """
         try:
             logger.info("Checking connection to legacy ERP API")
-            
+
             # First check if the connection is enabled
             if not connection_manager.is_connection_enabled("legacy_erp"):
                 logger.info("Legacy ERP API connection is disabled")
                 return False
-                
+
             return self.validate_session()
         except Exception as e:
             logger.error(f"Connection check failed: {e}")
@@ -75,11 +75,11 @@ class LegacyERPClient(BaseAPIClient):
     ) -> pd.DataFrame:
         """
         Fetch records from a table in the legacy ERP system.
-        
+
         Args:
             table_name: Name of the table to fetch records from
-            top: Number of records to fetch per request (None for no limit, 
-                though the API server may still apply a default limit, 
+            top: Number of records to fetch per request (None for no limit,
+                though the API server may still apply a default limit,
                 typically 100 records)
             skip: Number of records to skip (for pagination)
             filter_query: [['field', 'operator', 'value']]
@@ -87,10 +87,10 @@ class LegacyERPClient(BaseAPIClient):
             new_data_only: If True, only fetch new records
             date_created_start: Start date for filtering by creation date
             fail_on_filter_error: Whether to fail if filter query is invalid
-            
+
         Returns:
             DataFrame containing the fetched records
-            
+
         Raises:
             ConnectionError: If connection to the API fails
             ResponseError: If API returns an error response
@@ -108,34 +108,35 @@ class LegacyERPClient(BaseAPIClient):
                 fail_on_filter_error=fail_on_filter_error,
             )
         except Exception as e:
-            raise LegacyERPError(f"Failed to fetch table: {e}") 
+            raise LegacyERPError(f"Failed to fetch table: {e}")
 
 
 if __name__ == "__main__":
-    pd.set_option('display.max_columns', None)
+    pd.set_option("display.max_columns", None)
     # pd.set_option('display.max_rows', 10)
     # pd.set_option('display.width', 1000)
 
     client = LegacyERPClient(environment="live")
 
+    production_orders = client.fetch_table(
+        table_name="Werksauftraege",
 
-    filter_query = [['created_date', '>=', '2025-03-01']]
-
-    belege = client.fetch_table(
-        table_name="Belege",
-        # skip = 10000,
-        top=100,
-        filter_query=filter_query
     )
-    print(belege.tail())
-    absnr = str(list(belege['AbsNr'].unique().astype(str)))
-    print(absnr)
-    belege_pos = client.fetch_table(
-        table_name="Belege_Pos",
-        filter_query=[['AbsNr', 'in', absnr]]
-    )
+    print(production_orders.tail())
 
-    print(belege.tail())
-    print(belege_pos.tail())
+
+    items = list(production_orders['WerkAufNr'].unique().astype(str))
+    print(items)
+
     # breakpoint()
+
+    production_orders_line_items = client.fetch_table(
+        table_name="WerksauftrPos",
+        filter_query=[["W_Auftr_Nr", "in", items]]
+    )
+    
+    print(production_orders_line_items.tail())
+
+    merged = production_orders_line_items.merge(production_orders, left_on='W_Auftr_Nr', right_on='WerkAufNr', how='left')
+    print(merged.tail())
 

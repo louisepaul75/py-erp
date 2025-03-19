@@ -9,7 +9,7 @@ import cs from '../i18n/locales/cs';
 // Create i18n instance
 const i18n = createI18n({
   legacy: false,
-  locale: 'en', // set default locale
+  locale: 'de', // set default locale to German
   fallbackLocale: 'en',
   messages: {
     en,

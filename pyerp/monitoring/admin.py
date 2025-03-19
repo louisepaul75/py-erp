@@ -93,7 +93,9 @@ class HealthCheckResultAdmin(admin.ModelAdmin):
         for component in components:
             history = HealthCheckResult.objects.filter(
                 component=component,
-            ).order_by("-timestamp")[:20]
+            ).order_by(
+                "-timestamp"
+            )[:20]
 
             # Reverse to get chronological order for charts
             history_data[component] = list(reversed(history))

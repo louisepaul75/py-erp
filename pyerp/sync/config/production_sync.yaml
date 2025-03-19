@@ -1,0 +1,67 @@
+# Configuration for production data synchronization
+# Defines mappings between legacy ERP and pyERP for production orders and items
+
+mappings:
+  - source: legacy_erp
+    target: pyerp
+    entity_type: production_order
+    mapping_config:
+      field_mappings:
+        WerkAufNr: order_number
+        Form_Nr: form_number
+        Stückzahl: quantity
+        Status: status
+        eingestellt: creation_date
+        Termin: planned_date
+        Prio: priority
+        __KEY: legacy_key
+        UUID: legacy_id
+        linked_Form: legacy_form_id
+      incremental:
+        timestamp_filter_format: [["__TIMESTAMP", ">", "{value}"]]
+      extractor_config:
+        table_name: Werksauftraege
+        page_size: 500
+      transformer_class: pyerp.sync.transformers.production.ProductionOrderTransformer
+      loader_config:
+        model: pyerp.business_modules.production.models.ProductionOrder
+        key_field: order_number
+        update_existing: true
+
+  - source: legacy_erp
+    target: pyerp
+    entity_type: production_order_item
+    mapping_config:
+      field_mappings:
+        W_Auftr_Nr: production_order__order_number
+        Arbeitsgang: operation_type
+        St_Soll: target_quantity
+        St_Haben: completed_quantity
+        St_Rest: remaining_quantity
+        WAP_Nr: item_number
+        Datum_begin: start_date
+        Status: status
+        Art_Nr: product_sku
+        Anteil: product_share
+        Zeit: estimated_time
+        St_Std: standard_time
+        Wert: value
+        __KEY: legacy_key
+        UUID: legacy_id
+        linked_Kostenstelle: legacy_kostenstelle_id
+        linked_Form_Artikel: legacy_form_artikel_id
+      incremental:
+        timestamp_filter_format: [["__TIMESTAMP", ">", "{value}"]]
+      extractor_config:
+        table_name: WerksauftrPos
+        page_size: 500
+      transformer_class: pyerp.sync.transformers.production.ProductionOrderItemTransformer
+      loader_config:
+        model: pyerp.business_modules.production.models.ProductionOrderItem
+        key_field: legacy_key
+        update_existing: true
+        relation_config:
+          production_order:
+            model: pyerp.business_modules.production.models.ProductionOrder
+            lookup_field: order_number
+            required: true 

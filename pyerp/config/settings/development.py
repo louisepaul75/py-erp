@@ -7,7 +7,6 @@ These settings extend the base settings with development-specific configurations
 import os
 import sys
 from datetime import timedelta
-from pathlib import Path
 
 import dj_database_url  # noqa: F401
 import psycopg2
@@ -178,6 +177,13 @@ DEBUG_TOOLBAR_CONFIG = {
 
 # Email backend for development
 EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
+
+# 1Password Connect settings
+EMAIL_USE_1PASSWORD = os.environ.get("EMAIL_USE_1PASSWORD", "").lower() == "true"
+EMAIL_1PASSWORD_ITEM_NAME = os.environ.get("EMAIL_1PASSWORD_ITEM_NAME", "")
+OP_CONNECT_HOST = os.environ.get("OP_CONNECT_HOST", "http://192.168.73.65:8080")
+OP_CONNECT_TOKEN = os.environ.get("OP_CONNECT_TOKEN", "")
+OP_CONNECT_VAULT = os.environ.get("OP_CONNECT_VAULT", "dev")
 
 # Import anymail settings for reference, but use console backend
 from .anymail import *  # noqa

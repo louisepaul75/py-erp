@@ -7,4 +7,4 @@ during synchronization.
 
 from .legacy_api import LegacyAPIExtractor
 
-__all__ = ['LegacyAPIExtractor'] 
+__all__ = ["LegacyAPIExtractor"]

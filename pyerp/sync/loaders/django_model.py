@@ -35,10 +35,7 @@ class DjangoModelLoader(BaseLoader):
             ValueError: If model cannot be found
         """
         try:
-            return apps.get_model(
-                self.config["app_name"],
-                self.config["model_name"]
-            )
+            return apps.get_model(self.config["app_name"], self.config["model_name"])
         except Exception as e:
             raise ValueError(
                 f"Failed to get model {self.config['app_name']}."
@@ -62,9 +59,7 @@ class DjangoModelLoader(BaseLoader):
         # Get unique field from config
         unique_field = self.config["unique_field"]
         if unique_field not in record:
-            raise ValueError(
-                f"Record missing unique field: {unique_field}"
-            )
+            raise ValueError(f"Record missing unique field: {unique_field}")
 
         # Create lookup criteria
         lookup_criteria = {unique_field: record[unique_field]}
@@ -81,11 +76,11 @@ class DjangoModelLoader(BaseLoader):
             if field not in model_fields:
                 prepared_record.pop(field)
                 continue
-                
+
             field_obj = model_fields[field]
-            is_pk = getattr(field_obj, 'primary_key', False)  # Primary key
-            is_auto = getattr(field_obj, 'auto_created', False)  # Auto-created
-            
+            is_pk = getattr(field_obj, "primary_key", False)  # Primary key
+            is_auto = getattr(field_obj, "auto_created", False)  # Auto-created
+
             if is_pk or is_auto:
                 prepared_record.pop(field)
 
@@ -118,9 +113,7 @@ class DjangoModelLoader(BaseLoader):
         try:
             with transaction.atomic():
                 # Check for existing record
-                instance = model_class.objects.filter(
-                    **lookup_criteria
-                ).first()
+                instance = model_class.objects.filter(**lookup_criteria).first()
 
                 if instance:
                     if not update_existing:
@@ -134,31 +127,29 @@ class DjangoModelLoader(BaseLoader):
                         return None
 
                     # Create new instance - exclude auto-managed fields
-                    model_fields = {
-                        f.name: f for f in model_class._meta.get_fields()
-                    }
+                    model_fields = {f.name: f for f in model_class._meta.get_fields()}
                     filtered_record = {}
                     for field, value in record.items():
                         # Explicitly exclude 'id' field
-                        if field == 'id':
+                        if field == "id":
                             continue
-                            
+
                         if field not in model_fields:
                             continue
-                            
+
                         field_obj = model_fields[field]
-                        is_pk = getattr(field_obj, 'primary_key', False)
-                        is_auto = getattr(field_obj, 'auto_created', False)
-                        
+                        is_pk = getattr(field_obj, "primary_key", False)
+                        is_auto = getattr(field_obj, "auto_created", False)
+
                         if not (is_pk or is_auto):
                             filtered_record[field] = value
-                    
+
                     # Log the filtered record for debugging
                     logger.debug(
                         f"Creating new {model_class.__name__} "
                         f"with data: {filtered_record}"
                     )
-                            
+
                     instance = model_class(**filtered_record)
 
                 # Validate and save
@@ -192,9 +183,7 @@ class DjangoModelLoader(BaseLoader):
             LoadResult containing operation statistics
         """
         # Check update_strategy from config
-        update_strategy = self.config.get(
-            "update_strategy", "update_or_create"
-        )
+        update_strategy = self.config.get("update_strategy", "update_or_create")
         if update_strategy == "update":
             # Only update existing records, don't create new ones
             update_existing = True
@@ -230,14 +219,9 @@ class DjangoModelLoader(BaseLoader):
                 record_map[unique_value] = record
             except Exception as e:
                 result.add_error(
-                    record=record,
-                    error=e,
-                    context={"stage": "preparation"}
+                    record=record, error=e, context={"stage": "preparation"}
                 )
-                logger.error(
-                    f"Error preparing record: {e}",
-                    extra={"record": record}
-                )
+                logger.error(f"Error preparing record: {e}", extra={"record": record})
 
         if not prepared_records:
             return result
@@ -261,9 +245,9 @@ class DjangoModelLoader(BaseLoader):
                     lookup_dict,
                     prepared_record,
                     update_existing=update_existing,
-                    create_new=create_new
+                    create_new=create_new,
                 )
-                
+
                 if instance is None:
                     result.skipped += 1
                 elif instance._state.adding:
@@ -273,13 +257,10 @@ class DjangoModelLoader(BaseLoader):
             except Exception as e:
                 original_record = record_map.get(unique_value, prepared_record)
                 result.add_error(
-                    record=original_record,
-                    error=e,
-                    context={"stage": "load"}
+                    record=original_record, error=e, context={"stage": "load"}
                 )
                 logger.error(
-                    f"Error loading record: {e}",
-                    extra={"record": prepared_record}
+                    f"Error loading record: {e}", extra={"record": prepared_record}
                 )
 
         return result
@@ -304,10 +285,7 @@ class DjangoModelLoader(BaseLoader):
         if strategy == "newest_wins":
             return new_data
         elif strategy == "keep_existing":
-            return {
-                field: getattr(existing_record, field)
-                for field in new_data.keys()
-            }
+            return {field: getattr(existing_record, field) for field in new_data.keys()}
         else:
             raise ValueError(f"Unknown conflict strategy: {strategy}")
 
@@ -331,8 +309,7 @@ class DjangoModelLoader(BaseLoader):
                 if isinstance(field, models.IntegerField):
                     if not isinstance(value, (int, type(None))):
                         raise ValueError(
-                            f"Field {field_name} expects int, "
-                            f"got {type(value)}"
+                            f"Field {field_name} expects int, " f"got {type(value)}"
                         )
                 elif isinstance(field, models.FloatField):
                     if not isinstance(value, (float, int, type(None))):
@@ -343,8 +320,7 @@ class DjangoModelLoader(BaseLoader):
                 elif isinstance(field, models.CharField):
                     if not isinstance(value, (str, type(None))):
                         raise ValueError(
-                            f"Field {field_name} expects string, "
-                            f"got {type(value)}"
+                            f"Field {field_name} expects string, " f"got {type(value)}"
                         )
 
             except models.FieldDoesNotExist:

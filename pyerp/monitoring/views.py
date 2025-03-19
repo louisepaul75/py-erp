@@ -42,9 +42,7 @@ def run_health_checks(request):
             "success": True,
             "results": results,
             "authenticated": (
-                request.user.is_authenticated
-                if hasattr(request, "user")
-                else False
+                request.user.is_authenticated if hasattr(request, "user") else False
             ),
             "server_time": datetime.now().isoformat(),
         }
@@ -148,21 +146,19 @@ def get_host_resources_view(request):
     try:
         # Get host resource metrics
         resources = get_host_resources()
-        
+
         # Create response data
         response_data = {
             "success": True,
             "data": resources,
             "authenticated": (
-                request.user.is_authenticated
-                if hasattr(request, "user")
-                else False
+                request.user.is_authenticated if hasattr(request, "user") else False
             ),
             "server_time": datetime.now().isoformat(),
         }
-        
+
         return JsonResponse(response_data)
-    
+
     except Exception as e:
         logger.exception("Error retrieving host resources")
         return JsonResponse(

@@ -20,7 +20,7 @@ def fetch_all_images():
     """
     # Initialize the client
     client = ImageAPIClient()
-    
+
     # Start with page 1
     current_page = 1
     total_images = 0
@@ -28,30 +28,27 @@ def fetch_all_images():
 
     while True:
         # Fetch the current page of results
-        response = client.get_all_files(
-            page=current_page,
-            page_size=DEFAULT_PAGE_SIZE
-        )
-        
+        response = client.get_all_files(page=current_page, page_size=DEFAULT_PAGE_SIZE)
+
         if not response:
             print(f"Error fetching page {current_page}")
             break
-            
+
         # Extract results and count
-        results = response.get('results', [])
-        total_count = response.get('count', 0)
-        
+        results = response.get("results", [])
+        total_count = response.get("count", 0)
+
         # Add results to our collection
         all_images.extend(results)
         total_images = len(all_images)
-        
+
         print(f"Fetched page {current_page}: {len(results)} images")
         print(f"Total images so far: {total_images} of {total_count}")
-        
+
         # Check if we've got all images
         if total_images >= total_count:
             break
-            
+
         current_page += 1
 
     print("\nFinal Summary:")

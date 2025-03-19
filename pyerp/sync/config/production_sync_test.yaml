@@ -1,0 +1,69 @@
+mappings:
+- entity_type: production_order_test
+  mapping_config:
+    extractor_config:
+      page_size: 5
+      table_name: Werksauftraege
+    field_mappings:
+      Form_Nr: form_number
+      Prio: priority
+      Status: status
+      "St\xFCckzahl": quantity
+      Termin: planned_date
+      UUID: legacy_id
+      WerkAufNr: order_number
+      __KEY: legacy_key
+      eingestellt: creation_date
+      linked_Form: legacy_form_id
+    incremental:
+      timestamp_filter_format:
+      - - __TIMESTAMP
+        - '>'
+        - '{value}'
+    loader_config:
+      key_field: order_number
+      model: pyerp.business_modules.production.models.ProductionOrder
+      update_existing: true
+    transformer_class: pyerp.sync.transformers.production.ProductionOrderTransformer
+  source: legacy_erp
+  target: pyerp
+- entity_type: production_order_item_test
+  mapping_config:
+    extractor_config:
+      page_size: 10
+      table_name: WerksauftrPos
+    field_mappings:
+      Anteil: product_share
+      Arbeitsgang: operation_type
+      Art_Nr: product_sku
+      Datum_begin: start_date
+      St_Haben: completed_quantity
+      St_Rest: remaining_quantity
+      St_Soll: target_quantity
+      St_Std: standard_time
+      Status: status
+      UUID: legacy_id
+      WAP_Nr: item_number
+      W_Auftr_Nr: production_order__order_number
+      Wert: value
+      Zeit: estimated_time
+      __KEY: legacy_key
+      linked_Form_Artikel: legacy_form_artikel_id
+      linked_Kostenstelle: legacy_kostenstelle_id
+    incremental:
+      timestamp_filter_format:
+      - - __TIMESTAMP
+        - '>'
+        - '{value}'
+    loader_config:
+      key_field: legacy_key
+      model: pyerp.business_modules.production.models.ProductionOrderItem
+      relation_config:
+        production_order:
+          lookup_field: order_number
+          model: pyerp.business_modules.production.models.ProductionOrder
+          required: true
+      update_existing: true
+    transformer_class: pyerp.sync.transformers.production.ProductionOrderItemTransformer
+  source: legacy_erp
+  target: pyerp

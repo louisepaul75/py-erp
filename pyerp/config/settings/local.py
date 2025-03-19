@@ -10,7 +10,9 @@ from pathlib import Path  # noqa: F401
 from dotenv import load_dotenv
 
 # Load environment variables from .env.dev
-env_path = os.path.join(Path(__file__).resolve().parent.parent.parent.parent, 'config', 'env', '.env.dev')
+env_path = os.path.join(
+    Path(__file__).resolve().parent.parent.parent.parent, "config", "env", ".env.dev"
+)
 load_dotenv(env_path)
 
 from .base import *  # noqa
@@ -27,24 +29,31 @@ DEBUG = True
 # Allow all hosts for local development
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "*"]
 
+# Allow fallback to SQLite if PostgreSQL is unavailable
+ALLOW_SQLITE_FALLBACK = True
+DJANGO_ENV = "development"
+
 # Legacy API settings
-LEGACY_API_BASE_URL = os.environ.get('LEGACY_ERP_API_LIVE', 'http://192.168.73.28:8080')
-LEGACY_API_TEST_URL = os.environ.get('LEGACY_ERP_API_TEST', 'http://192.168.73.26:8090')
-LEGACY_API_USERNAME = os.environ.get('LEGACY_API_USERNAME', 'admin')
-LEGACY_API_PASSWORD = os.environ.get('LEGACY_API_PASSWORD', 'admin')
+LEGACY_API_BASE_URL = os.environ.get("LEGACY_ERP_API_LIVE", "http://192.168.73.28:8080")
+LEGACY_API_TEST_URL = os.environ.get("LEGACY_ERP_API_TEST", "http://192.168.73.26:8090")
+LEGACY_API_USERNAME = os.environ.get("LEGACY_API_USERNAME", "admin")
+LEGACY_API_PASSWORD = os.environ.get("LEGACY_API_PASSWORD", "admin")
+
+# Print Legacy API settings for debugging
+print(f"Legacy API URLs: Live={LEGACY_API_BASE_URL}, Test={LEGACY_API_TEST_URL}")
 
 # Legacy API environment configuration
 LEGACY_API_ENVIRONMENTS = {
-    'live': {
-        'base_url': LEGACY_API_BASE_URL,
-        'username': LEGACY_API_USERNAME,
-        'password': LEGACY_API_PASSWORD,
+    "live": {
+        "base_url": LEGACY_API_BASE_URL,
+        "username": LEGACY_API_USERNAME,
+        "password": LEGACY_API_PASSWORD,
     },
-    'test': {
-        'base_url': LEGACY_API_TEST_URL,
-        'username': LEGACY_API_USERNAME,
-        'password': LEGACY_API_PASSWORD,
-    }
+    "test": {
+        "base_url": LEGACY_API_TEST_URL,
+        "username": LEGACY_API_USERNAME,
+        "password": LEGACY_API_PASSWORD,
+    },
 }
 
 # Database configuration

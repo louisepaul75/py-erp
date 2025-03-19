@@ -96,15 +96,6 @@ class ValidationResult:
         return "Invalid: " + ", ".join(error_messages)
 
 
-class ValidationError(Exception):
-    """Exception raised for validation errors."""
-
-    def __init__(self, message):
-        """Initialize with error message."""
-        self.message = message
-        super().__init__(self.message)
-
-
 class ImportValidationError(Exception):
     """Exception raised for validation errors during import."""
 

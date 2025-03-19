@@ -9,6 +9,8 @@ export interface SMTPSettings {
   from_email: string;
   from_name: string;
   encryption: 'none' | 'ssl' | 'tls';
+  use_1password?: boolean;
+  onepassword_item_name?: string;
 }
 
 export interface TestEmailData {
@@ -171,6 +173,18 @@ const emailService = {
     try {
       // In production, this would call the API
       const response = await api.get('/email/settings/');
+      
+      // Anpassen der Feldnamen für das Frontend
+      if (response.data.success && response.data.data) {
+        const backendData = response.data.data;
+        
+        // Umbenenne 1password_item_name zu onepassword_item_name für das Frontend
+        if ('1password_item_name' in backendData) {
+          backendData.onepassword_item_name = backendData['1password_item_name'];
+          delete backendData['1password_item_name'];
+        }
+      }
+      
       return response.data;
 
       // For development without database, return mock data from localStorage
@@ -189,8 +203,20 @@ const emailService = {
   // Update SMTP settings
   updateSettings: async (settings: SMTPSettings) => {
     try {
+      // Anpassen der Feldnamen für das Backend
+      const backendSettings = {
+        ...settings,
+        // Umbenenne onepassword_item_name zu 1password_item_name für das Backend
+        '1password_item_name': settings.onepassword_item_name,
+      };
+      
+      // Entferne das Frontend-spezifische Feld
+      if ('onepassword_item_name' in backendSettings) {
+        delete (backendSettings as any).onepassword_item_name;
+      }
+      
       // In production, this would call the API
-      const response = await api.post('/email/settings/', settings);
+      const response = await api.post('/email/settings/', backendSettings);
       return response.data;
 
       // For development without database, update mock data and localStorage

@@ -27,7 +27,7 @@ def get_env_or_setting(env_key, setting_key, default):
 API_BASE_URL = get_env_or_setting(
     "LEGACY_ERP_API_LIVE",
     "LEGACY_API_BASE_URL",
-    "http://localhost:8080",
+    "http://192.168.73.28:8080",  # Changed from localhost to the actual server
 )
 API_INFO_ENDPOINT = getattr(settings, "LEGACY_API_INFO_ENDPOINT", "$info")
 API_REST_ENDPOINT = getattr(settings, "LEGACY_API_REST_ENDPOINT", "rest")
@@ -120,4 +120,4 @@ API_PAGINATION_ENABLED = getattr(
     True,
 )
 API_PAGINATION_SIZE = getattr(settings, "LEGACY_API_PAGINATION_SIZE", 100)
-API_RESPONSE_FORMAT = getattr(settings, "LEGACY_API_RESPONSE_FORMAT", "json") 
+API_RESPONSE_FORMAT = getattr(settings, "LEGACY_API_RESPONSE_FORMAT", "json")

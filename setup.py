@@ -8,4 +8,4 @@ setup(
     install_requires=[
         "django>=5.1.6",
     ],
-) 
+)

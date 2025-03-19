@@ -37,7 +37,7 @@ class TestProductImportCommand:
         ):
             command = MockImportCommand()
             result = command.handle(
-                file_path="test.json",
+                file_path="valid_test.json",
                 strict=True,
                 default_category="DEFAULT",
             )

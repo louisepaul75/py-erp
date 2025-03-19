@@ -1,1 +1,1 @@
-"""Configuration package for sync module.""" 
+"""Configuration package for sync module."""

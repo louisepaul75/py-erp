@@ -32,10 +32,14 @@ drf-yasg==1.21.9
 inflection==0.5.1
 uritemplate==4.1.1
 pyyaml==6.0.2
+coreapi==2.3.3
 
 # Authentication
 django-allauth==0.61.1
 djangorestframework-simplejwt==5.3.1
+
+# User management
+django-guardian==2.4.0
 
 # AWS
 boto3==1.33.13
@@ -84,3 +88,6 @@ ddtrace==2.0.0
 # - vue-i18n (^9.8.0): Internationalization plugin for Vue.js
 # - axios (^1.6.2): Promise based HTTP client
 # - @mdi/font (^7.4.47): Material Design Icons
+
+# Add the 1Password Connect SDK to the production requirements
+onepasswordconnectsdk

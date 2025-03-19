@@ -2,14 +2,22 @@ from django.http import JsonResponse
 from django.urls import path, include
 from rest_framework.decorators import api_view
 from rest_framework.routers import DefaultRouter
-from .views import CustomerViewSet, AddressViewSet
+from .views import (
+    CustomerViewSet,
+    AddressViewSet,
+    SalesRecordViewSet,
+    SalesRecordItemViewSet,
+)
 
 app_name = "sales"
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
-router.register(r'customers', CustomerViewSet)
-router.register(r'addresses', AddressViewSet)
+router.register(r"customers", CustomerViewSet)
+router.register(r"addresses", AddressViewSet)
+router.register(r"records", SalesRecordViewSet)
+router.register(r"record-items", SalesRecordItemViewSet)
+
 
 # Simple view that returns a placeholder response
 @api_view(["GET"])
@@ -22,9 +30,10 @@ def placeholder_view(request):
         },
     )
 
+
 # URL patterns for the sales app
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
     path("status/", placeholder_view, name="status"),
     path("placeholder/", placeholder_view, name="placeholder"),
 ]
