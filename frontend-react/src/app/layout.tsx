@@ -15,13 +15,14 @@ export const metadata: Metadata = {
   },
 }
 
+// Default language is German
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className="min-h-screen bg-amber-50 text-amber-950">
         <Providers>
           <Navbar />

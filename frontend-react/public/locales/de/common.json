@@ -1,0 +1,30 @@
+{
+  "welcome": "Willkommen bei pyERP",
+  "navigation": {
+    "home": "Startseite",
+    "products": "Produkte",
+    "sales": "Verkauf",
+    "production": "Produktion",
+    "inventory": "Lager",
+    "dashboard": "Dashboard",
+    "settings": "Einstellungen"
+  },
+  "buttons": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "confirm": "Bestätigen"
+  },
+  "messages": {
+    "loading": "Lädt...",
+    "noData": "Keine Daten gefunden",
+    "error": "Ein Fehler ist aufgetreten",
+    "success": "Erfolgreich",
+    "saved": "Gespeichert",
+    "deleted": "Gelöscht"
+  }
+} 

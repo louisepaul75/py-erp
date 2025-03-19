@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Globe } from 'lucide-react';
-import useLanguage from '@/hooks/useLanguage';
+import { useTranslation } from 'react-i18next';
 
 type LanguageOption = {
   code: 'en' | 'de' | 'fr' | 'es';
@@ -11,24 +11,24 @@ type LanguageOption = {
 };
 
 const languages: LanguageOption[] = [
-  { code: 'en', name: 'English', flag: '🇬🇧' },
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
   { code: 'fr', name: 'Français', flag: '🇫🇷' },
   { code: 'es', name: 'Español', flag: '🇪🇸' },
 ];
 
 export function LanguageSelector() {
-  const { language, changeLanguage } = useLanguage();
+  const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
   const handleLanguageChange = (code: 'en' | 'de' | 'fr' | 'es') => {
-    changeLanguage(code);
+    i18n.changeLanguage(code);
     setIsOpen(false);
   };
 
-  const currentLanguage = languages.find(lang => lang.code === language) || languages[0];
+  const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
 
   return (
     <div className="relative">

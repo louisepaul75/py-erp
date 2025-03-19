@@ -16,9 +16,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useTheme from '@/hooks/useTheme';
-import useLanguage from '@/hooks/useLanguage';
 import LanguageSelector from './LanguageSelector';
 import { useLogout } from '@/lib/auth/authHooks';
+import useAppTranslation from '@/hooks/useTranslationWrapper';
 
 // Mock user data - replace with actual auth implementation
 const mockUser = {
@@ -31,7 +31,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [testMenuOpen, setTestMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const { language } = useLanguage();
+  const { t } = useAppTranslation();
   const [user, setUser] = useState(mockUser);
   const logout = useLogout();
 
@@ -107,11 +107,11 @@ export function Navbar() {
           {/* Navigation Links - Desktop */}
           <div className="hidden md:flex items-center justify-center flex-1">
             <div className="flex space-x-4">
-              <NavLink href="/" label="Home" />
-              <NavLink href="/products" label="Products" />
-              <NavLink href="/sales" label="Sales" />
-              <NavLink href="/production" label="Production" />
-              <NavLink href="/inventory" label="Inventory" />
+              <NavLink href="/" label={t('navigation.home')} />
+              <NavLink href="/products" label={t('navigation.products')} />
+              <NavLink href="/sales" label={t('navigation.sales')} />
+              <NavLink href="/production" label={t('navigation.production')} />
+              <NavLink href="/inventory" label={t('navigation.inventory')} />
               
               {/* Test dropdown */}
               <div className="relative" id="test-dropdown">
@@ -144,27 +144,22 @@ export function Navbar() {
           </div>
 
           {/* User Menu - Desktop */}
-          <div className="hidden md:flex items-center">
+          <div className="hidden md:flex items-center ml-4 md:ml-6">
             <div className="ml-3 relative" id="user-dropdown">
               <div>
                 <button
                   type="button"
-                  className="flex items-center max-w-xs rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 items-center"
                   id="user-menu"
-                  aria-expanded="false"
-                  aria-haspopup="true"
                   onClick={toggleDropdown}
                 >
                   <span className="sr-only">Open user menu</span>
-                  <div className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                    <span className="text-gray-700 dark:text-gray-200">{user.name}</span>
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  </div>
+                  <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
+                  <span className="ml-2 text-gray-700 dark:text-gray-200">{user.name}</span>
+                  <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
               </div>
 
-              {/* Dropdown menu */}
               {isOpen && (
                 <div
                   className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none"
@@ -187,7 +182,7 @@ export function Navbar() {
 
                   <DropdownItem href="/settings">
                     <Settings className="mr-3 h-5 w-5" />
-                    {user.isAdmin ? 'Admin Settings' : 'Settings'}
+                    {user.isAdmin ? t('navigation.settings') : t('navigation.settings')}
                   </DropdownItem>
 
                   <DropdownItem onClick={handleLogout}>
@@ -205,11 +200,11 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="md:hidden" id="mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <MobileNavLink href="/" label="Home" />
-            <MobileNavLink href="/products" label="Products" />
-            <MobileNavLink href="/sales" label="Sales" />
-            <MobileNavLink href="/production" label="Production" />
-            <MobileNavLink href="/inventory" label="Inventory" />
+            <MobileNavLink href="/" label={t('navigation.home')} />
+            <MobileNavLink href="/products" label={t('navigation.products')} />
+            <MobileNavLink href="/sales" label={t('navigation.sales')} />
+            <MobileNavLink href="/production" label={t('navigation.production')} />
+            <MobileNavLink href="/inventory" label={t('navigation.inventory')} />
             
             {/* Mobile Test Dropdown */}
             <div className="relative py-2">
@@ -262,7 +257,7 @@ export function Navbar() {
               
               <MobileDropdownItem href="/settings">
                 <Settings className="mr-3 h-5 w-5" />
-                {user.isAdmin ? 'Admin Settings' : 'Settings'}
+                {user.isAdmin ? t('navigation.settings') : t('navigation.settings')}
               </MobileDropdownItem>
               
               <MobileDropdownItem onClick={handleLogout}>

@@ -10,6 +10,8 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from django.views.i18n import JavaScriptCatalog, set_language
+from django.conf.urls.i18n import i18n_patterns
+from django.utils.translation import gettext_lazy as _
 from rest_framework import permissions
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -40,8 +42,9 @@ except ImportError:
     has_swagger = False
     print("WARNING: drf_yasg not available, API documentation will be disabled")
 
-# Define URL patterns
+# Define URL patterns for non-internationalized URLs (API, static files, etc.)
 urlpatterns = [
+    path("i18n/", include("django.conf.urls.i18n")),  # For language switching
     path("set-language/", set_language, name="set_language"),
     # JavaScript translations
     path(
@@ -49,8 +52,6 @@ urlpatterns = [
         JavaScriptCatalog.as_view(),
         name="javascript-catalog",
     ),
-    # Django admin URLs
-    path("admin/", admin.site.urls),
     # API URLs
     path("api/", include("pyerp.core.api_urls")),
     path(
@@ -69,10 +70,6 @@ urlpatterns = [
         name="token_verify",
     ),
     # Add monitoring API URL
-    path(
-        "monitoring/",
-        include("pyerp.monitoring.urls", namespace="monitoring"),
-    ),
     path(
         "api/monitoring/",
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
@@ -133,10 +130,21 @@ urlpatterns += [
     path("", include("pyerp.core.urls")),
 ]
 
-# Root URL for React application
-urlpatterns += [
+# Define URL patterns with i18n (language prefix) support
+# These will have language prefix in the URL, e.g., /de/admin/, /en/admin/
+urlpatterns += i18n_patterns(
+    # Django admin URLs
+    path("admin/", admin.site.urls),
+    # Add monitoring UI URL
+    path(
+        "monitoring/",
+        include("pyerp.monitoring.urls", namespace="monitoring"),
+    ),
+    # Root URL for React application
     path("", ReactAppView.as_view(), name="react_app"),
-]
+    # Use language prefix by default
+    prefix_default_language=True
+)
 
 # Serve static and media files in development
 if settings.DEBUG:
