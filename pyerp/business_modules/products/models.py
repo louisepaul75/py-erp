@@ -72,12 +72,6 @@ class BaseProduct(models.Model):
             "ID in the legacy system - maps directly to __KEY and UID in legacy system (which had identical values)",
         ),
     )
-    legacy_uid = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_("UID in the legacy system"),
-    )
 
     # Names and descriptions
     name = models.CharField(
@@ -117,88 +111,6 @@ class BaseProduct(models.Model):
         help_text=_("Search keywords"),
     )
 
-    # Physical attributes
-    dimensions = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text=_("Product dimensions (LxWxH)"),
-    )
-    weight = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text=_("Weight in grams"),
-    )
-
-    # Pricing
-    list_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Retail price (maps to Laden price in legacy system)"),
-    )
-    wholesale_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Wholesale price (maps to Handel price in legacy system)"),
-    )
-    gross_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Recommended retail price (maps to Empf. price in legacy system)"),
-    )
-    cost_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Cost price (maps to Einkauf price in legacy system)"),
-    )
-
-    # Inventory
-    stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Current stock quantity"),
-    )
-    min_stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Minimum stock quantity before reordering"),
-    )
-    backorder_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on backorder"),
-    )
-    open_purchase_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on open purchase orders"),
-    )
-    last_receipt_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock receipt"),
-    )
-    last_issue_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock issue"),
-    )
-
-    # Sales statistics
-    units_sold_current_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in current year"),
-    )
-    units_sold_previous_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in previous year"),
-    )
-    revenue_previous_year = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        help_text=_("Revenue in previous year"),
-    )
-
     # Status flags
     is_active = models.BooleanField(
         default=True,
@@ -208,22 +120,6 @@ class BaseProduct(models.Model):
     is_discontinued = models.BooleanField(
         default=False,
         help_text=_("Whether the product is discontinued"),
-    )
-
-    # Manufacturing flags
-    has_bom = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product has a bill of materials"),
-    )
-
-    # Product-specific flags
-    is_one_sided = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is one-sided"),
-    )
-    is_hanging = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is hanging"),
     )
 
     # Timestamps
@@ -237,13 +133,10 @@ class BaseProduct(models.Model):
     )
 
     # Category
-    category = models.ForeignKey(
-        ProductCategory,
+    category_id = models.BigIntegerField(
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
-        related_name="%(class)s_products",
-        help_text=_("Product category"),
+        help_text=_("Product category ID"),
     )
 
     class Meta:
@@ -271,6 +164,23 @@ class ParentProduct(BaseProduct):
     is_new = models.BooleanField(
         default=False,
         help_text=_("Whether this is a new product (maps to Neu in Artikel_Familie)"),
+    )
+    
+    # Physical attributes - Weight specifically for ParentProduct
+    weight = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Weight in grams"),
+    )
+    
+    # Product-specific flags - moved from BaseProduct since these only exist in ParentProduct
+    is_one_sided = models.BooleanField(
+        default=False,
+        help_text=_("Whether the product is one-sided"),
+    )
+    is_hanging = models.BooleanField(
+        default=False,
+        help_text=_("Whether the product is hanging"),
     )
     
     # Physical dimensions
@@ -595,12 +505,7 @@ class Product(models.Model):
         help_text=_("Search keywords"),
     )
 
-    # Physical attributes
-    dimensions = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text=_("Product dimensions (LxWxH)"),
-    )
+    # Physical attributes - Keep weight field since it exists in the database
     weight = models.IntegerField(
         null=True,
         blank=True,
@@ -608,74 +513,69 @@ class Product(models.Model):
     )
 
     # Pricing
-    list_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Retail price (maps to Laden price in legacy system)"),
-    )
-    wholesale_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Wholesale price (maps to Handel price in legacy system)"),
-    )
-    gross_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Recommended retail price (maps to Empf. price in legacy system)"),
-    )
-    cost_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Cost price (maps to Einkauf price in legacy system)"),
-    )
+    # Removed fields (not in database schema)
+    # wholesale_price = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Wholesale price (maps to Handel price in legacy system)"),
+    # )
+    # gross_price = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Recommended retail price (maps to Empf. price in legacy system)"),
+    # )
+    # cost_price = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Cost price (maps to Einkauf price in legacy system)"),
+    # )
 
-    # Inventory
-    stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Current stock quantity"),
-    )
-    min_stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Minimum stock quantity before reordering"),
-    )
-    backorder_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on backorder"),
-    )
-    open_purchase_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on open purchase orders"),
-    )
-    last_receipt_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock receipt"),
-    )
-    last_issue_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock issue"),
-    )
+    # Inventory - Comment out these fields as they don't exist in the database schema
+    # stock_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Current stock quantity"),
+    # )
+    # min_stock_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Minimum stock quantity before reordering"),
+    # )
+    # backorder_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Quantity on backorder"),
+    # )
+    # open_purchase_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Quantity on open purchase orders"),
+    # )
+    # last_receipt_date = models.DateField(
+    #     null=True,
+    #     blank=True,
+    #     help_text=_("Date of last stock receipt"),
+    # )
+    # last_issue_date = models.DateField(
+    #     null=True,
+    #     blank=True,
+    #     help_text=_("Date of last stock issue"),
+    # )
 
     # Sales statistics
-    units_sold_current_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in current year"),
-    )
-    units_sold_previous_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in previous year"),
-    )
-    revenue_previous_year = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        help_text=_("Revenue in previous year"),
-    )
+    # units_sold_current_year = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Units sold in current year"),
+    # )
+    # units_sold_previous_year = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Units sold in previous year"),
+    # )
+    # revenue_previous_year = models.DecimalField(
+    #     max_digits=12,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Revenue in previous year"),
+    # )
 
     # Status flags
     is_active = models.BooleanField(
@@ -688,20 +588,10 @@ class Product(models.Model):
     )
 
     # Manufacturing flags
-    has_bom = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product has a bill of materials"),
-    )
-
-    # Product-specific flags
-    is_one_sided = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is one-sided"),
-    )
-    is_hanging = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is hanging"),
-    )
+    # has_bom = models.BooleanField(
+    #     default=False,
+    #     help_text=_("Whether the product has a bill of materials"),
+    # )
 
     # Timestamps
     created_at = models.DateTimeField(
