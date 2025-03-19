@@ -84,6 +84,7 @@
 - Support for translation namespaces and TypeScript integration
 
 ### UI Components
+- shadcn/ui - Component library built on Radix UI and Tailwind CSS
 - Radix UI - Headless UI components:
   - Dialog, Dropdown Menu, Separator, Slot, Tabs, Tooltip
 - Lucide React 0.344.0 - Icon library
