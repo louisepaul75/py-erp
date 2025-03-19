@@ -5,7 +5,7 @@ import { Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 type LanguageOption = {
-  code: 'en' | 'de' | 'fr' | 'es';
+  code: 'en' | 'de' | 'cs';
   name: string;
   flag: string;
 };
@@ -13,8 +13,7 @@ type LanguageOption = {
 const languages: LanguageOption[] = [
   { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'cs', name: 'Čeština', flag: '🇨🇿' },
 ];
 
 export function LanguageSelector() {
@@ -23,7 +22,7 @@ export function LanguageSelector() {
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
-  const handleLanguageChange = (code: 'en' | 'de' | 'fr' | 'es') => {
+  const handleLanguageChange = (code: 'en' | 'de' | 'cs') => {
     i18n.changeLanguage(code);
     setIsOpen(false);
   };

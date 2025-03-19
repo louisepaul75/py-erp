@@ -7,7 +7,8 @@
     "production": "Produktion",
     "inventory": "Lager",
     "dashboard": "Dashboard",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "admin_settings": "Admin-Einstellungen"
   },
   "buttons": {
     "save": "Speichern",

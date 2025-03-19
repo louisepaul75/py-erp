@@ -1,0 +1,84 @@
+# Czech translations for pyERP.
+# Copyright (C) 2024 pyERP Team
+# This file is distributed under the same license as the pyERP package.
+msgid ""
+msgstr ""
+"Project-Id-Version: pyERP 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-03-01 10:00+0100\n"
+"PO-Revision-Date: 2024-03-01 10:00+0100\n"
+"Last-Translator: pyERP Team\n"
+"Language-Team: Czech\n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
+
+#: pyerp/settings/base.py
+msgid "German"
+msgstr "Němčina"
+
+#: pyerp/settings/base.py
+msgid "English"
+msgstr "Angličtina"
+
+#: pyerp/settings/base.py
+msgid "Czech"
+msgstr "Čeština"
+
+#: pyerp/templates/base.html
+msgid "Dashboard"
+msgstr "Přehled"
+
+#: pyerp/templates/base.html
+msgid "Products"
+msgstr "Produkty"
+
+#: pyerp/templates/base.html
+msgid "Sales"
+msgstr "Prodej"
+
+#: pyerp/templates/base.html
+msgid "Inventory"
+msgstr "Sklad"
+
+#: pyerp/templates/base.html
+msgid "Production"
+msgstr "Výroba"
+
+#: pyerp/templates/base/language_switcher.html
+msgid "Language"
+msgstr "Jazyk"
+
+#: pyerp/templates/base.html
+msgid "Login"
+msgstr "Přihlášení"
+
+#: pyerp/templates/base.html
+msgid "Logout"
+msgstr "Odhlášení"
+
+#: pyerp/templates/base.html
+msgid "Profile"
+msgstr "Profil"
+
+#: pyerp/templates/base.html
+msgid "Admin"
+msgstr "Admin"
+
+#: pyerp/templates/products/product_list.html
+msgid "Product List"
+msgstr "Seznam produktů"
+
+#: pyerp/templates/products/product_detail.html
+msgid "Product Details"
+msgstr "Detail produktu"
+
+#: pyerp/templates/products/product_detail.html
+msgid "Edit"
+msgstr "Upravit"
+
+#: pyerp/templates/products/product_detail.html
+msgid "Delete"
+msgstr "Smazat" 

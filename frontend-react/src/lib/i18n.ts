@@ -42,7 +42,7 @@ if (isClient) {
     // init i18next
     .init({
       fallbackLng: 'de', // default language
-      supportedLngs: ['de', 'en', 'fr', 'es'],
+      supportedLngs: ['de', 'en', 'cs'],
       debug: process.env.NODE_ENV === 'development',
       
       interpolation: {
@@ -63,7 +63,7 @@ if (isClient) {
       resources,
       
       defaultNS: 'common',
-      ns: ['common', 'auth', 'products', 'dashboard'],
+      ns: ['common', 'auth', 'products', 'dashboard', 'settings'],
       
       // Initialize with resources to prevent loading delays
       preload: ['de', 'en'],

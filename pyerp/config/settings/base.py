@@ -161,7 +161,7 @@ USE_TZ = True
 LANGUAGES = [
     ('de', _('German')),
     ('en', _('English')),
-    # Add more languages as needed
+    ('cs', _('Czech')),
 ]
 
 # Paths where Django should look for translation files

@@ -66,10 +66,10 @@ export function Navbar() {
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex justify-between h-16">
-          {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
+          {/* Logo - moved further left by reducing padding */}
+          <div className="flex-shrink-0 flex items-center -ml-2">
             <Link href="/">
               <Image 
                 src="/wsz_logo_long.png" 
@@ -138,9 +138,9 @@ export function Navbar() {
             </div>
           </div>
 
-          {/* User Menu - Desktop */}
-          <div className="hidden md:flex items-center ml-4 md:ml-6">
-            <div className="ml-3 relative" id="user-dropdown">
+          {/* User Menu - Desktop - moved further right */}
+          <div className="hidden md:flex items-center ml-auto">
+            <div className="relative" id="user-dropdown">
               <div>
                 <button
                   type="button"
@@ -177,7 +177,7 @@ export function Navbar() {
 
                   <DropdownItem href="/settings">
                     <Settings className="mr-3 h-5 w-5" />
-                    {user?.isAdmin ? t('navigation.settings') : t('navigation.settings')}
+                    {user?.isAdmin ? t('navigation.admin_settings') : t('navigation.settings')}
                   </DropdownItem>
 
                   <DropdownItem onClick={handleLogout}>
@@ -252,7 +252,7 @@ export function Navbar() {
               
               <MobileDropdownItem href="/settings">
                 <Settings className="mr-3 h-5 w-5" />
-                {user?.isAdmin ? t('navigation.settings') : t('navigation.settings')}
+                {user?.isAdmin ? t('navigation.admin_settings') : t('navigation.settings')}
               </MobileDropdownItem>
               
               <MobileDropdownItem onClick={handleLogout}>

@@ -7,7 +7,8 @@
     "production": "Production",
     "inventory": "Inventory",
     "dashboard": "Dashboard",
-    "settings": "Settings"
+    "settings": "Settings",
+    "admin_settings": "Admin Settings"
   },
   "buttons": {
     "save": "Save",
