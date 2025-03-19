@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Activity, AlertTriangle, Clock, Database, Server, RefreshCw, WifiOff } from 'lucide-react';
+import { API_URL } from '@/lib/config';
 
 interface HealthCheckResult {
   component: string;
@@ -36,7 +37,7 @@ export default function HealthStatusPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const response = await fetch('/core/health', {
+      const response = await fetch(`${API_URL}/core/health`, {
         signal: controller.signal
       });
       
@@ -61,7 +62,7 @@ export default function HealthStatusPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const response = await fetch('/monitoring/health-checks', {
+      const response = await fetch(`${API_URL}/monitoring/health-checks`, {
         signal: controller.signal
       });
       

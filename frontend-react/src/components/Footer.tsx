@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Activity, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { API_URL } from '@/lib/config';
 
 interface HealthStatus {
   status: string;
@@ -65,7 +66,7 @@ export function Footer() {
   useEffect(() => {
     const fetchHealthStatus = async () => {
       try {
-        const response = await fetch('/core/health');
+        const response = await fetch(`${API_URL}/core/health`);
         if (response.ok) {
           const data = await response.json();
           setHealthStatus(data);
@@ -96,7 +97,7 @@ export function Footer() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const response = await fetch('/core/git/branch', { 
+        const response = await fetch(`${API_URL}/core/git/branch`, { 
           signal: controller.signal 
         });
         
