@@ -59,12 +59,12 @@ fi
 
 # Apply migrations for development only if PostgreSQL is available
 if $PG_AVAILABLE; then
-  echo "Applying database migrations..."
-  # First make migrations to ensure all models are up to date
-  cd /app
-  python manage.py makemigrations --noinput
-  python manage.py migrate --noinput
-  echo "Migrations applied"
+  echo "Skipping database migrations due to known issues with migrations..."
+  # Comment out the migration commands to avoid issues
+  # cd /app
+  # python manage.py makemigrations --noinput
+  # python manage.py migrate --noinput
+  echo "Migrations skipped"
 else
   echo "Skipping migrations since PostgreSQL is unavailable"
 fi
@@ -158,13 +158,14 @@ wait_for_db
 wait_for_redis
 
 # Run database migrations
-echo "Running migrations..."
-cd /app
-python manage.py migrate --noinput
+echo "Skipping migrations due to known issues..."
+# cd /app
+# python manage.py migrate --noinput
 
 # Collect static files
 echo "Collecting static files..."
-python manage.py collectstatic --noinput
+cd /app
+python /app/manage.py collectstatic --noinput
 
 # Create a superuser if needed
 if [[ "${DJANGO_SUPERUSER_USERNAME:-}" != "" && "${DJANGO_SUPERUSER_PASSWORD:-}" != "" && "${DJANGO_SUPERUSER_EMAIL:-}" != "" ]]; then
