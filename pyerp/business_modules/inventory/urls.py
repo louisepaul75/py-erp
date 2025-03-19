@@ -6,7 +6,8 @@ from rest_framework.response import Response
 import logging
 from django.db import models
 
-from .models import BoxType, StorageLocation, Box, ProductStorage, BoxStorage
+from .models import BoxType, StorageLocation, Box, ProductStorage, BoxStorage, BoxSlot
+from .services import InventoryService
 
 app_name = "inventory"
 logger = logging.getLogger(__name__)
@@ -273,6 +274,233 @@ def locations_by_product(request, product_id=None):
         )
 
 
+# New endpoints for inventory operations
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def move_box(request):
+    """API endpoint to move a box to a different storage location."""
+    try:
+        box_id = request.data.get("box_id")
+        target_location_id = request.data.get("target_location_id")
+
+        if not box_id or not target_location_id:
+            return Response(
+                {"detail": "Box ID and target location ID are required"},
+                status=400,
+            )
+
+        try:
+            box = Box.objects.get(id=box_id)
+            target_location = StorageLocation.objects.get(id=target_location_id)
+        except (Box.DoesNotExist, StorageLocation.DoesNotExist):
+            return Response(
+                {"detail": "Box or target location not found"},
+                status=404,
+            )
+
+        try:
+            updated_box = InventoryService.move_box(
+                box=box,
+                target_storage_location=target_location,
+                user=request.user,
+            )
+            
+            return Response({
+                "id": updated_box.id,
+                "code": updated_box.code,
+                "status": updated_box.status,
+                "storage_location": {
+                    "id": updated_box.storage_location.id,
+                    "name": updated_box.storage_location.name,
+                    "location_code": updated_box.storage_location.location_code,
+                } if updated_box.storage_location else None,
+                "message": f"Box successfully moved to {updated_box.storage_location}",
+            })
+        except Exception as e:
+            return Response({"detail": str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Error moving box: {e}")
+        return Response({"detail": "Failed to move box"}, status=500)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def add_product_to_box(request):
+    """API endpoint to add a product to a box slot."""
+    try:
+        product_id = request.data.get("product_id")
+        box_slot_id = request.data.get("box_slot_id")
+        quantity = request.data.get("quantity")
+        batch_number = request.data.get("batch_number")
+        expiry_date = request.data.get("expiry_date")
+
+        if not product_id or not box_slot_id or not quantity:
+            return Response(
+                {"detail": "Product ID, box slot ID, and quantity are required"},
+                status=400,
+            )
+
+        try:
+            from pyerp.business_modules.products.models import VariantProduct
+            product = VariantProduct.objects.get(id=product_id)
+            box_slot = BoxSlot.objects.get(id=box_slot_id)
+            quantity = int(quantity)
+        except (VariantProduct.DoesNotExist, BoxSlot.DoesNotExist, ValueError):
+            return Response(
+                {"detail": "Product, box slot not found, or invalid quantity"},
+                status=404,
+            )
+
+        try:
+            box_storage = InventoryService.add_product_to_box_slot(
+                product=product,
+                box_slot=box_slot,
+                quantity=quantity,
+                batch_number=batch_number,
+                expiry_date=expiry_date,
+                user=request.user,
+            )
+            
+            return Response({
+                "id": box_storage.id,
+                "product": {
+                    "id": product.id,
+                    "name": str(product),
+                },
+                "box_slot": {
+                    "id": box_slot.id,
+                    "code": box_slot.slot_code,
+                    "box_code": box_slot.box.code,
+                },
+                "quantity": box_storage.quantity,
+                "message": f"Added {quantity} of product {product} to box slot {box_slot}",
+            })
+        except Exception as e:
+            return Response({"detail": str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Error adding product to box: {e}")
+        return Response({"detail": "Failed to add product to box"}, status=500)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def move_product_between_boxes(request):
+    """API endpoint to move products between box slots."""
+    try:
+        source_box_storage_id = request.data.get("source_box_storage_id")
+        target_box_slot_id = request.data.get("target_box_slot_id")
+        quantity = request.data.get("quantity")
+
+        if not source_box_storage_id or not target_box_slot_id or not quantity:
+            return Response(
+                {"detail": "Source box storage ID, target box slot ID, and quantity are required"},
+                status=400,
+            )
+
+        try:
+            source_box_storage = BoxStorage.objects.get(id=source_box_storage_id)
+            target_box_slot = BoxSlot.objects.get(id=target_box_slot_id)
+            quantity = int(quantity)
+        except (BoxStorage.DoesNotExist, BoxSlot.DoesNotExist, ValueError):
+            return Response(
+                {"detail": "Source box storage or target box slot not found, or invalid quantity"},
+                status=404,
+            )
+
+        try:
+            source_updated, target_updated = InventoryService.move_product_between_box_slots(
+                source_box_storage=source_box_storage,
+                target_box_slot=target_box_slot,
+                quantity=quantity,
+                user=request.user,
+            )
+            
+            product = target_updated.product_storage.product
+            
+            return Response({
+                "product": {
+                    "id": product.id,
+                    "name": str(product),
+                },
+                "source_box_slot": {
+                    "id": source_box_storage.box_slot.id,
+                    "code": source_box_storage.box_slot.slot_code,
+                    "box_code": source_box_storage.box_slot.box.code,
+                    "remaining_quantity": source_updated.quantity if source_updated else 0,
+                },
+                "target_box_slot": {
+                    "id": target_box_slot.id,
+                    "code": target_box_slot.slot_code,
+                    "box_code": target_box_slot.box.code,
+                    "quantity": target_updated.quantity,
+                },
+                "quantity_moved": quantity,
+                "message": f"Moved {quantity} units of product {product} between box slots",
+            })
+        except Exception as e:
+            return Response({"detail": str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Error moving product between boxes: {e}")
+        return Response({"detail": "Failed to move product between boxes"}, status=500)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def remove_product_from_box(request):
+    """API endpoint to remove a product from a box slot."""
+    try:
+        box_storage_id = request.data.get("box_storage_id")
+        quantity = request.data.get("quantity")
+        reason = request.data.get("reason")
+
+        if not box_storage_id or not quantity:
+            return Response(
+                {"detail": "Box storage ID and quantity are required"},
+                status=400,
+            )
+
+        try:
+            box_storage = BoxStorage.objects.get(id=box_storage_id)
+            quantity = int(quantity)
+        except (BoxStorage.DoesNotExist, ValueError):
+            return Response(
+                {"detail": "Box storage not found or invalid quantity"},
+                status=404,
+            )
+
+        try:
+            updated_box_storage = InventoryService.remove_product_from_box_slot(
+                box_storage=box_storage,
+                quantity=quantity,
+                reason=reason,
+                user=request.user,
+            )
+            
+            product = box_storage.product_storage.product
+            box_slot = box_storage.box_slot
+            
+            return Response({
+                "product": {
+                    "id": product.id,
+                    "name": str(product),
+                },
+                "box_slot": {
+                    "id": box_slot.id,
+                    "code": box_slot.slot_code,
+                    "box_code": box_slot.box.code,
+                },
+                "quantity_removed": quantity,
+                "remaining_quantity": updated_box_storage.quantity if updated_box_storage else 0,
+                "message": f"Removed {quantity} units of product {product} from box slot {box_slot}",
+            })
+        except Exception as e:
+            return Response({"detail": str(e)}, status=400)
+    except Exception as e:
+        logger.error(f"Error removing product from box: {e}")
+        return Response({"detail": "Failed to remove product from box"}, status=500)
+
+
 # URL patterns for the inventory app
 urlpatterns = [
     path("status/", placeholder_view, name="status"),
@@ -294,4 +522,8 @@ urlpatterns = [
         locations_by_product,
         name="locations_by_product",
     ),
+    path("api/move-box/", move_box, name="move_box"),
+    path("api/add-product-to-box/", add_product_to_box, name="add_product_to_box"),
+    path("api/move-product-between-boxes/", move_product_between_boxes, name="move_product_between_boxes"),
+    path("api/remove-product-from-box/", remove_product_from_box, name="remove_product_from_box"),
 ]
