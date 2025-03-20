@@ -11,6 +11,7 @@ from django.db.utils import DatabaseError, InterfaceError, OperationalError
 from pyerp.core.checks import check_database_connection
 
 
+@pytest.mark.core
 def test_check_database_connection_success():
     """Test database connection check when connection is successful."""
     with patch("pyerp.core.checks.connections") as mock_connections:
@@ -28,6 +29,7 @@ def test_check_database_connection_success():
         mock_connection.cursor.assert_called_once()
 
 
+@pytest.mark.core
 @pytest.mark.parametrize(
     "exception_class", [OperationalError, InterfaceError, DatabaseError]
 )
