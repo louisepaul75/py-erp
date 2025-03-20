@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/sidebar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { authService } from '../../lib/auth/authService'
+import { API_URL } from '@/lib/config'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -305,15 +307,25 @@ const Dashboard = () => {
       // Save to backend API
       try {
         console.log("Saving layout to API...");
-        const response = await fetch("/api/dashboard/summary/", {
+        
+        // Get JWT token from auth service cookie storage
+        const token = authService.getToken();
+        
+        if (!token) {
+          console.error("JWT token not found. User may not be authenticated.");
+          return;
+        }
+        
+        const response = await fetch(`${API_URL}/dashboard/summary/`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            // Use only the lowercase version which Django expects
+            "Authorization": `Bearer ${token}`,
+            // Keep CSRF token for session auth fallback
             "X-Csrftoken": cleanToken,
           },
-          credentials: "include", // Include cookies for authentication
+          credentials: "include", // Include cookies for session auth fallback
           body: JSON.stringify({
             grid_layout: layouts
           })
@@ -375,11 +387,24 @@ const Dashboard = () => {
       try {
         // Try to fetch from API first
         console.log("Fetching dashboard data from API...");
-        const response = await fetch("/api/dashboard/summary/", {
+        
+        // Get JWT token from auth service cookie storage
+        const token = authService.getToken();
+        
+        if (!token) {
+          console.log("JWT token not found. User may not be authenticated. Falling back to localStorage.");
+          const savedLayout = localStorage.getItem("dashboard-grid-layout");
+          if (savedLayout) setLayouts(JSON.parse(savedLayout));
+          return;
+        }
+        
+        // Use the API_URL from config instead of relative path
+        const response = await fetch(`${API_URL}/dashboard/summary/`, {
           headers: {
             "Accept": "application/json",
+            "Authorization": `Bearer ${token}`
           },
-          credentials: "include" // Include cookies for authentication
+          credentials: "include" // Include cookies for session auth fallback
         });
         
         if (response.ok) {
@@ -403,18 +428,8 @@ const Dashboard = () => {
       
       // Fallback to localStorage if API fails or doesn't have grid_layout
       console.log("Falling back to localStorage for dashboard layout");
-      const savedLayout = localStorage.getItem("dashboard-grid-layout")
-      if (savedLayout) {
-        try {
-          const parsedLayout = JSON.parse(savedLayout)
-          setLayouts(parsedLayout)
-          console.log("Successfully loaded layout from localStorage");
-        } catch (error) {
-          console.error("Failed to parse saved layout", error)
-        }
-      } else {
-        console.log("No saved layout found in localStorage, using default layout");
-      }
+      const savedLayout = localStorage.getItem("dashboard-grid-layout");
+      if (savedLayout) setLayouts(JSON.parse(savedLayout));
     };
 
     fetchDashboardData();

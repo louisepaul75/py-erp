@@ -67,6 +67,10 @@ export const authService = {
     }
   },
   
+  getToken: (): string | null => {
+    return cookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+  },
+  
   login: async (credentials: LoginCredentials): Promise<User> => {
     try {
       const response = await authApi.post(AUTH_CONFIG.tokenEndpoint, {
