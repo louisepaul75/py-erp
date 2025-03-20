@@ -33,7 +33,7 @@ class InventoryServiceTestCase(TestCase):
         )
         
         self.variant_product = VariantProduct.objects.create(
-            base_product=self.product,
+            parent=self.product,
             sku="TEST-SKU-001",
             name="Test Variant",
             is_active=True,

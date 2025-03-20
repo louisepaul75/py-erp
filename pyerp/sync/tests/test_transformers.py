@@ -170,10 +170,10 @@ class TestBaseTransformer:
         transformer = SimpleTransformer({})
         
         # Register custom transformers
-        def uppercase_name(value, _):
+        def uppercase_name(value, source_record=None):
             return value.upper() if isinstance(value, str) else value
         
-        def double_price(value, _):
+        def double_price(value, source_record=None):
             return value * 2 if isinstance(value, (int, float)) else value
         
         transformer.register_custom_transformer("name", uppercase_name)
@@ -194,13 +194,13 @@ class TestBaseTransformer:
 
     @patch('pyerp.sync.transformers.base.logger')
     def test_apply_custom_transformers_error(self, mock_logger):
-        """Test error handling in custom transformers."""
+        """Test handling errors in custom transformers."""
         transformer = SimpleTransformer({})
         
-        # Register a transformer that will raise an exception
-        def failing_transformer(value, _):
+        # Register custom transformer that raises exception
+        def failing_transformer(value, source_record=None):
             raise ValueError("Test error")
-        
+            
         transformer.register_custom_transformer("name", failing_transformer)
         
         record = {"name": "Test Product"}
@@ -337,15 +337,16 @@ class TestBaseTransformer:
 
     def test_transform(self):
         """Test the transform method."""
-        field_mappings = {
-            "product_name": "name",
-            "product_price": "price",
-            "product_code": "sku"
-        }
-        transformer = SimpleTransformer({"field_mappings": field_mappings})
+        transformer = SimpleTransformer({
+            "field_mappings": {
+                "legacy_id": "id",
+                "product_name": "name",
+                "price": "price",
+            }
+        })
         
         # Register a custom transformer
-        def uppercase_name(value, _):
+        def uppercase_name(value, source_record=None):
             return value.upper() if isinstance(value, str) else value
         
         transformer.register_custom_transformer("product_name", uppercase_name)

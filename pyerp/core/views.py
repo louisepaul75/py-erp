@@ -140,7 +140,24 @@ class UserProfileView(APIView):
             "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
             "date_joined": user.date_joined,
+            "profile": {
+                "full_name": f"{user.first_name} {user.last_name}".strip(),
+                "username": user.username,
+                "email": user.email,
+            },
+            "preferences": {
+                "dashboard_config": {}
+            }
         }
+        
+        # Add user preferences if they exist
+        try:
+            user_pref = UserPreference.objects.get(user=user)
+            response_data["preferences"] = {
+                "dashboard_config": user_pref.dashboard_config
+            }
+        except Exception as e:
+            logger.warning(f"Error fetching user preferences: {e}")
 
         return Response(response_data)
 
@@ -163,15 +180,44 @@ class UserProfileView(APIView):
             fields_str = ", ".join(updated_fields.keys())
             msg = f"User {user.username} updated profile fields: {fields_str}"
             logger.info(msg)
-            return Response(
-                {
-                    "message": "Profile updated successfully",
-                    "updated_fields": updated_fields,
-                },
-            )
+
+        # Handle preferences update
+        preferences_updated = False
+        if 'preferences' in request.data:
+            try:
+                from pyerp.core.models import UserPreference
+                
+                # Get or create preferences
+                user_pref, created = UserPreference.objects.get_or_create(user=user)
+                
+                # Update dashboard config if provided
+                if 'dashboard_config' in request.data['preferences']:
+                    if not user_pref.dashboard_config:
+                        user_pref.dashboard_config = {}
+                    
+                    # Update with new values
+                    user_pref.dashboard_config.update(
+                        request.data['preferences']['dashboard_config']
+                    )
+                    user_pref.save()
+                    preferences_updated = True
+                    logger.info(f"Updated dashboard preferences for user {user.username}")
+            except Exception as e:
+                logger.error(f"Error updating preferences: {e}")
+                return Response(
+                    {"error": "Failed to update preferences"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        if updated_fields or preferences_updated:
+            return Response({
+                "message": "Profile updated successfully",
+                "updated_fields": updated_fields,
+                "preferences_updated": preferences_updated
+            })
 
         return Response(
-            {"message": "No valid fields to update"},
+            {"message": "No fields were updated"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -180,6 +226,19 @@ class DashboardSummaryView(APIView):
     """View to retrieve and update dashboard data."""
 
     permission_classes = [IsAuthenticated]
+    
+    def get_dashboard_data(self, user):
+        """Get dashboard data for the specified user."""
+        return {
+            "recent_activity": [],
+            "notifications": [],
+            "summary_stats": {
+                "total_orders": 0,
+                "pending_orders": 0,
+                "recent_sales": 0,
+                "inventory_alerts": 0
+            }
+        }
 
     def get(self, request):
         """Get summary data and user's dashboard configuration."""
@@ -273,6 +332,34 @@ class SystemSettingsView(APIView):
     """View to retrieve and update system settings."""
 
     permission_classes = [IsAuthenticated]
+    
+    def get_system_settings(self):
+        """Get all system settings."""
+        return {
+            "site_name": "pyERP",
+            "company_name": "pyERP Company",
+            "support_email": "support@example.com",
+            "maintenance_mode": False,
+            "version": "1.0.0",
+            "max_upload_size": 10485760,  # 10 MB
+            "allowed_file_types": [".pdf", ".docx", ".xlsx", ".jpg", ".png"]
+        }
+    
+    def update_system_settings(self, settings_data):
+        """Update system settings."""
+        # In a real implementation, this would save to the database
+        # For now, just validate and return the settings
+        
+        # Validate settings
+        allowed_keys = {
+            "site_name", "company_name", "support_email", 
+            "maintenance_mode", "max_upload_size", "allowed_file_types"
+        }
+        
+        # Filter to only allowed settings
+        valid_settings = {k: v for k, v in settings_data.items() if k in allowed_keys}
+        
+        return valid_settings
 
     def get(self, request):
         """Get system settings."""

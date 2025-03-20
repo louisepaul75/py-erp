@@ -16,7 +16,7 @@ from rest_framework.test import force_authenticate
 
 
 @pytest.fixture
-def user():
+def user(db):
     """Create a test user."""
     return User.objects.create_user(
         username='testuser',
@@ -29,7 +29,7 @@ def user():
 
 
 @pytest.fixture
-def admin_user():
+def admin_user(db):
     """Create a test admin user."""
     return User.objects.create_user(
         username='adminuser',
@@ -48,6 +48,7 @@ def rf():
     return RequestFactory()
 
 
+@pytest.mark.django_db
 class TestUserProfileView:
     """Tests for the UserProfileView."""
 
@@ -56,8 +57,7 @@ class TestUserProfileView:
         # Create a preference for the user
         UserPreference.objects.create(
             user=user,
-            key='theme',
-            value='dark'
+            dashboard_config={"theme": "dark"}
         )
         
         view = UserProfileView.as_view()
@@ -68,8 +68,8 @@ class TestUserProfileView:
         assert response.status_code == 200
         assert 'profile' in response.data
         assert 'preferences' in response.data
-        assert response.data['preferences'][0]['key'] == 'theme'
-        assert response.data['preferences'][0]['value'] == 'dark'
+        assert 'dashboard_config' in response.data['preferences']
+        assert response.data['preferences']['dashboard_config']['theme'] == 'dark'
 
     def test_update_user_profile(self, rf, user):
         """Test updating the user profile."""
@@ -78,16 +78,17 @@ class TestUserProfileView:
         # Create initial preference
         UserPreference.objects.create(
             user=user,
-            key='theme',
-            value='light'
+            dashboard_config={"theme": "light"}
         )
         
         # Update preferences
         request_data = {
-            'preferences': [
-                {'key': 'theme', 'value': 'dark'},
-                {'key': 'sidebar', 'value': 'collapsed'}
-            ]
+            'preferences': {
+                'dashboard_config': {
+                    'theme': 'dark',
+                    'sidebar': 'collapsed'
+                }
+            }
         }
         
         request = rf.patch(
@@ -102,23 +103,19 @@ class TestUserProfileView:
         
         # Verify preferences were updated
         preferences = UserPreference.objects.filter(user=user)
-        assert preferences.count() == 2
+        assert preferences.count() == 1
         
-        # Find the theme preference
-        theme_pref = next((p for p in preferences if p.key == 'theme'), None)
-        assert theme_pref is not None
-        assert theme_pref.value == 'dark'
-        
-        # Find the sidebar preference
-        sidebar_pref = next((p for p in preferences if p.key == 'sidebar'), None)
-        assert sidebar_pref is not None
-        assert sidebar_pref.value == 'collapsed'
+        # Get the preference
+        pref = preferences.first()
+        assert pref.dashboard_config['theme'] == 'dark'
+        assert pref.dashboard_config['sidebar'] == 'collapsed'
 
 
+@pytest.mark.django_db
 class TestDashboardSummaryView:
     """Tests for the DashboardSummaryView."""
 
-    @patch('pyerp.core.views.DashboardSummaryView._get_dashboard_data')
+    @patch('pyerp.core.views.DashboardSummaryView.get_dashboard_data')
     def test_get_dashboard_summary(self, mock_get_data, rf, user):
         """Test retrieving the dashboard summary."""
         mock_get_data.return_value = {
@@ -137,10 +134,11 @@ class TestDashboardSummaryView:
         assert response.data['statistics']['orders'] == 10
 
 
+@pytest.mark.django_db
 class TestSystemSettingsView:
     """Tests for the SystemSettingsView."""
 
-    @patch('pyerp.core.views.SystemSettingsView._get_system_settings')
+    @patch('pyerp.core.views.SystemSettingsView.get_system_settings')
     def test_get_system_settings_staff(self, mock_get_settings, rf, admin_user):
         """Test retrieving system settings as staff user."""
         mock_get_settings.return_value = {
@@ -167,7 +165,7 @@ class TestSystemSettingsView:
         
         assert response.status_code == 403
 
-    @patch('pyerp.core.views.SystemSettingsView._update_system_settings')
+    @patch('pyerp.core.views.SystemSettingsView.update_system_settings')
     def test_update_system_settings_superuser(self, mock_update_settings, rf, admin_user):
         """Test updating system settings as superuser."""
         mock_update_settings.return_value = True

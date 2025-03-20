@@ -404,16 +404,21 @@ class VariantProduct(BaseProduct):
         Returns:
             QuerySet of Tag objects
         """
+        from pyerp.business_modules.products.tag_models import Tag
+        
         # If no parent or not inheriting, return only direct tags
         if not self.parent or not self.inherits_tags():
             return self.tags.all()
         
-        # Return combined parent and variant tags
-        parent_tags = self.parent.tags.all()
-        variant_tags = self.tags.all()
+        # Get tag IDs from both parent and variant
+        parent_tag_ids = list(self.parent.tags.values_list('id', flat=True))
+        variant_tag_ids = list(self.tags.values_list('id', flat=True))
         
-        # Union the two querysets
-        return parent_tags.union(variant_tags)
+        # Combine the IDs
+        all_tag_ids = list(set(parent_tag_ids + variant_tag_ids))
+        
+        # Return a queryset with all tags
+        return Tag.objects.filter(id__in=all_tag_ids)
 
 
 class Product(models.Model):

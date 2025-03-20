@@ -24,7 +24,7 @@ sys.path.insert(0, project_root)
 # Handle Celery imports if SKIP_CELERY_IMPORT is set
 if os.environ.get("SKIP_CELERY_IMPORT") == "1":
     # Use our mock celery implementation
-    from tests.mock_celery import MockCelery
+    from pyerp.utils.testing.mock_celery import MockCelery
     mock_celery = MockCelery()
     mock_celery.install()
     print("Using MockCelery for testing")
@@ -42,7 +42,7 @@ from rest_framework.test import APIClient
 # Configure URL patterns for tests
 
 # Append our test URLs to the ROOT_URLCONF
-settings.ROOT_URLCONF = "tests.test_urls"
+settings.ROOT_URLCONF = "pyerp.config.test_urls"
 
 
 # UI Testing Fixtures

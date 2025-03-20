@@ -29,4 +29,4 @@ urlpatterns = [
     path("", include(router.urls)),
     # Include the original users app URLs with namespace
     path("namespaced/", include("users.urls", namespace="users")),
-]
+] 

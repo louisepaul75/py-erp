@@ -196,6 +196,7 @@ class TestDjangoModelLoader:
         mock_model.__name__ = 'MockModel'
         
         mock_model_instance = MagicMock()
+        mock_model_instance._state = MagicMock()
         mock_model_instance._state.adding = True  # Indicates a new record
         
         # Set up the model to return itself on constructor call
@@ -230,6 +231,7 @@ class TestDjangoModelLoader:
         mock_atomic.return_value.__exit__.return_value = None
         
         mock_model_instance = MagicMock()
+        mock_model_instance._state = MagicMock()
         mock_model_instance._state.adding = False  # Indicates an existing record
         
         mock_model = MagicMock()

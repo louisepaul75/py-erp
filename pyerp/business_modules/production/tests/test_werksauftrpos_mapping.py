@@ -23,7 +23,7 @@ class TestWerksauftrPosMapping(TestCase):
     def test_art_nr_to_legacy_base_sku_mapping(self):
         """Test that WerksauftrPos['Art_Nr'] correctly maps to ParentProduct['legacy_base_sku']."""
         # Create a transformer instance
-        transformer = ProductionOrderItemTransformer()
+        transformer = ProductionOrderItemTransformer({})
 
         # Create a mock WerksauftrPos record with Art_Nr matching our parent product's legacy_base_sku
         mock_record = {
@@ -64,7 +64,7 @@ class TestWerksauftrPosMapping(TestCase):
     def test_art_nr_no_matching_parent_product(self):
         """Test behavior when no matching parent product is found."""
         # Create a transformer instance
-        transformer = ProductionOrderItemTransformer()
+        transformer = ProductionOrderItemTransformer({})
 
         # Create a mock record with Art_Nr that doesn't match any parent product
         mock_record = {
