@@ -53,7 +53,7 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="fixed top-20 left-4 z-50 h-10 w-10 rounded-full shadow-md bg-background"
+      className="fixed top-20 left-4 z-[5] h-10 w-10 rounded-full shadow-md bg-background"
       onClick={toggleSidebar}
       style={{ display: isCollapsed ? "flex" : "none" }}
     >
@@ -656,7 +656,7 @@ const DashboardContent = ({
 
   return (
     <div className="flex h-screen">
-      <Sidebar className="border-r fixed h-full z-20">
+      <Sidebar className="border-r fixed h-full z-[5]">
         <SidebarHeader>
           <div className="flex items-center justify-between px-2 py-2 mt-4">
             <div className="flex items-center gap-2">
@@ -721,7 +721,7 @@ const DashboardContent = ({
       </Sidebar>
       <div className="w-full h-full">
         <div className="relative">
-          <div className="fixed inset-0 top-[60px] z-10" style={{ left: "50px" }}>
+          <div className="fixed inset-0 top-[60px] z-[1]" style={{ left: "50px" }}>
             <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg max-w-[1400px] mx-auto">
               <ResponsiveGridLayout
                 className="layout"
