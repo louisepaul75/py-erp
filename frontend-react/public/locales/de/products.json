@@ -1,0 +1,13 @@
+{
+  "productList": "Produktliste",
+  "productDetails": "Produktdetails",
+  "addProduct": "Produkt hinzufügen",
+  "editProduct": "Produkt bearbeiten",
+  "deleteProduct": "Produkt löschen",
+  "productName": "Produktname",
+  "productDescription": "Produktbeschreibung",
+  "productPrice": "Preis",
+  "productCategory": "Kategorie",
+  "productStock": "Lagerbestand",
+  "productUnit": "Einheit"
+} 

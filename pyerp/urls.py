@@ -9,8 +9,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
 from django.views.i18n import JavaScriptCatalog, set_language
+from django.conf.urls.i18n import i18n_patterns
+from django.utils.translation import gettext_lazy as _
 from rest_framework import permissions, routers
 from rest_framework.documentation import include_docs_urls
 from rest_framework_simplejwt.views import (
@@ -19,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 
-from pyerp.core.views import VueAppView
+from pyerp.core.views import ReactAppView
 from pyerp.external_api.search.views import GlobalSearchViewSet
 
 # Check if drf_yasg is available
@@ -49,8 +50,9 @@ router = routers.DefaultRouter()
 # Register API viewsets here
 router.register(r"search", GlobalSearchViewSet, basename="search")
 
-# Define URL patterns
+# Define URL patterns for non-internationalized URLs (API, static files, etc.)
 urlpatterns = [
+    path("i18n/", include("django.conf.urls.i18n")),  # For language switching
     path("set-language/", set_language, name="set_language"),
     # JavaScript translations
     path(
@@ -58,8 +60,6 @@ urlpatterns = [
         JavaScriptCatalog.as_view(),
         name="javascript-catalog",
     ),
-    # Django admin URLs
-    path("admin/", admin.site.urls),
     # API URLs
     path("api/", include(router.urls)),
     path(
@@ -78,10 +78,6 @@ urlpatterns = [
         name="token_verify",
     ),
     # Add monitoring API URL
-    path(
-        "monitoring/",
-        include("pyerp.monitoring.urls", namespace="monitoring"),
-    ),
     path(
         "api/monitoring/",
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
@@ -104,8 +100,6 @@ urlpatterns = [
     path("api/inventory/", include("pyerp.business_modules.inventory.urls")),
     # API documentation
     path("api/docs/", include_docs_urls(title="pyERP API Documentation")),
-    # Redirect root to admin interface for now
-    path("", RedirectView.as_view(url="/admin/", permanent=False)),
     # Users API
     path("api/users/", include("users.urls", namespace="users")),
     # Admin tools API
@@ -129,6 +123,7 @@ if has_swagger:
 
 # Optional API modules (excluding products since we added it directly)
 OPTIONAL_API_MODULES = [
+    ("sales", "pyerp.sales.urls"),
     ("inventory", "pyerp.business_modules.inventory.urls"),
     ("production", "pyerp.production.urls"),
     ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),
@@ -156,10 +151,21 @@ urlpatterns += [
     path("api/", include("pyerp.core.api_urls")),
 ]
 
-# Vue.js application route - now as the root URL
-urlpatterns += [
-    path("", VueAppView.as_view(), name="vue_app"),
-]
+# Define URL patterns with i18n (language prefix) support
+# These will have language prefix in the URL, e.g., /de/admin/, /en/admin/
+urlpatterns += i18n_patterns(
+    # Django admin URLs
+    path("admin/", admin.site.urls),
+    # Add monitoring UI URL
+    path(
+        "monitoring/",
+        include("pyerp.monitoring.urls", namespace="monitoring"),
+    ),
+    # Root URL for React application
+    path("", ReactAppView.as_view(), name="react_app"),
+    # Use language prefix by default
+    prefix_default_language=True
+)
 
 # Serve static and media files in development
 if settings.DEBUG:

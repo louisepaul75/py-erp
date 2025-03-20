@@ -1,0 +1,35 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "summary": "Summary",
+    "recentActivity": "Recent Activity",
+    "viewAll": "View all"
+  },
+  "statistics": {
+    "totalSales": "Total Sales",
+    "totalOrders": "Total Orders",
+    "averageOrder": "Average Order",
+    "pendingOrders": "Pending Orders"
+  },
+  "widgets": {
+    "inventory": "Inventory Status",
+    "salesByCategory": "Sales by Category",
+    "topProducts": "Top Products",
+    "recentOrders": "Recent Orders"
+  },
+  "charts": {
+    "monthly": "Monthly",
+    "quarterly": "Quarterly",
+    "yearly": "Yearly",
+    "revenue": "Revenue",
+    "orders": "Orders",
+    "customers": "Customers"
+  },
+  "actions": {
+    "newOrder": "New Order",
+    "addProduct": "Add Product",
+    "manageInventory": "Manage Inventory",
+    "generateReport": "Generate Report"
+  }
+} 

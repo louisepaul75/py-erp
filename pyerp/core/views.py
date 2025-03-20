@@ -8,7 +8,7 @@ import subprocess
 from django.db import connection
 from django.db.utils import OperationalError
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
@@ -183,51 +183,90 @@ class DashboardSummaryView(APIView):
 
     def get(self, request):
         """Get summary data and user's dashboard configuration."""
-        msg = f"Dashboard summary requested by {request.user.username}"
-        logger.debug(msg)
+        try:
+            msg = f"Dashboard summary requested by {request.user.username}"
+            logger.info(msg)
 
-        # Get or create user preferences
-        user_pref, created = UserPreference.objects.get_or_create(user=request.user)
+            # Get or create user preferences
+            user_pref, created = UserPreference.objects.get_or_create(
+                user=request.user
+            )
+            
+            if created:
+                logger.info(f"Created new user preferences for {request.user.username}")
+            
+            # Get dashboard modules configuration
+            dashboard_modules = user_pref.get_dashboard_modules()
+            
+            # Get dashboard grid layout configuration
+            grid_layout = user_pref.get_dashboard_grid_layout()
+            
+            logger.debug(f"Retrieved dashboard config for {request.user.username}: grid_layout keys={list(grid_layout.keys() if grid_layout else [])}")
 
-        # Get dashboard modules configuration
-        dashboard_modules = user_pref.get_dashboard_modules()
+            # Example summary data - this would be fetched from the database
+            response_data = {
+                "pending_orders": 0,
+                "low_stock_items": 0,
+                "sales_today": 0,
+                "production_status": "normal",
+                "recent_activities": [],
+                "dashboard_modules": dashboard_modules,
+                "grid_layout": grid_layout,
+            }
 
-        # Example summary data - this would be fetched from the database
-        response_data = {
-            "pending_orders": 0,
-            "low_stock_items": 0,
-            "sales_today": 0,
-            "production_status": "normal",
-            "recent_activities": [],
-            "dashboard_modules": dashboard_modules,
-        }
-
-        return Response(response_data)
-
+            return Response(response_data)
+        except Exception as e:
+            logger.error(f"Error in dashboard summary view: {str(e)}")
+            return Response(
+                {"error": "Failed to retrieve dashboard data"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
     def patch(self, request):
         """Update user's dashboard configuration."""
-        msg = f"Dashboard config update requested by {request.user.username}"
-        logger.debug(msg)
-
-        # Get or create user preferences
-        user_pref, created = UserPreference.objects.get_or_create(user=request.user)
-
-        if "modules" in request.data:
-            # Save dashboard modules configuration
-            modules = request.data["modules"]
-            user_pref.save_dashboard_config(modules)
-
-            return Response(
-                {
-                    "message": "Dashboard configuration updated successfully",
-                    "dashboard_modules": modules,
-                }
+        try:
+            msg = f"Dashboard config update requested by {request.user.username}"
+            logger.info(msg)
+            
+            # Log the received data for debugging
+            logger.debug(f"Received dashboard update data: {request.data}")
+            
+            # Get or create user preferences
+            user_pref, created = UserPreference.objects.get_or_create(
+                user=request.user
             )
-
-        return Response(
-            {"message": "No valid configuration data provided"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+            
+            modules = request.data.get('modules')
+            grid_layout = request.data.get('grid_layout')
+            
+            if modules is not None or grid_layout is not None:
+                # Save dashboard configuration
+                user_pref.save_dashboard_config(modules=modules, grid_layout=grid_layout)
+                logger.info(f"Updated dashboard config for {request.user.username}")
+                
+                response_data = {
+                    "message": "Dashboard configuration updated successfully",
+                }
+                
+                if modules is not None:
+                    response_data["dashboard_modules"] = modules
+                    
+                if grid_layout is not None:
+                    response_data["grid_layout"] = grid_layout
+                    
+                return Response(response_data)
+            
+            logger.warning(f"No valid configuration data provided by {request.user.username}")
+            return Response(
+                {"message": "No valid configuration data provided"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            logger.error(f"Error in dashboard update view: {str(e)}")
+            return Response(
+                {"error": "Failed to update dashboard configuration"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class SystemSettingsView(APIView):
@@ -295,25 +334,12 @@ def csrf_failure(request, reason=""):
     return render(request, "csrf_failure.html", context)
 
 
-class VueAppView(TemplateView):
-    """View for rendering the Vue.js application as the main frontend."""
+class ReactAppView(TemplateView):
+    """View for rendering the React.js application as the main frontend."""
 
-    template_name = "base/vue_base.html"
+    template_name = "base/react_base.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
         context["debug"] = settings.DEBUG
-
-        # Parse Vue.js manifest for correct asset paths in production
-        if not settings.DEBUG:
-            manifest_path = os.path.join(settings.STATIC_ROOT, "vue", "manifest.json")
-            if os.path.exists(manifest_path):
-                with open(manifest_path) as f:
-                    try:
-                        manifest = json.load(f)
-                        context["vue_manifest"] = manifest
-                    except json.JSONDecodeError:
-                        pass
-
         return context
