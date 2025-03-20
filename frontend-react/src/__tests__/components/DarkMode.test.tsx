@@ -123,10 +123,10 @@ describe('Dark Mode Integration Tests', () => {
       render(<Footer />);
       
       // Wait for loading indicator to appear
-      await screen.findByTestId('loading-indicator');
+      await screen.findByTestId('loading-spinner');
       
       // Wait for loading indicator to disappear
-      await waitForElementToBeRemoved(() => screen.queryByTestId('loading-indicator'));
+      await waitForElementToBeRemoved(() => screen.queryByTestId('loading-spinner'));
       
       // Wait for state updates to complete
       await act(async () => {

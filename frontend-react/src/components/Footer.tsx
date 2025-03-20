@@ -75,10 +75,12 @@ export function Footer() {
           setApiAvailable(true);
         } else {
           console.error('Failed to fetch health status');
+          setHealthStatus({ status: 'unhealthy', database: { status: 'unhealthy', message: 'API unavailable' }, environment: 'unknown', version: 'unknown' });
           setApiAvailable(false);
         }
       } catch (error) {
         console.error('Error fetching health status:', error);
+        setHealthStatus({ status: 'unhealthy', database: { status: 'unhealthy', message: 'API unavailable' }, environment: 'unknown', version: 'unknown' });
         setApiAvailable(false);
       } finally {
         setIsLoading(false);
@@ -129,8 +131,8 @@ export function Footer() {
   
   // Mock data for when API is not available
   const mockHealthStatus = {
-    status: 'healthy',
-    database: { status: 'connected', message: 'Database is connected' },
+    status: 'unhealthy',
+    database: { status: 'disconnected', message: 'API is not available' },
     environment: 'development',
     version: '1.0.0-dev'
   };

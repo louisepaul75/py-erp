@@ -1,41 +1,10 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { I18nextProvider } from 'react-i18next';
+import { I18nextProvider, initReactI18next } from 'react-i18next';
 import i18next from 'i18next';
-import { initReactI18next } from 'react-i18next';
 
-// Initialize i18n for testing
-const i18n = i18next.createInstance();
-
-i18n
-  .use(initReactI18next)
-  .init({
-    lng: 'en',
-    fallbackLng: 'en',
-    ns: ['common'],
-    defaultNS: 'common',
-    resources: {
-      en: {
-        common: {
-          'test.key': 'Test Value',
-          'health.debugInfo': 'Debug Information',
-          'health.environment': 'Environment',
-          'health.version': 'Version',
-          'health.databaseStatus': 'Database Status',
-          'health.gitBranch': 'Git Branch',
-          'health.apiAvailable': 'API Available',
-          'common.yes': 'Yes',
-          'common.no': 'No'
-        },
-      },
-    },
-    interpolation: {
-      escapeValue: false,
-    },
-  });
-
-// Create a client
+// Create a new QueryClient instance for testing
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -44,33 +13,57 @@ const queryClient = new QueryClient({
   },
 });
 
-interface AllProvidersProps {
-  children: React.ReactNode;
-}
+// Initialize i18next for testing
+i18next
+  .use(initReactI18next)
+  .init({
+    lng: 'en',
+    fallbackLng: 'en',
+    ns: ['common'],
+    defaultNS: 'common',
+    interpolation: {
+      escapeValue: false,
+    },
+    resources: {
+      en: {
+        common: {
+          test: 'test',
+          'navigation.home': 'Home',
+          'navigation.products': 'Products',
+          'navigation.sales': 'Sales',
+          'navigation.production': 'Production',
+          'navigation.inventory': 'Inventory',
+          'navigation.settings': 'Settings'
+        }
+      }
+    },
+    react: {
+      useSuspense: false
+    },
+    initImmediate: false
+  });
 
-const AllProviders = ({ children }: AllProvidersProps) => {
+// Create a wrapper component that provides both react-query and i18n context
+const AllProviders = ({ children }: { children: React.ReactNode }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <I18nextProvider i18n={i18n}>
+      <I18nextProvider i18n={i18next}>
         {children}
       </I18nextProvider>
     </QueryClientProvider>
   );
 };
 
-const customRender = (ui: React.ReactElement, options = {}) =>
-  render(ui, {
-    wrapper: AllProviders,
-    ...options,
-  });
+// Create a custom render function that wraps the component with the providers
+const customRender = (ui: React.ReactElement) => {
+  return render(ui, { wrapper: AllProviders });
+};
 
-// re-export everything
+// Re-export everything
 export * from '@testing-library/react';
-
-// override render method
 export { customRender as render };
 
-// Add a test to prevent "no tests" error
-test.skip('empty test', () => {
+// Add a simple test to prevent "no tests" errors
+test('true is true', () => {
   expect(true).toBe(true);
-}); 
+});

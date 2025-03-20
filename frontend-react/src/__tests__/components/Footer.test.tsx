@@ -1,106 +1,69 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { act } from 'react';
 import { Footer } from '@/components/Footer';
-import * as translationModule from '@/hooks/useTranslationWrapper';
-import { API_URL } from '@/lib/config';
 
 // Mock next/link
 jest.mock('next/link', () => {
-  return {
-    __esModule: true,
-    default: ({ children }: { children: React.ReactNode }) => children,
-  };
+  return ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  );
 });
 
-// Mock translation hook
+// Mock react-i18next
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (str: string) => str,
-    i18n: {
-      changeLanguage: () => new Promise(() => {}),
-    },
+    t: (key: string) => key,
   }),
 }));
 
-// Mock fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
 describe('Footer', () => {
   beforeEach(() => {
-    mockFetch.mockReset();
-    mockFetch.mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            version: '1.0.0',
-            git_branch: 'main',
-            environment: 'development',
-          }),
-      })
-    );
-  });
-
-  afterEach(() => {
-    delete process.env.NEXT_PUBLIC_ENVIRONMENT;
+    // Reset fetch mock before each test
+    global.fetch = jest.fn();
+    
+    // Reset document styles
+    document.documentElement.style.setProperty('--footer-height', '0px');
     document.documentElement.style.setProperty('--dev-bar-height', '0px');
   });
 
-  it('renders copyright information', async () => {
-    await act(async () => {
-      render(<Footer />);
-    });
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
+  it('renders copyright information', () => {
+    render(<Footer />);
     expect(screen.getByText(/© \d{4} pyERP System/)).toBeInTheDocument();
   });
 
   it('shows version number when API is available', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ status: 'healthy', version: '1.0.0' }),
+    });
+
     await act(async () => {
       render(<Footer />);
     });
 
     await waitFor(() => {
-      expect(screen.getByText('v1.0.0')).toBeInTheDocument();
+      expect(screen.getByText(/v1\.0\.0/)).toBeInTheDocument();
     });
   });
 
-  it('shows loading indicator while fetching', async () => {
-    let resolvePromise: (value: any) => void;
-    const promise = new Promise((resolve) => {
-      resolvePromise = resolve;
-    });
-
-    (global.fetch as jest.Mock).mockImplementationOnce(() => promise);
+  it('shows loading indicator while fetching data', async () => {
+    (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
 
     await act(async () => {
       render(<Footer />);
     });
-
+    
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-
-    await act(async () => {
-      resolvePromise!({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            version: '1.0.0',
-            git_branch: 'main',
-            environment: 'development',
-          }),
-      });
-    });
   });
 
   it('shows green indicator when API is healthy', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          status: 'healthy',
-          version: '1.0.0',
-        }),
+      json: () => Promise.resolve({ status: 'healthy', version: '1.0.0' }),
     });
 
     await act(async () => {
@@ -116,11 +79,7 @@ describe('Footer', () => {
   it('shows red indicator when API is unhealthy', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          status: 'unhealthy',
-          version: '1.0.0',
-        }),
+      json: () => Promise.resolve({ status: 'unhealthy', version: '1.0.0' }),
     });
 
     await act(async () => {
@@ -133,58 +92,90 @@ describe('Footer', () => {
     });
   });
 
-  it('shows development mode bar in development environment', async () => {
-    process.env.NEXT_PUBLIC_ENVIRONMENT = 'development';
+  it('shows red indicator when API fetch fails', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error'
+    });
 
     await act(async () => {
       render(<Footer />);
     });
+    
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+    });
 
     await waitFor(() => {
-      expect(screen.getByText(/DEV MODE/)).toBeInTheDocument();
+      const indicator = screen.getByTestId('api-status-indicator');
+      expect(indicator).toHaveClass('bg-red-500');
     });
   });
 
-  it('toggles dev bar on click', async () => {
-    process.env.NEXT_PUBLIC_ENVIRONMENT = 'development';
+  it('toggles development bar on click and updates height', async () => {
     const user = userEvent.setup();
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
 
-    await act(async () => {
-      render(<Footer />);
-    });
-
-    const devBar = await screen.findByText(/DEV MODE/);
-    await act(async () => {
-      await user.click(devBar);
-    });
-
-    await waitFor(() => {
-      expect(document.documentElement.style.getPropertyValue('--dev-bar-height')).toBe('200px');
-    });
-
-    await act(async () => {
-      await user.click(devBar);
-    });
-
-    await waitFor(() => {
-      expect(document.documentElement.style.getPropertyValue('--dev-bar-height')).toBe('24px');
-    });
-  });
-
-  it('handles API fetch error gracefully', async () => {
-    mockFetch.mockImplementationOnce(() =>
-      Promise.resolve({
-        ok: false,
-        status: 500,
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ 
+          status: 'healthy', 
+          version: '1.0.0', 
+          environment: 'development' 
+        }),
       })
-    );
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ branch: 'main' }),
+      });
 
     await act(async () => {
       render(<Footer />);
     });
+    
+    await waitFor(() => {
+      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+    });
+
+    const devModeButton = screen.getByText(/DEV MODE/);
+    expect(devModeButton).toBeInTheDocument();
+
+    const mockDevBarHeight = 200;
+    const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = jest.fn().mockReturnValue({
+      height: mockDevBarHeight,
+      width: 100,
+      top: 0,
+      left: 0,
+      right: 100,
+      bottom: mockDevBarHeight,
+      x: 0,
+      y: 0,
+    });
+
+    // Click to expand
+    await act(async () => {
+      await user.click(devModeButton);
+    });
 
     await waitFor(() => {
-      expect(screen.getByTestId('api-status-indicator')).toHaveClass('bg-red-500');
+      const height = document.documentElement.style.getPropertyValue('--dev-bar-height');
+      expect(height).toBe(`${mockDevBarHeight}px`);
     });
+
+    // Click to collapse
+    await act(async () => {
+      await user.click(devModeButton);
+    });
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--dev-bar-height')).toBe('0px');
+    });
+
+    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    process.env.NODE_ENV = originalEnv;
   });
 }); 

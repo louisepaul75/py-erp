@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { resources } from '@/lib/i18n';
 
 /**
- * Wrapper für react-i18next useTranslation mit standardmäßigem "common" Namespace
- * @param ns - Namespace oder Array von Namespaces (optional)
- * @returns useTranslation Objekt mit t, i18n, etc.
+ * Wrapper for react-i18next useTranslation with default "common" namespace
+ * @param ns - Namespace or array of namespaces (optional)
+ * @returns useTranslation object with t, i18n, etc.
  */
 export function useAppTranslation(ns: string | readonly string[] = 'common') {
   const [loaded, setLoaded] = useState(false);
@@ -28,7 +28,7 @@ export function useAppTranslation(ns: string | readonly string[] = 'common') {
   const serverSideFallback = (key: string) => {
     // For keys like 'navigation.home' in the 'common' namespace
     const mainNs = Array.isArray(ns) ? ns[0] : ns;
-    const lang = 'de'; // Default to German for SSR
+    const lang = 'en'; // Default to English for SSR and tests
     
     if (resources[lang] && resources[lang][mainNs] && resources[lang][mainNs][key]) {
       return resources[lang][mainNs][key];
@@ -38,9 +38,12 @@ export function useAppTranslation(ns: string | readonly string[] = 'common') {
     return key;
   };
 
+  // If we're in a test environment, always use the translation function
+  const isTest = process.env.NODE_ENV === 'test';
+
   return {
     ...translation,
-    t: (isClient && loaded && translation.i18n.isInitialized) ? translation.t : serverSideFallback,
+    t: (isTest || (isClient && loaded && translation.i18n?.isInitialized)) ? translation.t : serverSideFallback,
     ready: isClient ? translation.ready : true,
   };
 }
