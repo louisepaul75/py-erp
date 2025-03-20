@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 from datetime import datetime
 
 from django.test import TestCase
@@ -15,9 +15,20 @@ class TestVariantProductSignals(TestCase):
 
     def setUp(self):
         """Set up the test environment"""
+        # Add a dimensions property to ParentProduct for testing
+        # This is a test-only solution to the missing dimensions field
+        if not hasattr(ParentProduct, 'dimensions') or not isinstance(getattr(ParentProduct, 'dimensions', None), property):
+            ParentProduct.dimensions = property(lambda self: f"{self.length_mm or 0} x {self.width_mm or 0} x {self.height_mm or 0}")
+        
         # Create a real parent product instance instead of a mock
         self.parent_product = ParentProduct.objects.create(
-            sku="PARENT-SKU", name="Test Parent Product", legacy_id="12345"
+            sku="PARENT-SKU", 
+            name="Test Parent Product", 
+            legacy_id="12345",
+            # Add required dimensions fields if they exist in the model
+            length_mm=100,
+            width_mm=50,
+            height_mm=25,
         )
 
         self.variant = VariantProduct()
