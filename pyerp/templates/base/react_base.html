@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pyERP - Enterprise Resource Planning</title>
+    <meta name="description" content="Enterprise Resource Planning System">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div id="root"></div>
+    {% block content %}{% endblock %}
+    
+    <script>
+        window.DJANGO_SETTINGS = {
+            DEBUG: {{ debug|yesno:"true,false" }},
+            API_URL: "{% url 'api-root' %}",
+            CSRF_TOKEN: "{{ csrf_token }}",
+            USER: {% if request.user.is_authenticated %}
+                {
+                    "id": {{ request.user.id }},
+                    "username": "{{ request.user.username }}",
+                    "email": "{{ request.user.email }}",
+                    "is_staff": {{ request.user.is_staff|yesno:"true,false" }},
+                    "is_superuser": {{ request.user.is_superuser|yesno:"true,false" }}
+                }
+            {% else %}
+                null
+            {% endif %}
+        };
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 
