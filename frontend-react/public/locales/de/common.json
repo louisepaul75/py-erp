@@ -1,0 +1,45 @@
+{
+  "welcome": "Willkommen bei pyERP",
+  "navigation": {
+    "home": "Startseite",
+    "products": "Produkte",
+    "sales": "Vertrieb",
+    "production": "Produktion",
+    "inventory": "Lager",
+    "dashboard": "Dashboard",
+    "settings": "Einstellungen",
+    "admin_settings": "Admin-Einstellungen"
+  },
+  "buttons": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "confirm": "Bestätigen"
+  },
+  "messages": {
+    "loading": "Lädt...",
+    "noData": "Keine Daten gefunden",
+    "error": "Ein Fehler ist aufgetreten",
+    "success": "Erfolgreich",
+    "saved": "Gespeichert",
+    "deleted": "Gelöscht"
+  },
+  "common": {
+    "yes": "Ja",
+    "no": "Nein"
+  },
+  "health": {
+    "systemHealthy": "System Gesund",
+    "systemIssues": "System Probleme",
+    "debugInfo": "Debug-Informationen",
+    "environment": "Umgebung",
+    "version": "Version",
+    "databaseStatus": "Datenbank-Status",
+    "gitBranch": "Git Branch",
+    "apiAvailable": "API Verfügbar"
+  }
+} 

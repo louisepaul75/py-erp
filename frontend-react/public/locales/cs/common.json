@@ -1,0 +1,45 @@
+{
+  "welcome": "Vítejte v pyERP",
+  "navigation": {
+    "home": "Domů",
+    "products": "Produkty",
+    "sales": "Prodej",
+    "production": "Výroba",
+    "inventory": "Sklad",
+    "dashboard": "Přehled",
+    "settings": "Nastavení",
+    "admin_settings": "Nastavení administrátora"
+  },
+  "buttons": {
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "delete": "Smazat",
+    "edit": "Upravit",
+    "create": "Vytvořit",
+    "search": "Hledat",
+    "filter": "Filtrovat",
+    "confirm": "Potvrdit"
+  },
+  "messages": {
+    "loading": "Načítání...",
+    "noData": "Žádná data nenalezena",
+    "error": "Došlo k chybě",
+    "success": "Úspěch",
+    "saved": "Uloženo",
+    "deleted": "Smazáno"
+  },
+  "common": {
+    "yes": "Ano",
+    "no": "Ne"
+  },
+  "health": {
+    "systemHealthy": "Systém je v pořádku",
+    "systemIssues": "Problémy systému",
+    "debugInfo": "Informace o ladění",
+    "environment": "Prostředí",
+    "version": "Verze",
+    "databaseStatus": "Stav databáze",
+    "gitBranch": "Git větev",
+    "apiAvailable": "API dostupné"
+  }
+} 
