@@ -60,6 +60,8 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data \
 COPY frontend-react/package*.json /app/frontend-react/
 WORKDIR /app/frontend-react
 RUN npm install --legacy-peer-deps
+# Install testing-library/dom explicitly
+RUN npm install @testing-library/dom --save-dev
 
 # Copy frontend source files
 COPY frontend-react/ /app/frontend-react/
@@ -81,6 +83,10 @@ COPY docker/supervisord.dev.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy static directories setup script
 COPY docker/ensure_static_dirs.sh /app/docker/ensure_static_dirs.sh
 RUN chmod +x /app/docker/ensure_static_dirs.sh
+
+# Copy frontend dependencies setup script
+COPY docker/ensure_frontend_deps.sh /app/docker/ensure_frontend_deps.sh
+RUN chmod +x /app/docker/ensure_frontend_deps.sh
 
 # Set up entrypoint
 COPY docker/entrypoint.dev.sh /entrypoint.sh
