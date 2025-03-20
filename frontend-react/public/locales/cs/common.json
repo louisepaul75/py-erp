@@ -5,9 +5,10 @@
     "products": "Produkty",
     "sales": "Prodej",
     "production": "Výroba",
-    "inventory": "Sklad",
-    "dashboard": "Přehled",
+    "inventory": "Inventář",
+    "ui_components": "UI Komponenty",
     "settings": "Nastavení",
+    "logout": "Odhlásit se",
     "admin_settings": "Nastavení administrátora"
   },
   "buttons": {

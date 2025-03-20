@@ -61,12 +61,13 @@ export function Navbar() {
     logout.mutate();
   };
 
-  const navItems = [
-    { label: t('navigation.home'), href: '/' },
-    { label: t('navigation.products'), href: '/products' },
-    { label: t('navigation.sales'), href: '/sales' },
-    { label: t('navigation.production'), href: '/production' },
-    { label: t('navigation.inventory'), href: '/inventory' },
+  const navigationItems = [
+    { href: '/', label: t('navigation.home') },
+    { href: '/products', label: t('navigation.products') },
+    { href: '/sales', label: t('navigation.sales') },
+    { href: '/production', label: t('navigation.production') },
+    { href: '/inventory', label: t('navigation.inventory') },
+    { href: '/ui-components', label: t('navigation.ui_components') },
   ];
 
   return (
@@ -88,13 +89,13 @@ export function Navbar() {
 
           {/* Mobile menu */}
           <div className="flex items-center lg:hidden">
-            <MobileMenu items={navItems} />
+            <MobileMenu items={navigationItems} />
           </div>
 
           {/* Navigation Links - Desktop */}
           <div className="hidden lg:flex items-center justify-center flex-1">
             <div className="flex space-x-4">
-              {navItems.map(item => (
+              {navigationItems.map(item => (
                 <NavLink key={item.href} href={item.href} label={item.label} />
               ))}
               

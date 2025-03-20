@@ -55,7 +55,8 @@ const translations = {
   'navigation.settings': 'Settings',
   'user.logout': 'Logout',
   'theme.lightMode': 'Light Mode',
-  'theme.darkMode': 'Dark Mode'
+  'theme.darkMode': 'Dark Mode',
+  'navigation.ui_components': 'UI Components'
 };
 
 jest.mock('../../hooks/useTranslationWrapper', () => {
@@ -181,7 +182,7 @@ describe('Navbar', () => {
           expect.objectContaining({ href: '/sales', label: translations['navigation.sales'] }),
           expect.objectContaining({ href: '/production', label: translations['navigation.production'] }),
           expect.objectContaining({ href: '/inventory', label: translations['navigation.inventory'] }),
-          expect.objectContaining({ href: '/ui-components', label: 'UI Components' }),
+          expect.objectContaining({ href: '/ui-components', label: translations['navigation.ui_components'] }),
         ]),
       })
     );
