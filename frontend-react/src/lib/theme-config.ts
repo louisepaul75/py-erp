@@ -58,10 +58,10 @@ export const componentStyles = {
 
   // Card styles
   card: {
-    default: 'bg-card shadow-sm border border-border',
-    highlighted: 'bg-muted shadow-md border border-primary/20',
-    header: 'bg-muted border-b border-border',
-    footer: 'bg-muted border-t border-border'
+    default: 'rounded-xl text-card-foreground bg-card shadow-sm border border-border',
+    highlighted: 'rounded-xl text-card-foreground bg-primary/10 shadow-md border border-primary/20',
+    header: 'flex flex-col space-y-1.5 p-6 bg-primary/10',
+    footer: 'flex items-center p-6 pt-0 bg-primary/10'
   },
 
   // Input styles

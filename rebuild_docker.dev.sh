@@ -1,5 +1,27 @@
 #!/bin/bash
 
+# Initialize variables for optional parameters
+RUN_TESTS=""
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --tests)
+            if [ -z "$2" ]; then
+                echo "Error: --tests requires a parameter (e.g. ui)"
+                exit 1
+            fi
+            RUN_TESTS="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown parameter: $1"
+            echo "Usage: $0 [--tests ui]"
+            exit 1
+            ;;
+    esac
+done
+
 # Stop the existing container
 echo "Stopping existing pyerp-dev container..."
 docker stop pyerp-dev || true
@@ -43,9 +65,19 @@ docker run -d \
 echo "Showing last 50 lines of container logs..."
 docker logs --tail 50 pyerp-dev || true
 
-# Verify that frontend tests are set up correctly
-echo "Verifying frontend test setup..."
-docker exec pyerp-dev bash -c "cd /app/frontend-react && npm test -- --silent || echo 'Tests may fail initially, but the setup is complete.'"
+# Run tests only if the --tests parameter was provided
+if [ -n "$RUN_TESTS" ]; then
+    case "$RUN_TESTS" in
+        "ui")
+            echo "Running frontend tests..."
+            docker exec pyerp-dev bash -c "cd /app/frontend-react && npm test -- --silent || echo 'Tests may fail initially, but the setup is complete.'"
+            ;;
+        *)
+            echo "Unknown test type: $RUN_TESTS"
+            echo "Supported test types: ui"
+            ;;
+    esac
+fi
 
 echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again."
-echo -e "To run frontend tests, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"
+echo -e "To run frontend tests manually, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"

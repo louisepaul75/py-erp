@@ -53,7 +53,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         
         <div className="relative">
           {Icon && iconPosition === 'left' && (
-            <Icon className="absolute left-2.5 top-2.5 h-4 w-4 text-amber-500" />
+            <Icon 
+              className="absolute left-2.5 top-2.5 h-4 w-4 text-amber-500" 
+              data-testid={Icon.displayName?.toLowerCase() || 'icon'} 
+            />
           )}
           
           <ShadcnInput
@@ -69,7 +72,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
           
           {Icon && iconPosition === 'right' && (
-            <Icon className="absolute right-2.5 top-2.5 h-4 w-4 text-amber-500" />
+            <Icon 
+              className="absolute right-2.5 top-2.5 h-4 w-4 text-amber-500" 
+              data-testid={Icon.displayName?.toLowerCase() || 'icon'} 
+            />
           )}
         </div>
         

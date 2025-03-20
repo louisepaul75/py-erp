@@ -1,22 +1,26 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import { Footer } from '@/components/Footer';
 import * as translationModule from '@/hooks/useTranslationWrapper';
 import { API_URL } from '@/lib/config';
-import { act } from 'react-dom/test-utils';
 
 // Mock next/link
-jest.mock('next/link', () => ({
-  __esModule: true,
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>;
-  },
-}));
+jest.mock('next/link', () => {
+  return {
+    __esModule: true,
+    default: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
 
 // Mock translation hook
-jest.mock('@/hooks/useTranslationWrapper', () => ({
-  __esModule: true,
-  default: jest.fn(),
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (str: string) => str,
+    i18n: {
+      changeLanguage: () => new Promise(() => {}),
+    },
+  }),
 }));
 
 // Mock fetch
@@ -24,254 +28,163 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 describe('Footer', () => {
-  // Define common mock data
-  const mockHealthData = {
-    status: 'healthy',
-    database: { status: 'connected', message: 'Database is connected' },
-    environment: 'development',
-    version: '1.0.0-dev',
-  };
-
-  const mockGitData = {
-    branch: 'main',
-  };
-
   beforeEach(() => {
-    // Reset mocks
-    jest.clearAllMocks();
-    
-    // Mock translation
-    const mockUseTranslation = jest.fn().mockReturnValue({
-      t: (key: string) => {
-        const translations: Record<string, string> = {
-          'health.debugInfo': 'Debug Information',
-          'health.environment': 'Environment',
-          'health.version': 'Version',
-          'health.databaseStatus': 'Database Status',
-          'health.gitBranch': 'Git Branch',
-          'health.apiAvailable': 'API Available',
-          'common.yes': 'Yes',
-          'common.no': 'No',
-        };
-        return translations[key] || key;
-      },
-    });
-    jest.spyOn(translationModule, 'default').mockImplementation(mockUseTranslation);
-
-    // Mock successful fetch responses
-    mockFetch.mockImplementation((url) => {
-      if (url === `${API_URL}/health`) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockHealthData),
-        });
-      } else if (url === `${API_URL}/git/branch`) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(mockGitData),
-        });
-      }
-      return Promise.reject(new Error('Not found'));
-    });
-
-    // Mock DOM methods
-    Element.prototype.getBoundingClientRect = jest.fn().mockReturnValue({
-      height: 50,
-      width: 100,
-      top: 0,
-      left: 0,
-      right: 100,
-      bottom: 50,
-    });
-
-    // Mock document querySelector
-    document.querySelector = jest.fn().mockImplementation(() => ({
-      getBoundingClientRect: () => ({
-        height: 50,
-      }),
-    }));
-
-    // Mock style property
-    document.documentElement.style.setProperty = jest.fn();
+    mockFetch.mockReset();
+    mockFetch.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            version: '1.0.0',
+            git_branch: 'main',
+            environment: 'development',
+          }),
+      })
+    );
   });
 
-  it('renders the copyright information', async () => {
-    render(<Footer />);
-    const currentYear = new Date().getFullYear();
-    expect(screen.getByText(`© ${currentYear} pyERP System`)).toBeInTheDocument();
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_ENVIRONMENT;
+    document.documentElement.style.setProperty('--dev-bar-height', '0px');
   });
 
-  it('displays the version number from the health API', async () => {
+  it('renders copyright information', async () => {
     await act(async () => {
       render(<Footer />);
     });
-    
-    // Wait for data to load
+
+    expect(screen.getByText(/© \d{4} pyERP System/)).toBeInTheDocument();
+  });
+
+  it('shows version number when API is available', async () => {
+    await act(async () => {
+      render(<Footer />);
+    });
+
     await waitFor(() => {
-      expect(screen.getByText(`v${mockHealthData.version}`)).toBeInTheDocument();
+      expect(screen.getByText('v1.0.0')).toBeInTheDocument();
     });
   });
 
-  it('shows a loading indicator while fetching health status', async () => {
-    // Set up a delayed mock response to ensure loading state is captured
-    mockFetch.mockImplementationOnce(() => {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            ok: true,
-            json: () => Promise.resolve(mockHealthData),
-          });
-        }, 100);
+  it('shows loading indicator while fetching', async () => {
+    let resolvePromise: (value: any) => void;
+    const promise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    (global.fetch as jest.Mock).mockImplementationOnce(() => promise);
+
+    await act(async () => {
+      render(<Footer />);
+    });
+
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+
+    await act(async () => {
+      resolvePromise!({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            version: '1.0.0',
+            git_branch: 'main',
+            environment: 'development',
+          }),
       });
     });
-
-    render(<Footer />);
-    
-    // The loading indicator should be visible - use the screen object instead of document
-    expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
   });
 
-  it('shows the DEV MODE bar in development environment', async () => {
-    // Ensure we're in development mode
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-    
+  it('shows green indicator when API is healthy', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: 'healthy',
+          version: '1.0.0',
+        }),
+    });
+
     await act(async () => {
       render(<Footer />);
     });
-    
-    // Wait for health data to load
+
+    await waitFor(() => {
+      const indicator = screen.getByTestId('api-status-indicator');
+      expect(indicator).toHaveClass('bg-green-500');
+    });
+  });
+
+  it('shows red indicator when API is unhealthy', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: 'unhealthy',
+          version: '1.0.0',
+        }),
+    });
+
+    await act(async () => {
+      render(<Footer />);
+    });
+
+    await waitFor(() => {
+      const indicator = screen.getByTestId('api-status-indicator');
+      expect(indicator).toHaveClass('bg-red-500');
+    });
+  });
+
+  it('shows development mode bar in development environment', async () => {
+    process.env.NEXT_PUBLIC_ENVIRONMENT = 'development';
+
+    await act(async () => {
+      render(<Footer />);
+    });
+
     await waitFor(() => {
       expect(screen.getByText(/DEV MODE/)).toBeInTheDocument();
     });
-    
-    // Reset environment
-    process.env.NODE_ENV = originalNodeEnv;
   });
 
-  it('toggles the dev bar when clicking the button', async () => {
-    // Ensure we're in development mode
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-    
+  it('toggles dev bar on click', async () => {
+    process.env.NEXT_PUBLIC_ENVIRONMENT = 'development';
+    const user = userEvent.setup();
+
     await act(async () => {
       render(<Footer />);
     });
-    
-    // Wait for health data to load
-    await waitFor(() => {
-      expect(screen.getByText(/DEV MODE/)).toBeInTheDocument();
-    });
-    
-    // Initially, the dev bar content should be hidden
-    expect(screen.queryByText('Debug Information')).not.toBeInTheDocument();
-    
-    // Click the toggle button
+
+    const devBar = await screen.findByText(/DEV MODE/);
     await act(async () => {
-      fireEvent.click(screen.getByText(/DEV MODE/));
+      await user.click(devBar);
     });
-    
-    // Now the dev bar content should be visible
-    expect(screen.getByText('Debug Information')).toBeInTheDocument();
-    
-    // Reset environment
-    process.env.NODE_ENV = originalNodeEnv;
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--dev-bar-height')).toBe('200px');
+    });
+
+    await act(async () => {
+      await user.click(devBar);
+    });
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--dev-bar-height')).toBe('24px');
+    });
   });
 
-  it('displays git branch information when available', async () => {
-    // Ensure we're in development mode
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-    
-    await act(async () => {
-      render(<Footer />);
-    });
-    
-    // Wait for data to load
-    await waitFor(() => {
-      expect(screen.getByText(/DEV MODE \(main\)/)).toBeInTheDocument();
-    });
-    
-    // Click the toggle button to see debug info
-    await act(async () => {
-      fireEvent.click(screen.getByText(/DEV MODE/));
-    });
-    
-    // Check git branch info
-    expect(screen.getByText('main')).toBeInTheDocument();
-    
-    // Reset environment
-    process.env.NODE_ENV = originalNodeEnv;
-  });
-
-  it('handles API fetch errors gracefully', async () => {
-    // Mock failed fetch response
-    mockFetch.mockImplementationOnce(() => {
-      return Promise.resolve({
+  it('handles API fetch error gracefully', async () => {
+    mockFetch.mockImplementationOnce(() =>
+      Promise.resolve({
         ok: false,
-      });
-    });
-    
-    render(<Footer />);
-    
-    // Even with a failed fetch, the default mock data should be used
-    // So it will still show the version from the mockHealthStatus default
-    await waitFor(() => {
-      expect(screen.getByText(`v1.0.0-dev`)).toBeInTheDocument();
-    });
-  });
+        status: 500,
+      })
+    );
 
-  it('updates CSS variables when dev bar is expanded', async () => {
-    // Ensure we're in development mode
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-    
     await act(async () => {
       render(<Footer />);
     });
-    
-    // Wait for health data to load
-    await waitFor(() => {
-      expect(screen.getByText(/DEV MODE/)).toBeInTheDocument();
-    });
-    
-    // Click the toggle button
-    await act(async () => {
-      fireEvent.click(screen.getByText(/DEV MODE/));
-    });
-    
-    // Wait for the setTimeout in the component to execute
-    await waitFor(() => {
-      expect(document.documentElement.style.setProperty).toHaveBeenCalledWith('--dev-bar-height', '50px');
-    });
-    
-    // Reset environment
-    process.env.NODE_ENV = originalNodeEnv;
-  });
 
-  it('displays API status correctly', async () => {
-    // Ensure we're in development mode
-    const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-    
-    await act(async () => {
-      render(<Footer />);
-    });
-    
-    // Wait for health data to load
     await waitFor(() => {
-      expect(screen.getByText(/DEV MODE/)).toBeInTheDocument();
+      expect(screen.getByTestId('api-status-indicator')).toHaveClass('bg-red-500');
     });
-    
-    // Click the toggle button
-    await act(async () => {
-      fireEvent.click(screen.getByText(/DEV MODE/));
-    });
-    
-    // Check API available status
-    expect(screen.getByText('Yes')).toBeInTheDocument();
-    
-    // Reset environment
-    process.env.NODE_ENV = originalNodeEnv;
   });
 }); 

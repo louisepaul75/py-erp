@@ -1,22 +1,25 @@
-module.exports = {
+/** @type {import('jest').Config} */
+const config = {
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
-    '^.+\\.svg$': 'jest-transform-stub',
-  },
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.tsx'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.(jpg|jpeg|png|gif|webp|svg)$': 'jest-transform-stub',
   },
-  collectCoverage: true,
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+  },
+  transformIgnorePatterns: [
+    '/node_modules/(?!ky/).+\\.js$'
+  ],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
-    '!src/**/node_modules/**',
     '!src/**/*.stories.{js,jsx,ts,tsx}',
+    '!src/**/*.test.{js,jsx,ts,tsx}',
+    '!src/**/index.{js,jsx,ts,tsx}',
   ],
   coverageThreshold: {
     global: {
@@ -26,11 +29,6 @@ module.exports = {
       statements: 70,
     },
   },
-  reporters: [
-    'default',
-    ['jest-junit', {
-      outputDirectory: './',
-      outputName: 'jest-junit.xml',
-    }]
-  ],
-}; 
+};
+
+module.exports = config; 

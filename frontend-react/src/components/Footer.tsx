@@ -153,12 +153,18 @@ export function Footer() {
           >
             <span>v{displayHealthStatus?.version || '0.0.0'}</span>
             {isLoading ? (
-              <div className="h-3 w-3 rounded-full bg-gray-300 animate-pulse" data-testid="loading-indicator"></div>
+              <div 
+                data-testid="loading-spinner"
+                className="h-3 w-3 rounded-full bg-gray-300 animate-pulse"
+              />
             ) : (
-              <div className={cn(
-                "h-3 w-3 rounded-full",
-                displayHealthStatus?.status === 'healthy' ? "bg-green-500" : "bg-red-500"
-              )}></div>
+              <div 
+                data-testid="api-status-indicator"
+                className={cn(
+                  "h-3 w-3 rounded-full",
+                  displayHealthStatus?.status === 'healthy' ? "bg-green-500" : "bg-red-500"
+                )}
+              />
             )}
           </Link>
         </div>
