@@ -4,6 +4,11 @@ import { useTranslation, UseTranslationOptions } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { resources } from '@/lib/i18n';
 
+type ResourceType = typeof resources;
+type LanguageKeys = keyof ResourceType;
+type NamespaceKeys<T extends LanguageKeys> = keyof ResourceType[T];
+type TranslationKeys<T extends LanguageKeys, N extends NamespaceKeys<T>> = keyof ResourceType[T][N];
+
 /**
  * Wrapper for react-i18next useTranslation with default "common" namespace
  * @param ns - Namespace or array of namespaces (optional)
@@ -28,10 +33,14 @@ export function useAppTranslation(ns: string | readonly string[] = 'common') {
   const serverSideFallback = (key: string) => {
     // For keys like 'navigation.home' in the 'common' namespace
     const mainNs = Array.isArray(ns) ? ns[0] : ns;
-    const lang = 'en'; // Default to English for SSR and tests
+    const lang = 'en' as LanguageKeys; // Default to English for SSR and tests
     
-    if (resources[lang] && resources[lang][mainNs] && resources[lang][mainNs][key]) {
-      return resources[lang][mainNs][key];
+    if (
+      resources[lang] &&
+      resources[lang][mainNs as NamespaceKeys<typeof lang>] &&
+      resources[lang][mainNs as NamespaceKeys<typeof lang>][key as TranslationKeys<typeof lang, NamespaceKeys<typeof lang>>]
+    ) {
+      return resources[lang][mainNs as NamespaceKeys<typeof lang>][key as TranslationKeys<typeof lang, NamespaceKeys<typeof lang>>];
     }
     
     // Fallback to the key itself if no translation is found

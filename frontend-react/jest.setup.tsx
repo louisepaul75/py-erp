@@ -29,7 +29,16 @@ jest.mock('next/image', () => ({
 
 // Mock ky
 jest.mock('ky', () => {
-  const mockKy = {
+  interface MockKy {
+    extend: jest.Mock;
+    post: jest.Mock;
+    get: jest.Mock;
+    put: jest.Mock;
+    delete: jest.Mock;
+    create: jest.Mock;
+  }
+
+  const mockKy: MockKy = {
     extend: jest.fn(),
     post: jest.fn(),
     get: jest.fn(),

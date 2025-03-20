@@ -32,7 +32,19 @@ export const themeColors = {
   success: '#22c55e',
   warning: '#f59e0b',
   error: '#ef4444',
-  info: '#3b82f6'
+  info: '#3b82f6',
+
+  // Semantic colors
+  primary: '#f59e0b',
+  primaryHover: '#d97706',
+  primaryActive: '#b45309',
+  ring: '#f59e0b',
+  background: '#ffffff',
+  card: '#ffffff',
+  muted: '#f3f4f6',
+  foreground: '#111827',
+  mutedForeground: '#6b7280',
+  border: '#e5e7eb'
 } as const;
 
 // Component styles configuration
@@ -53,6 +65,7 @@ export const componentStyles = {
       sm: 'h-9 px-3',
       lg: 'h-11 px-8',
       icon: 'h-10 w-10',
+      xs: 'h-8 px-2 text-xs'
     },
   },
 
@@ -79,9 +92,11 @@ export const componentStyles = {
     container: 'w-full border-collapse',
     header: 'bg-gray-50 border-b border-gray-200',
     headerCell: 'h-12 px-4 text-left align-middle font-medium text-gray-500 [&:has([role=checkbox])]:pr-0',
+    headerText: 'text-gray-500 font-medium',
     row: 'border-b border-gray-200 transition-colors hover:bg-gray-50/50',
     cell: 'p-4 align-middle [&:has([role=checkbox])]:pr-0',
-    footer: 'bg-gray-50 border-t border-gray-200'
+    footer: 'bg-gray-50 border-t border-gray-200',
+    border: 'border-gray-200'
   },
 
   // Status badge styles
