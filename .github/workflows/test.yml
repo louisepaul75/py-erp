@@ -59,15 +59,11 @@ jobs:
           TEST_GROUP: ${{ matrix.test-group }}
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          # Create coverage directory
-          mkdir -p coverage
+          # Make sure test script is executable
+          chmod +x scripts/run_tests.sh
           
-          # Run tests for specific group from tests directory with coverage
-          cd tests && python -m pytest ${{ matrix.test-group }}/ \
-            --cov=../pyerp \
-            --cov-report=xml:../coverage/${{ matrix.test-group }}-coverage.xml \
-            --junitxml=../coverage/${{ matrix.test-group }}-junit.xml \
-            -o junit_family=legacy
+          # Run tests using the existing script
+          ./scripts/run_tests.sh ${{ matrix.test-group }}
 
       - name: Store test results
         if: always()

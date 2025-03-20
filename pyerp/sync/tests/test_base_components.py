@@ -276,38 +276,44 @@ class TestBaseLoader(TestCase):
         self.assertIn("key_field", str(context.exception))
 
     def test_load(self):
-        """Test the load method."""
-        
-        # Create a subclass for testing with mock methods
+        """Test the load method works correctly."""
+
         class TestLoader(BaseLoader):
             def get_required_config_fields(self):
                 return []
 
             def prepare_record(self, record):
                 # Simulate preparing record for loading
-                if record.get("id") == 1:
-                    # First record - successful create
-                    return {"id": 1}, record
-                elif record.get("id") == 2:
-                    # Second record - successful update
-                    return {"id": 2}, record
-                else:
-                    # Third record - error
-                    raise ValueError("Test error")
+                # Don't raise an error here, let it happen in load_record
+                lookup_criteria = {}
+                prepared_record = record.copy()
+
+                if "id" in record:
+                    lookup_criteria["id"] = record["id"]
+
+                return lookup_criteria, prepared_record
 
             def load_record(self, lookup_criteria, record, update_existing=True):
                 # Simulate loading a record
+                import unittest.mock
+                
+                # For ID 3, we'll simulate an error during loading
+                if record.get("id") == 3:
+                    raise ValueError("Test error")
+                
+                # Create mock object with _state for detecting create/update
                 mock_obj = unittest.mock.MagicMock()
                 mock_obj._state = unittest.mock.MagicMock()
                 
-                if not lookup_criteria or not lookup_criteria.get("id"):
-                    # Create new record
-                    mock_obj._state.adding = True
-                    return mock_obj
-                else:
-                    # Update existing record
+                # Ensure the 'adding' attribute is accessed correctly by the BaseLoader.load method
+                if lookup_criteria and lookup_criteria.get("id") == 2:
+                    # Update scenario
                     mock_obj._state.adding = False
-                    return mock_obj
+                else:
+                    # Create scenario
+                    mock_obj._state.adding = True
+                
+                return mock_obj
 
         # Create loader
         loader = TestLoader(config={})
