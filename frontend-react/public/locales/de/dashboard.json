@@ -1,0 +1,35 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Willkommen zurück",
+    "summary": "Zusammenfassung",
+    "recentActivity": "Letzte Aktivitäten",
+    "viewAll": "Alle anzeigen"
+  },
+  "statistics": {
+    "totalSales": "Gesamtumsatz",
+    "totalOrders": "Bestellungen insgesamt",
+    "averageOrder": "Durchschnittliche Bestellung",
+    "pendingOrders": "Ausstehende Bestellungen"
+  },
+  "widgets": {
+    "inventory": "Inventar-Status",
+    "salesByCategory": "Umsatz nach Kategorie",
+    "topProducts": "Top-Produkte",
+    "recentOrders": "Letzte Bestellungen"
+  },
+  "charts": {
+    "monthly": "Monatlich",
+    "quarterly": "Vierteljährlich",
+    "yearly": "Jährlich",
+    "revenue": "Umsatz",
+    "orders": "Bestellungen",
+    "customers": "Kunden"
+  },
+  "actions": {
+    "newOrder": "Neue Bestellung",
+    "addProduct": "Produkt hinzufügen",
+    "manageInventory": "Inventar verwalten",
+    "generateReport": "Bericht erstellen"
+  }
+} 

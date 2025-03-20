@@ -18,7 +18,7 @@ urlpatterns = [
         name="api-user-profile",
     ),
     path(
-        "dashboard/",
+        "dashboard/summary/",
         DashboardSummaryView.as_view(),
         name="api-dashboard-summary",
     ),

@@ -83,6 +83,9 @@ class TagInheritanceTestCase(TestCase):
     
     def test_override_status(self):
         """Test that the override status is stored correctly."""
+        # First ensure variant2 has inheritance enabled
+        self.variant2.set_tags_inheritance(True)
+        
         # Get content type for VariantProduct
         content_type = ContentType.objects.get_for_model(VariantProduct)
         

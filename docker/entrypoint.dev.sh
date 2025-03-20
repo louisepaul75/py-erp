@@ -50,11 +50,11 @@ fi
 # Create and ensure all required directories exist with proper permissions
 mkdir -p /app/media /app/static /app/data /app/pyerp/static
 
-# Initialize Vue.js application
-if [ -d "/app/frontend" ]; then
-    echo "Initializing Vue.js application..."
-    cd /app/frontend && npm install --legacy-peer-deps
-    echo "Vue.js initialization complete"
+# Initialize React application
+if [ -d "/app/frontend-react" ]; then
+    echo "Initializing React application..."
+    cd /app/frontend-react && npm install --legacy-peer-deps
+    echo "React initialization complete"
 fi
 
 # Apply migrations for development only if PostgreSQL is available

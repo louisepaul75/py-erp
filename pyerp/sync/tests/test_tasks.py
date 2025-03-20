@@ -15,49 +15,56 @@ class TestSyncTasks(TestCase):
     """Tests for the sync tasks."""
 
     def setUp(self):
-        """Set up test data."""
-        # Create source and target
-        self.source = SyncSource.objects.create(
-            name="test_source",
-            description="Test source",
-            config={"api_url": "http://example.com/api"},
-        )
+        """Set up test data with mocks instead of real DB objects."""
+        # Mock source and target
+        self.source = mock.MagicMock(spec=SyncSource)
+        self.source.name = "test_source"
+        self.source.description = "Test source"
+        self.source.config = {"api_url": "http://example.com/api"}
 
-        self.target = SyncTarget.objects.create(
-            name="test_target",
-            description="Test target",
-            config={"model_class": "app.models.TestModel"},
-        )
+        self.target = mock.MagicMock(spec=SyncTarget)
+        self.target.name = "test_target"
+        self.target.description = "Test target"
+        self.target.config = {"model_class": "app.models.TestModel"}
 
-        # Create mappings
-        self.mapping1 = SyncMapping.objects.create(
-            source=self.source,
-            target=self.target,
-            entity_type="products",
-            mapping_config={},
-            active=True,
-        )
+        # Mock mappings
+        self.mapping1 = mock.MagicMock(spec=SyncMapping)
+        self.mapping1.id = 1
+        self.mapping1.source = self.source
+        self.mapping1.target = self.target
+        self.mapping1.entity_type = "products"
+        self.mapping1.mapping_config = {}
+        self.mapping1.active = True
 
-        self.mapping2 = SyncMapping.objects.create(
-            source=self.source,
-            target=self.target,
-            entity_type="customers",
-            mapping_config={},
-            active=True,
-        )
+        self.mapping2 = mock.MagicMock(spec=SyncMapping)
+        self.mapping2.id = 2
+        self.mapping2.source = self.source
+        self.mapping2.target = self.target
+        self.mapping2.entity_type = "customers"
+        self.mapping2.mapping_config = {}
+        self.mapping2.active = True
 
         # Create inactive mapping
-        self.inactive_mapping = SyncMapping.objects.create(
-            source=self.source,
-            target=self.target,
-            entity_type="inactive",
-            mapping_config={},
-            active=False,
-        )
+        self.inactive_mapping = mock.MagicMock(spec=SyncMapping)
+        self.inactive_mapping.id = 3
+        self.inactive_mapping.source = self.source
+        self.inactive_mapping.target = self.target
+        self.inactive_mapping.entity_type = "inactive"
+        self.inactive_mapping.mapping_config = {}
+        self.inactive_mapping.active = False
 
     @mock.patch("pyerp.sync.tasks.PipelineFactory")
-    def test_run_entity_sync(self, mock_factory):
+    @mock.patch("pyerp.sync.tasks.SyncMapping.objects.get")
+    @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+    def test_run_entity_sync(self, mock_log_event, mock_get_mapping, mock_factory):
         """Test the run_entity_sync task."""
+        # Set up mock mapping
+        mock_mapping = mock.MagicMock(spec=SyncMapping)
+        mock_mapping.source.name = "test_source"
+        mock_mapping.target.name = "test_target"
+        mock_mapping.entity_type = "products"
+        mock_get_mapping.return_value = mock_mapping
+
         # Set up mock pipeline
         mock_pipeline = mock.MagicMock()
         mock_factory.create_pipeline.return_value = mock_pipeline
@@ -79,13 +86,19 @@ class TestSyncTasks(TestCase):
             query_params={"modified_after": "2023-01-01"},
         )
 
+        # Check that mapping was fetched correctly
+        mock_get_mapping.assert_called_once_with(id=self.mapping1.id, active=True)
+
         # Check that pipeline was created and run
-        mock_factory.create_pipeline.assert_called_once_with(self.mapping1)
+        mock_factory.create_pipeline.assert_called_once_with(mock_mapping)
         mock_pipeline.run.assert_called_once_with(
             incremental=True,
             batch_size=50,
             query_params={"modified_after": "2023-01-01"},
         )
+
+        # Check that log event was called
+        mock_log_event.assert_called_once()
 
         # Check result
         self.assertEqual(result["sync_log_id"], 123)
@@ -95,71 +108,93 @@ class TestSyncTasks(TestCase):
         self.assertEqual(result["records_failed"], 2)
 
     @mock.patch("pyerp.sync.tasks.run_entity_sync")
-    def test_run_all_mappings(self, mock_run_entity_sync):
+    @mock.patch("pyerp.sync.tasks.SyncMapping.objects.filter")
+    @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+    def test_run_all_mappings(self, mock_log_event, mock_filter, mock_run_entity_sync):
         """Test the run_all_mappings task."""
-        # Set up mock return values
-        mock_run_entity_sync.return_value = {"sync_log_id": 123, "status": "completed"}
+        # Set up a task result mock for run_entity_sync.delay
+        class MockAsyncResult:
+            def __init__(self):
+                self.id = "async-task-id"
+
+        mock_run_entity_sync.delay.return_value = MockAsyncResult()
+        
+        # Set up mock for SyncMapping.objects.filter
+        mock_queryset = mock.MagicMock()
+        mock_queryset.__iter__.return_value = [self.mapping1, self.mapping2]
+        mock_filter.return_value = mock_queryset
 
         # Run the task
         results = run_all_mappings(incremental=True)
 
-        # Check that run_entity_sync was called for each active mapping
-        self.assertEqual(mock_run_entity_sync.call_count, 2)
+        # Check filter was called correctly
+        mock_filter.assert_called_once_with(active=True)
+
+        # Check that run_entity_sync.delay was called for each active mapping
+        self.assertEqual(mock_run_entity_sync.delay.call_count, 2)
 
         # Check that it was called with the right mapping IDs
         mapping_ids = [
-            call_args[0][0] for call_args in mock_run_entity_sync.call_args_list
+            call_args[0][0] for call_args in mock_run_entity_sync.delay.call_args_list
         ]
         self.assertIn(self.mapping1.id, mapping_ids)
         self.assertIn(self.mapping2.id, mapping_ids)
         self.assertNotIn(self.inactive_mapping.id, mapping_ids)
 
+        # Check log event was called
+        mock_log_event.assert_called_once()
+
         # Check results
         self.assertEqual(len(results), 2)
         for result in results:
-            self.assertEqual(result["sync_log_id"], 123)
-            self.assertEqual(result["status"], "completed")
+            self.assertEqual(result["task_id"], "async-task-id")
+            # Check that mapping_id is one of our active mappings
+            self.assertIn(result["mapping_id"], [self.mapping1.id, self.mapping2.id])
 
     @mock.patch("pyerp.sync.tasks.run_all_mappings")
-    def test_run_incremental_sync(self, mock_run_all_mappings):
+    @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+    def test_run_incremental_sync(self, mock_log_event, mock_run_all_mappings):
         """Test the run_incremental_sync task."""
         # Set up mock return value
         mock_run_all_mappings.return_value = [
-            {"sync_log_id": 123, "status": "completed"},
-            {"sync_log_id": 124, "status": "completed"},
+            {"mapping_id": 1, "entity_type": "products", "task_id": "task-1"},
+            {"mapping_id": 2, "entity_type": "customers", "task_id": "task-2"},
         ]
 
         # Run the task
         results = run_incremental_sync()
 
+        # Check log event was called
+        mock_log_event.assert_called_once()
+
         # Check that run_all_mappings was called with incremental=True
-        mock_run_all_mappings.assert_called_once_with(
-            incremental=True, source_name=None
-        )
+        mock_run_all_mappings.assert_called_once_with(incremental=True)
 
         # Check results
         self.assertEqual(len(results), 2)
-        self.assertEqual(results[0]["sync_log_id"], 123)
-        self.assertEqual(results[1]["sync_log_id"], 124)
+        self.assertEqual(results[0]["mapping_id"], 1)
+        self.assertEqual(results[1]["mapping_id"], 2)
 
     @mock.patch("pyerp.sync.tasks.run_all_mappings")
-    def test_run_full_sync(self, mock_run_all_mappings):
+    @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+    def test_run_full_sync(self, mock_log_event, mock_run_all_mappings):
         """Test the run_full_sync task."""
         # Set up mock return value
         mock_run_all_mappings.return_value = [
-            {"sync_log_id": 123, "status": "completed"},
-            {"sync_log_id": 124, "status": "completed"},
+            {"mapping_id": 1, "entity_type": "products", "task_id": "task-1"},
+            {"mapping_id": 2, "entity_type": "customers", "task_id": "task-2"},
         ]
 
         # Run the task
         results = run_full_sync()
 
+        # Check log event was called
+        mock_log_event.assert_called_once()
+
         # Check that run_all_mappings was called with incremental=False
-        mock_run_all_mappings.assert_called_once_with(
-            incremental=False, source_name=None
-        )
+        mock_run_all_mappings.assert_called_once_with(incremental=False)
 
         # Check results
         self.assertEqual(len(results), 2)
-        self.assertEqual(results[0]["sync_log_id"], 123)
-        self.assertEqual(results[1]["sync_log_id"], 124)
+        self.assertEqual(results[0]["mapping_id"], 1)
+        self.assertEqual(results[1]["mapping_id"], 2)

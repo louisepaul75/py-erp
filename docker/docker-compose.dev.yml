@@ -13,6 +13,7 @@ services:
     ports:
       - "8050:8050"
       - "5173:5173"  # Vue.js development server (Vite)
+      - "3000:3000"  # React development server
       - "9200:9200"  # Elasticsearch
       - "5601:5601"  # Kibana
     volumes:
