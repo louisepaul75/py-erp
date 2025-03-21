@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 
+// Initialize jest-fuzz if needed
+try {
+  const jestFuzz = require('jest-fuzz');
+  // Add any additional jest-fuzz configuration here if needed
+} catch (error: any) {
+  console.warn('jest-fuzz not available:', error.message);
+}
+
 // Mock Next.js router
 jest.mock('next/router', () => ({
   useRouter: () => ({

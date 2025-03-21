@@ -115,10 +115,12 @@
 - Pytest Django 4.8.0 - Django testing integration
 - Pytest Cov 4.1.0 - Coverage reporting
 - mutmut 3.x - test Mutation
+- hypothesis 6.x - pytest Property-Based & Randomized Testing
 - Factory Boy 3.3.0 - Test fixtures
 - Faker 22.5.1 - Fake data generation
 - Jest 6.x - React Testing
 - Jest-junit 16.x - Jest coverage report
+- Jest-fuzz - Jest Property-Based & Randomized Testing
 - stryker 8.x - Jest Mutation
 
 ### Documentation
