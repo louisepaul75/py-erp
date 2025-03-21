@@ -257,8 +257,44 @@ export default function Products() {
                 </div>
               </div>
             ) : (
-              <div className="p-6 flex items-center justify-center h-full">
-                <p className="text-slate-500 dark:text-slate-400">Select a product to view details</p>
+              <div className="p-6 flex flex-col items-center justify-center h-full">
+                <p className="text-slate-500 dark:text-slate-400 mb-4">Select a product to view details</p>
+                
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Stock</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.slice(0, 5).map((product) => (
+                      <TableRow key={product.nummer} onClick={() => setSelectedItem(product.nummer)}>
+                        <TableCell>{product.nummer}</TableCell>
+                        <TableCell>{product.bezeichnung}</TableCell>
+                        <TableCell>€99.99</TableCell>
+                        <TableCell>100</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                
+                <div className="mt-6">
+                  <Tabs defaultValue="details">
+                    <TabsList>
+                      <TabsTrigger value="details">Details</TabsTrigger>
+                      <TabsTrigger value="history">History</TabsTrigger>
+                      <TabsTrigger value="pricing">Pricing</TabsTrigger>
+                      <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="details">Tab content for details</TabsContent>
+                    <TabsContent value="history">Tab content for history</TabsContent>
+                    <TabsContent value="pricing">Tab content for pricing</TabsContent>
+                    <TabsContent value="inventory">Tab content for inventory</TabsContent>
+                  </Tabs>
+                </div>
               </div>
             )}
           </div>

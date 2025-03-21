@@ -101,6 +101,6 @@ describe('Label Component', () => {
   });
 
   it('renders with correct display name', () => {
-    expect(Label.displayName).toBe('Root');
+    expect(Label.displayName).toBe('Label');
   });
 }); 

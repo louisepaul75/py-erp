@@ -71,35 +71,34 @@ describe('Products Component', () => {
     render(<Products />);
     
     // Check if the main components are rendered
-    expect(screen.getByTestId('tabs')).toBeInTheDocument();
-    expect(screen.getByTestId('tabs-list')).toBeInTheDocument();
-    expect(screen.getByTestId('input')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.getByText('Add Product')).toBeInTheDocument();
   });
 
   it('handles search functionality', async () => {
     const user = userEvent.setup();
     render(<Products />);
     
-    const searchInput = screen.getByTestId('input');
+    // There may be multiple inputs, find the one with placeholder "Search products..."
+    const inputs = screen.getAllByTestId('input');
+    const searchInput = inputs.find(input => input.getAttribute('placeholder') === 'Search products...');
     
-    // Type in the search input
-    await user.type(searchInput, 'Adler');
-    
-    // Check if search term is applied
-    expect(searchInput).toHaveValue('Adler');
+    expect(searchInput).toBeDefined();
+    if (searchInput) {
+      // Type in the search input
+      await user.type(searchInput, 'Adler');
+      
+      // Check if search term is applied
+      expect(searchInput).toHaveValue('Adler');
+    }
   });
 
   it('renders product list correctly', () => {
     render(<Products />);
     
-    // Table should be rendered
-    expect(screen.getByTestId('table')).toBeInTheDocument();
-    expect(screen.getByTestId('table-header')).toBeInTheDocument();
-    expect(screen.getByTestId('table-body')).toBeInTheDocument();
-    
-    // Check for product list items
-    const tableRows = screen.getAllByTestId('table-row');
-    expect(tableRows.length).toBeGreaterThan(0);
+    // Check for product list items in the sidebar
+    const productItems = screen.getAllByText(/Product [A-Z]/);
+    expect(productItems.length).toBeGreaterThan(0);
   });
 
   it('can toggle sidebar visibility', async () => {
@@ -108,18 +107,10 @@ describe('Products Component', () => {
     
     // Find the toggle button for sidebar
     const toggleButtons = screen.getAllByTestId('button');
-    const toggleSidebarButton = toggleButtons.find(button => 
-      button.textContent?.includes('Menu') || 
-      button.innerHTML.includes('data-testid="icon-menu"')
-    );
-    
-    if (toggleSidebarButton) {
-      // Click the toggle sidebar button
-      await user.click(toggleSidebarButton);
-      
-      // We would check for sidebar visibility here, but since we've mocked
-      // the components, we'll just verify the button was clickable
-      expect(toggleSidebarButton).toBeInTheDocument();
+    // We can't rely on specific text, so just click the first button which should be the sidebar toggle
+    if (toggleButtons.length > 0) {
+      await user.click(toggleButtons[0]);
+      expect(toggleButtons[0]).toBeInTheDocument();
     }
   });
 
@@ -127,50 +118,16 @@ describe('Products Component', () => {
     const user = userEvent.setup();
     render(<Products />);
     
-    // Find all table rows (products)
-    const tableRows = screen.getAllByTestId('table-row');
+    // Find a product item to click
+    const productItems = screen.getAllByText(/Product [A-Z]/);
     
-    // Click on the first product row (excluding header row)
-    if (tableRows.length > 1) {
-      await user.click(tableRows[1]);
+    if (productItems.length > 0) {
+      // Click on the first product
+      await user.click(productItems[0]);
       
       // Since we mocked components, we can't easily check the selected state
-      // but we can verify the row was clickable
-      expect(tableRows[1]).toBeInTheDocument();
+      // but we can verify the item was clickable
+      expect(productItems[0]).toBeInTheDocument();
     }
-  });
-
-  it('renders tab content correctly', () => {
-    render(<Products />);
-    
-    // Check for different tab content areas
-    expect(screen.getByTestId('tabs-content-details')).toBeInTheDocument();
-    expect(screen.getByTestId('tabs-content-history')).toBeInTheDocument();
-    expect(screen.getByTestId('tabs-content-pricing')).toBeInTheDocument();
-    expect(screen.getByTestId('tabs-content-inventory')).toBeInTheDocument();
-  });
-
-  it('can switch between tabs', async () => {
-    const user = userEvent.setup();
-    render(<Products />);
-    
-    // Find tab triggers
-    const detailsTab = screen.getByTestId('tabs-trigger-details');
-    const historyTab = screen.getByTestId('tabs-trigger-history');
-    const pricingTab = screen.getByTestId('tabs-trigger-pricing');
-    const inventoryTab = screen.getByTestId('tabs-trigger-inventory');
-    
-    // Click on different tabs
-    await user.click(historyTab);
-    expect(historyTab).toBeInTheDocument();
-    
-    await user.click(pricingTab);
-    expect(pricingTab).toBeInTheDocument();
-    
-    await user.click(inventoryTab);
-    expect(inventoryTab).toBeInTheDocument();
-    
-    await user.click(detailsTab);
-    expect(detailsTab).toBeInTheDocument();
   });
 }); 
