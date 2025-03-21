@@ -3,7 +3,7 @@
 # Initialize variables for optional parameters
 RUN_TESTS=""
 USE_CACHE="yes"
-MONITORING_MODE="none"  # Default is no monitoring
+MONITORING_MODE="separate"  # Default is separate monitoring
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -21,8 +21,8 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --monitoring)
-            if [[ "$2" != "none" && "$2" != "separate" && "$2" != "remote" ]]; then
-                echo "Error: --monitoring requires one of: none, separate, remote"
+            if [[ "$2" != "none" && "$2" != "separate" ]]; then
+                echo "Error: --monitoring requires one of: none, separate"
                 exit 1
             fi
             MONITORING_MODE="$2"
@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown parameter: $1"
-            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|separate|remote]"
+            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|separate]"
             exit 1
             ;;
     esac
@@ -47,6 +47,13 @@ docker stop pyerp-dev || true
 # Remove the existing container
 echo "Removing existing pyerp-dev container..."
 docker rm pyerp-dev || true
+
+# Check and stop monitoring services based on configuration
+if docker ps | grep -q "pyerp-monitoring"; then
+    echo "Stopping existing monitoring containers..."
+    docker stop pyerp-monitoring || true
+    docker rm pyerp-monitoring || true
+fi
 
 # For separate monitoring mode, also stop/remove the monitoring containers
 if [ "$MONITORING_MODE" == "separate" ]; then
@@ -87,13 +94,7 @@ if [ "$MONITORING_MODE" == "none" ]; then
     MONITORING_VOLUMES=""
 elif [ "$MONITORING_MODE" == "separate" ]; then
     # Set environment variables to connect to separate monitoring container
-    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-monitoring -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-monitoring -e KIBANA_PORT=5601 -e SENTRY_DSN=https://development@sentry.example.com/1"
-    MONITORING_CMD=""
-    MONITORING_PORTS=""
-    MONITORING_VOLUMES=""
-elif [ "$MONITORING_MODE" == "remote" ]; then
-    # Set environment variables to connect to remote monitoring system
-    MONITORING_ENV="-e ELASTICSEARCH_HOST=192.168.73.65 -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=192.168.73.65 -e KIBANA_PORT=5601 -e SENTRY_DSN=https://development@sentry.example.com/1"
+    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-monitoring -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-monitoring -e KIBANA_PORT=5602 -e SENTRY_DSN=https://development@sentry.example.com/1"
     MONITORING_CMD=""
     MONITORING_PORTS=""
     MONITORING_VOLUMES=""
@@ -109,7 +110,7 @@ docker run -d \
   -p 3000:3000 \
   -p 6379:6379 \
   -p 80:80 \
-  $([ "$MONITORING_MODE" == "none" ] && echo "-p 9200:9200 -p 5601:5601") \
+  $([ "$MONITORING_MODE" == "none" ] && echo "-p 9200:9200 -p 5602:5601") \
   -v $(pwd):/app \
   $([ "$MONITORING_MODE" == "none" ] && echo "-v pyerp_elasticsearch_data:/var/lib/elasticsearch") \
   --network pyerp-network \
@@ -146,33 +147,14 @@ echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' t
 if [ "$MONITORING_MODE" == "none" ]; then
     echo -e "\nMonitoring services (integrated):"
     echo -e "- Elasticsearch: http://localhost:9200"
-    echo -e "- Kibana: http://localhost:5601"
+    echo -e "- Kibana: http://localhost:5602"
     echo -e "- Sentry: Integrated with Django application"
 elif [ "$MONITORING_MODE" == "separate" ]; then
     echo -e "\nMonitoring services (separate container):"
     echo -e "- Elasticsearch: http://localhost:9200"
-    echo -e "- Kibana: http://localhost:5601" 
+    echo -e "- Kibana: http://localhost:5602" 
     echo -e "- Sentry: Integrated with Django application"
     echo -e "Monitoring container logs: docker logs pyerp-monitoring"
-elif [ "$MONITORING_MODE" == "remote" ]; then
-    echo -e "\nMonitoring services (remote at 192.168.73.65):"
-    echo -e "- Elasticsearch: http://192.168.73.65:9200"
-    echo -e "- Kibana: http://192.168.73.65:5601"
-    echo -e "- Sentry: Connected to remote instance"
 fi
 
 echo -e "To run frontend tests manually, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"
-
-# Ask the user if they want to set up remote monitoring only if using "none" mode
-if [ "$MONITORING_MODE" == "none" ]; then
-    echo ""
-    read -p "Would you like to set up the monitoring system on the remote server (192.168.73.65)? (y/n): " setup_remote
-
-    if [[ $setup_remote == "j" || $setup_remote == "J" || $setup_remote == "y" || $setup_remote == "Y" ]]; then
-        # Run the setup_monitoring_complete.sh script with updated path
-        echo "Starting remote monitoring setup..."
-        bash ./scripts/monitoring/setup_monitoring_complete.sh
-    else
-        echo "Remote monitoring setup skipped."
-    fi
-fi

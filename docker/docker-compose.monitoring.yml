@@ -2,58 +2,46 @@
 # This file defines the monitoring services separate from the main pyERP application
 
 services:
-  monitoring:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
-    container_name: pyerp-monitoring
+  elasticsearch:
+    image: elasticsearch:7.17.0
+    container_name: pyerp-elasticsearch
+    platform: linux/arm64
     ports:
       - "9200:9200"
       - "9300:9300"
-      - "5601:5601"
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - es_data:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - xpack.security.enabled=false
+      - bootstrap.system_call_filter=false
     networks:
       - pyerp-network
-    # Add custom entrypoint to start both Elasticsearch and Kibana
-    entrypoint: >
-      /bin/bash -c "
-        # Start Elasticsearch in the background
-        /usr/local/bin/docker-entrypoint.sh elasticsearch &
-        
-        # Wait for Elasticsearch to be ready
-        until curl -s http://localhost:9200 > /dev/null; do
-          echo 'Waiting for Elasticsearch to start...'
-          sleep 2
-        done
-        echo 'Elasticsearch is ready!'
-        
-        # Install Kibana for monitoring
-        echo 'Setting up Kibana...'
-        apt-get update && apt-get install -y wget
-        mkdir -p /opt/kibana
-        cd /opt/kibana
-        wget -q https://artifacts.elastic.co/downloads/kibana/kibana-7.17.0-linux-aarch64.tar.gz
-        tar -xzf kibana-7.17.0-linux-aarch64.tar.gz --strip-components=1
-        rm kibana-7.17.0-linux-aarch64.tar.gz
-        
-        # Configure Kibana
-        echo 'server.host: \"0.0.0.0\"' > config/kibana.yml
-        echo 'elasticsearch.hosts: [\"http://localhost:9200\"]' >> config/kibana.yml
-        echo 'server.port: 5601' >> config/kibana.yml
-        
-        # Start Kibana
-        echo 'Starting Kibana on port 5601...'
-        ./bin/kibana &
-        
-        # Keep container running
-        tail -f /dev/null
-      "
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  kibana:
+    image: kibana:7.17.0
+    container_name: pyerp-monitoring
+    platform: linux/arm64
+    ports:
+      - "5602:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://pyerp-elasticsearch:9200
+    networks:
+      - pyerp-network
+    depends_on:
+      - elasticsearch
 
 volumes:
-  elasticsearch_data:
+  es_data:
+    driver: local
 
 networks:
   pyerp-network:

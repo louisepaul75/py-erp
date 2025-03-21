@@ -1,1 +1,0 @@
-scripts/monitoring/setup_monitoring_complete.sh
