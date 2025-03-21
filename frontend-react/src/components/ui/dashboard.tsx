@@ -268,13 +268,14 @@ const Dashboard = () => {
     // Debug CSRF token sources
     const cookieToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
     const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    const settingsToken = window.DJANGO_SETTINGS?.CSRF_TOKEN;
+    // Type-safe access to window.DJANGO_SETTINGS if it exists
+    const settingsToken = (window as any).DJANGO_SETTINGS?.CSRF_TOKEN;
     
     console.log('CSRF Debug:');
     console.log('- Cookie:', cookieToken);
     console.log('- Meta tag:', metaToken);
     console.log('- Settings:', settingsToken);
-    console.log('- window.DJANGO_SETTINGS:', window.DJANGO_SETTINGS);
+    console.log('- window.DJANGO_SETTINGS:', (window as any).DJANGO_SETTINGS);
   }, []);
   
   const saveLayout = async () => {
@@ -284,16 +285,19 @@ const Dashboard = () => {
       console.log("Layout saved to localStorage");
       
       // Get CSRF token from cookies
-      const getCookie = (name) => {
+      const getCookie = (name: string) => {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
+        if (parts.length === 2) {
+          const part = parts.pop();
+          return part ? part.split(';').shift() : undefined;
+        }
         return undefined;
       };
       
       // Try multiple sources for the CSRF token
       const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      const csrfToken = getCookie('csrftoken') || window.DJANGO_SETTINGS?.CSRF_TOKEN || metaToken;
+      const csrfToken = getCookie('csrftoken') || (window as any).DJANGO_SETTINGS?.CSRF_TOKEN || metaToken;
       console.log("CSRF Token:", csrfToken); // Log token for debugging
       
       if (!csrfToken) {
