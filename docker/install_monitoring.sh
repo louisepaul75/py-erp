@@ -33,7 +33,12 @@ mkdir -p /app/logs
 chown -R elasticsearch:elasticsearch /var/lib/elasticsearch
 chown -R elasticsearch:elasticsearch /var/log/elasticsearch
 
-# Configure Elasticsearch
+# Configure Elasticsearch with dynamic host
+ES_HOST="${ELASTICSEARCH_HOST:-localhost}"
+ES_PORT="${ELASTICSEARCH_PORT:-9200}"
+KB_HOST="${KIBANA_HOST:-localhost}"
+KB_PORT="${KIBANA_PORT:-5601}"
+
 cat > /etc/elasticsearch/elasticsearch.yml << EOFELS
 cluster.name: pyerp-monitoring
 node.name: pyerp-node
@@ -45,15 +50,20 @@ discovery.type: single-node
 xpack.security.enabled: false
 EOFELS
 
-# Configure Kibana
+# Configure Kibana with dynamic Elasticsearch host
 cat > /etc/kibana/kibana.yml << EOFKIB
 server.port: 5601
 server.host: "0.0.0.0"
-elasticsearch.hosts: ["http://localhost:9200"]
+elasticsearch.hosts: ["http://${ES_HOST}:${ES_PORT}"]
 EOFKIB
 
-# Configure Filebeat
-cat > /etc/filebeat/filebeat.yml << EOFFB
+# Check if our custom Filebeat config exists and use it, otherwise create default
+if [ -f /app/docker/filebeat_config.yml ]; then
+    echo "Using custom Filebeat configuration from /app/docker/filebeat_config.yml"
+    cp /app/docker/filebeat_config.yml /etc/filebeat/filebeat.yml
+else
+    # Configure Filebeat with dynamic hosts
+    cat > /etc/filebeat/filebeat.yml << EOFFB
 filebeat.inputs:
 - type: log
   enabled: true
@@ -61,18 +71,52 @@ filebeat.inputs:
     - /app/logs/*.log
   json.keys_under_root: true
   json.add_error_key: true
+  json.message_key: message
+  # Handle multiline stack traces
+  multiline.pattern: '^[[:space:]]+(at|...)|^Caused by:'
+  multiline.negate: false
+  multiline.match: after
+
+processors:
+  - add_host_metadata: ~
+  - add_docker_metadata: ~
+  # Add custom tags
+  - add_tags:
+      tags: ["pyerp", "${PYERP_ENV:-development}"]
 
 output.elasticsearch:
-  hosts: ["localhost:9200"]
+  hosts: ["${ES_HOST}:${ES_PORT}"]
   index: "pyerp-logs-%{+yyyy.MM.dd}"
 
 setup.kibana:
-  host: "localhost:5601"
+  host: "${KB_HOST}:${KB_PORT}"
 
 setup.template.name: "pyerp"
 setup.template.pattern: "pyerp-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
 setup.ilm.enabled: false
 EOFFB
+fi
+
+# Create Elasticsearch index templates for better field mapping
+sleep 5  # Give Elasticsearch time to start up before creating templates
+
+# Function to check if Elasticsearch is running
+wait_for_elasticsearch() {
+    echo "Waiting for Elasticsearch to start..."
+    for i in {1..30}; do
+        if curl -s "http://${ES_HOST}:${ES_PORT}" > /dev/null; then
+            echo "Elasticsearch is ready!"
+            return 0
+        fi
+        echo "Elasticsearch not ready yet, retrying in 5 seconds..."
+        sleep 5
+    done
+    echo "Elasticsearch did not start in time"
+    return 1
+}
 
 # Install pip and Python dependencies
 apt-get install -y python3-pip
@@ -141,5 +185,88 @@ EOFFB
 # Create directories for supervisor logs
 mkdir -p /var/log/supervisor
 mkdir -p /var/run
+
+# Add a script to create Elasticsearch index templates that will run after Elasticsearch starts
+cat > /app/create_es_templates.sh << 'EOF'
+#!/bin/bash
+set -e
+
+ES_HOST="${ELASTICSEARCH_HOST:-localhost}"
+ES_PORT="${ELASTICSEARCH_PORT:-9200}"
+
+echo "Waiting for Elasticsearch to be ready..."
+for i in {1..30}; do
+    if curl -s "http://${ES_HOST}:${ES_PORT}" > /dev/null; then
+        echo "Elasticsearch is ready!"
+        break
+    fi
+    echo "Waiting for Elasticsearch... ($i/30)"
+    sleep 5
+    if [ $i -eq 30 ]; then
+        echo "Elasticsearch did not start in time"
+        exit 1
+    fi
+done
+
+echo "Creating index template for pyerp logs..."
+curl -X PUT "http://${ES_HOST}:${ES_PORT}/_index_template/pyerp-logs" -H 'Content-Type: application/json' -d'
+{
+  "index_patterns": ["pyerp-logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "timestamp": { "type": "date" },
+        "message": { "type": "text" },
+        "level": { "type": "keyword" },
+        "name": { "type": "keyword" },
+        "hostname": { "type": "keyword" },
+        "environment": { "type": "keyword" },
+        "service": { "type": "keyword" },
+        "user_id": { "type": "keyword" },
+        "request_id": { "type": "keyword" },
+        "ip_address": { "type": "ip" },
+        "exception": { "type": "text" },
+        "path": { "type": "keyword" },
+        "method": { "type": "keyword" },
+        "status_code": { "type": "integer" },
+        "duration_ms": { "type": "float" },
+        "tags": { "type": "keyword" }
+      }
+    }
+  }
+}
+'
+
+echo "Creating security dashboard in Kibana..."
+sleep 10  # Give Kibana some time to connect to Elasticsearch
+
+# Try to create a basic dashboard for security logs
+curl -X POST "http://${KB_HOST}:${KB_PORT}/api/saved_objects/index-pattern/pyerp-logs-*" \
+  -H 'kbn-xsrf: true' \
+  -H 'Content-Type: application/json' \
+  -d '{"attributes":{"title":"pyerp-logs-*","timeFieldName":"timestamp"}}'
+
+echo "Elasticsearch and Kibana setup completed."
+EOF
+
+chmod +x /app/create_es_templates.sh
+
+# Add the template creation script to supervisor to run after Elasticsearch starts
+cat > /etc/supervisor/conf.d/es_templates.conf << EOFET
+[program:es_templates]
+command=/app/create_es_templates.sh
+user=root
+autostart=true
+autorestart=false
+startsecs=0
+startretries=3
+stderr_logfile=/app/logs/es-templates-err.log
+stdout_logfile=/app/logs/es-templates-out.log
+priority=50
+EOFET
 
 echo "Installation and configuration of monitoring tools completed." 

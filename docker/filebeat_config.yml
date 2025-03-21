@@ -1,0 +1,58 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /app/logs/*.log
+  json.keys_under_root: true
+  json.add_error_key: true
+  json.message_key: message
+  # Handle multiline stack traces
+  multiline.pattern: '^[[:space:]]+(at|...)|^Caused by:'
+  multiline.negate: false
+  multiline.match: after
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+  # Add a timestamp processor to handle cases where the log doesn't have a timestamp
+  - timestamp:
+      field: timestamp
+      layouts:
+        - 2006-01-02T15:04:05.999Z
+      test:
+        - 2023-05-05T14:12:30.123Z
+  # Add custom tags
+  - add_tags:
+      tags: ["pyerp", "${PYERP_ENV:development}"]
+
+# Set output based on environment variables
+output.elasticsearch:
+  hosts: ["${ELASTICSEARCH_HOST:localhost}:${ELASTICSEARCH_PORT:9200}"]
+  index: "pyerp-logs-%{+yyyy.MM.dd}"
+  ssl.enabled: ${ELASTICSEARCH_SSL_ENABLED:false}
+  username: "${ELASTICSEARCH_USERNAME:}"
+  password: "${ELASTICSEARCH_PASSWORD:}"
+
+setup.kibana:
+  host: "${KIBANA_HOST:localhost}:${KIBANA_PORT:5601}"
+  ssl.enabled: ${KIBANA_SSL_ENABLED:false}
+  username: "${KIBANA_USERNAME:}"
+  password: "${KIBANA_PASSWORD:}"
+
+setup.template.name: "pyerp"
+setup.template.pattern: "pyerp-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+setup.ilm.enabled: false
+
+# Logging configuration for Filebeat itself
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /app/logs
+  name: filebeat.log
+  keepfiles: 7
+  permissions: 0644 

@@ -1,6 +1,7 @@
 import os
 import json
 import logging.config
+import socket
 from datetime import datetime
 
 class JSONFormatter(logging.Formatter):
@@ -15,6 +16,11 @@ class JSONFormatter(logging.Formatter):
         logobj['level'] = record.levelname
         logobj['name'] = record.name
         logobj['message'] = record.getMessage()
+        
+        # Add system and environment information
+        logobj['hostname'] = socket.gethostname()
+        logobj['environment'] = os.environ.get('PYERP_ENV', 'unknown')
+        logobj['service'] = 'pyerp'
         
         # Add exception info if available
         if record.exc_info:
@@ -35,6 +41,10 @@ def configure_logging():
     """
     Configure Django logging to output structured JSON logs that can be easily parsed by Filebeat.
     """
+    # Create logs directory if it doesn't exist
+    log_dir = os.environ.get('LOG_DIR', '/app/logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
     logging_config = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -47,6 +57,14 @@ def configure_logging():
                 'style': '{',
             },
         },
+        'filters': {
+            'require_debug_false': {
+                '()': 'django.utils.log.RequireDebugFalse',
+            },
+            'require_debug_true': {
+                '()': 'django.utils.log.RequireDebugTrue',
+            },
+        },
         'handlers': {
             'console': {
                 'level': 'DEBUG',
@@ -56,7 +74,7 @@ def configure_logging():
             'file': {
                 'level': 'INFO',
                 'class': 'logging.handlers.RotatingFileHandler',
-                'filename': os.path.join(os.environ.get('LOG_DIR', '/app/logs'), 'pyerp.log'),
+                'filename': os.path.join(log_dir, 'pyerp.log'),
                 'maxBytes': 10485760,  # 10 MB
                 'backupCount': 10,
                 'formatter': 'json',
@@ -64,7 +82,23 @@ def configure_logging():
             'error_file': {
                 'level': 'ERROR',
                 'class': 'logging.handlers.RotatingFileHandler',
-                'filename': os.path.join(os.environ.get('LOG_DIR', '/app/logs'), 'pyerp-error.log'),
+                'filename': os.path.join(log_dir, 'pyerp-error.log'),
+                'maxBytes': 10485760,  # 10 MB
+                'backupCount': 10,
+                'formatter': 'json',
+            },
+            'security_file': {
+                'level': 'INFO',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': os.path.join(log_dir, 'pyerp-security.log'),
+                'maxBytes': 10485760,  # 10 MB
+                'backupCount': 10,
+                'formatter': 'json',
+            },
+            'performance_file': {
+                'level': 'INFO',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': os.path.join(log_dir, 'pyerp-performance.log'),
                 'maxBytes': 10485760,  # 10 MB
                 'backupCount': 10,
                 'formatter': 'json',
@@ -84,6 +118,16 @@ def configure_logging():
             'pyerp': {
                 'handlers': ['console', 'file', 'error_file'],
                 'level': 'DEBUG',
+                'propagate': False,
+            },
+            'pyerp.security': {
+                'handlers': ['console', 'security_file', 'error_file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'pyerp.performance': {
+                'handlers': ['console', 'performance_file'],
+                'level': 'INFO',
                 'propagate': False,
             },
         },
@@ -109,4 +153,19 @@ def get_logger(name):
             'ip_address': request.META.get('REMOTE_ADDR')
         })
     """
-    return logging.getLogger(name) 
+    return logging.getLogger(name)
+
+def get_category_logger(category):
+    """
+    Get a logger for a specific category like 'security', 'performance', etc.
+    
+    Usage:
+        logger = get_category_logger('security')
+        
+        logger.info("Sensitive operation performed", extra={
+            'user_id': user.id,
+            'operation': 'password_change',
+            'ip_address': request.META.get('REMOTE_ADDR')
+        })
+    """
+    return logging.getLogger(f"pyerp.{category}") 
