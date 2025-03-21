@@ -52,7 +52,8 @@ describe('Switch Component', () => {
     expect(switchElement).toHaveClass('disabled:cursor-not-allowed disabled:opacity-50');
   });
 
-  it('responds to keyboard interaction', () => {
+  it('responds to keyboard interaction', async () => {
+    const user = userEvent.setup();
     render(<Switch data-testid="test-switch" />);
     
     const switchElement = screen.getByTestId('test-switch');
@@ -64,11 +65,11 @@ describe('Switch Component', () => {
     expect(switchElement).toHaveAttribute('data-state', 'unchecked');
     
     // Press space to check
-    fireEvent.keyDown(switchElement, { key: ' ' });
+    await user.keyboard(' ');
     expect(switchElement).toHaveAttribute('data-state', 'checked');
     
     // Press space to uncheck
-    fireEvent.keyDown(switchElement, { key: ' ' });
+    await user.keyboard(' ');
     expect(switchElement).toHaveAttribute('data-state', 'unchecked');
   });
 

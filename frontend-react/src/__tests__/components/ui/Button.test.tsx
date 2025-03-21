@@ -11,7 +11,7 @@ jest.mock('@/lib/utils', () => ({
 // Mock class-variance-authority
 jest.mock('class-variance-authority', () => {
   const mockCva = () => {
-    const variantFn = jest.fn(({ variant, size, className } = {}) => {
+    const variantFn = jest.fn(({ variant = 'default', size = 'default', className } = {}) => {
       const classes = ['button-base-class'];
       
       if (variant) {
