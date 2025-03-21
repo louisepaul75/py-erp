@@ -6,8 +6,10 @@
     "sales": "Sales",
     "production": "Production",
     "inventory": "Inventory",
-    "dashboard": "Dashboard",
+    "ui_components": "UI Components",
     "settings": "Settings",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
     "admin_settings": "Admin Settings"
   },
   "buttons": {

@@ -3,12 +3,12 @@
   "navigation": {
     "home": "Startseite",
     "products": "Produkte",
-    "sales": "Vertrieb",
+    "sales": "Verkauf",
     "production": "Produktion",
     "inventory": "Lager",
-    "dashboard": "Dashboard",
+    "ui_components": "UI Komponenten",
     "settings": "Einstellungen",
-    "admin_settings": "Admin-Einstellungen"
+    "logout": "Abmelden"
   },
   "buttons": {
     "save": "Speichern",

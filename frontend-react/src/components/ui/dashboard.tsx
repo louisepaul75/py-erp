@@ -3,19 +3,31 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
-  BarChart3,
-  Bell,
-  Edit,
-  Grip,
+  Calendar,
+  Mail,
+  User,
   Home,
-  Menu,
-  Package,
-  Save,
-  Settings,
-  ShoppingCart,
-  Star,
+  BarChart,
   Users,
   X,
+  Search,
+  RotateCcw,
+  Eye,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Maximize,
+  Minimize,
+  ShoppingCart,
+  Package,
+  BarChart3,
+  Settings,
+  Bell,
+  Star,
+  Edit,
+  Menu,
+  Grip,
+  Save,
 } from "lucide-react"
 import { Responsive as ResponsiveGridLayout, Layout } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
@@ -43,6 +55,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { authService } from '../../lib/auth/authService'
 import { API_URL } from '@/lib/config'
+import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
+import { SearchResultsDropdown } from "./search-results-dropdown"
+import { useRouter } from "next/navigation"
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -657,6 +672,45 @@ const DashboardContent = ({
   newsItems: NewsItem[]
 }) => {
   const { state: sidebarState } = useSidebar()
+  const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
+  const [showResults, setShowResults] = useState(false)
+  const router = useRouter()
+
+  const handleInputFocus = () => {
+    setShowResults(true)
+  }
+
+  const handleInputBlur = () => {
+    // Delay hiding results to allow for click events
+    setTimeout(() => setShowResults(false), 200)
+  }
+
+  const handleSearchResultSelect = (result: SearchResult) => {
+    // Handle navigation based on result type
+    switch (result.type) {
+      case "customer":
+        router.push(`/customers/${result.id}`)
+        break
+      case "sales_record":
+        router.push(`/sales/${result.id}`)
+        break
+      case "parent_product":
+        router.push(`/products/parent/${result.id}`)
+        break
+      case "variant_product":
+        router.push(`/products/variant/${result.id}`)
+        break
+      case "box_slot":
+        router.push(`/inventory/boxes/${result.id}`)
+        break
+      case "storage_location":
+        router.push(`/inventory/locations/${result.id}`)
+        break
+      default:
+        console.warn(`Unknown result type: ${result.type}`)
+    }
+    reset()
+  }
 
   return (
     <div className="flex h-screen">
@@ -667,8 +721,41 @@ const DashboardContent = ({
               <SidebarTrigger className="flex md:flex" />
             </div>
           </div>
-          <div className="px-2 pb-2 mt-2">
-            <Input type="search" placeholder="Suchen..." className="h-9" />
+          <div className="px-2 pb-2 mt-2 relative">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="search" 
+                placeholder="Suchen..." 
+                className="h-9 pl-8 pr-8"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+              />
+              {query && (
+                <button 
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    reset()
+                    setShowResults(false)
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {error && (
+              <div className="mt-1 text-xs text-red-500">
+                Fehler beim Suchen. Bitte versuchen Sie es später erneut.
+              </div>
+            )}
+            <SearchResultsDropdown
+              results={getAllResults()}
+              isLoading={isLoading}
+              open={showResults && (isLoading || (results && results.total_count > 0))}
+              onSelect={handleSearchResultSelect}
+            />
           </div>
         </SidebarHeader>
 
