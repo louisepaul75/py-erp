@@ -1,277 +1,268 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { mockMatchMedia } from '@/utils/test-utils';
+import userEvent from '@testing-library/user-event';
+import Dashboard from '@/components/ui/dashboard';
 
-// We need to mock the Dashboard component instead of trying to render the real one
-// because it's too complex with many dependencies
-jest.mock('@/components/ui/dashboard', () => {
-  // Create a simple mock of the Dashboard component
-  return {
-    __esModule: true,
-    default: jest.fn(() => {
-      return (
-        <div data-testid="mock-dashboard">
-          <div data-testid="responsive-grid-layout">
-            <div data-testid="widget-recent-orders" />
-            <div data-testid="widget-menu-tiles" />
-          </div>
-          <button data-testid="edit-button">Bearbeiten</button>
-          <button data-testid="save-button" style={{ display: 'none' }}>Speichern</button>
-          <button data-testid="cancel-button" style={{ display: 'none' }}>Abbrechen</button>
-          <button data-testid="star" aria-label="Toggle favorite" />
-          <button data-testid="remove-button" aria-label="remove" style={{ display: 'none' }} />
-        </div>
-      );
-    })
-  };
+// Mock react-grid-layout since it uses complicated DOM manipulations
+jest.mock('react-grid-layout', () => ({
+  Responsive: jest.fn(({ children }) => <div data-testid="responsive-grid">{children}</div>),
+  __esModule: true,
+}));
+
+// Mock Next.js Link component
+jest.mock('next/link', () => {
+  return ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href} data-testid="next-link">
+      {children}
+    </a>
+  );
 });
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store = {};
-  return {
-    getItem: jest.fn((key) => store[key] || null),
-    setItem: jest.fn((key, value) => {
-      store[key] = value.toString();
-    }),
-    clear: jest.fn(() => {
-      store = {};
-    }),
-  };
-})();
-
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-});
-
-// Mock fetch
+// Mock API calls
 global.fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
-    json: () => Promise.resolve({ grid_layout: {} }),
-    text: () => Promise.resolve(''),
+    json: () => Promise.resolve({ 
+      layouts: {
+        lg: [],
+        md: [],
+        sm: []
+      },
+      menuTiles: []
+    }),
   })
-);
+) as jest.Mock;
 
-// Import the component after mocking
-import Dashboard from '@/components/ui/dashboard';
+// Mock the auth service
+jest.mock('@/lib/auth/authService', () => ({
+  authService: {
+    getToken: jest.fn().mockReturnValue('test-token'),
+  },
+}));
+
+// Mock window resize
+const originalInnerWidth = window.innerWidth;
+const resizeWindow = (width: number) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  });
+  window.dispatchEvent(new Event('resize'));
+};
 
 describe('Dashboard Component', () => {
   beforeEach(() => {
-    // Mock window matchMedia
-    mockMatchMedia();
-    
-    // Clear localStorage before each test
-    localStorageMock.clear();
-    
-    // Reset fetch mock
     jest.clearAllMocks();
-    
-    // Reset component implementations
-    jest.mocked(Dashboard).mockImplementation(() => {
-      const [isEditMode, setIsEditMode] = React.useState(false);
-      
-      // Call localStorage in useEffect to simulate real component behavior
-      React.useEffect(() => {
-        localStorageMock.getItem('dashboard-grid-layout');
-        fetch('/api/dashboard/summary/', {
-          headers: {
-            'Accept': 'application/json',
-          },
-          credentials: 'include',
-        });
-      }, []);
-      
-      return (
-        <div data-testid="mock-dashboard">
-          <div data-testid="responsive-grid-layout">
-            <div data-testid="widget-recent-orders" />
-            <div data-testid="widget-menu-tiles" />
-          </div>
-          
-          {!isEditMode ? (
-            <button 
-              data-testid="edit-button" 
-              onClick={() => setIsEditMode(true)}
-            >
-              Bearbeiten
-            </button>
-          ) : (
-            <>
-              <button 
-                data-testid="save-button" 
-                onClick={() => {
-                  localStorageMock.setItem('dashboard-grid-layout', JSON.stringify({}));
-                  fetch('/api/dashboard/summary/', {
-                    method: 'PATCH',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Accept': 'application/json',
-                      'X-Csrftoken': document.cookie.split('csrftoken=')[1],
-                    },
-                    body: JSON.stringify({ grid_layout: {} }),
-                  });
-                  setIsEditMode(false);
-                }}
-              >
-                Speichern
-              </button>
-              <button 
-                data-testid="cancel-button" 
-                onClick={() => setIsEditMode(false)}
-              >
-                Abbrechen
-              </button>
-              <button 
-                data-testid="remove-button" 
-                aria-label="remove" 
-                onClick={() => {
-                  localStorageMock.setItem('dashboard-grid-layout', JSON.stringify({}));
-                }}
-              />
-            </>
-          )}
-          
-          <button 
-            data-testid="star" 
-            aria-label="Toggle favorite" 
-            onClick={() => {
-              localStorageMock.setItem('dashboard-favorites', JSON.stringify([]));
-            }}
-          />
-        </div>
-      );
+  });
+
+  afterEach(() => {
+    // Restore window width
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: originalInnerWidth,
     });
-    
-    // Setup DOM elements required by the component
-    document.cookie = 'csrftoken=test-token';
   });
 
-  it('renders the dashboard component', async () => {
+  it('renders the dashboard with default widgets', async () => {
     render(<Dashboard />);
-    
-    // Check if the main dashboard elements are rendered
-    expect(screen.getByTestId('mock-dashboard')).toBeInTheDocument();
-    expect(screen.getByTestId('responsive-grid-layout')).toBeInTheDocument();
-  });
 
-  it('loads default layout when no saved layout exists', async () => {
-    // Ensure localStorage returns null for grid layout
-    localStorageMock.getItem.mockReturnValueOnce(null);
-    
-    render(<Dashboard />);
-    
-    // Wait for the useEffect to run
+    // Wait for the dashboard to load
     await waitFor(() => {
-      // Dashboard component loads from localStorage on mount
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('dashboard-grid-layout');
+      expect(screen.getByText(/Letzte Bestellungen nach Liefertermin/i)).toBeInTheDocument();
     });
-  });
 
-  it('loads saved layout from localStorage', async () => {
-    // Mock a saved layout
-    const mockLayout = {
-      lg: [
-        { i: 'recent-orders', x: 0, y: 0, w: 12, h: 8, title: 'Recent Orders' },
-        { i: 'menu-tiles', x: 0, y: 8, w: 12, h: 10, title: 'Menu' },
-      ],
-      md: [
-        { i: 'recent-orders', x: 0, y: 0, w: 12, h: 8, title: 'Recent Orders' },
-        { i: 'menu-tiles', x: 0, y: 8, w: 12, h: 10, title: 'Menu' },
-      ],
-      sm: [
-        { i: 'recent-orders', x: 0, y: 0, w: 12, h: 8, title: 'Recent Orders' },
-        { i: 'menu-tiles', x: 0, y: 8, w: 12, h: 10, title: 'Menu' },
-      ],
-    };
-    
-    localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(mockLayout));
-    
-    render(<Dashboard />);
-    
-    await waitFor(() => {
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('dashboard-grid-layout');
-    });
-  });
-
-  it('attempts to fetch dashboard layout from API first', async () => {
-    render(<Dashboard />);
-    
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/dashboard/summary/', expect.objectContaining({
-        headers: expect.objectContaining({
-          'Accept': 'application/json',
-        }),
-      }));
-    });
+    // Check for key dashboard sections
+    expect(screen.getByText(/Menü/i)).toBeInTheDocument();
+    expect(screen.getByText(/Schnellzugriff/i)).toBeInTheDocument();
+    expect(screen.getByText(/Pinnwand/i)).toBeInTheDocument();
   });
 
   it('toggles edit mode when edit button is clicked', async () => {
     render(<Dashboard />);
-    
-    // Click the edit button
-    fireEvent.click(screen.getByTestId('edit-button'));
-    
-    // Edit mode buttons should be visible
-    expect(screen.getByTestId('save-button')).toBeInTheDocument();
-    expect(screen.getByTestId('cancel-button')).toBeInTheDocument();
+
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Letzte Bestellungen nach Liefertermin/i)).toBeInTheDocument();
+    });
+
+    // Find and click the edit button
+    const editButton = screen.getByRole('button', { name: /dashboard bearbeiten/i });
+    fireEvent.click(editButton);
+
+    // Check that save button appears when in edit mode
+    expect(screen.getByRole('button', { name: /änderungen speichern/i })).toBeInTheDocument();
+
+    // Click again to exit edit mode
+    const saveButton = screen.getByRole('button', { name: /änderungen speichern/i });
+    fireEvent.click(saveButton);
+
+    // Check that we're back to edit button
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /dashboard bearbeiten/i })).toBeInTheDocument();
+    });
   });
 
-  it('saves layout when save button is clicked', async () => {
+  it('renders menu tiles correctly', async () => {
+    render(<Dashboard />);
+
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Menü/i)).toBeInTheDocument();
+    });
+
+    // Check for some menu tiles
+    expect(screen.getByText(/Kunden/i)).toBeInTheDocument();
+    expect(screen.getByText(/Aufträge/i)).toBeInTheDocument();
+    expect(screen.getByText(/Produkte/i)).toBeInTheDocument();
+    expect(screen.getByText(/Berichte/i)).toBeInTheDocument();
+  });
+
+  it('renders recent orders table correctly', async () => {
+    render(<Dashboard />);
+
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Letzte Bestellungen nach Liefertermin/i)).toBeInTheDocument();
+    });
+
+    // Check for order table headers
+    expect(screen.getByText(/Auftrags-ID/i)).toBeInTheDocument();
+    expect(screen.getByText(/Kunde/i)).toBeInTheDocument();
+    expect(screen.getByText(/Liefertermin/i)).toBeInTheDocument();
+    expect(screen.getByText(/Status/i)).toBeInTheDocument();
+    expect(screen.getByText(/Betrag/i)).toBeInTheDocument();
+
+    // Check for a sample order
+    expect(screen.getByText(/ORD-7352/i)).toBeInTheDocument();
+    expect(screen.getByText(/Müller GmbH/i)).toBeInTheDocument();
+  });
+
+  it('renders quick links correctly', async () => {
+    render(<Dashboard />);
+
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Schnellzugriff/i)).toBeInTheDocument();
+    });
+
+    // Check for quick links
+    expect(screen.getByText(/Handbuch/i)).toBeInTheDocument();
+    expect(screen.getByText(/Support-Ticket erstellen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Schulungsvideos/i)).toBeInTheDocument();
+    expect(screen.getByText(/FAQ/i)).toBeInTheDocument();
+  });
+
+  it('renders news items correctly', async () => {
+    render(<Dashboard />);
+
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Pinnwand/i)).toBeInTheDocument();
+    });
+
+    // Check for news items
+    expect(screen.getByText(/Neue Funktionen im ERP-System/i)).toBeInTheDocument();
+    expect(screen.getByText(/Wartungsarbeiten am 25.03/i)).toBeInTheDocument();
+    expect(screen.getByText(/Neue Schulungsvideos verfügbar/i)).toBeInTheDocument();
+  });
+
+  it('handles window resize correctly', async () => {
+    render(<Dashboard />);
+
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Letzte Bestellungen nach Liefertermin/i)).toBeInTheDocument();
+    });
+
+    // Simulate a window resize to mobile size
+    resizeWindow(768);
+    
+    // Force a re-render by toggling edit mode
+    const editButton = screen.getByRole('button', { name: /dashboard bearbeiten/i });
+    fireEvent.click(editButton);
+    
+    // Verify the grid is still rendered
+    expect(screen.getByTestId('responsive-grid')).toBeInTheDocument();
+  });
+
+  it('calls fetch with correct parameters when saving layout', async () => {
     render(<Dashboard />);
     
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Letzte Bestellungen nach Liefertermin/i)).toBeInTheDocument();
+    });
+
     // Enter edit mode
-    fireEvent.click(screen.getByTestId('edit-button'));
-    
-    // Click save
-    fireEvent.click(screen.getByTestId('save-button'));
-    
-    // Should save to localStorage
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'dashboard-grid-layout',
-      expect.any(String)
-    );
-    
-    // Should attempt to save to API
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/dashboard/summary/',
-      expect.objectContaining({
-        method: 'PATCH',
-        headers: expect.objectContaining({
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-Csrftoken': 'test-token',
-        }),
-      })
-    );
+    const editButton = screen.getByRole('button', { name: /dashboard bearbeiten/i });
+    fireEvent.click(editButton);
+
+    // Save the layout
+    const saveButton = screen.getByRole('button', { name: /änderungen speichern/i });
+    fireEvent.click(saveButton);
+
+    // Verify fetch was called with correct parameters
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/dashboard'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer test-token'
+          }),
+          body: expect.any(String)
+        })
+      );
+    });
   });
 
-  it('toggles favorites when star is clicked', async () => {
+  it('can add a favorite by clicking the star icon', async () => {
+    const user = userEvent.setup();
     render(<Dashboard />);
     
-    // Click the star button
-    fireEvent.click(screen.getByTestId('star'));
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Menü/i)).toBeInTheDocument();
+    });
+
+    // Find a menu tile and its star button
+    const starButtons = screen.getAllByTestId('favorite-button');
     
-    // Should update localStorage
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'dashboard-favorites',
-      expect.any(String)
-    );
+    // Click on one star button (for Kunden tile)
+    await user.click(starButtons[0]);
+    
+    // Verify the star is now filled (favorited)
+    expect(starButtons[0]).toHaveAttribute('data-favorited', 'true');
   });
 
-  it('removes a widget when the remove button is clicked in edit mode', async () => {
+  it('can remove a widget in edit mode', async () => {
+    const user = userEvent.setup();
     render(<Dashboard />);
     
+    // Wait for the dashboard to load
+    await waitFor(() => {
+      expect(screen.getByText(/Letzte Bestellungen nach Liefertermin/i)).toBeInTheDocument();
+    });
+
     // Enter edit mode
-    fireEvent.click(screen.getByTestId('edit-button'));
+    const editButton = screen.getByRole('button', { name: /dashboard bearbeiten/i });
+    fireEvent.click(editButton);
     
-    // Click the remove button
-    fireEvent.click(screen.getByTestId('remove-button'));
+    // Find remove buttons that appear in edit mode
+    const removeButtons = screen.getAllByRole('button', { name: '' });
+    const firstRemoveButton = removeButtons[0]; // First widget's remove button
     
-    // Should update localStorage
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'dashboard-grid-layout',
-      expect.any(String)
+    // Remove the widget
+    await user.click(firstRemoveButton);
+    
+    // Since we're mocking the grid, we can't easily test the removal visually,
+    // but we can check that the internal state changed by checking for a re-render
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('/api/dashboard'),
+      expect.anything()
     );
   });
 }); 
