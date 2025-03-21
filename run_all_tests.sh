@@ -12,6 +12,7 @@ show_help() {
     echo "  -n, --no-coverage  Disable coverage reporting"
     echo "  -m, --mutation     Run mutation tests"
     echo "  -f, --fuzz         Run fuzz tests"
+    echo "  -s, --security     Run security tests (Bandit)"
     echo "  -v, --verbose      Verbose output"
     echo "  -q, --quiet        Quiet output"
     echo ""
@@ -19,6 +20,8 @@ show_help() {
     echo "  $0 -t unit -m      Run unit tests with mutation testing"
     echo "  $0 -t all -f -n    Run all tests with fuzzing and no coverage"
     echo "  $0 -t backend -v   Run backend tests with high verbosity"
+    echo "  $0 -s              Run security tests"
+    echo "  $0 -t all -s       Run all tests including security tests"
 }
 
 # Default values
@@ -26,6 +29,7 @@ TEST_TYPE="all"
 COVERAGE_OPT=""
 MUTATION_OPT=""
 FUZZ_OPT=""
+SECURITY_OPT=""
 VERBOSITY_OPT=""
 
 # Parse command line options
@@ -56,6 +60,10 @@ while [[ $# -gt 0 ]]; do
             FUZZ_OPT="--fuzz"
             shift
             ;;
+        -s|--security)
+            SECURITY_OPT="--security"
+            shift
+            ;;
         -v|--verbose)
             VERBOSITY_OPT="-v"
             shift
@@ -80,4 +88,12 @@ echo "Running: $CMD"
 echo "-------------------------------------"
 
 # Execute the command
-eval $CMD 
+eval $CMD
+
+# Run security tests if requested
+if [[ "$SECURITY_OPT" == "--security" ]] || [[ "$TEST_TYPE" == "security" ]]; then
+    echo ""
+    echo "Running security tests..."
+    echo "-------------------------------------"
+    ./scripts/run_security_tests.sh
+fi 
