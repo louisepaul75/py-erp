@@ -12,7 +12,7 @@ class JSONFormatter(logging.Formatter):
         logobj = {}
         
         # Standard log record attributes
-        logobj['timestamp'] = datetime.utcnow().isoformat()
+        logobj['@timestamp'] = datetime.utcnow().isoformat()
         logobj['level'] = record.levelname
         logobj['name'] = record.name
         logobj['message'] = record.getMessage()

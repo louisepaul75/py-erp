@@ -257,7 +257,7 @@ LOGGING = {
             "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
             "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
             "rename_fields": {
-                "asctime": "timestamp",
+                "asctime": "@timestamp",
                 "levelname": "level",
             },
         },

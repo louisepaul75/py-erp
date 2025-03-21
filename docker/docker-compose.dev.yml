@@ -14,12 +14,13 @@ services:
       - "8050:8050"
       - "5173:5173"  # Vue.js development server (Vite)
       - "3000:3000"  # React development server
-      - "9200:9200"  # Elasticsearch
-      - "5601:5601"  # Kibana
+      - "6379:6379"  # Redis
+      - "80:80"      # Nginx
     volumes:
       - ..:/app  # Mount local code directory to /app for hot reloading
       - pyerp_data:/app/data
-      - elasticsearch_data:/var/lib/elasticsearch
+      - filebeat_data:/var/lib/filebeat
+      - ./filebeat_config.yml:/etc/filebeat/filebeat.yml
     env_file:
       - ../config/env/.env.dev
     environment:
@@ -33,9 +34,9 @@ services:
       - DB_NAME=pyerp_testing
       - DB_USER=postgres
       # Monitoring configuration
-      - ELASTICSEARCH_HOST=localhost
+      - ELASTICSEARCH_HOST=pyerp-monitoring
       - ELASTICSEARCH_PORT=9200
-      - KIBANA_HOST=localhost
+      - KIBANA_HOST=pyerp-monitoring
       - KIBANA_PORT=5601
       - SENTRY_DSN=https://development@sentry.example.com/1
     command: >
@@ -49,10 +50,87 @@ services:
         bash /app/docker/ensure_static_dirs.sh &&
         # Run the monitoring installation script
         bash /app/docker/install_monitoring.sh &&
+        # Configure Filebeat to ship logs to monitoring container
+        echo 'Configuring Filebeat to ship logs to monitoring container...' &&
+        if [ -f /usr/bin/filebeat ]; then
+          # Remove any existing filebeat lock file
+          rm -f /var/lib/filebeat/filebeat.lock &&
+          # Start Filebeat in the background
+          /usr/bin/filebeat -e -c /etc/filebeat/filebeat.yml > /app/logs/filebeat.log 2>&1 &
+          echo 'Filebeat started successfully.'
+        else
+          echo 'Filebeat not installed. Installing now...' &&
+          apt-get update &&
+          apt-get install -y filebeat &&
+          # Remove any existing filebeat lock file
+          rm -f /var/lib/filebeat/filebeat.lock &&
+          # Start Filebeat in the background
+          /usr/bin/filebeat -e -c /etc/filebeat/filebeat.yml > /app/logs/filebeat.log 2>&1 &
+          echo 'Filebeat installed and started successfully.'
+        fi &&
         # Start supervisord
         /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "
+    networks:
+      - pyerp-network
+    depends_on:
+      - pyerp-monitoring
+
+  pyerp-monitoring:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
+    container_name: pyerp-monitoring
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - xpack.monitoring.enabled=true
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+      - "5601:5601"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    command: >
+      /bin/bash -c "
+        # Start Elasticsearch
+        su -c '/usr/local/bin/docker-entrypoint.sh eswrapper' elasticsearch &
+        ES_PID=$!
+        
+        # Wait for Elasticsearch to be ready
+        until curl -s http://localhost:9200 > /dev/null; do
+          echo 'Waiting for Elasticsearch...'
+          sleep 5
+        done
+        
+        # Install Kibana
+        if [ ! -d /usr/share/kibana ]; then
+          echo 'Installing Kibana...'
+          apt-get update && apt-get install -y wget gnupg
+          wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -
+          echo 'deb https://artifacts.elastic.co/packages/7.x/apt stable main' > /etc/apt/sources.list.d/elastic-7.x.list
+          apt-get update && apt-get install -y kibana=7.17.0
+        fi
+        
+        # Configure Kibana
+        echo 'server.host: \"0.0.0.0\"' > /etc/kibana/kibana.yml
+        echo 'elasticsearch.hosts: [\"http://localhost:9200\"]' >> /etc/kibana/kibana.yml
+        
+        # Start Kibana
+        su -c '/usr/share/kibana/bin/kibana --allow-root' kibana &
+        KIBANA_PID=$!
+        
+        # Wait for process termination
+        wait $ES_PID
+        wait $KIBANA_PID
+      "
+    networks:
+      - pyerp-network
 
 volumes:
   pyerp_data:
-  elasticsearch_data:
+  filebeat_data:
+  es_data:
+
+networks:
+  pyerp-network:
+    external: true
