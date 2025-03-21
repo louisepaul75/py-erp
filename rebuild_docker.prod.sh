@@ -48,7 +48,7 @@ read -p "Would you like to set up the monitoring system on the remote server (19
 if [[ $setup_remote == "j" || $setup_remote == "J" || $setup_remote == "y" || $setup_remote == "Y" ]]; then
     # Run the setup_monitoring_complete.sh script
     echo "Starting remote monitoring setup..."
-    bash ./setup_monitoring_complete.sh
+    bash ./scripts/monitoring/setup_monitoring_complete.sh
 else
     echo "Remote monitoring setup skipped."
 fi
