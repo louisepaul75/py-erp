@@ -156,4 +156,16 @@ export function mockApiEndpoint(endpoint: string, responseData: any, status = 20
     }
     return Promise.reject(new Error(`No mock for ${urlString}`));
   });
-} 
+}
+
+/**
+ * Simple test to ensure Jest recognizes this file as containing tests
+ * This prevents the "Your test suite must contain at least one test" error
+ */
+describe('Test helpers', () => {
+  it('should exist', () => {
+    expect(createQueryClientWrapper).toBeDefined();
+    expect(renderWithQueryClient).toBeDefined();
+    expect(mockFetch).toBeDefined();
+  });
+}); 
