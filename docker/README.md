@@ -92,3 +92,27 @@ If you encounter issues with Docker:
 3. Ensure PostgreSQL is accessible from the container.
 
 4. Check for port conflicts on the host machine.
+
+## Monitoring
+
+To start the monitoring services (Elasticsearch and Kibana), run:
+
+```bash
+cd docker
+docker-compose -f docker-compose.monitoring.yml up -d
+```
+
+This will start:
+- Elasticsearch on port 9200
+- Kibana on port 5601
+
+You can access the Kibana UI at http://localhost:5601 to monitor and manage your Elasticsearch instance.
+
+### Stopping Monitoring
+
+To stop the monitoring services, run:
+
+```bash
+cd docker
+docker-compose -f docker-compose.monitoring.yml down
+```
