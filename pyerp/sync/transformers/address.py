@@ -253,8 +253,11 @@ class AddressTransformer(BaseTransformer):
         # Strip whitespace and convert to lowercase
         email = email.strip().lower()
 
-        # Basic validation - must contain @ and at least one dot after @
-        if "@" in email and "." in email.split("@")[1]:
+        # Basic validation:
+        # 1. Must contain @
+        # 2. Must have text before and after @
+        # 3. Must have at least one dot after @
+        if "@" in email and email.split("@")[0] and "." in email.split("@")[1]:
             return email
 
         return ""
