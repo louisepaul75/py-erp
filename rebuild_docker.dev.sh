@@ -50,7 +50,9 @@ docker rm pyerp-dev || true
 
 # For separate monitoring mode, also stop/remove the monitoring containers
 if [ "$MONITORING_MODE" == "separate" ]; then
-    echo "Stopping existing monitoring containers..."
+    echo "Stopping existing monitoring container..."
+    docker stop pyerp-monitoring || true
+    docker rm pyerp-monitoring || true
     docker-compose -f docker/docker-compose.monitoring.yml down || true
 fi
 
@@ -85,7 +87,7 @@ if [ "$MONITORING_MODE" == "none" ]; then
     MONITORING_VOLUMES=""
 elif [ "$MONITORING_MODE" == "separate" ]; then
     # Set environment variables to connect to separate monitoring container
-    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-elasticsearch -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-kibana -e KIBANA_PORT=5601 -e SENTRY_DSN=https://development@sentry.example.com/1"
+    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-monitoring -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-monitoring -e KIBANA_PORT=5601 -e SENTRY_DSN=https://development@sentry.example.com/1"
     MONITORING_CMD=""
     MONITORING_PORTS=""
     MONITORING_VOLUMES=""
@@ -114,9 +116,9 @@ docker run -d \
   pyerp-dev-image \
   bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_frontend_deps.sh && $([ "$MONITORING_MODE" == "none" ] && echo "bash /app/docker/install_monitoring.sh &&") /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
-# Start the separate monitoring containers if needed
+# Start the separate monitoring container if needed
 if [ "$MONITORING_MODE" == "separate" ]; then
-    echo "Starting separate monitoring containers with docker-compose..."
+    echo "Starting separate monitoring container with docker-compose..."
     docker-compose -f docker/docker-compose.monitoring.yml up -d
 fi
 
@@ -147,11 +149,11 @@ if [ "$MONITORING_MODE" == "none" ]; then
     echo -e "- Kibana: http://localhost:5601"
     echo -e "- Sentry: Integrated with Django application"
 elif [ "$MONITORING_MODE" == "separate" ]; then
-    echo -e "\nMonitoring services (separate containers):"
+    echo -e "\nMonitoring services (separate container):"
     echo -e "- Elasticsearch: http://localhost:9200"
     echo -e "- Kibana: http://localhost:5601" 
     echo -e "- Sentry: Integrated with Django application"
-    echo -e "Monitoring container logs: docker logs pyerp-elasticsearch or docker logs pyerp-kibana"
+    echo -e "Monitoring container logs: docker logs pyerp-monitoring"
 elif [ "$MONITORING_MODE" == "remote" ]; then
     echo -e "\nMonitoring services (remote at 192.168.73.65):"
     echo -e "- Elasticsearch: http://192.168.73.65:9200"

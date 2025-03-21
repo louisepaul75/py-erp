@@ -4,31 +4,52 @@
 version: '3.8'
 
 services:
-  elasticsearch:
+  monitoring:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
-    container_name: pyerp-elasticsearch
+    container_name: pyerp-monitoring
     ports:
       - "9200:9200"
       - "9300:9300"
+      - "5601:5601"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      # Add environment variables for Kibana
+      - xpack.security.enabled=false
     networks:
       - pyerp-network
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.0
-    container_name: pyerp-kibana
-    ports:
-      - "5601:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    depends_on:
-      - elasticsearch
-    networks:
-      - pyerp-network
+    # Add custom entrypoint to start both Elasticsearch and Kibana
+    entrypoint: >
+      /bin/bash -c "
+        # Start Elasticsearch in the background
+        /usr/local/bin/docker-entrypoint.sh elasticsearch &
+        
+        # Wait for Elasticsearch to be ready
+        until curl -s http://localhost:9200 > /dev/null; do
+          echo 'Waiting for Elasticsearch to start...'
+          sleep 2
+        done
+        echo 'Elasticsearch is ready!'
+        
+        # Install and start Kibana
+        apt-get update && apt-get install -y curl
+        curl -L -O https://artifacts.elastic.co/downloads/kibana/kibana-7.17.0-linux-x86_64.tar.gz
+        tar -xzf kibana-7.17.0-linux-x86_64.tar.gz
+        cd kibana-7.17.0-linux-x86_64
+        
+        # Configure Kibana
+        echo 'server.port: 5601' > config/kibana.yml
+        echo 'server.host: \"0.0.0.0\"' >> config/kibana.yml
+        echo 'elasticsearch.hosts: [\"http://localhost:9200\"]' >> config/kibana.yml
+        
+        # Start Kibana
+        ./bin/kibana &
+        
+        # Keep container running
+        tail -f /dev/null
+      "
 
 volumes:
   elasticsearch_data:
