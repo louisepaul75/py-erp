@@ -16,6 +16,7 @@ pytest-cov==4.1.0
 factory-boy==3.3.0
 faker==22.5.1
 mutmut==3.2.3  # Mutation testing
+hypothesis==6.98.2  # Property-based testing
 
 # Code quality
 black==24.2.0
