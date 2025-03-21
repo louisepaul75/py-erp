@@ -8,8 +8,15 @@ from pyerp.sync.transformers.base import BaseTransformer, ValidationError
 from pyerp.sync.exceptions import TransformError
 
 
+@pytest.mark.unit
 class TestValidationError:
     """Tests for the ValidationError class."""
+
+
+
+
+
+
 
     def test_init_with_defaults(self):
         """Test initialization with default values."""
@@ -54,8 +61,33 @@ class SimpleTransformer(BaseTransformer):
         return transformed_records
 
 
+@pytest.mark.unit
 class TestBaseTransformer:
     """Tests for the BaseTransformer class."""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def test_init_with_minimal_config(self):
         """Test initialization with minimal configuration."""
@@ -66,6 +98,9 @@ class TestBaseTransformer:
         assert transformer.field_mappings == {}
         assert transformer.custom_transformers == {}
         assert transformer.validation_rules == []
+
+
+
 
     def test_init_with_full_config(self):
         """Test initialization with full configuration."""
@@ -93,6 +128,9 @@ class TestBaseTransformer:
         assert transformer.field_mappings == field_mappings
         assert transformer.validation_rules == validation_rules
 
+
+
+
     def test_validate_config_valid(self):
         """Test configuration validation with valid config."""
         config = {
@@ -103,6 +141,9 @@ class TestBaseTransformer:
         # This should not raise an exception
         transformer = SimpleTransformer(config)
         assert transformer.field_mappings == {"target": "source"}
+
+
+
 
     def test_validate_config_invalid_mappings(self):
         """Test configuration validation with invalid field mappings."""
@@ -116,6 +157,9 @@ class TestBaseTransformer:
         
         assert "field_mappings must be a dictionary" in str(exc_info.value)
 
+
+
+
     def test_validate_config_invalid_rules(self):
         """Test configuration validation with invalid validation rules."""
         config = {
@@ -127,6 +171,9 @@ class TestBaseTransformer:
             SimpleTransformer(config)
         
         assert "validation_rules must be a list" in str(exc_info.value)
+
+
+
 
     def test_register_custom_transformer(self):
         """Test registering a custom transformer function."""
@@ -140,6 +187,9 @@ class TestBaseTransformer:
         
         assert "name" in transformer.custom_transformers
         assert transformer.custom_transformers["name"] == custom_func
+
+
+
 
     def test_apply_field_mappings(self):
         """Test applying field mappings to a source record."""
@@ -169,6 +219,9 @@ class TestBaseTransformer:
         assert result["target_code"] == "TP001"
         assert result["other_field"] == "Other value"
 
+
+
+
     def test_apply_custom_transformers(self):
         """Test applying custom transformers to a record."""
         transformer = SimpleTransformer({})
@@ -196,6 +249,9 @@ class TestBaseTransformer:
         assert result["price"] == 21.98
         assert result["code"] == "TP001"  # Unchanged, no transformer
 
+
+
+
     def test_apply_custom_transformers_error(self):
         """Test handling errors in custom transformers."""
         transformer = SimpleTransformer({})
@@ -214,6 +270,9 @@ class TestBaseTransformer:
         
         assert "Error applying custom transformer for field 'name'" in str(exc_info.value)
         assert "Test error" in str(exc_info.value)
+
+
+
 
     def test_validate_record(self):
         """Test record validation."""
@@ -251,6 +310,9 @@ class TestBaseTransformer:
         assert len(price_errors) == 1
         assert price_errors[0].field == "price"
 
+
+
+
     def test_prefilter_records(self):
         """Test prefiltering records based on existing keys."""
         source_data = [
@@ -270,6 +332,9 @@ class TestBaseTransformer:
         assert [r["id"] for r in to_update] == [1, 3]
         assert [r["id"] for r in to_create] == [2]
 
+
+
+
     def test_prefilter_records_normalization(self):
         """Test key normalization in prefiltering."""
         source_data = [
@@ -288,6 +353,9 @@ class TestBaseTransformer:
         assert len(to_create) == 2
         assert [r["id"] for r in to_update] == [3]
         assert sorted([r["id"] for r in to_create]) == ["001", "2"]
+
+
+
 
     def test_prefilter_records_missing_key_field(self):
         """Test prefiltering when key field is missing."""
@@ -311,6 +379,9 @@ class TestBaseTransformer:
         all_records, empty_list = transformer.prefilter_records(source_data, existing_keys)
         assert len(all_records) == 3
         assert len(empty_list) == 0
+
+
+
 
     def test_transform(self):
         """Test the main transform method."""
@@ -339,6 +410,9 @@ class TestBaseTransformer:
         assert result[0]["product_price"] == 10.99
         assert result[0]["product_code"] == "P1"
         assert result[1]["product_name"] == "PRODUCT 2"
+
+
+
 
     def test_validate(self):
         """

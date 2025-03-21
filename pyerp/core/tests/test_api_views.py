@@ -48,9 +48,36 @@ def rf():
     return RequestFactory()
 
 
-@pytest.mark.django_db
+@pytest.mark.core
+@pytest.mark.backend
+@pytest.mark.api
 class TestUserProfileView:
     """Tests for the UserProfileView."""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def test_get_user_profile(self, rf, user):
         """Test retrieving the user profile."""
@@ -70,6 +97,31 @@ class TestUserProfileView:
         assert 'preferences' in response.data
         assert 'dashboard_config' in response.data['preferences']
         assert response.data['preferences']['dashboard_config']['theme'] == 'dark'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def test_update_user_profile(self, rf, user):
         """Test updating the user profile."""
@@ -111,11 +163,33 @@ class TestUserProfileView:
         assert pref.dashboard_config['sidebar'] == 'collapsed'
 
 
-@pytest.mark.django_db
+@pytest.mark.core
+@pytest.mark.backend
+@pytest.mark.api
 class TestDashboardSummaryView:
     """Tests for the DashboardSummaryView."""
 
     @patch('pyerp.core.views.DashboardSummaryView.get_dashboard_data')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def test_get_dashboard_summary(self, mock_get_data, rf, user):
         """Test retrieving the dashboard summary."""
         mock_get_data.return_value = {
@@ -134,11 +208,15 @@ class TestDashboardSummaryView:
         assert response.data['statistics']['orders'] == 10
 
 
-@pytest.mark.django_db
+@pytest.mark.core
+@pytest.mark.backend
+@pytest.mark.api
 class TestSystemSettingsView:
     """Tests for the SystemSettingsView."""
 
     @patch('pyerp.core.views.SystemSettingsView.get_system_settings')
+
+
     def test_get_system_settings_staff(self, mock_get_settings, rf, admin_user):
         """Test retrieving system settings as staff user."""
         mock_get_settings.return_value = {
@@ -156,6 +234,9 @@ class TestSystemSettingsView:
         assert 'app_version' in response.data
         assert 'environment' in response.data
 
+
+
+
     def test_get_system_settings_non_staff(self, rf, user):
         """Test retrieving system settings as non-staff user."""
         view = SystemSettingsView.as_view()
@@ -166,6 +247,8 @@ class TestSystemSettingsView:
         assert response.status_code == 403
 
     @patch('pyerp.core.views.SystemSettingsView.update_system_settings')
+
+
     def test_update_system_settings_superuser(self, mock_update_settings, rf, admin_user):
         """Test updating system settings as superuser."""
         mock_update_settings.return_value = True

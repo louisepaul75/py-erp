@@ -1,3 +1,4 @@
+import pytest
 """
 Direct test command for production sync.
 

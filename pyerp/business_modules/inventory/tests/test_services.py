@@ -1,3 +1,4 @@
+import pytest
 """
 Unit tests for the inventory services.
 """
@@ -309,6 +310,12 @@ class InventoryServiceTestCase(TestCase):
         # Update occupied status
         self.source_slot.update_occupied_status()
 
+
+
+
+
+
+
     def test_move_box(self):
         """Test moving a box to a different storage location."""
         # Monkey patch the Box model for this test to add a storage_location attribute
@@ -326,6 +333,12 @@ class InventoryServiceTestCase(TestCase):
             reference__startswith="Box move:",
         )
         self.assertTrue(movements.exists())
+
+
+
+
+
+
 
     def test_add_product_to_box_slot(self):
         """Test adding a product to a box slot."""
@@ -360,6 +373,12 @@ class InventoryServiceTestCase(TestCase):
             movement_type=InventoryMovement.MovementType.RECEIPT,
         )
         self.assertIsNotNone(movement)
+
+
+
+
+
+
 
     def test_move_product_between_box_slots(self):
         """Test moving a product between box slots."""
@@ -408,6 +427,12 @@ class InventoryServiceTestCase(TestCase):
         )
         self.assertIsNotNone(movement)
 
+
+
+
+
+
+
     def test_move_all_product_between_box_slots(self):
         """Test moving all of a product between box slots."""
         result = MockInventoryService.move_product_between_box_slots(
@@ -438,6 +463,12 @@ class InventoryServiceTestCase(TestCase):
             BoxStorage.objects.filter(box_slot=self.source_slot).exists()
         )
 
+
+
+
+
+
+
     def test_remove_product_from_box_slot(self):
         """Test removing a product from a box slot."""
         result = MockInventoryService.remove_product_from_box_slot(
@@ -463,6 +494,12 @@ class InventoryServiceTestCase(TestCase):
         )
         self.assertIsNotNone(movement)
         self.assertEqual(movement.notes, "Testing removal")
+
+
+
+
+
+
 
     def test_remove_all_product_from_box_slot(self):
         """Test removing all of a product from a box slot."""
@@ -497,6 +534,12 @@ class InventoryServiceTestCase(TestCase):
         )
         self.assertIsNotNone(movement)
         self.assertEqual(movement.notes, "Testing complete removal")
+
+
+
+
+
+
 
     def test_validation_errors(self):
         """Test that validation errors are raised appropriately."""
