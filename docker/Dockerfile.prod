@@ -51,6 +51,8 @@ RUN pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 COPY frontend-react/package*.json /app/frontend-react/
 WORKDIR /app/frontend-react
 RUN npm install --legacy-peer-deps
+# Install Stryker packages for mutation testing
+RUN npm install @stryker-mutator/core@8.7.1 @stryker-mutator/jest-runner@8.7.1 serve --save-dev
 
 # Copy the rest of the frontend code
 COPY frontend-react/ /app/frontend-react/

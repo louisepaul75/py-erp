@@ -51,8 +51,7 @@
 - Pydantic 2.6.3 - Data validation
 - Pandas 2.2.0 - Data analysis
 - Tabulate 0.9.0 - Pretty-print tabular data
-- pytest 8.x - Backend Testing
-- mutmut 3.x - test Mutation
+
 
 ### Logging
 - StructLog 24.1.0 - Structured logging
@@ -73,8 +72,7 @@
 - Next.js 14.2.24 - React framework
 - TypeScript 5.3.3 - Type-safe JavaScript
 - Recharts 2.x - React Charts
-- Jest 6.x - React Testing
-- Jest-junit 16.x - Jest coverage report
+
 
 ### State Management
 - React Query (TanStack Query) 5.69.0 - Server state management and data fetching
@@ -116,8 +114,12 @@
 - Pytest 8.0.2 - Testing framework
 - Pytest Django 4.8.0 - Django testing integration
 - Pytest Cov 4.1.0 - Coverage reporting
+- mutmut 3.x - test Mutation
 - Factory Boy 3.3.0 - Test fixtures
 - Faker 22.5.1 - Fake data generation
+- Jest 6.x - React Testing
+- Jest-junit 16.x - Jest coverage report
+- stryker 8.x - Jest Mutation
 
 ### Documentation
 - Sphinx 7.3.7 - Documentation generator

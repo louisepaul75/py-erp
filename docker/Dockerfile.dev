@@ -62,6 +62,8 @@ WORKDIR /app/frontend-react
 RUN npm install --legacy-peer-deps
 # Install testing-library/dom explicitly
 RUN npm install @testing-library/dom --save-dev
+# Install Stryker packages for mutation testing
+RUN npm install @stryker-mutator/core@8.7.1 @stryker-mutator/jest-runner@8.7.1 serve --save-dev
 
 # Copy frontend source files
 COPY frontend-react/ /app/frontend-react/

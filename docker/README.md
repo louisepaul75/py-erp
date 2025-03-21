@@ -59,6 +59,28 @@ docker-compose up
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
+## Included Development Tools
+
+The Docker development environment includes several tools to aid development:
+
+### Testing Tools
+- **Jest**: JavaScript testing framework
+- **Stryker Mutator (v8.7.1)**: Mutation testing framework for JavaScript
+  - Available commands:
+    - `npm run test:mutation`: Run mutation tests
+    - `npm run test:mutation:report`: View mutation test report
+
+### Viewing Mutation Test Reports
+
+The mutation test reports can be viewed by running:
+
+```bash
+# From the frontend-react directory inside the container
+npm run test:mutation:report
+```
+
+This will serve the HTML report, typically accessible at http://localhost:3000.
+
 ## Docker Files
 
 ```
