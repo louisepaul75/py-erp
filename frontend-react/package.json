@@ -12,6 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --reporters=default --reporters=jest-junit",
+    "test:fuzz": "jest --testMatch='**/?(*.)+(fuzz).test.[jt]s?(x)'",
     "test:mutation": "stryker run",
     "test:mutation:report": "npx serve ./reports/mutation/html"
   },

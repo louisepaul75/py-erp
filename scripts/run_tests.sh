@@ -31,8 +31,69 @@ else
   fi
 fi
 
-# Which test group to run - default to all if not specified
-TEST_GROUP=${1:-all}
+# Default options
+COVERAGE=true
+MUTATION=false
+FUZZ=false
+VERBOSITY=1
+
+# Parse command line options
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --no-coverage)
+      COVERAGE=false
+      shift
+      ;;
+    --mutation)
+      MUTATION=true
+      shift
+      ;;
+    --fuzz)
+      FUZZ=true
+      shift
+      ;;
+    -v|--verbose)
+      VERBOSITY=2
+      shift
+      ;;
+    -q|--quiet)
+      VERBOSITY=0
+      shift
+      ;;
+    *)
+      TEST_GROUP=$1
+      shift
+      ;;
+  esac
+done
+
+# Set default test group to 'all' if not specified
+TEST_GROUP=${TEST_GROUP:-all}
+
+echo "Running tests with options:"
+echo "  Test group: $TEST_GROUP"
+echo "  Coverage: $COVERAGE"
+echo "  Mutation testing: $MUTATION"
+echo "  Fuzz testing: $FUZZ"
+echo "  Verbosity: $VERBOSITY"
+
+# Prepare base pytest options
+PYTEST_OPTS=""
+
+# Add coverage options if enabled
+if [ "$COVERAGE" = true ]; then
+  PYTEST_OPTS="$PYTEST_OPTS --cov=pyerp"
+  PYTEST_OPTS="$PYTEST_OPTS --cov-report=xml:coverage/${TEST_GROUP}-coverage.xml"
+  PYTEST_OPTS="$PYTEST_OPTS --junitxml=coverage/${TEST_GROUP}-junit.xml"
+  PYTEST_OPTS="$PYTEST_OPTS -o junit_family=legacy"
+fi
+
+# Add verbosity options
+if [ "$VERBOSITY" -eq 0 ]; then
+  PYTEST_OPTS="$PYTEST_OPTS -q"
+elif [ "$VERBOSITY" -eq 2 ]; then
+  PYTEST_OPTS="$PYTEST_OPTS -v"
+fi
 
 # Special handling for UI tests which use Jest
 if [ "$TEST_GROUP" = "ui" ]; then
@@ -62,14 +123,29 @@ if [ "$TEST_GROUP" = "ui" ]; then
     npm ci
   fi
   
-  # Run tests with coverage and CI mode
-  echo "Running Jest tests..."
-  npm run test:ci
+  # Prepare Jest options
+  JEST_OPTS=""
+  
+  # Add coverage options for Jest
+  if [ "$COVERAGE" = true ]; then
+    JEST_OPTS="$JEST_OPTS --coverage"
+  fi
+  
+  # Add fuzz testing options for Jest
+  if [ "$FUZZ" = true ]; then
+    JEST_OPTS="$JEST_OPTS --testMatch='**/?(*.)+(fuzz).test.[jt]s?(x)'"
+  fi
+  
+  # Run tests with prepared options
+  echo "Running Jest tests with options: $JEST_OPTS"
+  npm test -- $JEST_OPTS
   
   # Copy test results to the expected location for the CI pipeline
-  mkdir -p ../coverage
-  cp jest-junit.xml ../coverage/ui-junit.xml
-  cp -r coverage/coverage-final.json ../coverage/ui-coverage.xml
+  if [ "$COVERAGE" = true ]; then
+    mkdir -p ../coverage
+    cp jest-junit.xml ../coverage/ui-junit.xml
+    cp -r coverage/coverage-final.json ../coverage/ui-coverage.xml
+  fi
   
   # Return to project root
   cd ..
@@ -81,12 +157,38 @@ elif [ "$TEST_GROUP" = "all" ]; then
   # First run UI tests
   $0 ui
   
-  # Then run all backend tests using pytest's automatic discovery
-  python -m pytest \
-    --cov=pyerp \
-    --cov-report=xml:coverage/all-coverage.xml \
-    --junitxml=coverage/all-junit.xml \
-    -o junit_family=legacy
+  # Then run backend tests
+  
+  # Add fuzz test markers if enabled
+  if [ "$FUZZ" = true ]; then
+    PYTEST_OPTS="$PYTEST_OPTS -m 'fuzzing or property'"
+  fi
+  
+  # Run backend tests with automatic discovery
+  python -m pytest $PYTEST_OPTS
+  
+  # Run mutation tests if enabled
+  if [ "$MUTATION" = true ]; then
+    echo "Running mutation tests with mutmut"
+    if [ -f "tools/mutation_testing/run_mutmut.sh" ]; then
+      ./tools/mutation_testing/run_mutmut.sh
+    else
+      echo "WARNING: Mutation testing script not found at tools/mutation_testing/run_mutmut.sh"
+      echo "Attempting to run mutmut directly"
+      python -m mutmut run
+    fi
+  fi
+elif [ "$TEST_GROUP" = "sync" ]; then
+  echo "Running sync tests"
+  
+  # Set up environment for sync tests
+  export DJANGO_SETTINGS_MODULE=pyerp.config.settings.test
+  
+  # Run the sync tests with the appropriate options
+  echo "Running sync tests with pytest..."
+  python -m pytest tests/backend/sync/ $PYTEST_OPTS
+  
+  echo "Sync tests completed"
 else
   echo "Running $TEST_GROUP tests"
   
@@ -95,13 +197,15 @@ else
   if [[ "$TEST_GROUP" =~ ^(backend|core|unit|api|database)$ ]]; then
     echo "Using marker: -m $TEST_GROUP"
     
+    # Add fuzz test markers if enabled
+    if [ "$FUZZ" = true ]; then
+      PYTEST_OPTS="$PYTEST_OPTS -m '$TEST_GROUP or fuzzing or property'"
+    else
+      PYTEST_OPTS="$PYTEST_OPTS -m $TEST_GROUP"
+    fi
+    
     # Run tests matching the marker
-    python -m pytest \
-      -m $TEST_GROUP \
-      --cov=pyerp \
-      --cov-report=xml:coverage/${TEST_GROUP}-coverage.xml \
-      --junitxml=coverage/${TEST_GROUP}-junit.xml \
-      -o junit_family=legacy
+    python -m pytest $PYTEST_OPTS
   else
     # For other test groups, try to find a matching directory
     echo "Looking for test directory for group: $TEST_GROUP"
@@ -130,20 +234,26 @@ else
       echo "Attempting to run tests using the group name as a directory pattern"
       
       # Fall back to running tests using a pattern
-      python -m pytest \
-        -k "$TEST_GROUP" \
-        --cov=pyerp \
-        --cov-report=xml:coverage/${TEST_GROUP}-coverage.xml \
-        --junitxml=coverage/${TEST_GROUP}-junit.xml \
-        -o junit_family=legacy
+      python -m pytest -k "$TEST_GROUP" $PYTEST_OPTS
     else
       # Run tests from the found directory
-      python -m pytest \
-        "$TEST_PATH" \
-        --cov=pyerp \
-        --cov-report=xml:coverage/${TEST_GROUP}-coverage.xml \
-        --junitxml=coverage/${TEST_GROUP}-junit.xml \
-        -o junit_family=legacy
+      python -m pytest "$TEST_PATH" $PYTEST_OPTS
+    fi
+  fi
+  
+  # Run mutation tests if enabled and we have a specific module to test
+  if [ "$MUTATION" = true ]; then
+    echo "Running mutation tests for $TEST_GROUP"
+    if [ -f "tools/mutation_testing/run_mutmut.sh" ]; then
+      if [ -n "$TEST_PATH" ]; then
+        ./tools/mutation_testing/run_mutmut.sh "pyerp/$TEST_GROUP" "$TEST_PATH"
+      else
+        ./tools/mutation_testing/run_mutmut.sh "pyerp/$TEST_GROUP"
+      fi
+    else
+      echo "WARNING: Mutation testing script not found at tools/mutation_testing/run_mutmut.sh"
+      echo "Attempting to run mutmut directly"
+      python -m mutmut run --paths-to-mutate "pyerp/$TEST_GROUP"
     fi
   fi
 fi 

@@ -75,10 +75,10 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           # Make sure test script is executable
-          chmod +x scripts/run_tests.sh
+          chmod +x run_all_tests.sh
           
-          # Run tests using the existing script
-          ./scripts/run_tests.sh ${{ matrix.test-group }}
+          # Run tests using the main wrapper script
+          ./run_all_tests.sh --type ${{ matrix.test-group }}
 
       - name: Store test results
         if: always()

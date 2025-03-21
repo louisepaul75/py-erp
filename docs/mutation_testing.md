@@ -16,33 +16,20 @@ pip install mutmut
 
 ## Running Mutation Tests
 
-### Option 1: Using the Convenience Script
-
-We've created a script that makes it easier to run mutation tests on specific modules:
+To run mutation tests, use:
 
 ```bash
-./run_mutmut.sh <module_path> [test_path]
+./run_all_tests.sh --type <module_name> --mutation
 ```
 
-For example:
+Examples:
 
 ```bash
-./run_mutmut.sh pyerp/users/models.py tests/unit/users
-```
+# Run mutation tests on the users module
+./run_all_tests.sh --type users --mutation
 
-### Option 2: Running Directly with mutmut
-
-You can run mutmut directly with various options:
-
-```bash
-# Run on the entire codebase (might take a long time)
-mutmut run
-
-# Run on a specific file or module
-mutmut run --paths-to-mutate "pyerp/users/models.py"
-
-# Run with specific test directory
-mutmut run --paths-to-mutate "pyerp/users/models.py" --tests-dir "tests/unit/users"
+# Run mutation tests on all unit tests
+./run_all_tests.sh --type unit --mutation
 ```
 
 ## Analyzing Results

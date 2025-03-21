@@ -44,11 +44,13 @@ jobs:
         DJANGO_SETTINGS_MODULE: pyerp.config.settings.test
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_testing
       run: |
-        # Example: Run mutation tests on critical modules only to save time
-        # Adjust these paths based on your project's critical components
-        ./run_mutmut.sh pyerp/users/models.py tests/unit/users
-        # Add more critical modules as needed
-        # ./run_mutmut.sh pyerp/core/utils.py tests/unit/core
+        # Make sure test script is executable
+        chmod +x run_all_tests.sh
+        
+        # Run mutation tests on critical modules using the main wrapper script
+        ./run_all_tests.sh --type unit --mutation
+        # To test specific modules, you can add more targeted runs as needed
+        # ./run_all_tests.sh --type users --mutation
         
     - name: Generate JUnit XML report
       run: |
