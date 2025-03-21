@@ -51,6 +51,8 @@
 - Pydantic 2.6.3 - Data validation
 - Pandas 2.2.0 - Data analysis
 - Tabulate 0.9.0 - Pretty-print tabular data
+- pytest 8.x - Backend Testing
+- mutmut 3.x - test Mutation
 
 ### Logging
 - StructLog 24.1.0 - Structured logging
