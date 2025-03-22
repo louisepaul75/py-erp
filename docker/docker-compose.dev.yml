@@ -5,40 +5,32 @@
 version: '3.8'
 
 services:
-  pyerp:
+  pyerp-app:
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
     container_name: pyerp-dev
     ports:
       - "8050:8050"
-      - "5173:5173"  # Vue.js development server (Vite)
-      - "3000:3000"  # React development server
-      - "6379:6379"  # Redis
-      - "80:80"      # Nginx
+      - "3000:3000"
+      - "80:80"
+      - "6379:6379"
     volumes:
-      - ..:/app  # Mount local code directory to /app for hot reloading
-      - pyerp_data:/app/data
+      - ..:/app
       - filebeat_data:/var/lib/filebeat
-      - ./filebeat_config.yml:/etc/filebeat/filebeat.yml
-    env_file:
-      - ../config/env/.env.dev
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.config.settings.development
-      - REDIS_URL=redis://127.0.0.1:6379/0
-      - DJANGO_DEBUG=True
-      - PYTHONPATH=/app
-      # Use the correct PostgreSQL server IP
-      - DB_HOST=192.168.73.65
-      - DB_PORT=5432
-      - DB_NAME=pyerp_testing
-      - DB_USER=postgres
-      # Monitoring configuration
-      - ELASTICSEARCH_HOST=pyerp-monitoring
+      - PYERP_ENV=development
+      - ELASTICSEARCH_HOST=pyerp-elastic-kibana
       - ELASTICSEARCH_PORT=9200
-      - KIBANA_HOST=pyerp-monitoring
+      - KIBANA_HOST=pyerp-elastic-kibana
       - KIBANA_PORT=5601
-      - SENTRY_DSN=https://development@sentry.example.com/1
+      - REDIS_HOST=localhost
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     command: >
       bash -c "
         cd /app &&
@@ -48,13 +40,14 @@ services:
         chmod 750 /var/lib/redis &&
         # Run the static directories setup script
         bash /app/docker/ensure_static_dirs.sh &&
-        # Run the monitoring installation script
-        bash /app/docker/install_monitoring.sh &&
         # Configure Filebeat to ship logs to monitoring container
         echo 'Configuring Filebeat to ship logs to monitoring container...' &&
         if [ -f /usr/bin/filebeat ]; then
           # Remove any existing filebeat lock file
           rm -f /var/lib/filebeat/filebeat.lock &&
+          # Ensure filebeat config has correct Elasticsearch host
+          sed -i 's/\${ELASTICSEARCH_HOST}/pyerp-elastic-kibana/g' /etc/filebeat/filebeat.yml &&
+          sed -i 's/\${KIBANA_HOST}/pyerp-elastic-kibana/g' /etc/filebeat/filebeat.yml &&
           # Start Filebeat in the background
           /usr/bin/filebeat -e -c /etc/filebeat/filebeat.yml > /app/logs/filebeat.log 2>&1 &
           echo 'Filebeat started successfully.'
@@ -62,6 +55,14 @@ services:
           echo 'Filebeat not installed. Installing now...' &&
           apt-get update &&
           apt-get install -y filebeat &&
+          # Copy the filebeat config
+          cp /app/docker/filebeat_config.yml /etc/filebeat/filebeat.yml &&
+          # Set correct permissions
+          chown root:root /etc/filebeat/filebeat.yml &&
+          chmod go-w /etc/filebeat/filebeat.yml &&
+          # Update config with correct hosts
+          sed -i 's/\${ELASTICSEARCH_HOST}/pyerp-elastic-kibana/g' /etc/filebeat/filebeat.yml &&
+          sed -i 's/\${KIBANA_HOST}/pyerp-elastic-kibana/g' /etc/filebeat/filebeat.yml &&
           # Remove any existing filebeat lock file
           rm -f /var/lib/filebeat/filebeat.lock &&
           # Start Filebeat in the background
@@ -74,11 +75,11 @@ services:
     networks:
       - pyerp-network
     depends_on:
-      - pyerp-monitoring
+      - pyerp-elastic-kibana
 
-  pyerp-monitoring:
+  pyerp-elastic-kibana:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
-    container_name: pyerp-monitoring
+    container_name: pyerp-elastic-kibana
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
@@ -87,7 +88,7 @@ services:
     ports:
       - "9200:9200"
       - "9300:9300"
-      - "5601:5601"
+      - "5602:5601"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     command: >
@@ -119,12 +120,34 @@ services:
         su -c '/usr/share/kibana/bin/kibana --allow-root' kibana &
         KIBANA_PID=$!
         
+        # Create initial index templates
+        curl -X PUT 'http://localhost:9200/_template/pyerp-logs' -H 'Content-Type: application/json' -d '{
+          \"index_patterns\": [\"pyerp-*\"],
+          \"settings\": {
+            \"number_of_shards\": 1,
+            \"number_of_replicas\": 0
+          },
+          \"mappings\": {
+            \"properties\": {
+              \"@timestamp\": { \"type\": \"date\" },
+              \"message\": { \"type\": \"text\" },
+              \"level\": { \"type\": \"keyword\" },
+              \"name\": { \"type\": \"keyword\" }
+            }
+          }
+        }'
+        
         # Wait for process termination
         wait $ES_PID
         wait $KIBANA_PID
       "
     networks:
       - pyerp-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   pyerp_data:
@@ -133,4 +156,4 @@ volumes:
 
 networks:
   pyerp-network:
-    external: true
+    driver: bridge
