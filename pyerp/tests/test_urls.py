@@ -3,7 +3,9 @@ Unit tests for the pyerp.urls module.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+import sys
+import importlib
+from unittest.mock import patch, MagicMock, call
 from django.urls import URLPattern, URLResolver
 
 
@@ -72,4 +74,106 @@ class TestURLConfigurations:
             # In a real implementation, this would check for the debug toolbar URLs
             # Since we're mocking, we just check that urlpatterns exists
             assert hasattr(pyerp.urls, 'urlpatterns')
-            assert isinstance(pyerp.urls.urlpatterns, list) 
+            assert isinstance(pyerp.urls.urlpatterns, list)
+    
+    @patch('pyerp.urls.has_swagger', True)
+    def test_swagger_urls_when_available(self):
+        """Test swagger URLs are included when has_swagger is True."""
+        import importlib
+        import pyerp.urls
+        
+        # Force reload the module with patched has_swagger
+        importlib.reload(pyerp.urls)
+        
+        # Check for swagger URLs
+        swagger_url_found = False
+        redoc_url_found = False
+        
+        for pattern in pyerp.urls.urlpatterns:
+            if isinstance(pattern, URLPattern):
+                if 'api/docs/' in str(pattern.pattern):
+                    swagger_url_found = True
+                elif 'api/redoc/' in str(pattern.pattern):
+                    redoc_url_found = True
+        
+        assert swagger_url_found or redoc_url_found, "Could not find swagger or redoc URLs"
+    
+    @patch('builtins.print')
+    def test_optional_modules_success(self, mock_print):
+        """Test optional modules are properly loaded when available."""
+        # Get current module state
+        if 'pyerp.urls' in sys.modules:
+            original_urls = sys.modules['pyerp.urls']
+            del sys.modules['pyerp.urls']
+        
+        # Create a test module with urlpatterns
+        mock_module = MagicMock()
+        mock_module.urlpatterns = ["test_pattern"]
+        
+        # Create a simplified version of the OPTIONAL_API_MODULES structure
+        test_modules = [("test", "test.module.path")]
+        
+        # Define a custom version of __import__ that returns our mock for specific modules
+        original_import = __import__
+        
+        def custom_import(name, *args, **kwargs):
+            if name == 'test.module.path' or name.startswith('test.module'):
+                return mock_module
+            return original_import(name, *args, **kwargs)
+        
+        # Apply patches
+        with patch('builtins.__import__', side_effect=custom_import):
+            with patch('pyerp.urls.OPTIONAL_API_MODULES', test_modules):
+                # Import the module to trigger the code we want to test
+                import pyerp.urls
+                
+                # Verify our success message was printed
+                success_message_found = False
+                for call_args in mock_print.call_args_list:
+                    if "Added API URL patterns for test.module.path" in str(call_args):
+                        success_message_found = True
+                        break
+                
+                assert success_message_found, "Success message for module import not found"
+        
+        # Clean up
+        if 'original_urls' in locals():
+            sys.modules['pyerp.urls'] = original_urls
+    
+    @patch('builtins.print')
+    def test_optional_modules_import_error(self, mock_print):
+        """Test optional modules handle ImportError gracefully."""
+        # Get current module state
+        if 'pyerp.urls' in sys.modules:
+            original_urls = sys.modules['pyerp.urls']
+            del sys.modules['pyerp.urls']
+        
+        # Create a simplified version of the OPTIONAL_API_MODULES structure
+        test_modules = [("error", "nonexistent.module")]
+        
+        # Define a custom version of __import__ that raises ImportError for our test module
+        original_import = __import__
+        
+        def custom_import(name, *args, **kwargs):
+            if name == 'nonexistent.module' or name.startswith('nonexistent'):
+                raise ImportError(f"Test import error for {name}")
+            return original_import(name, *args, **kwargs)
+        
+        # Apply patches
+        with patch('builtins.__import__', side_effect=custom_import):
+            with patch('pyerp.urls.OPTIONAL_API_MODULES', test_modules):
+                # Import the module to trigger the code we want to test
+                import pyerp.urls
+                
+                # Verify warning message was printed
+                warning_found = False
+                for call_args in mock_print.call_args_list:
+                    if "WARNING: Could not import nonexistent.module" in str(call_args):
+                        warning_found = True
+                        break
+                
+                assert warning_found, "Warning message for import error not found"
+        
+        # Clean up
+        if 'original_urls' in locals():
+            sys.modules['pyerp.urls'] = original_urls 
