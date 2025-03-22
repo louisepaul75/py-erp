@@ -1,276 +1,157 @@
-import { JSDOM } from 'jsdom';
-import fs from 'fs';
-import path from 'path';
-
-// Load the script content
-const scriptPath = path.resolve(__dirname, '../../scripts/export-dashboard-layout.js');
-const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+/**
+ * Tests for export-dashboard-layout.js using a minimal approach for coverage
+ */
 
 describe('Export Dashboard Layout Script', () => {
-  let dom;
-  let window;
-  let consoleSpy;
-  let consoleErrorSpy;
-  let documentAppendChildSpy;
-  let documentBodyRemoveChildSpy;
-
+  // Store original console methods
+  const originalConsoleError = console.error;
+  const originalConsoleLog = console.log;
+  
   beforeEach(() => {
-    // Create a new JSDOM instance
-    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
-      url: 'http://localhost/',
-      runScripts: 'outside-only'
-    });
-    window = dom.window;
-    global.window = window;
-    global.document = window.document;
-    global.Blob = window.Blob || class Blob {};
+    // Reset modules for clean tests
+    jest.resetModules();
     
-    // Properly mock the URL object
-    const mockCreateObjectURL = jest.fn().mockReturnValue('mock-url');
-    const mockRevokeObjectURL = jest.fn();
+    // Mock console methods
+    console.error = jest.fn();
+    console.log = jest.fn();
     
-    global.URL = {
-      createObjectURL: mockCreateObjectURL,
-      revokeObjectURL: mockRevokeObjectURL
-    };
-
-    // Mock localStorage
-    const mockLocalStorage = {
-      getItem: jest.fn(),
-      setItem: jest.fn(),
-      removeItem: jest.fn(),
-      clear: jest.fn()
-    };
-    Object.defineProperty(window, 'localStorage', {
-      value: mockLocalStorage,
+    // Create simple mock structure for the browser environment
+    Object.defineProperty(global, 'localStorage', {
+      value: {
+        getItem: jest.fn()
+      },
       writable: true
     });
-
-    // Spy on console methods
-    consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
-    // Spy on DOM methods
-    documentAppendChildSpy = jest.spyOn(document.body, 'appendChild');
-    documentBodyRemoveChildSpy = jest.spyOn(document.body, 'removeChild');
-
-    // Reset jest timers
-    jest.useFakeTimers();
+    
+    // Set up minimal document mock
+    Object.defineProperty(global, 'document', {
+      value: {
+        createElement: jest.fn(() => ({
+          click: jest.fn(),
+          href: '',
+          download: ''
+        })),
+        body: {
+          appendChild: jest.fn(),
+          removeChild: jest.fn()
+        }
+      },
+      writable: true
+    });
+    
+    // Set up URL mock
+    Object.defineProperty(global, 'URL', {
+      value: {
+        createObjectURL: jest.fn(() => 'mock-url'),
+        revokeObjectURL: jest.fn()
+      },
+      writable: true
+    });
+    
+    // Set up Blob mock
+    global.Blob = jest.fn(() => ({}));
+    
+    // Make setTimeout synchronous
+    const realSetTimeout = global.setTimeout;
+    global.setTimeout = jest.fn((cb) => cb());
+    
+    // Store real for cleanup
+    global._realSetTimeout = realSetTimeout;
   });
-
+  
   afterEach(() => {
-    consoleSpy.mockRestore();
-    consoleErrorSpy.mockRestore();
-    documentAppendChildSpy.mockRestore();
-    documentBodyRemoveChildSpy.mockRestore();
-    jest.useRealTimers();
+    // Restore console
+    console.error = originalConsoleError;
+    console.log = originalConsoleLog;
+    
+    // Restore setTimeout
+    global.setTimeout = global._realSetTimeout;
+    delete global._realSetTimeout;
   });
-
-  test('exportDashboardLayout should handle no layout in localStorage', () => {
-    // Set up localStorage to return null
-    window.localStorage.getItem.mockReturnValue(null);
+  
+  test('Should handle missing localStorage data', () => {
+    // Setup localStorage to return null
+    global.localStorage.getItem.mockReturnValue(null);
     
-    // Define exportDashboardLayout in the window context
-    window.eval(`
-      function exportDashboardLayout() {
-        try {
-          const layoutJson = localStorage.getItem('dashboard-grid-layout');
-          
-          if (!layoutJson) {
-            console.error('No dashboard layout found in localStorage');
-            return;
-          }
-          
-          // This code shouldn't execute due to early return
-          const layout = JSON.parse(layoutJson);
-        } catch (error) {
-          console.error('Failed to export dashboard layout:', error);
-        }
-      }
-      
-      exportDashboardLayout();
-    `);
+    // Import and test
+    const module = require('../../scripts/export-dashboard-layout');
     
-    expect(window.localStorage.getItem).toHaveBeenCalledWith('dashboard-grid-layout');
-    expect(consoleErrorSpy).toHaveBeenCalledWith('No dashboard layout found in localStorage');
-    expect(documentAppendChildSpy).not.toHaveBeenCalled();
+    // Test export
+    expect(module.exportDashboardLayout()).toBe(false);
+    expect(console.error).toHaveBeenCalledWith('No dashboard layout found in localStorage');
+    
+    // Test show
+    console.error.mockClear();
+    expect(module.showDashboardLayout()).toBeUndefined();
+    expect(console.error).toHaveBeenCalledWith('No dashboard layout found in localStorage');
   });
-
-  test('exportDashboardLayout should export layout when available', () => {
-    // Mock dashboard layout data
-    const mockLayout = { widgets: [{ id: 'widget1', x: 0, y: 0, w: 2, h: 2 }] };
+  
+  test('Should handle invalid JSON data', () => {
+    // Setup localStorage to return invalid JSON
+    global.localStorage.getItem.mockReturnValue('not valid json');
     
-    // Set up localStorage to return the mock layout
-    window.localStorage.getItem.mockImplementation((key) => {
-      if (key === 'dashboard-grid-layout') {
-        return JSON.stringify(mockLayout);
-      }
-      return null;
-    });
+    // Import and test
+    const module = require('../../scripts/export-dashboard-layout');
     
-    // Create a mock anchor element
-    const mockAnchor = {
-      href: '',
-      download: '',
-      click: jest.fn()
-    };
+    // Test export
+    expect(module.exportDashboardLayout()).toBe(false);
+    expect(console.error).toHaveBeenCalled();
+    expect(console.error.mock.calls[0][0]).toBe('Failed to export dashboard layout:');
     
-    // Mock document.createElement
-    const originalCreateElement = document.createElement;
-    document.createElement = jest.fn(tag => {
-      if (tag === 'a') {
-        return mockAnchor;
-      }
-      return originalCreateElement.call(document, tag);
-    });
-    
-    // We need to mock URL.createObjectURL directly
-    URL.createObjectURL = jest.fn().mockReturnValue('mock-url');
-    
-    // We need to directly test the code without wrapping it in a function
-    // to ensure it actually runs against our mocks
-    try {
-      // Get the current layout from localStorage
-      const layoutJson = localStorage.getItem('dashboard-grid-layout');
-      
-      if (!layoutJson) {
-        console.error('No dashboard layout found in localStorage');
-        return;
-      }
-      
-      // Parse to validate it's proper JSON
-      const layout = JSON.parse(layoutJson);
-      
-      // Create a Blob with the JSON data
-      const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
-      
-      // Create a download link
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'dashboard-layout.json';
-      document.body.appendChild(a);
-      
-      // Trigger the download
-      a.click();
-      
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 0);
-      
-      console.log('Dashboard layout exported successfully!');
-    } catch (error) {
-      console.error('Failed to export dashboard layout:', error);
-    }
-    
-    // Verify function behavior
-    expect(window.localStorage.getItem).toHaveBeenCalledWith('dashboard-grid-layout');
-    expect(URL.createObjectURL).toHaveBeenCalled();
-    expect(document.createElement).toHaveBeenCalledWith('a');
-    expect(mockAnchor.download).toBe('dashboard-layout.json');
-    expect(mockAnchor.href).toBe('mock-url');
-    expect(mockAnchor.click).toHaveBeenCalled();
-    expect(documentAppendChildSpy).toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith('Dashboard layout exported successfully!');
-    
-    // Run timers for cleanup
-    jest.runAllTimers();
-    
-    // Cleanup
-    document.createElement = originalCreateElement;
+    // Test show
+    console.error.mockClear();
+    expect(module.showDashboardLayout()).toBeUndefined();
+    expect(console.error).toHaveBeenCalled();
+    expect(console.error.mock.calls[0][0]).toBe('Failed to show dashboard layout:');
   });
-
-  test('showDashboardLayout should display layout in console', () => {
-    // Mock dashboard layout data
-    const mockLayout = { widgets: [{ id: 'widget1', x: 0, y: 0, w: 2, h: 2 }] };
-    window.localStorage.getItem.mockReturnValue(JSON.stringify(mockLayout));
+  
+  test('Should handle valid JSON data', () => {
+    // Create valid layout data
+    const validLayout = { layout: [{ i: 'widget1', x: 0, y: 0, w: 2, h: 2 }] };
     
-    // Define showDashboardLayout in the window context
-    window.eval(`
-      function showDashboardLayout() {
-        try {
-          const layoutJson = localStorage.getItem('dashboard-grid-layout');
-          
-          if (!layoutJson) {
-            console.error('No dashboard layout found in localStorage');
-            return;
-          }
-          
-          const layout = JSON.parse(layoutJson);
-          console.log('Current dashboard layout:');
-          console.log(JSON.stringify(layout, null, 2));
-          
-          return layout;
-        } catch (error) {
-          console.error('Failed to show dashboard layout:', error);
-        }
-      }
-      
-      showDashboardLayout();
-    `);
+    // Setup localStorage to return valid JSON
+    global.localStorage.getItem.mockReturnValue(JSON.stringify(validLayout));
     
-    expect(window.localStorage.getItem).toHaveBeenCalledWith('dashboard-grid-layout');
-    expect(consoleSpy).toHaveBeenCalledWith('Current dashboard layout:');
-    expect(consoleSpy).toHaveBeenCalledWith(JSON.stringify(mockLayout, null, 2));
+    // Import and test
+    const module = require('../../scripts/export-dashboard-layout');
+    
+    // Test export
+    expect(module.exportDashboardLayout()).toBe(true);
+    expect(console.log).toHaveBeenCalledWith('Dashboard layout exported successfully!');
+    
+    // Test show
+    console.log.mockClear();
+    const result = module.showDashboardLayout();
+    expect(result).toEqual(validLayout);
+    expect(console.log).toHaveBeenCalledWith('Current dashboard layout:');
   });
-
-  test('showDashboardLayout should handle no layout in localStorage', () => {
-    // Set up localStorage to return null
-    window.localStorage.getItem.mockReturnValue(null);
+  
+  test('Should handle browser check for localStorage undefined', () => {
+    // Create a non-browser environment
+    delete global.localStorage;
     
-    // Define showDashboardLayout in the window context
-    window.eval(`
-      function showDashboardLayout() {
-        try {
-          const layoutJson = localStorage.getItem('dashboard-grid-layout');
-          
-          if (!layoutJson) {
-            console.error('No dashboard layout found in localStorage');
-            return;
-          }
-          
-          // This shouldn't execute
-          const layout = JSON.parse(layoutJson);
-        } catch (error) {
-          console.error('Failed to show dashboard layout:', error);
-        }
-      }
-      
-      showDashboardLayout();
-    `);
+    // Import and test
+    const module = require('../../scripts/export-dashboard-layout');
     
-    expect(window.localStorage.getItem).toHaveBeenCalledWith('dashboard-grid-layout');
-    expect(consoleErrorSpy).toHaveBeenCalledWith('No dashboard layout found in localStorage');
+    // Test export with no localStorage
+    expect(module.exportDashboardLayout()).toBe(false);
+    expect(console.error).toHaveBeenCalledWith('Not in a browser environment');
+    
+    // Test show with no localStorage
+    console.error.mockClear();
+    expect(module.showDashboardLayout()).toBeUndefined();
+    expect(console.error).toHaveBeenCalledWith('Not in a browser environment');
   });
-
-  test('exportDashboardLayout should handle JSON parsing errors', () => {
-    // Set up localStorage to return invalid JSON
-    window.localStorage.getItem.mockReturnValue('invalid-json');
+  
+  test('Should handle browser check for document undefined', () => {
+    // Create a partial browser environment
+    delete global.document;
     
-    // Define exportDashboardLayout in the window context
-    window.eval(`
-      function exportDashboardLayout() {
-        try {
-          const layoutJson = localStorage.getItem('dashboard-grid-layout');
-          
-          if (!layoutJson) {
-            console.error('No dashboard layout found in localStorage');
-            return;
-          }
-          
-          // This will throw an error
-          const layout = JSON.parse(layoutJson);
-        } catch (error) {
-          console.error('Failed to export dashboard layout:', error);
-        }
-      }
-      
-      exportDashboardLayout();
-    `);
+    // Import and test
+    const module = require('../../scripts/export-dashboard-layout');
     
-    expect(window.localStorage.getItem).toHaveBeenCalledWith('dashboard-grid-layout');
-    expect(consoleErrorSpy).toHaveBeenCalled();
+    // Test export with no document
+    expect(module.exportDashboardLayout()).toBe(false);
+    expect(console.error).toHaveBeenCalledWith('Not in a browser environment');
   });
 }); 
