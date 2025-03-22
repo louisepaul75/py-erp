@@ -4,11 +4,21 @@ from typing import Dict, List, Optional
 import os
 import yaml
 
-from celery import shared_task
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
+
+try:
+    from celery import shared_task
+except ImportError:
+    # Create dummy decorator for testing
+    def shared_task(func):
+        return func
+
 from celery.schedules import crontab
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
-from .models import SyncMapping
+from .models import SyncMapping, SyncSource, SyncTarget
 from .pipeline import PipelineFactory
 
 logger = get_logger(__name__)
@@ -567,3 +577,264 @@ def run_full_production_sync() -> List[Dict]:
     """
     logger.info("Starting full production sync")
     return run_production_sync(incremental=False)
+
+
+def _load_business_yaml() -> Dict:
+    """Load business data sync configuration from YAML file."""
+    config_path = os.path.join(
+        os.path.dirname(__file__), "config", "business_sync.yaml"
+    )
+    try:
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"Failed to load business sync config: {e}")
+        return {}
+
+
+def get_employee_mapping():
+    """Get employee mapping from YAML configuration.
+    
+    Returns:
+        Dict containing employee mapping configuration
+    """
+    config = _load_business_yaml()
+    
+    # Extract the employee mapping
+    employee_mapping = config.get("employees", {})
+    
+    return employee_mapping
+
+
+def create_employee_mapping():
+    """Create employee mapping from YAML configuration.
+    
+    Returns:
+        SyncMapping object for employee data
+    """
+    from .models import SyncSource, SyncTarget, SyncMapping
+    
+    # Load the configuration
+    config = _load_business_yaml()
+    employee_config = config.get("employees", {})
+    
+    if not employee_config:
+        logger.error("Employee configuration not found in business_sync.yaml")
+        return None
+    
+    # Get or create source
+    source_config = employee_config.get("source", {}).get("config", {})
+    source, _ = SyncSource.objects.get_or_create(
+        name="legacy_erp",
+        defaults={
+            "description": "Legacy 4D ERP System",
+            "config": source_config
+        }
+    )
+    
+    # Get or create target
+    target, _ = SyncTarget.objects.get_or_create(
+        name="django_models",
+        defaults={
+            "description": "Django ORM Models",
+            "config": {"loader_class": "pyerp.sync.loaders.django_model.DjangoModelLoader"}
+        }
+    )
+    
+    # Create mapping
+    mapping_config = {
+        "transformer_class": employee_config.get("transformer", {}).get("class"),
+        "field_mappings": employee_config.get("transformer", {}).get("config", {}).get("field_mappings", {}),
+        "validation_rules": employee_config.get("transformer", {}).get("config", {}).get("validation_rules", []),
+        "loader_config": employee_config.get("loader", {}).get("config", {})
+    }
+    
+    mapping, created = SyncMapping.objects.get_or_create(
+        source=source,
+        target=target,
+        entity_type="employee",
+        defaults={
+            "mapping_config": mapping_config,
+            "active": True
+        }
+    )
+    
+    if created:
+        logger.info("Created new employee mapping")
+    else:
+        # Update the mapping if it already exists
+        mapping.mapping_config = mapping_config
+        mapping.save()
+        logger.info("Updated existing employee mapping")
+    
+    return mapping
+
+
+@shared_task
+def sync_employees(
+    full_sync=False,
+    filters=None,
+):
+    """Run the employee synchronization task.
+
+    Args:
+        full_sync (bool): If True, do a full sync instead of incremental.
+        filters (dict): Optional filters to apply to the extraction.
+
+    Returns:
+        dict: Result status and details.
+    """
+    try:
+        # Create config objects
+        source_config = {
+            "name": "legacy_erp",
+            "extractor_class": "pyerp.sync.extractors.legacy_employee.LegacyEmployeeExtractor",
+            "config": {"table": "Pers", "key_field": "__KEY"},
+        }
+
+        target_config = {
+            "name": "django_models",
+            "loader_class": "pyerp.sync.loaders.django_model.DjangoModelLoader",
+            "config": {
+                "app_label": "business",
+                "model_name": "Employee",
+            },
+        }
+
+        mapping_config = {
+            "entity_type": "employee",
+            "transformer_class": "pyerp.sync.transformers.employee.EmployeeTransformer",
+            "field_mappings": {
+                # Basic info
+                "Pers_Nr": "employee_number",
+                "Name": "last_name",
+                "Vorname": "first_name",
+                "eMail": "email",
+                "AD_Name": "ad_username",
+                
+                # Contact details
+                "Straße": "street", 
+                "PLZ": "postal_code",
+                "Ort": "city",
+                "Telefon": "phone",
+                "Telefon2": "mobile_phone",
+                
+                # Employment details
+                "GebDatum": "birth_date",
+                "Eintrittsdatum": "hire_date",
+                "Austrittsdatum": "termination_date",
+                "ausgeschieden": "is_terminated",
+                "anwesend": "is_present",
+                
+                # Compensation and benefits
+                "Geh_code": "salary_code",
+                "Monatsgehalt": "monthly_salary",
+                "Jahres_Gehalt": "annual_salary",
+                "Arb_Std_Wo": "weekly_hours",
+                "Arb_Std_Tag": "daily_hours",
+                "Jahrs_Urlaub": "annual_vacation_days",
+                
+                # System fields for sync
+                "__KEY": "legacy_id",
+            },
+        }
+
+        # Get or create sync components from config
+        source, created = SyncSource.objects.get_or_create(
+            name=source_config["name"],
+            defaults={
+                "description": "Legacy 4D ERP System",
+                "config": {
+                    "extractor_class": source_config["extractor_class"],
+                    "config": source_config["config"]
+                },
+                "active": True
+            }
+        )
+        
+        target, created = SyncTarget.objects.get_or_create(
+            name=target_config["name"],
+            defaults={
+                "description": "Django ORM Models",
+                "config": {
+                    "loader_class": target_config["loader_class"],
+                    "config": target_config["config"]
+                },
+                "active": True
+            }
+        )
+        
+        mapping, created = SyncMapping.objects.get_or_create(
+            entity_type=mapping_config["entity_type"],
+            source=source,
+            target=target,
+            defaults={
+                "mapping_config": mapping_config,
+            }
+        )
+        
+        if not mapping:
+            return {"status": "error", "message": "Failed to get or create mapping"}
+        
+        # Create and run the pipeline
+        factory = PipelineFactory()
+        pipeline = factory.create_pipeline(mapping)
+        
+        result = pipeline.run(
+            incremental=not full_sync,  # Convert full_sync to incremental
+            query_params=filters or {},  # Use query_params instead of filters
+            batch_size=100
+        )
+        
+        logger.info(
+            "Employee sync completed: %d total, %d success, %d failed", 
+            result.records_processed, 
+            result.records_succeeded, 
+            result.records_failed
+        )
+        
+        return {
+            "status": "success",
+            "mapping_id": mapping.id,
+            "sync_log_id": result.id,
+            "records_processed": result.records_processed,
+            "records_succeeded": result.records_succeeded,
+            "records_failed": result.records_failed
+        }
+        
+    except Exception as e:
+        logger.exception("Error in employee sync task: %s", e)
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+@shared_task
+def scheduled_employee_sync():
+    """Scheduled task for incremental employee sync."""
+    logger.info("Running scheduled incremental employee sync")
+    return sync_employees(full_sync=False)
+
+
+# Add periodic_task attribute for registration in AppConfig
+scheduled_employee_sync.periodic_task = {
+    "name": "sync-employees-every-5-min",
+    "schedule": crontab(minute="*/5"),
+    "options": {"expires": 60 * 4}  # Expires after 4 minutes
+}
+
+
+@shared_task
+def nightly_full_employee_sync():
+    """Nightly task for full employee sync."""
+    logger.info("Running nightly full employee sync")
+    return sync_employees(full_sync=True)
+
+
+# Add periodic_task attribute for registration in AppConfig
+nightly_full_employee_sync.periodic_task = {
+    "name": "sync-employees-nightly",
+    "schedule": crontab(hour=2, minute=15),  # Run at 2:15 AM
+    "options": {"expires": 60 * 60 * 3}  # Expires after 3 hours
+}
