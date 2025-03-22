@@ -11,6 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:coverage:check": "./scripts/test-coverage.sh",
     "test:ci": "jest --ci --coverage --reporters=default --reporters=jest-junit",
     "test:fuzz": "jest --testMatch='**/?(*.)+(fuzz).test.[jt]s?(x)'",
     "test:mutation": "stryker run",
