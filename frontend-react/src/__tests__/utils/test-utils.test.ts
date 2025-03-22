@@ -96,32 +96,30 @@ describe('Test Utilities', () => {
   });
 
   test('setupBrowserMocks should setup all browser mocks', () => {
-    // Spy on the individual mock functions
-    const matchMediaSpy = jest.spyOn({ mockMatchMedia }, 'mockMatchMedia');
-    const intersectionObserverSpy = jest.spyOn({ mockIntersectionObserver }, 'mockIntersectionObserver');
-    const resizeObserverSpy = jest.spyOn({ mockResizeObserver }, 'mockResizeObserver');
+    // Clear window.matchMedia, window.IntersectionObserver, and window.ResizeObserver
+    window.matchMedia = undefined as any;
+    window.IntersectionObserver = undefined as any;
+    window.ResizeObserver = undefined as any;
     
-    // Override the functions with spies
-    (matchMediaSpy as any).mockImplementation(mockMatchMedia);
-    (intersectionObserverSpy as any).mockImplementation(mockIntersectionObserver);
-    (resizeObserverSpy as any).mockImplementation(mockResizeObserver);
-    
-    // Call the setup function
+    // Instead of replacing the functions, we'll check that the mocks are setup
     setupBrowserMocks();
     
-    // Verify that all mock functions were called
-    expect(matchMediaSpy).toHaveBeenCalled();
-    expect(intersectionObserverSpy).toHaveBeenCalled();
-    expect(resizeObserverSpy).toHaveBeenCalled();
-    
-    // Verify that the mocks are defined
+    // Verify that the functions work as expected by checking that they were defined
     expect(window.matchMedia).toBeDefined();
     expect(window.IntersectionObserver).toBeDefined();
     expect(window.ResizeObserver).toBeDefined();
     
-    // Clean up spies
-    matchMediaSpy.mockRestore();
-    intersectionObserverSpy.mockRestore();
-    resizeObserverSpy.mockRestore();
+    // Test that the mocked functions return the expected results
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    expect(mediaQuery).toHaveProperty('matches');
+    expect(mediaQuery).toHaveProperty('addEventListener');
+    
+    const intersectionObserver = new window.IntersectionObserver(() => {});
+    expect(intersectionObserver).toHaveProperty('observe');
+    expect(intersectionObserver).toHaveProperty('disconnect');
+    
+    const resizeObserver = new window.ResizeObserver(() => {});
+    expect(resizeObserver).toHaveProperty('observe');
+    expect(resizeObserver).toHaveProperty('disconnect');
   });
 }); 

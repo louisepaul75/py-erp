@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 
+// Add polyfills for TextEncoder and TextDecoder
+// This is needed for JSDOM in some tests
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
 // Initialize jest-fuzz if needed
 try {
   const jestFuzz = require('jest-fuzz');
