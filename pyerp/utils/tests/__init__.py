@@ -1,1 +1,3 @@
-"""Tests for the utils module."""
+"""
+Test package for pyerp.utils
+"""
