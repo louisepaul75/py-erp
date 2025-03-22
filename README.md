@@ -30,10 +30,9 @@ The pyERP system includes a comprehensive monitoring setup based on the ELK stac
 - **Sentry**: Error tracking and performance monitoring
   - Integrated with the Django application
 
-To view logs from the monitoring containers:
+To view logs from the monitoring container:
 ```bash
-docker logs pyerp-elasticsearch
-docker logs pyerp-kibana
+docker logs pyerp-elastic-kibana
 ```
 
 ### Monitoring Scripts

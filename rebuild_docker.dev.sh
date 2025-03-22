@@ -48,19 +48,18 @@ docker stop pyerp-dev || true
 echo "Removing existing pyerp-dev container..."
 docker rm pyerp-dev || true
 
-# Check and stop monitoring services based on configuration
-if docker ps | grep -q "pyerp-monitoring"; then
-    echo "Stopping existing monitoring containers..."
-    docker stop pyerp-monitoring || true
-    docker rm pyerp-monitoring || true
+# Check if monitoring containers are already running and stop/remove them if they are
+if docker ps | grep -q "pyerp-elastic-kibana"; then
+    echo "Stopping existing monitoring container..."
+    docker stop pyerp-elastic-kibana || true
+    docker rm pyerp-elastic-kibana || true
 fi
 
-# For separate monitoring mode, also stop/remove the monitoring containers
+# Always remove the monitoring container even if not running
 if [ "$MONITORING_MODE" == "separate" ]; then
-    echo "Stopping existing monitoring container..."
-    docker stop pyerp-monitoring || true
-    docker rm pyerp-monitoring || true
-    docker-compose -f docker/docker-compose.monitoring.yml down || true
+    echo "Removing monitoring container (if exists)..."
+    docker stop pyerp-elastic-kibana || true
+    docker rm pyerp-elastic-kibana || true
 fi
 
 # Uncomment to clean up build cache if needed
@@ -94,7 +93,7 @@ if [ "$MONITORING_MODE" == "none" ]; then
     MONITORING_VOLUMES=""
 elif [ "$MONITORING_MODE" == "separate" ]; then
     # Set environment variables to connect to separate monitoring container
-    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-monitoring -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-monitoring -e KIBANA_PORT=5602 -e SENTRY_DSN=https://development@sentry.example.com/1"
+    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-elastic-kibana -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-elastic-kibana -e KIBANA_PORT=5602 -e SENTRY_DSN=https://development@sentry.example.com/1"
     MONITORING_CMD=""
     MONITORING_PORTS=""
     MONITORING_VOLUMES=""
@@ -154,7 +153,7 @@ elif [ "$MONITORING_MODE" == "separate" ]; then
     echo -e "- Elasticsearch: http://localhost:9200"
     echo -e "- Kibana: http://localhost:5602" 
     echo -e "- Sentry: Integrated with Django application"
-    echo -e "Monitoring container logs: docker logs pyerp-monitoring"
+    echo -e "Monitoring container logs: docker logs pyerp-elastic-kibana"
 fi
 
 echo -e "To run frontend tests manually, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"

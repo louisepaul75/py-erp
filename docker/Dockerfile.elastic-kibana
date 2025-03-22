@@ -1,0 +1,30 @@
+FROM elasticsearch:7.17.0
+
+# Install dependencies required for Kibana
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg \
+    ca-certificates \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+# Get Kibana and extract it - using ARM64 version
+WORKDIR /usr/share
+ENV KIBANA_VERSION=7.17.0
+RUN wget -q https://artifacts.elastic.co/downloads/kibana/kibana-${KIBANA_VERSION}-linux-aarch64.tar.gz \
+    && tar -xzf kibana-${KIBANA_VERSION}-linux-aarch64.tar.gz \
+    && rm kibana-${KIBANA_VERSION}-linux-aarch64.tar.gz \
+    && mv kibana-${KIBANA_VERSION}-linux-aarch64 kibana
+
+# Create configuration for supervisor
+RUN mkdir -p /var/log/supervisor
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ports for Elasticsearch and Kibana
+EXPOSE 9200 9300 5601
+
+# Set up entrypoint
+COPY docker/elastic-kibana-entrypoint.sh /
+RUN chmod +x /elastic-kibana-entrypoint.sh
+ENTRYPOINT ["/elastic-kibana-entrypoint.sh"] 

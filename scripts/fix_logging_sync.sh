@@ -7,7 +7,7 @@ timestamp() {
 }
 
 # Find Elasticsearch container
-ELASTICSEARCH_CONTAINER="pyerp-elasticsearch"
+ELASTICSEARCH_CONTAINER="pyerp-elastic-kibana"
 ELASTICSEARCH_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $ELASTICSEARCH_CONTAINER)
 
 if [ -z "$ELASTICSEARCH_IP" ]; then

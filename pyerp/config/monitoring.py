@@ -57,10 +57,10 @@ def setup_monitoring(settings):
         settings.KIBANA_HOST = os.environ.get('KIBANA_HOST', 'localhost')
         settings.KIBANA_PORT = os.environ.get('KIBANA_PORT', '5601')
     elif monitoring_mode == 'separate':
-        # Monitoring components are in separate containers
-        settings.ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_HOST', 'pyerp-elasticsearch')
+        # Monitoring components are in a separate container
+        settings.ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_HOST', 'pyerp-elastic-kibana')
         settings.ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_PORT', '9200')
-        settings.KIBANA_HOST = os.environ.get('KIBANA_HOST', 'pyerp-kibana')
+        settings.KIBANA_HOST = os.environ.get('KIBANA_HOST', 'pyerp-elastic-kibana')
         settings.KIBANA_PORT = os.environ.get('KIBANA_PORT', '5601')
     elif monitoring_mode == 'remote':
         # Monitoring components are on a remote server

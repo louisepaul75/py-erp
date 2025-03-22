@@ -1,21 +1,26 @@
-# Configuration for the standalone monitoring system
-# This file defines the monitoring services separate from the main pyERP application
+# Configuration for the monitoring system
+# This file defines the monitoring service with Elasticsearch and Kibana in the same container
 
 services:
-  elasticsearch:
-    image: elasticsearch:7.17.0
-    container_name: pyerp-elasticsearch
+  elastic-kibana:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.elastic-kibana
+    container_name: pyerp-elastic-kibana
     platform: linux/arm64
     ports:
       - "9200:9200"
       - "9300:9300"
+      - "5602:5601"
     volumes:
-      - es_data:/usr/share/elasticsearch/data
+      - es_kibana_data:/usr/share/elasticsearch/data
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - xpack.security.enabled=false
       - bootstrap.system_call_filter=false
+      - "ES_ENV_ELASTICSEARCH.HOSTS=http://localhost:9200"
+      - "ES_ENV_SERVER.HOST=0.0.0.0"
     networks:
       - pyerp-network
     ulimits:
@@ -25,22 +30,10 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-
-  kibana:
-    image: kibana:7.17.0
-    container_name: pyerp-monitoring
-    platform: linux/arm64
-    ports:
-      - "5602:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=http://pyerp-elasticsearch:9200
-    networks:
-      - pyerp-network
-    depends_on:
-      - elasticsearch
+    restart: unless-stopped
 
 volumes:
-  es_data:
+  es_kibana_data:
     driver: local
 
 networks:
