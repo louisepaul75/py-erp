@@ -1,0 +1,95 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /app/logs/pyerp*.log
+    - /app/logs/test_*.log
+  json.keys_under_root: true
+  json.add_error_key: true
+  json.message_key: message
+  json.overwrite_keys: true
+  
+  # Handle multiline stack traces
+  multiline.pattern: '^[[:space:]]+(at|\.{3})[[:space:]]+\b|^Caused by:'
+  multiline.negate: false
+  multiline.match: after
+  
+  # Add default fields to support mixed JSON/non-JSON logs
+  fields_under_root: true
+  fields:
+    level: "INFO"
+    name: "unspecified"
+    service:
+      name: "pyerp"
+      type: "application"
+    
+  # Disable JSON decoding processor to handle non-JSON logs
+  processors:
+    - add_host_metadata: ~
+    - add_cloud_metadata: ~
+    - add_docker_metadata: ~
+    - convert:
+        fields:
+          - {from: "timestamp", to: "@timestamp", type: "string"}
+        ignore_missing: true
+        fail_on_error: false
+    - drop_fields:
+        fields: ["timestamp"]
+
+# Add a separate input for non-JSON logs
+- type: log
+  enabled: true
+  paths:
+    - /app/logs/*.log
+  exclude_files: ['.*pyerp.*\.log', '.*test_.*\.log']
+  fields_under_root: true
+  fields:
+    level: "INFO"
+    name: "unspecified"
+    service:
+      name: "pyerp"
+      type: "application"
+  
+  # Handle multiline stack traces
+  multiline.pattern: '^[[:space:]]+(at|\.{3})|^Caused by:'
+  multiline.negate: false
+  multiline.match: after
+
+processors:
+  - add_host_metadata: ~
+  - add_docker_metadata: ~
+  - add_cloud_metadata: ~
+  - add_fields:
+      target: ''
+      fields:
+        service.name: "pyerp"
+        service.type: "application"
+  # Add custom tags
+  - add_tags:
+      tags: ["pyerp", "development"]
+
+output.elasticsearch:
+  hosts: ["${ELASTICSEARCH_HOST}:9200"]
+  index: "pyerp-%{+yyyy.MM.dd}"
+
+setup.kibana:
+  host: "${KIBANA_HOST}:5601"
+
+setup.template.name: "pyerp"
+setup.template.pattern: "pyerp-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+setup.ilm.enabled: false
+
+# Pipeline to handle JSON parsing errors
+setup.template.enabled: true
+setup.dashboards.enabled: false
+
+logging.level: debug
+logging.to_files: true
+logging.files:
+  path: /app/logs
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
