@@ -73,8 +73,7 @@ COPY . /app/
 RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
     && chmod +x /app/docker/ensure_static_dirs.sh \
     && /app/docker/ensure_static_dirs.sh \
-    && chown -R root:root /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
-    && chmod -R 755 /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data
+    && chown -R root:root /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data
 
 # Set Django settings module for collectstatic
 ARG DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
@@ -99,8 +98,8 @@ COPY docker/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/ensure_static_dirs.sh /app/docker/ensure_static_dirs.sh
 RUN chmod +x /app/docker/ensure_static_dirs.sh
 
-# Expose port for Nginx
-EXPOSE 80 443
+# Expose ports for web services
+EXPOSE 80 443 8050
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

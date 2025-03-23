@@ -30,7 +30,6 @@ DATABASES = {
             "connect_timeout": 10,  # Connection timeout in seconds
             "client_encoding": "UTF8",
             "sslmode": "prefer",
-            "auth_method": "md5",  # Use MD5 authentication
         },
     },
 }

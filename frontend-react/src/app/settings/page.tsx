@@ -34,6 +34,12 @@ interface PasswordForm {
   confirm_password: string;
 }
 
+// Error interface to handle all possible error types
+interface ErrorState extends Partial<ProfileForm>, Partial<PasswordForm> {
+  advanced?: string;
+  general?: string;
+}
+
 export default function SettingsPage() {
   const { t } = useAppTranslation('settings');
   const { user } = useIsAuthenticated();
