@@ -37,6 +37,12 @@ if [ -f /usr/bin/filebeat ]; then
     
     # Filebeat will be managed by supervisord, not started here
     echo "Filebeat will be started by supervisord..."
+    
+    # Configure Elasticsearch retention policy
+    if [ -f /app/scripts/configure_elasticsearch_retention.sh ]; then
+        echo "Configuring Elasticsearch retention policy (1GB limit)..."
+        bash /app/scripts/configure_elasticsearch_retention.sh
+    fi
 else
     echo "Warning: Filebeat not found. Logs will not be shipped to Elasticsearch."
     echo "Run fix_elasticsearch_logging.sh to install and configure Filebeat."

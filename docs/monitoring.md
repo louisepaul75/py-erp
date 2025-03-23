@@ -107,6 +107,26 @@ Logs are automatically rotated to prevent disk space issues. The rotation config
 
 Elasticsearch indices are created with a date pattern (`pyerp-logs-YYYY.MM.DD`), which allows for easy management of older logs.
 
+#### Log Retention Policy
+
+The system has been configured with the following log retention policies:
+
+1. **Filebeat Logs**: The `filebeat_stdout.log` file is limited to 500MB and will rotate automatically when it reaches this size.
+
+2. **Elasticsearch Storage**: A size-based retention policy limits the total Elasticsearch storage to 1GB. When the storage limit is reached, the oldest indices are automatically deleted to make room for new logs.
+
+3. **Index Lifecycle Management (ILM)**: Elasticsearch uses ILM policies to manage index growth and automatically delete old indices to maintain the 1GB storage limit.
+
+To reconfigure these settings, you can:
+
+```bash
+# Adjust Filebeat log size limit
+# Edit docker/filebeat_config.yml: rotateeverybytes parameter
+
+# Adjust Elasticsearch storage limit
+# Edit scripts/configure_elasticsearch_retention.sh: modify max_size values
+```
+
 ## Troubleshooting
 
 If you encounter issues with the monitoring system:

@@ -70,7 +70,7 @@ processors:
 
 output.elasticsearch:
   hosts: ["${ELASTICSEARCH_HOST}:9200"]
-  index: "pyerp-%{+yyyy.MM.dd}"
+  index: "pyerp-logs"
 
 setup.kibana:
   host: "${KIBANA_HOST}:5601"
@@ -80,7 +80,10 @@ setup.template.pattern: "pyerp-*"
 setup.template.settings:
   index.number_of_shards: 1
   index.number_of_replicas: 0
-setup.ilm.enabled: false
+setup.ilm.enabled: true
+setup.ilm.policy_name: "pyerp-logs-policy"
+setup.ilm.rollover_alias: "pyerp-logs"
+setup.ilm.pattern: "{now/d}-000001"
 
 # Pipeline to handle JSON parsing errors
 setup.template.enabled: true
@@ -93,3 +96,5 @@ logging.files:
   name: filebeat
   keepfiles: 7
   permissions: 0644
+  rotateeverybytes: 524288000  # 500MB in bytes 
+  rotateonstartup: true
