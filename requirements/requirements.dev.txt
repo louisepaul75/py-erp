@@ -29,21 +29,8 @@ sphinx-rtd-theme==2.0.0
 django-browser-reload==1.12.1
 watchdog==4.0.0
 
-# Frontend Development
-# Note: These are npm packages and should be installed using npm in the frontend directory
-# They are listed here for documentation purposes only
-# For development, you'll need to run:
-# cd frontend
-# npm install
-# npm run dev
-#
-# Development dependencies:
-# - vite (^5.0.11): Next generation frontend tooling
-# - typescript (^5.3.3): TypeScript language
-# - eslint (^8.56.0): Linting utility
-# - prettier (^3.1.1): Code formatter
-# - jest (^29.7.0): JavaScript testing framework
-# - @vue/test-utils (^2.4.3): Testing utilities for Vue
+# Frontend development dependencies are managed separately with npm/yarn
+# See package.json for the complete list of frontend development dependencies
 
 # Add development dependencies here
 # These are in addition to the production dependencies

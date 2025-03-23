@@ -75,11 +75,11 @@ The product module exposes the following API endpoints:
 
 ## Frontend Integration
 
-The product module includes Vue.js components for the frontend:
+The product module includes React components for the frontend:
 
-- `ProductList.vue`: List view with filtering and pagination
-- `ProductDetail.vue`: Detail view with images and variant selection
-- `VariantDetail.vue`: Variant detail view with related variants
+- `ProductList.tsx`: List view with filtering and pagination
+- `ProductDetail.tsx`: Detail view with images and variant selection
+- `VariantDetail.tsx`: Variant detail view with related variants
 
 ### Asset Handling
 

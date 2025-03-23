@@ -1,6 +1,6 @@
 # Frontend Authentication Troubleshooting Guide
 
-This document provides guidance for troubleshooting common authentication issues in the Vue.js frontend of the pyERP system.
+This document provides guidance for troubleshooting common authentication issues in the React frontend of the pyERP system.
 
 ## Common Authentication Issues
 
@@ -9,7 +9,7 @@ This document provides guidance for troubleshooting common authentication issues
 **Symptoms:**
 - Unable to log in
 - "Invalid credentials" error message
-- Successful login in Django admin but not in Vue.js frontend
+- Successful login in Django admin but not in React frontend
 
 **Possible Causes:**
 - Incorrect username or password
@@ -149,6 +149,6 @@ tail -f logs/django.log
 
 ## Related Documentation
 
-- [Vue.js Authentication Implementation](./vue_auth_implementation.md)
+- [React Authentication Implementation](./react_auth_implementation.md)
 - [Django REST Framework JWT Documentation](https://django-rest-framework-simplejwt.readthedocs.io/)
 - [Vite Proxy Configuration](https://vitejs.dev/config/server-options.html#server-proxy)

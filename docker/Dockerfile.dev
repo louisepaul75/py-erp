@@ -56,20 +56,20 @@ RUN mkdir -p /app/static /app/media /app/logs /app/data \
     && chown -R root:root /var/run \
     && chmod -R 755 /app/logs
 
-# Set up frontend dependencies
+# Set up React frontend dependencies
 COPY frontend-react/package*.json /app/frontend-react/
 WORKDIR /app/frontend-react
-RUN npm install --legacy-peer-deps
-# Install testing-library/dom explicitly
-RUN npm install @testing-library/dom --save-dev
+RUN npm install && \
+    npm install --save-dev autoprefixer postcss tailwindcss && \
+    npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom @babel/preset-env @babel/preset-react @babel/preset-typescript jest-transform-stub identity-obj-proxy ts-jest jest-junit
 
-# Copy frontend source files
+# Copy React frontend source files
 COPY frontend-react/ /app/frontend-react/
 
 WORKDIR /app
 
-# Expose ports for Django and Redis
-EXPOSE 8050 6379 3000 5173
+# Expose ports for Django and React
+EXPOSE 8050 6379 3000 
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -84,7 +84,7 @@ COPY docker/supervisord.dev.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/ensure_static_dirs.sh /app/docker/ensure_static_dirs.sh
 RUN chmod +x /app/docker/ensure_static_dirs.sh
 
-# Copy frontend dependencies setup script
+# Set up frontend dependencies script
 COPY docker/ensure_frontend_deps.sh /app/docker/ensure_frontend_deps.sh
 RUN chmod +x /app/docker/ensure_frontend_deps.sh
 
