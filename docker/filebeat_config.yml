@@ -64,16 +64,31 @@ processors:
       fields:
         service.name: "pyerp"
         service.type: "application"
+  # Add developer identification based on hostname
+  - add_fields:
+      target: ''
+      fields:
+        developer.id: "${HOSTNAME}"
+        developer.machine: "${HOSTNAME}"
+        environment: "${PYERP_ENV:development}"
   # Add custom tags
   - add_tags:
-      tags: ["pyerp", "development"]
+      tags: ["pyerp", "${PYERP_ENV:development}"]
+  # Conditionally add dev tag if in development environment
+  - add_tags:
+      tags: ["developer-${HOSTNAME}"]
+      when:
+        equals:
+          environment: "development"
 
 output.elasticsearch:
-  hosts: ["${ELASTICSEARCH_HOST}:9200"]
-  index: "pyerp-logs"
+  hosts: ["${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT:9200}"]
+  index: "${ELASTICSEARCH_INDEX_PREFIX:pyerp}-${PYERP_ENV:production}-logs"
+  username: "${ELASTICSEARCH_USERNAME:}"
+  password: "${ELASTICSEARCH_PASSWORD:}"
 
 setup.kibana:
-  host: "${KIBANA_HOST}:5601"
+  host: "${KIBANA_HOST}:${KIBANA_PORT:5601}"
 
 setup.template.name: "pyerp"
 setup.template.pattern: "pyerp-*"
@@ -82,7 +97,7 @@ setup.template.settings:
   index.number_of_replicas: 0
 setup.ilm.enabled: true
 setup.ilm.policy_name: "pyerp-logs-policy"
-setup.ilm.rollover_alias: "pyerp-logs"
+setup.ilm.rollover_alias: "${ELASTICSEARCH_INDEX_PREFIX:pyerp}-${PYERP_ENV:production}-logs"
 setup.ilm.pattern: "{now/d}-000001"
 
 # Pipeline to handle JSON parsing errors

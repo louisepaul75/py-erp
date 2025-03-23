@@ -21,8 +21,8 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --monitoring)
-            if [[ "$2" != "none" && "$2" != "separate" ]]; then
-                echo "Error: --monitoring requires one of: none, separate"
+            if [[ "$2" != "none" && "$2" != "separate" && "$2" != "remote" ]]; then
+                echo "Error: --monitoring requires one of: none, separate, remote"
                 exit 1
             fi
             MONITORING_MODE="$2"
@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown parameter: $1"
-            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|separate]"
+            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|separate|remote]"
             exit 1
             ;;
     esac
@@ -84,6 +84,9 @@ else
     ENV_ARG="-e DJANGO_SETTINGS_MODULE=pyerp.config.settings.development -e PYERP_ENV=dev"
 fi
 
+# Get hostname for developer identification
+HOSTNAME=$(hostname)
+
 # Configure monitoring environment variables based on selected mode
 if [ "$MONITORING_MODE" == "none" ]; then
     # No monitoring environment variables needed
@@ -93,7 +96,21 @@ if [ "$MONITORING_MODE" == "none" ]; then
     MONITORING_VOLUMES=""
 elif [ "$MONITORING_MODE" == "separate" ]; then
     # Set environment variables to connect to separate monitoring container
-    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-elastic-kibana -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-elastic-kibana -e KIBANA_PORT=5602 -e SENTRY_DSN=https://development@sentry.example.com/1"
+    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-elastic-kibana -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-elastic-kibana -e KIBANA_PORT=5602 -e ELASTICSEARCH_INDEX_PREFIX=pyerp -e PYERP_ENV=dev -e SENTRY_DSN=https://development@sentry.example.com/1"
+    MONITORING_CMD=""
+    MONITORING_PORTS=""
+    MONITORING_VOLUMES=""
+elif [ "$MONITORING_MODE" == "remote" ]; then
+    # Get remote ELK settings from .env.dev file or use defaults
+    if [ -f "$ENV_FILE" ]; then
+        # Source the .env file to get the ELK settings
+        source "$ENV_FILE"
+        # Set environment variables for remote ELK
+        MONITORING_ENV="-e ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST:-production-elk-server-address} -e ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT:-9200} -e KIBANA_HOST=${KIBANA_HOST:-production-elk-server-address} -e KIBANA_PORT=${KIBANA_PORT:-5601} -e ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-} -e ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-} -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
+    else
+        echo "Warning: No $ENV_FILE found, using default remote ELK settings"
+        MONITORING_ENV="-e ELASTICSEARCH_HOST=production-elk-server-address -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=production-elk-server-address -e KIBANA_PORT=5601 -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
+    fi
     MONITORING_CMD=""
     MONITORING_PORTS=""
     MONITORING_VOLUMES=""
@@ -154,6 +171,11 @@ elif [ "$MONITORING_MODE" == "separate" ]; then
     echo -e "- Kibana: http://localhost:5602" 
     echo -e "- Sentry: Integrated with Django application"
     echo -e "Monitoring container logs: docker logs pyerp-elastic-kibana"
+elif [ "$MONITORING_MODE" == "remote" ]; then
+    echo -e "\nMonitoring services (remote connection):"
+    echo -e "- Connected to remote Elasticsearch: ${ELASTICSEARCH_HOST:-production-elk-server-address}:${ELASTICSEARCH_PORT:-9200}"
+    echo -e "- Connected to remote Kibana: ${KIBANA_HOST:-production-elk-server-address}:${KIBANA_PORT:-5601}"
+    echo -e "- Using developer ID: $HOSTNAME"
 fi
 
 echo -e "To run frontend tests manually, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"
