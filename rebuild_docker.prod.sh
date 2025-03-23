@@ -33,7 +33,8 @@ docker run -d \
 
 # Follow the logs for just 10 seconds to see startup
 echo "Showing initial container logs (10 seconds)..."
-timeout 10 docker logs -f pyerp-prod || true
+# Use a macOS compatible approach instead of timeout command
+(docker logs -f pyerp-prod & PID=$!; sleep 10; kill $PID) || true
 
 echo -e "\nContainer is running in the background. Use 'docker logs pyerp-prod' to view logs again."
 echo -e "\nMonitoring services:"
@@ -41,14 +42,6 @@ echo -e "- Elasticsearch: http://localhost:9200"
 echo -e "- Kibana: http://localhost:5601"
 echo -e "- Sentry: Integrated with Django application"
 
-# Ask the user if they want to set up remote monitoring
-echo ""
-read -p "Would you like to set up the monitoring system on the remote server (192.168.73.65)? (y/n): " setup_remote
-
-if [[ $setup_remote == "j" || $setup_remote == "J" || $setup_remote == "y" || $setup_remote == "Y" ]]; then
-    # Run the setup_monitoring_complete.sh script
-    echo "Starting remote monitoring setup..."
-    bash ./scripts/monitoring/setup_monitoring_complete.sh
-else
-    echo "Remote monitoring setup skipped."
-fi
+# Start the monitoring setup automatically
+echo "Starting monitoring setup..."
+bash ./scripts/monitoring/setup_monitoring_complete.sh

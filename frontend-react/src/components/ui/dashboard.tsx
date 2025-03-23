@@ -279,16 +279,17 @@ const Dashboard = () => {
   
   const saveLayout = async () => {
     try {
-      // Save to localStorage
-      localStorage.setItem("dashboard-grid-layout", JSON.stringify(layouts))
-      console.log("Layout saved to localStorage");
+      console.log('Saving layout:', layouts);
       
       // Get CSRF token from cookies
-      const getCookie = (name) => {
+      const getCookie = (name: string) => {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return undefined;
+        if (parts.length === 2) {
+          const part = parts.pop();
+          return part ? part.split(';').shift() || null : null;
+        }
+        return null;
       };
       
       // Try multiple sources for the CSRF token

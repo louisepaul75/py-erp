@@ -5,6 +5,7 @@ export interface User {
   firstName: string;
   lastName: string;
   isAdmin: boolean;
+  group?: string;
 }
 
 export interface LoginCredentials {

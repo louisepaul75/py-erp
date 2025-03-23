@@ -51,12 +51,20 @@ RUN echo "cluster.name: pyerp-monitoring" > /etc/elasticsearch/elasticsearch.yml
     && echo "network.host: 0.0.0.0" >> /etc/elasticsearch/elasticsearch.yml \
     && echo "http.port: 9200" >> /etc/elasticsearch/elasticsearch.yml \
     && echo "discovery.type: single-node" >> /etc/elasticsearch/elasticsearch.yml \
-    && echo "xpack.security.enabled: false" >> /etc/elasticsearch/elasticsearch.yml
+    && echo "xpack.security.enabled: false" >> /etc/elasticsearch/elasticsearch.yml \
+    && mkdir -p /var/lib/elasticsearch \
+    && chown -R elasticsearch:elasticsearch /var/lib/elasticsearch /var/log/elasticsearch /etc/elasticsearch \
+    && chmod -R 770 /var/lib/elasticsearch /var/log/elasticsearch \
+    && chmod -R 640 /etc/elasticsearch/*
 
 # Configure Kibana
 RUN echo "server.port: 5601" > /etc/kibana/kibana.yml \
     && echo "server.host: 0.0.0.0" >> /etc/kibana/kibana.yml \
-    && echo "elasticsearch.hosts: [\"http://localhost:9200\"]" >> /etc/kibana/kibana.yml
+    && echo "elasticsearch.hosts: [\"http://localhost:9200\"]" >> /etc/kibana/kibana.yml \
+    && echo "elasticsearch.username: kibana_system" >> /etc/kibana/kibana.yml \
+    && chown -R kibana:kibana /etc/kibana /var/log/kibana \
+    && chmod -R 770 /var/log/kibana \
+    && chmod -R 640 /etc/kibana/*
 
 # Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
