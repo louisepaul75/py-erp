@@ -27,7 +27,7 @@ export default function RootLayout({
         <Providers>
           <Navbar />
           <main className="pt-16 pb-[calc(var(--footer-height,2.75rem)+0.5rem)] flex-grow flex justify-center">
-            <div className="w-full max-w-7xl mx-auto">
+            <div className="w-full max-w-7xl mx-auto border border-blue-4">
               {children}
             </div>
           </main>

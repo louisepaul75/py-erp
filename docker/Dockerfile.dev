@@ -69,7 +69,7 @@ COPY frontend-react/ /app/frontend-react/
 WORKDIR /app
 
 # Expose ports for Django and React
-EXPOSE 8050 6379 3000 5173
+EXPOSE 8050 6379 3000 
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

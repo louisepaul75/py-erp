@@ -65,7 +65,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-10">
+    <nav className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-50">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex justify-between h-16">
           {/* Logo - moved further left by reducing padding */}
