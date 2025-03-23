@@ -2,7 +2,7 @@ mappings:
 - entity_type: production_order_test
   mapping_config:
     extractor_config:
-      page_size: 5
+      page_size: 10
       table_name: Werksauftraege
     field_mappings:
       Form_Nr: form_number
@@ -30,7 +30,7 @@ mappings:
 - entity_type: production_order_item_test
   mapping_config:
     extractor_config:
-      page_size: 10
+      page_size: 20
       table_name: WerksauftrPos
     field_mappings:
       Anteil: product_share
