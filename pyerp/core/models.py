@@ -3,6 +3,7 @@ Core models for the ERP system.
 """
 
 import uuid
+import json
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -153,6 +154,15 @@ class UserPreference(models.Model):
             return self.get_default_dashboard_modules()
         return self.dashboard_config.get("modules", [])
 
+    def get_dashboard_grid_layout(self):
+        """
+        Returns the user's dashboard grid layout configuration.
+        If none exists, returns the default grid layout.
+        """
+        if not self.dashboard_config or "grid_layout" not in self.dashboard_config:
+            return self.get_default_dashboard_grid_layout()
+        return self.dashboard_config.get("grid_layout", {})
+
     def get_default_dashboard_modules(self):
         """
         Returns the default dashboard modules configuration.
@@ -200,13 +210,46 @@ class UserPreference(models.Model):
             },
         ]
 
-    def save_dashboard_config(self, modules):
+    def get_default_dashboard_grid_layout(self):
         """
-        Save the dashboard configuration modules.
+        Returns the default dashboard grid layout configuration.
+        This is used when no user-specific layout is available.
+        """
+        # Default grid layout
+        return {
+            "lg": [
+                {"i": "recent-orders", "x": 0, "y": 0, "w": 12, "h": 8, "title": "Letzte Bestellungen nach Liefertermin"},
+                {"i": "menu-tiles", "x": 0, "y": 8, "w": 12, "h": 10, "title": "Menü"},
+                {"i": "quick-links", "x": 0, "y": 18, "w": 6, "h": 6, "title": "Schnellzugriff"},
+                {"i": "news-pinboard", "x": 6, "y": 18, "w": 6, "h": 6, "title": "Pinnwand"}
+            ],
+            "md": [
+                {"i": "recent-orders", "x": 0, "y": 0, "w": 12, "h": 8, "title": "Letzte Bestellungen nach Liefertermin"},
+                {"i": "menu-tiles", "x": 0, "y": 8, "w": 12, "h": 12, "title": "Menü"},
+                {"i": "quick-links", "x": 0, "y": 20, "w": 6, "h": 6, "title": "Schnellzugriff"},
+                {"i": "news-pinboard", "x": 6, "y": 20, "w": 6, "h": 6, "title": "Pinnwand"}
+            ],
+            "sm": [
+                {"i": "recent-orders", "x": 0, "y": 0, "w": 12, "h": 8, "title": "Letzte Bestellungen nach Liefertermin"},
+                {"i": "menu-tiles", "x": 0, "y": 8, "w": 12, "h": 14, "title": "Menü"},
+                {"i": "quick-links", "x": 0, "y": 22, "w": 12, "h": 6, "title": "Schnellzugriff"},
+                {"i": "news-pinboard", "x": 0, "y": 28, "w": 12, "h": 6, "title": "Pinnwand"}
+            ]
+        }
+
+    def save_dashboard_config(self, modules=None, grid_layout=None):
+        """
+        Save the dashboard configuration.
+        Can update modules, grid layout, or both.
         """
         if not self.dashboard_config:
             self.dashboard_config = {}
-
-        self.dashboard_config["modules"] = modules
+        
+        if modules is not None:
+            self.dashboard_config['modules'] = modules
+            
+        if grid_layout is not None:
+            self.dashboard_config['grid_layout'] = grid_layout
+            
         self.save()
         return self.dashboard_config

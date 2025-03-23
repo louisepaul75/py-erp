@@ -7,6 +7,11 @@ This is a consolidated file that combines features from multiple model files.
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import slugify
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
+
+from pyerp.business_modules.products.tag_models import Tag, M2MOverride, FieldOverride, InheritableField
 
 
 class ProductCategory(models.Model):
@@ -67,12 +72,6 @@ class BaseProduct(models.Model):
             "ID in the legacy system - maps directly to __KEY and UID in legacy system (which had identical values)",
         ),
     )
-    legacy_uid = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        help_text=_("UID in the legacy system"),
-    )
 
     # Names and descriptions
     name = models.CharField(
@@ -112,88 +111,6 @@ class BaseProduct(models.Model):
         help_text=_("Search keywords"),
     )
 
-    # Physical attributes
-    dimensions = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text=_("Product dimensions (LxWxH)"),
-    )
-    weight = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text=_("Weight in grams"),
-    )
-
-    # Pricing
-    list_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Retail price (maps to Laden price in legacy system)"),
-    )
-    wholesale_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Wholesale price (maps to Handel price in legacy system)"),
-    )
-    gross_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Recommended retail price (maps to Empf. price in legacy system)"),
-    )
-    cost_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Cost price (maps to Einkauf price in legacy system)"),
-    )
-
-    # Inventory
-    stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Current stock quantity"),
-    )
-    min_stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Minimum stock quantity before reordering"),
-    )
-    backorder_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on backorder"),
-    )
-    open_purchase_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on open purchase orders"),
-    )
-    last_receipt_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock receipt"),
-    )
-    last_issue_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock issue"),
-    )
-
-    # Sales statistics
-    units_sold_current_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in current year"),
-    )
-    units_sold_previous_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in previous year"),
-    )
-    revenue_previous_year = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        help_text=_("Revenue in previous year"),
-    )
-
     # Status flags
     is_active = models.BooleanField(
         default=True,
@@ -203,22 +120,6 @@ class BaseProduct(models.Model):
     is_discontinued = models.BooleanField(
         default=False,
         help_text=_("Whether the product is discontinued"),
-    )
-
-    # Manufacturing flags
-    has_bom = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product has a bill of materials"),
-    )
-
-    # Product-specific flags
-    is_one_sided = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is one-sided"),
-    )
-    is_hanging = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is hanging"),
     )
 
     # Timestamps
@@ -232,13 +133,10 @@ class BaseProduct(models.Model):
     )
 
     # Category
-    category = models.ForeignKey(
-        ProductCategory,
+    category_id = models.BigIntegerField(
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
-        related_name="%(class)s_products",
-        help_text=_("Product category"),
+        help_text=_("Product category ID"),
     )
 
     class Meta:
@@ -251,10 +149,12 @@ class ParentProduct(BaseProduct):
     Maps to Artikel_Familie in the legacy system.
     """
 
-    base_sku = models.CharField(
+    legacy_base_sku = models.CharField(
         max_length=255,
         db_index=True,
-        help_text=_("Base SKU for variants"),
+        blank=True,
+        null=False,
+        help_text=_("Legacy base SKU for variants (maps to legacy system)"),
     )
     release_date = models.DateTimeField(
         null=True,
@@ -264,6 +164,54 @@ class ParentProduct(BaseProduct):
     is_new = models.BooleanField(
         default=False,
         help_text=_("Whether this is a new product (maps to Neu in Artikel_Familie)"),
+    )
+    
+    # Physical attributes - Weight specifically for ParentProduct
+    weight = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Weight in grams"),
+    )
+    
+    # Product-specific flags - moved from BaseProduct since these only exist in ParentProduct
+    is_one_sided = models.BooleanField(
+        default=False,
+        help_text=_("Whether the product is one-sided"),
+    )
+    is_hanging = models.BooleanField(
+        default=False,
+        help_text=_("Whether the product is hanging"),
+    )
+    
+    # Physical dimensions
+    length_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("Length in millimeters"),
+    )
+    width_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("Width in millimeters"),
+    )
+    height_mm = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=_("Height in millimeters"),
+    )
+
+    # Tags
+    tags = models.ManyToManyField(
+        Tag,
+        blank=True,
+        related_name="parent_products",
+        help_text=_("Tags assigned to this parent product"),
     )
 
     class Meta:
@@ -293,6 +241,7 @@ class VariantProduct(BaseProduct):
     variant_code = models.CharField(
         max_length=10,
         blank=True,
+        null=False,
         help_text=_("Variant code"),
     )
     legacy_sku = models.CharField(
@@ -301,22 +250,15 @@ class VariantProduct(BaseProduct):
         null=True,
         help_text=_("Legacy SKU (maps to alteNummer in Artikel_Variante)"),
     )
-    base_sku = models.CharField(
+    legacy_base_sku = models.CharField(
         max_length=50,
         db_index=True,
-        help_text=_("Base SKU without variant"),
-    )
-
-    # Original legacy system field names - keeping only Familie_ reference
-    legacy_familie = models.CharField(
-        max_length=50,
         blank=True,
-        null=True,
-        db_column="familie_",
-        help_text=_("Original Familie_ field from Artikel_Variante"),
+        null=False,
+        help_text=_("Legacy base SKU without variant (maps to legacy system)"),
     )
 
-    # Add refOld field
+    # Legacy field reference
     refOld = models.CharField(
         max_length=50,
         blank=True,
@@ -324,7 +266,7 @@ class VariantProduct(BaseProduct):
         help_text=_("Reference to old product ID"),
     )
 
-    # HIGH PRIORITY - Core product data from legacy system
+    # Core product data
     is_verkaufsartikel = models.BooleanField(
         default=False,
         help_text=_(
@@ -343,7 +285,7 @@ class VariantProduct(BaseProduct):
         help_text=_("Discontinuation date (maps to Auslaufdatum in Artikel_Variante)"),
     )
 
-    # HIGH PRIORITY - Pricing structure from legacy system
+    # Pricing structure
     retail_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -384,32 +326,6 @@ class VariantProduct(BaseProduct):
         null=True,
         help_text=_("Color of the variant"),
     )
-    size = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        help_text=_("Size of the variant"),
-    )
-    material = models.CharField(
-        max_length=100,
-        blank=True,
-        null=True,
-        help_text=_("Material composition"),
-    )
-    weight_grams = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text=_("Weight in grams"),
-    )
-    length_mm = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text=_("Length in millimeters"),
-    )
     width_mm = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -417,47 +333,8 @@ class VariantProduct(BaseProduct):
         blank=True,
         help_text=_("Width in millimeters"),
     )
-    height_mm = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text=_("Height in millimeters"),
-    )
 
-    # Inventory and supply chain
-    min_stock_level = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text=_("Minimum stock level to maintain"),
-    )
-    max_stock_level = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text=_("Maximum stock level to maintain"),
-    )
-    current_stock = models.IntegerField(
-        default=0,
-        help_text=_("Current inventory level"),
-    )
-    reorder_point = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text=_("Point at which to reorder inventory"),
-    )
-    lead_time_days = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text=_("Lead time for replenishment in days"),
-    )
-
-    # Sales and performance data
-    units_sold_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in current year"),
-    )
-
-    # Status and categorization
+    # Status flags
     is_featured = models.BooleanField(
         default=False,
         help_text=_("Whether this variant is featured"),
@@ -471,11 +348,12 @@ class VariantProduct(BaseProduct):
         help_text=_("Whether this is a bestselling variant"),
     )
 
-    # Timestamps and tracking
-    last_ordered_date = models.DateField(
-        null=True,
+    # Add tags field for direct tag assignment
+    tags = models.ManyToManyField(
+        Tag,
         blank=True,
-        help_text=_("Date of last customer order"),
+        related_name="variant_products",
+        help_text=_("Tags assigned directly to this variant product"),
     )
 
     class Meta:
@@ -484,7 +362,63 @@ class VariantProduct(BaseProduct):
         ordering = ["parent__name", "variant_code"]
 
     def __str__(self) -> str:
-        return f"{self.name} ({self.sku})"
+        return f"{self.name} ({self.variant_code})" if self.variant_code else self.name
+        
+    def get_tag_override(self):
+        """
+        Get the M2M override for tags, create if it doesn't exist.
+        """
+        content_type = ContentType.objects.get_for_model(self)
+        override, created = M2MOverride.objects.get_or_create(
+            content_type=content_type,
+            object_id=self.id,
+            relationship_name='tags',
+            defaults={'inherit': True}
+        )
+        return override
+    
+    def inherits_tags(self):
+        """
+        Check if this variant inherits tags from its parent.
+        """
+        if not self.parent:
+            return False
+        override = self.get_tag_override()
+        return override.inherit
+    
+    def set_tags_inheritance(self, inherit):
+        """
+        Set whether this variant inherits tags from its parent.
+        
+        Args:
+            inherit: Boolean indicating whether to inherit tags
+        """
+        override = self.get_tag_override()
+        override.inherit = inherit
+        override.save()
+    
+    def get_all_tags(self):
+        """
+        Get all tags for this variant, either inherited or direct.
+        
+        Returns:
+            QuerySet of Tag objects
+        """
+        from pyerp.business_modules.products.tag_models import Tag
+        
+        # If no parent or not inheriting, return only direct tags
+        if not self.parent or not self.inherits_tags():
+            return self.tags.all()
+        
+        # Get tag IDs from both parent and variant
+        parent_tag_ids = list(self.parent.tags.values_list('id', flat=True))
+        variant_tag_ids = list(self.tags.values_list('id', flat=True))
+        
+        # Combine the IDs
+        all_tag_ids = list(set(parent_tag_ids + variant_tag_ids))
+        
+        # Return a queryset with all tags
+        return Tag.objects.filter(id__in=all_tag_ids)
 
 
 class Product(models.Model):
@@ -498,10 +432,12 @@ class Product(models.Model):
         unique=True,
         help_text=_("Stock Keeping Unit (maps to ArtNr in legacy system)"),
     )
-    base_sku = models.CharField(
+    legacy_base_sku = models.CharField(
         max_length=50,
         db_index=True,
-        help_text=_("Base SKU without variant (maps to fk_ArtNr in legacy system)"),
+        blank=True,
+        null=True,
+        help_text=_("Legacy base SKU without variant (maps to fk_ArtNr in legacy system)"),
     )
     variant_code = models.CharField(
         max_length=10,
@@ -574,12 +510,7 @@ class Product(models.Model):
         help_text=_("Search keywords"),
     )
 
-    # Physical attributes
-    dimensions = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text=_("Product dimensions (LxWxH)"),
-    )
+    # Physical attributes - Keep weight field since it exists in the database
     weight = models.IntegerField(
         null=True,
         blank=True,
@@ -587,74 +518,69 @@ class Product(models.Model):
     )
 
     # Pricing
-    list_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Retail price (maps to Laden price in legacy system)"),
-    )
-    wholesale_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Wholesale price (maps to Handel price in legacy system)"),
-    )
-    gross_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Recommended retail price (maps to Empf. price in legacy system)"),
-    )
-    cost_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0,
-        help_text=_("Cost price (maps to Einkauf price in legacy system)"),
-    )
+    # Removed fields (not in database schema)
+    # wholesale_price = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Wholesale price (maps to Handel price in legacy system)"),
+    # )
+    # gross_price = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Recommended retail price (maps to Empf. price in legacy system)"),
+    # )
+    # cost_price = models.DecimalField(
+    #     max_digits=10,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Cost price (maps to Einkauf price in legacy system)"),
+    # )
 
-    # Inventory
-    stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Current stock quantity"),
-    )
-    min_stock_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Minimum stock quantity before reordering"),
-    )
-    backorder_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on backorder"),
-    )
-    open_purchase_quantity = models.IntegerField(
-        default=0,
-        help_text=_("Quantity on open purchase orders"),
-    )
-    last_receipt_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock receipt"),
-    )
-    last_issue_date = models.DateField(
-        null=True,
-        blank=True,
-        help_text=_("Date of last stock issue"),
-    )
+    # Inventory - Comment out these fields as they don't exist in the database schema
+    # stock_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Current stock quantity"),
+    # )
+    # min_stock_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Minimum stock quantity before reordering"),
+    # )
+    # backorder_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Quantity on backorder"),
+    # )
+    # open_purchase_quantity = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Quantity on open purchase orders"),
+    # )
+    # last_receipt_date = models.DateField(
+    #     null=True,
+    #     blank=True,
+    #     help_text=_("Date of last stock receipt"),
+    # )
+    # last_issue_date = models.DateField(
+    #     null=True,
+    #     blank=True,
+    #     help_text=_("Date of last stock issue"),
+    # )
 
     # Sales statistics
-    units_sold_current_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in current year"),
-    )
-    units_sold_previous_year = models.IntegerField(
-        default=0,
-        help_text=_("Units sold in previous year"),
-    )
-    revenue_previous_year = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        help_text=_("Revenue in previous year"),
-    )
+    # units_sold_current_year = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Units sold in current year"),
+    # )
+    # units_sold_previous_year = models.IntegerField(
+    #     default=0,
+    #     help_text=_("Units sold in previous year"),
+    # )
+    # revenue_previous_year = models.DecimalField(
+    #     max_digits=12,
+    #     decimal_places=2,
+    #     default=0,
+    #     help_text=_("Revenue in previous year"),
+    # )
 
     # Status flags
     is_active = models.BooleanField(
@@ -667,20 +593,10 @@ class Product(models.Model):
     )
 
     # Manufacturing flags
-    has_bom = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product has a bill of materials"),
-    )
-
-    # Product-specific flags
-    is_one_sided = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is one-sided"),
-    )
-    is_hanging = models.BooleanField(
-        default=False,
-        help_text=_("Whether the product is hanging"),
-    )
+    # has_bom = models.BooleanField(
+    #     default=False,
+    #     help_text=_("Whether the product has a bill of materials"),
+    # )
 
     # Timestamps
     created_at = models.DateTimeField(
@@ -859,7 +775,7 @@ class UnifiedProduct(models.Model):
     # Fields to handle the parent-variant relationship
     is_variant = models.BooleanField(_("Is Variant"), default=False)
     is_parent = models.BooleanField(_("Is Parent"), default=False)
-    base_sku = models.CharField(_("Base SKU"), max_length=100, blank=True)
+    legacy_base_sku = models.CharField(_("Legacy Base SKU"), max_length=100, blank=True)
     parent = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,

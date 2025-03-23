@@ -31,19 +31,15 @@ This document describes the migration of the sync module tests from their origin
 3. **Discoverability**: Tests are now in a standard location, making them easier to find
 4. **CI/CD Integration**: Tests are automatically run as part of the CI/CD pipeline
 
-## Running the Tests
+## Running Sync Tests
 
-To run the sync tests specifically:
-
-```bash
-./scripts/run_sync_tests.sh
-```
-
-Or using pytest directly:
+To run the sync tests specifically, use:
 
 ```bash
-cd tests && python -m pytest backend/sync/
+./run_all_tests.sh --type sync
 ```
+
+This will run only the synchronization-related tests.
 
 ## Future Work
 

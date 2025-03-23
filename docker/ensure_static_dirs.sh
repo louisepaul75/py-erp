@@ -16,6 +16,17 @@ mkdir -p static/images
 mkdir -p staticfiles/images
 mkdir -p pyerp/static/images
 
+# Create directories for logs and data
+mkdir -p logs
+mkdir -p data
+mkdir -p /var/lib/elasticsearch
+mkdir -p /var/log/elasticsearch
+mkdir -p /app/logs
+
+# Set proper permissions
+chown -R root:root /var/lib/elasticsearch /var/log/elasticsearch /app/logs 2>/dev/null || true
+chmod -R 755 /var/lib/elasticsearch /var/log/elasticsearch /app/logs 2>/dev/null || true
+
 # Copy frontend assets to static directories if they exist
 if [ -d frontend/src/assets ]; then
   echo "Copying frontend assets to static directories..."

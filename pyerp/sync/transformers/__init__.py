@@ -13,6 +13,8 @@ from .inventory import (
     ProductInventoryTransformer,
 )
 from .sales_record import SalesRecordTransformer
+from .production import ProductionOrderTransformer, ProductionOrderItemTransformer
+from .employee import EmployeeTransformer
 
 __all__ = [
     "ProductTransformer",
@@ -21,4 +23,7 @@ __all__ = [
     "BoxSlotTransformer",
     "ProductInventoryTransformer",
     "SalesRecordTransformer",
+    "ProductionOrderTransformer",
+    "ProductionOrderItemTransformer",
+    "EmployeeTransformer",
 ]

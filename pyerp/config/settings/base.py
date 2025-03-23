@@ -67,6 +67,7 @@ LOCAL_APPS = [
     "pyerp.sync",
     "pyerp.external_api",
     "admin_tools",  # Admin tools app for database table view
+    "business",  # Business management (HR, finance, etc.)
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -109,16 +110,28 @@ WSGI_APPLICATION = "pyerp.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# Get password with explicit fallback to environment variable
+DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+if not DB_PASSWORD:
+    print("WARNING: Database password not found in environment variables!")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("DB_NAME", "pyerp_testing"),
         "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "PASSWORD": DB_PASSWORD,
         "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
         "PORT": os.environ.get("DB_PORT", "5432"),
+        "OPTIONS": {
+            "connect_timeout": 5,
+        },
     }
 }
+
+# Print database connection info for debugging
+print(f"Database settings: NAME={DATABASES['default']['NAME']}, HOST={DATABASES['default']['HOST']}, USER={DATABASES['default']['USER']}")
+print(f"Database password is {'set' if DATABASES['default']['PASSWORD'] else 'NOT SET'}")
 
 # Alternative DATABASE_URL configuration (commented out)
 
@@ -245,7 +258,7 @@ LOGGING = {
             "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
             "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
             "rename_fields": {
-                "asctime": "timestamp",
+                "asctime": "@timestamp",
                 "levelname": "level",
             },
         },

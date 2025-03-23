@@ -1,0 +1,68 @@
+name: Mutation Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  mutmut:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: pyerp_testing
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements/requirements.dev.txt
+        
+    - name: Run mutation tests on critical modules
+      env:
+        DJANGO_SETTINGS_MODULE: pyerp.config.settings.test
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/pyerp_testing
+      run: |
+        # Make sure test script is executable
+        chmod +x run_all_tests.sh
+        
+        # Run mutation tests on critical modules using the main wrapper script
+        ./run_all_tests.sh --type unit --mutation
+        # To test specific modules, you can add more targeted runs as needed
+        # ./run_all_tests.sh --type users --mutation
+        
+    - name: Generate JUnit XML report
+      run: |
+        mutmut junitxml > mutmut-results.xml
+      continue-on-error: true
+        
+    - name: Upload mutation test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: mutation-test-results
+        path: |
+          mutmut-results.xml
+          .mutmut-cache
+          html/
+      if: always() 

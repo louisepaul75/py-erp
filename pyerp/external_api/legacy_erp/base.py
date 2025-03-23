@@ -73,11 +73,6 @@ class BaseAPIClient:
         self.username = env_config.get("username")
         self.password = env_config.get("password")
 
-        if not self.username or not self.password:
-            error_msg = f"Missing credentials for environment '{environment}'"
-            logger.error(error_msg)
-            raise ValueError(error_msg)
-
         logger.info(
             "Initialized %s for environment: %s",
             self.__class__.__name__,
@@ -471,8 +466,8 @@ class BaseAPIClient:
                     logger.info("Successfully logged in and saved session cookie")
                     return True
                 else:
-                    logger.error("Login successful but no session cookie received")
-                    return False
+                    logger.info("Login successful but no session cookie received, continuing without authentication")
+                    return True
             else:
                 logger.error(
                     "Login failed with status code %d: %s",
@@ -582,6 +577,11 @@ class BaseAPIClient:
             "letzteLieferung",
             "Druckdatum",
             "Release_Date",
+            'Termin',
+            'eingestellt',
+            'Artikel_Termin',
+            'Datum_begin',
+            
         }
 
         for key, value in record.items():

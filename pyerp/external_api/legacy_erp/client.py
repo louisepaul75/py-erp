@@ -118,21 +118,10 @@ if __name__ == "__main__":
 
     client = LegacyERPClient(environment="live")
 
-    filter_query = [["created_date", ">=", "2025-03-01"]]
-
-    belege = client.fetch_table(
-        table_name="Belege",
-        # skip = 10000,
-        top=100,
-        filter_query=filter_query,
+    employees = client.fetch_table(
+        table_name="Personal",
+        top=10  # Just get a sample of 10 employees
     )
-    print(belege.tail())
-    absnr = str(list(belege["AbsNr"].unique().astype(str)))
-    print(absnr)
-    belege_pos = client.fetch_table(
-        table_name="Belege_Pos", filter_query=[["AbsNr", "in", absnr]]
-    )
-
-    print(belege.tail())
-    print(belege_pos.tail())
-    # breakpoint()
+    print(employees.tail())
+    
+    

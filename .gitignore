@@ -27,6 +27,8 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
+*/migrations/*
+!*/migrations/__init__.py
 
 # Environment variables
 .env
@@ -57,6 +59,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 coverage/
+*/tests/coverage/*
+security_reports/
 
 # Translations
 *.mo

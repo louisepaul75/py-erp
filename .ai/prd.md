@@ -270,6 +270,78 @@ Our goal is to build an on-premise, highly customized ERP system to manage the e
   - Updated VariantDetail.vue to use asset utilities ✅ *Implemented*
   - Consistent image display across all product views ✅ *Implemented*
 
+### 4.1.8 Product Tags and Inheritance System *Planned*
+
+- **Tags System:** *Planned*
+  - **Model Structure:**
+    - Create Tag model with name, slug, and description fields ⬜
+    - Implement direct M2M relationship between ParentProduct and Tag ⬜
+    - Integrate with existing product structure ⬜
+    - Support for tag search and filtering ⬜
+  - **UI Implementation:**
+    - Tag management UI for parent products ⬜
+    - Tag display in product list and detail views ⬜
+    - Tag-based filtering in product lists ⬜
+    - Tag cloud visualization ⬜
+  - **API Integration:**
+    - CRUD endpoints for tag management ⬜
+    - Tag-based product filtering API ⬜
+    - Batch tagging operations ⬜
+
+- **Inheritance Framework:** *Planned*
+  - **Core Architecture:**
+    - Implement InheritableField registry system for tracking inheritable fields ⬜
+    - Create FieldOverride model to track scalar field inheritance ⬜
+    - Create M2MOverride model for M2M relationship inheritance ⬜
+    - Support for ContentTypes framework integration ⬜
+  - **Inheritance Behavior:**
+    - Default parent-to-variant inheritance for registered fields ⬜
+    - Field-level inheritance control ⬜
+    - Selective overriding of specific M2M relationships ⬜
+    - Inheritance indicators in the UI ⬜
+  - **Helper Methods:**
+    - get_effective_value() for retrieving inherited or overridden values ⬜
+    - _get_effective_m2m() for handling M2M relationship inheritance ⬜
+    - inherit_parent_tags() and disconnect_parent_tags() convenience methods ⬜
+    - is_field_inherited() for checking inheritance status ⬜
+
+- **Implementation Benefits:**
+  - **Enhanced Categorization:**
+    - Improved product organization with flexible tagging ⬜
+    - Support for multi-dimensional product categorization ⬜
+    - Enhanced product discovery and filtering ⬜
+  - **Data Consistency:**
+    - Automatic inheritance of parent product attributes to variants ⬜
+    - Reduced data redundancy and maintenance burden ⬜
+    - Consistent product categorization across parent-variant hierarchy ⬜
+  - **Future Extensibility:**
+    - Framework designed to support inheritance of other attributes beyond tags ⬜
+    - Consistent inheritance patterns for all product properties ⬜
+    - Scalable design for additional inheritable fields ⬜
+
+- **Tag Operations:**
+  - **Tag Management:**
+    - Create, update, delete tags ⬜
+    - Assign multiple tags to products ⬜
+    - Batch tag operations ⬜
+    - Tag validation and normalization ⬜
+  - **Inheritance Control:**
+    - Enable/disable inheritance for specific variants ⬜
+    - Selectively override individual inherited tags ⬜
+    - Add variant-specific tags while inheriting others ⬜
+    - Restore inheritance after manual overrides ⬜
+  - **Search & Discovery:**
+    - Tag-based product search ⬜
+    - Filter products by multiple tags ⬜
+    - Display inherited vs. direct tags differently ⬜
+    - Tag suggestions based on existing tags ⬜
+
+### 4.1.9 Data Synchronization Framework ✅ *Partially Implemented*
+
+- **Modular ETL Architecture:** ✅ *Partially Implemented*
+  - Base classes for extractors, transformers, and loaders ✅ *Implemented*
+  - Standardized interface for extracting data from different legacy system tables ✅ *Implemented*
+
 ### 4.2 Sales Management
 
 - **Customer Master Data:**

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Product Tags" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{% translate "Product Tags" %}</h1>
+        <a href="{% url 'products:tag_create' %}" class="btn btn-primary">
+            <i class="fa fa-plus"></i> {% translate "Add Tag" %}
+        </a>
+    </div>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            {% if tags %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% translate "Name" %}</th>
+                            <th>{% translate "Description" %}</th>
+                            <th>{% translate "Slug" %}</th>
+                            <th>{% translate "Created" %}</th>
+                            <th>{% translate "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tag in tags %}
+                        <tr>
+                            <td>{{ tag.name }}</td>
+                            <td>{{ tag.description|truncatechars:50 }}</td>
+                            <td>{{ tag.slug }}</td>
+                            <td>{{ tag.created_at|date }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'products:tag_update' tag.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fa fa-edit"></i> {% translate "Edit" %}
+                                    </a>
+                                    <a href="{% url 'products:tag_delete' tag.pk %}" class="btn btn-sm btn-outline-danger">
+                                        <i class="fa fa-trash"></i> {% translate "Delete" %}
+                                    </a>
+                                    <a href="{% url 'products:product_by_tag' tag.slug %}" class="btn btn-sm btn-outline-info">
+                                        <i class="fa fa-filter"></i> {% translate "View Products" %}
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                {% translate "No tags found. Click 'Add Tag' to create your first tag." %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

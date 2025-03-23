@@ -1,3 +1,4 @@
+import pytest
 from pyerp.external_api.legacy_erp.client import LegacyERPClient
 import logging
 
@@ -6,6 +7,15 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
+
+
+
+
+
+
+
+
+@pytest.mark.unit
 def test_session_validation():
     # Initialize the client
     client = LegacyERPClient(environment="live")

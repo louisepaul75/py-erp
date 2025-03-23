@@ -1,10 +1,17 @@
+import pytest
 from django.db import connections
 from django.test import TestCase
 
 from pyerp.business_modules.products.models import ImageSyncLog
 
 
+@pytest.mark.backend
+@pytest.mark.database
 class ImageSyncLogTest(TestCase):
+
+
+
+
     def test_create_log(self):
         """Test that we can create an ImageSyncLog instance with auto-incrementing ID."""
         connection = connections["default"]

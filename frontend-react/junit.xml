@@ -1,0 +1,543 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="239" failures="0" errors="0" time="3.382">
+  <testsuite name="useLanguage hook" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:23" time="0.973" tests="5">
+    <testcase classname="useLanguage hook should initialize with English by default" name="useLanguage hook should initialize with English by default" time="0.077">
+    </testcase>
+    <testcase classname="useLanguage hook should initialize with saved language from localStorage" name="useLanguage hook should initialize with saved language from localStorage" time="0.005">
+    </testcase>
+    <testcase classname="useLanguage hook should initialize with browser language if available and not in localStorage" name="useLanguage hook should initialize with browser language if available and not in localStorage" time="0.004">
+    </testcase>
+    <testcase classname="useLanguage hook should default to English if browser language is not supported" name="useLanguage hook should default to English if browser language is not supported" time="0.001">
+    </testcase>
+    <testcase classname="useLanguage hook should change language and update localStorage" name="useLanguage hook should change language and update localStorage" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Label" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:23" time="1.011" tests="6">
+    <testcase classname="Label renders correctly" name="Label renders correctly" time="0.027">
+    </testcase>
+    <testcase classname="Label applies custom className" name="Label applies custom className" time="0.007">
+    </testcase>
+    <testcase classname="Label can be rendered with htmlFor attribute" name="Label can be rendered with htmlFor attribute" time="0.004">
+    </testcase>
+    <testcase classname="Label handles additional props" name="Label handles additional props" time="0.003">
+    </testcase>
+    <testcase classname="Label renders children as expected" name="Label renders children as expected" time="0.019">
+    </testcase>
+    <testcase classname="Label includes correct accessibility styles for disabled peer elements" name="Label includes correct accessibility styles for disabled peer elements" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="LanguageSelector" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:23" time="1.048" tests="3">
+    <testcase classname="LanguageSelector renders correctly with default language" name="LanguageSelector renders correctly with default language" time="0.045">
+    </testcase>
+    <testcase classname="LanguageSelector opens dropdown when clicked" name="LanguageSelector opens dropdown when clicked" time="0.012">
+    </testcase>
+    <testcase classname="LanguageSelector changes language when an option is selected" name="LanguageSelector changes language when an option is selected" time="0.018">
+    </testcase>
+  </testsuite>
+  <testsuite name="Table Components" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:23" time="1.04" tests="20">
+    <testcase classname="Table Components Table renders table with children" name="Table Components Table renders table with children" time="0.03">
+    </testcase>
+    <testcase classname="Table Components Table applies custom className" name="Table Components Table applies custom className" time="0.01">
+    </testcase>
+    <testcase classname="Table Components Table applies default styles" name="Table Components Table applies default styles" time="0.003">
+    </testcase>
+    <testcase classname="Table Components TableHeader renders header with children" name="Table Components TableHeader renders header with children" time="0.015">
+    </testcase>
+    <testcase classname="Table Components TableHeader applies custom className" name="Table Components TableHeader applies custom className" time="0.007">
+    </testcase>
+    <testcase classname="Table Components TableBody renders body with children" name="Table Components TableBody renders body with children" time="0.002">
+    </testcase>
+    <testcase classname="Table Components TableBody applies custom className" name="Table Components TableBody applies custom className" time="0.002">
+    </testcase>
+    <testcase classname="Table Components TableRow renders row with children" name="Table Components TableRow renders row with children" time="0.001">
+    </testcase>
+    <testcase classname="Table Components TableRow applies custom className" name="Table Components TableRow applies custom className" time="0.003">
+    </testcase>
+    <testcase classname="Table Components TableHead renders header cell with children" name="Table Components TableHead renders header cell with children" time="0.001">
+    </testcase>
+    <testcase classname="Table Components TableHead applies default styles" name="Table Components TableHead applies default styles" time="0.001">
+    </testcase>
+    <testcase classname="Table Components TableHead applies custom className" name="Table Components TableHead applies custom className" time="0.001">
+    </testcase>
+    <testcase classname="Table Components TableCell renders cell with children" name="Table Components TableCell renders cell with children" time="0.001">
+    </testcase>
+    <testcase classname="Table Components TableCell applies default styles" name="Table Components TableCell applies default styles" time="0.002">
+    </testcase>
+    <testcase classname="Table Components TableCell applies custom className" name="Table Components TableCell applies custom className" time="0.001">
+    </testcase>
+    <testcase classname="Table Components StatusBadge renders active status correctly" name="Table Components StatusBadge renders active status correctly" time="0.002">
+    </testcase>
+    <testcase classname="Table Components StatusBadge renders pending status correctly" name="Table Components StatusBadge renders pending status correctly" time="0.001">
+    </testcase>
+    <testcase classname="Table Components StatusBadge renders inactive status correctly" name="Table Components StatusBadge renders inactive status correctly" time="0.001">
+    </testcase>
+    <testcase classname="Table Components StatusBadge applies custom className" name="Table Components StatusBadge applies custom className" time="0.002">
+    </testcase>
+    <testcase classname="Table Components StatusBadge applies default badge styles" name="Table Components StatusBadge applies default badge styles" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="MobileMenu" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:23" time="1.17" tests="7">
+    <testcase classname="MobileMenu renders nothing when not on mobile or tablet" name="MobileMenu renders nothing when not on mobile or tablet" time="0.017">
+    </testcase>
+    <testcase classname="MobileMenu renders menu button on mobile devices" name="MobileMenu renders menu button on mobile devices" time="0.02">
+    </testcase>
+    <testcase classname="MobileMenu renders menu button on tablet devices" name="MobileMenu renders menu button on tablet devices" time="0.004">
+    </testcase>
+    <testcase classname="MobileMenu toggles menu open when button is clicked" name="MobileMenu toggles menu open when button is clicked" time="0.017">
+    </testcase>
+    <testcase classname="MobileMenu displays all navigation items when menu is open" name="MobileMenu displays all navigation items when menu is open" time="0.008">
+    </testcase>
+    <testcase classname="MobileMenu closes menu when a navigation item is clicked" name="MobileMenu closes menu when a navigation item is clicked" time="0.011">
+    </testcase>
+    <testcase classname="MobileMenu changes button icon when menu is opened and closed" name="MobileMenu changes button icon when menu is opened and closed" time="0.014">
+    </testcase>
+  </testsuite>
+  <testsuite name="Auth Hooks" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.363" tests="8">
+    <testcase classname="Auth Hooks useUser should fetch current user" name="Auth Hooks useUser should fetch current user" time="0.028">
+    </testcase>
+    <testcase classname="Auth Hooks useUser should handle null user (not authenticated)" name="Auth Hooks useUser should handle null user (not authenticated)" time="0.013">
+    </testcase>
+    <testcase classname="Auth Hooks useLogin should call login service and set user data on success" name="Auth Hooks useLogin should call login service and set user data on success" time="0.006">
+    </testcase>
+    <testcase classname="Auth Hooks useLogin should handle login error" name="Auth Hooks useLogin should handle login error" time="0.005">
+    </testcase>
+    <testcase classname="Auth Hooks useLogout should call logout service" name="Auth Hooks useLogout should call logout service" time="0.004">
+    </testcase>
+    <testcase classname="Auth Hooks useUpdateProfile should update profile successfully" name="Auth Hooks useUpdateProfile should update profile successfully" time="0.005">
+    </testcase>
+    <testcase classname="Auth Hooks useIsAuthenticated should return authenticated=true when user exists" name="Auth Hooks useIsAuthenticated should return authenticated=true when user exists" time="0.012">
+    </testcase>
+    <testcase classname="Auth Hooks useIsAuthenticated should return authenticated=false when user is null" name="Auth Hooks useIsAuthenticated should return authenticated=false when user is null" time="0.013">
+    </testcase>
+  </testsuite>
+  <testsuite name="Dashboard Layout Grid Functionality" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.534" tests="4">
+    <testcase classname="Dashboard Layout Grid Functionality renders the responsive grid layout with correct props" name="Dashboard Layout Grid Functionality renders the responsive grid layout with correct props" time="0.012">
+    </testcase>
+    <testcase classname="Dashboard Layout Grid Functionality applies edit mode properties correctly" name="Dashboard Layout Grid Functionality applies edit mode properties correctly" time="0.002">
+    </testcase>
+    <testcase classname="Dashboard Layout Grid Functionality renders with different layouts based on screen size" name="Dashboard Layout Grid Functionality renders with different layouts based on screen size" time="0.003">
+    </testcase>
+    <testcase classname="Dashboard Layout Grid Functionality renders correct widget content for each widget" name="Dashboard Layout Grid Functionality renders correct widget content for each widget" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="Input Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.546" tests="11">
+    <testcase classname="Input Component renders basic input correctly" name="Input Component renders basic input correctly" time="0.01">
+    </testcase>
+    <testcase classname="Input Component renders with label" name="Input Component renders with label" time="0.007">
+    </testcase>
+    <testcase classname="Input Component renders with error message" name="Input Component renders with error message" time="0.001">
+    </testcase>
+    <testcase classname="Input Component renders with left icon" name="Input Component renders with left icon" time="0.005">
+    </testcase>
+    <testcase classname="Input Component renders with right icon" name="Input Component renders with right icon" time="0.002">
+    </testcase>
+    <testcase classname="Input Component applies fullWidth class when fullWidth prop is true" name="Input Component applies fullWidth class when fullWidth prop is true" time="0.001">
+    </testcase>
+    <testcase classname="Input Component forwards ref correctly" name="Input Component forwards ref correctly" time="0.001">
+    </testcase>
+    <testcase classname="Input Component handles user input correctly" name="Input Component handles user input correctly" time="0.12">
+    </testcase>
+    <testcase classname="Input Component applies custom className correctly" name="Input Component applies custom className correctly" time="0.004">
+    </testcase>
+    <testcase classname="Input Component passes through HTML input attributes" name="Input Component passes through HTML input attributes" time="0.001">
+    </testcase>
+    <testcase classname="Input Component renders with both label and error" name="Input Component renders with both label and error" time="0.003">
+    </testcase>
+  </testsuite>
+  <testsuite name="Footer" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.573" tests="7">
+    <testcase classname="Footer renders copyright information" name="Footer renders copyright information" time="0.044">
+    </testcase>
+    <testcase classname="Footer shows version number when API is available" name="Footer shows version number when API is available" time="0.008">
+    </testcase>
+    <testcase classname="Footer shows loading indicator while fetching data" name="Footer shows loading indicator while fetching data" time="0.004">
+    </testcase>
+    <testcase classname="Footer shows green indicator when API is healthy" name="Footer shows green indicator when API is healthy" time="0.008">
+    </testcase>
+    <testcase classname="Footer shows red indicator when API is unhealthy" name="Footer shows red indicator when API is unhealthy" time="0.004">
+    </testcase>
+    <testcase classname="Footer shows red indicator when API fetch fails" name="Footer shows red indicator when API fetch fails" time="0.021">
+    </testcase>
+    <testcase classname="Footer toggles development bar on click and updates height" name="Footer toggles development bar on click and updates height" time="0.108">
+    </testcase>
+  </testsuite>
+  <testsuite name="DashboardWidget Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.693" tests="8">
+    <testcase classname="DashboardWidget Component renders children correctly" name="DashboardWidget Component renders children correctly" time="0.019">
+    </testcase>
+    <testcase classname="DashboardWidget Component displays the title when provided" name="DashboardWidget Component displays the title when provided" time="0.005">
+    </testcase>
+    <testcase classname="DashboardWidget Component does not display title when not provided" name="DashboardWidget Component does not display title when not provided" time="0.002">
+    </testcase>
+    <testcase classname="DashboardWidget Component displays edit controls in edit mode" name="DashboardWidget Component displays edit controls in edit mode" time="0.006">
+    </testcase>
+    <testcase classname="DashboardWidget Component does not display edit controls when not in edit mode" name="DashboardWidget Component does not display edit controls when not in edit mode" time="0.006">
+    </testcase>
+    <testcase classname="DashboardWidget Component calls onRemove with the correct id when remove button is clicked" name="DashboardWidget Component calls onRemove with the correct id when remove button is clicked" time="0.042">
+    </testcase>
+    <testcase classname="DashboardWidget Component applies edit mode styling" name="DashboardWidget Component applies edit mode styling" time="0.005">
+    </testcase>
+    <testcase classname="DashboardWidget Component does not apply edit mode styling when not in edit mode" name="DashboardWidget Component does not apply edit mode styling when not in edit mode" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Auth Service" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.252" tests="20">
+    <testcase classname="Auth Service login should login successfully and store tokens" name="Auth Service login should login successfully and store tokens" time="0.001">
+    </testcase>
+    <testcase classname="Auth Service login should throw error on failed login" name="Auth Service login should throw error on failed login" time="0.046">
+    </testcase>
+    <testcase classname="Auth Service logout should remove tokens from cookies" name="Auth Service logout should remove tokens from cookies" time="0">
+    </testcase>
+    <testcase classname="Auth Service authApi hooks should add error message from response text in authApi beforeError hook" name="Auth Service authApi hooks should add error message from response text in authApi beforeError hook" time="0">
+    </testcase>
+    <testcase classname="Auth Service authApi hooks should use statusText if response text fails in authApi beforeError hook" name="Auth Service authApi hooks should use statusText if response text fails in authApi beforeError hook" time="0.001">
+    </testcase>
+    <testcase classname="Auth Service getCurrentUser should return null if no token exists" name="Auth Service getCurrentUser should return null if no token exists" time="0">
+    </testcase>
+    <testcase classname="Auth Service getCurrentUser should get current user from valid token" name="Auth Service getCurrentUser should get current user from valid token" time="0">
+    </testcase>
+    <testcase classname="Auth Service getCurrentUser should try to refresh token if expired" name="Auth Service getCurrentUser should try to refresh token if expired" time="0">
+    </testcase>
+    <testcase classname="Auth Service getCurrentUser should return null if token refresh fails" name="Auth Service getCurrentUser should return null if token refresh fails" time="0">
+    </testcase>
+    <testcase classname="Auth Service refreshToken should return null if no refresh token exists" name="Auth Service refreshToken should return null if no refresh token exists" time="0">
+    </testcase>
+    <testcase classname="Auth Service refreshToken should refresh token successfully" name="Auth Service refreshToken should refresh token successfully" time="0">
+    </testcase>
+    <testcase classname="Auth Service refreshToken should handle refresh token error" name="Auth Service refreshToken should handle refresh token error" time="0.005">
+    </testcase>
+    <testcase classname="Auth Service updateProfile should update user profile successfully" name="Auth Service updateProfile should update user profile successfully" time="0.002">
+    </testcase>
+    <testcase classname="Auth Service updateProfile should throw error on failed profile update" name="Auth Service updateProfile should throw error on failed profile update" time="0.001">
+    </testcase>
+    <testcase classname="Auth Service changePassword should change password successfully" name="Auth Service changePassword should change password successfully" time="0">
+    </testcase>
+    <testcase classname="Auth Service changePassword should throw error on failed password change" name="Auth Service changePassword should throw error on failed password change" time="0">
+    </testcase>
+    <testcase classname="Auth Service api instance should include auth token in requests if available" name="Auth Service api instance should include auth token in requests if available" time="0">
+    </testcase>
+    <testcase classname="Auth Service api instance should not include auth token if not available" name="Auth Service api instance should not include auth token if not available" time="0">
+    </testcase>
+    <testcase classname="Auth Service api instance should add error message from response text" name="Auth Service api instance should add error message from response text" time="0">
+    </testcase>
+    <testcase classname="Auth Service api instance should use statusText if response text fails" name="Auth Service api instance should use statusText if response text fails" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Switch" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.377" tests="6">
+    <testcase classname="Switch renders correctly" name="Switch renders correctly" time="0.018">
+    </testcase>
+    <testcase classname="Switch applies custom className" name="Switch applies custom className" time="0.003">
+    </testcase>
+    <testcase classname="Switch can be checked and unchecked" name="Switch can be checked and unchecked" time="0.003">
+    </testcase>
+    <testcase classname="Switch respects the disabled state" name="Switch respects the disabled state" time="0.003">
+    </testcase>
+    <testcase classname="Switch passes additional props to the underlying component" name="Switch passes additional props to the underlying component" time="0.002">
+    </testcase>
+    <testcase classname="Switch has the correct styles based on state" name="Switch has the correct styles based on state" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Dashboard Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.244" tests="8">
+    <testcase classname="Dashboard Component renders the dashboard component" name="Dashboard Component renders the dashboard component" time="0.008">
+    </testcase>
+    <testcase classname="Dashboard Component loads default layout when no saved layout exists" name="Dashboard Component loads default layout when no saved layout exists" time="0.007">
+    </testcase>
+    <testcase classname="Dashboard Component loads saved layout from localStorage" name="Dashboard Component loads saved layout from localStorage" time="0.005">
+    </testcase>
+    <testcase classname="Dashboard Component attempts to fetch dashboard layout from API first" name="Dashboard Component attempts to fetch dashboard layout from API first" time="0.012">
+    </testcase>
+    <testcase classname="Dashboard Component toggles edit mode when edit button is clicked" name="Dashboard Component toggles edit mode when edit button is clicked" time="0.006">
+    </testcase>
+    <testcase classname="Dashboard Component saves layout when save button is clicked" name="Dashboard Component saves layout when save button is clicked" time="0.004">
+    </testcase>
+    <testcase classname="Dashboard Component toggles favorites when star is clicked" name="Dashboard Component toggles favorites when star is clicked" time="0.003">
+    </testcase>
+    <testcase classname="Dashboard Component removes a widget when the remove button is clicked in edit mode" name="Dashboard Component removes a widget when the remove button is clicked in edit mode" time="0.012">
+    </testcase>
+  </testsuite>
+  <testsuite name="Card Components" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.272" tests="18">
+    <testcase classname="Card Components Card renders children correctly" name="Card Components Card renders children correctly" time="0.005">
+    </testcase>
+    <testcase classname="Card Components Card applies default variant styles" name="Card Components Card applies default variant styles" time="0.006">
+    </testcase>
+    <testcase classname="Card Components Card applies highlighted variant styles" name="Card Components Card applies highlighted variant styles" time="0.002">
+    </testcase>
+    <testcase classname="Card Components Card applies additional className" name="Card Components Card applies additional className" time="0.002">
+    </testcase>
+    <testcase classname="Card Components CardHeader renders children correctly" name="Card Components CardHeader renders children correctly" time="0.001">
+    </testcase>
+    <testcase classname="Card Components CardHeader applies highlighted styles when highlighted prop is true" name="Card Components CardHeader applies highlighted styles when highlighted prop is true" time="0.001">
+    </testcase>
+    <testcase classname="Card Components CardHeader applies additional className" name="Card Components CardHeader applies additional className" time="0.001">
+    </testcase>
+    <testcase classname="Card Components CardTitle renders children correctly" name="Card Components CardTitle renders children correctly" time="0.002">
+    </testcase>
+    <testcase classname="Card Components CardTitle renders with icon when provided" name="Card Components CardTitle renders with icon when provided" time="0.002">
+    </testcase>
+    <testcase classname="Card Components CardTitle applies text-primary class by default" name="Card Components CardTitle applies text-primary class by default" time="0.001">
+    </testcase>
+    <testcase classname="Card Components CardTitle applies additional className" name="Card Components CardTitle applies additional className" time="0.004">
+    </testcase>
+    <testcase classname="Card Components CardDescription renders children correctly" name="Card Components CardDescription renders children correctly" time="0.006">
+    </testcase>
+    <testcase classname="Card Components CardDescription applies additional className" name="Card Components CardDescription applies additional className" time="0.001">
+    </testcase>
+    <testcase classname="Card Components CardContent renders children correctly" name="Card Components CardContent renders children correctly" time="0.002">
+    </testcase>
+    <testcase classname="Card Components CardContent applies additional className" name="Card Components CardContent applies additional className" time="0.001">
+    </testcase>
+    <testcase classname="Card Components CardFooter renders children correctly" name="Card Components CardFooter renders children correctly" time="0">
+    </testcase>
+    <testcase classname="Card Components CardFooter applies highlighted styles when highlighted prop is true" name="Card Components CardFooter applies highlighted styles when highlighted prop is true" time="0.004">
+    </testcase>
+    <testcase classname="Card Components CardFooter applies additional className" name="Card Components CardFooter applies additional className" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:24" time="0.338" tests="1">
+    <testcase classname=" true is true" name=" true is true" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Navbar" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:23" time="2.155" tests="8">
+    <testcase classname="Navbar renders the logo" name="Navbar renders the logo" time="0.043">
+    </testcase>
+    <testcase classname="Navbar renders desktop navigation on large screens" name="Navbar renders desktop navigation on large screens" time="0.018">
+    </testcase>
+    <testcase classname="Navbar passes correct navigation items to MobileMenu on small screens" name="Navbar passes correct navigation items to MobileMenu on small screens" time="0.004">
+    </testcase>
+    <testcase classname="Navbar shows user menu dropdown when clicked" name="Navbar shows user menu dropdown when clicked" time="0.034">
+    </testcase>
+    <testcase classname="Navbar shows simplified user button on mobile" name="Navbar shows simplified user button on mobile" time="0.005">
+    </testcase>
+    <testcase classname="Navbar shows mobile user dropdown when clicked" name="Navbar shows mobile user dropdown when clicked" time="0.01">
+    </testcase>
+    <testcase classname="Navbar shows tablet specific UI when on tablet" name="Navbar shows tablet specific UI when on tablet" time="0.009">
+    </testcase>
+    <testcase classname="Navbar closes user dropdown when clicking outside" name="Navbar closes user dropdown when clicking outside" time="0.01">
+    </testcase>
+  </testsuite>
+  <testsuite name="useTheme hook" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.199" tests="5">
+    <testcase classname="useTheme hook should initialize with light theme when no preferences are set" name="useTheme hook should initialize with light theme when no preferences are set" time="0.002">
+    </testcase>
+    <testcase classname="useTheme hook should initialize with saved theme from localStorage" name="useTheme hook should initialize with saved theme from localStorage" time="0.001">
+    </testcase>
+    <testcase classname="useTheme hook should toggle theme from light to dark" name="useTheme hook should toggle theme from light to dark" time="0.001">
+    </testcase>
+    <testcase classname="useTheme hook should toggle theme from dark to light" name="useTheme hook should toggle theme from dark to light" time="0.018">
+    </testcase>
+    <testcase classname="useTheme hook should use system preference when no localStorage value is present" name="useTheme hook should use system preference when no localStorage value is present" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Separator component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.204" tests="7">
+    <testcase classname="Separator component renders horizontal separator by default" name="Separator component renders horizontal separator by default" time="0.004">
+    </testcase>
+    <testcase classname="Separator component renders vertical separator when specified" name="Separator component renders vertical separator when specified" time="0.001">
+    </testcase>
+    <testcase classname="Separator component applies custom className correctly" name="Separator component applies custom className correctly" time="0.001">
+    </testcase>
+    <testcase classname="Separator component forwards ref correctly" name="Separator component forwards ref correctly" time="0.016">
+    </testcase>
+    <testcase classname="Separator component sets correct data-orientation attribute" name="Separator component sets correct data-orientation attribute" time="0.001">
+    </testcase>
+    <testcase classname="Separator component handles decorative prop correctly" name="Separator component handles decorative prop correctly" time="0.001">
+    </testcase>
+    <testcase classname="Separator component passes additional props to the component" name="Separator component passes additional props to the component" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="ResponsiveCard" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.201" tests="11">
+    <testcase classname="ResponsiveCard renders title correctly" name="ResponsiveCard renders title correctly" time="0.004">
+    </testcase>
+    <testcase classname="ResponsiveCard renders description when provided" name="ResponsiveCard renders description when provided" time="0.003">
+    </testcase>
+    <testcase classname="ResponsiveCard renders icon when provided" name="ResponsiveCard renders icon when provided" time="0.001">
+    </testcase>
+    <testcase classname="ResponsiveCard renders children content when provided" name="ResponsiveCard renders children content when provided" time="0.001">
+    </testcase>
+    <testcase classname="ResponsiveCard renders footer when provided" name="ResponsiveCard renders footer when provided" time="0.001">
+    </testcase>
+    <testcase classname="ResponsiveCard uses TouchFeedback when onClick is provided" name="ResponsiveCard uses TouchFeedback when onClick is provided" time="0.001">
+    </testcase>
+    <testcase classname="ResponsiveCard does not use TouchFeedback when onClick is not provided" name="ResponsiveCard does not use TouchFeedback when onClick is not provided" time="0.001">
+    </testcase>
+    <testcase classname="ResponsiveCard applies custom className" name="ResponsiveCard applies custom className" time="0.001">
+    </testcase>
+    <testcase classname="ResponsiveCard applies mobile-specific styles when on mobile" name="ResponsiveCard applies mobile-specific styles when on mobile" time="0.011">
+    </testcase>
+    <testcase classname="ResponsiveCard applies desktop-specific styles when not on mobile" name="ResponsiveCard applies desktop-specific styles when not on mobile" time="0.003">
+    </testcase>
+    <testcase classname="ResponsiveCard handles click events when onClick is provided" name="ResponsiveCard handles click events when onClick is provided" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Button Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.255" tests="6">
+    <testcase classname="Button Component renders correctly with default props" name="Button Component renders correctly with default props" time="0.021">
+    </testcase>
+    <testcase classname="Button Component renders with different variants" name="Button Component renders with different variants" time="0.005">
+    </testcase>
+    <testcase classname="Button Component renders with different sizes" name="Button Component renders with different sizes" time="0.003">
+    </testcase>
+    <testcase classname="Button Component renders as a child component when asChild is true" name="Button Component renders as a child component when asChild is true" time="0.002">
+    </testcase>
+    <testcase classname="Button Component passes additional props to the button element" name="Button Component passes additional props to the button element" time="0.002">
+    </testcase>
+    <testcase classname="Button Component combines custom className with buttonVariants" name="Button Component combines custom className with buttonVariants" time="0.009">
+    </testcase>
+  </testsuite>
+  <testsuite name="Tabs component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.253" tests="5">
+    <testcase classname="Tabs component renders tabs and verifies tab triggers" name="Tabs component renders tabs and verifies tab triggers" time="0.016">
+    </testcase>
+    <testcase classname="Tabs component applies custom classes to tabs components" name="Tabs component applies custom classes to tabs components" time="0.004">
+    </testcase>
+    <testcase classname="Tabs component forwards refs correctly" name="Tabs component forwards refs correctly" time="0.002">
+    </testcase>
+    <testcase classname="Tabs component supports additional props" name="Tabs component supports additional props" time="0.003">
+    </testcase>
+    <testcase classname="Tabs component activates the correct tab with defaultValue" name="Tabs component activates the correct tab with defaultValue" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="Dark Mode Integration Tests" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:23" time="2.384" tests="9">
+    <testcase classname="Dark Mode Integration Tests Navbar Dark Mode applies dark mode classes to Navbar components" name="Dark Mode Integration Tests Navbar Dark Mode applies dark mode classes to Navbar components" time="0.059">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Navbar Dark Mode shows correct theme toggle button in dark mode" name="Dark Mode Integration Tests Navbar Dark Mode shows correct theme toggle button in dark mode" time="0.018">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Footer Dark Mode applies dark mode classes to Footer components" name="Dark Mode Integration Tests Footer Dark Mode applies dark mode classes to Footer components" time="0.021">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Footer Dark Mode applies dark mode text colors" name="Dark Mode Integration Tests Footer Dark Mode applies dark mode text colors" time="0.211">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Button Component Dark Mode applies dark mode styles to primary button" name="Dark Mode Integration Tests Button Component Dark Mode applies dark mode styles to primary button" time="0.009">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Button Component Dark Mode applies dark mode styles to secondary button" name="Dark Mode Integration Tests Button Component Dark Mode applies dark mode styles to secondary button" time="0.001">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Button Component Dark Mode applies dark mode styles to outline button" name="Dark Mode Integration Tests Button Component Dark Mode applies dark mode styles to outline button" time="0.002">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Theme Transition adds dark class to document when theme is dark" name="Dark Mode Integration Tests Theme Transition adds dark class to document when theme is dark" time="0.004">
+    </testcase>
+    <testcase classname="Dark Mode Integration Tests Theme Transition removes dark class from document when theme is light" name="Dark Mode Integration Tests Theme Transition removes dark class from document when theme is light" time="0.009">
+    </testcase>
+  </testsuite>
+  <testsuite name="ProtectedRoute Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.223" tests="4">
+    <testcase classname="ProtectedRoute Component renders children when user is authenticated" name="ProtectedRoute Component renders children when user is authenticated" time="0.004">
+    </testcase>
+    <testcase classname="ProtectedRoute Component renders loading spinner when authentication status is loading" name="ProtectedRoute Component renders loading spinner when authentication status is loading" time="0.002">
+    </testcase>
+    <testcase classname="ProtectedRoute Component does not render children when user is not authenticated" name="ProtectedRoute Component does not render children when user is not authenticated" time="0.005">
+    </testcase>
+    <testcase classname="ProtectedRoute Component redirects to login page when user is not authenticated" name="ProtectedRoute Component redirects to login page when user is not authenticated" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="useIsMobile hook" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.203" tests="5">
+    <testcase classname="useIsMobile hook should return false for desktop screen width" name="useIsMobile hook should return false for desktop screen width" time="0.003">
+    </testcase>
+    <testcase classname="useIsMobile hook should return true for mobile screen width" name="useIsMobile hook should return true for mobile screen width" time="0">
+    </testcase>
+    <testcase classname="useIsMobile hook should update state when window is resized" name="useIsMobile hook should update state when window is resized" time="0.001">
+    </testcase>
+    <testcase classname="useIsMobile hook should add resize event listener on mount" name="useIsMobile hook should add resize event listener on mount" time="0.019">
+    </testcase>
+    <testcase classname="useIsMobile hook should remove resize event listener on unmount" name="useIsMobile hook should remove resize event listener on unmount" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="AdminRoute Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.211" tests="5">
+    <testcase classname="AdminRoute Component renders children when user is admin" name="AdminRoute Component renders children when user is admin" time="0.023">
+    </testcase>
+    <testcase classname="AdminRoute Component renders loading spinner when authentication status is loading" name="AdminRoute Component renders loading spinner when authentication status is loading" time="0.003">
+    </testcase>
+    <testcase classname="AdminRoute Component does not render children when user is authenticated but not admin" name="AdminRoute Component does not render children when user is authenticated but not admin" time="0.001">
+    </testcase>
+    <testcase classname="AdminRoute Component does not render children when user is not authenticated" name="AdminRoute Component does not render children when user is not authenticated" time="0.001">
+    </testcase>
+    <testcase classname="AdminRoute Component redirects to unauthorized page when user is not admin" name="AdminRoute Component redirects to unauthorized page when user is not admin" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="LogoutButton Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.237" tests="4">
+    <testcase classname="LogoutButton Component renders correctly with default state" name="LogoutButton Component renders correctly with default state" time="0.015">
+    </testcase>
+    <testcase classname="LogoutButton Component calls logout.mutate when clicked" name="LogoutButton Component calls logout.mutate when clicked" time="0.007">
+    </testcase>
+    <testcase classname="LogoutButton Component shows loading state when logout is pending" name="LogoutButton Component shows loading state when logout is pending" time="0.003">
+    </testcase>
+    <testcase classname="LogoutButton Component has correct styling" name="LogoutButton Component has correct styling" time="0.023">
+    </testcase>
+  </testsuite>
+  <testsuite name="ConnectionStatusAnimation" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.249" tests="9">
+    <testcase classname="ConnectionStatusAnimation renders without crashing" name="ConnectionStatusAnimation renders without crashing" time="0.008">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation applies the correct class name" name="ConnectionStatusAnimation applies the correct class name" time="0.002">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation creates the animation for healthy status" name="ConnectionStatusAnimation creates the animation for healthy status" time="0.002">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation creates the animation for warning status" name="ConnectionStatusAnimation creates the animation for warning status" time="0.002">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation creates the animation for error status" name="ConnectionStatusAnimation creates the animation for error status" time="0.001">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation creates the animation for unknown status" name="ConnectionStatusAnimation creates the animation for unknown status" time="0">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation cleans up animation on unmount" name="ConnectionStatusAnimation cleans up animation on unmount" time="0.001">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation handles missing canvas context gracefully" name="ConnectionStatusAnimation handles missing canvas context gracefully" time="0.001">
+    </testcase>
+    <testcase classname="ConnectionStatusAnimation does not crash when transaction values are out of normal ranges" name="ConnectionStatusAnimation does not crash when transaction values are out of normal ranges" time="0.022">
+    </testcase>
+  </testsuite>
+  <testsuite name="TouchFeedback" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.326" tests="9">
+    <testcase classname="TouchFeedback renders children correctly" name="TouchFeedback renders children correctly" time="0.015">
+    </testcase>
+    <testcase classname="TouchFeedback applies custom className" name="TouchFeedback applies custom className" time="0.026">
+    </testcase>
+    <testcase classname="TouchFeedback calls onClick when clicked" name="TouchFeedback calls onClick when clicked" time="0.01">
+    </testcase>
+    <testcase classname="TouchFeedback does not call onClick when disabled" name="TouchFeedback does not call onClick when disabled" time="0.009">
+    </testcase>
+    <testcase classname="TouchFeedback applies disabled styles when disabled" name="TouchFeedback applies disabled styles when disabled" time="0.002">
+    </testcase>
+    <testcase classname="TouchFeedback handles touch events correctly" name="TouchFeedback handles touch events correctly" time="0.003">
+    </testcase>
+    <testcase classname="TouchFeedback handles touch cancel events correctly" name="TouchFeedback handles touch cancel events correctly" time="0.009">
+    </testcase>
+    <testcase classname="TouchFeedback adds correct accessibility attributes when clickable" name="TouchFeedback adds correct accessibility attributes when clickable" time="0.002">
+    </testcase>
+    <testcase classname="TouchFeedback does not add accessibility attributes when not clickable" name="TouchFeedback does not add accessibility attributes when not clickable" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Responsive Utilities" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.148" tests="7">
+    <testcase classname="Responsive Utilities useScreenSize should return correct screen dimensions" name="Responsive Utilities useScreenSize should return correct screen dimensions" time="0.002">
+    </testcase>
+    <testcase classname="Responsive Utilities useScreenSize should detect mobile screens correctly" name="Responsive Utilities useScreenSize should detect mobile screens correctly" time="0.001">
+    </testcase>
+    <testcase classname="Responsive Utilities useScreenSize should detect tablet screens correctly" name="Responsive Utilities useScreenSize should detect tablet screens correctly" time="0.001">
+    </testcase>
+    <testcase classname="Responsive Utilities useScreenSize should detect desktop screens correctly" name="Responsive Utilities useScreenSize should detect desktop screens correctly" time="0.002">
+    </testcase>
+    <testcase classname="Responsive Utilities getResponsiveClasses should combine default classes with responsive variants" name="Responsive Utilities getResponsiveClasses should combine default classes with responsive variants" time="0.001">
+    </testcase>
+    <testcase classname="Responsive Utilities getResponsiveClasses should work with empty responsive classes" name="Responsive Utilities getResponsiveClasses should work with empty responsive classes" time="0">
+    </testcase>
+    <testcase classname="Responsive Utilities breakpoints should have the correct breakpoint values" name="Responsive Utilities breakpoints should have the correct breakpoint values" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="LoadingSpinner Component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.149" tests="5">
+    <testcase classname="LoadingSpinner Component renders with default (medium) size" name="LoadingSpinner Component renders with default (medium) size" time="0.002">
+    </testcase>
+    <testcase classname="LoadingSpinner Component renders with small size" name="LoadingSpinner Component renders with small size" time="0.001">
+    </testcase>
+    <testcase classname="LoadingSpinner Component renders with large size" name="LoadingSpinner Component renders with large size" time="0.002">
+    </testcase>
+    <testcase classname="LoadingSpinner Component has correct border styling" name="LoadingSpinner Component has correct border styling" time="0.002">
+    </testcase>
+    <testcase classname="LoadingSpinner Component is wrapped in a flex container with centered content" name="LoadingSpinner Component is wrapped in a flex container with centered content" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Badge component" errors="0" failures="0" skipped="0" timestamp="2025-03-21T12:13:25" time="0.184" tests="8">
+    <testcase classname="Badge component renders correctly with default props" name="Badge component renders correctly with default props" time="0.005">
+    </testcase>
+    <testcase classname="Badge component renders with secondary variant" name="Badge component renders with secondary variant" time="0.003">
+    </testcase>
+    <testcase classname="Badge component renders with destructive variant" name="Badge component renders with destructive variant" time="0.001">
+    </testcase>
+    <testcase classname="Badge component renders with outline variant" name="Badge component renders with outline variant" time="0.001">
+    </testcase>
+    <testcase classname="Badge component renders with amber variant" name="Badge component renders with amber variant" time="0.001">
+    </testcase>
+    <testcase classname="Badge component applies additional className prop correctly" name="Badge component applies additional className prop correctly" time="0.004">
+    </testcase>
+    <testcase classname="Badge component passes additional props to the div element" name="Badge component passes additional props to the div element" time="0.001">
+    </testcase>
+    <testcase classname="Badge component badgeVariants function returns expected classes" name="Badge component badgeVariants function returns expected classes" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>

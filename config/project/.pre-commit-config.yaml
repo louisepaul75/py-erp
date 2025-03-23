@@ -38,7 +38,7 @@ repos:
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.7
-    hooks: []
-#       - id: bandit
-#         args: ["-c", "pyproject.toml", "--exit-zero"]  # Add --exit-zero
-#         additional_dependencies: ["bandit[toml]"]
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml", "--exit-zero"]  # Add --exit-zero
+        additional_dependencies: ["bandit[toml]"]

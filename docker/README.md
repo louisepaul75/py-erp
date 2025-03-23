@@ -59,6 +59,28 @@ docker-compose up
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
+## Included Development Tools
+
+The Docker development environment includes several tools to aid development:
+
+### Testing Tools
+- **Jest**: JavaScript testing framework
+- **Stryker Mutator (v8.7.1)**: Mutation testing framework for JavaScript
+  - Available commands:
+    - `npm run test:mutation`: Run mutation tests
+    - `npm run test:mutation:report`: View mutation test report
+
+### Viewing Mutation Test Reports
+
+The mutation test reports can be viewed by running:
+
+```bash
+# From the frontend-react directory inside the container
+npm run test:mutation:report
+```
+
+This will serve the HTML report, typically accessible at http://localhost:3000.
+
 ## Docker Files
 
 ```
@@ -92,3 +114,27 @@ If you encounter issues with Docker:
 3. Ensure PostgreSQL is accessible from the container.
 
 4. Check for port conflicts on the host machine.
+
+## Monitoring
+
+To start the monitoring services (Elasticsearch and Kibana), run:
+
+```bash
+cd docker
+docker-compose -f docker-compose.monitoring.yml up -d
+```
+
+This will start:
+- Elasticsearch on port 9200
+- Kibana on port 5601
+
+You can access the Kibana UI at http://localhost:5601 to monitor and manage your Elasticsearch instance.
+
+### Stopping Monitoring
+
+To stop the monitoring services, run:
+
+```bash
+cd docker
+docker-compose -f docker-compose.monitoring.yml down
+```
