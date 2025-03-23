@@ -20,19 +20,13 @@ if [ -n "$DB_PASSWORD" ]; then
   echo "Database password is set"
 fi
 
-# Disable Datadog APM for Elasticsearch and Kibana
-export DD_TRACE_ENABLED=false
-export DD_PROFILING_ENABLED=false
-echo "Disabled Datadog APM tracing for Elasticsearch and Kibana"
+# Create log directory
+mkdir -p /app/logs
+chmod -R 755 /app/logs
+echo "Log directories configured with correct permissions"
 
 # Apply database migrations
 python manage.py migrate --noinput
 
-# Create directories for Elasticsearch and Kibana
-mkdir -p /var/lib/elasticsearch /var/log/elasticsearch /app/logs
-chown -R elasticsearch:elasticsearch /var/lib/elasticsearch /var/log/elasticsearch
-chmod -R 755 /var/lib/elasticsearch /var/log/elasticsearch /app/logs
-echo "Elasticsearch directories configured with correct permissions"
-
-# Start Supervisor (which manages Gunicorn, Nginx, Elasticsearch, and Kibana)
+# Start Supervisor (which manages Gunicorn, Nginx, and Redis)
 exec "$@"
