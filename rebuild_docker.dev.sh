@@ -3,7 +3,7 @@
 # Initialize variables for optional parameters
 RUN_TESTS=""
 USE_CACHE="yes"
-MONITORING_MODE="separate"  # Default is separate monitoring
+MONITORING_MODE="none"  # Default is basic local logging
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
