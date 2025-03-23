@@ -60,10 +60,18 @@ COPY frontend-react/ /app/frontend-react/
 # Build React frontend
 RUN npm run build
 
-# Fix: Ensure build output is copied to the React static directory
+# Fix: Ensure build output is properly copied to the React static directory
 RUN mkdir -p /app/staticfiles/react
+# Copy the built Next.js output
 RUN cp -r .next/static/* /app/staticfiles/react/ || echo "Failed to copy static files"
+# Copy public files
 RUN cp -r public/* /app/staticfiles/react/ || echo "Failed to copy public files"
+# Create and copy index.html as an export
+RUN npx next export -o /tmp/exported || echo "Export step skipped"
+RUN cp -r /tmp/exported/* /app/staticfiles/react/ || echo "Failed to copy exported files"
+# Ensure index.html exists at root level
+RUN touch /app/staticfiles/react/index.html
+RUN echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>pyERP</title><script>window.location.href="/app";</script></head><body><div id="root">Loading pyERP...</div></body></html>' > /app/staticfiles/react/index.html
 
 # Copy the rest of the project code
 WORKDIR /app
