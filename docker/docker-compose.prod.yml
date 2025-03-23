@@ -10,6 +10,7 @@ services:
     ports:
       - "8050:8050"
       - "80:80"
+      - "443:443"  # Add explicit HTTPS port
       - "9200:9200"  # Elasticsearch
       - "5601:5601"  # Kibana
     env_file:
@@ -18,7 +19,7 @@ services:
       - DJANGO_SETTINGS_MODULE=pyerp.settings.production
       - REDIS_URL=redis://localhost:6379/0
       # External PostgreSQL connection details
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=postgres_container
       - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-pyerp_testing}
       - DB_USER=${DB_USER:-postgres}
@@ -31,6 +32,9 @@ services:
     volumes:
       - pyerp_data:/app
       - es_data:/var/lib/elasticsearch
+    networks:
+      - pgnetwork
+      - default
     healthcheck:
       test: curl --fail http://localhost:8050/admin/ || exit 1
       interval: 30s
@@ -49,3 +53,7 @@ services:
 volumes:
   pyerp_data:
   es_data:
+
+networks:
+  pgnetwork:
+    external: true
