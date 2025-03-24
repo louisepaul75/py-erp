@@ -78,6 +78,7 @@ class MockInventoryService:
             quantity=quantity,
             batch_number=batch_number or "",
             expiry_date=expiry_date,
+            created_by=user,
         )
 
         # Update box slot occupied status
@@ -123,7 +124,8 @@ class MockInventoryService:
             expiry_date=source_box_storage.expiry_date,
             defaults={
                 "quantity": 0,
-            }
+            },
+            created_by=user,
         )
         
         # Update quantities
@@ -303,6 +305,7 @@ class InventoryServiceTestCase(TestCase):
             box_slot=self.source_slot,
             quantity=5,
             batch_number="BATCH-001",
+            created_by=None,  # Set to None for tests that don't require user
         )
         
         # Update occupied status

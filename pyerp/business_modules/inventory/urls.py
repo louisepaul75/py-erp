@@ -691,37 +691,37 @@ def remove_product_from_box(request):
 
 # URL patterns for the inventory app
 urlpatterns = [
-    path("api/inventory/status/", placeholder_view, name="status"),
-    path("api/inventory/box-types/", box_types_list, name="box_types_list"),
-    path("api/inventory/boxes/", boxes_list, name="boxes_list"),
+    path("status/", placeholder_view, name="status"),
+    path("box-types/", box_types_list, name="box_types_list"),
+    path("boxes/", boxes_list, name="boxes_list"),
     path(
-        "api/inventory/storage-locations/",
+        "storage-locations/",
         storage_locations_list,
         name="storage_locations_list",
     ),
     path(
-        "api/inventory/storage-locations/<int:location_id>/products/",
+        "storage-locations/<int:location_id>/products/",
         products_by_location,
         name="products_by_location",
     ),
     path(
-        "api/inventory/products/<int:product_id>/locations/",
+        "products/<int:product_id>/locations/",
         locations_by_product,
         name="locations_by_product",
     ),
-    path("api/inventory/move-box/", move_box, name="move_box"),
+    path("move-box/", move_box, name="move_box"),
     path(
-        "api/inventory/add-product-to-box/",
+        "add-product-to-box/",
         add_product_to_box,
         name="add_product_to_box"
     ),
     path(
-        "api/inventory/move-product-between-boxes/",
+        "move-product-between-boxes/",
         move_product_between_boxes,
         name="move_product_between_boxes"
     ),
     path(
-        "api/inventory/remove-product-from-box/",
+        "remove-product-from-box/",
         remove_product_from_box,
         name="remove_product_from_box"
     ),

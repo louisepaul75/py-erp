@@ -6,6 +6,8 @@ This module tests the InventoryService class directly for proper error behavior.
 import pytest
 from unittest.mock import patch, MagicMock, PropertyMock
 from django.test import TestCase
+from unittest.mock import Mock
+from django.core.exceptions import ValidationError
 
 from pyerp.business_modules.inventory.services import InventoryService
 from pyerp.business_modules.inventory.models import (
@@ -46,31 +48,37 @@ class TestInventoryServiceErrorHandling(TestCase):
         # Create the service instance
         self.service = InventoryService()
     
-    @patch('pyerp.business_modules.inventory.services.BoxStorage.objects.filter')
+    @patch('pyerp.business_modules.inventory.services.Box.objects.filter')
     def test_move_box_with_permission_error(self, mock_filter):
         """Test that move_box correctly handles permission errors."""
-        # Set up the mock to raise a PermissionError
-        mock_filter.side_effect = PermissionError("User lacks permission")
+        # Create a mock user without the required permission
+        mock_user = Mock()
+        mock_user.has_perm.return_value = False
         
         # Test the service method raises the appropriate error
         with self.assertRaises(PermissionError):
             self.service.move_box(
                 box=self.mock_box,
                 target_storage_location=self.storage_location,
-                user=self.mock_user
+                user=mock_user
             )
     
-    @patch('pyerp.business_modules.inventory.services.BoxStorage.objects.filter')
+    @patch('pyerp.business_modules.inventory.services.Box.objects.filter')
     def test_move_box_with_value_error(self, mock_filter):
         """Test that move_box correctly handles validation errors."""
-        # Set up the mock to raise a ValueError
-        mock_filter.side_effect = ValueError("Invalid data")
+        # Test with invalid input (None values)
+        with self.assertRaises(ValidationError):
+            self.service.move_box(
+                box=None,
+                target_storage_location=self.storage_location,
+                user=self.mock_user
+            )
         
-        # Test the service method raises the appropriate error
-        with self.assertRaises(ValueError):
+        # Test with invalid target location
+        with self.assertRaises(ValidationError):
             self.service.move_box(
                 box=self.mock_box,
-                target_storage_location=self.storage_location,
+                target_storage_location=None,
                 user=self.mock_user
             )
     

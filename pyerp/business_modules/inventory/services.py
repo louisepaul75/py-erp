@@ -58,7 +58,7 @@ class InventoryService:
         return box
 
     @staticmethod
-    def add_product_to_box_slot(product, box_slot, quantity, user=None):
+    def add_product_to_box_slot(product, box_slot, quantity, user=None, batch_number=None, expiry_date=None):
         """
         Add a product to a box slot.
 
@@ -67,6 +67,8 @@ class InventoryService:
             box_slot: The box slot to add the product to
             quantity: The quantity to add
             user: The user performing the action (optional)
+            batch_number: The batch number for the product (optional)
+            expiry_date: The expiry date for the product (optional)
 
         Raises:
             PermissionError: If the user lacks permission
@@ -95,6 +97,9 @@ class InventoryService:
         box_storage, _ = BoxStorage.objects.get_or_create(
             product_storage=product_storage,
             box_slot=box_slot,
+            batch_number=batch_number,
+            expiry_date=expiry_date,
+            created_by=user,
             defaults={'quantity': 0}
         )
 

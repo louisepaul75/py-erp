@@ -104,6 +104,11 @@ class StorageLocation(SalesModel):
         blank=True,
         help_text=_("Maximum total capacity limit for this location"),
     )
+    capacity = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Maximum storage capacity in standard units"),
+    )
 
     class Meta:
         verbose_name = _("Storage Location")
@@ -487,6 +492,14 @@ class BoxStorage(SalesModel):
         related_name="box_storage_items",
         help_text=_("Box slot where the product is stored"),
     )
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.PROTECT,
+        related_name='box_storage_created',
+        help_text=_("User who created this box storage record"),
+        null=True,
+        blank=True,
+    )
     position_in_slot = models.CharField(
         max_length=20,
         blank=True,
@@ -500,6 +513,7 @@ class BoxStorage(SalesModel):
     )
     batch_number = models.CharField(
         max_length=100,
+        null=True,
         blank=True,
         help_text=_("Batch or lot number for the product"),
     )
