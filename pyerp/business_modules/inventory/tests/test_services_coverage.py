@@ -50,39 +50,35 @@ class InventoryServiceCoverageTestCase(TestCase):
         # Create storage locations
         self.source_location = StorageLocation.objects.create(
             name="Source Location",
-            location_code="SRC-LOC",
+            box_capacity=10,
+            capacity_limit=5,
             country="DE",
             city_building="Berlin HQ",
-            unit="A",
+            unit="C",
             compartment="1",
-            shelf="Top",
-            capacity=None,  # Test with no capacity limit
-            is_active=True,
+            shelf="1"
         )
         
         self.target_location = StorageLocation.objects.create(
             name="Target Location",
-            location_code="TGT-LOC",
-            country="DE",
-            city_building="Berlin HQ",
-            unit="B",
-            compartment="2",
-            shelf="Bottom",
-            capacity=5,
-            is_active=True,
-        )
-        
-        # Create storage location at max capacity
-        self.full_location = StorageLocation.objects.create(
-            name="Full Location",
-            location_code="FULL-LOC",
+            box_capacity=10,
+            capacity_limit=5,
             country="DE",
             city_building="Berlin HQ",
             unit="C",
-            compartment="3",
-            shelf="Middle",
-            capacity=0,  # No capacity available
-            is_active=True,
+            compartment="1",
+            shelf="2"
+        )
+        
+        self.full_location = StorageLocation.objects.create(
+            name="Full Location",
+            box_capacity=1,
+            capacity_limit=1,
+            country="DE",
+            city_building="Berlin HQ",
+            unit="C",
+            compartment="1",
+            shelf="3"
         )
         
         # Create box types

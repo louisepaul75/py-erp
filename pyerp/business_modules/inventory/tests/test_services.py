@@ -228,26 +228,24 @@ class InventoryServiceTestCase(TestCase):
         # Create storage locations
         self.source_location = StorageLocation.objects.create(
             name="Source Location",
-            location_code="SRC-LOC",
+            box_capacity=10,
+            capacity_limit=5,
             country="DE",
             city_building="Berlin HQ",
             unit="A",
             compartment="1",
-            shelf="Top",
-            capacity=10,
-            is_active=True,
+            shelf="1"
         )
         
         self.target_location = StorageLocation.objects.create(
             name="Target Location",
-            location_code="TGT-LOC",
+            box_capacity=10,
+            capacity_limit=5,
             country="DE",
             city_building="Berlin HQ",
-            unit="B",
-            compartment="2",
-            shelf="Bottom",
-            capacity=5,
-            is_active=True,
+            unit="A",
+            compartment="1",
+            shelf="2"
         )
         
         # Create box type

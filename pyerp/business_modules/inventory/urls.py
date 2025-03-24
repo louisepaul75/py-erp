@@ -52,18 +52,11 @@ def box_types_list(request):
             }
             for box_type in box_types
         ]
-        return Response({
-            "status": "success",
-            "message": "Box types retrieved successfully",
-            "data": data
-        })
+        return Response(data)
     except Exception as e:
         logger.error(f"Error fetching box types: {e}")
         return Response({
-            "status": "error",
-            "message": "Failed to fetch box types",
-            "code": "SERVER_ERROR",
-            "details": str(e)
+            "detail": "Failed to fetch box types"
         }, status=500)
 
 
@@ -135,25 +128,16 @@ def boxes_list(request):
                 continue
 
         return Response({
-            "status": "success",
-            "message": "Boxes retrieved successfully",
-            "data": {
-                "results": data,
-                "pagination": {
-                    "total": total_count,
-                    "page": page,
-                    "page_size": page_size,
-                    "total_pages": (total_count + page_size - 1) // page_size,
-                }
-            }
+            "results": data,
+            "total": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_count + page_size - 1) // page_size,
         })
     except Exception as e:
         logger.error(f"Error fetching boxes: {e}")
         return Response({
-            "status": "error",
-            "message": "Failed to fetch boxes",
-            "code": "SERVER_ERROR",
-            "details": str(e)
+            "detail": "Failed to fetch boxes"
         }, status=500)
 
 
@@ -198,18 +182,11 @@ def storage_locations_list(request):
                 "location_code": location_code,
             })
 
-        return Response({
-            "status": "success",
-            "message": "Storage locations retrieved successfully",
-            "data": data
-        })
+        return Response(data)
     except Exception as e:
         logger.error(f"Error fetching storage locations: {e}")
         return Response({
-            "status": "error",
-            "message": "Failed to fetch storage locations",
-            "code": "SERVER_ERROR",
-            "details": str(e)
+            "detail": "Failed to fetch storage locations"
         }, status=500)
 
 
@@ -229,11 +206,7 @@ def products_by_location(request, location_id=None):
     """
     try:
         if not location_id:
-            return Response({
-                "status": "error",
-                "message": "Storage location ID is required",
-                "code": "MISSING_PARAMETERS"
-            }, status=400)
+            return Response([], status=200)
 
         product_storage_items = ProductStorage.objects.filter(
             storage_location_id=location_id
@@ -261,50 +234,39 @@ def products_by_location(request, location_id=None):
                 result[box_code]["slots"][slot_code] = {
                     "slot_id": box_item.box_slot.id,
                     "slot_code": slot_code,
-                    "products": [],
+                    "products": []
                 }
 
             result[box_code]["slots"][slot_code]["products"].append({
-                "id": product.id,
-                "sku": product.sku,
-                "name": product.name,
+                "product_id": product.id,
+                "product_name": product.name,
                 "quantity": box_item.quantity,
-                "reservation_status": (
-                    box_item.product_storage.reservation_status
-                ),
                 "batch_number": box_item.batch_number,
-                "date_stored": box_item.date_stored,
+                "expiry_date": box_item.expiry_date.isoformat() if box_item.expiry_date else None
             })
 
-        formatted_result = []
-        for box_code, box_data in result.items():
-            box_item = {
+        # Convert the dictionary to a list for the response
+        data = [
+            {
                 "box_id": box_data["box_id"],
-                "box_code": box_code,
-                "slots": []
+                "box_code": box_data["box_code"],
+                "slots": [
+                    {
+                        "slot_id": slot_data["slot_id"],
+                        "slot_code": slot_code,
+                        "products": slot_data["products"]
+                    }
+                    for slot_code, slot_data in box_data["slots"].items()
+                ]
             }
+            for box_code, box_data in result.items()
+        ]
 
-            for slot_code, slot_data in box_data["slots"].items():
-                box_item["slots"].append({
-                    "slot_id": slot_data["slot_id"],
-                    "slot_code": slot_code,
-                    "products": slot_data["products"],
-                })
-
-            formatted_result.append(box_item)
-
-        return Response({
-            "status": "success",
-            "message": "Products retrieved successfully",
-            "data": formatted_result
-        })
+        return Response(data)
     except Exception as e:
         logger.error(f"Error fetching products by location: {e}")
         return Response({
-            "status": "error",
-            "message": "Failed to fetch products by location",
-            "code": "SERVER_ERROR",
-            "details": str(e)
+            "detail": "Failed to fetch products by location"
         }, status=500)
 
 
@@ -367,10 +329,7 @@ def locations_by_product(request, product_id=None):
     except Exception as e:
         logger.error(f"Error fetching locations by product: {e}")
         return Response({
-            "status": "error",
-            "message": "Failed to fetch locations by product",
-            "code": "SERVER_ERROR",
-            "details": str(e)
+            "detail": "Failed to fetch locations by product"
         }, status=500)
 
 
@@ -397,12 +356,9 @@ def move_box(request):
         target_location_id = request.data.get("target_location_id")
 
         if not box_id or not target_location_id:
-            error_response = {
-                "status": "error",
-                "message": "Box ID and target location ID are required",
-                "code": "MISSING_PARAMETERS",
-            }
-            return Response(error_response, status=400)
+            return Response({
+                "detail": "Box ID and target location ID are required"
+            }, status=400)
 
         try:
             box = Box.objects.get(id=box_id)
@@ -485,9 +441,7 @@ def add_product_to_box(request):
 
         if not product_id or not box_slot_id or not quantity:
             return Response({
-                "status": "error",
-                "message": "Product ID, box slot ID, and quantity are required",
-                "code": "MISSING_PARAMETERS"
+                "detail": "Product ID, box slot ID, and quantity are required"
             }, status=400)
 
         try:
@@ -571,12 +525,7 @@ def move_product_between_boxes(request):
 
         if not source_box_storage_id or not target_box_slot_id or not quantity:
             return Response({
-                "status": "error",
-                "message": (
-                    "Source box storage ID, target box slot ID, and quantity "
-                    "are required"
-                ),
-                "code": "MISSING_PARAMETERS"
+                "detail": "Source box storage ID, target box slot ID, and quantity are required"
             }, status=400)
 
         try:
@@ -675,9 +624,7 @@ def remove_product_from_box(request):
 
         if not box_storage_id or not quantity:
             return Response({
-                "status": "error",
-                "message": "Box storage ID and quantity are required",
-                "code": "MISSING_PARAMETERS"
+                "detail": "Box storage ID and quantity are required"
             }, status=400)
 
         try:
@@ -778,4 +725,5 @@ urlpatterns = [
         remove_product_from_box,
         name="remove_product_from_box"
     ),
+    path("placeholder/", placeholder_view, name="placeholder"),
 ]

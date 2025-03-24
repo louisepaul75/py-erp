@@ -1,271 +1,543 @@
----
-description: 
-globs: test_*.py,conftest.py,run_all_tests.sh
-alwaysApply: false
----
 # Testing Standards for pyERP
 
 ## Overview
-This document outlines comprehensive testing standards and practices for the pyERP system. These guidelines ensure that all components maintain high quality, reliability, and security through effective testing methodologies. By following these standards, we can catch bugs early, ensure consistent behavior across modules, and maintain a robust enterprise resource planning solution.
+This document outlines testing standards and practices for the pyERP system. It provides guidelines for writing effective tests that ensure code quality, catch bugs early, and maintain system reliability across all components.
 
 ## Project Test Structure
 
 ### Business Module Organization
-Tests in pyERP follow a modular organization that mirrors the business domain structure. Each business module contains its own dedicated test directory with specialized test files for different testing purposes. This organization facilitates focused testing, improves maintainability, and allows developers to quickly locate relevant tests.
+Tests in pyERP are organized by business module, with each module containing its own `tests` directory:
 
-The cross-module tests directory contains integration tests that verify interactions between different business modules, ensuring that components work together correctly. Core tests focus on the fundamental infrastructure of the system, while legacy API tests verify proper integration with external systems.
+```
+pyerp/
+├── business_modules/
+│   ├── inventory/
+│   │   ├── tests/
+│   │   │   ├── __init__.py
+│   │   │   ├── conftest.py               # Module-specific fixtures
+│   │   │   ├── test_services.py          # Service tests
+│   │   │   ├── test_services_mock.py     # Tests with mocked dependencies
+│   │   │   ├── test_services_coverage.py # Coverage-focused tests
+│   │   │   ├── test_error_handling.py    # Error handling tests
+│   │   │   ├── test_inventory_views.py   # View tests
+│   │   │   └── ...
+│   ├── products/
+│   │   ├── tests/
+│   │   │   └── ...
+│   ├── sales/
+│   │   ├── tests/
+│   │   │   └── ...
+│   └── tests/                            # Cross-module tests
+├── core/
+│   ├── tests/
+│   │   └── ...
+└── legacy_api/
+    ├── tests/
+    │   └── ...
+```
 
 ### Test File Organization
-Each test file should focus on a specific component or functionality aspect. Test files should begin with clear docstrings explaining their purpose and the components they test. Import statements should be organized by standard libraries first, followed by Django/framework imports, and finally project-specific imports.
+Each test file should focus on a specific component or functionality:
 
-Test classes should be descriptive and contain focused methods for specific test scenarios. Every test method requires a clear docstring explaining what is being tested and the expected outcome. The setUp and tearDown methods should establish necessary test data and properly clean resources after tests.
+```python
+# test_inventory_views.py
+
+"""
+Tests for inventory views error handling.
+Tests the view functions with mocked services.
+"""
+
+import json
+import logging
+from unittest.mock import patch, MagicMock, Mock
+from django.test import TestCase, RequestFactory
+from rest_framework import status
+from django.urls import reverse
+
+from pyerp.business_modules.inventory.urls import move_box, add_product_to_box
+from pyerp.business_modules.inventory.models import BoxSlot
+from pyerp.business_modules.products.models import VariantProduct
+
+# Configure logging for tests
+logger = logging.getLogger(__name__)
+
+class TestInventoryViewsErrorHandling(TestCase):
+    """Test class for inventory views with proper error handling."""
+
+    def setUp(self):
+        """Set up test data and mocks."""
+        self.factory = RequestFactory()
+        # Set up common test data and mocks
+        
+    def tearDown(self):
+        """Clean up after tests."""
+        # Clean up resources, patches, etc.
+        
+    def test_move_box_missing_parameters(self):
+        """Test move_box view handles missing parameters correctly."""
+        # Test implementation
+```
 
 ## Test Categories and Patterns
 
 ### 1. Service Tests
-Service tests verify business logic in service layers without mocking dependencies when practical. These tests interact with real database connections to ensure all components work correctly together. They focus on validating the business rules, calculations, validations, and other core functionality.
+Test business logic in service layers without mocking dependencies when practical.
 
-Service tests should create all necessary data during setup, execute service methods with appropriate parameters, and validate both return values and database state changes. They should cover various scenarios including edge cases and ensure business rules are enforced correctly.
+```python
+# test_services.py
+
+from django.test import TestCase
+from decimal import Decimal
+
+from pyerp.business_modules.inventory.services import InventoryService
+from pyerp.business_modules.inventory.models import Box, StorageLocation
+
+class TestInventoryService(TestCase):
+    """Test the inventory service with real database access."""
+    
+    def setUp(self):
+        """Set up test data."""
+        # Create required test data
+        self.warehouse = Warehouse.objects.create(name="Test Warehouse")
+        self.box_type = BoxType.objects.create(
+            name="Test Box Type",
+            length=10, width=10, height=10,
+            weight_capacity=100,
+            slot_count=4
+        )
+        self.box = Box.objects.create(
+            code="BOX001",
+            box_type=self.box_type,
+            warehouse=self.warehouse
+        )
+        self.location = StorageLocation.objects.create(
+            name="Test Location",
+            warehouse=self.warehouse
+        )
+        
+        # Create service instance
+        self.service = InventoryService()
+    
+    def test_move_box(self):
+        """Test moving a box to a new location."""
+        # Execute the service method
+        result = self.service.move_box(self.box, self.location)
+        
+        # Assert expected outcomes
+        self.assertTrue(result)
+        # Refresh box from database
+        self.box.refresh_from_db()
+        self.assertEqual(self.box.location, self.location)
+```
 
 ### 2. Mocked Service Tests
-Mock-based service tests isolate specific components by replacing dependencies with controlled test doubles. This approach allows testing a service's internal logic without relying on external systems or databases, resulting in faster test execution and more precise failure diagnosis.
+Test services with mocked dependencies to isolate functionality.
 
-These tests should focus on verifying internal service behavior like correct method calls, parameter validation, and proper error propagation. Mock configuration should be established in setUp methods or custom fixtures, with assertions validating both the return values and the expected interactions with dependencies.
+```python
+# test_services_mock.py
+
+from django.test import TestCase
+from unittest.mock import patch, MagicMock
+
+from pyerp.business_modules.inventory.services import InventoryService
+
+class TestInventoryServiceMocked(TestCase):
+    """Test inventory service with mocked dependencies."""
+    
+    def setUp(self):
+        """Set up mocks and service."""
+        self.service = InventoryService()
+    
+    @patch('pyerp.business_modules.inventory.services.Box')
+    @patch('pyerp.business_modules.inventory.services.StorageLocation')
+    def test_move_box_calls_save(self, MockLocation, MockBox):
+        """Test that move_box calls save on the box."""
+        # Setup mocks
+        mock_box = MagicMock()
+        mock_location = MagicMock()
+        
+        # Call service method
+        self.service.move_box(mock_box, mock_location)
+        
+        # Assert box was updated and saved
+        self.assertEqual(mock_box.location, mock_location)
+        mock_box.save.assert_called_once()
+```
 
 ### 3. View Tests
-View tests validate API endpoints and view functions, ensuring they handle requests correctly, apply appropriate permissions, and return proper responses. These tests use Django's testing framework and REST framework's APIClient to simulate HTTP requests and verify responses.
+Test API endpoints and view functions.
 
-View tests should create necessary test data, authenticate if required, execute API calls with appropriate parameters, and validate both the response status code and content. They should verify that database state changes occur correctly and that proper error responses are generated for invalid inputs.
+```python
+# test_inventory_views.py
+
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework import status
+import json
+
+from pyerp.business_modules.inventory.models import Box, StorageLocation
+
+class TestInventoryViews(TestCase):
+    """Test inventory API views."""
+    
+    def setUp(self):
+        """Set up test client and data."""
+        self.client = APIClient()
+        # Setup authentication if needed
+        # self.client.force_authenticate(user=user)
+        
+        # Create test data
+        self.box = Box.objects.create(code="BOX001")
+        self.location = StorageLocation.objects.create(name="Test Location")
+    
+    def test_move_box_api(self):
+        """Test the move box API endpoint."""
+        url = reverse('inventory:move_box')
+        data = {
+            'box_id': self.box.id,
+            'target_location_id': self.location.id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = json.loads(response.content)
+        self.assertTrue(response_data['success'])
+        
+        # Verify box was moved
+        self.box.refresh_from_db()
+        self.assertEqual(self.box.location, self.location)
+```
 
 ### 4. Error Handling Tests
-Error handling tests specifically target exceptional conditions to verify that errors are properly caught, logged, and reported. They ensure that appropriate error responses are returned rather than exposing internal error details or causing system failures.
+Test that errors are properly handled and appropriate responses returned.
 
-These tests should verify that each potential error condition is properly handled, including missing parameters, invalid inputs, database constraints, and service exceptions. They should confirm that proper HTTP status codes are returned, error messages are understandable, and sensitive details are not exposed.
+```python
+# test_error_handling.py
+
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework import status
+from unittest.mock import patch
+
+class TestInventoryViewsErrorHandling(TestCase):
+    """Test error handling in inventory views."""
+    
+    def setUp(self):
+        """Set up test client."""
+        self.client = APIClient()
+    
+    def test_move_box_missing_parameters(self):
+        """Test handling of missing parameters."""
+        url = reverse('inventory:move_box')
+        data = {'target_location_id': 1}  # Missing box_id
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Box ID and target location ID are required', 
+                     response.data['detail'])
+    
+    @patch('pyerp.business_modules.inventory.services.InventoryService.move_box')
+    def test_move_box_service_error(self, mock_move_box):
+        """Test handling of service exceptions."""
+        mock_move_box.side_effect = ValueError("Box capacity exceeded")
+        
+        url = reverse('inventory:move_box')
+        data = {'box_id': 1, 'target_location_id': 1}
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Box capacity exceeded', response.data['detail'])
+```
 
 ### 5. Model Tests
-Model tests verify that Django models function correctly, including field validations, constraints, calculated properties, and model methods. They ensure data integrity at the database level and validate business rules implemented in model methods.
+Test Django models and their methods.
 
-These tests should create instances with various attribute combinations, verify that validation constraints are enforced, test computed properties, and confirm that model methods produce expected results. They should also verify that signals and hooks work correctly during model lifecycle events.
+```python
+# test_models.py
+
+from django.test import TestCase
+from pyerp.business_modules.inventory.models import Box, BoxSlot, BoxType
+
+class TestBoxModel(TestCase):
+    """Test Box model functionality."""
+    
+    def setUp(self):
+        """Set up test data."""
+        self.box_type = BoxType.objects.create(
+            name="Test Box Type",
+            slot_count=4
+        )
+        self.box = Box.objects.create(
+            code="BOX001",
+            box_type=self.box_type
+        )
+    
+    def test_box_create_slots(self):
+        """Test that slots are automatically created for a box."""
+        # Method to create slots should be called on box creation
+        self.assertEqual(BoxSlot.objects.filter(box=self.box).count(), 4)
+        
+    def test_box_available_slots(self):
+        """Test the available_slots property."""
+        # Initially all slots should be available
+        self.assertEqual(self.box.available_slots, 4)
+        
+        # Mark one slot as occupied
+        slot = BoxSlot.objects.filter(box=self.box).first()
+        slot.is_occupied = True
+        slot.save()
+        
+        # Now only 3 slots should be available
+        self.assertEqual(self.box.available_slots, 3)
+```
 
 ### 6. Legacy API Tests
-Legacy API tests validate integration with external systems, particularly the legacy 4D API. These tests verify that the API client correctly handles authentication, request formatting, response parsing, error handling, and connection management.
+Test integration with legacy 4D API.
 
-Since external systems should not be directly accessed during testing, these tests heavily rely on mocking to simulate API responses. They should verify correct request formation, authentication flows, response handling, and error recovery mechanisms.
+```python
+# test_legacy_api.py
+
+import pytest
+from unittest.mock import patch, MagicMock
+from django.test import TestCase
+
+from pyerp.legacy_api.client import LegacyAPIClient
+from pyerp.legacy_api.exceptions import AuthenticationError
+
+class TestLegacyAPIClient(TestCase):
+    """Test the legacy API client."""
+    
+    def setUp(self):
+        """Set up test client."""
+        self.client = LegacyAPIClient(environment='test')
+    
+    @patch('pyerp.legacy_api.client.requests.post')
+    def test_authentication_success(self, mock_post):
+        """Test successful authentication."""
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'status': 'success', 
+            'session': 'test_session_id'
+        }
+        mock_post.return_value = mock_response
+        
+        # Perform authentication
+        self.client.authenticate()
+        
+        # Assert authentication was successful
+        self.assertTrue(self.client.is_authenticated)
+        self.assertEqual(self.client.session_id, 'test_session_id')
+```
 
 ## Testing Best Practices
 
 ### 1. Use Fixtures for Common Test Data
-Pytest fixtures provide a powerful mechanism for reusable test setup. Fixtures should be used for common test data like standard model instances, authentication, and environment configuration. They improve test maintainability by centralizing setup logic and reducing duplication.
+Use pytest fixtures for reusable test setup:
 
-Module-specific fixtures should be defined in each module's conftest.py file, while global fixtures belong in the root conftest.py. Fixtures should be focused, properly documented, and designed to be combinable to support various test scenarios.
+```python
+# conftest.py
+
+import pytest
+from pyerp.business_modules.inventory.models import Box, BoxType, StorageLocation
+
+@pytest.fixture
+def box_type():
+    """Create a box type for testing."""
+    return BoxType.objects.create(
+        name="Test Box Type",
+        length=10, width=10, height=10,
+        weight_capacity=100,
+        slot_count=4
+    )
+
+@pytest.fixture
+def box(box_type):
+    """Create a box for testing."""
+    return Box.objects.create(
+        code="BOX001",
+        box_type=box_type
+    )
+
+@pytest.fixture
+def storage_location():
+    """Create a storage location for testing."""
+    return StorageLocation.objects.create(
+        name="Test Location"
+    )
+```
 
 ### 2. Mock External Dependencies
-External dependencies including APIs, services, and resource-intensive components should be consistently mocked during testing. This prevents tests from being affected by external system availability and ensures consistent test behavior.
+Use unittest.mock for external services:
 
-Mocks should be configured to return realistic data that closely resembles production behavior. Common mocking patterns should be standardized across the codebase, preferably in shared helper modules, to ensure consistency and reduce duplication.
+```python
+@patch('pyerp.legacy_api.client.requests.get')
+def test_api_request(self, mock_get):
+    # Setup mock response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'status': 'success', 'data': [...]}
+    mock_get.return_value = mock_response
+
+    # Test API function
+    result = legacy_api_function()
+
+    # Assertions
+    self.assertEqual(result, expected_result)
+```
 
 ### 3. Test Both Happy Path and Error Cases
-Comprehensive testing requires covering both successful operations and error conditions. Every feature should have tests that verify normal operation as well as how it handles various error conditions, invalid inputs, and edge cases.
+Ensure both successful operations and error handling are tested:
 
-Error case tests should verify that appropriate error messages are returned, proper status codes are used, and that the system remains in a consistent state after error conditions. They should also ensure that errors are properly logged for diagnostic purposes.
+```python
+def test_move_box_success(self):
+    """Test successful box move."""
+    # Test implementation for success case
+    
+def test_move_box_invalid_location(self):
+    """Test move box with invalid location."""
+    # Test implementation for error case
+    
+def test_move_box_box_not_found(self):
+    """Test move box with non-existent box."""
+    # Test implementation for error case
+```
 
 ### 4. Use Proper Test Isolation
-Tests must be independent and not affect each other's execution. Each test should set up its own data, execute operations in isolation, and clean up afterward. Global state modification should be avoided, and if necessary, properly reset between tests.
+Ensure tests don't affect each other:
 
-Database transactions should be properly managed to prevent test data from leaking between tests. Time-dependent tests should use controlled time mocking rather than depending on real system time. Resource cleanup should occur reliably even when tests fail.
+```python
+def test_independent_function_1(self):
+    """This test should not affect other tests."""
+    # Use setUp and tearDown to prepare and clean environment
+    # Avoid modifying global state
+    
+def test_independent_function_2(self):
+    """This test should run regardless of other test results."""
+    # Create test-specific data instead of relying on shared data
+```
 
 ### 5. Use Descriptive Test Names
-Test method names should clearly describe what they're testing and the expected outcome. Follow the pattern of test_[function/method]_[scenario]_[expected_result] to provide immediate understanding of test purpose.
+Follow a consistent naming pattern:
 
-Names should be specific enough to identify the exact scenario being tested while remaining reasonably concise. When test failures occur, the name alone should provide significant insight into what functionality has broken.
+- test_[function/method]_[scenario]_[expected_result]
+- Examples:
+  - `test_move_box_invalid_location_returns_error`
+  - `test_calculate_stock_value_empty_warehouse_returns_zero`
 
 ## Test Coverage
 
 ### 1. Coverage Goals
-High test coverage is essential for critical system components. We aim for at least 80% code coverage for all business modules, with critical paths reaching 100% coverage. Core services, error handling, and security-sensitive components require complete coverage.
-
-Coverage goals should be balanced with practicality. Focus on thorough testing of business-critical paths first, then expand coverage to less critical areas. Complex decision logic and error handling deserve special attention to ensure all branches are tested.
+- Aim for at least 80% code coverage for critical modules
+- 100% coverage for core services and error handling
+- Focus on business-critical paths first
 
 ### 2. Running Coverage Reports
-Coverage tools like pytest-cov provide detailed insights into which code paths are executed during tests. Regular coverage analysis helps identify undertested areas and guides further test development. 
+```bash
+# Install coverage tools
+pip install pytest-cov
 
-Coverage reports should be generated in multiple formats including console output for quick reference and HTML reports for detailed analysis. These reports should be reviewed regularly as part of the development process to ensure testing remains comprehensive as code evolves.
+# Run tests with coverage
+pytest --cov=pyerp
+
+# Generate HTML report
+pytest --cov=pyerp --cov-report=html
+```
 
 ### 3. Continuous Integration
-Automated testing in CI/CD pipelines ensures consistent validation across all changes. The pipeline should run the complete test suite on every commit, with failures preventing code from progressing to production.
-
-Coverage trends should be tracked over time to prevent deterioration. The CI system should enforce minimum coverage thresholds for critical modules and alert teams when coverage decreases significantly. Test results should be easily accessible to all team members.
+- Configure tests to run in CI/CD pipeline
+- Fail pipeline on test failures
+- Track coverage trends over time
 
 ## Testing Environment
 
 ### 1. Test Database
-Tests should use an isolated database environment that is separate from development and production. For most tests, an in-memory SQLite database provides the fastest execution while maintaining compatibility with Django's ORM.
-
-The test database should be created fresh for each test run and destroyed afterward to prevent test data persistence issues. Database migrations should be applied to ensure the schema matches production, but with performance optimizations when possible.
+- Tests use a separate test database
+- Database is created and destroyed for each test run
+- Use migrations to ensure schema matches production
 
 ### 2. Environment Variables
-Environmental configuration for testing should override external service endpoints, authentication credentials, and other production settings. These overrides should redirect external connections to local mocks or test instances.
-
-Configuration should be implemented in a way that prevents accidental connections to production systems during testing. Test-specific settings should be clearly marked and isolated from production configuration to prevent confusion.
+```python
+# Settings for test environment
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+    
+    # Override external service URLs for testing
+    LEGACY_API_URL = 'http://mock-api.example.com'
+```
 
 ### 3. Test Logging
-Logging during tests should be configured to capture diagnostic information without overwhelming output. Log messages should be directed to appropriate handlers based on severity, with critical errors visible in test output and debug messages available for troubleshooting.
+Configure appropriate logging for tests:
 
-Log formatting should include timestamps, log levels, and source information to facilitate problem diagnosis. In CI environments, logs should be preserved for failed tests to aid in diagnosing intermittent issues.
+```python
+# Configure test logging
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+logger.addHandler(handler)
+```
 
 ## Running Tests
 
 ### 1. Running with Django Test Command
-Django's test command provides a familiar interface for running tests in the context of a Django project. It handles database setup/teardown and integrates with Django's settings management.
-
-Developers should become familiar with filtering options to run specific test subsets during development. These commands can target specific modules, classes, or methods to enable focused testing during feature development.
-
-### 2. Running with pytest
-Pytest offers advanced testing features including better fixture support, more detailed failure reports, and enhanced test discovery. It integrates well with Django tests while providing additional capabilities.
-
-Parameter-based test selection allows running focused test subsets matching particular patterns or markers. Verbose output options provide detailed information about test execution, while integrations with debuggers and other tools enhance the testing workflow.
-
-### 3. Test Debugging
-When tests fail, effective debugging tools help quickly identify root causes. Interactive debugging with pdb allows examining the exact state at failure points, while detailed traceback options provide context for failures.
-
-Print output can be enabled to see runtime values during test execution. Local variable inspection helps understand the test environment at failure points. These debugging approaches should be used systematically to efficiently diagnose test failures.
-
-## JavaScript Testing
-
-### 1. Jest Testing Framework
-Jest provides a comprehensive testing solution for JavaScript code, including both browser and Node.js environments. Its integrated approach combines test running, assertion library, mocking capabilities, and coverage reporting in a single framework.
-
-Jest's snapshot testing features are particularly valuable for UI components, allowing detection of unexpected changes in rendered output. Its watch mode supports rapid development cycles by automatically re-running relevant tests when files change.
-
-### 2. Component Testing
-React components require specialized testing approaches that focus on user interactions rather than implementation details. React Testing Library promotes testing components as users would interact with them, focusing on accessibility and visible behavior.
-
-Component tests should verify proper rendering, state management, event handling, and asynchronous operations. They should simulate real user interactions like clicks and form submissions rather than directly manipulating component internals.
-
-### 3. Jest Configuration
-Jest configuration should be tailored to the project's specific needs, including proper module resolution, file transformations, and environment setup. The jest.config.js file centralizes these settings and ensures consistent test behavior.
-
-Configuration should establish appropriate coverage thresholds, customize reporters, and define mock behaviors for external dependencies. Test setup files should prepare the environment with necessary globals and utilities.
-
-### 4. Running Jest Tests
-Standard Jest commands should be documented and used consistently across the team. Developers should be familiar with running complete test suites, specific test files, or filtered test sets based on patterns.
-
-Watch mode should be used during active development to get immediate feedback on changes. Coverage reporting should be integrated into the workflow to ensure JavaScript code maintains high test coverage.
-
-### 5. Integration with Django
-Projects combining Django backend with JavaScript frontend require specific integration strategies. Test organization should mirror the frontend architecture while maintaining clear separation from backend tests.
-
-Combined coverage reporting provides a complete view of project test status across both backend and frontend components. The test environment should be configured to simulate the production integration between Django and JavaScript components.
-
-## Mutation Testing
-
-### 1. Python Mutation Testing with Mutmut
-Mutation testing introduces small changes (mutations) to the codebase and verifies that tests detect these changes. Mutmut automates this process for Python code, helping identify weaknesses in test assertions and coverage.
-
-Mutations include changing operators, modifying boolean conditions, altering return values, and removing code. Tests should fail when relevant code is mutated, indicating that they effectively verify the expected behavior.
-
-### 2. JavaScript Mutation Testing with Stryker
-Stryker Mutator provides similar capabilities for JavaScript code, with support for various frameworks including Jest and React Testing Library. It offers comprehensive reports that highlight surviving mutations requiring additional test coverage.
-
-Mutation testing should be applied to critical business logic first, as it requires significant computational resources. Results should guide the development of more robust test assertions rather than simply increasing redundant test coverage.
-
-### 3. Interpreting Mutation Results
-Mutation testing produces a mutation score representing the percentage of mutations detected by tests. Higher scores indicate more effective test suites that thoroughly verify code behavior rather than simply executing code paths.
-
-Analysis should focus on patterns in surviving mutations, which often reveal assumptions in the code not being verified by tests. Correlation between traditional coverage metrics and mutation scores provides insight into test quality beyond simple execution.
-
-### 4. Mutation Testing Best Practices
-Effective mutation testing requires strategic application to maximize value while managing computational costs. Starting with small, critical modules allows focused improvement of test suites for the most important code.
-
-Focus on business logic that directly impacts system correctness rather than infrastructural or UI code. Integrate mutation testing in CI/CD pipelines on a scheduled basis to monitor test quality over time. Regular review of surviving mutations guides continuous test improvement.
-
-### 5. Integrating with CI/CD
-Mutation testing in CI/CD pipelines requires careful implementation to balance thoroughness with performance. Scheduled execution rather than running on every commit prevents excessive build times while still monitoring test quality.
-
-Reports should be automatically generated and archived to track trends over time. Score thresholds can be established to alert teams when test effectiveness decreases. Performance optimization techniques like test selection and parallelization maximize efficiency.
-
-## Security Testing
-
-### 1. Python Security Testing with Bandit
-Bandit performs static analysis of Python code to identify common security vulnerabilities. It detects issues like injection vulnerabilities, insecure cryptography, and hardcoded credentials through pattern matching and AST analysis.
-
-Configuration should be tailored to the project's specific security requirements, with custom rules for organization-specific concerns. Severity levels help prioritize remediation efforts based on potential impact and exploitation likelihood.
-
-### 2. JavaScript Security Testing with ESLint Security Plugin
-ESLint security plugins provide similar capabilities for JavaScript code, detecting vulnerabilities in frontend and Node.js components. Rules cover issues like XSS vulnerabilities, unsafe resource loading, and injection risks.
-
-Custom rule configuration allows adapting security checks to the specific frameworks and patterns used in the project. Integration with IDEs provides immediate feedback during development, while automated scanning ensures comprehensive coverage.
-
-### 3. SAST Integration in CI/CD
-Security Static Application Testing should be fully integrated into CI/CD workflows to ensure consistent application. Automated scans on every commit provide immediate feedback on potential security issues introduced by changes.
-
-Report generation should include details needed for remediation while being accessible to developers. Issue prioritization based on severity guides efficient resolution efforts. Blocking criteria for critical vulnerabilities prevents introducing serious security flaws.
-
-### 4. Security Testing Best Practices
-Effective security testing combines automated checks with manual review and specialized testing approaches. Automated checks should run continuously to catch common issues, while periodic manual reviews address more complex vulnerabilities.
-
-Define a security baseline with minimum standards for all code. Prioritize fixing critical issues immediately, with defined timeframes for addressing less severe findings. Regularly scan dependencies for published vulnerabilities and update as needed.
-
-### 5. Vulnerability Management
-When security issues are identified, a structured process ensures proper handling and resolution. Issue tracking should record all vulnerabilities with severity assessments and remediation plans.
-
-Risk assessment helps prioritize fixes based on potential impact and exploitation likelihood. Remediation plans should include clear steps and verification testing to ensure issues are fully resolved. Documentation of security findings and resolutions creates an institutional knowledge base.
-
-## Testing Entrypoint
-
-### Main Testing Script
-PyERP provides a centralized testing entrypoint through the `run_all_tests.sh` script. This script serves as the primary interface for executing various types of tests across the system, offering flexibility through command-line options while maintaining consistency in test execution.
-
-### Usage and Options
-The script supports multiple testing modes and configurations:
-
-- **Test Types**: Run specific categories of tests using the `-t/--type` option:
-  - `all`: Execute the complete test suite
-  - `unit`: Run only unit tests
-  - `backend`: Run backend-specific tests
-  - `ui`: Run UI and frontend tests
-  - Other specialized test categories as needed
-
-- **Coverage Analysis**: Control coverage reporting:
-  - Coverage is enabled by default
-  - `-n/--no-coverage`: Disable coverage reporting
-  - `-c/--coverage`: Explicitly enable coverage (default behavior)
-
-- **Advanced Testing Methods**:
-  - `-m/--mutation`: Enable mutation testing to identify weaknesses in test assertions
-  - `-f/--fuzz`: Run fuzz testing to detect vulnerabilities with random inputs
-  - `-s/--security`: Execute security-focused tests using tools like Bandit
-
-- **Output Control**:
-  - `-v/--verbose`: Increase output verbosity for detailed test information
-  - `-q/--quiet`: Reduce output to essential information only
-
-### Example Usage Patterns
-The testing script accommodates various testing scenarios:
-
 ```bash
-# Run all tests with default options
-./run_all_tests.sh
+# Run all tests
+python manage.py test
 
-# Run unit tests with mutation testing
-./run_all_tests.sh -t unit -m
+# Run tests for a specific app
+python manage.py test pyerp.business_modules.inventory
 
-# Run backend tests with detailed output
-./run_all_tests.sh -t backend -v
+# Run a specific test class
+python manage.py test pyerp.business_modules.inventory.tests.test_services.TestInventoryService
 
-# Run security-focused tests only
-./run_all_tests.sh -s
-
-# Run complete test suite with all validation types
-./run_all_tests.sh -t all -m -f -s
+# Run a specific test method
+python manage.py test pyerp.business_modules.inventory.tests.test_services.TestInventoryService.test_move_box
 ```
 
-### Integration with CI/CD
-The testing entrypoint is designed to work seamlessly in both local development environments and CI/CD pipelines. In CI environments, the script can be invoked with appropriate options to execute relevant test suites based on the pipeline stage and branch context.
+### 2. Running with pytest
+```bash
+# Run all tests
+pytest
 
-This standardized approach to test execution ensures consistency between local and CI environments, reducing the "works on my machine" problem and providing reliable validation across all stages of development.
+# Run tests in a specific directory
+pytest pyerp/business_modules/inventory/tests/
 
-### Extending the Test Entrypoint
-When adding new test categories or testing tools to the system, extend the main testing script rather than creating separate execution paths. This maintains the single entrypoint pattern and ensures all testing capabilities remain accessible through the consistent interface.
+# Run a specific test file
+pytest pyerp/business_modules/inventory/tests/test_services.py
 
-New test types should be added to the help documentation and implemented in the underlying test execution scripts that are called by the main entrypoint.
+# Run tests matching a pattern
+pytest -k "move_box"
+
+# Run tests with more verbose output
+pytest -v
+```
+
+### 3. Test Debugging
+Debug failing tests:
+
+```bash
+# Run tests with pdb enabled
+pytest --pdb
+
+# Run tests with print output enabled
+pytest -s
+
+# Run tests with detailed tracebacks
+pytest --showlocals
+``` 
