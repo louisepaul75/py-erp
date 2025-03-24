@@ -3,7 +3,7 @@
 import React from "react";
 import { SearchResult } from "@/hooks/useGlobalSearch";
 
-interface SearchResultsDropdownProps {
+interface SafeSearchResultsDropdownProps {
   results: SearchResult[];
   isLoading: boolean;
   open: boolean;
@@ -12,6 +12,6 @@ interface SearchResultsDropdownProps {
 }
 
 // Completely disabled version
-export function SearchResultsDropdown(props: SearchResultsDropdownProps) {
+export function SafeSearchResultsDropdown(props: SafeSearchResultsDropdownProps) {
   return null;
-}
+} 

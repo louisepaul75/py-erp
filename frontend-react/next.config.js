@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: process.env.NODE_ENV === 'development',
   experimental: {
     // appDir is now the default in Next.js 14+
   },
@@ -20,6 +20,11 @@ const nextConfig = {
   // Don't attempt to optimize pages that aren't being correctly detected
   optimizeFonts: true,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  // Disable minification for easier debugging
+  swcMinify: false,
+  productionBrowserSourceMaps: true,
+  // Increase timeout for builds
+  staticPageGenerationTimeout: 180,
   async rewrites() {
     return [
       {
