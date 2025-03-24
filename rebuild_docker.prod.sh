@@ -54,6 +54,7 @@ docker run -d \
     -p 3000:3000 \
     -p 5432:5432 \
     -p 6379:6379 \
+    -p 8050:8050 \
     --env-file $ENV_FILE \
     -e NODE_ENV=development \
     -e NEXT_TELEMETRY_DISABLED=1 \

@@ -17,11 +17,18 @@ const nextConfig = {
   poweredByHeader: false,
   // Configure the build to handle dynamic routes properly
   distDir: '.next',
-  // Don't attempt to optimize pages that aren't being correctly detected
+  // Enable optimizations
   optimizeFonts: true,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-  // Disable minification for easier debugging
-  swcMinify: false,
+  // Enable SWC minification and configure compiler
+  swcMinify: true,
+  compiler: {
+    // Remove console.logs in production
+    removeConsole: process.env.NODE_ENV === 'production',
+    // Configure SWC features
+    styledComponents: true,
+    emotion: true,
+  },
   productionBrowserSourceMaps: true,
   // Increase timeout for builds
   staticPageGenerationTimeout: 180,

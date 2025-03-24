@@ -49,10 +49,20 @@ RUN pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 
 # Copy frontend files first and build React
 COPY frontend-react/package*.json /app/frontend-react/
+
+# Create .npmrc to reduce warnings and optimize installation
+RUN echo "legacy-peer-deps=true\nloglevel=error" > /app/frontend-react/.npmrc
+
 WORKDIR /app/frontend-react
-RUN npm install --legacy-peer-deps
+
+# Clean install dependencies using npm ci for faster, more reliable builds
+RUN npm ci --prefer-offline --no-audit --no-optional
+
 # Install Stryker packages for mutation testing
-RUN npm install @stryker-mutator/core@8.7.1 @stryker-mutator/jest-runner@8.7.1 serve --save-dev
+RUN npm install --save-dev \
+    @stryker-mutator/core@8.7.1 \
+    @stryker-mutator/jest-runner@8.7.1 \
+    serve
 
 # Copy the rest of the frontend code
 COPY frontend-react/ /app/frontend-react/
