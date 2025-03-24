@@ -9,8 +9,29 @@ from pyerp.sync.loaders.base import BaseLoader, LoadResult
 from pyerp.sync.loaders.django_model import DjangoModelLoader
 
 
+@pytest.mark.unit
 class TestLoadResult:
     """Tests for the LoadResult class."""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def test_init(self):
         """Test initialization of LoadResult."""
@@ -20,6 +41,9 @@ class TestLoadResult:
         assert result.skipped == 0
         assert result.errors == 0
         assert result.error_details == []
+
+
+
 
     def test_add_error(self):
         """Test adding an error to LoadResult."""
@@ -35,6 +59,9 @@ class TestLoadResult:
         assert result.error_details[0]["record"] == record
         assert result.error_details[0]["error"] == str(error)
         assert result.error_details[0]["context"] == context
+
+
+
 
     def test_to_dict(self):
         """Test converting LoadResult to dictionary."""
@@ -67,8 +94,12 @@ class MockModel(models.Model):
         managed = False
 
 
+@pytest.mark.unit
 class TestDjangoModelLoader:
     """Tests for the DjangoModelLoader."""
+
+
+
 
     def test_get_required_config_fields(self):
         """Test required config fields method."""
@@ -85,6 +116,8 @@ class TestDjangoModelLoader:
         assert "unique_field" in required_fields
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
+
+
     def test_get_model_class(self, mock_get_model):
         """Test getting model class from configuration."""
         # Setup the mock
@@ -103,6 +136,8 @@ class TestDjangoModelLoader:
         assert model_class == MockModel
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
+
+
     def test_get_model_class_error(self, mock_get_model):
         """Test error handling when getting model class."""
         # Setup the mock to raise an exception
@@ -120,6 +155,8 @@ class TestDjangoModelLoader:
         assert "Failed to get model" in str(exc_info.value)
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
+
+
     def test_prepare_record(self, mock_get_model):
         """Test preparing a record for loading."""
         # Setup mock
@@ -164,6 +201,8 @@ class TestDjangoModelLoader:
         assert "non_existent_field" not in prepared_record  # Should be removed as it doesn't exist
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
+
+
     def test_prepare_record_missing_unique_field(self, mock_get_model):
         """Test error when unique field is missing."""
         mock_get_model.return_value = MockModel
@@ -185,6 +224,8 @@ class TestDjangoModelLoader:
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
+
+
     def test_load_record_create(self, mock_atomic, mock_get_model):
         """Test creating a new record."""
         # Setup mocks
@@ -224,6 +265,8 @@ class TestDjangoModelLoader:
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
+
+
     def test_load_record_update(self, mock_atomic, mock_get_model):
         """Test updating an existing record."""
         # Setup mocks
@@ -263,6 +306,8 @@ class TestDjangoModelLoader:
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
+
+
     def test_load_record_skip_existing(self, mock_atomic, mock_get_model):
         """Test skipping an existing record when update_existing is False."""
         # Setup mocks
@@ -294,6 +339,8 @@ class TestDjangoModelLoader:
 
     @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
+
+
     def test_load_record_validation_error(self, mock_atomic, mock_get_model):
         """Test handling validation errors."""
         # Setup mocks

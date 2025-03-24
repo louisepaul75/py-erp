@@ -47,36 +47,25 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements/requirements.dev.txt
 
+      # Set up Node.js for UI tests
       - name: Set up Node.js
-        if: matrix.test-group == 'ui'
+        if: matrix.test-group == 'ui' || matrix.test-group == 'all'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: 'frontend-react/package-lock.json'
 
-      - name: Install React dependencies
-        if: matrix.test-group == 'ui'
+      # Install Node.js dependencies for UI tests
+      - name: Install Node.js dependencies
+        if: matrix.test-group == 'ui' || matrix.test-group == 'all'
         working-directory: frontend-react
         run: npm ci
-
-      - name: Run React UI tests
-        if: matrix.test-group == 'ui'
-        working-directory: frontend-react
-        run: |
-          # Run Jest tests and generate coverage
-          npm test -- --coverage --coverageReporters=json --coverageReporters=lcov --coverageReporters=text --coverageReporters=cobertura
-          # Create coverage directory in root for artifact upload
-          mkdir -p ../coverage
-          # Copy test results to expected location
-          cp ./jest-junit.xml ../coverage/ui-junit.xml
-          # Copy coverage to expected location
-          cp ./coverage/cobertura-coverage.xml ../coverage/ui-coverage.xml
 
       - name: Run ${{ matrix.test-group }} tests
         if: matrix.test-group != 'ui'
@@ -86,15 +75,11 @@ jobs:
           TEST_GROUP: ${{ matrix.test-group }}
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          # Create coverage directory
-          mkdir -p coverage
+          # Make sure test script is executable
+          chmod +x run_all_tests.sh
           
-          # Run tests for specific group from tests directory with coverage
-          cd tests && python -m pytest ${{ matrix.test-group }}/ \
-            --cov=../pyerp \
-            --cov-report=xml:../coverage/${{ matrix.test-group }}-coverage.xml \
-            --junitxml=../coverage/${{ matrix.test-group }}-junit.xml \
-            -o junit_family=legacy
+          # Run tests using the main wrapper script
+          ./run_all_tests.sh --type ${{ matrix.test-group }}
 
       - name: Store test results
         if: always()

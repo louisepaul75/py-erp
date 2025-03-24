@@ -1,6 +1,22 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 
+// Add polyfills for TextEncoder and TextDecoder
+// This is needed for JSDOM in some tests
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
+// Initialize jest-fuzz if needed
+try {
+  const jestFuzz = require('jest-fuzz');
+  // Add any additional jest-fuzz configuration here if needed
+} catch (error: any) {
+  console.warn('jest-fuzz not available:', error.message);
+}
+
 // Mock Next.js router
 jest.mock('next/router', () => ({
   useRouter: () => ({

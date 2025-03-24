@@ -1,3 +1,4 @@
+import pytest
 from unittest import mock
 from django.test import TestCase
 
@@ -41,6 +42,7 @@ class MockLoader(BaseLoader):
         return None
 
 
+@pytest.mark.unit
 class TestPipelineFactory(TestCase):
     """Tests for the PipelineFactory class."""
 
@@ -75,6 +77,22 @@ class TestPipelineFactory(TestCase):
 
     @mock.patch("pyerp.sync.pipeline.PipelineFactory._create_component")
     @mock.patch("pyerp.sync.pipeline.SyncPipeline")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def test_create_pipeline_with_defaults(self, mock_pipeline_class, mock_create_component):
         """Test creating a pipeline with default component classes."""
         # Create mock components to return
@@ -102,6 +120,8 @@ class TestPipelineFactory(TestCase):
 
     @mock.patch("pyerp.sync.pipeline.PipelineFactory._create_component")
     @mock.patch("pyerp.sync.pipeline.SyncPipeline")
+
+
     def test_create_pipeline_with_explicit_classes(self, mock_pipeline_class, mock_create_component):
         """Test creating a pipeline with explicitly provided component classes."""
         # Create mock components to return
@@ -133,6 +153,8 @@ class TestPipelineFactory(TestCase):
 
     @mock.patch("pyerp.sync.pipeline.PipelineFactory._import_class")
     @mock.patch("pyerp.sync.pipeline.SyncPipeline")
+
+
     def test_import_class_called_correctly(self, mock_pipeline_class, mock_import_class):
         """Test that _import_class is called with correct paths."""
         # Set up mock to return the mock classes
@@ -150,6 +172,9 @@ class TestPipelineFactory(TestCase):
         mock_import_class.assert_any_call(self.transformer_path)
         mock_import_class.assert_any_call(self.loader_path)
 
+
+
+
     def test_import_class(self):
         """Test the _import_class method."""
         # Import a real class from the current module
@@ -161,12 +186,17 @@ class TestPipelineFactory(TestCase):
         # Verify they are the same class
         self.assertIs(cls, DirectMockExtractor)
 
+
+
+
     def test_import_class_error(self):
         """Test that _import_class raises ImportError for invalid paths."""
         with self.assertRaises(ImportError):
             PipelineFactory._import_class("nonexistent.module.Class")
 
     @mock.patch("pyerp.sync.pipeline.PipelineFactory._import_class")
+
+
     def test_create_component(self, mock_import_class):
         """Test the _create_component method."""
         # Set up mock to return MockExtractor

@@ -60,7 +60,7 @@ export function useGlobalSearch() {
 
       try {
         const data = await api.get(`search/search/?q=${encodeURIComponent(debouncedQuery)}`).json();
-        setResults(data);
+        setResults(data as SearchResponse);
       } catch (err) {
         console.error('Error fetching search results:', err);
         setError(err instanceof Error ? err.message : 'An unknown error occurred');

@@ -74,10 +74,10 @@ class BaseTransformer(ABC):
 
     def apply_field_mappings(self, source_record: Dict[str, Any]) -> Dict[str, Any]:
         """Apply field mappings to a source record.
-
+        
         Args:
             source_record: Source record to transform
-
+            
         Returns:
             Transformed record with mapped fields
         """

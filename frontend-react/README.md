@@ -50,6 +50,46 @@ npm run build
 yarn build
 ```
 
+### Testing
+
+Run the test suite:
+
+```bash
+npm run test
+# or
+yarn test
+```
+
+For test coverage:
+
+```bash
+npm run test:coverage
+# or
+yarn test:coverage
+```
+
+### Mutation Testing
+
+Mutation testing helps to evaluate the quality of your test suite by making small changes (mutations) to your code and checking if your tests can detect these changes.
+
+To run mutation tests:
+
+```bash
+npm run test:mutation
+# or
+yarn test:mutation
+```
+
+To view the mutation testing report in a browser:
+
+```bash
+npm run test:mutation:report
+# or
+yarn test:mutation:report
+```
+
+This will serve the HTML report on a local server, typically at http://localhost:3000.
+
 To start the production server:
 
 ```bash

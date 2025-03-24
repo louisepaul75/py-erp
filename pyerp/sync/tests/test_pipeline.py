@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 import unittest
 from unittest import mock
 import pytest
+from django.test import TestCase
 
 from pyerp.sync.pipeline import SyncPipeline
 from pyerp.sync.models import SyncMapping, SyncLog, SyncState, SyncLogDetail
@@ -77,7 +78,8 @@ class MockLoader(BaseLoader):
         return self.load_result
 
 
-class TestSyncPipeline(unittest.TestCase):
+@pytest.mark.unit
+class TestSyncPipeline(TestCase):
     """Tests for the SyncPipeline class."""
 
     def setUp(self):
@@ -185,6 +187,26 @@ class TestSyncPipeline(unittest.TestCase):
         self.sync_log_patcher.stop()
         self.sync_log_detail_patcher.stop()
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def test_clean_for_json_with_namedtuple(self):
         """Test that _clean_for_json can handle NamedTuple objects."""
         # Create a NamedTuple similar to LoadResult
@@ -212,6 +234,9 @@ class TestSyncPipeline(unittest.TestCase):
         self.assertEqual(cleaned["errors"], 1)
         self.assertEqual(cleaned["error_details"], [{"error": "Test error"}])
 
+
+
+
     def test_clean_for_json_with_datetime(self):
         """Test that _clean_for_json can handle datetime objects."""
         # Create a test datetime
@@ -223,6 +248,9 @@ class TestSyncPipeline(unittest.TestCase):
         # Verify the result is an ISO format string
         self.assertIsInstance(cleaned, str)
         self.assertEqual(cleaned, "2025-03-09T12:00:00+00:00")
+
+
+
 
     def test_clean_for_json_with_nested_data(self):
         """Test that _clean_for_json can handle nested data structures."""
@@ -255,6 +283,9 @@ class TestSyncPipeline(unittest.TestCase):
         self.assertEqual(cleaned["datetime"], "2025-03-09T12:00:00+00:00")
         self.assertEqual(cleaned["namedtuple"], {"created": 5, "updated": 3})
 
+
+
+
     def test_run_creates_sync_log(self):
         """Test that run creates a sync log entry."""
         # Run the pipeline
@@ -270,6 +301,9 @@ class TestSyncPipeline(unittest.TestCase):
         # Check that sync_log was set on the pipeline
         self.assertEqual(self.pipeline.sync_log, self.mock_sync_log)
 
+
+
+
     def test_run_updates_sync_state(self):
         """Test that run updates the sync state."""
         # Run the pipeline
@@ -278,6 +312,9 @@ class TestSyncPipeline(unittest.TestCase):
         # Check that sync state was updated
         self.mock_sync_state.update_sync_started.assert_called_once()
         self.mock_sync_state.update_sync_completed.assert_called_once_with(success=True)
+
+
+
 
     def test_run_calls_extract_transform_load(self):
         """Test that run calls extract, transform, and load."""
@@ -294,6 +331,9 @@ class TestSyncPipeline(unittest.TestCase):
         # Check that _process_batch was called with extract results
         self.pipeline._process_batch.assert_called_with(self.extractor.extract_results)
 
+
+
+
     def test_run_with_query_params(self):
         """Test that run passes query parameters to extract."""
         # Set up test data
@@ -306,6 +346,9 @@ class TestSyncPipeline(unittest.TestCase):
         self.assertTrue(self.extractor.extract_called)
         self.assertEqual(self.extractor.query_params, query_params)
 
+
+
+
     def test_run_with_incremental_false(self):
         """Test that run with incremental=False sets is_full_sync=True."""
         # Run the pipeline with incremental=False
@@ -314,6 +357,9 @@ class TestSyncPipeline(unittest.TestCase):
         # Check that SyncLog was created with is_full_sync=True
         call_kwargs = self.mock_sync_log_class.objects.create.call_args[1]
         self.assertEqual(call_kwargs["is_full_sync"], True)
+
+
+
 
     def test_run_updates_sync_state_on_success(self):
         """Test that run updates sync state on successful completion."""
@@ -331,6 +377,9 @@ class TestSyncPipeline(unittest.TestCase):
         self.mock_sync_state.update_sync_started.assert_called_once()
         self.mock_sync_state.update_sync_completed.assert_called_once_with(success=True)
 
+
+
+
     def test_run_updates_sync_state_on_failure(self):
         """Test that run updates sync state on failure."""
         # Set up test data to simulate a failure
@@ -347,6 +396,9 @@ class TestSyncPipeline(unittest.TestCase):
         self.mock_sync_state.update_sync_started.assert_called_once()
         self.mock_sync_state.update_sync_completed.assert_called_once_with(success=False)
 
+
+
+
     def test_run_handles_exception(self):
         """Test that run handles exceptions gracefully."""
         # Make the extractor raise an exception
@@ -358,6 +410,9 @@ class TestSyncPipeline(unittest.TestCase):
         # Verify the exception was handled and log marked as failed
         self.mock_sync_log.mark_failed.assert_called_once()
         self.assertIn("Test exception", self.mock_sync_log.mark_failed.call_args[1]["error_message"])
+
+
+
 
     def test_run_with_empty_extract_results(self):
         """Test that run handles empty extract results."""
@@ -371,6 +426,9 @@ class TestSyncPipeline(unittest.TestCase):
         self.mock_sync_log.mark_completed.assert_called_once()
         self.assertEqual(self.mock_sync_log.mark_completed.call_args[0][0], 0)  # 0 success
         self.assertEqual(self.mock_sync_log.mark_completed.call_args[0][1], 0)  # 0 failed
+
+
+
 
     def test_run_with_transformer_error(self):
         """Test that run handles transformer errors."""
@@ -390,6 +448,9 @@ class TestSyncPipeline(unittest.TestCase):
         self.mock_sync_log.mark_failed.assert_called_once()
         self.assertIn("Transform error", self.mock_sync_log.mark_failed.call_args[1]["error_message"])
 
+
+
+
     def test_run_with_invalid_batch_size(self):
         """Test that run handles invalid batch size."""
         # Run the pipeline with an invalid batch size (0)
@@ -408,6 +469,9 @@ class TestSyncPipeline(unittest.TestCase):
         error_message = self.mock_sync_log.mark_failed.call_args[1]["error_message"]
         self.assertIn("range() arg 3 must not be zero", error_message)
 
+
+
+
     def test_run_with_custom_query_params(self):
         """Test that run handles custom query parameters."""
         # Set up custom query params
@@ -419,6 +483,9 @@ class TestSyncPipeline(unittest.TestCase):
         # Check that extract was called with merged query params
         self.assertTrue(self.extractor.extract_called)
         self.assertEqual(self.extractor.query_params["custom"], "value")
+
+
+
 
     def test_run_with_loader_partial_success(self):
         """Test that run handles partial success from loader."""

@@ -2,7 +2,11 @@
 Pytest configuration for sync module tests.
 """
 
+import os
 import pytest
+
+# Set environment variable to skip Celery import to avoid circular imports
+os.environ["SKIP_CELERY_IMPORT"] = "1"
 
 # Import test settings to configure Django before tests run
 # pylint: disable=unused-wildcard-import,wildcard-import

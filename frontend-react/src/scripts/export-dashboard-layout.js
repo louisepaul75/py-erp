@@ -6,12 +6,18 @@
 // Function to export the dashboard layout
 function exportDashboardLayout() {
   try {
+    // Check if we're in a browser environment
+    if (typeof localStorage === 'undefined' || typeof document === 'undefined') {
+      console.error('Not in a browser environment');
+      return false;
+    }
+
     // Get the current layout from localStorage
     const layoutJson = localStorage.getItem('dashboard-grid-layout');
     
     if (!layoutJson) {
       console.error('No dashboard layout found in localStorage');
-      return;
+      return false;
     }
     
     // Parse to validate it's proper JSON
@@ -37,19 +43,27 @@ function exportDashboardLayout() {
     }, 0);
     
     console.log('Dashboard layout exported successfully!');
+    return true;
   } catch (error) {
     console.error('Failed to export dashboard layout:', error);
+    return false;
   }
 }
 
 // Alternative method to just display the layout in console
 function showDashboardLayout() {
   try {
+    // Check if we're in a browser environment
+    if (typeof localStorage === 'undefined') {
+      console.error('Not in a browser environment');
+      return undefined;
+    }
+
     const layoutJson = localStorage.getItem('dashboard-grid-layout');
     
     if (!layoutJson) {
       console.error('No dashboard layout found in localStorage');
-      return;
+      return undefined;
     }
     
     const layout = JSON.parse(layoutJson);
@@ -59,11 +73,21 @@ function showDashboardLayout() {
     return layout;
   } catch (error) {
     console.error('Failed to show dashboard layout:', error);
+    return undefined;
   }
 }
 
-// Execute the export function
-exportDashboardLayout();
+// Execute the export function if directly executed (not imported)
+if (typeof module === 'undefined') {
+  exportDashboardLayout();
+  // Also show in console
+  showDashboardLayout();
+}
 
-// Also show in console
-showDashboardLayout(); 
+// Export for testing
+if (typeof module !== 'undefined') {
+  module.exports = {
+    exportDashboardLayout,
+    showDashboardLayout
+  };
+} 

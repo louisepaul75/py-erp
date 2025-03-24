@@ -1,0 +1,67 @@
+---
+# Business Data Sync Configuration
+
+# Employee data sync
+employees:
+  name: "employees_sync"
+  description: "Synchronize employee data from legacy system"
+  source:
+    type: "legacy_api"
+    extractor_class: "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor"
+    config:
+      environment: "live"
+      table_name: "Personal"
+      filters:
+        ausgeschieden: false  # Only active employees
+      all_records: true
+      page_size: 1000
+  transformer:
+    type: "custom"
+    class: "pyerp.sync.transformers.employee.EmployeeTransformer"
+    config:
+      field_mappings:
+        __KEY: legacy_id
+        Pers_Nr: employee_number
+        Name: last_name
+        Vorname: first_name
+        Straße: street
+        PLZ: postal_code
+        Ort: city
+        eMail: email
+        Telefon: phone
+        Telefon2: mobile_phone
+        Arb_Std_Wo: weekly_hours
+        Arb_Std_Tag: daily_hours
+        anwesend: is_present
+        ausgeschieden: is_terminated
+        GebDatum: birth_date
+        Eintrittsdatum: hire_date
+        Austrittsdatum: termination_date
+        Geh_code: salary_code
+        Jahres_Gehalt: annual_salary
+        Jahrs_Urlaub: annual_vacation_days
+        Monatsgehalt: monthly_salary
+        AD_Name: ad_username
+      validation_rules:
+        - field: employee_number
+          validator: validate_not_empty
+          error_message: Employee number cannot be empty
+        - field: email
+          validator: validate_email_format
+          error_message: Invalid email format
+          required: false  # Email might be empty for some employees
+  loader:
+    type: "django_model"
+    class: "pyerp.sync.loaders.django_model.DjangoModelLoader"
+    config:
+      app_name: business
+      model_name: Employee
+      unique_field: employee_number
+      update_strategy: newest_wins
+  schedule:
+    frequency: daily
+    time: '02:15'  # Schedule after product and customer syncs
+  incremental:
+    enabled: true
+    timestamp_field: modified_time
+    full_sync_fallback: true 

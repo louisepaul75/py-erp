@@ -29,8 +29,15 @@ def sample_csv_file():
     os.unlink(tmp_file.name)
 
 
+@pytest.mark.unit
 class TestProductImportValidator:
     """Tests for the ProductImportValidator class."""
+    
+
+
+    
+
+
     
     def test_validate_sku(self):
         """Test SKU validation."""
@@ -47,6 +54,8 @@ class TestProductImportValidator:
         assert 'sku' in result.errors
         assert 'required' in result.errors['sku'][0].lower()
     
+
+    
     def test_validate_name(self):
         """Test name validation."""
         validator = ProductImportValidator()
@@ -61,6 +70,8 @@ class TestProductImportValidator:
         assert name is None
         assert 'name' in result.errors
         assert 'required' in result.errors['name'][0].lower()
+    
+
     
     def test_validate_list_price(self):
         """Test list price validation."""
@@ -84,8 +95,11 @@ class TestProductImportValidator:
         assert 'invalid' in result.errors['list_price'][0].lower()
 
 
+@pytest.mark.unit
 class TestImportProductsCommand:
     """Tests for the importproducts command."""
+    
+
     
     def test_create_product_validator(self):
         """Test creating a product validator."""
@@ -95,6 +109,8 @@ class TestImportProductsCommand:
         assert isinstance(validator, ProductImportValidator)
         assert validator.strict is True
         assert validator.default_category == 'Electronics'
+    
+
     
     def test_validate_products(self):
         """Test product validation."""
@@ -115,6 +131,7 @@ class TestImportProductsCommand:
     
     @patch('pyerp.management.commands.importproducts.Command.get_products_from_file')
     @patch('pyerp.management.commands.importproducts.Command.create_or_update_product')
+
     def test_handle_with_valid_file(self, mock_create, mock_get_products, sample_csv_file):
         """Test handling a valid file."""
         mock_get_products.return_value = [
@@ -138,6 +155,7 @@ class TestImportProductsCommand:
         assert 'successfully' in output.lower()
     
     @patch('pyerp.management.commands.importproducts.Command.get_products_from_file')
+
     def test_handle_with_invalid_data(self, mock_get_products, sample_csv_file):
         """Test handling invalid data."""
         # Return some invalid data

@@ -4,11 +4,14 @@ Tests for the product tags inheritance system.
 
 from django.test import TestCase
 from django.contrib.contenttypes.models import ContentType
+import pytest
 
 from pyerp.business_modules.products.models import ParentProduct, VariantProduct
 from pyerp.business_modules.products.tag_models import Tag, M2MOverride
 
 
+@pytest.mark.backend
+@pytest.mark.unit
 class TagInheritanceTestCase(TestCase):
     """Test the tag inheritance functionality."""
     
@@ -44,6 +47,8 @@ class TagInheritanceTestCase(TestCase):
         )
         self.variant2.tags.add(self.tag3)
     
+
+
     def test_default_inheritance(self):
         """Test that variants inherit tags by default."""
         # By default, variants should inherit tags from parent
@@ -55,6 +60,8 @@ class TagInheritanceTestCase(TestCase):
         self.assertIn(self.tag1, all_tags)
         self.assertIn(self.tag2, all_tags)
     
+
+
     def test_inheritance_with_own_tags(self):
         """Test that variants can have their own tags while inheriting."""
         # Variant2 has its own tag and inherits parent tags
@@ -64,6 +71,8 @@ class TagInheritanceTestCase(TestCase):
         self.assertIn(self.tag2, all_tags)
         self.assertIn(self.tag3, all_tags)
     
+
+
     def test_disable_inheritance(self):
         """Test that tag inheritance can be disabled."""
         # Disable inheritance for variant2
@@ -81,6 +90,8 @@ class TagInheritanceTestCase(TestCase):
         all_tags = list(self.variant2.get_all_tags())
         self.assertEqual(len(all_tags), 3)
     
+
+
     def test_override_status(self):
         """Test that the override status is stored correctly."""
         # First ensure variant2 has inheritance enabled

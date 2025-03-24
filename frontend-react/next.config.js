@@ -15,6 +15,11 @@ const nextConfig = {
   // Add output configuration to ensure static files are generated correctly
   output: 'standalone',
   poweredByHeader: false,
+  // Configure the build to handle dynamic routes properly
+  distDir: '.next',
+  // Don't attempt to optimize pages that aren't being correctly detected
+  optimizeFonts: true,
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   async rewrites() {
     return [
       {

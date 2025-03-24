@@ -3,6 +3,7 @@
 # Initialize variables for optional parameters
 RUN_TESTS=""
 USE_CACHE="yes"
+MONITORING_MODE="none"  # Default is basic local logging
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -19,13 +20,25 @@ while [[ $# -gt 0 ]]; do
             USE_CACHE="no"
             shift
             ;;
+        --monitoring)
+            if [[ "$2" != "none" && "$2" != "remote" ]]; then
+                echo "Error: --monitoring requires one of: none, remote"
+                exit 1
+            fi
+            MONITORING_MODE="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown parameter: $1"
-            echo "Usage: $0 [--tests ui] [--no-cache]"
+            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|remote]"
             exit 1
             ;;
     esac
 done
+
+# Create Docker network if it doesn't exist
+echo "Ensuring Docker network exists..."
+docker network create pyerp-network 2>/dev/null || true
 
 # Stop the existing container
 echo "Stopping existing pyerp-dev container..."
@@ -34,9 +47,6 @@ docker stop pyerp-dev || true
 # Remove the existing container
 echo "Removing existing pyerp-dev container..."
 docker rm pyerp-dev || true
-
-# Uncomment to clean up build cache if needed
-# docker buildx prune -a
 
 # Rebuild the Docker image
 if [ "$USE_CACHE" == "no" ]; then
@@ -57,16 +67,38 @@ else
     ENV_ARG="-e DJANGO_SETTINGS_MODULE=pyerp.config.settings.development -e PYERP_ENV=dev"
 fi
 
-# Start a new container
+# Get hostname for developer identification
+HOSTNAME=$(hostname)
+
+# Configure monitoring environment variables based on selected mode
+if [ "$MONITORING_MODE" == "none" ]; then
+    # No monitoring environment variables needed
+    MONITORING_ENV=""
+elif [ "$MONITORING_MODE" == "remote" ]; then
+    # Get remote ELK settings from .env.dev file or use defaults
+    if [ -f "$ENV_FILE" ]; then
+        # Source the .env file to get the ELK settings
+        source "$ENV_FILE"
+        # Set environment variables for remote ELK
+        MONITORING_ENV="-e ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST:-production-elk-server-address} -e ELASTICSEARCH_PORT=${ELASTICSEARCH_PORT:-9200} -e KIBANA_HOST=${KIBANA_HOST:-production-elk-server-address} -e KIBANA_PORT=${KIBANA_PORT:-5601} -e ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-} -e ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-} -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
+    else
+        echo "Warning: No $ENV_FILE found, using default remote ELK settings"
+        MONITORING_ENV="-e ELASTICSEARCH_HOST=production-elk-server-address -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=production-elk-server-address -e KIBANA_PORT=5601 -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
+    fi
+fi
+
+# Start the pyERP container
 echo "Starting new pyerp-dev container..."
 docker run -d \
   --name pyerp-dev \
   $ENV_ARG \
+  $MONITORING_ENV \
   -p 8050:8050 \
   -p 3000:3000 \
   -p 6379:6379 \
   -p 80:80 \
   -v $(pwd):/app \
+  --network pyerp-network \
   pyerp-dev-image \
   bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
@@ -89,4 +121,15 @@ if [ -n "$RUN_TESTS" ]; then
 fi
 
 echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' to view logs again."
+
+# Display monitoring information based on the selected mode
+if [ "$MONITORING_MODE" == "none" ]; then
+    echo -e "\nMonitoring: Disabled (using local logging only)"
+elif [ "$MONITORING_MODE" == "remote" ]; then
+    echo -e "\nMonitoring services (remote connection):"
+    echo -e "- Connected to remote Elasticsearch: ${ELASTICSEARCH_HOST:-production-elk-server-address}:${ELASTICSEARCH_PORT:-9200}"
+    echo -e "- Connected to remote Kibana: ${KIBANA_HOST:-production-elk-server-address}:${KIBANA_PORT:-5601}"
+    echo -e "- Using developer ID: $HOSTNAME"
+fi
+
 echo -e "To run frontend tests manually, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"

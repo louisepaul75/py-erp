@@ -1,10 +1,13 @@
 import React from 'react';
 
-interface LoadingSpinnerProps {
+interface LoadingSpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md' }) => {
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
+  size = 'md', 
+  ...props 
+}) => {
   const sizeMap = {
     sm: 'h-4 w-4',
     md: 'h-8 w-8',
@@ -12,7 +15,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'md' }) =
   };
 
   return (
-    <div className="flex justify-center items-center">
+    <div className="flex justify-center items-center" {...props}>
       <div className={`animate-spin rounded-full border-t-2 border-b-2 border-primary ${sizeMap[size]}`}></div>
     </div>
   );

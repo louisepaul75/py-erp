@@ -2,6 +2,8 @@ import unittest
 from unittest import mock
 from django.utils import timezone
 from datetime import timedelta
+import pytest
+from django.test import TestCase
 
 from pyerp.sync.models import (
     SyncSource,
@@ -13,7 +15,8 @@ from pyerp.sync.models import (
 )
 
 
-class TestSyncModels(unittest.TestCase):
+@pytest.mark.unit
+class TestSyncModels(TestCase):
     """Tests for the sync models."""
 
     def setUp(self):
@@ -63,18 +66,34 @@ class TestSyncModels(unittest.TestCase):
         self.sync_log_detail.record_data = {"id": "456", "name": "Test"}
         self.sync_log_detail.__str__.return_value = f"{self.sync_log} - 456"
 
+
+
+
+
+
+
+
+
+
+
+
+
+
     def test_sync_source_str(self):
         """Test the string representation of SyncSource."""
         self.assertEqual(str(self.source), "test_source")
+
 
     def test_sync_target_str(self):
         """Test the string representation of SyncTarget."""
         self.assertEqual(str(self.target), "test_target")
 
+
     def test_sync_mapping_str(self):
         """Test the string representation of SyncMapping."""
         expected = f"{self.source} → {self.target} (test_entity)"
         self.assertEqual(str(self.mapping), expected)
+
 
     def test_sync_state_update_sync_started(self):
         """Test updating sync state when sync starts."""
@@ -99,6 +118,7 @@ class TestSyncModels(unittest.TestCase):
         self.assertEqual(self.sync_state.last_sync_time, self.now)
         # Verify save was called
         self.sync_state.save.assert_called_once()
+
 
     def test_sync_state_update_sync_completed_success(self):
         """Test updating sync state when sync completes successfully."""
@@ -129,6 +149,7 @@ class TestSyncModels(unittest.TestCase):
         # Verify save was called
         self.sync_state.save.assert_called_once()
 
+
     def test_sync_state_update_sync_completed_failure(self):
         """Test updating sync state when sync fails."""
         # Set up initial state
@@ -155,6 +176,7 @@ class TestSyncModels(unittest.TestCase):
         self.assertEqual(self.sync_state.last_successful_sync_time, self.yesterday)
         # Verify save was called
         self.sync_state.save.assert_called_once()
+
 
     def test_sync_log_mark_completed(self):
         """Test marking a sync log as completed."""
@@ -196,6 +218,7 @@ class TestSyncModels(unittest.TestCase):
         # Verify save was called
         self.sync_log.save.assert_called_once()
 
+
     def test_sync_log_mark_completed_all_success(self):
         """Test marking a sync log as completed with all successes."""
         # Set up initial state
@@ -236,6 +259,7 @@ class TestSyncModels(unittest.TestCase):
         # Verify save was called
         self.sync_log.save.assert_called_once()
 
+
     def test_sync_log_mark_failed(self):
         """Test marking a sync log as failed."""
         # Set up initial state
@@ -270,6 +294,7 @@ class TestSyncModels(unittest.TestCase):
         self.assertEqual(self.sync_log.end_time, self.now)
         # Verify save was called
         self.sync_log.save.assert_called_once()
+
 
     def test_sync_log_detail_str(self):
         """Test the string representation of SyncLogDetail."""

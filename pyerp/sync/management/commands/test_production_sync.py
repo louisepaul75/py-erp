@@ -1,3 +1,4 @@
+import pytest
 """
 Management command to test production sync with limited data.
 

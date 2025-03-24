@@ -15,6 +15,31 @@ from pyerp.sync.exceptions import (
 )
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@pytest.mark.unit
 def test_sync_error_base_class():
     """Test that SyncError is a base exception class."""
     assert issubclass(SyncError, Exception)
@@ -25,38 +50,58 @@ def test_sync_error_base_class():
     assert str(error) == error_msg
 
 
+
+
+
+
+@pytest.mark.unit
 def test_extract_error():
-    """Test the ExtractError exception."""
+    """Test that ExtractError is a subclass of SyncError."""
     assert issubclass(ExtractError, SyncError)
     
     # Test that it can be instantiated with a message
-    error_msg = "Failed to extract data"
+    error_msg = "Error during data extraction"
     error = ExtractError(error_msg)
     assert str(error) == error_msg
 
 
+
+
+
+
+@pytest.mark.unit
 def test_transform_error():
-    """Test the TransformError exception."""
+    """Test that TransformError is a subclass of SyncError."""
     assert issubclass(TransformError, SyncError)
     
     # Test that it can be instantiated with a message
-    error_msg = "Failed to transform data"
+    error_msg = "Error during data transformation"
     error = TransformError(error_msg)
     assert str(error) == error_msg
 
 
+
+
+
+
+@pytest.mark.unit
 def test_load_error():
-    """Test the LoadError exception."""
+    """Test that LoadError is a subclass of SyncError."""
     assert issubclass(LoadError, SyncError)
     
     # Test that it can be instantiated with a message
-    error_msg = "Failed to load data"
+    error_msg = "Error during data loading"
     error = LoadError(error_msg)
     assert str(error) == error_msg
 
 
+
+
+
+
+@pytest.mark.unit
 def test_validation_error():
-    """Test the ValidationError exception."""
+    """Test that ValidationError is a subclass of SyncError."""
     assert issubclass(ValidationError, SyncError)
     
     # Test that it can be instantiated with a message
@@ -65,8 +110,13 @@ def test_validation_error():
     assert str(error) == error_msg
 
 
+
+
+
+
+@pytest.mark.unit
 def test_configuration_error():
-    """Test the ConfigurationError exception."""
+    """Test that ConfigurationError is a subclass of SyncError."""
     assert issubclass(ConfigurationError, SyncError)
     
     # Test that it can be instantiated with a message
@@ -75,15 +125,27 @@ def test_configuration_error():
     assert str(error) == error_msg
 
 
+
+
+
+
+@pytest.mark.unit
 def test_raising_sync_errors():
-    """Test that sync errors can be raised and caught appropriately."""
-    # Test raising and catching a specific sync error
-    with pytest.raises(ExtractError) as exc_info:
-        raise ExtractError("Could not connect to source")
-    assert "Could not connect to source" in str(exc_info.value)
+    """Test that all SyncError subclasses can be caught as SyncError."""
+    # Create a list of error classes and their messages
+    error_classes = [
+        (ExtractError, "Extract error"),
+        (TransformError, "Transform error"),
+        (LoadError, "Load error"),
+        (ValidationError, "Validation error"),
+        (ConfigurationError, "Configuration error"),
+    ]
     
-    # Test that we can catch a specific error type with SyncError
-    try:
-        raise LoadError("Database connection failed")
-    except SyncError as e:
-        assert "Database connection failed" in str(e) 
+    # Test that each error type can be caught as a SyncError
+    for error_class, error_msg in error_classes:
+        try:
+            raise error_class(error_msg)
+        except SyncError as e:
+            assert str(e) == error_msg
+        except Exception:
+            assert False, f"{error_class.__name__} was not caught as SyncError" 

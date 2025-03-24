@@ -1,3 +1,4 @@
+import pytest
 from unittest import mock
 
 from django.test import TestCase
@@ -11,6 +12,7 @@ from pyerp.sync.tasks import (
 )
 
 
+@pytest.mark.unit
 class TestSyncTasks(TestCase):
     """Tests for the sync tasks."""
 
@@ -56,6 +58,22 @@ class TestSyncTasks(TestCase):
     @mock.patch("pyerp.sync.tasks.PipelineFactory")
     @mock.patch("pyerp.sync.tasks.SyncMapping.objects.get")
     @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def test_run_entity_sync(self, mock_log_event, mock_get_mapping, mock_factory):
         """Test the run_entity_sync task."""
         # Set up mock mapping
@@ -110,6 +128,8 @@ class TestSyncTasks(TestCase):
     @mock.patch("pyerp.sync.tasks.run_entity_sync")
     @mock.patch("pyerp.sync.tasks.SyncMapping.objects.filter")
     @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+
+
     def test_run_all_mappings(self, mock_log_event, mock_filter, mock_run_entity_sync):
         """Test the run_all_mappings task."""
         # Set up a task result mock for run_entity_sync.delay
@@ -153,6 +173,8 @@ class TestSyncTasks(TestCase):
 
     @mock.patch("pyerp.sync.tasks.run_all_mappings")
     @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+
+
     def test_run_incremental_sync(self, mock_log_event, mock_run_all_mappings):
         """Test the run_incremental_sync task."""
         # Set up mock return value
@@ -177,6 +199,8 @@ class TestSyncTasks(TestCase):
 
     @mock.patch("pyerp.sync.tasks.run_all_mappings")
     @mock.patch("pyerp.sync.tasks.log_data_sync_event")
+
+
     def test_run_full_sync(self, mock_log_event, mock_run_all_mappings):
         """Test the run_full_sync task."""
         # Set up mock return value

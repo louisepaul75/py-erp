@@ -1,3 +1,4 @@
+import pytest
 from django.test import TestCase
 import unittest.mock
 
@@ -25,23 +26,43 @@ class MockTransformer(BaseTransformer):
         return transformed_records
 
 
+# Create test subclasses for each base component
+class TestExtractor(BaseExtractor):
+    """Test extractor implementation."""
+    
+    def get_required_config_fields(self):
+        return ["api_key", "url"]
+
+    def connect(self):
+        self.connect_called = True
+
+    def extract(self, query_params=None):
+        return []
+    
+    def close(self):
+        self.close_called = True
+
+
+class TestLoader(BaseLoader):
+    """Test loader implementation."""
+    
+    def get_required_config_fields(self):
+        return ["destination_url"]
+    
+    def prepare_record(self, record):
+        return record
+    
+    def load_record(self, lookup_criteria, record, update_existing=True):
+        # Simulate loading a record
+        return {"id": 1, "status": "success"}
+
+
+@pytest.mark.unit
 class TestBaseExtractor(TestCase):
     """Tests for the BaseExtractor class."""
 
     def test_validate_config_with_missing_fields(self):
         """Test that _validate_config raises ValueError for missing fields."""
-
-        # Create a subclass that requires fields
-        class TestExtractor(BaseExtractor):
-            def get_required_config_fields(self):
-                return ["api_key", "url"]
-
-            def connect(self):
-                pass
-
-            def extract(self, query_params=None):
-                return []
-
         # Test with missing fields
         with self.assertRaises(ValueError) as context:
             TestExtractor(config={"api_key": "test"})
@@ -52,18 +73,6 @@ class TestBaseExtractor(TestCase):
 
     def test_validate_config_with_all_fields(self):
         """Test that _validate_config passes with all required fields."""
-
-        # Create a subclass that requires fields
-        class TestExtractor(BaseExtractor):
-            def get_required_config_fields(self):
-                return ["api_key", "url"]
-
-            def connect(self):
-                pass
-
-            def extract(self, query_params=None):
-                return []
-
         # Test with all fields
         config = {"api_key": "test", "url": "http://example.com"}
         extractor = TestExtractor(config=config)
@@ -74,23 +83,8 @@ class TestBaseExtractor(TestCase):
 
     def test_context_manager(self):
         """Test that extractor can be used as a context manager."""
-
-        # Create a subclass with mock methods
-        class TestExtractor(BaseExtractor):
-            def get_required_config_fields(self):
-                return []
-
-            def connect(self):
-                self.connect_called = True
-
-            def extract(self, query_params=None):
-                return []
-
-            def close(self):
-                self.close_called = True
-
         # Create instance
-        extractor = TestExtractor(config={})
+        extractor = TestExtractor(config={"api_key": "test", "url": "http://example.com"})
         extractor.connect_called = False
         extractor.close_called = False
 
@@ -105,6 +99,7 @@ class TestBaseExtractor(TestCase):
         self.assertTrue(extractor.close_called)
 
 
+@pytest.mark.unit
 class TestBaseTransformer(TestCase):
     """Tests for the BaseTransformer class."""
 
@@ -217,6 +212,7 @@ class TestBaseTransformer(TestCase):
         self.assertEqual(error.context, {"value": -10})
 
 
+@pytest.mark.unit
 class TestBaseLoader(TestCase):
     """Tests for the BaseLoader class."""
 
@@ -255,62 +251,58 @@ class TestBaseLoader(TestCase):
 
     def test_validate_config_with_missing_fields(self):
         """Test that _validate_config raises ValueError for missing fields."""
-
-        # Create a subclass that requires fields
-        class TestLoader(BaseLoader):
+        # Create a test loader that requires a key_field
+        class KeyFieldLoader(TestLoader):
             def get_required_config_fields(self):
-                return ["model_class", "key_field"]
-
-            def prepare_record(self, record):
-                return {}, {}
-
-            def load_record(self, lookup_criteria, record, update_existing=True):
-                return None
-
+                return super().get_required_config_fields() + ["key_field"]
+        
         # Test with missing fields
         with self.assertRaises(ValueError) as context:
-            TestLoader(config={"model_class": "TestModel"})
+            KeyFieldLoader(config={"destination_url": "http://example.com"})
 
         # Check error message
         self.assertIn("Missing required configuration fields", str(context.exception))
         self.assertIn("key_field", str(context.exception))
 
     def test_load(self):
-        """Test the load method."""
-        
-        # Create a subclass for testing with mock methods
-        class TestLoader(BaseLoader):
-            def get_required_config_fields(self):
-                return []
-
+        """Test the load method works correctly."""
+        # Create a special test loader for this test
+        class TestLoadLoader(TestLoader):
             def prepare_record(self, record):
                 # Simulate preparing record for loading
-                if record.get("id") == 1:
-                    # First record - successful create
-                    return {"id": 1}, record
-                elif record.get("id") == 2:
-                    # Second record - successful update
-                    return {"id": 2}, record
-                else:
-                    # Third record - error
-                    raise ValueError("Test error")
+                # Don't raise an error here, let it happen in load_record
+                lookup_criteria = {}
+                prepared_record = record.copy()
+
+                if "id" in record:
+                    lookup_criteria["id"] = record["id"]
+
+                return lookup_criteria, prepared_record
 
             def load_record(self, lookup_criteria, record, update_existing=True):
                 # Simulate loading a record
+                import unittest.mock
+                
+                # For ID 3, we'll simulate an error during loading
+                if record.get("id") == 3:
+                    raise ValueError("Test error")
+                
+                # Create mock object with _state for detecting create/update
                 mock_obj = unittest.mock.MagicMock()
                 mock_obj._state = unittest.mock.MagicMock()
                 
-                if not lookup_criteria or not lookup_criteria.get("id"):
-                    # Create new record
-                    mock_obj._state.adding = True
-                    return mock_obj
-                else:
-                    # Update existing record
+                # Ensure the 'adding' attribute is accessed correctly by the BaseLoader.load method
+                if lookup_criteria and lookup_criteria.get("id") == 2:
+                    # Update scenario
                     mock_obj._state.adding = False
-                    return mock_obj
+                else:
+                    # Create scenario
+                    mock_obj._state.adding = True
+                
+                return mock_obj
 
         # Create loader
-        loader = TestLoader(config={})
+        loader = TestLoadLoader(config={"destination_url": "http://example.com"})
 
         # Test records
         records = [

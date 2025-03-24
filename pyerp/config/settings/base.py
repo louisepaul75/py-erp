@@ -67,6 +67,7 @@ LOCAL_APPS = [
     "pyerp.sync",
     "pyerp.external_api",
     "admin_tools",  # Admin tools app for database table view
+    "pyerp.business_modules.business",  # Business management (HR, finance, etc.)
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -271,7 +272,7 @@ LOGGING = {
             "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
             "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
             "rename_fields": {
-                "asctime": "timestamp",
+                "asctime": "@timestamp",
                 "levelname": "level",
             },
         },

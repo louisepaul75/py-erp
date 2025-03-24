@@ -46,8 +46,29 @@ def basic_config():
     }
 
 
+@pytest.mark.unit
 class TestValidationError:
     """Tests for the ValidationError class."""
+    
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
     
     def test_init_with_defaults(self):
         """Test ValidationError initialization with default values."""
@@ -57,6 +78,26 @@ class TestValidationError:
         assert error.message == "Price must be positive"
         assert error.error_type == "error"
         assert error.context == {}
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
     
     def test_init_with_custom_values(self):
         """Test ValidationError initialization with custom values."""
@@ -69,8 +110,29 @@ class TestValidationError:
         assert error.context == context
 
 
+@pytest.mark.unit
 class TestBaseTransformer:
     """Tests for the BaseTransformer class."""
+    
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
     
     def test_init_with_minimal_config(self):
         """Test initialization with minimal configuration."""
@@ -82,6 +144,26 @@ class TestBaseTransformer:
         assert transformer.validation_rules == []
         assert transformer.custom_transformers == {}
     
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
+    
     def test_init_with_full_config(self, basic_config):
         """Test initialization with full configuration."""
         transformer = MockTransformer(basic_config)
@@ -89,6 +171,26 @@ class TestBaseTransformer:
         assert transformer.config == basic_config
         assert transformer.field_mappings == basic_config["field_mappings"]
         assert transformer.validation_rules == basic_config["validation_rules"]
+    
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
     
     def test_validate_config_valid(self, basic_config):
         """Test configuration validation with valid config."""
@@ -99,6 +201,26 @@ class TestBaseTransformer:
         transformer._validate_config()
         
         # No exception means test passes
+    
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
     
     def test_validate_config_invalid_mappings(self):
         """Test configuration validation with invalid mappings."""
@@ -111,6 +233,26 @@ class TestBaseTransformer:
         
         assert "field_mappings must be a dictionary" in str(exc_info.value)
     
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
+    
     def test_validate_config_invalid_rules(self):
         """Test configuration validation with invalid rules."""
         config = {
@@ -121,6 +263,9 @@ class TestBaseTransformer:
             MockTransformer(config)
         
         assert "validation_rules must be a list" in str(exc_info.value)
+    
+
+
     
     def test_register_custom_transformer(self, basic_config):
         """Test registering a custom transformer function."""
@@ -133,6 +278,9 @@ class TestBaseTransformer:
         
         assert "price" in transformer.custom_transformers
         assert transformer.custom_transformers["price"] == convert_to_float
+    
+
+
     
     def test_apply_field_mappings(self, basic_config):
         """Test applying field mappings to source data."""
@@ -152,6 +300,9 @@ class TestBaseTransformer:
         assert result["price"] == "99.99"
         assert "other_field" in result  # Unmapped fields should be preserved
         assert result["other_field"] == "value"
+    
+
+
     
     def test_apply_custom_transformers(self, basic_config):
         """Test applying custom transformers to mapped data."""
@@ -180,6 +331,9 @@ class TestBaseTransformer:
         assert result["id"] == 123  # Unchanged
         assert result["name"] == "Test Product"  # Unchanged
     
+
+
+    
     def test_apply_custom_transformers_error(self, basic_config):
         """Test error handling in custom transformers."""
         transformer = MockTransformer(basic_config)
@@ -197,6 +351,9 @@ class TestBaseTransformer:
         
         assert "Error applying custom transformer for field 'price'" in str(exc_info.value)
     
+
+
+    
     def test_validate_record(self, basic_config):
         """Test record validation with validation rules."""
         transformer = MockTransformer(basic_config)
@@ -212,6 +369,9 @@ class TestBaseTransformer:
         assert len(invalid_errors) == 1
         assert invalid_errors[0].field == "price"
         assert "Price must be greater than zero" in invalid_errors[0].message
+    
+
+
     
     def test_prefilter_records(self, basic_config):
         """Test prefiltering records based on key field."""
@@ -237,6 +397,9 @@ class TestBaseTransformer:
         assert to_update[0]["legacy_id"] == 1
         assert to_update[1]["legacy_id"] == 3
     
+
+
+    
     def test_prefilter_records_normalization(self, basic_config):
         """Test normalization of key values in prefiltering."""
         transformer = MockTransformer(basic_config)
@@ -258,6 +421,9 @@ class TestBaseTransformer:
         assert len(to_create) == 1
         assert to_update[0]["legacy_id"] == "1"  # Original format preserved
         assert to_create[0]["legacy_id"] == 2
+    
+
+
     
     def test_prefilter_records_missing_key_field(self, basic_config):
         """Test prefiltering when a record is missing the key field."""
@@ -282,6 +448,9 @@ class TestBaseTransformer:
         assert len(to_create) == 1
         assert to_update[0]["legacy_id"] == 1
         assert to_create[0]["legacy_id"] == 3
+    
+
+
     
     def test_transform(self, basic_config):
         """Test the transform method implementation."""
@@ -309,6 +478,9 @@ class TestBaseTransformer:
         assert result[1]["id"] == 2
         assert result[1]["name"] == "Product 2"
         assert result[1]["price"] == "20.99"
+    
+
+
     
     def test_validate(self, basic_config):
         """Test the validate method."""

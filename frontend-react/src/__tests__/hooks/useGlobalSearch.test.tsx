@@ -2,8 +2,15 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useGlobalSearch } from '@/hooks/useGlobalSearch';
 import { API_URL } from '@/lib/config';
 
-// Mock fetch
-global.fetch = jest.fn();
+// Mock the api object from authService
+jest.mock('@/lib/auth/authService', () => ({
+  api: {
+    get: jest.fn()
+  }
+}));
+
+// Import after mocking
+import { api } from '@/lib/auth/authService';
 
 describe('useGlobalSearch', () => {
   beforeEach(() => {
@@ -57,8 +64,8 @@ describe('useGlobalSearch', () => {
       }
     };
     
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
+    // Mock the api.get to return the mockResponse
+    (api.get as jest.Mock).mockReturnValueOnce({
       json: () => Promise.resolve(mockResponse)
     });
     
@@ -79,7 +86,7 @@ describe('useGlobalSearch', () => {
       expect(result.current.results).toEqual(mockResponse);
     });
     
-    expect(global.fetch).toHaveBeenCalledWith(`${API_URL}/search/search/?q=test`);
+    expect(api.get).toHaveBeenCalledWith(`search/search/?q=test`);
   });
 
   it('should not fetch when query is empty', async () => {
@@ -94,11 +101,14 @@ describe('useGlobalSearch', () => {
       jest.advanceTimersByTime(300);
     });
     
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(api.get).not.toHaveBeenCalled();
   });
 
   it('should handle error correctly', async () => {
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('API error'));
+    // Mock the api.get to throw an error
+    (api.get as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('API error');
+    });
     
     const { result } = renderHook(() => useGlobalSearch());
     
@@ -156,8 +166,8 @@ describe('useGlobalSearch', () => {
       }
     };
     
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
+    // Mock the api.get to return the mockResponse
+    (api.get as jest.Mock).mockReturnValueOnce({
       json: () => Promise.resolve(mockResponse)
     });
     
@@ -175,6 +185,7 @@ describe('useGlobalSearch', () => {
     // Wait for the async update
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
+      expect(result.current.results).toEqual(mockResponse);
     });
     
     expect(result.current.getAllResults()).toEqual([

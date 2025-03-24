@@ -61,6 +61,7 @@ coverage.xml
 .pytest_cache/
 coverage/
 */tests/coverage/*
+security_reports/
 
 # Translations
 *.mo

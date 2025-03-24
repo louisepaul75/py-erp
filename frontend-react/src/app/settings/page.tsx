@@ -22,11 +22,22 @@ interface ProfileForm {
   last_name: string;
 }
 
+// Error interface that extends ProfileForm for additional error fields
+interface ErrorState extends Partial<ProfileForm> {
+  advanced?: string;
+}
+
 // Password change form interface
 interface PasswordForm {
   old_password: string;
   new_password: string;
   confirm_password: string;
+}
+
+// Error interface to handle all possible error types
+interface ErrorState extends Partial<ProfileForm>, Partial<PasswordForm> {
+  advanced?: string;
+  general?: string;
 }
 
 export default function SettingsPage() {
@@ -83,7 +94,7 @@ export default function SettingsPage() {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   
   // Form errors state
-  const [errors, setErrors] = useState<Partial<ProfileForm>>({});
+  const [errors, setErrors] = useState<ErrorState>({});
   
   // Success message state
   const [successMessage, setSuccessMessage] = useState('');
@@ -803,7 +814,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-sm font-medium">{t('user_group')}</p>
-                      <p className="text-sm text-muted-foreground">{user?.group || 'N/A'}</p>
+                      <p className="text-sm text-muted-foreground">{'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium">{t('admin_status')}</p>

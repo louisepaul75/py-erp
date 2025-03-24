@@ -1,3 +1,4 @@
+import pytest
 """Tests for the WerksauftrPos to ProductionOrderItem synchronization."""
 
 from django.test import TestCase
@@ -8,6 +9,8 @@ from pyerp.business_modules.production.models import ProductionOrderItem
 from pyerp.sync.transformers.production import ProductionOrderItemTransformer
 
 
+@pytest.mark.unit
+@pytest.mark.django_db
 class TestWerksauftrPosMapping(TestCase):
     """Test the mapping between WerksauftrPos and ProductionOrderItem."""
 
@@ -19,6 +22,12 @@ class TestWerksauftrPosMapping(TestCase):
             name="Test Parent Product",
             legacy_base_sku="TEST-ART-NR-001"
         )
+
+
+
+
+
+
 
     def test_art_nr_to_legacy_base_sku_mapping(self):
         """Test that WerksauftrPos['Art_Nr'] correctly maps to ParentProduct['legacy_base_sku']."""
@@ -60,6 +69,12 @@ class TestWerksauftrPosMapping(TestCase):
                         "product_sku not correctly mapped from Art_Nr")
         self.assertEqual(transformed["operation_type"], "E",
                         "operation_type not correctly mapped from Arbeitsgang")
+
+
+
+
+
+
 
     def test_art_nr_no_matching_parent_product(self):
         """Test behavior when no matching parent product is found."""

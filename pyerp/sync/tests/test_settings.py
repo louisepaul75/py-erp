@@ -1,3 +1,4 @@
+import pytest
 """
 Test settings for pyERP sync module tests.
 """
