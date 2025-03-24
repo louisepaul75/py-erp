@@ -27,7 +27,7 @@ if "ddtrace" in sys.modules:
 # Load environment variables using centralized loader
 from pyerp.utils.env_loader import load_environment_variables  # noqa: E402
 
-from .base import *  # noqa: F403
+from pyerp.config.settings.base import *  # noqa: F403
 
 load_environment_variables(verbose=True)
 
@@ -41,24 +41,64 @@ print(f"DB_PORT: {os.environ.get('DB_PORT', 'not set')}")
 # Configure for test environment
 DEBUG = True
 
-# Remove debug toolbar for tests
-if "debug_toolbar" in INSTALLED_APPS:  # noqa: F405
-    INSTALLED_APPS.remove("debug_toolbar")  # noqa: F405
+# Add required apps
+INSTALLED_APPS = [
+    # Django core apps
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    
+    # Third-party apps
+    'rest_framework',
+    'corsheaders',
+    'django_filters',
+    'drf_yasg',
+    'django_celery_beat',
+    'django_celery_results',
+    'admin_tools',
+    
+    # Core apps
+    'pyerp.core',
+    'users',
+    'pyerp.sync',
+    'pyerp.monitoring',
+    'pyerp.external_api',
+    'pyerp.legacy_sync',
+    'pyerp.middleware',
+    
+    # Business modules
+    'pyerp.business_modules.products',
+    'pyerp.business_modules.inventory',
+    'pyerp.business_modules.sales',
+    'pyerp.business_modules.production',
+    'pyerp.business_modules.business',
+    
+    # Utility apps
+    'pyerp.utils.email_system',
+]
 
-MIDDLEWARE = [  # noqa: F405
-    middleware
-    for middleware in MIDDLEWARE
-    if "debug_toolbar" not in middleware  # noqa: F405
+# Remove debug toolbar for tests
+if "debug_toolbar" in INSTALLED_APPS:
+    INSTALLED_APPS.remove("debug_toolbar")
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 # Remove ddtrace middleware if present
-MIDDLEWARE = [  # noqa: F405
-    middleware for middleware in MIDDLEWARE if "ddtrace" not in middleware  # noqa: F405
+MIDDLEWARE = [
+    middleware for middleware in MIDDLEWARE if "ddtrace" not in middleware
 ]
-
-# Remove ddtrace from INSTALLED_APPS if present
-if "ddtrace.contrib.django" in INSTALLED_APPS:  # noqa: F405
-    INSTALLED_APPS.remove("ddtrace.contrib.django")  # noqa: F405
 
 ALLOWED_HOSTS = ["*"]
 

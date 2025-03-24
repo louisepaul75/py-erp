@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 import logging
 from django.db import models
+from datetime import datetime
 
 from .models import BoxType, StorageLocation, Box, ProductStorage, BoxStorage, BoxSlot
 from .services import InventoryService
@@ -28,7 +29,13 @@ def placeholder_view(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def box_types_list(request):
-    """API endpoint to list all box types."""
+    """
+    API endpoint to list all box types.
+    
+    Returns:
+        200: List of box types
+        500: Server error
+    """
     try:
         box_types = BoxType.objects.all()
         data = [
@@ -45,48 +52,66 @@ def box_types_list(request):
             }
             for box_type in box_types
         ]
-        return Response(data)
+        return Response({
+            "status": "success",
+            "message": "Box types retrieved successfully",
+            "data": data
+        })
     except Exception as e:
         logger.error(f"Error fetching box types: {e}")
-        return Response({"detail": "Failed to fetch box types"}, status=500)
+        return Response({
+            "status": "error",
+            "message": "Failed to fetch box types",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def boxes_list(request):
-    """API endpoint to list all boxes."""
+    """
+    API endpoint to list all boxes with pagination.
+    
+    Query Parameters:
+        page: Page number (default: 1)
+        page_size: Number of items per page (default: 10)
+        
+    Returns:
+        200: List of boxes with pagination info
+        500: Server error
+    """
     try:
-        # Get page number and size from query parameters
         page = int(request.GET.get("page", 1))
         page_size = int(request.GET.get("page_size", 10))
 
-        # Calculate offset and limit
         offset = (page - 1) * page_size
         limit = page_size
 
-        # Get total count
         total_count = Box.objects.count()
-
-        # Get paginated boxes with related data
         boxes = (
             Box.objects.select_related("box_type")
             .prefetch_related("slots")
-            .all()[offset : offset + limit]
+            .all()[offset:offset + limit]
         )
 
         data = []
         for box in boxes:
             try:
-                # Get the first slot with a storage location through box storage
                 storage_location = None
                 for slot in box.slots.all():
-                    box_storage = slot.box_storage_items.select_related(
-                        "product_storage__storage_location"
-                    ).first()
-                    if box_storage and box_storage.product_storage.storage_location:
+                    box_storage = (
+                        slot.box_storage_items
+                        .select_related("product_storage__storage_location")
+                        .first()
+                    )
+                    if (box_storage and 
+                            box_storage.product_storage.storage_location):
                         storage_location = {
-                            "id": box_storage.product_storage.storage_location.id,
-                            "name": box_storage.product_storage.storage_location.name,
+                            "id": (box_storage.product_storage
+                                  .storage_location.id),
+                            "name": (box_storage.product_storage
+                                   .storage_location.name),
                         }
                         break
 
@@ -109,32 +134,55 @@ def boxes_list(request):
                 logger.error(f"Error processing box {box.id}: {box_error}")
                 continue
 
-        return Response(
-            {
+        return Response({
+            "status": "success",
+            "message": "Boxes retrieved successfully",
+            "data": {
                 "results": data,
-                "total": total_count,
-                "page": page,
-                "page_size": page_size,
-                "total_pages": (total_count + page_size - 1) // page_size,
+                "pagination": {
+                    "total": total_count,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": (total_count + page_size - 1) // page_size,
+                }
             }
-        )
+        })
     except Exception as e:
         logger.error(f"Error fetching boxes: {e}")
-        return Response({"detail": "Failed to fetch boxes"}, status=500)
+        return Response({
+            "status": "error",
+            "message": "Failed to fetch boxes",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def storage_locations_list(request):
-    """API endpoint to list all storage locations."""
+    """
+    API endpoint to list all storage locations.
+    
+    Returns:
+        200: List of storage locations
+        500: Server error
+    """
     try:
-        # Get all storage locations with product counts
         locations = StorageLocation.objects.annotate(
             product_count=models.Count("stored_products", distinct=True)
         )
 
-        data = [
-            {
+        data = []
+        for location in locations:
+            location_code = "-".join(filter(None, [
+                location.country,
+                location.city_building,
+                location.unit,
+                location.compartment,
+                location.shelf
+            ]))
+            
+            data.append({
                 "id": location.id,
                 "name": location.name,
                 "description": location.description,
@@ -147,37 +195,54 @@ def storage_locations_list(request):
                 "special_spot": location.special_spot,
                 "is_active": location.is_active,
                 "product_count": location.product_count,
-                "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip(
-                    "-"
-                ),
-            }
-            for location in locations
-        ]
-        return Response(data)
+                "location_code": location_code,
+            })
+
+        return Response({
+            "status": "success",
+            "message": "Storage locations retrieved successfully",
+            "data": data
+        })
     except Exception as e:
         logger.error(f"Error fetching storage locations: {e}")
-        return Response({"detail": "Failed to fetch storage locations"}, status=500)
+        return Response({
+            "status": "error",
+            "message": "Failed to fetch storage locations",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def products_by_location(request, location_id=None):
-    """API endpoint to list products by storage location."""
+    """
+    API endpoint to list products by storage location.
+    
+    Path Parameters:
+        location_id: ID of the storage location
+        
+    Returns:
+        200: List of products in the location
+        400: Missing location ID
+        500: Server error
+    """
     try:
         if not location_id:
-            return Response({"detail": "Storage location ID is required"}, status=400)
+            return Response({
+                "status": "error",
+                "message": "Storage location ID is required",
+                "code": "MISSING_PARAMETERS"
+            }, status=400)
 
-        # Get products in the storage location
         product_storage_items = ProductStorage.objects.filter(
             storage_location_id=location_id
         ).select_related("product", "storage_location")
 
-        # Get box storage items for these products
         box_storage_items = BoxStorage.objects.filter(
             product_storage__in=product_storage_items
         ).select_related("box_slot", "box_slot__box")
 
-        # Group products by box and slot
         result = {}
         for box_item in box_storage_items:
             box = box_item.box_slot.box
@@ -186,7 +251,11 @@ def products_by_location(request, location_id=None):
             product = box_item.product_storage.product
 
             if box_code not in result:
-                result[box_code] = {"box_id": box.id, "box_code": box_code, "slots": {}}
+                result[box_code] = {
+                    "box_id": box.id,
+                    "box_code": box_code,
+                    "slots": {}
+                }
 
             if slot_code not in result[box_code]["slots"]:
                 result[box_code]["slots"][slot_code] = {
@@ -195,83 +264,114 @@ def products_by_location(request, location_id=None):
                     "products": [],
                 }
 
-            result[box_code]["slots"][slot_code]["products"].append(
-                {
-                    "id": product.id,
-                    "sku": product.sku,
-                    "name": product.name,
-                    "quantity": box_item.quantity,
-                    "reservation_status": box_item.product_storage.reservation_status,
-                    "batch_number": box_item.batch_number,
-                    "date_stored": box_item.date_stored,
-                }
-            )
+            result[box_code]["slots"][slot_code]["products"].append({
+                "id": product.id,
+                "sku": product.sku,
+                "name": product.name,
+                "quantity": box_item.quantity,
+                "reservation_status": (
+                    box_item.product_storage.reservation_status
+                ),
+                "batch_number": box_item.batch_number,
+                "date_stored": box_item.date_stored,
+            })
 
-        # Convert to list format for easier consumption in frontend
         formatted_result = []
         for box_code, box_data in result.items():
-            box_item = {"box_id": box_data["box_id"], "box_code": box_code, "slots": []}
+            box_item = {
+                "box_id": box_data["box_id"],
+                "box_code": box_code,
+                "slots": []
+            }
 
             for slot_code, slot_data in box_data["slots"].items():
-                box_item["slots"].append(
-                    {
-                        "slot_id": slot_data["slot_id"],
-                        "slot_code": slot_code,
-                        "products": slot_data["products"],
-                    }
-                )
+                box_item["slots"].append({
+                    "slot_id": slot_data["slot_id"],
+                    "slot_code": slot_code,
+                    "products": slot_data["products"],
+                })
 
             formatted_result.append(box_item)
 
-        return Response(formatted_result)
+        return Response({
+            "status": "success",
+            "message": "Products retrieved successfully",
+            "data": formatted_result
+        })
     except Exception as e:
         logger.error(f"Error fetching products by location: {e}")
-        return Response(
-            {"detail": f"Failed to fetch products by location: {str(e)}"}, status=500
-        )
+        return Response({
+            "status": "error",
+            "message": "Failed to fetch products by location",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def locations_by_product(request, product_id=None):
-    """API endpoint to list storage locations for a specific product."""
+    """
+    API endpoint to list storage locations for a specific product.
+    
+    Path Parameters:
+        product_id: ID of the product
+        
+    Returns:
+        200: List of locations containing the product
+        400: Missing product ID
+        500: Server error
+    """
     try:
         if not product_id:
-            return Response({"detail": "Product ID is required"}, status=400)
+            return Response({
+                "status": "error",
+                "message": "Product ID is required",
+                "code": "MISSING_PARAMETERS"
+            }, status=400)
 
-        # Get storage locations for the product
         product_storage_items = ProductStorage.objects.filter(
             product_id=product_id
         ).select_related("product", "storage_location")
 
-        # Format the response
         result = []
         for item in product_storage_items:
             if item.storage_location:
                 location = item.storage_location
-                result.append(
-                    {
-                        "id": location.id,
-                        "name": location.name,
-                        "location_code": f"{location.country}-{location.city_building}-{location.unit}-{location.compartment}-{location.shelf}".strip(
-                            "-"
-                        ),
-                        "quantity": item.quantity,
-                        "reservation_status": item.reservation_status,
-                        "country": location.country,
-                        "city_building": location.city_building,
-                        "unit": location.unit,
-                        "compartment": location.compartment,
-                        "shelf": location.shelf,
-                    }
-                )
+                location_code = "-".join(filter(None, [
+                    location.country,
+                    location.city_building,
+                    location.unit,
+                    location.compartment,
+                    location.shelf
+                ]))
+                
+                result.append({
+                    "id": location.id,
+                    "name": location.name,
+                    "location_code": location_code,
+                    "quantity": item.quantity,
+                    "reservation_status": item.reservation_status,
+                    "country": location.country,
+                    "city_building": location.city_building,
+                    "unit": location.unit,
+                    "compartment": location.compartment,
+                    "shelf": location.shelf,
+                })
 
-        return Response(result)
+        return Response({
+            "status": "success",
+            "message": "Locations retrieved successfully",
+            "data": result
+        })
     except Exception as e:
         logger.error(f"Error fetching locations by product: {e}")
-        return Response(
-            {"detail": f"Failed to fetch locations by product: {str(e)}"}, status=500
-        )
+        return Response({
+            "status": "error",
+            "message": "Failed to fetch locations by product",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 # New endpoints for inventory operations
@@ -279,25 +379,42 @@ def locations_by_product(request, product_id=None):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def move_box(request):
-    """API endpoint to move a box to a different storage location."""
+    """
+    API endpoint to move a box to a different storage location.
+
+    Request body:
+        box_id: ID of the box to move
+        target_location_id: ID of the target storage location
+
+    Returns:
+        200: Box moved successfully
+        400: Invalid request parameters
+        404: Box or location not found
+        500: Server error
+    """
     try:
         box_id = request.data.get("box_id")
         target_location_id = request.data.get("target_location_id")
 
         if not box_id or not target_location_id:
-            return Response(
-                {"detail": "Box ID and target location ID are required"},
-                status=400,
-            )
+            error_response = {
+                "status": "error",
+                "message": "Box ID and target location ID are required",
+                "code": "MISSING_PARAMETERS",
+            }
+            return Response(error_response, status=400)
 
         try:
             box = Box.objects.get(id=box_id)
             target_location = StorageLocation.objects.get(id=target_location_id)
-        except (Box.DoesNotExist, StorageLocation.DoesNotExist):
-            return Response(
-                {"detail": "Box or target location not found"},
-                status=404,
-            )
+        except (Box.DoesNotExist, StorageLocation.DoesNotExist) as e:
+            error_response = {
+                "status": "error",
+                "message": "Box or target location not found",
+                "code": "NOT_FOUND",
+                "details": str(e),
+            }
+            return Response(error_response, status=404)
 
         try:
             updated_box = InventoryService.move_box(
@@ -306,28 +423,59 @@ def move_box(request):
                 user=request.user,
             )
             
-            return Response({
-                "id": updated_box.id,
-                "code": updated_box.code,
-                "status": updated_box.status,
-                "storage_location": {
-                    "id": updated_box.storage_location.id,
-                    "name": updated_box.storage_location.name,
-                    "location_code": updated_box.storage_location.location_code,
-                } if updated_box.storage_location else None,
-                "message": f"Box successfully moved to {updated_box.storage_location}",
-            })
+            success_response = {
+                "status": "success",
+                "message": "Box moved successfully",
+                "data": {
+                    "box_id": updated_box.id,
+                    "current_location": {
+                        "id": target_location.id,
+                        "name": target_location.name,
+                    },
+                    "moved_at": datetime.now().isoformat(),
+                    "moved_by": request.user.username,
+                },
+            }
+            return Response(success_response)
+            
         except Exception as e:
-            return Response({"detail": str(e)}, status=400)
+            error_response = {
+                "status": "error",
+                "message": "Failed to move box",
+                "code": "MOVE_FAILED",
+                "details": str(e),
+            }
+            return Response(error_response, status=500)
+            
     except Exception as e:
-        logger.error(f"Error moving box: {e}")
-        return Response({"detail": "Failed to move box"}, status=500)
+        error_response = {
+            "status": "error",
+            "message": "Internal server error",
+            "code": "SERVER_ERROR",
+            "details": str(e),
+        }
+        return Response(error_response, status=500)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_product_to_box(request):
-    """API endpoint to add a product to a box slot."""
+    """
+    API endpoint to add a product to a box slot.
+    
+    Request body:
+        product_id: ID of the product to add
+        box_slot_id: ID of the target box slot
+        quantity: Quantity to add
+        batch_number: Optional batch number
+        expiry_date: Optional expiry date
+        
+    Returns:
+        200: Product added successfully
+        400: Invalid request parameters
+        404: Product or box slot not found
+        500: Server error
+    """
     try:
         product_id = request.data.get("product_id")
         box_slot_id = request.data.get("box_slot_id")
@@ -336,10 +484,11 @@ def add_product_to_box(request):
         expiry_date = request.data.get("expiry_date")
 
         if not product_id or not box_slot_id or not quantity:
-            return Response(
-                {"detail": "Product ID, box slot ID, and quantity are required"},
-                status=400,
-            )
+            return Response({
+                "status": "error",
+                "message": "Product ID, box slot ID, and quantity are required",
+                "code": "MISSING_PARAMETERS"
+            }, status=400)
 
         try:
             from pyerp.business_modules.products.models import VariantProduct
@@ -347,10 +496,11 @@ def add_product_to_box(request):
             box_slot = BoxSlot.objects.get(id=box_slot_id)
             quantity = int(quantity)
         except (VariantProduct.DoesNotExist, BoxSlot.DoesNotExist, ValueError):
-            return Response(
-                {"detail": "Product, box slot not found, or invalid quantity"},
-                status=404,
-            )
+            return Response({
+                "status": "error",
+                "message": "Product, box slot not found, or invalid quantity",
+                "code": "NOT_FOUND"
+            }, status=404)
 
         try:
             box_storage = InventoryService.add_product_to_box_slot(
@@ -363,167 +513,269 @@ def add_product_to_box(request):
             )
             
             return Response({
-                "id": box_storage.id,
-                "product": {
-                    "id": product.id,
-                    "name": str(product),
-                },
-                "box_slot": {
-                    "id": box_slot.id,
-                    "code": box_slot.slot_code,
-                    "box_code": box_slot.box.code,
-                },
-                "quantity": box_storage.quantity,
-                "message": f"Added {quantity} of product {product} to box slot {box_slot}",
+                "status": "success",
+                "message": (
+                    f"Added {quantity} of product {product} to box slot {box_slot}"
+                ),
+                "data": {
+                    "box_storage_id": box_storage.id,
+                    "product": {
+                        "id": product.id,
+                        "name": str(product),
+                    },
+                    "box_slot": {
+                        "id": box_slot.id,
+                        "code": box_slot.slot_code,
+                        "box_code": box_slot.box.code,
+                    },
+                    "quantity": box_storage.quantity,
+                }
             })
         except Exception as e:
-            return Response({"detail": str(e)}, status=400)
+            return Response({
+                "status": "error",
+                "message": str(e),
+                "code": "OPERATION_FAILED"
+            }, status=400)
     except Exception as e:
         logger.error(f"Error adding product to box: {e}")
-        return Response({"detail": "Failed to add product to box"}, status=500)
+        return Response({
+            "status": "error",
+            "message": "Failed to add product to box",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def move_product_between_boxes(request):
-    """API endpoint to move products between box slots."""
+    """
+    API endpoint to move products between box slots.
+    
+    Request body:
+        source_box_storage_id: ID of the source box storage
+        target_box_slot_id: ID of the target box slot
+        quantity: Quantity to move
+        
+    Returns:
+        200: Product moved successfully
+        400: Invalid request parameters
+        404: Source or target not found
+        500: Server error
+    """
     try:
         source_box_storage_id = request.data.get("source_box_storage_id")
         target_box_slot_id = request.data.get("target_box_slot_id")
         quantity = request.data.get("quantity")
 
         if not source_box_storage_id or not target_box_slot_id or not quantity:
-            return Response(
-                {"detail": "Source box storage ID, target box slot ID, and quantity are required"},
-                status=400,
-            )
+            return Response({
+                "status": "error",
+                "message": (
+                    "Source box storage ID, target box slot ID, and quantity "
+                    "are required"
+                ),
+                "code": "MISSING_PARAMETERS"
+            }, status=400)
 
         try:
-            source_box_storage = BoxStorage.objects.get(id=source_box_storage_id)
+            source_box_storage = BoxStorage.objects.get(
+                id=source_box_storage_id
+            )
             target_box_slot = BoxSlot.objects.get(id=target_box_slot_id)
             quantity = int(quantity)
         except (BoxStorage.DoesNotExist, BoxSlot.DoesNotExist, ValueError):
-            return Response(
-                {"detail": "Source box storage or target box slot not found, or invalid quantity"},
-                status=404,
-            )
+            return Response({
+                "status": "error",
+                "message": (
+                    "Source box storage or target box slot not found, "
+                    "or invalid quantity"
+                ),
+                "code": "NOT_FOUND"
+            }, status=404)
 
         try:
-            source_updated, target_updated = InventoryService.move_product_between_box_slots(
-                source_box_storage=source_box_storage,
-                target_box_slot=target_box_slot,
-                quantity=quantity,
-                user=request.user,
+            source_updated, target_updated = (
+                InventoryService.move_product_between_box_slots(
+                    source_box_storage=source_box_storage,
+                    target_box_slot=target_box_slot,
+                    quantity=quantity,
+                    user=request.user,
+                )
             )
             
             product = target_updated.product_storage.product
             
             return Response({
-                "product": {
-                    "id": product.id,
-                    "name": str(product),
-                },
-                "source_box_slot": {
-                    "id": source_box_storage.box_slot.id,
-                    "code": source_box_storage.box_slot.slot_code,
-                    "box_code": source_box_storage.box_slot.box.code,
-                    "remaining_quantity": source_updated.quantity if source_updated else 0,
-                },
-                "target_box_slot": {
-                    "id": target_box_slot.id,
-                    "code": target_box_slot.slot_code,
-                    "box_code": target_box_slot.box.code,
-                    "quantity": target_updated.quantity,
-                },
-                "quantity_moved": quantity,
-                "message": f"Moved {quantity} units of product {product} between box slots",
+                "status": "success",
+                "message": (
+                    f"Moved {quantity} units of product {product} "
+                    "between box slots"
+                ),
+                "data": {
+                    "product": {
+                        "id": product.id,
+                        "name": str(product),
+                    },
+                    "source_box_slot": {
+                        "id": source_box_storage.box_slot.id,
+                        "code": source_box_storage.box_slot.slot_code,
+                        "box_code": source_box_storage.box_slot.box.code,
+                        "remaining_quantity": (
+                            source_updated.quantity if source_updated else 0
+                        ),
+                    },
+                    "target_box_slot": {
+                        "id": target_box_slot.id,
+                        "code": target_box_slot.slot_code,
+                        "box_code": target_box_slot.box.code,
+                        "quantity": target_updated.quantity,
+                    },
+                    "quantity_moved": quantity,
+                }
             })
         except Exception as e:
-            return Response({"detail": str(e)}, status=400)
+            return Response({
+                "status": "error",
+                "message": str(e),
+                "code": "OPERATION_FAILED"
+            }, status=400)
     except Exception as e:
         logger.error(f"Error moving product between boxes: {e}")
-        return Response({"detail": "Failed to move product between boxes"}, status=500)
+        return Response({
+            "status": "error",
+            "message": "Failed to move product between boxes",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def remove_product_from_box(request):
-    """API endpoint to remove a product from a box slot."""
+    """
+    API endpoint to remove a product from a box slot.
+    
+    Request body:
+        box_storage_id: ID of the box storage to remove from
+        quantity: Quantity to remove
+        reason: Optional reason for removal
+        
+    Returns:
+        200: Product removed successfully
+        400: Invalid request parameters
+        404: Box storage not found
+        500: Server error
+    """
     try:
         box_storage_id = request.data.get("box_storage_id")
         quantity = request.data.get("quantity")
         reason = request.data.get("reason")
 
         if not box_storage_id or not quantity:
-            return Response(
-                {"detail": "Box storage ID and quantity are required"},
-                status=400,
-            )
+            return Response({
+                "status": "error",
+                "message": "Box storage ID and quantity are required",
+                "code": "MISSING_PARAMETERS"
+            }, status=400)
 
         try:
             box_storage = BoxStorage.objects.get(id=box_storage_id)
             quantity = int(quantity)
         except (BoxStorage.DoesNotExist, ValueError):
-            return Response(
-                {"detail": "Box storage not found or invalid quantity"},
-                status=404,
-            )
+            return Response({
+                "status": "error",
+                "message": "Box storage not found or invalid quantity",
+                "code": "NOT_FOUND"
+            }, status=404)
 
         try:
-            updated_box_storage = InventoryService.remove_product_from_box_slot(
-                box_storage=box_storage,
-                quantity=quantity,
-                reason=reason,
-                user=request.user,
+            updated_box_storage = (
+                InventoryService.remove_product_from_box_slot(
+                    box_storage=box_storage,
+                    quantity=quantity,
+                    reason=reason,
+                    user=request.user,
+                )
             )
             
             product = box_storage.product_storage.product
             box_slot = box_storage.box_slot
             
             return Response({
-                "product": {
-                    "id": product.id,
-                    "name": str(product),
-                },
-                "box_slot": {
-                    "id": box_slot.id,
-                    "code": box_slot.slot_code,
-                    "box_code": box_slot.box.code,
-                },
-                "quantity_removed": quantity,
-                "remaining_quantity": updated_box_storage.quantity if updated_box_storage else 0,
-                "message": f"Removed {quantity} units of product {product} from box slot {box_slot}",
+                "status": "success",
+                "message": (
+                    f"Removed {quantity} units of product {product} "
+                    f"from box slot {box_slot}"
+                ),
+                "data": {
+                    "product": {
+                        "id": product.id,
+                        "name": str(product),
+                    },
+                    "box_slot": {
+                        "id": box_slot.id,
+                        "code": box_slot.slot_code,
+                        "box_code": box_slot.box.code,
+                    },
+                    "quantity_removed": quantity,
+                    "remaining_quantity": (
+                        updated_box_storage.quantity 
+                        if updated_box_storage else 0
+                    ),
+                }
             })
         except Exception as e:
-            return Response({"detail": str(e)}, status=400)
+            return Response({
+                "status": "error",
+                "message": str(e),
+                "code": "OPERATION_FAILED"
+            }, status=400)
     except Exception as e:
         logger.error(f"Error removing product from box: {e}")
-        return Response({"detail": "Failed to remove product from box"}, status=500)
+        return Response({
+            "status": "error",
+            "message": "Failed to remove product from box",
+            "code": "SERVER_ERROR",
+            "details": str(e)
+        }, status=500)
 
 
 # URL patterns for the inventory app
 urlpatterns = [
-    path("status/", placeholder_view, name="status"),
-    path("placeholder/", placeholder_view, name="placeholder"),
-    path("box-types/", box_types_list, name="box_types_list"),
-    path("boxes/", boxes_list, name="boxes_list"),
+    path("api/inventory/status/", placeholder_view, name="status"),
+    path("api/inventory/box-types/", box_types_list, name="box_types_list"),
+    path("api/inventory/boxes/", boxes_list, name="boxes_list"),
     path(
-        "storage-locations/",
+        "api/inventory/storage-locations/",
         storage_locations_list,
         name="storage_locations_list",
     ),
     path(
-        "storage-locations/<int:location_id>/products/",
+        "api/inventory/storage-locations/<int:location_id>/products/",
         products_by_location,
         name="products_by_location",
     ),
     path(
-        "products/<int:product_id>/locations/",
+        "api/inventory/products/<int:product_id>/locations/",
         locations_by_product,
         name="locations_by_product",
     ),
-    path("api/move-box/", move_box, name="move_box"),
-    path("api/add-product-to-box/", add_product_to_box, name="add_product_to_box"),
-    path("api/move-product-between-boxes/", move_product_between_boxes, name="move_product_between_boxes"),
-    path("api/remove-product-from-box/", remove_product_from_box, name="remove_product_from_box"),
+    path("api/inventory/move-box/", move_box, name="move_box"),
+    path(
+        "api/inventory/add-product-to-box/",
+        add_product_to_box,
+        name="add_product_to_box"
+    ),
+    path(
+        "api/inventory/move-product-between-boxes/",
+        move_product_between_boxes,
+        name="move_product_between_boxes"
+    ),
+    path(
+        "api/inventory/remove-product-from-box/",
+        remove_product_from_box,
+        name="remove_product_from_box"
+    ),
 ]
