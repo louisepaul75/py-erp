@@ -142,8 +142,10 @@ class TestInventoryViewsErrorHandling(TestCase):
         # Check the response
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = json.loads(response.content)
-        self.assertIn("Product ID, box slot ID, and quantity are required", 
-                     data['detail'])
+        self.assertIn(
+            "Product ID, box slot ID, and quantity are required",
+            data['detail']
+        )
     
     @patch('pyerp.business_modules.inventory.urls.BoxSlot.objects.get')
     @patch('pyerp.business_modules.products.models.VariantProduct.objects.get')
@@ -154,11 +156,11 @@ class TestInventoryViewsErrorHandling(TestCase):
         # Create request with valid parameters
         request = self.factory.post(
             '/api/add-product-to-box/',
-            data={
+            data=json.dumps({
                 'product_id': 1,
                 'box_slot_id': 2,
                 'quantity': 5
-            },
+            }),
             content_type='application/json'
         )
         request.user = self.user
@@ -166,24 +168,33 @@ class TestInventoryViewsErrorHandling(TestCase):
         # Mark the request as CSRF exempt
         request._dont_enforce_csrf_checks = True
         
-        # Set up mocks
-        mock_product = MagicMock()
+        # Set up mocks with minimal required attributes to avoid DB access
+        mock_product = MagicMock(spec=['id', '__str__'])
         mock_product.id = 1
+        mock_product.__str__.return_value = "Test Product"
         mock_product_get.return_value = mock_product
         
-        mock_slot = MagicMock()
+        mock_slot = MagicMock(spec=['id', 'box', 'slot_code'])
         mock_slot.id = 2
+        mock_slot.slot_code = "SLOT001"
+        mock_slot.box = MagicMock(spec=['code'])
+        mock_slot.box.code = "BOX001"
         mock_slot_get.return_value = mock_slot
         
-        # Setup service to raise an exception
-        mock_service_instance = MagicMock()
+        # Create a standalone mock service rather than using the class
         error_message = "Slot capacity exceeded"
-        mock_service_instance.add_product_to_box_slot.side_effect = \
+        mock_service_instance = MagicMock()
+        mock_service_instance.add_product_to_box_slot.side_effect = (
             ValueError(error_message)
+        )
         mock_service.return_value = mock_service_instance
         
         # Call the view
         response = add_product_to_box(request)
+        
+        # Verify mocks were called correctly
+        mock_product_get.assert_called_once_with(id=1)
+        mock_slot_get.assert_called_once_with(id=2)
         
         # Render the response so content is available
         response.render()

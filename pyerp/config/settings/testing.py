@@ -26,8 +26,18 @@ if "ddtrace" in sys.modules:
 
 # Load environment variables using centralized loader
 from pyerp.utils.env_loader import load_environment_variables
+from .base import (  # noqa: F403
+    INSTALLED_APPS,
+    MIDDLEWARE,
+    BASE_DIR,
+    TEMPLATES,
+)
 
-from .base import *  # noqa: F403
+# Add email_system to INSTALLED_APPS
+INSTALLED_APPS += ["pyerp.utils.email_system"]
+
+# Set logging level for tests
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 
 load_environment_variables(verbose=True)
 
