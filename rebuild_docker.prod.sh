@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Check if running in debug mode
+DEBUG_MODE=false
+if [[ "$1" == "--debug" ]]; then
+  DEBUG_MODE=true
+  echo "Running in debug mode - optimizing for localhost testing"
+fi
+
 # Stop the existing container
 echo "Stopping existing pyerp-prod container..."
 docker stop pyerp-prod || true
@@ -15,8 +22,17 @@ docker rm pyerp-elastic-kibana || true
 
 # Rebuild the Docker image
 echo "Rebuilding Docker image..."
-docker build -t pyerp-prod-image -f docker/Dockerfile.prod \
-  --build-arg DJANGO_SETTINGS_MODULE=pyerp.config.settings.production .
+
+if [ "$DEBUG_MODE" = true ]; then
+  # Debug mode build with special flags
+  docker build -t pyerp-prod-image -f docker/Dockerfile.prod \
+    --build-arg DJANGO_SETTINGS_MODULE=pyerp.config.settings.production \
+    --build-arg DEBUG_MODE=true .
+else
+  # Normal production build
+  docker build -t pyerp-prod-image -f docker/Dockerfile.prod \
+    --build-arg DJANGO_SETTINGS_MODULE=pyerp.config.settings.production .
+fi
 
 # Create Docker network if it doesn't exist
 echo "Ensuring Docker network exists..."
@@ -24,13 +40,28 @@ docker network create pyerp-network 2>/dev/null || true
 
 # Start a new container
 echo "Starting new pyerp-prod container..."
+
+# Determine which env file to use based on mode
+ENV_FILE="config/env/.env.prod"
+if [ "$DEBUG_MODE" = true ]; then
+  ENV_FILE="config/env/.env.prod.local"
+  # Create local env file if it doesn't exist
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "Creating local debugging env file..."
+    cp config/env/.env.prod "$ENV_FILE"
+    echo "DEBUG=True" >> "$ENV_FILE"
+    echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> "$ENV_FILE"
+  fi
+fi
+
 docker run -d \
   --name pyerp-prod \
-  --env-file config/env/.env.prod \
+  --env-file $ENV_FILE \
   -e ELASTICSEARCH_HOST=pyerp-elastic-kibana \
   -e ELASTICSEARCH_PORT=9200 \
   -e KIBANA_HOST=pyerp-elastic-kibana \
   -e KIBANA_PORT=5601 \
+  -e DEBUG_MODE=${DEBUG_MODE} \
   -p 80:80 \
   -p 443:443 \
   -v $(pwd)/docker/nginx/ssl:/etc/nginx/ssl \
@@ -69,3 +100,10 @@ for i in {1..30}; do
         echo "You can check logs with: docker logs pyerp-elastic-kibana"
     fi
 done
+
+if [ "$DEBUG_MODE" = true ]; then
+  echo -e "\nDebug mode is active. Access the application at:"
+  echo -e "- http://localhost (HTTP)"
+  echo -e "- https://localhost (HTTPS - you may need to accept the self-signed certificate)"
+  echo -e "\nTo check for frontend issues, open browser devtools (F12) and check the console"
+fi

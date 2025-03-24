@@ -2,6 +2,15 @@
 
 set -e
 
+# Handle debug mode
+if [ "$DEBUG_MODE" = "true" ]; then
+  echo "Running in DEBUG MODE - special configuration for local development"
+  # Load debug environment instead of prod
+  ENV_FILE="/app/config/env/.env.prod.local"
+else
+  ENV_FILE="/app/config/env/.env.prod"
+fi
+
 # Wait for PostgreSQL
 until nc -z -v -w30 $DB_HOST $DB_PORT
 do
@@ -11,8 +20,8 @@ done
 echo "PostgreSQL database is ready!"
 
 # Load environment variables
-echo "Loading environment from /app/config/env/.env.prod"
-source /app/config/env/.env.prod 2>/dev/null || true
+echo "Loading environment from $ENV_FILE"
+source $ENV_FILE 2>/dev/null || true
 
 # Print database settings for debugging
 echo "Database settings: NAME=$DB_NAME, HOST=$DB_HOST, USER=$DB_USER"
@@ -25,8 +34,8 @@ mkdir -p /app/logs
 chmod -R 755 /app/logs
 echo "Log directories configured with correct permissions"
 
-# Apply database migrations
-python manage.py migrate --noinput
+# Apply Django migrations if needed
+python manage.py migrate
 
-# Start Supervisor (which manages Gunicorn, Nginx, and Redis)
-exec "$@"
+# Start all services using supervisord
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

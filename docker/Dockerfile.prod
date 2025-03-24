@@ -60,18 +60,64 @@ COPY frontend-react/ /app/frontend-react/
 # Build React frontend
 RUN npm run build
 
-# Fix: Ensure build output is properly copied to the React static directory
+# Create necessary directories
 RUN mkdir -p /app/staticfiles/react
-# Copy the built Next.js output
-RUN cp -r .next/static/* /app/staticfiles/react/ || echo "Failed to copy static files"
-# Copy public files
-RUN cp -r public/* /app/staticfiles/react/ || echo "Failed to copy public files"
-# Create and copy index.html as an export
-RUN npx next export -o /tmp/exported || echo "Export step skipped"
-RUN cp -r /tmp/exported/* /app/staticfiles/react/ || echo "Failed to copy exported files"
-# Ensure index.html exists at root level
-RUN touch /app/staticfiles/react/index.html
-RUN echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>pyERP</title><script>window.location.href="/app";</script></head><body><div id="root">Loading pyERP...</div></body></html>' > /app/staticfiles/react/index.html
+
+# Copy the built Next.js output and static files
+RUN cp -r .next /app/staticfiles/react/
+RUN cp -r public/* /app/staticfiles/react/
+
+# Create app directory for proper routing
+RUN mkdir -p /app/staticfiles/react/app
+
+# Create a script to find the actual chunk file names
+RUN echo "#!/bin/bash" > /tmp/find_chunk_files.sh && \
+    echo "POLYFILLS=\$(find .next/static/chunks/ -name 'polyfills-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
+    echo "WEBPACK=\$(find .next/static/chunks/ -name 'webpack-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
+    echo "FRAMEWORK=\$(find .next/static/chunks/ -name 'framework-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
+    echo "MAIN=\$(find .next/static/chunks/ -name 'main-*.js' | grep -v 'main-app' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
+    echo "APP=\$(find .next/static/chunks/pages/ -name '_app-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
+    echo "echo \$POLYFILLS \$WEBPACK \$FRAMEWORK \$MAIN \$APP" >> /tmp/find_chunk_files.sh && \
+    chmod +x /tmp/find_chunk_files.sh
+
+# Use the Next.js exported HTML file instead of manually creating it
+RUN if [ -f .next/server/pages/index.html ]; then \
+      cp .next/server/pages/index.html /app/staticfiles/react/app/index.html; \
+    else \
+      CHUNK_FILES=$(/tmp/find_chunk_files.sh) && \
+      echo '<!DOCTYPE html>' > /app/staticfiles/react/app/index.html && \
+      echo '<html lang="en">' >> /app/staticfiles/react/app/index.html && \
+      echo '<head>' >> /app/staticfiles/react/app/index.html && \
+      echo '  <meta charset="utf-8">' >> /app/staticfiles/react/app/index.html && \
+      echo '  <meta name="viewport" content="width=device-width, initial-scale=1">' >> /app/staticfiles/react/app/index.html && \
+      echo '  <title>pyERP Dashboard</title>' >> /app/staticfiles/react/app/index.html && \
+      echo '  <link rel="icon" href="/favicon.ico" />' >> /app/staticfiles/react/app/index.html && \
+      echo '</head>' >> /app/staticfiles/react/app/index.html && \
+      echo '<body>' >> /app/staticfiles/react/app/index.html && \
+      echo '  <div id="__next"></div>' >> /app/staticfiles/react/app/index.html && \
+      for chunk in $CHUNK_FILES; do \
+        echo "  <script src=\"/_next/static/chunks/$chunk\"></script>" >> /app/staticfiles/react/app/index.html; \
+      done && \
+      echo '</body>' >> /app/staticfiles/react/app/index.html; \
+    fi
+
+# Create root index.html that redirects to /app/
+RUN echo '<!DOCTYPE html>' > /app/staticfiles/react/index.html && \
+    echo '<html lang="en">' >> /app/staticfiles/react/index.html && \
+    echo '<head>' >> /app/staticfiles/react/index.html && \
+    echo '  <meta charset="utf-8">' >> /app/staticfiles/react/index.html && \
+    echo '  <meta name="viewport" content="width=device-width, initial-scale=1">' >> /app/staticfiles/react/index.html && \
+    echo '  <title>pyERP</title>' >> /app/staticfiles/react/index.html && \
+    echo '  <meta http-equiv="refresh" content="0;url=/app/">' >> /app/staticfiles/react/index.html && \
+    echo '</head>' >> /app/staticfiles/react/index.html && \
+    echo '<body>' >> /app/staticfiles/react/index.html && \
+    echo '  <p>Redirecting to <a href="/app/">application</a>...</p>' >> /app/staticfiles/react/index.html && \
+    echo '</body>' >> /app/staticfiles/react/index.html && \
+    echo '</html>' >> /app/staticfiles/react/index.html
+
+# Ensure _next directory is properly structured for Nginx
+RUN mkdir -p /app/staticfiles/react/app/_next && \
+    cp -r /app/staticfiles/react/.next/* /app/staticfiles/react/app/_next/
 
 # Copy the rest of the project code
 WORKDIR /app

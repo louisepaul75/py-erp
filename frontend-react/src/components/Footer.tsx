@@ -33,10 +33,14 @@ export function Footer() {
   // Measure footer height and set CSS variable
   useEffect(() => {
     const updateFooterHeight = () => {
-      const footer = document.querySelector('footer');
-      if (footer) {
-        const height = footer.getBoundingClientRect().height;
-        document.documentElement.style.setProperty('--footer-height', `${height}px`);
+      try {
+        const footer = document.querySelector('footer');
+        if (footer && footer.getBoundingClientRect) {
+          const height = footer.getBoundingClientRect().height;
+          document.documentElement.style.setProperty('--footer-height', `${height}px`);
+        }
+      } catch (error) {
+        console.error('Error updating footer height:', error);
       }
     };
     
@@ -53,10 +57,19 @@ export function Footer() {
     if (isDevBarExpanded) {
       // Set a small delay to ensure the DOM has updated
       setTimeout(() => {
-        const devBarContent = document.querySelector('.dev-bar-content');
-        if (devBarContent) {
-          const height = devBarContent.getBoundingClientRect().height;
-          document.documentElement.style.setProperty('--dev-bar-height', `${height}px`);
+        try {
+          const devBarContent = document.querySelector('.dev-bar-content');
+          if (devBarContent && devBarContent.getBoundingClientRect) {
+            const height = devBarContent.getBoundingClientRect().height;
+            document.documentElement.style.setProperty('--dev-bar-height', `${height}px`);
+          } else {
+            // Fallback height if element not found
+            document.documentElement.style.setProperty('--dev-bar-height', '200px');
+          }
+        } catch (error) {
+          console.error('Error updating dev bar height:', error);
+          // Fallback in case of error
+          document.documentElement.style.setProperty('--dev-bar-height', '200px');
         }
       }, 10);
     } else {
