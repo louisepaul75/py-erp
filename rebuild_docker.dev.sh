@@ -21,8 +21,8 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --monitoring)
-            if [[ "$2" != "none" && "$2" != "separate" && "$2" != "remote" ]]; then
-                echo "Error: --monitoring requires one of: none, separate, remote"
+            if [[ "$2" != "none" && "$2" != "remote" ]]; then
+                echo "Error: --monitoring requires one of: none, remote"
                 exit 1
             fi
             MONITORING_MODE="$2"
@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown parameter: $1"
-            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|separate|remote]"
+            echo "Usage: $0 [--tests ui] [--no-cache] [--monitoring none|remote]"
             exit 1
             ;;
     esac
@@ -47,23 +47,6 @@ docker stop pyerp-dev || true
 # Remove the existing container
 echo "Removing existing pyerp-dev container..."
 docker rm pyerp-dev || true
-
-# Check if monitoring containers are already running and stop/remove them if they are
-if docker ps | grep -q "pyerp-elastic-kibana"; then
-    echo "Stopping existing monitoring container..."
-    docker stop pyerp-elastic-kibana || true
-    docker rm pyerp-elastic-kibana || true
-fi
-
-# Always remove the monitoring container even if not running
-if [ "$MONITORING_MODE" == "separate" ]; then
-    echo "Removing monitoring container (if exists)..."
-    docker stop pyerp-elastic-kibana || true
-    docker rm pyerp-elastic-kibana || true
-fi
-
-# Uncomment to clean up build cache if needed
-# docker buildx prune -a
 
 # Rebuild the Docker image
 if [ "$USE_CACHE" == "no" ]; then
@@ -91,15 +74,6 @@ HOSTNAME=$(hostname)
 if [ "$MONITORING_MODE" == "none" ]; then
     # No monitoring environment variables needed
     MONITORING_ENV=""
-    MONITORING_CMD=""
-    MONITORING_PORTS=""
-    MONITORING_VOLUMES=""
-elif [ "$MONITORING_MODE" == "separate" ]; then
-    # Set environment variables to connect to separate monitoring container
-    MONITORING_ENV="-e ELASTICSEARCH_HOST=pyerp-elastic-kibana -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=pyerp-elastic-kibana -e KIBANA_PORT=5602 -e ELASTICSEARCH_INDEX_PREFIX=pyerp -e PYERP_ENV=dev -e SENTRY_DSN=https://development@sentry.example.com/1"
-    MONITORING_CMD=""
-    MONITORING_PORTS=""
-    MONITORING_VOLUMES=""
 elif [ "$MONITORING_MODE" == "remote" ]; then
     # Get remote ELK settings from .env.dev file or use defaults
     if [ -f "$ENV_FILE" ]; then
@@ -111,9 +85,6 @@ elif [ "$MONITORING_MODE" == "remote" ]; then
         echo "Warning: No $ENV_FILE found, using default remote ELK settings"
         MONITORING_ENV="-e ELASTICSEARCH_HOST=production-elk-server-address -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=production-elk-server-address -e KIBANA_PORT=5601 -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
     fi
-    MONITORING_CMD=""
-    MONITORING_PORTS=""
-    MONITORING_VOLUMES=""
 fi
 
 # Start the pyERP container
@@ -126,18 +97,10 @@ docker run -d \
   -p 3000:3000 \
   -p 6379:6379 \
   -p 80:80 \
-  $([ "$MONITORING_MODE" == "none" ] && echo "-p 9200:9200 -p 5602:5601") \
   -v $(pwd):/app \
-  $([ "$MONITORING_MODE" == "none" ] && echo "-v pyerp_elasticsearch_data:/var/lib/elasticsearch") \
   --network pyerp-network \
   pyerp-dev-image \
-  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_frontend_deps.sh && $([ "$MONITORING_MODE" == "none" ] && echo "bash /app/docker/install_monitoring.sh &&") /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
-
-# Start the separate monitoring container if needed
-if [ "$MONITORING_MODE" == "separate" ]; then
-    echo "Starting separate monitoring container with docker-compose..."
-    docker-compose -f docker/docker-compose.monitoring.yml up -d
-fi
+  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
 # Show the last 50 lines of container logs
 echo "Showing last 50 lines of container logs..."
@@ -161,16 +124,7 @@ echo -e "\nContainer is running in the background. Use 'docker logs pyerp-dev' t
 
 # Display monitoring information based on the selected mode
 if [ "$MONITORING_MODE" == "none" ]; then
-    echo -e "\nMonitoring services (integrated):"
-    echo -e "- Elasticsearch: http://localhost:9200"
-    echo -e "- Kibana: http://localhost:5602"
-    echo -e "- Sentry: Integrated with Django application"
-elif [ "$MONITORING_MODE" == "separate" ]; then
-    echo -e "\nMonitoring services (separate container):"
-    echo -e "- Elasticsearch: http://localhost:9200"
-    echo -e "- Kibana: http://localhost:5602" 
-    echo -e "- Sentry: Integrated with Django application"
-    echo -e "Monitoring container logs: docker logs pyerp-elastic-kibana"
+    echo -e "\nMonitoring: Disabled (using local logging only)"
 elif [ "$MONITORING_MODE" == "remote" ]; then
     echo -e "\nMonitoring services (remote connection):"
     echo -e "- Connected to remote Elasticsearch: ${ELASTICSEARCH_HOST:-production-elk-server-address}:${ELASTICSEARCH_PORT:-9200}"

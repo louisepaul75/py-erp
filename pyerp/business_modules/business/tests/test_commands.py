@@ -14,7 +14,9 @@ import pytest
 class TestSyncEmployeesCommand(TestCase):
     """Tests for the sync_employees management command."""
 
-    @mock.patch("business.management.commands.sync_employees.sync_employees")
+    @mock.patch(
+        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
+    )
     def test_sync_employees_command_default(self, mock_sync_employees):
         """Test running the command with default options."""
         # Set up mock return value
@@ -39,7 +41,9 @@ class TestSyncEmployeesCommand(TestCase):
         self.assertIn("Sync completed", output)
         self.assertIn("10 total, 9 success, 1 failed", output)
 
-    @mock.patch("business.management.commands.sync_employees.sync_employees")
+    @mock.patch(
+        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
+    )
     def test_sync_employees_command_full_sync(self, mock_sync_employees):
         """Test running the command with full sync option."""
         # Set up mock return value
@@ -64,7 +68,9 @@ class TestSyncEmployeesCommand(TestCase):
         self.assertIn("Sync completed", output)
         self.assertIn("100 total, 95 success, 5 failed", output)
 
-    @mock.patch("business.management.commands.sync_employees.sync_employees")
+    @mock.patch(
+        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
+    )
     def test_sync_employees_command_with_filters(self, mock_sync_employees):
         """Test running the command with filters."""
         # Set up mock return value
@@ -83,7 +89,9 @@ class TestSyncEmployeesCommand(TestCase):
         call_command("sync_employees", filters=json.dumps(filters), stdout=out)
         
         # Check that the sync_employees function was called with filters
-        mock_sync_employees.assert_called_once_with(full_sync=False, filters=filters)
+        mock_sync_employees.assert_called_once_with(
+            full_sync=False, filters=filters
+        )
         
         # Check output
         output = out.getvalue()
@@ -92,7 +100,9 @@ class TestSyncEmployeesCommand(TestCase):
         self.assertIn("Sync completed", output)
         self.assertIn("5 total, 5 success, 0 failed", output)
 
-    @mock.patch("business.management.commands.sync_employees.sync_employees")
+    @mock.patch(
+        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
+    )
     def test_sync_employees_command_invalid_filters(self, mock_sync_employees):
         """Test the command with invalid JSON filters."""
         # Run the command with invalid JSON
@@ -106,7 +116,9 @@ class TestSyncEmployeesCommand(TestCase):
         output = out.getvalue()
         self.assertIn("Invalid JSON format for filters", output)
 
-    @mock.patch("business.management.commands.sync_employees.sync_employees")
+    @mock.patch(
+        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
+    )
     def test_sync_employees_command_failure(self, mock_sync_employees):
         """Test command handling when sync fails."""
         # Set up mock to return error
@@ -118,6 +130,9 @@ class TestSyncEmployeesCommand(TestCase):
         # Run the command
         out = StringIO()
         call_command("sync_employees", stdout=out)
+        
+        # Check that sync_employees was called
+        mock_sync_employees.assert_called_once_with(full_sync=False, filters=None)
         
         # Check output shows error
         output = out.getvalue()

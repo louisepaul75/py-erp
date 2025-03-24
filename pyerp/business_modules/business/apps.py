@@ -6,7 +6,7 @@ class BusinessConfig(AppConfig):
     """Business app configuration."""
     
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'business'
+    name = 'pyerp.business_modules.business'
     verbose_name = _('Business Management')
     
     def ready(self):

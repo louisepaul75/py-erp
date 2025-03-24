@@ -27,8 +27,12 @@ class TestEmployeeSync(TestCase):
         self.source.name = "legacy_erp"
         self.source.description = "Legacy 4D ERP System"
         self.source.config = {
-            "extractor_class": "pyerp.sync.extractors.legacy_employee.LegacyEmployeeExtractor",
-            "config": {"table": "Pers", "key_field": "__KEY"},
+            "extractor_class": "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor",
+            "config": {
+                "environment": "test",
+                "table_name": "Pers",
+                "key_field": "__KEY"
+            },
         }
 
         self.target = mock.MagicMock(spec=SyncTarget)

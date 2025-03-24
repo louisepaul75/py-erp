@@ -688,8 +688,12 @@ def sync_employees(
         # Create config objects
         source_config = {
             "name": "legacy_erp",
-            "extractor_class": "pyerp.sync.extractors.legacy_employee.LegacyEmployeeExtractor",
-            "config": {"table": "Pers", "key_field": "__KEY"},
+            "extractor_class": "pyerp.sync.extractors.legacy_api.LegacyAPIExtractor",
+            "config": {
+                "environment": "test",
+                "table_name": "Pers",
+                "key_field": "__KEY"
+            },
         }
 
         target_config = {

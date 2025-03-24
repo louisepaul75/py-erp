@@ -331,16 +331,19 @@ class ProductAPIView(APIView):
             product_data["primary_image"] = None
 
             # Add category if available
-            if hasattr(product, "category") and product.category:
+            if product.category_id:
                 try:
+                    category = ProductCategory.objects.get(id=product.category_id)
                     product_data["category"] = {
-                        "id": product.category.id,
-                        "name": product.category.name,
-                        "code": getattr(product.category, "code", ""),
+                        "id": category.id,
+                        "name": category.name,
+                        "code": category.code,
                     }
-                except Exception as e:
+                except (ProductCategory.DoesNotExist, Exception) as e:
                     print(f"Error getting category for product {product.id}: {e!s}")
                     product_data["category"] = None
+            else:
+                product_data["category"] = None
 
             # Add variants count for parent products
             if isinstance(product, ParentProduct):
@@ -449,8 +452,8 @@ class ProductListAPIView(ProductAPIView):
 
     def get(self, request):
         """Handle GET request for product listing"""
-        # Start with an optimized queryset that includes related data
-        products = ParentProduct.objects.select_related("category")
+        # Start with the base queryset
+        products = ParentProduct.objects.all()
 
         # Use annotation to count variants in a single query instead of N+1 queries
         products = products.annotate(variants_count=Count("variants"))
@@ -464,9 +467,7 @@ class ProductListAPIView(ProductAPIView):
 
         # Consolidate prefetch_related calls to avoid conflicts
         if include_variants:
-            variant_qs = VariantProduct.objects.select_related(
-                "category"
-            ).prefetch_related("images")
+            variant_qs = VariantProduct.objects.prefetch_related("images")
             products = products.prefetch_related(
                 Prefetch("variants", queryset=variant_qs)
             )
