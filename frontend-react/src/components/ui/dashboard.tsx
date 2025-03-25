@@ -465,20 +465,22 @@ const Dashboard = () => {
   // Update the width calculation in useEffect
   useEffect(() => {
     const updateWidth = () => {
-      // Use a fixed width for the grid
-      const maxWidth = 1400; 
-      setWidth(maxWidth); // Always use the same fixed width
+      // Get the container width instead of using fixed width
+      const container = document.querySelector('.dashboard-grid-container');
+      if (container) {
+        setWidth(container.clientWidth);
+      }
     }
 
     // Set initial width
-    updateWidth()
+    updateWidth();
 
     // Add event listener for resize
-    window.addEventListener('resize', updateWidth)
+    window.addEventListener('resize', updateWidth);
 
     // Cleanup
-    return () => window.removeEventListener('resize', updateWidth)
-  }, [])
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
 
   // Find the title for a widget based on its ID
   const getWidgetTitle = (id: string): string | null => {
@@ -811,35 +813,38 @@ const DashboardContent = ({
       <div className="w-full h-full">
         <div className="relative">
           <div className="fixed inset-0 top-[60px] z-[1]" style={{ left: "50px" }}>
-            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg max-w-[1400px] mx-auto">
-              <ResponsiveGridLayout
-                className="layout"
-                layouts={layouts}
-                breakpoints={{ lg: 1200, md: 996, sm: 768 }}
-                cols={{ lg: 12, md: 12, sm: 12 }}
-                rowHeight={50}
-                width={width}
-                isDraggable={isEditMode}
-                isResizable={isEditMode}
-                onLayoutChange={(layout, layouts) => handleLayoutChange(layout, layouts)}
-                draggableHandle=".bg-primary"
-                margin={[16, 16]}
-                containerPadding={[16, 16]}
-                useCSSTransforms={true}
-              >
-                {layouts.lg.map((item) => (
-                  <div key={item.i} className="bg-background p-4 rounded-lg shadow-sm">
-                    <DashboardWidget
-                      id={item.i}
-                      title={getWidgetTitle(item.i)}
-                      isEditMode={isEditMode}
-                      onRemove={handleRemoveWidget}
-                    >
-                      {renderWidgetContent(item.i)}
-                    </DashboardWidget>
-                  </div>
-                ))}
-              </ResponsiveGridLayout>
+            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full px-4">
+              <div className="dashboard-grid-container w-full h-full">
+                <ResponsiveGridLayout
+                  className="layout"
+                  layouts={layouts}
+                  breakpoints={{ lg: 1200, md: 996, sm: 768 }}
+                  cols={{ lg: 12, md: 12, sm: 12 }}
+                  rowHeight={50}
+                  width={width}
+                  isDraggable={isEditMode}
+                  isResizable={isEditMode}
+                  onLayoutChange={(layout, layouts) => handleLayoutChange(layout, layouts)}
+                  draggableHandle=".bg-primary"
+                  margin={[16, 16]}
+                  containerPadding={[16, 16]}
+                  useCSSTransforms={true}
+                  autoSize={true}
+                >
+                  {layouts.lg.map((item) => (
+                    <div key={item.i} className="bg-background p-4 rounded-lg shadow-sm">
+                      <DashboardWidget
+                        id={item.i}
+                        title={getWidgetTitle(item.i)}
+                        isEditMode={isEditMode}
+                        onRemove={handleRemoveWidget}
+                      >
+                        {renderWidgetContent(item.i)}
+                      </DashboardWidget>
+                    </div>
+                  ))}
+                </ResponsiveGridLayout>
+              </div>
             </div>
           </div>
         </div>
