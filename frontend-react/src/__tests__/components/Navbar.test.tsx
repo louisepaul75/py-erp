@@ -177,7 +177,7 @@ describe('Navbar', () => {
     expect(mockMobileMenuFn).toHaveBeenCalledWith(
       expect.objectContaining({
         items: expect.arrayContaining([
-          expect.objectContaining({ href: '/', label: translations['navigation.home'] }),
+          expect.objectContaining({ href: '/dashboard', label: translations['navigation.home'] }),
           expect.objectContaining({ href: '/products', label: translations['navigation.products'] }),
           expect.objectContaining({ href: '/sales', label: translations['navigation.sales'] }),
           expect.objectContaining({ href: '/production', label: translations['navigation.production'] }),
@@ -291,5 +291,21 @@ describe('Navbar', () => {
     // Dropdown should be closed now - use queryAllByText which doesn't throw if no elements found
     const closedLightModeElements = screen.queryAllByText(translations['theme.lightMode']);
     expect(closedLightModeElements.length).toBe(0);
+  });
+
+  it('shows UI Components in test dropdown menu', () => {
+    render(<Navbar />);
+    
+    // Find and click the test dropdown button
+    const testButton = screen.getByText('Test');
+    fireEvent.click(testButton);
+    
+    // Verify UI Components link is in the dropdown
+    const uiComponentsLink = screen.getByText('UI Components / Style Guide');
+    expect(uiComponentsLink).toBeInTheDocument();
+    
+    // Verify it's inside the test dropdown
+    const testDropdown = document.getElementById('test-dropdown');
+    expect(testDropdown).toContainElement(uiComponentsLink);
   });
 }); 

@@ -67,7 +67,6 @@ export function Navbar() {
     { href: '/sales', label: t('navigation.sales') },
     { href: '/production', label: t('navigation.production') },
     { href: '/warehouse', label: t('navigation.inventory') },
-    { href: '/ui-components', label: 'UI Components' },
   ];
 
   return (
