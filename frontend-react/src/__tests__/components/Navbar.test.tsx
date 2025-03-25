@@ -181,7 +181,7 @@ describe('Navbar', () => {
           expect.objectContaining({ href: '/products', label: translations['navigation.products'] }),
           expect.objectContaining({ href: '/sales', label: translations['navigation.sales'] }),
           expect.objectContaining({ href: '/production', label: translations['navigation.production'] }),
-          expect.objectContaining({ href: '/inventory', label: translations['navigation.inventory'] }),
+          expect.objectContaining({ href: '/warehouse', label: translations['navigation.inventory'] }),
         ]),
       })
     );
