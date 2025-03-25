@@ -26,29 +26,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
 
   useEffect(() => {
     // Lade Mock-Daten für verfügbare Container
-    const mockContainers = generateMockContainers(20, true).map((container) => ({
-      ...container,
-      // Add random location information to some containers
-      location:
-        Math.random() > 0.5
-          ? {
-              laNumber: `LA${1000 + Math.floor(Math.random() * 1000)}`,
-              shelf: Math.floor(Math.random() * 20) + 1,
-              compartment: Math.floor(Math.random() * 10) + 1,
-              floor: Math.floor(Math.random() * 5) + 1,
-            }
-          : null,
-      // Add multiple articles (1-5 articles per container)
-      articles: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, () => ({
-        id: crypto.randomUUID(),
-        articleNumber: Math.floor(Math.random() * 900000) + 100000,
-        oldArticleNumber: `${13200 + Math.floor(Math.random() * 10)}-BE`,
-        description: ["Dampfer Herrschung", "neuer Raddampfer Diessen", "Teufel", "Mond mit Mütze", "Kuckucksuhr"][
-          Math.floor(Math.random() * 5)
-        ],
-        stock: Math.floor(Math.random() * 100) + 1,
-      })),
-    }))
+    const mockContainers = generateMockContainers(20, true)
     setContainers(mockContainers)
 
     // Initialize all containers as collapsed

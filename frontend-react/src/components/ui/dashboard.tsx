@@ -788,7 +788,7 @@ const DashboardContent = ({
   const gridBreakpoints = useMemo(() => ({ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }), []);
   const gridCols = useMemo(() => ({ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }), []);
   const gridRowHeight = useMemo(() => 30, []);
-  const gridMargin = useMemo(() => [16, 16], []);
+  const gridMargin = useMemo<[number, number]>(() => [16, 16], [])
   
   // Generate a stable list of layout IDs to prevent re-renders
   const layoutKeys = useMemo(() => {

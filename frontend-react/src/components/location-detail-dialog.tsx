@@ -543,6 +543,8 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
               oldArticleNumber: "",
               description: "",
               stock: 0,
+              slots: [],
+              units: []
             }
           }
           onConfirm={confirmRemoveContainer}

@@ -32,6 +32,21 @@ export type ContainerUnit = {
   stock?: number
 }
 
+export type ContainerLocation = {
+  laNumber: string
+  shelf: number
+  compartment: number
+  floor: number
+}
+
+export type ContainerArticle = {
+  id: string
+  articleNumber: number
+  oldArticleNumber: string
+  description: string
+  stock: number
+}
+
 export type ContainerItem = {
   id: string
   containerCode: string
@@ -42,6 +57,8 @@ export type ContainerItem = {
   stock: number
   slots: ContainerSlot[]
   units: ContainerUnit[]
+  location?: ContainerLocation
+  articles?: ContainerArticle[]
 }
 
 export type ContainerTypeDefinition = {
