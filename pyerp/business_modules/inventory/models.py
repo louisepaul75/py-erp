@@ -94,10 +94,20 @@ class StorageLocation(SalesModel):
         default=True,
         help_text=_("Whether this storage location is currently active"),
     )
+    box_capacity = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Maximum number of boxes that can be stored in this location"),
+    )
+    capacity_limit = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Maximum total capacity limit for this location"),
+    )
     capacity = models.IntegerField(
         null=True,
         blank=True,
-        help_text=_("Maximum capacity of the storage location (number of boxes)"),
+        help_text=_("Maximum storage capacity in standard units"),
     )
 
     class Meta:
@@ -250,6 +260,14 @@ class Box(SalesModel):
         default=BoxPurpose.STORAGE,
         help_text=_("Primary purpose of this box"),
     )
+    storage_location = models.ForeignKey(
+        StorageLocation,
+        on_delete=models.PROTECT,
+        related_name="boxes",
+        null=True,
+        blank=True,
+        help_text=_("Current storage location of the box"),
+    )
     notes = models.TextField(
         blank=True,
         help_text=_("Additional notes about the box"),
@@ -330,6 +348,11 @@ class BoxSlot(SalesModel):
     occupied = models.BooleanField(
         default=False,
         help_text=_("Whether the slot is currently occupied"),
+    )
+    capacity = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Maximum capacity of the slot (number of items)"),
     )
     max_products = models.IntegerField(
         default=100,
@@ -469,6 +492,14 @@ class BoxStorage(SalesModel):
         related_name="box_storage_items",
         help_text=_("Box slot where the product is stored"),
     )
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.PROTECT,
+        related_name='box_storage_created',
+        help_text=_("User who created this box storage record"),
+        null=True,
+        blank=True,
+    )
     position_in_slot = models.CharField(
         max_length=20,
         blank=True,
@@ -482,6 +513,7 @@ class BoxStorage(SalesModel):
     )
     batch_number = models.CharField(
         max_length=100,
+        null=True,
         blank=True,
         help_text=_("Batch or lot number for the product"),
     )

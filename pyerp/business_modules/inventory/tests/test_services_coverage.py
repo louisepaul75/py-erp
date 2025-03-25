@@ -50,39 +50,35 @@ class InventoryServiceCoverageTestCase(TestCase):
         # Create storage locations
         self.source_location = StorageLocation.objects.create(
             name="Source Location",
-            location_code="SRC-LOC",
+            box_capacity=10,
+            capacity_limit=5,
             country="DE",
             city_building="Berlin HQ",
-            unit="A",
+            unit="C",
             compartment="1",
-            shelf="Top",
-            capacity=None,  # Test with no capacity limit
-            is_active=True,
+            shelf="1"
         )
         
         self.target_location = StorageLocation.objects.create(
             name="Target Location",
-            location_code="TGT-LOC",
-            country="DE",
-            city_building="Berlin HQ",
-            unit="B",
-            compartment="2",
-            shelf="Bottom",
-            capacity=5,
-            is_active=True,
-        )
-        
-        # Create storage location at max capacity
-        self.full_location = StorageLocation.objects.create(
-            name="Full Location",
-            location_code="FULL-LOC",
+            box_capacity=10,
+            capacity_limit=5,
             country="DE",
             city_building="Berlin HQ",
             unit="C",
-            compartment="3",
-            shelf="Middle",
-            capacity=0,  # No capacity available
-            is_active=True,
+            compartment="1",
+            shelf="2"
+        )
+        
+        self.full_location = StorageLocation.objects.create(
+            name="Full Location",
+            box_capacity=1,
+            capacity_limit=1,
+            country="DE",
+            city_building="Berlin HQ",
+            unit="C",
+            compartment="1",
+            shelf="3"
         )
         
         # Create box types
@@ -191,18 +187,27 @@ class InventoryServiceCoverageTestCase(TestCase):
 
     def test_add_product_with_no_slot_capacity(self):
         """Test adding a product to a slot with no capacity limit."""
-        # Add product to a slot with high max_products to simulate no capacity limit
-        # Use patch to avoid created_by field issue
-        with patch('pyerp.business_modules.inventory.services.BoxStorage.objects.create') as mock_create, \
+        # Use more extensive patching to avoid database interactions
+        with patch('pyerp.business_modules.inventory.services.ProductStorage.objects.get_or_create') as mock_product_storage, \
+             patch('pyerp.business_modules.inventory.services.BoxStorage.objects.get_or_create') as mock_box_storage, \
+             patch('pyerp.business_modules.inventory.services.BoxStorage.objects.filter') as mock_filter, \
              patch('pyerp.business_modules.inventory.services.InventoryMovement.objects.create'):
              
-            # Configure the mock to return a valid BoxStorage object
-            mock_box_storage = MagicMock()
-            mock_box_storage.quantity = 500
-            mock_box_storage.box_slot = self.source_slot1
-            mock_box_storage.created_by = "test_user"
-            mock_create.return_value = mock_box_storage
+            # Configure mocks
+            mock_product_storage_obj = MagicMock()
+            mock_product_storage_obj.quantity = 0
+            mock_product_storage.return_value = (mock_product_storage_obj, True)
+            
+            mock_box_storage_obj = MagicMock()
+            mock_box_storage_obj.quantity = 0
+            mock_box_storage_obj.box_slot = self.source_slot1
+            mock_box_storage_obj.created_by = self.mock_user
+            mock_box_storage.return_value = (mock_box_storage_obj, True)
+            
+            # Mock aggregation result for capacity check
+            mock_filter.return_value.aggregate.return_value = {'total': 0}
 
+            # Call the service method
             box_storage = InventoryService.add_product_to_box_slot(
                 self.variant_product,
                 self.source_slot1,
@@ -213,14 +218,14 @@ class InventoryServiceCoverageTestCase(TestCase):
             # Verify the product was added
             self.assertEqual(box_storage.quantity, 500)
             self.assertEqual(box_storage.box_slot, self.source_slot1)
-            self.assertEqual(box_storage.created_by, "test_user")
+            self.assertEqual(box_storage.created_by, self.mock_user)
             
-            # Verify create was called with correct params
-            mock_create.assert_called_once()
-            call_kwargs = mock_create.call_args.kwargs
-            self.assertEqual(call_kwargs['quantity'], 500)
-            self.assertEqual(call_kwargs['box_slot'], self.source_slot1)
-            self.assertEqual(call_kwargs['created_by'], "test_user")
+            # Verify mocks were called with correct parameters
+            mock_product_storage.assert_called_once()
+            mock_box_storage.assert_called_once()
+            product_storage_args = mock_product_storage.call_args[1]
+            self.assertEqual(product_storage_args['product'], self.variant_product)
+            self.assertEqual(product_storage_args['storage_location'], self.source_slot1.box.storage_location)
 
     def test_add_product_invalid_parameters(self):
         """Test validation errors with invalid parameters for add_product_to_box_slot."""

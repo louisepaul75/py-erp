@@ -1,0 +1,543 @@
+# Testing Standards for pyERP
+
+## Overview
+This document outlines testing standards and practices for the pyERP system. It provides guidelines for writing effective tests that ensure code quality, catch bugs early, and maintain system reliability across all components.
+
+## Project Test Structure
+
+### Business Module Organization
+Tests in pyERP are organized by business module, with each module containing its own `tests` directory:
+
+```
+pyerp/
+├── business_modules/
+│   ├── inventory/
+│   │   ├── tests/
+│   │   │   ├── __init__.py
+│   │   │   ├── conftest.py               # Module-specific fixtures
+│   │   │   ├── test_services.py          # Service tests
+│   │   │   ├── test_services_mock.py     # Tests with mocked dependencies
+│   │   │   ├── test_services_coverage.py # Coverage-focused tests
+│   │   │   ├── test_error_handling.py    # Error handling tests
+│   │   │   ├── test_inventory_views.py   # View tests
+│   │   │   └── ...
+│   ├── products/
+│   │   ├── tests/
+│   │   │   └── ...
+│   ├── sales/
+│   │   ├── tests/
+│   │   │   └── ...
+│   └── tests/                            # Cross-module tests
+├── core/
+│   ├── tests/
+│   │   └── ...
+└── legacy_api/
+    ├── tests/
+    │   └── ...
+```
+
+### Test File Organization
+Each test file should focus on a specific component or functionality:
+
+```python
+# test_inventory_views.py
+
+"""
+Tests for inventory views error handling.
+Tests the view functions with mocked services.
+"""
+
+import json
+import logging
+from unittest.mock import patch, MagicMock, Mock
+from django.test import TestCase, RequestFactory
+from rest_framework import status
+from django.urls import reverse
+
+from pyerp.business_modules.inventory.urls import move_box, add_product_to_box
+from pyerp.business_modules.inventory.models import BoxSlot
+from pyerp.business_modules.products.models import VariantProduct
+
+# Configure logging for tests
+logger = logging.getLogger(__name__)
+
+class TestInventoryViewsErrorHandling(TestCase):
+    """Test class for inventory views with proper error handling."""
+
+    def setUp(self):
+        """Set up test data and mocks."""
+        self.factory = RequestFactory()
+        # Set up common test data and mocks
+        
+    def tearDown(self):
+        """Clean up after tests."""
+        # Clean up resources, patches, etc.
+        
+    def test_move_box_missing_parameters(self):
+        """Test move_box view handles missing parameters correctly."""
+        # Test implementation
+```
+
+## Test Categories and Patterns
+
+### 1. Service Tests
+Test business logic in service layers without mocking dependencies when practical.
+
+```python
+# test_services.py
+
+from django.test import TestCase
+from decimal import Decimal
+
+from pyerp.business_modules.inventory.services import InventoryService
+from pyerp.business_modules.inventory.models import Box, StorageLocation
+
+class TestInventoryService(TestCase):
+    """Test the inventory service with real database access."""
+    
+    def setUp(self):
+        """Set up test data."""
+        # Create required test data
+        self.warehouse = Warehouse.objects.create(name="Test Warehouse")
+        self.box_type = BoxType.objects.create(
+            name="Test Box Type",
+            length=10, width=10, height=10,
+            weight_capacity=100,
+            slot_count=4
+        )
+        self.box = Box.objects.create(
+            code="BOX001",
+            box_type=self.box_type,
+            warehouse=self.warehouse
+        )
+        self.location = StorageLocation.objects.create(
+            name="Test Location",
+            warehouse=self.warehouse
+        )
+        
+        # Create service instance
+        self.service = InventoryService()
+    
+    def test_move_box(self):
+        """Test moving a box to a new location."""
+        # Execute the service method
+        result = self.service.move_box(self.box, self.location)
+        
+        # Assert expected outcomes
+        self.assertTrue(result)
+        # Refresh box from database
+        self.box.refresh_from_db()
+        self.assertEqual(self.box.location, self.location)
+```
+
+### 2. Mocked Service Tests
+Test services with mocked dependencies to isolate functionality.
+
+```python
+# test_services_mock.py
+
+from django.test import TestCase
+from unittest.mock import patch, MagicMock
+
+from pyerp.business_modules.inventory.services import InventoryService
+
+class TestInventoryServiceMocked(TestCase):
+    """Test inventory service with mocked dependencies."""
+    
+    def setUp(self):
+        """Set up mocks and service."""
+        self.service = InventoryService()
+    
+    @patch('pyerp.business_modules.inventory.services.Box')
+    @patch('pyerp.business_modules.inventory.services.StorageLocation')
+    def test_move_box_calls_save(self, MockLocation, MockBox):
+        """Test that move_box calls save on the box."""
+        # Setup mocks
+        mock_box = MagicMock()
+        mock_location = MagicMock()
+        
+        # Call service method
+        self.service.move_box(mock_box, mock_location)
+        
+        # Assert box was updated and saved
+        self.assertEqual(mock_box.location, mock_location)
+        mock_box.save.assert_called_once()
+```
+
+### 3. View Tests
+Test API endpoints and view functions.
+
+```python
+# test_inventory_views.py
+
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework import status
+import json
+
+from pyerp.business_modules.inventory.models import Box, StorageLocation
+
+class TestInventoryViews(TestCase):
+    """Test inventory API views."""
+    
+    def setUp(self):
+        """Set up test client and data."""
+        self.client = APIClient()
+        # Setup authentication if needed
+        # self.client.force_authenticate(user=user)
+        
+        # Create test data
+        self.box = Box.objects.create(code="BOX001")
+        self.location = StorageLocation.objects.create(name="Test Location")
+    
+    def test_move_box_api(self):
+        """Test the move box API endpoint."""
+        url = reverse('inventory:move_box')
+        data = {
+            'box_id': self.box.id,
+            'target_location_id': self.location.id
+        }
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response_data = json.loads(response.content)
+        self.assertTrue(response_data['success'])
+        
+        # Verify box was moved
+        self.box.refresh_from_db()
+        self.assertEqual(self.box.location, self.location)
+```
+
+### 4. Error Handling Tests
+Test that errors are properly handled and appropriate responses returned.
+
+```python
+# test_error_handling.py
+
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+from rest_framework import status
+from unittest.mock import patch
+
+class TestInventoryViewsErrorHandling(TestCase):
+    """Test error handling in inventory views."""
+    
+    def setUp(self):
+        """Set up test client."""
+        self.client = APIClient()
+    
+    def test_move_box_missing_parameters(self):
+        """Test handling of missing parameters."""
+        url = reverse('inventory:move_box')
+        data = {'target_location_id': 1}  # Missing box_id
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Box ID and target location ID are required', 
+                     response.data['detail'])
+    
+    @patch('pyerp.business_modules.inventory.services.InventoryService.move_box')
+    def test_move_box_service_error(self, mock_move_box):
+        """Test handling of service exceptions."""
+        mock_move_box.side_effect = ValueError("Box capacity exceeded")
+        
+        url = reverse('inventory:move_box')
+        data = {'box_id': 1, 'target_location_id': 1}
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Box capacity exceeded', response.data['detail'])
+```
+
+### 5. Model Tests
+Test Django models and their methods.
+
+```python
+# test_models.py
+
+from django.test import TestCase
+from pyerp.business_modules.inventory.models import Box, BoxSlot, BoxType
+
+class TestBoxModel(TestCase):
+    """Test Box model functionality."""
+    
+    def setUp(self):
+        """Set up test data."""
+        self.box_type = BoxType.objects.create(
+            name="Test Box Type",
+            slot_count=4
+        )
+        self.box = Box.objects.create(
+            code="BOX001",
+            box_type=self.box_type
+        )
+    
+    def test_box_create_slots(self):
+        """Test that slots are automatically created for a box."""
+        # Method to create slots should be called on box creation
+        self.assertEqual(BoxSlot.objects.filter(box=self.box).count(), 4)
+        
+    def test_box_available_slots(self):
+        """Test the available_slots property."""
+        # Initially all slots should be available
+        self.assertEqual(self.box.available_slots, 4)
+        
+        # Mark one slot as occupied
+        slot = BoxSlot.objects.filter(box=self.box).first()
+        slot.is_occupied = True
+        slot.save()
+        
+        # Now only 3 slots should be available
+        self.assertEqual(self.box.available_slots, 3)
+```
+
+### 6. Legacy API Tests
+Test integration with legacy 4D API.
+
+```python
+# test_legacy_api.py
+
+import pytest
+from unittest.mock import patch, MagicMock
+from django.test import TestCase
+
+from pyerp.legacy_api.client import LegacyAPIClient
+from pyerp.legacy_api.exceptions import AuthenticationError
+
+class TestLegacyAPIClient(TestCase):
+    """Test the legacy API client."""
+    
+    def setUp(self):
+        """Set up test client."""
+        self.client = LegacyAPIClient(environment='test')
+    
+    @patch('pyerp.legacy_api.client.requests.post')
+    def test_authentication_success(self, mock_post):
+        """Test successful authentication."""
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'status': 'success', 
+            'session': 'test_session_id'
+        }
+        mock_post.return_value = mock_response
+        
+        # Perform authentication
+        self.client.authenticate()
+        
+        # Assert authentication was successful
+        self.assertTrue(self.client.is_authenticated)
+        self.assertEqual(self.client.session_id, 'test_session_id')
+```
+
+## Testing Best Practices
+
+### 1. Use Fixtures for Common Test Data
+Use pytest fixtures for reusable test setup:
+
+```python
+# conftest.py
+
+import pytest
+from pyerp.business_modules.inventory.models import Box, BoxType, StorageLocation
+
+@pytest.fixture
+def box_type():
+    """Create a box type for testing."""
+    return BoxType.objects.create(
+        name="Test Box Type",
+        length=10, width=10, height=10,
+        weight_capacity=100,
+        slot_count=4
+    )
+
+@pytest.fixture
+def box(box_type):
+    """Create a box for testing."""
+    return Box.objects.create(
+        code="BOX001",
+        box_type=box_type
+    )
+
+@pytest.fixture
+def storage_location():
+    """Create a storage location for testing."""
+    return StorageLocation.objects.create(
+        name="Test Location"
+    )
+```
+
+### 2. Mock External Dependencies
+Use unittest.mock for external services:
+
+```python
+@patch('pyerp.legacy_api.client.requests.get')
+def test_api_request(self, mock_get):
+    # Setup mock response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'status': 'success', 'data': [...]}
+    mock_get.return_value = mock_response
+
+    # Test API function
+    result = legacy_api_function()
+
+    # Assertions
+    self.assertEqual(result, expected_result)
+```
+
+### 3. Test Both Happy Path and Error Cases
+Ensure both successful operations and error handling are tested:
+
+```python
+def test_move_box_success(self):
+    """Test successful box move."""
+    # Test implementation for success case
+    
+def test_move_box_invalid_location(self):
+    """Test move box with invalid location."""
+    # Test implementation for error case
+    
+def test_move_box_box_not_found(self):
+    """Test move box with non-existent box."""
+    # Test implementation for error case
+```
+
+### 4. Use Proper Test Isolation
+Ensure tests don't affect each other:
+
+```python
+def test_independent_function_1(self):
+    """This test should not affect other tests."""
+    # Use setUp and tearDown to prepare and clean environment
+    # Avoid modifying global state
+    
+def test_independent_function_2(self):
+    """This test should run regardless of other test results."""
+    # Create test-specific data instead of relying on shared data
+```
+
+### 5. Use Descriptive Test Names
+Follow a consistent naming pattern:
+
+- test_[function/method]_[scenario]_[expected_result]
+- Examples:
+  - `test_move_box_invalid_location_returns_error`
+  - `test_calculate_stock_value_empty_warehouse_returns_zero`
+
+## Test Coverage
+
+### 1. Coverage Goals
+- Aim for at least 80% code coverage for critical modules
+- 100% coverage for core services and error handling
+- Focus on business-critical paths first
+
+### 2. Running Coverage Reports
+```bash
+# Install coverage tools
+pip install pytest-cov
+
+# Run tests with coverage
+pytest --cov=pyerp
+
+# Generate HTML report
+pytest --cov=pyerp --cov-report=html
+```
+
+### 3. Continuous Integration
+- Configure tests to run in CI/CD pipeline
+- Fail pipeline on test failures
+- Track coverage trends over time
+
+## Testing Environment
+
+### 1. Test Database
+- Tests use a separate test database
+- Database is created and destroyed for each test run
+- Use migrations to ensure schema matches production
+
+### 2. Environment Variables
+```python
+# Settings for test environment
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+    
+    # Override external service URLs for testing
+    LEGACY_API_URL = 'http://mock-api.example.com'
+```
+
+### 3. Test Logging
+Configure appropriate logging for tests:
+
+```python
+# Configure test logging
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+logger.addHandler(handler)
+```
+
+## Running Tests
+
+### 1. Running with Django Test Command
+```bash
+# Run all tests
+python manage.py test
+
+# Run tests for a specific app
+python manage.py test pyerp.business_modules.inventory
+
+# Run a specific test class
+python manage.py test pyerp.business_modules.inventory.tests.test_services.TestInventoryService
+
+# Run a specific test method
+python manage.py test pyerp.business_modules.inventory.tests.test_services.TestInventoryService.test_move_box
+```
+
+### 2. Running with pytest
+```bash
+# Run all tests
+pytest
+
+# Run tests in a specific directory
+pytest pyerp/business_modules/inventory/tests/
+
+# Run a specific test file
+pytest pyerp/business_modules/inventory/tests/test_services.py
+
+# Run tests matching a pattern
+pytest -k "move_box"
+
+# Run tests with more verbose output
+pytest -v
+```
+
+### 3. Test Debugging
+Debug failing tests:
+
+```bash
+# Run tests with pdb enabled
+pytest --pdb
+
+# Run tests with print output enabled
+pytest -s
+
+# Run tests with detailed tracebacks
+pytest --showlocals
+``` 

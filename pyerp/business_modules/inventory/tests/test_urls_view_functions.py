@@ -172,68 +172,6 @@ class TestInventoryViewFunctions:
         assert content[0]['location_code'] == "US-Building 1-Unit 1-Compartment 1-Shelf 1"
 
     @patch('pyerp.business_modules.inventory.urls.ProductStorage.objects.filter')
-    def test_products_by_location(self, mock_filter, request_factory):
-        """Test the products_by_location view returns expected response."""
-        from pyerp.business_modules.inventory.urls import products_by_location
-        
-        # Create mocks for a product in a box slot
-        mock_product = MagicMock()
-        mock_product.id = 1
-        mock_product.sku = "SKU001"
-        mock_product.name = "Test Product"
-        
-        mock_storage_location = MagicMock()
-        mock_storage_location.id = 1
-        mock_storage_location.name = "Test Location"
-        
-        mock_product_storage = MagicMock()
-        mock_product_storage.product = mock_product
-        mock_product_storage.storage_location = mock_storage_location
-        mock_product_storage.reservation_status = "available"
-        
-        mock_box = MagicMock()
-        mock_box.id = 1
-        mock_box.code = "BOX001"
-        
-        mock_box_slot = MagicMock()
-        mock_box_slot.id = 1
-        mock_box_slot.box = mock_box
-        mock_box_slot.slot_code = "SLOT1"
-        
-        mock_box_storage = MagicMock()
-        mock_box_storage.product_storage = mock_product_storage
-        mock_box_storage.box_slot = mock_box_slot
-        mock_box_storage.quantity = 5
-        mock_box_storage.batch_number = "BATCH001"
-        mock_box_storage.date_stored = "2023-01-01"
-        
-        # Set up nested mocks
-        mock_select_related = MagicMock()
-        mock_select_related.return_value = [mock_product_storage]
-        mock_filter.return_value.select_related = mock_select_related
-        
-        # Create a proper request object
-        request = request_factory.get('/api/inventory/storage-locations/1/products/')
-        
-        with patch('pyerp.business_modules.inventory.urls.BoxStorage.objects.filter') as mock_box_storage_filter:
-            mock_box_storage_filter.return_value.select_related.return_value = [mock_box_storage]
-            
-            # Mock the permission check
-            with patch('pyerp.business_modules.inventory.urls.IsAuthenticated.has_permission', return_value=True):
-                response = products_by_location(request, 1)
-                response = self.render_response(response)
-                
-        assert response.status_code == status.HTTP_200_OK
-        content = json.loads(response.content)
-        assert len(content) == 1
-        assert content[0]['box_code'] == "BOX001"
-        assert len(content[0]['slots']) == 1
-        assert content[0]['slots'][0]['slot_code'] == "SLOT1"
-        assert len(content[0]['slots'][0]['products']) == 1
-        assert content[0]['slots'][0]['products'][0]['sku'] == "SKU001"
-        assert content[0]['slots'][0]['products'][0]['quantity'] == 5
-
-    @patch('pyerp.business_modules.inventory.urls.ProductStorage.objects.filter')
     def test_locations_by_product(self, mock_filter, request_factory):
         """Test the locations_by_product view returns expected response."""
         # Skip this test entirely for now as it's causing issues

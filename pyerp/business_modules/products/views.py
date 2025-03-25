@@ -1,3 +1,4 @@
+# Test comment to trigger reload
 """
 Views for the products app.
 """
@@ -315,20 +316,55 @@ class ProductAPIView(APIView):
     def get_product_data(self, product):
         """Convert a product model to a dictionary for JSON response"""
         try:
+            # Import models here to avoid circular imports
+            from pyerp.business_modules.products.models import ParentProduct, VariantProduct
+            
             product_data = {
                 "id": product.id,
                 "name": product.name,
                 "sku": product.sku,
                 "description": getattr(product, "description", ""),
-                "list_price": float(product.list_price) if product.list_price else None,
-                "stock_quantity": product.stock_quantity,
+                "is_active": getattr(product, "is_active", True),
+                "is_discontinued": getattr(product, "is_discontinued", False),
+                "is_new": getattr(product, "is_new", False),
+                "release_date": product.release_date.isoformat() if getattr(product, "release_date", None) else None,
+                "created_at": product.created_at.isoformat() if getattr(product, "created_at", None) else None,
+                "updated_at": product.updated_at.isoformat() if getattr(product, "updated_at", None) else None,
+                "weight": getattr(product, "weight", None),
+                "length_mm": float(product.length_mm) if getattr(product, "length_mm", None) else None,
+                "width_mm": float(product.width_mm) if getattr(product, "width_mm", None) else None,
+                "height_mm": float(product.height_mm) if getattr(product, "height_mm", None) else None,
+                "name_en": getattr(product, "name_en", ""),
+                "short_description": getattr(product, "short_description", ""),
+                "short_description_en": getattr(product, "short_description_en", ""),
+                "description_en": getattr(product, "description_en", ""),
+                "keywords": getattr(product, "keywords", ""),
+                "legacy_id": getattr(product, "legacy_id", None),
+                "legacy_base_sku": getattr(product, "legacy_base_sku", None),
                 "is_hanging": getattr(product, "is_hanging", False),
                 "is_one_sided": getattr(product, "is_one_sided", False),
+                "images": [],
+                "primary_image": None,
+                "category": None,
+                "tags": []
             }
 
-            # Initialize images as empty to avoid undefined
-            product_data["images"] = []
-            product_data["primary_image"] = None
+            # Add variant-specific fields if this is a VariantProduct
+            if isinstance(product, VariantProduct):
+                product_data.update({
+                    "variant_code": getattr(product, "variant_code", ""),
+                    "legacy_sku": getattr(product, "legacy_sku", None),
+                    "is_verkaufsartikel": getattr(product, "is_verkaufsartikel", False),
+                    "is_featured": getattr(product, "is_featured", False),
+                    "is_bestseller": getattr(product, "is_bestseller", False),
+                    "retail_price": float(product.retail_price) if getattr(product, "retail_price", None) else None,
+                    "wholesale_price": float(product.wholesale_price) if getattr(product, "wholesale_price", None) else None,
+                    "retail_unit": getattr(product, "retail_unit", None),
+                    "wholesale_unit": getattr(product, "wholesale_unit", None),
+                    "color": getattr(product, "color", None),
+                    "auslaufdatum": product.auslaufdatum.isoformat() if getattr(product, "auslaufdatum", None) else None,
+                    "refOld": getattr(product, "refOld", None),
+                })
 
             # Add category if available
             if product.category_id:
@@ -344,6 +380,25 @@ class ProductAPIView(APIView):
                     product_data["category"] = None
             else:
                 product_data["category"] = None
+
+            # Add tags if available
+            if hasattr(product, "tags"):
+                try:
+                    tags = list(product.tags.all())
+                    tags_data = []
+                    for tag in tags:
+                        tags_data.append({
+                            "id": tag.id,
+                            "name": tag.name,
+                            "slug": getattr(tag, "slug", None),
+                            "description": getattr(tag, "description", "")
+                        })
+                    product_data["tags"] = tags_data
+                except Exception as e:
+                    print(f"Error getting tags for product {product.id}: {e!s}")
+                    product_data["tags"] = []
+            else:
+                product_data["tags"] = []
 
             # Add variants count for parent products
             if isinstance(product, ParentProduct):
@@ -566,8 +621,8 @@ class ProductDetailAPIView(ProductAPIView):
         # Get basic product data
         product_data = self.get_product_data(product)
 
-        # Add variants
-        variants = VariantProduct.objects.filter(parent=product)
+        # Add variants with prefetch_related for optimization
+        variants = VariantProduct.objects.filter(parent=product).prefetch_related("images", "tags", "attributes")
         variants_data = []
         for variant in variants:
             variant_data = self.get_product_data(variant)
@@ -610,14 +665,17 @@ class VariantDetailAPIView(ProductAPIView):
         """Handle GET request for variant detail"""
         variant = get_object_or_404(VariantProduct, pk=pk)
 
-        # Get basic variant data
+        # Get basic variant data - now includes all variant fields thanks to updated get_product_data
         variant_data = self.get_product_data(variant)
 
-        # Add parent product info
+        # Add parent product info with more details
         if variant.parent:
             variant_data["parent"] = {
                 "id": variant.parent.id,
                 "name": variant.parent.name,
+                "sku": variant.parent.sku,
+                "slug": getattr(variant.parent, "slug", None),
+                "legacy_id": getattr(variant.parent, "legacy_id", None),
             }
 
         # Add all images
@@ -634,6 +692,8 @@ class VariantDetailAPIView(ProductAPIView):
                             else image.image_url
                         ),
                         "is_primary": image.is_primary,
+                        "is_front": getattr(image, "is_front", False),
+                        "image_type": getattr(image, "image_type", None),
                     },
                 )
 
@@ -648,8 +708,58 @@ class VariantDetailAPIView(ProductAPIView):
                     },
                 )
 
+        # Add information about tags inheritance if applicable
+        if hasattr(variant, "inherits_tags"):
+            variant_data["inherits_tags"] = variant.inherits_tags()
+
         # Return JSON response
         return Response(variant_data)
+
+    def patch(self, request, pk):
+        """Handle PATCH request for variant update"""
+        variant = get_object_or_404(VariantProduct, pk=pk)
+        
+        # Update basic fields
+        if "name" in request.data:
+            variant.name = request.data["name"]
+        if "description" in request.data:
+            variant.description = request.data["description"]
+        if "is_active" in request.data:
+            variant.is_active = request.data["is_active"]
+            
+        # Update variant-specific fields
+        if "variant_code" in request.data:
+            variant.variant_code = request.data["variant_code"]
+        if "is_featured" in request.data:
+            variant.is_featured = request.data["is_featured"]
+        if "is_bestseller" in request.data:
+            variant.is_bestseller = request.data["is_bestseller"]
+        if "is_new" in request.data:
+            variant.is_new = request.data["is_new"]
+        if "is_verkaufsartikel" in request.data:
+            variant.is_verkaufsartikel = request.data["is_verkaufsartikel"]
+        if "retail_price" in request.data:
+            variant.retail_price = request.data["retail_price"]
+        if "wholesale_price" in request.data:
+            variant.wholesale_price = request.data["wholesale_price"]
+        if "retail_unit" in request.data:
+            variant.retail_unit = request.data["retail_unit"]
+        if "wholesale_unit" in request.data:
+            variant.wholesale_unit = request.data["wholesale_unit"]
+        if "color" in request.data:
+            variant.color = request.data["color"]
+        if "width_mm" in request.data:
+            variant.width_mm = request.data["width_mm"]
+            
+        # Handle tags inheritance if applicable
+        if "inherits_tags" in request.data and hasattr(variant, "set_tags_inheritance"):
+            variant.set_tags_inheritance(request.data["inherits_tags"])
+            
+        # Save changes
+        variant.save()
+        
+        # Return updated variant data
+        return Response(self.get_product_data(variant))
 
 
 class CategoryListAPIView(ProductAPIView):
