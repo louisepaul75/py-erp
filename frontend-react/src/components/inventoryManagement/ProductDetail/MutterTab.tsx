@@ -1,4 +1,4 @@
-// components/ProductDetail/MutterTab.tsx
+// components/Product/MutterTab.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,49 +12,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Minus, Zap, Plus } from "lucide-react";
+import { productApi } from "@/lib/products/api";
+import { SelectedItem } from "@/components/types/product";
+import { Product, ProductDetailProps } from "@/components/types/product";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import useAppTranslation from "@/hooks/useTranslationWrapper";
 
 // Define the interface based on the schema
-interface SelectedProductData {
-  id: string;
-  sku: string;
-  name: string;
-  description: string;
-  height_mm: string;
-  length_mm: string;
-  width_mm: string;
-  weight: string;
-  is_hanging: boolean;
-  is_one_sided: boolean;
-  packaging_id: string;
-  is_active: boolean;
-  is_new: boolean;
-  release_date: string;
-}
 
-interface MutterTabProps {
-  selectedItem: string | null; // Assuming selectedItem contains the product ID or SKU
-}
+export default function MutterTab({
+  selectedItem,
+  selectedProduct,
+}: ProductDetailProps) {
+  // Initialize selectedProduct with static data
 
-export default function MutterTab({ selectedItem }: MutterTabProps) {
-  // Initialize selectedProductData with static data
-  const [selectedProductData, setSelectedProductData] =
-    useState<SelectedProductData>({
-      id: "218300",
-      sku: "AL-001",
-      name: '"Adler"-Lock',
-      description:
-        "Erleben Sie die Eleganz und den Charme vergangener Zeiten mit dieser exquisiten Zinnfigur, inspiriert von den Anfängen der Eisenbahngeschichte. Perfekt für Sammler und Liebhaber von Nostalgie, zeigt diese Figur einen klassischen Lokführer, gekleidet in traditioneller Montur, der stolz seine Maschine lenkt. Ideal für jede Vitrine oder als geschmackvolles Geschenk. Eine Hommage an die Ingenieurskunst und das kulturelle Erbe.",
-      height_mm: "70",
-      length_mm: "70",
-      width_mm: "7",
-      weight: "30",
-      is_hanging: false,
-      is_one_sided: false,
-      packaging_id: "B5",
-      is_active: true,
-      is_new: false,
-      release_date: "2023-01-01",
-    });
+  const { t } = useAppTranslation("mutterTab"); // Use the mutterTab namespace
 
   // Separate state for categories
   const [categories, setCategories] = useState<string[][]>([
@@ -62,40 +44,13 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
     ["", "", "", ""],
     ["", "", "", ""],
   ]);
-
-  // Update selectedProductData when selectedItem changes (static logic for now)
-  useEffect(() => {
-    if (selectedItem) {
-      // For now, we are using static data
-      // In the future, fetch product data based on selectedItem.id
-      /*
-      const fetchProductData = async () => {
-        try {
-          const productData = await getProduct(selectedItem);
-          setSelectedProductData(productData);
-        } catch (error) {
-          console.error('Error fetching product data:', error);
-        }
-      };
-      fetchProductData();
-      */
-      setSelectedProductData((prev) => ({
-        ...prev,
-        name: selectedItem === "218300" ? '"Adler"-Lock' : prev.name,
-      }));
-    }
-  }, [selectedItem]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Handlers to update selectedProductData
   const handleInputChange = (
-    field: keyof SelectedProductData,
+    field: keyof Product,
     value: string | boolean
-  ) => {
-    setSelectedProductData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  ) => {};
 
   // Handler to update categories
   const handleCategoryChange = (
@@ -119,15 +74,36 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
 
   // Placeholder logic for save and delete
   const handleSave = () => {
-    console.log("Save clicked:", selectedProductData);
-    // TODO: Implement API call to save selectedProductData
+    console.log("Save clicked:", selectedProduct);
+    // TODO: Implement API call to save selectedProduct
     alert("Product saved! (Placeholder)");
   };
 
-  const handleDelete = () => {
-    console.log("Delete clicked for item:", selectedItem);
-    // TODO: Implement API call to delete the product
-    alert("Product deleted! (Placeholder)");
+  const confirmDeleteProduct = () => {
+    console.log("confirm to delete");
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedProduct?.id) {
+      console.error("No product ID found to delete.");
+      return;
+    }
+
+    try {
+      console.log("Deleting product with ID:", selectedProduct.id);
+      await productApi.deleteProduct(selectedProduct.id.toString()); // Call the API
+      console.log("Product deleted successfully!");
+
+      // Optionally, you can add further logic here, such as:
+      // - Showing a success message
+      // - Redirecting the user
+      // - Refreshing the product list
+      alert("Product deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      alert("Failed to delete the product. Please try again.");
+    }
   };
 
   return (
@@ -141,32 +117,58 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
             </div>
             <div className="flex-1">
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                <h1 className="text-2xl font-bold">
-                  {selectedProductData.name}
-                </h1>
+                <h1 className="text-2xl font-bold">{selectedProduct?.name}</h1>
                 <Badge className="w-fit bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50">
-                  Aktiv
+                  {t("active")}
                 </Badge>
               </div>
               <p className="text-slate-500 dark:text-slate-400 mt-1">
-                Artikelnummer: {selectedItem || "N/A"}
+                {t("articleNumber")}: {selectedItem || "N/A"}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 md:justify-end ">
-              <Button
-                variant="outline"
-                className="rounded-full"
-                onClick={handleDelete}
+              <AlertDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
               >
-                <Minus className="h-4 w-4 mr-2" />
-                Löschen
-              </Button>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    onClick={confirmDeleteProduct}
+                    variant="outline"
+                    className="rounded-full"
+                  >
+                    <Minus className="h-4 w-4 mr-2" />
+                    {t("delete")}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {t("confirmDeleteTitle")}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("confirmDeleteDescription")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="rounded-full bg-red-600 hover:bg-red-700 text-white px-5 py-2">
+                      {t("cancel")}
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-5 py-2"
+                    >
+                      {t("ok")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button
                 className="rounded-full bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={handleSave}
               >
                 <Zap className="h-4 w-4 mr-2" />
-                Speichern
+                {t("save")}
               </Button>
             </div>
           </div>
@@ -174,15 +176,15 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
 
         {/* Bezeichnung & Beschreibung */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-          <h2 className="text-lg font-semibold mb-4">Produktdetails</h2>
+          <h2 className="text-lg font-semibold mb-4">{t("productDetails")}</h2>
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400 md:pt-2.5">
-                Bezeichnung
+                {t("designation")}
               </label>
-              <div className="md:col-span-3">
+              <div className="md:col-span-3 ml-3">
                 <Input
-                  value={selectedProductData.name}
+                  value={selectedProduct?.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
                 />
@@ -190,11 +192,11 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400 md:pt-2.5">
-                Beschreibung
+                {t("description")}
               </label>
-              <div className="md:col-span-3">
+              <div className="md:col-span-3 ml-3">
                 <textarea
-                  value={selectedProductData.description}
+                  value={selectedProduct?.description}
                   onChange={(e) =>
                     handleInputChange("description", e.target.value)
                   }
@@ -208,51 +210,51 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
         {/* Maße */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Maße & Eigenschaften</h2>
+            <h2 className="text-lg font-semibold">{t("dimensions")}</h2>
             <Badge
               variant="outline"
               className="text-xs font-normal px-2 py-0.5 h-5 border-slate-200 dark:border-slate-700"
             >
-              Einheit: mm
+              {t("unit")}
             </Badge>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Höhe
+                {t("height")}
               </label>
               <Input
-                value={selectedProductData.height_mm}
+                value={selectedProduct?.height_mm ?? ""}
                 onChange={(e) => handleInputChange("height_mm", e.target.value)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Länge
+                {t("length")}
               </label>
               <Input
-                value={selectedProductData.length_mm}
+                value={selectedProduct?.length_mm ?? ""}
                 onChange={(e) => handleInputChange("length_mm", e.target.value)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Breite
+                {t("width")}
               </label>
               <Input
-                value={selectedProductData.width_mm}
+                value={selectedProduct?.width_mm ?? ""}
                 onChange={(e) => handleInputChange("width_mm", e.target.value)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Gewicht (g)
+                {t("weight")}
               </label>
               <Input
-                value={selectedProductData.weight}
+                value={selectedProduct?.weight ?? ""}
                 onChange={(e) => handleInputChange("weight", e.target.value)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
@@ -263,40 +265,40 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
               <input
                 type="checkbox"
                 id="hangend"
-                checked={selectedProductData.is_hanging}
+                checked={selectedProduct?.is_hanging}
                 onChange={(e) =>
                   handleInputChange("is_hanging", e.target.checked)
                 }
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />
               <label htmlFor="hangend" className="text-sm">
-                Hängend
+                {t("hanging")}
               </label>
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="einseitig"
-                checked={selectedProductData.is_one_sided}
+                checked={selectedProduct?.is_one_sided}
                 onChange={(e) =>
                   handleInputChange("is_one_sided", e.target.checked)
                 }
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />
               <label htmlFor="einseitig" className="text-sm">
-                Einseitig
+                {t("oneSided")}
               </label>
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="neuheit"
-                checked={selectedProductData.is_new}
+                checked={selectedProduct?.is_new}
                 onChange={(e) => handleInputChange("is_new", e.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />
               <label htmlFor="neuheit" className="text-sm">
-                Neuheit
+                {t("novelty")}
               </label>
             </div>
           </div>
@@ -305,13 +307,13 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400 w-24">
                 Boxgröße
               </label>
-              <Input
-                value={selectedProductData.packaging_id}
+              {/* <Input
+                value={selectedProduct.packaging_id}
                 onChange={(e) =>
                   handleInputChange("packaging_id", e.target.value)
                 }
                 className="w-32 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-              />
+              /> */}
             </div>
           </div>
         </div>
@@ -328,16 +330,16 @@ export default function MutterTab({ selectedItem }: MutterTabProps) {
                 onClick={handleAddCategory}
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
-                <span className="text-xs">Hinzufügen</span>
+                <span className="text-xs">{t("add")}</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 rounded-full border border-red-500"
+                className="h-8 rounded-full "
                 onClick={handleDelete}
               >
                 <Minus className="h-3.5 w-3.5 mr-1 " />
-                <span className="text-xs">Entfernen</span>
+                <span className="text-xs">{t("remove")}</span>
               </Button>
             </div>
           </div>

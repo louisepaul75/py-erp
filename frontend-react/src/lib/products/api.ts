@@ -5,7 +5,7 @@ import ky, {
   type NormalizedOptions,
 } from "ky";
 import { API_URL, AUTH_CONFIG } from "../config";
-
+import { Product } from "@/components/types/product";
 // Cookie storage utility
 const cookieStorage = {
   getItem: (name: string) => {
@@ -163,14 +163,6 @@ const api = ky.create({
 });
 
 // Interfaces remain unchanged
-interface Product {
-  id: string;
-  nummer: string;
-  bezeichnung: string;
-  status: "active" | "inactive" | "draft";
-  categories?: { id: string; name: string }[];
-  variants?: Variant[];
-}
 
 interface Variant {
   id: string;
@@ -199,6 +191,7 @@ interface ProductListParams {
 // Product API methods
 export const productApi = {
   getProducts: async (params: ProductListParams = {}) => {
+    console.log("Fetching products in getProducts");
     if (params._ude_variants !== undefined) {
       params.include_variants = params._ude_variants;
       delete params._ude_variants;
@@ -206,7 +199,7 @@ export const productApi = {
 
     // Default query parameters
     const defaultParams: ProductListParams = {
-      page_size: 100,
+      page_size: 30,
       page: 1,
       is_parent: true,
       ...params, // Override defaults with any passed parameters
@@ -220,11 +213,19 @@ export const productApi = {
     }
   },
 
-  getProduct: async (id: string): Promise<Product> => {
+  getProduct: async (id: string | number): Promise<Product> => {
     try {
       return await api.get(`products/${id}/`).json();
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
+      throw error;
+    }
+  },
+  getProductBySlug: async (sku: string | number): Promise<Product> => {
+    try {
+      return await api.get(`products/by-slug/${sku}/`).json();
+    } catch (error) {
+      console.error(`Error fetching product ${sku}:`, error);
       throw error;
     }
   },
@@ -251,6 +252,7 @@ export const productApi = {
   },
 
   deleteProduct: async (id: string): Promise<void> => {
+    console.log("product to be deleted", id);
     try {
       await api.delete(`products/${id}/`);
     } catch (error) {

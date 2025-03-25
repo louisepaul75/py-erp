@@ -9,6 +9,7 @@ import VariantenHeader from "../variants/VariantenHeader";
 import VariantenTable from "../variants/VariantenTable";
 import VariantenTabs from "../variants/VariantenTabs";
 import DetailsTab from "../variants/DetailsTab";
+import { SelectedItem } from "@/components/types/product";
 
 interface Variant {
   id: string;
@@ -32,11 +33,9 @@ interface VariantDetails {
   selbstkosten: string;
 }
 
-interface VariantenTabProps {
-  selectedItem: string | null;
-}
 
-export default function VariantenTab({ selectedItem }: VariantenTabProps) {
+
+export default function VariantenTab({ selectedItem }: SelectedItem) {
   const [variantenActiveTab, setVariantenActiveTab] = useState("details");
   const [searchTerm, setSearchTerm] = useState("");
   const [variants, setVariants] = useState<Variant[]>([]);
