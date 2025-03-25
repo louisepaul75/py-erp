@@ -16,7 +16,7 @@ app_name = "products_api"
 urlpatterns = [
     path("", ProductListAPIView.as_view(), name="product_list"),
     path("categories/", CategoryListAPIView.as_view(), name="category_list"),
-    path("<int:pk>/", ProductDetailAPIView.as_view(), name="product_detail"),
+    path("<int:pk>/", lambda request, pk: print(f"DEBUG: URL pattern matched for pk={pk}") or ProductDetailAPIView.as_view()(request, pk=pk), name="product_detail"),
     path(
         "by-slug/<slug:slug>/",
         ProductDetailAPIView.as_view(),

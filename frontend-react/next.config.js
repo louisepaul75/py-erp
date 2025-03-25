@@ -1,3 +1,4 @@
+const path = require('path');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: process.env.NODE_ENV === 'development',
@@ -6,10 +7,15 @@ const nextConfig = {
   },
   // Add this to disable favicon requests
   webpack: (config) => {
+    // Add alias for @ to point to the root directory
+    config.resolve.alias['@'] = path.resolve(__dirname, 'src');
+
+    // Existing rule for handling image files
     config.module.rules.push({
       test: /\.(ico|png|jpg|jpeg|gif|svg)$/,
       type: 'asset/resource',
     });
+
     return config;
   },
   // Add output configuration to ensure static files are generated correctly

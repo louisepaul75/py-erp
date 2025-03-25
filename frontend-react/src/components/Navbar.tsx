@@ -62,12 +62,11 @@ export function Navbar() {
   };
 
   const navigationItems = [
-    { href: '/', label: t('navigation.home') },
+    { href: '/dashboard', label: t('navigation.home') },
     { href: '/products', label: t('navigation.products') },
     { href: '/sales', label: t('navigation.sales') },
     { href: '/production', label: t('navigation.production') },
-    { href: '/inventory', label: t('navigation.inventory') },
-    { href: '/ui-components', label: 'UI Components' },
+    { href: '/warehouse', label: t('navigation.inventory') },
   ];
 
   return (
@@ -76,7 +75,7 @@ export function Navbar() {
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
-            <Link href="/">
+            <Link href="/dashboard">
               <Image 
                 src="/wsz_logo_long.png" 
                 alt="Wilhelm Schweizer Zinnmanufaktur" 
