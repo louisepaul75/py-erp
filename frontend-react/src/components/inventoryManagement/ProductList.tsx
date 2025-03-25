@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/components/types/product";
 import { ProductListProps } from "@/components/types/product";
-import { Spinner } from "@radix-ui/themes";
+// import { Spinner } from "@radix-ui/themes";
 
 import {
   Table,
@@ -199,7 +199,7 @@ export default function ProductList({
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8">
                   <div className="flex justify-center items-center gap-2 min-h-[500px]">
-                    <Spinner size="3" />
+                    {/* <Spinner size="3" /> */}
                     <span>Loading products...</span>
                   </div>
                 </TableCell>
