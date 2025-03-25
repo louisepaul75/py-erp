@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import {
   Calendar,
@@ -159,13 +159,17 @@ const DashboardWidget = ({
                 <X className="h-3 w-3" />
               </Button>
             )}
-            <div className="h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+            <div className="h-6 w-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center draggable-handle">
               <Grip className="h-3 w-3" />
             </div>
           </div>
         )}
         
-        {title && <h2 className="text-xl font-bold tracking-tight mb-2 pr-8">{title}</h2>}
+        {title && (
+          <div className={isEditMode ? "draggable-handle" : ""}>
+            <h2 className="text-xl font-bold tracking-tight mb-2 pr-8">{title}</h2>
+          </div>
+        )}
         <div className="flex-1 overflow-auto">
           {children}
         </div>
@@ -177,6 +181,7 @@ const DashboardWidget = ({
 const Dashboard = () => {
   const [isEditMode, setIsEditMode] = useState(false)
   const [width, setWidth] = useState(1200) // Default width for SSR
+  const [isLoading, setIsLoading] = useState(true) // Add loading state
   const [layouts, setLayouts] = useState<Layouts>({
     lg: [
       { i: "recent-orders", x: 0, y: 0, w: 12, h: 8, title: "Letzte Bestellungen nach Liefertermin" },
@@ -264,7 +269,8 @@ const Dashboard = () => {
     },
   ]
 
-  const handleLayoutChange = (currentLayout: Layout[], allLayouts: any) => {
+  // Memoize the handleLayoutChange function to prevent unnecessary re-renders
+  const handleLayoutChange = useCallback((currentLayout: Layout[], allLayouts: any) => {
     // Update the layouts state with the new positions and sizes
     setLayouts(allLayouts)
     
@@ -274,7 +280,7 @@ const Dashboard = () => {
     } catch (error) {
       console.error("Failed to save layout", error)
     }
-  }
+  }, [])
 
   const toggleEditMode = () => {
     setIsEditMode(!isEditMode)
@@ -403,86 +409,104 @@ const Dashboard = () => {
   // Load saved layout on initial render
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsLoading(true);
       try {
         // Try to fetch from API first
         console.log("Fetching dashboard data from API...");
         
         // Get JWT token from auth service cookie storage
         const token = authService.getToken();
+        let shouldUseLocalStorage = false;
         
-        if (!token) {
-          console.log("JWT token not found. User may not be authenticated. Falling back to localStorage.");
-          const savedLayout = localStorage.getItem("dashboard-grid-layout");
-          if (savedLayout) setLayouts(JSON.parse(savedLayout));
-          return;
-        }
-        
-        // Use the API_URL from config instead of relative path
-        const response = await fetch(`${API_URL}/dashboard/summary/`, {
-          headers: {
-            "Accept": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-          credentials: "include" // Include cookies for session auth fallback
-        });
-        
-        if (response.ok) {
-          console.log("API response successful");
-          const data = await response.json();
-          
-          // If grid_layout exists in the API response, use it
-          if (data.grid_layout && Object.keys(data.grid_layout).length > 0) {
-            console.log("Using grid layout from API");
-            setLayouts(data.grid_layout);
-            return;
-          } else {
-            console.log("No grid layout in API response, falling back to localStorage");
+        if (token) {
+          try {
+            // Use the API_URL from config instead of relative path
+            const response = await fetch(`${API_URL}/dashboard/summary/`, {
+              headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              credentials: "include" // Include cookies for session auth fallback
+            });
+            
+            if (response.ok) {
+              console.log("API response successful");
+              const data = await response.json();
+              
+              // If grid_layout exists in the API response, use it
+              if (data.grid_layout && Object.keys(data.grid_layout).length > 0) {
+                console.log("Using grid layout from API");
+                setLayouts(data.grid_layout);
+                setIsLoading(false);
+                return;
+              } else {
+                console.log("No grid layout in API response, falling back to localStorage");
+                shouldUseLocalStorage = true;
+              }
+            } else {
+              console.error(`API request failed: ${response.status} ${response.statusText}`);
+              shouldUseLocalStorage = true;
+            }
+          } catch (apiError) {
+            console.error("API error when fetching dashboard layout:", apiError);
+            shouldUseLocalStorage = true;
           }
         } else {
-          console.error(`API request failed: ${response.status} ${response.statusText}`);
+          console.log("JWT token not found. User may not be authenticated. Falling back to localStorage.");
+          shouldUseLocalStorage = true;
         }
-      } catch (apiError) {
-        console.error("API error when fetching dashboard layout:", apiError);
+        
+        // Fallback to localStorage if needed
+        if (shouldUseLocalStorage) {
+          console.log("Using localStorage for dashboard layout");
+          const savedLayout = localStorage.getItem("dashboard-grid-layout");
+          if (savedLayout) {
+            setLayouts(JSON.parse(savedLayout));
+          }
+          
+          // Load saved favorites
+          const savedFavorites = localStorage.getItem("dashboard-favorites");
+          if (savedFavorites) {
+            try {
+              const parsedFavorites = JSON.parse(savedFavorites);
+              setMenuTiles(parsedFavorites);
+            } catch (error) {
+              console.error("Failed to parse saved favorites", error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Fallback to localStorage if API fails or doesn't have grid_layout
-      console.log("Falling back to localStorage for dashboard layout");
-      const savedLayout = localStorage.getItem("dashboard-grid-layout");
-      if (savedLayout) setLayouts(JSON.parse(savedLayout));
     };
 
     fetchDashboardData();
-
-    const savedFavorites = localStorage.getItem("dashboard-favorites")
-    if (savedFavorites) {
-      try {
-        const parsedFavorites = JSON.parse(savedFavorites)
-        setMenuTiles(parsedFavorites)
-      } catch (error) {
-        console.error("Failed to parse saved favorites", error)
-      }
-    }
-  }, [])
+  }, []);
 
   // Update the width calculation in useEffect
   useEffect(() => {
-    const updateWidth = () => {
-      // Get the container width instead of using fixed width
-      const container = document.querySelector('.dashboard-grid-container');
-      if (container) {
-        setWidth(container.clientWidth);
+    // Only set up the resize listener after initial load is complete
+    if (!isLoading) {
+      const updateWidth = () => {
+        // Get the container width instead of using fixed width
+        const container = document.querySelector('.dashboard-grid-container');
+        if (container) {
+          setWidth(container.clientWidth);
+        }
       }
+
+      // Set initial width
+      updateWidth();
+
+      // Add event listener for resize
+      window.addEventListener('resize', updateWidth);
+
+      // Cleanup
+      return () => window.removeEventListener('resize', updateWidth);
     }
-
-    // Set initial width
-    updateWidth();
-
-    // Add event listener for resize
-    window.addEventListener('resize', updateWidth);
-
-    // Cleanup
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
+  }, [isLoading]);
 
   // Find the title for a widget based on its ID
   const getWidgetTitle = (id: string): string | null => {
@@ -610,27 +634,36 @@ const Dashboard = () => {
     }
   }
 
+  // Memoize the actual layout that will be rendered to prevent unnecessary re-calculations
+  const currentLayouts = useMemo(() => layouts, [layouts]);
+
   return (
     <SidebarProvider defaultOpen={true}>
-      <DashboardContent 
-        isEditMode={isEditMode}
-        width={width}
-        layouts={layouts}
-        setLayouts={setLayouts}
-        menuTiles={menuTiles}
-        setMenuTiles={setMenuTiles}
-        toggleEditMode={toggleEditMode}
-        saveLayout={saveLayout}
-        handleRemoveWidget={handleRemoveWidget}
-        toggleFavorite={toggleFavorite}
-        recentAccessed={recentAccessed}
-        handleLayoutChange={handleLayoutChange}
-        getWidgetTitle={getWidgetTitle}
-        renderWidgetContent={renderWidgetContent}
-        recentOrders={recentOrders}
-        quickLinks={quickLinks}
-        newsItems={newsItems}
-      />
+      {isLoading ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <DashboardContent 
+          isEditMode={isEditMode}
+          width={width}
+          layouts={currentLayouts}
+          setLayouts={setLayouts}
+          menuTiles={menuTiles}
+          setMenuTiles={setMenuTiles}
+          toggleEditMode={toggleEditMode}
+          saveLayout={saveLayout}
+          handleRemoveWidget={handleRemoveWidget}
+          toggleFavorite={toggleFavorite}
+          recentAccessed={recentAccessed}
+          handleLayoutChange={handleLayoutChange}
+          getWidgetTitle={getWidgetTitle}
+          renderWidgetContent={renderWidgetContent}
+          recentOrders={recentOrders}
+          quickLinks={quickLinks}
+          newsItems={newsItems}
+        />
+      )}
     </SidebarProvider>
   )
 }
@@ -726,6 +759,18 @@ const DashboardContent = ({
     }
     reset()
   }
+
+  // Use memoized values for grid layout props to prevent unnecessary re-renders
+  const gridBreakpoints = useMemo(() => ({ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }), []);
+  const gridCols = useMemo(() => ({ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }), []);
+  const gridRowHeight = useMemo(() => 30, []);
+  const gridMargin = useMemo(() => [16, 16], []);
+  
+  // Generate a stable list of layout IDs to prevent re-renders
+  const layoutKeys = useMemo(() => {
+    if (!layouts || !layouts.lg) return [];
+    return layouts.lg.map(item => item.i);
+  }, [layouts]);
 
   return (
     <div className="flex h-screen">
@@ -833,28 +878,28 @@ const DashboardContent = ({
                 <ResponsiveGridLayout
                   className="layout"
                   layouts={layouts}
-                  breakpoints={{ lg: 1200, md: 996, sm: 768 }}
-                  cols={{ lg: 12, md: 12, sm: 12 }}
-                  rowHeight={50}
+                  breakpoints={gridBreakpoints}
+                  cols={gridCols}
+                  rowHeight={gridRowHeight}
                   width={width}
+                  margin={gridMargin}
+                  onLayoutChange={handleLayoutChange}
                   isDraggable={isEditMode}
                   isResizable={isEditMode}
-                  onLayoutChange={(layout, layouts) => handleLayoutChange(layout, layouts)}
-                  draggableHandle=".bg-primary"
-                  margin={[16, 16]}
-                  containerPadding={[16, 16]}
+                  draggableHandle=".draggable-handle"
+                  compactType="vertical"
                   useCSSTransforms={true}
-                  autoSize={true}
+                  preventCollision={false}
                 >
-                  {layouts.lg.map((item) => (
-                    <div key={item.i} className="bg-background p-4 rounded-lg shadow-sm">
+                  {layoutKeys.map((key) => (
+                    <div key={key} className="relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border">
                       <DashboardWidget
-                        id={item.i}
-                        title={getWidgetTitle(item.i)}
+                        id={key}
+                        title={getWidgetTitle(key)}
                         isEditMode={isEditMode}
-                        onRemove={handleRemoveWidget}
+                        onRemove={isEditMode ? handleRemoveWidget : undefined}
                       >
-                        {renderWidgetContent(item.i)}
+                        {renderWidgetContent(key)}
                       </DashboardWidget>
                     </div>
                   ))}
