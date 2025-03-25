@@ -47,6 +47,8 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* Add empty CSRF token meta tag that can be populated by API responses */}
+        <meta name="csrf-token" content="" />
       </head>
       <body className="min-h-screen bg-gray-50 dark:bg-gray-900 text-amber-950 dark:text-gray-100">
         <Providers>

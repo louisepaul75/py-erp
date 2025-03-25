@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { authService } from '../../lib/auth/authService'
+import { authService, csrfService } from '../../lib/auth/authService'
 import { API_URL } from '@/lib/config'
 import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
 import { SearchResultsDropdown } from "./search-results-dropdown"
@@ -305,69 +305,93 @@ const Dashboard = () => {
     try {
       console.log('Saving layout:', layouts);
       
-      // Get CSRF token from cookies
-      const getCookie = (name: string) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) {
-          const part = parts.pop();
-          return part ? part.split(';').shift() || null : null;
-        }
-        return null;
-      };
+      // Get JWT token from auth service cookie storage
+      const token = authService.getToken();
       
-      // Try multiple sources for the CSRF token
-      const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      const csrfToken = getCookie('csrftoken') || (window as any).DJANGO_SETTINGS?.CSRF_TOKEN || metaToken;
-      console.log("CSRF Token:", csrfToken); // Log token for debugging
-      
-      if (!csrfToken) {
-        console.error("CSRF token is missing or invalid");
+      if (!token) {
+        console.error("JWT token not found. User may not be authenticated.");
         return;
       }
       
-      // Make sure the token doesn't have any whitespace
-      const cleanToken = csrfToken.trim();
+      // Get or fetch CSRF token
+      let csrfToken = csrfService.getToken();
+      if (!csrfToken) {
+        console.log("No CSRF token found, fetching a new one");
+        csrfToken = await csrfService.fetchToken();
+      }
       
-      // Save to backend API
-      try {
-        console.log("Saving layout to API...");
+      // Proceed with the API call to save the layout
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${token}`
+      };
+      
+      // Add CSRF token if available
+      if (csrfToken) {
+        headers["X-CSRFToken"] = csrfToken;
+      }
+      
+      console.log("Saving layout to API with headers:", headers);
+      
+      const response = await fetch(`${API_URL}/dashboard/summary/`, {
+        method: "PATCH",
+        headers,
+        credentials: "include", // Include cookies for session auth fallback
+        body: JSON.stringify({
+          grid_layout: layouts
+        })
+      });
+      
+      if (response.ok) {
+        console.log("Layout successfully saved to server");
+      } else {
+        const errorText = await response.text();
+        console.error(`Failed to save layout to server: ${response.status} ${response.statusText}`);
+        console.error("Error details:", errorText);
         
-        // Get JWT token from auth service cookie storage
-        const token = authService.getToken();
-        
-        if (!token) {
-          console.error("JWT token not found. User may not be authenticated.");
-          return;
+        // If it's a CSRF error, try one more time with a fresh token
+        if (response.status === 403 && (errorText.includes("CSRF") || errorText.includes("csrf"))) {
+          try {
+            console.log("CSRF validation failed, trying with a fresh token");
+            const freshToken = await csrfService.fetchToken();
+            
+            if (freshToken) {
+              console.log("Retrying with fresh CSRF token");
+              
+              const retryHeaders = {
+                ...headers,
+                "X-CSRFToken": freshToken
+              };
+              
+              const retryResponse = await fetch(`${API_URL}/dashboard/summary/`, {
+                method: "PATCH",
+                headers: retryHeaders,
+                credentials: "include",
+                body: JSON.stringify({
+                  grid_layout: layouts
+                })
+              });
+              
+              if (retryResponse.ok) {
+                console.log("Layout successfully saved to server on retry");
+                setIsEditMode(false);
+                return;
+              } else {
+                console.error("Retry with fresh CSRF token also failed");
+              }
+            }
+          } catch (retryError) {
+            console.error("Error during retry with fresh CSRF token:", retryError);
+          }
         }
         
-        const response = await fetch(`${API_URL}/dashboard/summary/`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": `Bearer ${token}`,
-            // Keep CSRF token for session auth fallback
-            "X-Csrftoken": cleanToken,
-          },
-          credentials: "include", // Include cookies for session auth fallback
-          body: JSON.stringify({
-            grid_layout: layouts
-          })
-        });
-        
-        if (response.ok) {
-          console.log("Layout successfully saved to server");
-        } else {
-          const errorText = await response.text();
-          console.error(`Failed to save layout to server: ${response.status} ${response.statusText}`);
-          console.error("Error details:", errorText);
-        }
-      } catch (apiError) {
-        console.error("API error when saving layout:", apiError);
+        // Display error message to user
+        alert("Fehler beim Speichern des Layouts. Bitte versuchen Sie es später erneut.");
       }
     } catch (error) {
       console.error("Failed to save layout", error);
+      alert("Fehler beim Speichern des Layouts. Bitte versuchen Sie es später erneut.");
     }
     setIsEditMode(false);
   }
