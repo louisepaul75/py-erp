@@ -61,6 +61,8 @@ import { useRouter } from "next/navigation"
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
+  
+
   const { state, toggleSidebar } = useSidebar()
   const isCollapsed = state === "collapsed"
 
@@ -669,11 +671,24 @@ const DashboardContent = ({
   quickLinks: QuickLink[]
   newsItems: NewsItem[]
 }) => {
+
   const { state: sidebarState } = useSidebar()
   const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
   const [showResults, setShowResults] = useState(false)
   const router = useRouter()
 
+  const handleMenuClick = (id: string) => {
+    // Navigate based on the clicked menu item
+    switch(id) {
+      case "inventory":
+        router.push("/warehouse");  // Navigate to the inventory route
+        break;
+      // You can add more cases here for other menu items
+      default:
+        break;
+    }
+  };
+  
   const handleInputFocus = () => {
     setShowResults(true)
   }
@@ -768,7 +783,7 @@ const DashboardContent = ({
                     .map((item) => (
                       <SidebarMenuItem key={item.id}>
                         <SidebarMenuButton asChild>
-                          <Link href="#">
+                          <Link href="#" onClick={() => handleMenuClick(item.id)}>
                             <item.icon className="h-4 w-4" />
                             <span>{item.name}</span>
                           </Link>
