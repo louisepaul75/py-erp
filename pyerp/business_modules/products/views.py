@@ -1,3 +1,4 @@
+# Test comment to trigger reload
 """
 Views for the products app.
 """
@@ -320,15 +321,30 @@ class ProductAPIView(APIView):
                 "name": product.name,
                 "sku": product.sku,
                 "description": getattr(product, "description", ""),
-                "list_price": float(product.list_price) if product.list_price else None,
-                "stock_quantity": product.stock_quantity,
+                "is_active": getattr(product, "is_active", True),
+                "is_discontinued": getattr(product, "is_discontinued", False),
+                "is_new": getattr(product, "is_new", False),
+                "release_date": product.release_date.isoformat() if getattr(product, "release_date", None) else None,
+                "created_at": product.created_at.isoformat() if getattr(product, "created_at", None) else None,
+                "updated_at": product.updated_at.isoformat() if getattr(product, "updated_at", None) else None,
+                "weight": getattr(product, "weight", None),
+                "length_mm": float(product.length_mm) if getattr(product, "length_mm", None) else None,
+                "width_mm": float(product.width_mm) if getattr(product, "width_mm", None) else None,
+                "height_mm": float(product.height_mm) if getattr(product, "height_mm", None) else None,
+                "name_en": getattr(product, "name_en", ""),
+                "short_description": getattr(product, "short_description", ""),
+                "short_description_en": getattr(product, "short_description_en", ""),
+                "description_en": getattr(product, "description_en", ""),
+                "keywords": getattr(product, "keywords", ""),
+                "legacy_id": getattr(product, "legacy_id", None),
+                "legacy_base_sku": getattr(product, "legacy_base_sku", None),
                 "is_hanging": getattr(product, "is_hanging", False),
                 "is_one_sided": getattr(product, "is_one_sided", False),
+                "images": [],
+                "primary_image": None,
+                "category": None,
+                "tags": []
             }
-
-            # Initialize images as empty to avoid undefined
-            product_data["images"] = []
-            product_data["primary_image"] = None
 
             # Add category if available
             if product.category_id:
@@ -344,6 +360,25 @@ class ProductAPIView(APIView):
                     product_data["category"] = None
             else:
                 product_data["category"] = None
+
+            # Add tags if available
+            if hasattr(product, "tags"):
+                try:
+                    tags = list(product.tags.all())
+                    tags_data = []
+                    for tag in tags:
+                        tags_data.append({
+                            "id": tag.id,
+                            "name": tag.name,
+                            "slug": getattr(tag, "slug", None),
+                            "description": getattr(tag, "description", "")
+                        })
+                    product_data["tags"] = tags_data
+                except Exception as e:
+                    print(f"Error getting tags for product {product.id}: {e!s}")
+                    product_data["tags"] = []
+            else:
+                product_data["tags"] = []
 
             # Add variants count for parent products
             if isinstance(product, ParentProduct):
