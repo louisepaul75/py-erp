@@ -14,6 +14,8 @@ import WarehouseLocationMobile from "@/components/warehouse-location/warehouse-l
 import WarehouseLocationTable from "@/components/warehouse-location/warehouse-location-table"
 import { generateMockData } from "@/lib/warehouse-service"
 import type { WarehouseLocation, ContainerItem } from "@/types/warehouse-types"
+import { API_URL } from "@/lib/config"
+import { authService } from "@/lib/auth/authService"
 
 const PRINTERS = [
   { value: "none", label: "Drucker auswählen" },
@@ -45,13 +47,81 @@ export default function WarehouseLocationList() {
   const [highlightedLocationId, setHighlightedLocationId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(500)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load mock data
-    const mockData = generateMockData(3000)
-    setLocations(mockData)
-    setFilteredLocations(mockData)
-  }, [])
+    const fetchStorageLocations = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Get the authentication token
+        const token = authService.getToken();
+        
+        // Get CSRF token from cookies if available
+        const getCookie = (name: string) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(';').shift();
+          return undefined;
+        };
+        
+        const csrfToken = getCookie('csrftoken');
+        
+        const response = await fetch(`${API_URL}/inventory/storage-locations/`, {
+          headers: {
+            "Accept": "application/json",
+            "Authorization": token ? `Bearer ${token}` : "",
+            ...(csrfToken && { "X-CSRFToken": csrfToken }),
+          },
+          credentials: "include" // Include cookies for session auth
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Authentication required. Please log in to access warehouse locations.');
+          } else if (response.status === 403) {
+            throw new Error('Permission denied. You may need to refresh the page to update your session.');
+          } else if (response.status === 404) {
+            throw new Error('API endpoint not found. The inventory API might not be properly configured.');
+          }
+          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Map the API response to match our WarehouseLocation type
+        const warehouseLocations: WarehouseLocation[] = data.map((item: any) => ({
+          id: item.id.toString(),
+          laNumber: item.location_code || `LA-${item.id}`,
+          location: item.name,
+          forSale: item.sale || false,
+          specialStorage: item.special_spot || false,
+          shelf: parseInt(item.shelf) || 0,
+          compartment: parseInt(item.compartment) || 0,
+          floor: parseInt(item.unit) || 0,
+          containerCount: item.product_count || 0,
+          status: item.product_count > 0 ? "in-use" : "free"
+        }));
+        
+        setLocations(warehouseLocations);
+        setFilteredLocations(warehouseLocations);
+      } catch (error) {
+        console.error("Error fetching storage locations:", error);
+        setError("Failed to load storage locations. Using mock data instead.");
+        
+        // Fallback to mock data if the API request fails
+        const mockData = generateMockData(50);
+        setLocations(mockData);
+        setFilteredLocations(mockData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStorageLocations();
+  }, []);
 
   // Highlight location from URL params
   useEffect(() => {
@@ -214,6 +284,12 @@ export default function WarehouseLocationList() {
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 border border-red-200 bg-red-50 text-red-800 rounded-md">
+          {error}
+        </div>
+      )}
+
       <WarehouseLocationFilters
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -233,26 +309,36 @@ export default function WarehouseLocationList() {
         setStatusFilter={setStatusFilter}
       />
 
-      {/* Table and Mobile List */}
-      <div className="hidden md:block"> 
-        <WarehouseLocationTable
-          filteredLocations={paginatedLocations}
-          selectedLocations={selectedLocations}
-          handleSelectLocation={handleSelectLocation}
-          handleRowClick={handleRowClick}
-          handleDeleteClick={handleDeleteClick}
-          highlightedLocationId={highlightedLocationId}
-        />
-      </div>
-      <WarehouseLocationMobile
-        filteredLocations={paginatedLocations}
-        selectedLocations={selectedLocations}
-        handleSelectLocation={handleSelectLocation}
-        handleRowClick={handleRowClick}
-        handleDeleteClick={handleDeleteClick}
-      />
+      {/* Loading indicator */}
+      {isLoading ? (
+        <div className="flex justify-center items-center p-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <span className="ml-3">Lade Lagerorte...</span>
+        </div>
+      ) : (
+        <>
+          {/* Table and Mobile List */}
+          <div className="hidden md:block"> 
+            <WarehouseLocationTable
+              filteredLocations={paginatedLocations}
+              selectedLocations={selectedLocations}
+              handleSelectLocation={handleSelectLocation}
+              handleRowClick={handleRowClick}
+              handleDeleteClick={handleDeleteClick}
+              highlightedLocationId={highlightedLocationId}
+            />
+          </div>
+          <WarehouseLocationMobile
+            filteredLocations={paginatedLocations}
+            selectedLocations={selectedLocations}
+            handleSelectLocation={handleSelectLocation}
+            handleRowClick={handleRowClick}
+            handleDeleteClick={handleDeleteClick}
+          />
+        </>
+      )}
 
-      {filteredLocations.length > 0 && (
+      {!isLoading && filteredLocations.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Einträge pro Seite:</span>
@@ -337,19 +423,21 @@ export default function WarehouseLocationList() {
       )}
 
       {/* Print Section */}
-      <div className="flex items-center gap-4 border-t pt-4">
-        <div className="flex-1">
-          <Select
-            value={selectedPrinter}
-            onValueChange={setSelectedPrinter}
-            placeholder="Drucker auswählen"
-            options={PRINTERS}
-          />
+      {!isLoading && (
+        <div className="flex items-center gap-4 border-t pt-4">
+          <div className="flex-1">
+            <Select
+              value={selectedPrinter}
+              onValueChange={setSelectedPrinter}
+              placeholder="Drucker auswählen"
+              options={PRINTERS}
+            />
+          </div>
+          <Button variant="default" onClick={handlePrint} disabled={selectedLocations.length === 0 || !selectedPrinter}>
+            Lagerorte drucken
+          </Button>
         </div>
-        <Button variant="default" onClick={handlePrint} disabled={selectedLocations.length === 0 || !selectedPrinter}>
-          Lagerorte drucken
-        </Button>
-      </div>
+      )}
 
       {/* Modals */}
       <NewWarehouseLocationModal
