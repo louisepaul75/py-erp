@@ -36,6 +36,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Ensure we're in the project root directory
+cd "$(dirname "$0")"
+
 # Create Docker network if it doesn't exist
 echo "Ensuring Docker network exists..."
 docker network create pyerp-network 2>/dev/null || true
@@ -87,7 +90,10 @@ elif [ "$MONITORING_MODE" == "remote" ]; then
     fi
 fi
 
-# Start the pyERP container
+# Create necessary directories if they don't exist
+mkdir -p static media logs data
+
+# Start the pyERP container with improved mount points
 echo "Starting new pyerp-dev container..."
 docker run -d \
   --name pyerp-dev \
@@ -97,10 +103,14 @@ docker run -d \
   -p 3000:3000 \
   -p 6379:6379 \
   -p 80:80 \
-  -v $(pwd):/app \
+  -v "$(pwd)":/app \
+  -v "$(pwd)/static":/app/static \
+  -v "$(pwd)/media":/app/media \
+  -v "$(pwd)/logs":/app/logs \
+  -v "$(pwd)/data":/app/data \
   --network pyerp-network \
   pyerp-dev-image \
-  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+  bash -c "cd /app && chmod +x /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_static_dirs.sh && chmod +x /app/docker/ensure_frontend_deps.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
 # Show the last 50 lines of container logs
 echo "Showing last 50 lines of container logs..."
