@@ -441,7 +441,15 @@ const Dashboard = () => {
       setError(null);
       
       try {
-        // Fetch all required data
+        // Use hardcoded data instead of API calls for now
+        // The following API endpoints are not implemented yet:
+        // - /api/orders/recent
+        // - /api/menu/tiles
+        // - /api/quick-links
+        // - /api/news
+        
+        // Comment out API calls that are resulting in 404 errors
+        /*
         const [ordersResponse, tilesResponse, linksResponse, newsResponse] = await Promise.allSettled([
           fetch('/api/orders/recent'),
           fetch('/api/menu/tiles'),
@@ -468,12 +476,29 @@ const Dashboard = () => {
         if (newsResponse.status === 'fulfilled' && newsResponse.value.ok) {
           news = await newsResponse.value.json();
         }
-
-        // Update state with fetched data
-        setRecentOrders(orders);
-        setMenuTiles(tiles);
-        setQuickLinks(links);
-        setNewsItems(news);
+        */
+        
+        // Use the existing hardcoded data directly
+        setRecentOrders(recentOrdersData);
+        // Only update menuTiles if there's no existing data (preserves any runtime changes)
+        if (menuTiles.length === 0) {
+          setMenuTiles([
+            { id: "customers", name: "Kunden", icon: Users, favorited: false },
+            { id: "orders", name: "Aufträge", icon: ShoppingCart, favorited: false },
+            { id: "products", name: "Produkte", icon: Package, favorited: false },
+            { id: "reports", name: "Berichte", icon: BarChart3, favorited: false },
+            { id: "settings", name: "Einstellungen", icon: Settings, favorited: false },
+            { id: "users", name: "Benutzer", icon: Users, favorited: false },
+            { id: "finance", name: "Finanzen", icon: BarChart3, favorited: false },
+            { id: "inventory", name: "Lager", icon: Package, favorited: false },
+            { id: "picklist", name: "Picklist", icon: Package, favorited: false },
+            { id: "support", name: "Support", icon: Users, favorited: false },
+            { id: "documents", name: "Dokumente", icon: Package, favorited: false },
+            { id: "dashboard", name: "Dashboard", icon: Home, favorited: false },
+          ]);
+        }
+        setQuickLinks(quickLinksData);
+        setNewsItems(newsItemsData);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data. Please try again later.');
