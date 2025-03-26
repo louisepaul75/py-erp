@@ -63,8 +63,8 @@ WORKDIR /app/frontend-react
 # Copy package files first for better layer caching
 COPY frontend-react/package*.json ./
 
-# Install frontend dependencies with clean install and legacy peer deps
-RUN npm ci --legacy-peer-deps && \
+# Install frontend dependencies and generate lock file
+RUN npm install --legacy-peer-deps && \
     npm install --save-dev autoprefixer postcss tailwindcss && \
     npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom @babel/preset-env @babel/preset-react @babel/preset-typescript jest-transform-stub identity-obj-proxy ts-jest jest-junit
 
