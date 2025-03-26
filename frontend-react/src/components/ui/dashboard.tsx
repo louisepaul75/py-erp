@@ -181,7 +181,11 @@ const DashboardWidget = ({
 const Dashboard = () => {
   const [isEditMode, setIsEditMode] = useState(false)
   const [width, setWidth] = useState(1200) // Default width for SSR
-  const [isLoading, setIsLoading] = useState(true) // Add loading state
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [recentOrders, setRecentOrders] = useState<Order[]>([])
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>([])
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [layouts, setLayouts] = useState<Layouts>({
     lg: [
       { i: "recent-orders", x: 0, y: 0, w: 12, h: 8, title: "Letzte Bestellungen nach Liefertermin" },
@@ -219,7 +223,7 @@ const Dashboard = () => {
   ])
 
   // Recent orders data
-  const recentOrders: Order[] = [
+  const recentOrdersData: Order[] = [
     { id: "ORD-7352", customer: "Müller GmbH", date: "2025-03-20", status: "Pending", amount: "€1,240.00" },
     { id: "ORD-7351", customer: "Schmidt AG", date: "2025-03-18", status: "Processing", amount: "€2,156.00" },
     { id: "ORD-7350", customer: "Weber KG", date: "2025-03-17", status: "Shipped", amount: "€865.50" },
@@ -237,7 +241,7 @@ const Dashboard = () => {
   ]
 
   // Quick links
-  const quickLinks: QuickLink[] = [
+  const quickLinksData: QuickLink[] = [
     { name: "Handbuch", url: "#" },
     { name: "Support-Ticket erstellen", url: "#" },
     { name: "Schulungsvideos", url: "#" },
@@ -251,7 +255,7 @@ const Dashboard = () => {
   ]
 
   // News items
-  const newsItems: NewsItem[] = [
+  const newsItemsData: NewsItem[] = [
     {
       title: "Neue Funktionen im ERP-System",
       date: "15.03.2025",
@@ -434,73 +438,45 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
+      setError(null);
+      
       try {
-        // Try to fetch from API first
-        console.log("Fetching dashboard data from API...");
-        
-        // Get JWT token from auth service cookie storage
-        const token = authService.getToken();
-        let shouldUseLocalStorage = false;
-        
-        if (token) {
-          try {
-            // Use the API_URL from config instead of relative path
-            const response = await fetch(`${API_URL}/dashboard/summary/`, {
-              headers: {
-                "Accept": "application/json",
-                "Authorization": `Bearer ${token}`
-              },
-              credentials: "include" // Include cookies for session auth fallback
-            });
-            
-            if (response.ok) {
-              console.log("API response successful");
-              const data = await response.json();
-              
-              // If grid_layout exists in the API response, use it
-              if (data.grid_layout && Object.keys(data.grid_layout).length > 0) {
-                console.log("Using grid layout from API");
-                setLayouts(data.grid_layout);
-                setIsLoading(false);
-                return;
-              } else {
-                console.log("No grid layout in API response, falling back to localStorage");
-                shouldUseLocalStorage = true;
-              }
-            } else {
-              console.error(`API request failed: ${response.status} ${response.statusText}`);
-              shouldUseLocalStorage = true;
-            }
-          } catch (apiError) {
-            console.error("API error when fetching dashboard layout:", apiError);
-            shouldUseLocalStorage = true;
-          }
-        } else {
-          console.log("JWT token not found. User may not be authenticated. Falling back to localStorage.");
-          shouldUseLocalStorage = true;
+        // Fetch all required data
+        const [ordersResponse, tilesResponse, linksResponse, newsResponse] = await Promise.allSettled([
+          fetch('/api/orders/recent'),
+          fetch('/api/menu/tiles'),
+          fetch('/api/quick-links'),
+          fetch('/api/news')
+        ]);
+
+        // Initialize data with defaults
+        let orders: Order[] = [];
+        let tiles: MenuTile[] = [];
+        let links: QuickLink[] = [];
+        let news: NewsItem[] = [];
+
+        // Handle each response
+        if (ordersResponse.status === 'fulfilled' && ordersResponse.value.ok) {
+          orders = await ordersResponse.value.json();
         }
-        
-        // Fallback to localStorage if needed
-        if (shouldUseLocalStorage) {
-          console.log("Using localStorage for dashboard layout");
-          const savedLayout = localStorage.getItem("dashboard-grid-layout");
-          if (savedLayout) {
-            setLayouts(JSON.parse(savedLayout));
-          }
-          
-          // Load saved favorites
-          const savedFavorites = localStorage.getItem("dashboard-favorites");
-          if (savedFavorites) {
-            try {
-              const parsedFavorites = JSON.parse(savedFavorites);
-              setMenuTiles(parsedFavorites);
-            } catch (error) {
-              console.error("Failed to parse saved favorites", error);
-            }
-          }
+        if (tilesResponse.status === 'fulfilled' && tilesResponse.value.ok) {
+          tiles = await tilesResponse.value.json();
         }
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
+        if (linksResponse.status === 'fulfilled' && linksResponse.value.ok) {
+          links = await linksResponse.value.json();
+        }
+        if (newsResponse.status === 'fulfilled' && newsResponse.value.ok) {
+          news = await newsResponse.value.json();
+        }
+
+        // Update state with fetched data
+        setRecentOrders(orders);
+        setMenuTiles(tiles);
+        setQuickLinks(links);
+        setNewsItems(news);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again later.');
       } finally {
         setIsLoading(false);
       }
@@ -540,17 +516,22 @@ const Dashboard = () => {
 
   // Render widget content based on ID
   const renderWidgetContent = (widgetId: string) => {
+    // Add null checks for all data before rendering
+    if (!recentOrders || !menuTiles || !quickLinks || !newsItems) {
+      return <div>Loading widget content...</div>
+    }
+
     switch (widgetId) {
       case "recent-orders":
         return (
-          <Card className="h-full border-0 shadow-none">
-            <CardContent className="p-0 h-full">
+          <div className="space-y-8">
+            {recentOrders.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Bestellung</TableHead>
+                    <TableHead>Bestellnummer</TableHead>
                     <TableHead>Kunde</TableHead>
-                    <TableHead>Liefertermin</TableHead>
+                    <TableHead>Datum</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Betrag</TableHead>
                   </TableRow>
@@ -567,8 +548,10 @@ const Dashboard = () => {
                   ))}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
+            ) : (
+              <div className="text-center py-4">Keine Bestellungen gefunden</div>
+            )}
+          </div>
         )
 
       case "menu-tiles":
@@ -660,6 +643,23 @@ const Dashboard = () => {
 
   // Memoize the actual layout that will be rendered to prevent unnecessary re-calculations
   const currentLayouts = useMemo(() => layouts, [layouts]);
+
+  // Add loading state check at the beginning of the render
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-destructive">{error}</div>
+      </div>
+    )
+  }
 
   return (
     <SidebarProvider defaultOpen={true}>
