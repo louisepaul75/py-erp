@@ -18,7 +18,15 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none overflow-hidden">
+        <Dialog.Description asChild>
+          <div className="sr-only" id="settings-dialog-description">
+            Dialog zum Verwalten der Systemeinstellungen, einschließlich Drucker, Waagen, Schüttenzwecke und Schüttentypen.
+          </div>
+        </Dialog.Description>
+        <Dialog.Content 
+          className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none overflow-hidden"
+          aria-describedby="settings-dialog-description"
+        >
           <div className="flex items-center justify-between p-4 border-b">
             <Dialog.Title className="text-xl font-semibold flex items-center gap-2 text-black">
               <Settings className="h-5 w-5" />
