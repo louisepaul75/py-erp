@@ -46,7 +46,7 @@ def box_types_list(request):
                 "length": box_type.length,
                 "width": box_type.width,
                 "height": box_type.height,
-                "weight_capacity": box_type.weight_capacity,
+                "weight_capacity": box_type.weight_empty,
                 "slot_count": box_type.slot_count,
                 "slot_naming_scheme": box_type.slot_naming_scheme,
             }
@@ -78,36 +78,65 @@ def boxes_list(request):
         page = int(request.GET.get("page", 1))
         page_size = int(request.GET.get("page_size", 10))
 
+        # Calculate pagination
         offset = (page - 1) * page_size
         limit = page_size
 
+        # Get total count using cached query
         total_count = Box.objects.count()
-        boxes = (
-            Box.objects.select_related("box_type")
-            .prefetch_related("slots")
-            .all()[offset:offset + limit]
-        )
+        logger.info(f"Total boxes count: {total_count}")
 
-        data = []
-        for box in boxes:
-            try:
-                storage_location = None
-                for slot in box.slots.all():
-                    box_storage = (
-                        slot.box_storage_items
-                        .select_related("product_storage__storage_location")
-                        .first()
+        try:
+            # Optimize query with joins and annotations
+            boxes = (
+                Box.objects.select_related("box_type")
+                .prefetch_related(
+                    models.Prefetch(
+                        "slots",
+                        queryset=BoxSlot.objects.prefetch_related(
+                            models.Prefetch(
+                                "box_storage_items",
+                                queryset=BoxStorage.objects.select_related(
+                                    "product_storage__storage_location"
+                                )
+                            )
+                        )
                     )
-                    if (box_storage and 
-                            box_storage.product_storage.storage_location):
-                        storage_location = {
-                            "id": (box_storage.product_storage
-                                  .storage_location.id),
-                            "name": (box_storage.product_storage
-                                   .storage_location.name),
-                        }
-                        break
+                )
+                .annotate(
+                    computed_storage_location_id=models.Subquery(
+                        BoxSlot.objects.filter(
+                            box=models.OuterRef("pk"),
+                            box_storage_items__isnull=False
+                        ).values(
+                            "box_storage_items__product_storage__storage_location__id"
+                        )[:1]
+                    ),
+                    computed_storage_location_name=models.Subquery(
+                        BoxSlot.objects.filter(
+                            box=models.OuterRef("pk"),
+                            box_storage_items__isnull=False
+                        ).values(
+                            "box_storage_items__product_storage__storage_location__name"
+                        )[:1]
+                    )
+                )
+            )
+            logger.info("Base query constructed successfully")
 
+            # Apply pagination
+            boxes = boxes[offset:offset + limit]
+            logger.info(f"Fetched {len(boxes)} boxes for page {page}")
+
+        except Exception as query_error:
+            logger.error(f"Database query error: {str(query_error)}", exc_info=True)
+            return Response({
+                "detail": f"Database query error: {str(query_error)}"
+            }, status=500)
+
+        try:
+            data = []
+            for box in boxes:
                 box_data = {
                     "id": box.id,
                     "code": box.code,
@@ -116,16 +145,28 @@ def boxes_list(request):
                         "id": box.box_type.id,
                         "name": box.box_type.name,
                     },
-                    "storage_location": storage_location,
+                    "storage_location": (
+                        {
+                            "id": box.computed_storage_location_id,
+                            "name": box.computed_storage_location_name
+                        }
+                        if box.computed_storage_location_id
+                        else None
+                    ),
                     "status": box.status,
                     "purpose": box.purpose,
                     "notes": box.notes,
                     "available_slots": box.available_slots,
                 }
                 data.append(box_data)
-            except Exception as box_error:
-                logger.error(f"Error processing box {box.id}: {box_error}")
-                continue
+                
+            logger.info(f"Successfully processed {len(data)} boxes")
+
+        except Exception as transform_error:
+            logger.error(f"Data transformation error: {str(transform_error)}", exc_info=True)
+            return Response({
+                "detail": f"Error processing box data: {str(transform_error)}"
+            }, status=500)
 
         return Response({
             "results": data,
@@ -134,10 +175,11 @@ def boxes_list(request):
             "page_size": page_size,
             "total_pages": (total_count + page_size - 1) // page_size,
         })
+        
     except Exception as e:
-        logger.error(f"Error fetching boxes: {e}")
+        logger.error(f"Unexpected error in boxes_list: {str(e)}", exc_info=True)
         return Response({
-            "detail": "Failed to fetch boxes"
+            "detail": f"An unexpected error occurred: {str(e)}"
         }, status=500)
 
 

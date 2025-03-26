@@ -43,20 +43,20 @@ Enhanced the API service with a `determineBaseUrl()` function that:
 
 ### 3. Component Integration
 
-Updated all product-related Vue components to use the new asset utilities:
+Updated all product-related React components to use the new asset utilities:
 
-- **ProductList.vue**
+- **ProductList.tsx**
   - Modified `getProductImage()` to use `getNoImageUrl()` for fallbacks
-  - Added error handling with `@error="handleImageError"`
+  - Added error handling with `onError={handleImageError}`
 
-- **ProductDetail.vue**
+- **ProductDetail.tsx**
   - Updated `getMainImage` computed property to use `getNoImageUrl()`
   - Modified `getVariantImage()` to use `getValidImageUrl()` and `getNoImageUrl()`
-  - Added error handling with `@error="handleImageError"`
+  - Added error handling with `onError={handleImageError}`
 
-- **VariantDetail.vue**
+- **VariantDetail.tsx**
   - Updated related variants section to use `getNoImageUrl()`
-  - Added error handling with `@error="handleImageError"`
+  - Added error handling with `onError={handleImageError}`
 
 ## Benefits
 
@@ -80,9 +80,9 @@ These changes were tested in multiple environments:
 
 - `frontend/src/utils/assetUtils.ts` (new file)
 - `frontend/src/services/api.ts` (updated)
-- `frontend/src/views/products/ProductList.vue` (updated)
-- `frontend/src/views/products/ProductDetail.vue` (updated)
-- `frontend/src/views/products/VariantDetail.vue` (updated)
+- `frontend/src/views/products/ProductList.tsx` (updated)
+- `frontend/src/views/products/ProductDetail.tsx` (updated)
+- `frontend/src/views/products/VariantDetail.tsx` (updated)
 
 ## Future Improvements
 

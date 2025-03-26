@@ -10,23 +10,34 @@ export function middleware(request: NextRequest) {
   const isPublicPath = 
     path === '/login' || 
     path === '/health-status' ||
+    path === '/api/csrf/' ||  // Allow CSRF token endpoint
+    path === '/api/token/' ||  // Allow token endpoint
+    path === '/api/token/refresh/' ||  // Allow token refresh endpoint
     path.startsWith('/images/') ||
     path.startsWith('/fonts/') ||
-    path.startsWith('/assets/')
+    path.startsWith('/assets/') ||
+    path.startsWith('/locales/') ||  // Allow translations
+    path.startsWith('/_next/') ||  // Allow Next.js assets
+    path.startsWith('/favicon')  // Allow favicon
   
-  // Get the token from cookies
-  const token = request.cookies.get('access_token')?.value || ''
+  // Check for authentication cookie
+  const hasAuthCookie = request.cookies.has('access_token')
 
   // Redirect logic based on auth status
-  if (isPublicPath && token && path === '/login') {
-    // If user has token and tries to access login page, redirect to dashboard
+  if (isPublicPath && hasAuthCookie && path === '/login') {
+    // If user has auth cookie and tries to access login page, redirect to dashboard
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  if (!isPublicPath && !token) {
-    // If no token and not on public path, redirect to login
-    return NextResponse.redirect(new URL('/login', request.url))
+  if (!isPublicPath && !hasAuthCookie) {
+    // Store the original URL to redirect back after login
+    const url = new URL('/login', request.url)
+    url.searchParams.set('from', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
   }
+
+  // Allow the request to proceed
+  return NextResponse.next()
 }
 
 // See "Matching Paths" below to learn more

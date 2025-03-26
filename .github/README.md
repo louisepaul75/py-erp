@@ -222,7 +222,7 @@ python manage.py sync_customers --full
 
 - Project documentation is available in the `docs/` directory
 - API documentation can be accessed at `/api/docs/` when the server is running
-- Vue.js frontend documentation:
+- React frontend documentation:
   - README files in the `frontend/` directory
   - Component documentation in the `frontend/src/components/` directory
 
@@ -574,69 +574,4 @@ For third-party libraries without type stubs, we use the following approaches:
 
 For the `wsz_api` module, which is a custom module without type stubs, we've configured mypy to ignore missing imports.
 
-## Vue.js Integration
-
-The project now includes a Vue.js 3.5 frontend integration. The Vue.js application is located in the `frontend/` directory and is integrated with Django.
-
-### Setup
-
-1. Install Node.js dependencies:
-
-```bash
-cd frontend
-npm install
-```
-
-2. Run the Vue.js development server:
-
-```bash
-cd frontend
-npm run dev
-```
-
-3. Access the Vue.js application at `/vue/` in your Django application.
-
-### Development
-
-The Vue.js application is set up with the following features:
-
-- Vue.js 3.5 with Composition API
-- TypeScript for type safety
-- Vite for fast development and builds
-- ESLint and Prettier for code quality
-- Hot Module Replacement for rapid development
-- JWT-based authentication with automatic token refresh
-- Protected routes with navigation guards
-- Centralized state management with Pinia
-
-The development workflow allows for:
-
-- Real-time updates using the Vite dev server
-- Integration with Django templates
-- API calls to Django endpoints
-- Secure authentication with the Django backend
-
-### Authentication
-
-The Vue.js frontend implements a comprehensive authentication system that integrates with Django's authentication backend:
-
-- **JWT-based Authentication**: Secure token-based authentication
-- **User Management**: Login, logout, profile management, and password changes
-- **Protected Routes**: Navigation guards for authenticated routes
-- **Role-based Access**: Different access levels for admin and regular users
-- **Automatic Token Refresh**: Seamless user experience with token refresh
-- **Centralized State**: Authentication state managed with Pinia
-
-For detailed documentation, see [Authentication Implementation](docs/vue_auth_implementation.md).
-
-### Building for Production
-
-To build the Vue.js application for production:
-
-```bash
-cd frontend
-npm run build
-```
-
-This will generate optimized assets in the `static/vue/` directory, which Django will serve in production mode.
 # Test change

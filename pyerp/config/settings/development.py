@@ -82,18 +82,17 @@ except (OSError, psycopg2.OperationalError) as e:
     DATABASES = {"default": SQLITE_PARAMS}
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = (
-    os.environ.get("CORS_ALLOW_ALL_ORIGINS", "True").lower() == "true"
-)
-CORS_ALLOW_CREDENTIALS = (
-    os.environ.get("CORS_ALLOW_CREDENTIALS", "True").lower() == "true"
-)
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://0.0.0.0:5173",
     "http://localhost:8050",
     "http://127.0.0.1:8050",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://0.0.0.0:3000"
 ]
 
 CORS_ALLOW_METHODS = [
@@ -122,6 +121,7 @@ CORS_ALLOW_HEADERS = [
 CORS_EXPOSE_HEADERS = [
     "access-control-allow-origin",
     "access-control-allow-credentials",
+    "set-cookie"
 ]
 
 # Logging configuration for development
@@ -163,6 +163,9 @@ SIMPLE_JWT.update(
         ),  # Longer lifetime for development
         "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
         "AUTH_COOKIE_SECURE": False,  # Allow non-HTTPS in development
+        "AUTH_COOKIE_HTTP_ONLY": True,
+        "AUTH_COOKIE_SAMESITE": "Lax",
+        "AUTH_COOKIE_PATH": "/",
     },
 )
 

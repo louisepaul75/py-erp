@@ -212,7 +212,7 @@ const Dashboard = () => {
     { id: "users", name: "Benutzer", icon: Users, favorited: false },
     { id: "finance", name: "Finanzen", icon: BarChart3, favorited: false },
     { id: "inventory", name: "Lager", icon: Package, favorited: false },
-    { id: "marketing", name: "Marketing", icon: Bell, favorited: false },
+    { id: "picklist", name: "Picklist", icon: Package, favorited: false },
     { id: "support", name: "Support", icon: Users, favorited: false },
     { id: "documents", name: "Dokumente", icon: Package, favorited: false },
     { id: "dashboard", name: "Dashboard", icon: Home, favorited: false },

@@ -52,7 +52,6 @@
 - Pandas 2.2.0 - Data analysis
 - Tabulate 0.9.0 - Pretty-print tabular data
 
-
 ### Logging
 - StructLog 24.1.0 - Structured logging
 - Python JSON Logger 3.2.1 - JSON logging format
