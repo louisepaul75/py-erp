@@ -15,7 +15,6 @@ export default function InventoryManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [darkMode, setDarkMode] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product>({
     id: 0,
     name: "",
@@ -106,46 +105,21 @@ export default function InventoryManagement() {
     }
   }, [selectedItem, filteredProducts]);
 
-  useEffect(() => {
-    if (
-      window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-    ) {
-      setDarkMode(true);
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle("dark");
-  };
-
   return (
-    <div className={`min-h-screen ${darkMode ? "dark" : ""}`}>
+    <div className="min-h-screen">
       <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
         {/* Simple header with search */}
         <div className="py-4 px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
           <h1 className="text-xl font-semibold">Produkte</h1>
-          <div className="flex items-center gap-4">
-            <div className="relative w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                type="search"
-                placeholder="Suche nach Produkt..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleDarkMode}
-              className="ml-2"
-            >
-              {darkMode ? "☀️" : "🌙"}
-            </Button>
+          <div className="relative w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              type="search"
+              placeholder="Suche nach Produkt..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </div>
         
