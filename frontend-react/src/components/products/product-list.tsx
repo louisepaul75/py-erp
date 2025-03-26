@@ -1,16 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Download, Upload, Trash } from "lucide-react"
+import { Plus, Download, Upload, Trash, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import ProductFilters from "@/components/products/product-filters"
-import ProductTable from "@/components/products/product-table"
 import ProductMobile from "@/components/products/product-mobile"
 import ProductDetailDialog from "@/components/products/product-detail-dialog"
 import DeleteConfirmDialog from "@/components/products/delete-confirm-dialog"
 import { Product, ApiResponse } from "../types/product"
 import { productApi } from "@/lib/products/api"
+import { SkinnyTable } from "@/components/ui/skinny-table"
+import { StatusBadge } from "@/components/ui"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export type { Product }
 
@@ -227,14 +229,75 @@ export default function ProductList() {
 
       {/* Desktop Table View */}
       <div className="hidden md:block">
-        <ProductTable
-          products={filteredProducts}
-          selectedProducts={selectedProducts}
-          handleSelectProduct={handleSelectProduct}
-          handleRowClick={handleRowClick}
-          handleEditClick={handleEditClick}
-          handleDeleteClick={handleDeleteClick}
+        <SkinnyTable
+          data={filteredProducts}
+          columns={[
+            {
+              field: "checkbox",
+              header: "",
+              width: "40px",
+              render: (item) => (
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={selectedProducts.includes(item.id)}
+                    onCheckedChange={(checked) => handleSelectProduct(item.id, !!checked)}
+                  />
+                </div>
+              ),
+            },
+            { field: "sku", header: "SKU" },
+            { field: "name", header: "Name" },
+            {
+              field: "is_active",
+              header: "Status",
+              render: (item) => (
+                <div className="flex gap-1">
+                  <StatusBadge status={item.is_active ? "active" : "inactive"}>
+                    {item.is_active ? "Active" : "Inactive"}
+                  </StatusBadge>
+                  {item.is_new && (
+                    <StatusBadge status="info" className="bg-purple-500">
+                      New
+                    </StatusBadge>
+                  )}
+                  {item.is_discontinued && (
+                    <StatusBadge status="warning">
+                      Discontinued
+                    </StatusBadge>
+                  )}
+                </div>
+              ),
+            },
+            { field: "category", header: "Category" },
+            {
+              field: "actions",
+              header: "Actions",
+              width: "100px",
+              render: (item) => (
+                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEditClick(item)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-red-500"
+                    onClick={() => handleDeleteClick(item)}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+                </div>
+              ),
+            },
+          ]}
+          selectedItem={selectedProduct?.id}
+          onItemSelect={(item) => handleRowClick(item)}
           isLoading={isLoading}
+          noDataMessage="No products found"
         />
       </div>
 

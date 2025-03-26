@@ -5,25 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/components/types/product";
 import { ProductListProps } from "@/components/types/product";
-// import { Spinner } from "@radix-ui/themes";
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-// import {
-//   Table,
-//   Flex,
-//   Text,
-//   Select,
-//   Box,
-//   Badge as RadixBadge,
-// } from "@radix-ui/themes";
-
+import { SkinnyTable } from "@/components/ui/skinny-table";
+import { StatusBadge } from "@/components/ui";
 import {
   Search,
   X,
@@ -144,245 +127,56 @@ export default function ProductList({
 
       {/* Product List */}
       <div className="flex-1 overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-              <TableHead
-                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
-                onClick={() => handleSort("sku")}
-              >
-                <div className="flex items-center gap-2">
-                  SKU
-                  {sortField === "sku" && (
-                    <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
-                  )}
-                </div>
-              </TableHead>
-              <TableHead
-                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
-                onClick={() => handleSort("name")}
-              >
-                <div className="flex items-center gap-2">
-                  Name
-                  {sortField === "name" && (
-                    <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
-                  )}
-                </div>
-              </TableHead>
-              <TableHead
-                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
-                onClick={() => handleSort("legacy_base_sku")}
-              >
-                <div className="flex items-center gap-2">
-                  Legacy Base Sku
-                  {sortField === "legacy_base_sku" && (
-                    <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
-                  )}
-                </div>
-              </TableHead>
-              <TableHead
-                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
-                onClick={() => handleSort("variants_count")}
-              >
-                <div className="flex items-center gap-2">
-                  Variants
-                  {sortField === "variants_count" && (
-                    <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
-                  )}
-                </div>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody className="min-h-[500px]">
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-8">
-                  <div className="flex justify-center items-center gap-2 min-h-[500px]">
-                    {/* <Spinner size="3" /> */}
-                    <span className="text-slate-600 dark:text-slate-400">Loading products...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : sortedFilteredProducts.length > 0 ? (
-              sortedFilteredProducts.map((product) => (
-                <TableRow
-                  key={product.sku}
-                  onClick={() => setSelectedItem(product.id)}
-                  className={`cursor-pointer transition-colors ${
-                    selectedItem === product.id
-                      ? "bg-blue-50 dark:bg-blue-900/20 text-slate-900 dark:text-slate-100"
-                      : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-300"
-                  }`}
+        <SkinnyTable
+          data={filteredProducts}
+          columns={[
+            { field: "sku", header: "SKU" },
+            { field: "name", header: "Name" },
+            { field: "legacy_base_sku", header: "Legacy SKU" },
+            {
+              field: "is_active",
+              header: "Status",
+              render: (item) => (
+                <StatusBadge
+                  status={item.is_active ? "active" : "inactive"}
+                  className="text-xs"
                 >
-                  <TableCell
-                    className={
-                      selectedItem === product.sku ? "font-medium" : ""
-                    }
-                  >
-                    {product.sku}
-                  </TableCell>
-                  <TableCell
-                    className={
-                      selectedItem === product.sku ? "font-medium" : ""
-                    }
-                  >
-                    {product.legacy_base_sku}
-                  </TableCell>
-                  <TableCell
-                    className={
-                      selectedItem === product.sku ? "font-medium" : ""
-                    }
-                  >
-                    {product.name || "—"}
-                  </TableCell>
-                  <TableCell
-                    className={
-                      selectedItem === product.sku ? "font-medium" : ""
-                    }
-                  >
-                    {product.variants_count}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center py-8">
-                  <div className="flex justify-center items-center gap-2 min-h-[500px]">
-                    <span className="text-slate-600 dark:text-slate-400">No products found</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Pagination Controls */}
-        <div className="flex flex-col w-full ">
-          <div className="flex justify-center items-center gap-2 my-2">
-            <span className="text-sm text-slate-600 dark:text-slate-400">
-              Rows per page:
-            </span>
-            <select
-              value={pagination.pageSize}
-              onChange={(e) => {
-                setPagination({
-                  pageIndex: 0, // Reset to first page
-                  pageSize: Number(e.target.value),
-                });
-              }}
-              className="text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-            >
-              {[20, 30, 40].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex justify-center items-center gap-2">
-            <Button
-              variant="outline"
-              disabled={pagination.pageIndex === 0}
-              onClick={() =>
-                setPagination({
-                  ...pagination,
-                  pageIndex: pagination.pageIndex - 1,
-                })
-              }
-              className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700"
-            >
-              Previous
-            </Button>
-            {/* <Text className="mx-6" size="2">
-              Page {pagination.pageIndex + 1}
-            </Text> */}
-            <p className="mx-6 text-slate-700 dark:text-slate-300">Page {pagination.pageIndex + 1}</p>
-            <Button
-              variant="outline"
-              disabled={filteredProducts.length < pagination.pageSize}
-              onClick={() =>
-                setPagination({
-                  ...pagination,
-                  pageIndex: pagination.pageIndex + 1,
-                })
-              }
-              className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+                  {item.is_active ? "Active" : "Inactive"}
+                </StatusBadge>
+              ),
+            },
+          ]}
+          selectedItem={selectedItem}
+          onItemSelect={(item) => setSelectedItem(item.id)}
+          isLoading={isLoading}
+          noDataMessage="No products found"
+        />
       </div>
 
-      {/* <div className="flex-1 overflow-auto">
-        {filteredProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-            <Inbox className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-2" />
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Keine Produkte gefunden
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Versuchen Sie, Ihre Suchkriterien zu ändern
-            </p>
-          </div>
-        ) : (
-          <div className="p-2">
-            <div className="grid grid-cols-[auto_1fr_auto] gap-2 font-medium text-sm text-slate-500 dark:text-slate-400 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-t-lg">
-              <div className="cursor-pointer" onClick={() => handleSort("sku")}>
-                Nummer
-                {sortField === "sku" && (
-                  <span>{sortOrder === "asc" ? " ↑" : " ↓"}</span>
-                )}
-              </div>
-              <div
-                className="cursor-pointer"
-                onClick={() => handleSort("name")}
-              >
-                Bezeichnung
-                {sortField === "name" && (
-                  <span>{sortOrder === "asc" ? " ↑" : " ↓"}</span>
-                )}
-              </div>
-            </div>
-            {sortedFilteredProducts.map((product) => (
-              <div
-                key={product.sku}
-                className={`p-3 my-1 rounded-xl cursor-pointer transition-all ${
-                  selectedItem === product.sku
-                    ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500"
-                    : "hover:bg-slate-50 dark:hover:bg-slate-800/50 border-l-4 border-transparent"
-                }`}
-                onClick={() => setSelectedItem(product.sku)}
-              >
-                <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
-                  <div className="font-medium">{product.sku}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400 truncate">
-                    {product.name || "—"}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge
-                    variant="secondary"
-                    className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                  >
-                    <Tag className="h-3 w-3 mr-1" />
-                    Zinnfigur
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                  >
-                    <Bookmark className="h-3 w-3 mr-1" />
-                    Eisenbahn
-                  </Badge>
-                </div>
-              </div>
+      {/* Pagination Controls */}
+      <div className="flex flex-col w-full border-t border-slate-200 dark:border-slate-800">
+        <div className="flex justify-center items-center gap-2 my-2">
+          <span className="text-sm text-slate-600 dark:text-slate-400">
+            Rows per page:
+          </span>
+          <select
+            value={pagination.pageSize}
+            onChange={(e) => {
+              setPagination({
+                pageIndex: 0, // Reset to first page
+                pageSize: Number(e.target.value),
+              });
+            }}
+            className="text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+          >
+            {[20, 30, 40].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
             ))}
-          </div>
-        )}
-      </div> */}
+          </select>
+        </div>
+      </div>
     </div>
   );
 }
