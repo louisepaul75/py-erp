@@ -2,16 +2,16 @@
 "use client";
 import React from "react";
 import { useState, useEffect } from "react";
-import MainSidebar from "../inventoryManagement/MainSidebar";
-import Header from "../inventoryManagement/Header";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search } from "lucide-react";
 import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
 import { productApi } from "@/lib/products/api";
-import { Product, ApiResponse, SelectedItem } from "../types/product";
+import { Product, ApiResponse } from "../types/product";
 
 export default function InventoryManagement() {
   const [selectedItem, setSelectedItem] = useState<number | string | null>("");
-  const [showSidebar, setShowSidebar] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -56,53 +56,6 @@ export default function InventoryManagement() {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // const products = [
-  //   { nummer: "307967", bezeichnung: "", status: "active" },
-  //   { nummer: "132355", bezeichnung: "", status: "inactive" },
-  //   { nummer: "-1", bezeichnung: "", status: "draft" },
-  //   {
-  //     nummer: "912859",
-  //     bezeichnung: '"Adler"-Erste Eisenbahn',
-  //     status: "active",
-  //   },
-  //   { nummer: "218300", bezeichnung: '"Adler"-Lock', status: "active" },
-  //   { nummer: "310048", bezeichnung: '"Adler"-Tender', status: "active" },
-  //   { nummer: "411430", bezeichnung: '"Adler"-Wagen', status: "active" },
-  //   { nummer: "409129", bezeichnung: '"Adler"-Wagen-offen', status: "active" },
-  //   { nummer: "300251", bezeichnung: '"Adler"-Wagen/Führer', status: "active" },
-  //   { nummer: "922678", bezeichnung: "100-0", status: "inactive" },
-  //   { nummer: "325473", bezeichnung: "100-0/3", status: "active" },
-  //   { nummer: "530620", bezeichnung: "100-0/5", status: "active" },
-  //   {
-  //     nummer: "921063",
-  //     bezeichnung: "1x Saugnapf für Glasscheibe Vitrine",
-  //     status: "active",
-  //   },
-  //   {
-  //     nummer: "903786",
-  //     bezeichnung: "22 Zoll Display Sichtschutz Bildschirm",
-  //     status: "active",
-  //   },
-  //   {
-  //     nummer: "718205",
-  //     bezeichnung: "27 Zoll Display Sichtschutz Bildschirm",
-  //     status: "active",
-  //   },
-  //   {
-  //     nummer: "701703",
-  //     bezeichnung: "5x BelegDrucker Rollen",
-  //     status: "active",
-  //   },
-  //   {
-  //     nummer: "831738",
-  //     bezeichnung: "7 miniatur Hasen in drei Teile",
-  //     status: "active",
-  //   },
-  //   { nummer: "309069", bezeichnung: "7 Schwaben mit Hase", status: "active" },
-  //   { nummer: "811140", bezeichnung: "80-2", status: "active" },
-  //   { nummer: "304527", bezeichnung: "80-4", status: "active" },
-  // ];
-
   // Update your fetchProducts useEffect
   useEffect(() => {
     const fetchProducts = async () => {
@@ -116,8 +69,8 @@ export default function InventoryManagement() {
 
         setProducts(response.results);
         setFilteredProducts(response.results);
-        setSelectedItem(response.results[0].id);
-        if (!selectedProduct) {
+        setSelectedItem(response.results[0]?.id || null);
+        if (response.results.length > 0 && !selectedProduct.id) {
           setSelectedProduct(response.results[0]);
         }
         console.log("Fetched products:", response);
@@ -130,11 +83,8 @@ export default function InventoryManagement() {
     fetchProducts();
   }, [pagination.pageIndex, pagination.pageSize]);
 
-
-  console.log("zmbye");
-
   useEffect(() => {
-    console.log("how many times");
+    console.log("Filtering products by search term");
     setFilteredProducts(
       products.filter(
         (product) =>
@@ -172,32 +122,48 @@ export default function InventoryManagement() {
   };
 
   return (
-    <div className={`min-h-screen  ${darkMode ? "dark" : ""}`}>
-      <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
-        <MainSidebar showSidebar={showSidebar} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header
-            showSidebar={showSidebar}
-            setShowSidebar={setShowSidebar}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            darkMode={darkMode}
-            toggleDarkMode={toggleDarkMode}
-          />
-          <div className="flex-1 flex overflow-hidden w-full">
-            {showSidebar && (
-              <ProductList
-                showSidebar={showSidebar}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                filteredProducts={filteredProducts}
-                selectedItem={selectedItem}
-                setSelectedItem={setSelectedItem}
-                pagination={pagination}
-                setPagination={setPagination}
-                isLoading={isLoading}
+    <div className={`min-h-screen ${darkMode ? "dark" : ""}`}>
+      <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
+        {/* Simple header with search */}
+        <div className="py-4 px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">Produkte</h1>
+          <div className="flex items-center gap-4">
+            <div className="relative w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Input
+                type="search"
+                placeholder="Suche nach Produkt..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
               />
-            )}
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleDarkMode}
+              className="ml-2"
+            >
+              {darkMode ? "☀️" : "🌙"}
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex-1 flex overflow-hidden w-full">
+          <div className="w-1/3 border-r border-slate-200 dark:border-slate-800">
+            <ProductList
+              showSidebar={true}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              filteredProducts={filteredProducts}
+              selectedItem={selectedItem}
+              setSelectedItem={setSelectedItem}
+              pagination={pagination}
+              setPagination={setPagination}
+              isLoading={isLoading}
+            />
+          </div>
+          <div className="w-2/3">
             <ProductDetail
               selectedItem={selectedItem}
               selectedProduct={selectedProduct}
