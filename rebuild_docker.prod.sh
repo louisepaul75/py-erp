@@ -51,6 +51,7 @@ docker run -d \
     --name pyerp-prod \
     --network pyerp-network \
     -p 80:80 \
+    -p 443:443 \
     -p 3000:3000 \
     -p 5432:5432 \
     -p 6379:6379 \

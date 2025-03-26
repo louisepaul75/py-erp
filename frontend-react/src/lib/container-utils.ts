@@ -1,4 +1,4 @@
-import type { ContainerItem, ContainerSlot, ContainerUnit, SlotCode } from "@/types/warehouse-types"
+import type { ContainerItem, ContainerSlot, ContainerUnit, SlotCode, SlotItem } from "@/types/warehouse-types"
 
 // Helper function to generate a random color
 const generateRandomColor = (): string => {
@@ -45,7 +45,7 @@ export const generateContainerSlots = (
 /**
  * Generates initial units for container slots
  */
-export const generateInitialUnits = (slots: ContainerSlot[]): ContainerUnit[] => {
+export const generateInitialUnits = (slots: SlotItem[]): ContainerUnit[] => {
   if (!slots.length) return []
 
   // Create a single unit that contains all slots initially
@@ -58,11 +58,6 @@ export const generateInitialUnits = (slots: ContainerSlot[]): ContainerUnit[] =>
     description: "",
     stock: 0
   }
-
-  // Update slot unitIds
-  slots.forEach(slot => {
-    slot.unitId = unit.id
-  })
 
   return [unit]
 }
@@ -159,13 +154,17 @@ export const createUnitFromSlots = (
 }
 
 /**
- * Finds a unit by its article number
+ * Finds a unit by its article number or old article number
  */
 export const findArticleByNumber = (
   container: ContainerItem,
-  articleNumber: string
+  articleNumber: string,
+  oldArticleNumber: string = ""
 ): ContainerUnit | undefined => {
-  return container.units.find(unit => unit.articleNumber === articleNumber)
+  return container.units.find(unit => 
+    (articleNumber && unit.articleNumber === articleNumber) || 
+    (oldArticleNumber && unit.oldArticleNumber === oldArticleNumber)
+  )
 }
 
 /**

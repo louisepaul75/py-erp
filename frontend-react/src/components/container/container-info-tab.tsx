@@ -77,19 +77,16 @@ export default function ContainerInfoTab({
                     console.error("Error changing type:", error)
                   }
                 }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Typ auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="OD">OD</SelectItem>
-                  <SelectItem value="KC">KC</SelectItem>
-                  <SelectItem value="PT">PT</SelectItem>
-                  <SelectItem value="JK">JK</SelectItem>
-                  <SelectItem value="AR">AR</SelectItem>
-                  <SelectItem value="HF">HF</SelectItem>
-                </SelectContent>
-              </Select>
+                placeholder="Typ auswählen"
+                options={[
+                  { value: "OD", label: "OD" },
+                  { value: "KC", label: "KC" },
+                  { value: "PT", label: "PT" },
+                  { value: "JK", label: "JK" },
+                  { value: "AR", label: "AR" },
+                  { value: "HF", label: "HF" }
+                ]}
+              />
             ) : (
               <div className="p-2 border rounded-md bg-gray-50">{container.type}</div>
             )}
@@ -110,17 +107,14 @@ export default function ContainerInfoTab({
               onValueChange={(value) => {
                 // Hier würde die Logik zum Ändern des Zwecks implementiert werden
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Zweck auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Lager">Lager</SelectItem>
-                <SelectItem value="Transport">Transport</SelectItem>
-                <SelectItem value="Picken">Picken</SelectItem>
-                <SelectItem value="Werkstatt">Werkstatt</SelectItem>
-              </SelectContent>
-            </Select>
+              placeholder="Zweck auswählen"
+              options={[
+                { value: "Lager", label: "Lager" },
+                { value: "Transport", label: "Transport" },
+                { value: "Picken", label: "Picken" },
+                { value: "Werkstatt", label: "Werkstatt" }
+              ]}
+            />
           ) : (
             <div className="p-2 border rounded-md bg-gray-50">
               {container.type === "OD" || container.type === "KC"
@@ -151,7 +145,7 @@ export default function ContainerInfoTab({
           <div className="space-y-2">
             <Label>Einheiten</Label>
             <div className="p-2 border rounded-md bg-gray-50">
-              {editedContainer.units?.filter((u) => u.articleNumber || u.description || u.stock > 0).length || 0}/
+              {editedContainer.units?.filter((u) => u.articleNumber || u.description || (u.stock !== undefined && u.stock > 0)).length || 0}/
               {editedContainer.units?.length || 0}
             </div>
           </div>

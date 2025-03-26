@@ -47,11 +47,11 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
     const filtered = containers.filter(
       (container) =>
         container.containerCode.toLowerCase().includes(term) ||
-        container.articles?.some(
-          (article) =>
-            article.articleNumber.toString().includes(term) ||
-            article.oldArticleNumber.toLowerCase().includes(term) ||
-            article.description.toLowerCase().includes(term),
+        container.units.some(
+          (unit) =>
+            unit.articleNumber?.toString().includes(term) ||
+            unit.oldArticleNumber?.toLowerCase().includes(term) ||
+            unit.description?.toLowerCase().includes(term),
         ),
     )
     setFilteredContainers(filtered)
@@ -61,7 +61,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
     // Check if container already has a location
     if (container.location) {
       setSelectedContainer(container)
-      setExistingLocation(`${container.location.shelf}/${container.location.compartment}/${container.location.floor}`)
+      setExistingLocation(`${container.shelf}/${container.compartment}/${container.floor}`)
       setIsConfirmationOpen(true)
     } else {
       // If no existing location, proceed directly
@@ -143,7 +143,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                             <td className="px-4 py-3 text-sm">
                               {container.location ? (
                                 <div className="flex items-center text-blue-600">
-                                  {container.location.shelf}/{container.location.compartment}/{container.location.floor}
+                                  {container.shelf}/{container.compartment}/{container.floor}
                                   <ExternalLink className="h-3 w-3 ml-1" />
                                 </div>
                               ) : (
@@ -164,9 +164,9 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                             </td>
                           </tr>
                           {expandedContainers[container.containerCode] &&
-                            container.articles &&
-                            container.articles.length > 0 && (
-                              <tr key={`articles-${container.id}`}>
+                            container.units &&
+                            container.units.length > 0 && (
+                              <tr key={`units-${container.id}`}>
                                 <td colSpan={3} className="px-4 py-0">
                                   <div className="bg-gray-50 p-2 rounded my-1">
                                     <table className="min-w-full">
@@ -187,12 +187,12 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {container.articles.map((article) => (
-                                          <tr key={article.id} className="border-t border-gray-200">
-                                            <td className="px-2 py-1 text-xs">{article.articleNumber}</td>
-                                            <td className="px-2 py-1 text-xs">{article.oldArticleNumber}</td>
-                                            <td className="px-2 py-1 text-xs">{article.description}</td>
-                                            <td className="px-2 py-1 text-xs">{article.stock}</td>
+                                        {container.units.map((unit) => (
+                                          <tr key={unit.id} className="border-t border-gray-200">
+                                            <td className="px-2 py-1 text-xs">{unit.articleNumber}</td>
+                                            <td className="px-2 py-1 text-xs">{unit.oldArticleNumber}</td>
+                                            <td className="px-2 py-1 text-xs">{unit.description}</td>
+                                            <td className="px-2 py-1 text-xs">{unit.stock}</td>
                                           </tr>
                                         ))}
                                       </tbody>

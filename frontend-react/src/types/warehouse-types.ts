@@ -66,6 +66,7 @@ export interface ContainerItem {
   slots: SlotItem[]; // Box slots
   units: UnitItem[]; // Logical units within the box
   customSlotCount?: number; // Custom number of slots for the container
+  articles?: ContainerArticle[]; // Articles in the container
 }
 
 export interface SlotItem {

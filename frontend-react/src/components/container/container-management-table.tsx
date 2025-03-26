@@ -208,10 +208,10 @@ export default function ContainerManagementTable({
                                       {container.location ? (
                                         <button
                                           onClick={() =>
-                                            onLocationClick(
-                                              container.shelf,
-                                              container.compartment,
-                                              container.floor
+                                            onLocationClick && onLocationClick(
+                                              container.shelf || 0,
+                                              container.compartment || 0,
+                                              container.floor || 0
                                             )
                                           }
                                           className="text-blue-600 hover:underline"

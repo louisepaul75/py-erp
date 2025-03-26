@@ -18,12 +18,6 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.settings.production
       - REDIS_URL=redis://localhost:6379/0
-      # External PostgreSQL connection details
-      - DB_HOST=postgres_container
-      - DB_PORT=${DB_PORT:-5432}
-      - DB_NAME=${DB_NAME:-pyerp_testing}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD}
       # ELK stack configuration
       - ELASTICSEARCH_HOST=localhost
       - ELASTICSEARCH_PORT=9200
@@ -35,8 +29,6 @@ services:
     networks:
       - default
     dns_search: .
-    extra_hosts:
-      - "postgres_container:172.17.0.1"
     healthcheck:
       test: curl --fail http://localhost:8050/admin/ || exit 1
       interval: 30s
@@ -51,33 +43,10 @@ services:
         # Start supervisord
         /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "
-    depends_on:
-      - postgres_container
-
-  postgres_container:
-    image: postgres:14
-    container_name: postgres_container
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=db_secure_password
-      - POSTGRES_DB=pyerp_production
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    networks:
-      - default
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 volumes:
   pyerp_data:
   es_data:
-  postgres_data:
 
 networks:
   default:

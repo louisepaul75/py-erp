@@ -188,7 +188,10 @@ const api = ky.extend({
               if (token) {
                 request.headers.set('Authorization', `Bearer ${token}`);
               }
-              return ky(request);
+              // Explicitly handle the response type to satisfy TypeScript
+              const newResponse = await ky(request);
+              // Don't return the response directly, throw a new error with the right type
+              throw new HTTPError(newResponse, request, error.options);
             }
           } catch (refreshError) {
             // Wenn Token-Erneuerung fehlschlägt, ausloggen
@@ -206,7 +209,10 @@ const api = ky.extend({
               // Retry request with new CSRF token
               const request = error.request.clone();
               request.headers.set('X-CSRFToken', newCsrfToken);
-              return ky(request);
+              // Explicitly handle the response type to satisfy TypeScript
+              const newResponse = await ky(request);
+              // Don't return the response directly, throw a new error with the right type
+              throw new HTTPError(newResponse, request, error.options);
             }
           } catch (csrfError) {
             console.error('CSRF token refresh failed:', csrfError);

@@ -73,91 +73,26 @@ const api = ky.create({
     ],
     beforeError: [
       async (error: HTTPError) => {
-        const { response, request } = error;
+        const { response } = error;
 
-        if (!response) {
-          console.error("Network error:", {
-            message: error.message,
-            request,
-            error,
-          });
-          return error;
-        }
-
-        let errorMessage;
-        try {
-          errorMessage = await response.text();
-        } catch {
-          errorMessage = response.statusText;
-        }
-
+        // Log the error details
         console.error("API Error:", {
-          status: response.status,
-          method: request.method,
-          url: request.url,
-          fullURL: `${API_URL}${request.url}`,
-          error: errorMessage,
-          headers: Object.fromEntries(request.headers.entries()),
+          status: response?.status,
+          method: error.request?.method,
+          url: error.request?.url,
+          message: error.message
         });
 
-        // Handle 401 with token refresh
-        if (response.status === 401) {
-          if (isRefreshing) {
-            return new Promise<void>((resolve, reject) => {
-              failedQueue.push({ resolve, reject });
-            })
-              .then(() => {
-                // Retry the original request after token refresh
-                return ky(request);
-              })
-              .catch((err) => {
-                throw err;
-              });
+        try {
+          // Try to get and set the error message from response text
+          if (response) {
+            error.message = await response.text();
           }
+        } catch {}
 
-          isRefreshing = true;
-          try {
-            const refreshToken = cookieStorage.getItem(
-              AUTH_CONFIG.tokenStorage.refreshToken
-            );
-            if (!refreshToken) throw new Error("No refresh token");
-
-            const refreshResponse = await ky
-              .post(new URL(AUTH_CONFIG.refreshEndpoint, API_URL).toString(), {
-                json: { refresh: refreshToken },
-              })
-              .json<{ access: string }>();
-
-            const newToken = refreshResponse.access;
-            cookieStorage.setItem(
-              AUTH_CONFIG.tokenStorage.accessToken,
-              newToken,
-              {
-                maxAge: 15 * 60,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "strict",
-              }
-            );
-
-            processQueue(null); // Resolve all queued requests
-            request.headers.set("Authorization", `Bearer ${newToken}`);
-            return ky(request); // Retry the original request
-          } catch (refreshError) {
-            processQueue(refreshError);
-            cookieStorage.removeItem(AUTH_CONFIG.tokenStorage.accessToken);
-            cookieStorage.removeItem(AUTH_CONFIG.tokenStorage.refreshToken);
-            if (typeof window !== "undefined") {
-              window.location.href = "/login";
-            }
-            throw refreshError;
-          } finally {
-            isRefreshing = false;
-          }
-        }
-
-        error.message = errorMessage;
+        // Return the error directly - this is what the type system expects
         return error;
-      },
+      }
     ],
   },
 });

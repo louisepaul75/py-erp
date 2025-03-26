@@ -97,16 +97,24 @@ export function generateMockContainers(count: number = 5, includeLocation: boole
       id: faker.string.uuid(),
       containerCode: faker.string.alphanumeric(6).toUpperCase(),
       type: faker.helpers.arrayElement(['Karton', 'Palette', 'Gitterbox', 'Behälter']),
+      description: faker.commerce.productDescription(),
+      status: faker.helpers.arrayElement(['Neu', 'In Benutzung', 'Beschädigt']),
+      purpose: faker.helpers.arrayElement(['Lagerung', 'Transport', 'Ausstellung']),
+      stock: faker.number.int({ min: 0, max: 1000 }),
       articleNumber: faker.string.alphanumeric(8).toUpperCase(),
       oldArticleNumber: faker.string.alphanumeric(8).toUpperCase(),
-      description: faker.commerce.productDescription(),
-      stock: faker.number.int({ min: 0, max: 1000 }),
-      slots: generateMockContainerSlots(),
+      slots: generateMockContainerSlots().map(slot => ({
+        id: slot.id,
+        code: {
+          code: slot.code.code,
+          color: slot.code.color
+        }
+      })),
       units: generateMockContainerUnits()
     }
 
     if (includeLocation && Math.random() > 0.5) {
-      const location: ContainerLocation = {
+      const locationObj: ContainerLocation = {
         laNumber: `LA${1000 + faker.number.int({ min: 0, max: 999 })}`,
         shelf: faker.number.int({ min: 1, max: 20 }),
         compartment: faker.number.int({ min: 1, max: 10 }),
@@ -132,7 +140,10 @@ export function generateMockContainers(count: number = 5, includeLocation: boole
 
       return {
         ...container,
-        location,
+        location: `${locationObj.laNumber} - Regal ${locationObj.shelf}/${locationObj.compartment}/${locationObj.floor}`,
+        shelf: locationObj.shelf,
+        compartment: locationObj.compartment,
+        floor: locationObj.floor,
         articles
       }
     }

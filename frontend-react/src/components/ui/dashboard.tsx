@@ -837,7 +837,7 @@ const DashboardContent = ({
             <SearchResultsDropdown
               results={getAllResults()}
               isLoading={isLoading}
-              open={!!(showResults && (isLoading || (results && results.total_count > 0)))}
+              open={!!(showResults && (isLoading || (results && typeof results === 'object' && 'total_count' in results && (results as any).total_count > 0)))}
               onSelect={handleSearchResultSelect}
             />
           </div>

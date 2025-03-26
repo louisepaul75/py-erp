@@ -13,10 +13,10 @@ interface ProductFiltersProps {
   setStatusFilter: (value: string) => void
   categoryFilter: string
   setCategoryFilter: (value: string) => void
-  isNewFilter: boolean
-  setIsNewFilter: (value: boolean) => void
-  isActiveFilter: boolean
-  setIsActiveFilter: (value: boolean) => void
+  isNewFilter: string
+  setIsNewFilter: (value: string) => void
+  isActiveFilter: string
+  setIsActiveFilter: (value: string) => void
 }
 
 export function ProductFilters({
@@ -72,22 +72,24 @@ export function ProductFilters({
           <div className="space-y-2">
             <Label>Neuheit</Label>
             <Select
-              value={isNewFilter ? "new" : "all"}
-              onValueChange={(value) => setIsNewFilter(value === "new")}
+              value={isNewFilter}
+              onValueChange={setIsNewFilter}
               options={[
                 { value: "all", label: "Alle" },
                 { value: "new", label: "Nur neue" },
+                { value: "not_new", label: "Keine neuen" }
               ]}
             />
           </div>
           <div className="space-y-2">
             <Label>Aktivität</Label>
             <Select
-              value={isActiveFilter ? "active" : "all"}
-              onValueChange={(value) => setIsActiveFilter(value === "active")}
+              value={isActiveFilter}
+              onValueChange={setIsActiveFilter}
               options={[
                 { value: "all", label: "Alle" },
                 { value: "active", label: "Nur aktive" },
+                { value: "inactive", label: "Nur inaktive" }
               ]}
             />
           </div>

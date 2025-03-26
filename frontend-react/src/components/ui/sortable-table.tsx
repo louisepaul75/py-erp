@@ -115,7 +115,9 @@ export function SortableTable<T>({ data, columns, onRowClick, handleRowClick, re
             {orderedColumns.map((column) => (
               <th
                 key={column.id}
-                ref={(el) => (headerRefs.current[column.id] = el)}
+                ref={(el) => {
+                  headerRefs.current[column.id] = el;
+                }}
                 className={`px-4 py-3 text-left text-sm font-medium text-gray-500 select-none sticky top-0 bg-gray-100 ${
                   column.sortable ? "cursor-pointer" : ""
                 } ${dragOverColumn === column.id ? "bg-blue-100" : ""}`}

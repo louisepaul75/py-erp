@@ -1,9 +1,40 @@
-# All-in-one Docker Image for pyERP
+# Create .dockerignore if it doesn't exist
+FROM node:20-slim AS frontend-builder
+
+# Set working directory for frontend
+WORKDIR /frontend
+
+# Copy package files first for better caching
+COPY frontend-react/package*.json ./
+
+# Create .npmrc to reduce warnings and optimize installation
+RUN echo "legacy-peer-deps=true\nloglevel=error" > .npmrc
+
+# Install production dependencies and required Babel plugins
+RUN npm ci --prefer-offline --no-audit --no-optional --production && \
+    npm install --no-save \
+    @babel/plugin-transform-private-methods \
+    @babel/plugin-proposal-private-property-in-object \
+    @babel/plugin-proposal-class-properties
+
+# Copy only the necessary files for the build
+COPY frontend-react/tsconfig.json ./
+COPY frontend-react/next.config.js ./
+COPY frontend-react/.babelrc ./
+COPY frontend-react/src ./src
+COPY frontend-react/public ./public
+
+# Build React frontend
+ENV NODE_ENV=production
+RUN npm run build
+
+# Start the main build
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_ENV=production
 
 # Install system dependencies
 RUN apt-get update \
@@ -11,7 +42,6 @@ RUN apt-get update \
         build-essential \
         curl \
         git \
-        libpq-dev \
         netcat-traditional \
         supervisor \
         nginx \
@@ -38,100 +68,27 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 # Set working directory
 WORKDIR /app
 
-# Upgrade pip
-RUN pip install --upgrade pip
-
-# Copy requirements files
+# Upgrade pip and install production dependencies
 COPY requirements/ /app/requirements/
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 
-# Install production dependencies
-RUN pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
+# Copy the built frontend from the frontend-builder stage
+COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
+COPY --from=frontend-builder /frontend/public /app/frontend-react/public
+COPY --from=frontend-builder /frontend/node_modules /app/frontend-react/node_modules
+COPY --from=frontend-builder /frontend/package.json /app/frontend-react/package.json
 
-# Copy frontend files first and build React
-COPY frontend-react/package*.json /app/frontend-react/
-
-# Create .npmrc to reduce warnings and optimize installation
-RUN echo "legacy-peer-deps=true\nloglevel=error" > /app/frontend-react/.npmrc
-
-WORKDIR /app/frontend-react
-
-# Clean install dependencies using npm ci for faster, more reliable builds
-RUN npm ci --prefer-offline --no-audit --no-optional
-
-# Install Stryker packages for mutation testing
-RUN npm install --save-dev \
-    @stryker-mutator/core@8.7.1 \
-    @stryker-mutator/jest-runner@8.7.1 \
-    serve
-
-# Copy the rest of the frontend code
-COPY frontend-react/ /app/frontend-react/
-
-# Build React frontend
-RUN npm run build
-
-# Create necessary directories
-RUN mkdir -p /app/staticfiles/react
-
-# Copy the built Next.js output and static files
-RUN cp -r .next /app/staticfiles/react/
-RUN cp -r public/* /app/staticfiles/react/
-
-# Create app directory for proper routing
-RUN mkdir -p /app/staticfiles/react/app
-
-# Create a script to find the actual chunk file names
-RUN echo "#!/bin/bash" > /tmp/find_chunk_files.sh && \
-    echo "POLYFILLS=\$(find .next/static/chunks/ -name 'polyfills-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
-    echo "WEBPACK=\$(find .next/static/chunks/ -name 'webpack-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
-    echo "FRAMEWORK=\$(find .next/static/chunks/ -name 'framework-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
-    echo "MAIN=\$(find .next/static/chunks/ -name 'main-*.js' | grep -v 'main-app' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
-    echo "APP=\$(find .next/static/chunks/pages/ -name '_app-*.js' | sed 's|.next/static/chunks/||')" >> /tmp/find_chunk_files.sh && \
-    echo "echo \$POLYFILLS \$WEBPACK \$FRAMEWORK \$MAIN \$APP" >> /tmp/find_chunk_files.sh && \
-    chmod +x /tmp/find_chunk_files.sh
-
-# Use the Next.js exported HTML file instead of manually creating it
-RUN if [ -f .next/server/pages/index.html ]; then \
-      cp .next/server/pages/index.html /app/staticfiles/react/app/index.html; \
-    else \
-      CHUNK_FILES=$(/tmp/find_chunk_files.sh) && \
-      echo '<!DOCTYPE html>' > /app/staticfiles/react/app/index.html && \
-      echo '<html lang="en">' >> /app/staticfiles/react/app/index.html && \
-      echo '<head>' >> /app/staticfiles/react/app/index.html && \
-      echo '  <meta charset="utf-8">' >> /app/staticfiles/react/app/index.html && \
-      echo '  <meta name="viewport" content="width=device-width, initial-scale=1">' >> /app/staticfiles/react/app/index.html && \
-      echo '  <title>pyERP Dashboard</title>' >> /app/staticfiles/react/app/index.html && \
-      echo '  <link rel="icon" href="/favicon.ico" />' >> /app/staticfiles/react/app/index.html && \
-      echo '</head>' >> /app/staticfiles/react/app/index.html && \
-      echo '<body>' >> /app/staticfiles/react/app/index.html && \
-      echo '  <div id="__next"></div>' >> /app/staticfiles/react/app/index.html && \
-      for chunk in $CHUNK_FILES; do \
-        echo "  <script src=\"/_next/static/chunks/$chunk\"></script>" >> /app/staticfiles/react/app/index.html; \
-      done && \
-      echo '</body>' >> /app/staticfiles/react/app/index.html; \
-    fi
-
-# Create root index.html that redirects to /app/
-RUN echo '<!DOCTYPE html>' > /app/staticfiles/react/index.html && \
-    echo '<html lang="en">' >> /app/staticfiles/react/index.html && \
-    echo '<head>' >> /app/staticfiles/react/index.html && \
-    echo '  <meta charset="utf-8">' >> /app/staticfiles/react/index.html && \
-    echo '  <meta name="viewport" content="width=device-width, initial-scale=1">' >> /app/staticfiles/react/index.html && \
-    echo '  <title>pyERP</title>' >> /app/staticfiles/react/index.html && \
-    echo '  <meta http-equiv="refresh" content="0;url=/app/">' >> /app/staticfiles/react/index.html && \
-    echo '</head>' >> /app/staticfiles/react/index.html && \
-    echo '<body>' >> /app/staticfiles/react/index.html && \
-    echo '  <p>Redirecting to <a href="/app/">application</a>...</p>' >> /app/staticfiles/react/index.html && \
-    echo '</body>' >> /app/staticfiles/react/index.html && \
-    echo '</html>' >> /app/staticfiles/react/index.html
-
-# Ensure _next directory is properly structured for Nginx
+# Create necessary directories and setup static files
 RUN mkdir -p /app/staticfiles/react/app/_next && \
-    cp -r /app/staticfiles/react/.next/* /app/staticfiles/react/app/_next/
+    cp -r /app/frontend-react/.next/* /app/staticfiles/react/app/_next/
 
-# Copy the rest of the project code
-WORKDIR /app
-COPY . /app/
+# Copy only necessary project files
+COPY pyerp/ /app/pyerp/
+COPY users/ /app/users/
+COPY admin_tools/ /app/admin_tools/
+COPY manage.py /app/
+COPY docker/ /app/docker/
 
 # Create directories and setup static files
 RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
@@ -157,10 +114,6 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
 
 # Copy supervisord configuration
 COPY docker/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Copy static directories setup script
-COPY docker/ensure_static_dirs.sh /app/docker/ensure_static_dirs.sh
-RUN chmod +x /app/docker/ensure_static_dirs.sh
 
 # Expose ports for web services
 EXPOSE 80 443 8050

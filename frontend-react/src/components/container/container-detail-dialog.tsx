@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { ContainerItem } from "@/types/warehouse-types"
 import { generateContainerSlots, generateInitialUnits, splitUnit, renumberUnits } from "@/lib/container-utils"
-import ActivityLogDialog from "./activity-log-dialog"
+import ActivityLogDialog from "../activity-log-dialog"
 import React from "react"
-import ConfirmationDialog from "./confirmation-dialog"
-import ContainerInfoTab from "./container/container-info-tab"
-import ContainerUnitsTab from "./container/container-units-tab"
-import ContainerLocationTab from "./container/container-location-tab"
+import ConfirmationDialog from "../confirmation-dialog"
+import ContainerInfoTab from "./container-info-tab"
+import ContainerUnitsTab from "./container-units-tab"
+import ContainerLocationTab from "./container-location-tab"
 
 interface ContainerDetailDialogProps {
   isOpen: boolean
@@ -62,11 +62,15 @@ export default function ContainerDetailDialog({
       id: container.id,
       containerCode: container.containerCode,
       type: container.type,
+      description: container.description || "",
+      status: container.status || "",
+      purpose: container.purpose || "",
+      stock: container.stock || 0,
       slots: Array.isArray(container.slots) ? container.slots : [],
       units: Array.isArray(container.units) ? container.units : [],
     }),
-    [container.id, container.containerCode, container.type],
-  ) // Only depend on stable props
+    [container.id, container.containerCode, container.type, container.description, container.status, container.purpose, container.stock],
+  ) // Include all dependencies
 
   // Initialize state once with the initial container data
   useEffect(() => {
@@ -88,8 +92,13 @@ export default function ContainerDetailDialog({
         updatedContainer.units = Array.isArray(newUnits) ? newUnits : []
       }
 
+      // Add required properties
+      const containerWithProperties = {
+        ...updatedContainer,
+      }
+
       // Ensure units are properly numbered
-      const numberedContainer = renumberUnits(updatedContainer)
+      const numberedContainer = renumberUnits(containerWithProperties)
 
       setEditedContainer(numberedContainer)
       setSlotCount(numberedContainer.slots?.length || 1)
@@ -177,7 +186,7 @@ export default function ContainerDetailDialog({
 
       // Check if this unit has article data
       const hasArticleData =
-        unit.articleNumber || unit.oldArticleNumber || unit.description || (unit.stock && unit.stock > 0)
+        unit.articleNumber || unit.oldArticleNumber || unit.description || (unit.stock !== undefined && unit.stock > 0)
 
       if (hasArticleData) {
         // Show confirmation dialog
@@ -340,7 +349,7 @@ export default function ContainerDetailDialog({
         <ActivityLogDialog
           isOpen={isActivityLogOpen}
           onClose={() => setIsActivityLogOpen(false)}
-          entityId={container.id}
+          locationId={container.id}
           locationType="container"
         />
       )}

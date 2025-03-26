@@ -539,9 +539,9 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
               id: "multiple",
               containerCode: `${selectedContainerIds.length} Schütten`,
               type: "",
-              articleNumber: "",
-              oldArticleNumber: "",
               description: "",
+              status: "",
+              purpose: "",
               stock: 0,
               slots: [],
               units: []

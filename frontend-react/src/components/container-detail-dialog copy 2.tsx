@@ -62,11 +62,25 @@ export default function ContainerDetailDialog({
       id: container.id,
       containerCode: container.containerCode,
       type: container.type,
+      description: container.description || "",
+      status: container.status || "active",
+      purpose: container.purpose || "",
+      stock: container.stock || 0,
       slots: Array.isArray(container.slots) ? container.slots : [],
       units: Array.isArray(container.units) ? container.units : [],
+      // Optional properties
+      displayCode: container.displayCode,
+      location: container.location,
+      shelf: container.shelf,
+      compartment: container.compartment,
+      floor: container.floor,
+      articleNumber: container.articleNumber,
+      oldArticleNumber: container.oldArticleNumber,
+      lastPrintDate: container.lastPrintDate,
+      customSlotCount: container.customSlotCount
     }),
-    [container.id, container.containerCode, container.type],
-  ) // Only depend on stable props
+    [container.id, container.containerCode, container.type, container.description, container.status, container.purpose, container.stock]
+  ) // Only depend on required props
 
   // Initialize state once with the initial container data
   useEffect(() => {
@@ -340,7 +354,7 @@ export default function ContainerDetailDialog({
         <ActivityLogDialog
           isOpen={isActivityLogOpen}
           onClose={() => setIsActivityLogOpen(false)}
-          entityId={container.id}
+          locationId={container.id}
           locationType="container"
         />
       )}

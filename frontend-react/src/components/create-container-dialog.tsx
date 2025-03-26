@@ -65,10 +65,12 @@ export default function CreateContainerDialog({
         id: crypto.randomUUID(),
         containerCode: generateContainerCode(),
         type,
-        articleNumber: "",
-        oldArticleNumber: "",
         description: "",
-        stock: 0, // Standardmäßig 0 Bestand
+        status: "",
+        purpose: purpose,
+        stock: 0,
+        slots: [],
+        units: [],
         customSlotCount: slots, // Add the custom slot count
       })
     }

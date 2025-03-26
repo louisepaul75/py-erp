@@ -158,13 +158,19 @@ export default function ContainerUnitsTab({
 
         // Find article
         const article = findArticleByNumber(
+          editedContainer,
           isOldArticleNumber ? "" : articleSearchTerm,
           isOldArticleNumber ? articleSearchTerm : "",
         )
 
         if (article) {
           // Assign article to the selected unit
-          const updatedContainer = assignArticleToUnit(editedContainer, editingUnitId, article)
+          const updatedContainer = assignArticleToUnit(
+            editedContainer, 
+            editingUnitId, 
+            article.articleNumber || "",
+            article.description || ""
+          )
           setEditedContainer(updatedContainer)
         }
 
@@ -197,11 +203,14 @@ export default function ContainerUnitsTab({
               Neue Einheit
             </Button>
           )}
-          {selectedUnitId && units.find((u) => u.id === selectedUnitId)?.slots.length > 1 && (
-            <Button variant="outline" size="sm" onClick={onSplitUnit} className="flex items-center gap-1">
-              Einheit teilen
-            </Button>
-          )}
+          {selectedUnitId && (() => {
+            const selectedUnit = units.find((u) => u.id === selectedUnitId);
+            return selectedUnit && Array.isArray(selectedUnit.slots) && selectedUnit.slots.length > 1 ? (
+              <Button variant="outline" size="sm" onClick={onSplitUnit} className="flex items-center gap-1">
+                Einheit teilen
+              </Button>
+            ) : null;
+          })()}
         </div>
       </div>
 

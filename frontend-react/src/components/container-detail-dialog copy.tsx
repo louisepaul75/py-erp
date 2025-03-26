@@ -64,8 +64,24 @@ export default function ContainerDetailDialog({
       type: container.type,
       slots: Array.isArray(container.slots) ? container.slots : [],
       units: Array.isArray(container.units) ? container.units : [],
+      description: container.description || "",
+      status: container.status || "active",
+      purpose: container.purpose || "storage",
+      stock: container.stock || 0,
+      displayCode: container.displayCode || container.containerCode,
+      location: container.location || "",
+      shelf: container.shelf || 0,
+      compartment: container.compartment || 0,
+      floor: container.floor || 0,
+      articleNumber: container.articleNumber || "",
+      oldArticleNumber: container.oldArticleNumber || "",
+      lastPrintDate: container.lastPrintDate || undefined,
+      customSlotCount: container.customSlotCount || undefined,
     }),
-    [container.id, container.containerCode, container.type],
+    [container.id, container.containerCode, container.type, container.description, container.status, 
+     container.purpose, container.stock, container.displayCode, container.location, container.shelf, 
+     container.compartment, container.floor, container.articleNumber, container.oldArticleNumber, 
+     container.lastPrintDate, container.customSlotCount],
   ) // Only depend on stable props
 
   // Initialize state once with the initial container data
@@ -340,7 +356,7 @@ export default function ContainerDetailDialog({
         <ActivityLogDialog
           isOpen={isActivityLogOpen}
           onClose={() => setIsActivityLogOpen(false)}
-          entityId={container.id}
+          locationId={container.id}
           locationType="container"
         />
       )}

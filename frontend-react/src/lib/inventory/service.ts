@@ -1,4 +1,4 @@
-import { Box, BoxType, PaginatedResponse, fetchBoxes, fetchBoxTypes, fetchStorageLocations } from './api';
+import { Box, BoxType, PaginatedResponse, fetchBoxes, fetchBoxTypes, fetchStorageLocations, BoxWithSlots } from './api';
 import { ContainerItem, SlotItem, UnitItem } from '@/types/warehouse-types';
 import { authService } from '../auth/authService';
 
@@ -103,13 +103,30 @@ export const generateInitialUnits = (slots: SlotItem[]): UnitItem[] => {
   }];
 };
 
+// Transform BoxSlot to SlotItem
+const transformBoxSlotToSlotItem = (boxSlot: any): SlotItem => {
+  return {
+    id: boxSlot.id.toString(),
+    code: {
+      code: boxSlot.slot_code,
+      color: boxSlot.occupied ? 'bg-red-200' : 'bg-green-200'
+    }
+  };
+};
+
 // Transform a Box from API to ContainerItem for UI with minimal transformations
 export const transformBoxToContainer = (box: Box): ContainerItem => {
   const boxTypeCode = mapBoxType(box.box_type);
   
   // Only generate slots if needed
-  const slots = box.slots || generateSlotItems(boxTypeCode, box.available_slots);
-  const units = box.units || generateInitialUnits(slots);
+  let slots: SlotItem[];
+  if ((box as BoxWithSlots).slots) {
+    // Transform BoxSlot[] to SlotItem[]
+    slots = (box as BoxWithSlots).slots.map(transformBoxSlotToSlotItem);
+  } else {
+    slots = generateSlotItems(boxTypeCode, box.available_slots);
+  }
+  const units = generateInitialUnits(slots);
 
   return {
     id: box.id.toString(),
