@@ -17,7 +17,7 @@ export interface BoxType {
   length?: number;
   width?: number;
   height?: number;
-  weight_capacity?: number;
+  weight_capacity?: number;  // This is actually weight_empty from the backend
   slot_count: number;
   slot_naming_scheme: string;
 }

@@ -46,7 +46,7 @@ def box_types_list(request):
                 "length": box_type.length,
                 "width": box_type.width,
                 "height": box_type.height,
-                "weight_capacity": box_type.weight_capacity,
+                "weight_capacity": box_type.weight_empty,
                 "slot_count": box_type.slot_count,
                 "slot_naming_scheme": box_type.slot_naming_scheme,
             }

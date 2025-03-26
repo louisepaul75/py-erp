@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { fetchContainerTypes } from '../api/container-types'
 
 export interface ContainerTypeImage {
   id: string
@@ -21,6 +22,9 @@ export interface ContainerType {
 
 interface ContainerTypeStore {
   containerTypes: ContainerType[]
+  isLoading: boolean
+  error: string | null
+  fetchContainerTypes: () => Promise<void>
   addContainerType: (containerType: ContainerType) => void
   updateContainerType: (id: string, updatedContainerType: ContainerType) => void
   deleteContainerType: (id: string) => void
@@ -30,7 +34,19 @@ interface ContainerTypeStore {
 
 export const useContainerTypeStore = create<ContainerTypeStore>((set) => ({
   containerTypes: [],
+  isLoading: false,
+  error: null,
   
+  fetchContainerTypes: async () => {
+    set({ isLoading: true, error: null })
+    try {
+      const types = await fetchContainerTypes()
+      set({ containerTypes: types, isLoading: false })
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false })
+    }
+  },
+
   addContainerType: (containerType) =>
     set((state) => ({
       containerTypes: [...state.containerTypes, containerType],

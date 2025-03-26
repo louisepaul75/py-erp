@@ -1,17 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Trash2, Edit, Plus } from "lucide-react"
+import { Trash2, Edit, Plus, Loader2 } from "lucide-react"
 import { useContainerTypeStore, type ContainerType } from "@/lib/stores/container-type-store"
 import ContainerTypeDialog from "./container-type-dialog"
 import { SortableTable } from "../ui/sortable-table"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function ContainerTypeSettings() {
-  const { containerTypes, deleteContainerType } = useContainerTypeStore()
+  const { containerTypes, isLoading, error, fetchContainerTypes, deleteContainerType } = useContainerTypeStore()
   const [selectedContainerType, setSelectedContainerType] = useState<ContainerType | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+
+  useEffect(() => {
+    fetchContainerTypes()
+  }, [fetchContainerTypes])
 
   const handleEdit = (containerType: ContainerType) => {
     setSelectedContainerType(containerType)
@@ -125,6 +130,16 @@ export default function ContainerTypeSettings() {
     },
   ]
 
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          Fehler beim Laden der Schüttentypen: {error}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -136,7 +151,13 @@ export default function ContainerTypeSettings() {
       </div>
 
       <div className="border rounded-md overflow-hidden">
-        <SortableTable data={containerTypes} columns={columns} onRowClick={handleEdit} />
+        {isLoading ? (
+          <div className="flex justify-center items-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <SortableTable data={containerTypes} columns={columns} onRowClick={handleEdit} />
+        )}
       </div>
 
       {isDialogOpen && (
