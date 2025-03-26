@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   pyerp:
@@ -10,9 +10,9 @@ services:
     ports:
       - "8050:8050"
       - "80:80"
-      - "443:443"  # Add explicit HTTPS port
-      - "9200:9200"  # Elasticsearch
-      - "5601:5601"  # Kibana
+      - "443:443" # Add explicit HTTPS port
+      - "9201:9200" # Elasticsearch - Changed port to avoid conflict
+      - "5602:5601" # Kibana - Changed port to avoid conflict
     env_file:
       - ../config/env/.env.prod
     environment:
@@ -33,8 +33,10 @@ services:
       - pyerp_data:/app
       - es_data:/var/lib/elasticsearch
     networks:
-      - pgnetwork
       - default
+    dns_search: .
+    extra_hosts:
+      - "postgres_container:172.17.0.1"
     healthcheck:
       test: curl --fail http://localhost:8050/admin/ || exit 1
       interval: 30s
@@ -49,11 +51,34 @@ services:
         # Start supervisord
         /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf
       "
+    depends_on:
+      - postgres_container
+
+  postgres_container:
+    image: postgres:14
+    container_name: postgres_container
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=db_secure_password
+      - POSTGRES_DB=pyerp_production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pyerp_data:
   es_data:
+  postgres_data:
 
 networks:
-  pgnetwork:
-    external: true
+  default:
+    driver: bridge
