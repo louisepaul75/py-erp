@@ -2,32 +2,33 @@
 
 set -e
 
-# Handle debug mode
-if [ "$DEBUG_MODE" = "true" ]; then
-  echo "Running in DEBUG MODE - special configuration for local development"
-  # Load debug environment instead of prod
-  ENV_FILE="/app/config/env/.env.prod.local"
-else
-  ENV_FILE="/app/config/env/.env.prod"
-fi
-
-# Wait for PostgreSQL
-until nc -z -v -w30 $DB_HOST $DB_PORT
-do
-  echo "Waiting for PostgreSQL database connection..."
-  sleep 1
-done
-echo "PostgreSQL database is ready!"
-
-# Load environment variables
-echo "Loading environment from $ENV_FILE"
-source $ENV_FILE 2>/dev/null || true
+# Load environment variables first
+echo "Loading environment from /app/config/env/.env.prod"
+source /app/config/env/.env.prod 2>/dev/null || true
 
 # Print database settings for debugging
 echo "Database settings: NAME=$DB_NAME, HOST=$DB_HOST, USER=$DB_USER"
 if [ -n "$DB_PASSWORD" ]; then
   echo "Database password is set"
 fi
+
+# Network diagnostics
+echo "Network diagnostics:"
+echo "Checking DNS resolution for $DB_HOST..."
+cat /etc/hosts
+echo "Running ping test..."
+ping -c 1 $DB_HOST || echo "Ping failed but continuing..."
+echo "Running IP resolution test..."
+getent hosts $DB_HOST || echo "Host resolution failed but continuing..."
+
+# Wait for PostgreSQL
+echo "Attempting connection to PostgreSQL at $DB_HOST:$DB_PORT..."
+until nc -z -v -w30 $DB_HOST $DB_PORT
+do
+  echo "Waiting for PostgreSQL database connection..."
+  sleep 2
+done
+echo "PostgreSQL database is ready!"
 
 # Create log directory
 mkdir -p /app/logs
