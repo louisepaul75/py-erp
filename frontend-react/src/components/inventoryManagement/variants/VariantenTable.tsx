@@ -84,19 +84,19 @@ export default function VariantenTable({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="relative w-full sm:w-64">
             <Input
-              className="pl-9 h-10 rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus-visible:ring-blue-500"
+              className="pl-9 h-10 rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus-visible:ring-blue-500 text-slate-900 dark:text-slate-100"
               placeholder="Suchen..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
             />
             <div className="absolute left-3 top-1/2 -translate-y-1/2">
-              <Search className="h-4 w-4 text-slate-400" />
+              <Search className="h-4 w-4 text-slate-500 dark:text-slate-400" />
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="h-9 rounded-full"
+            className="h-9 rounded-full text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700"
             onClick={() => onExport(filteredVariants)} // Pass filteredVariants to onExport
           >
             <Download className="h-4 w-4 mr-1" />
@@ -107,7 +107,7 @@ export default function VariantenTable({
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
               <TableHead className="w-12">
                 {/* <input
                   type="checkbox"
@@ -119,29 +119,29 @@ export default function VariantenTable({
                   type="checkbox"
                   checked={variants.length > 0 && variants.every((v) => v.selected)} // Ensure it only checks when there are rows
                   onChange={handleSelectAll}
-                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                 />
               </TableHead>
-              <TableHead className="font-medium">Nummer</TableHead>
-              <TableHead className="font-medium">Bezeichnung</TableHead>
-              <TableHead className="font-medium">Ausprägung</TableHead>
-              <TableHead className="w-12 text-center font-medium">
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Nummer</TableHead>
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Bezeichnung</TableHead>
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Ausprägung</TableHead>
+              <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
                 Prod.
               </TableHead>
-              <TableHead className="w-12 text-center font-medium">
+              <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
                 Vertr.
               </TableHead>
-              <TableHead className="w-12 text-center font-medium">
+              <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
                 VK Artikel
               </TableHead>
-              <TableHead className="font-medium">Releas</TableHead>
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Releas</TableHead>
               <TableHead className="w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredVariants.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-4">
+                <TableCell colSpan={10} className="text-center py-4 text-slate-600 dark:text-slate-400">
                   Keine Varianten gefunden
                 </TableCell>
               </TableRow>
@@ -150,7 +150,7 @@ export default function VariantenTable({
                 <TableRow
                   key={variant.id}
                   className={
-                    variant.selected ? "bg-blue-50/50 dark:bg-blue-900/10" : ""
+                    variant.selected ? "bg-blue-50/50 dark:bg-blue-900/10 text-slate-800 dark:text-slate-200" : "text-slate-700 dark:text-slate-300"
                   }
                 >
                   <TableCell>
@@ -158,7 +158,7 @@ export default function VariantenTable({
                       type="checkbox"
                       checked={variant.selected}
                       onChange={() => onToggleSelect(variant.id)}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>
                   <TableCell className="font-medium">
@@ -171,7 +171,7 @@ export default function VariantenTable({
                       type="checkbox"
                       checked={variant.prod}
                       onChange={() => onToggleCheckbox(variant.id, "prod")}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>
                   <TableCell className="text-center">
@@ -179,7 +179,7 @@ export default function VariantenTable({
                       type="checkbox"
                       checked={variant.vertr}
                       onChange={() => onToggleCheckbox(variant.id, "vertr")}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>
                   <TableCell className="text-center">
@@ -187,7 +187,7 @@ export default function VariantenTable({
                       type="checkbox"
                       checked={variant.vkArtikel}
                       onChange={() => onToggleCheckbox(variant.id, "vkArtikel")}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>
                   <TableCell>{variant.releas}</TableCell>
@@ -202,7 +202,7 @@ export default function VariantenTable({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-full"
+                          className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                           onClick={() => {
                             setSelectedVariantId(variant.id);
                             onMoreAction(variant.id);
@@ -211,17 +211,17 @@ export default function VariantenTable({
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
+                      <AlertDialogContent className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>
+                          <AlertDialogTitle className="text-slate-900 dark:text-slate-100">
                             Aktionen für Variante {selectedVariantId}
                           </AlertDialogTitle>
-                          <AlertDialogDescription>
+                          <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
                             Wählen Sie eine Aktion für diese Variante aus.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
-                          <Button variant="outline" onClick={onEditVariant}>
+                          <Button variant="outline" onClick={onEditVariant} className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700">
                             Bearbeiten
                           </Button>
                           <Button
@@ -230,7 +230,7 @@ export default function VariantenTable({
                           >
                             Löschen
                           </Button>
-                          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                          <AlertDialogCancel className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700">Abbrechen</AlertDialogCancel>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

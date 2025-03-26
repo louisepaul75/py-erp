@@ -88,7 +88,7 @@ export default function ProductList({
   return (
     <div className="w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
       {/* Search and Filters */}
-      <div className="p-4 border-b border-stalte-200 dark:border-slate-800">
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
         <div className="relative md:hidden mb-4">
           <Input
             className="w-full pl-9 h-10 rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus-visible:ring-blue-500"
@@ -118,14 +118,14 @@ export default function ProductList({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
             >
               <Filter className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               onClick={() => handleSort("sku")} // Default sort by SKU
               aria-label="Sort by SKU"
             >
@@ -134,7 +134,7 @@ export default function ProductList({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
             >
               <Sliders className="h-4 w-4" />
             </Button>
@@ -146,9 +146,9 @@ export default function ProductList({
       <div className="flex-1 overflow-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
               <TableHead
-                className="font-medium cursor-pointer"
+                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
                 onClick={() => handleSort("sku")}
               >
                 <div className="flex items-center gap-2">
@@ -159,7 +159,7 @@ export default function ProductList({
                 </div>
               </TableHead>
               <TableHead
-                className="font-medium cursor-pointer"
+                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
                 onClick={() => handleSort("name")}
               >
                 <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export default function ProductList({
                 </div>
               </TableHead>
               <TableHead
-                className="font-medium cursor-pointer"
+                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
                 onClick={() => handleSort("legacy_base_sku")}
               >
                 <div className="flex items-center gap-2">
@@ -181,7 +181,7 @@ export default function ProductList({
                 </div>
               </TableHead>
               <TableHead
-                className="font-medium cursor-pointer"
+                className="font-medium cursor-pointer text-slate-700 dark:text-slate-300"
                 onClick={() => handleSort("variants_count")}
               >
                 <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export default function ProductList({
                 <TableCell colSpan={3} className="text-center py-8">
                   <div className="flex justify-center items-center gap-2 min-h-[500px]">
                     {/* <Spinner size="3" /> */}
-                    <span>Loading products...</span>
+                    <span className="text-slate-600 dark:text-slate-400">Loading products...</span>
                   </div>
                 </TableCell>
               </TableRow>
@@ -211,8 +211,8 @@ export default function ProductList({
                   onClick={() => setSelectedItem(product.id)}
                   className={`cursor-pointer transition-colors ${
                     selectedItem === product.id
-                      ? "bg-blue-50 dark:bg-blue-900/20"
-                      : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-slate-900 dark:text-slate-100"
+                      : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-300"
                   }`}
                 >
                   <TableCell
@@ -249,7 +249,7 @@ export default function ProductList({
               <TableRow>
                 <TableCell colSpan={3} className="text-center py-8">
                   <div className="flex justify-center items-center gap-2 min-h-[500px]">
-                    <span>No products found</span>
+                    <span className="text-slate-600 dark:text-slate-400">No products found</span>
                   </div>
                 </TableCell>
               </TableRow>
@@ -271,7 +271,7 @@ export default function ProductList({
                   pageSize: Number(e.target.value),
                 });
               }}
-              className="text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+              className="text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
             >
               {[20, 30, 40].map((size) => (
                 <option key={size} value={size}>
@@ -291,13 +291,14 @@ export default function ProductList({
                   pageIndex: pagination.pageIndex - 1,
                 })
               }
+              className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700"
             >
               Previous
             </Button>
             {/* <Text className="mx-6" size="2">
               Page {pagination.pageIndex + 1}
             </Text> */}
-            <p className="mx-6">Page {pagination.pageIndex + 1}</p>
+            <p className="mx-6 text-slate-700 dark:text-slate-300">Page {pagination.pageIndex + 1}</p>
             <Button
               variant="outline"
               disabled={filteredProducts.length < pagination.pageSize}
@@ -307,6 +308,7 @@ export default function ProductList({
                   pageIndex: pagination.pageIndex + 1,
                 })
               }
+              className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700"
             >
               Next
             </Button>

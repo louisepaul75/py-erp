@@ -622,7 +622,7 @@ class ProductDetailAPIView(ProductAPIView):
         product_data = self.get_product_data(product)
 
         # Add variants with prefetch_related for optimization
-        variants = VariantProduct.objects.filter(parent=product).prefetch_related("images", "tags", "attributes")
+        variants = VariantProduct.objects.filter(parent=product).prefetch_related("images", "tags")
         variants_data = []
         for variant in variants:
             variant_data = self.get_product_data(variant)
