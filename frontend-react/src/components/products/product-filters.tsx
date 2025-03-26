@@ -1,8 +1,10 @@
 "use client"
 
-import { Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Select } from "@/components/ui/select"
+import { Filter } from "lucide-react"
 
 interface ProductFiltersProps {
   searchTerm: string
@@ -11,13 +13,13 @@ interface ProductFiltersProps {
   setStatusFilter: (value: string) => void
   categoryFilter: string
   setCategoryFilter: (value: string) => void
-  isNewFilter: string
-  setIsNewFilter: (value: string) => void
-  isActiveFilter: string
-  setIsActiveFilter: (value: string) => void
+  isNewFilter: boolean
+  setIsNewFilter: (value: boolean) => void
+  isActiveFilter: boolean
+  setIsActiveFilter: (value: boolean) => void
 }
 
-export default function ProductFilters({
+export function ProductFilters({
   searchTerm,
   setSearchTerm,
   statusFilter,
@@ -30,64 +32,67 @@ export default function ProductFilters({
   setIsActiveFilter,
 }: ProductFiltersProps) {
   return (
-    <>
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        <Input
-          className="pl-10 w-full"
-          placeholder="Produkt suchen (Artikelnummer, Name)..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <Select
-          value={statusFilter}
-          onValueChange={setStatusFilter}
-          placeholder="Status"
-          options={[
-            { value: "all", label: "Alle Status" },
-            { value: "active", label: "Aktiv" },
-            { value: "inactive", label: "Inaktiv" },
-            { value: "discontinued", label: "Eingestellt" },
-          ]}
-        />
-
-        <Select
-          value={categoryFilter}
-          onValueChange={setCategoryFilter}
-          placeholder="Kategorie"
-          options={[
-            { value: "all", label: "Alle Kategorien" },
-            { value: "zinnfigur", label: "Zinnfiguren" },
-            { value: "eisenbahn", label: "Eisenbahnen" },
-            { value: "accessories", label: "Zubehör" },
-          ]}
-        />
-
-        <Select
-          value={isNewFilter}
-          onValueChange={setIsNewFilter}
-          placeholder="Neuheit"
-          options={[
-            { value: "all", label: "Alle Produkte" },
-            { value: "new", label: "Neuheiten" },
-            { value: "old", label: "Keine Neuheiten" },
-          ]}
-        />
-
-        <Select
-          value={isActiveFilter}
-          onValueChange={setIsActiveFilter}
-          placeholder="Status"
-          options={[
-            { value: "all", label: "Alle Produkte" },
-            { value: "active", label: "Aktive Produkte" },
-            { value: "inactive", label: "Inaktive Produkte" },
-          ]}
-        />
-      </div>
-    </>
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="sm" className="flex items-center gap-1">
+          <Filter className="h-4 w-4" />
+          <span>Filter</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Filter</SheetTitle>
+        </SheetHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={[
+                { value: "", label: "Alle" },
+                { value: "active", label: "Aktiv" },
+                { value: "inactive", label: "Inaktiv" },
+              ]}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Kategorie</Label>
+            <Select
+              value={categoryFilter}
+              onValueChange={setCategoryFilter}
+              options={[
+                { value: "", label: "Alle" },
+                { value: "electronics", label: "Elektronik" },
+                { value: "clothing", label: "Kleidung" },
+                { value: "books", label: "Bücher" },
+              ]}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Neuheit</Label>
+            <Select
+              value={isNewFilter ? "new" : "all"}
+              onValueChange={(value) => setIsNewFilter(value === "new")}
+              options={[
+                { value: "all", label: "Alle" },
+                { value: "new", label: "Nur neue" },
+              ]}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Aktivität</Label>
+            <Select
+              value={isActiveFilter ? "active" : "all"}
+              onValueChange={(value) => setIsActiveFilter(value === "active")}
+              options={[
+                { value: "all", label: "Alle" },
+                { value: "active", label: "Nur aktive" },
+              ]}
+            />
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 } 

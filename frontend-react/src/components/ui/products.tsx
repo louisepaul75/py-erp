@@ -2,13 +2,22 @@
 "use client";
 import React from "react";
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
 import { productApi } from "@/lib/products/api";
 import { Product, ApiResponse } from "../types/product";
+
+// Import from centralized component library
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  Input,
+} from "@/components/ui";
 
 export default function InventoryManagement() {
   const [selectedItem, setSelectedItem] = useState<number | string | null>("");
@@ -45,7 +54,7 @@ export default function InventoryManagement() {
     tags: [],
     variants_count: 0,
   });
-  // In products.tsx
+  
   const [pagination, setPagination] = React.useState<{
     pageIndex: number;
     pageSize: number;
@@ -106,44 +115,51 @@ export default function InventoryManagement() {
   }, [selectedItem, filteredProducts]);
 
   return (
-    <div className="min-h-screen">
-      <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden">
-        {/* Simple header with search */}
-        <div className="py-4 px-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Produkte</h1>
-          <div className="relative w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              type="search"
-              placeholder="Suche nach Produkt..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        
-        <div className="flex-1 flex overflow-hidden w-full">
-          <div className="w-1/3 border-r border-slate-200 dark:border-slate-800">
-            <ProductList
-              showSidebar={true}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              filteredProducts={filteredProducts}
-              selectedItem={selectedItem}
-              setSelectedItem={setSelectedItem}
-              pagination={pagination}
-              setPagination={setPagination}
-              isLoading={isLoading}
-            />
-          </div>
-          <div className="w-2/3">
-            <ProductDetail
-              selectedItem={selectedItem}
-              selectedProduct={selectedProduct}
-            />
-          </div>
-        </div>
+    <div className="container mx-auto py-8 px-4 md:px-6">
+      <div className="max-w-full mx-auto">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl font-bold text-primary">Produkte</CardTitle>
+                <CardDescription>Verwalten Sie Ihre Produkte und Varianten</CardDescription>
+              </div>
+              <div className="relative w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  type="search"
+                  placeholder="Suche nach Produkt..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="flex overflow-hidden h-[calc(100vh-15rem)]">
+              <div className="w-1/3 border-r border-slate-200 dark:border-slate-800">
+                <ProductList
+                  showSidebar={true}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  filteredProducts={filteredProducts}
+                  selectedItem={selectedItem}
+                  setSelectedItem={setSelectedItem}
+                  pagination={pagination}
+                  setPagination={setPagination}
+                  isLoading={isLoading}
+                />
+              </div>
+              <div className="w-2/3">
+                <ProductDetail
+                  selectedItem={selectedItem}
+                  selectedProduct={selectedProduct}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

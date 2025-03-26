@@ -1,18 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Download, Upload, Trash, Edit } from "lucide-react"
+import { Plus, Download, Upload, Trash, Edit, Search, Filter, ChevronDown, ArrowUpDown, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
-import ProductFilters from "@/components/products/product-filters"
+import { ProductFilters } from "@/components/products/product-filters"
 import ProductMobile from "@/components/products/product-mobile"
 import ProductDetailDialog from "@/components/products/product-detail-dialog"
 import DeleteConfirmDialog from "@/components/products/delete-confirm-dialog"
 import { Product, ApiResponse } from "../types/product"
 import { productApi } from "@/lib/products/api"
-import { SkinnyTable } from "@/components/ui/skinny-table"
 import { StatusBadge } from "@/components/ui"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Container } from "@/components/ui/container"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 export type { Product }
 
@@ -178,183 +180,217 @@ export default function ProductList() {
   const totalPages = Math.ceil(totalItems / pagination.pageSize)
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Produkte</h1>
-        
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm">
-            <Upload className="h-4 w-4 mr-2" />
-            Importieren
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Exportieren
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-red-500"
-            disabled={selectedProducts.length === 0}
-          >
-            <Trash className="h-4 w-4 mr-2" />
-            Ausgewählte löschen ({selectedProducts.length})
-          </Button>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Neues Produkt
-          </Button>
-        </div>
-      </div>
-
-      <ProductFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        isNewFilter={isNewFilter}
-        setIsNewFilter={setIsNewFilter}
-        isActiveFilter={isActiveFilter}
-        setIsActiveFilter={setIsActiveFilter}
-      />
-
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
-          <p>{error}</p>
-        </div>
-      )}
-
-      {/* Desktop Table View */}
-      <div className="hidden md:block">
-        <SkinnyTable
-          data={filteredProducts}
-          columns={[
-            {
-              field: "checkbox",
-              header: "",
-              width: "40px",
-              render: (item) => (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={selectedProducts.includes(item.id)}
-                    onCheckedChange={(checked) => handleSelectProduct(item.id, !!checked)}
-                  />
-                </div>
-              ),
-            },
-            { field: "sku", header: "SKU" },
-            { field: "name", header: "Name" },
-            {
-              field: "is_active",
-              header: "Status",
-              render: (item) => (
-                <div className="flex gap-1">
-                  <StatusBadge status={item.is_active ? "active" : "inactive"}>
-                    {item.is_active ? "Active" : "Inactive"}
-                  </StatusBadge>
-                  {item.is_new && (
-                    <StatusBadge status="info" className="bg-purple-500">
-                      New
-                    </StatusBadge>
-                  )}
-                  {item.is_discontinued && (
-                    <StatusBadge status="warning">
-                      Discontinued
-                    </StatusBadge>
-                  )}
-                </div>
-              ),
-            },
-            { field: "category", header: "Category" },
-            {
-              field: "actions",
-              header: "Actions",
-              width: "100px",
-              render: (item) => (
-                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEditClick(item)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-red-500"
-                    onClick={() => handleDeleteClick(item)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
-          selectedItem={selectedProduct?.id}
-          onItemSelect={(item) => handleRowClick(item)}
-          isLoading={isLoading}
-          noDataMessage="No products found"
-        />
-      </div>
-
-      {/* Mobile List View */}
-      <ProductMobile
-        products={filteredProducts}
-        selectedProducts={selectedProducts}
-        handleSelectProduct={handleSelectProduct}
-        handleRowClick={handleRowClick}
-        handleEditClick={handleEditClick}
-        handleDeleteClick={handleDeleteClick}
-      />
-
-      {/* Pagination */}
-      {!isLoading && filteredProducts.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Einträge pro Seite:</span>
-            <Select
-              value={pagination.pageSize.toString()}
-              onValueChange={handleItemsPerPageChange}
-              options={[
-                { value: "10", label: "10" },
-                { value: "20", label: "20" },
-                { value: "50", label: "50" },
-                { value: "100", label: "100" },
-              ]}
-            />
+    <Container>
+      <div className="max-w-5xl mx-auto py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 text-primary">Produkte</h1>
+            <p className="text-muted-foreground">Verwalten Sie Ihre Produktliste</p>
           </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.pageIndex - 1)}
-                disabled={pagination.pageIndex === 0}
-              >
-                Zurück
-              </Button>
-              
-              <div className="text-sm mx-2">
-                Seite {pagination.pageIndex + 1} von {totalPages}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.pageIndex + 1)}
-                disabled={pagination.pageIndex >= totalPages - 1}
-              >
-                Weiter
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Exportieren
+            </Button>
+            <Button variant="outline" size="sm">
+              <Upload className="h-4 w-4 mr-2" />
+              Importieren
+            </Button>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Neues Produkt
+            </Button>
+          </div>
         </div>
-      )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Produktliste</CardTitle>
+            <CardDescription>Alle Produkte in Ihrem Katalog</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-300" />
+                <Input
+                  type="search"
+                  placeholder="Suche nach Produkt..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <ProductFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  statusFilter={statusFilter}
+                  setStatusFilter={setStatusFilter}
+                  categoryFilter={categoryFilter}
+                  setCategoryFilter={setCategoryFilter}
+                  isNewFilter={isNewFilter}
+                  setIsNewFilter={setIsNewFilter}
+                  isActiveFilter={isActiveFilter}
+                  setIsActiveFilter={setIsActiveFilter}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <span>Status</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  <span>Kategorie</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                  <TableHead className="w-[40px] font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                    <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-1">
+                      <span>SKU</span>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-1">
+                      <span>Name</span>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-1">
+                      <span>Status</span>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-1">
+                      <span>Category</span>
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product) => (
+                  <TableRow key={product.id} onClick={() => handleRowClick(product)}>
+                    <TableCell>
+                      <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        {selectedProducts.includes(product.id) && <Check className="h-3 w-3" />}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{product.sku}</TableCell>
+                    <TableCell>{product.name}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <StatusBadge status={product.is_active ? "active" : "inactive"}>
+                          {product.is_active ? "Active" : "Inactive"}
+                        </StatusBadge>
+                        {product.is_new && (
+                          <StatusBadge status="info" className="bg-purple-500">
+                            New
+                          </StatusBadge>
+                        )}
+                        {product.is_discontinued && (
+                          <StatusBadge status="warning">
+                            Discontinued
+                          </StatusBadge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{product.category}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick(product);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(product);
+                          }}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {/* Pagination */}
+            {!isLoading && filteredProducts.length > 0 && (
+              <div className="mt-4 flex items-center justify-between">
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  <strong>{selectedProducts.length}</strong> items selected
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      Einträge pro Seite:
+                    </span>
+                    <Select
+                      value={pagination.pageSize.toString()}
+                      onValueChange={handleItemsPerPageChange}
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "20", label: "20" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.pageIndex - 1)}
+                      disabled={pagination.pageIndex === 0}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(pagination.pageIndex + 1)}
+                      disabled={pagination.pageIndex >= totalPages - 1}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Dialogs */}
       <ProductDetailDialog
@@ -369,6 +405,6 @@ export default function ProductList() {
         onConfirm={handleConfirmDelete}
         product={selectedProduct}
       />
-    </div>
+    </Container>
   )
 } 
