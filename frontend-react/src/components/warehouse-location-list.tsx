@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { ListChecks, ChevronLeft, ChevronRight } from "lucide-react"
+import { ListChecks, ChevronLeft, ChevronRight, Warehouse, Package2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import NewWarehouseLocationModal from "@/components/new-warehouse-location-modal"
@@ -16,6 +16,8 @@ import { generateMockData } from "@/lib/warehouse-service"
 import type { WarehouseLocation, ContainerItem } from "@/types/warehouse-types"
 import { API_URL } from "@/lib/config"
 import { authService } from "@/lib/auth/authService"
+import Link from "next/link"
+import SettingsDialog from "./settings/settings-dialog"
 
 const PRINTERS = [
   { value: "none", label: "Drucker auswählen" },
@@ -26,6 +28,7 @@ const PRINTERS = [
 
 export type { ContainerItem, WarehouseLocation }
 export default function WarehouseLocationList() {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [locations, setLocations] = useState<WarehouseLocation[]>([])
   const [filteredLocations, setFilteredLocations] = useState<WarehouseLocation[]>([])
   const [selectedLocations, setSelectedLocations] = useState<string[]>([])
@@ -49,6 +52,7 @@ export default function WarehouseLocationList() {
   const [itemsPerPage, setItemsPerPage] = useState(500)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<string>("/")
 
   useEffect(() => {
     const fetchStorageLocations = async () => {
@@ -268,6 +272,31 @@ export default function WarehouseLocationList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Lagerort-Verwaltung</h1>
+        <div className="flex">
+          <Link
+            href="/"
+            className={`flex  mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-blue-500 text-blue-600`}
+          >
+            <Warehouse className="h-4 w-4 mr-2" />
+            Lagerort-Verwaltung
+          </Link>
+          <Link
+            href="/container-management"
+            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-transparent hover:border-gray-300 hover:text-gray-600`}
+          >
+            <Package2 className="h-4 w-4 mr-2" />
+            Schütten-Verwaltung
+          </Link>
+          <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-1"
+            >
+            <Settings className="h-4 w-4  mx-2" />
+            Einstellungen
+          </Button>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsMultipleNewLocationModalOpen(true)}>
             Mehrere Lagerorte
@@ -479,6 +508,8 @@ export default function WarehouseLocationList() {
           location={selectedLocation}
         />
       )}
+      <SettingsDialog isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
     </div>
   )
 }
