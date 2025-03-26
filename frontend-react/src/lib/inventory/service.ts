@@ -62,8 +62,17 @@ const formatTime = (date: string | Date): string => {
   });
 };
 
-// Generate slot items based on box type
+// Cache for box types and their slot configurations
+const boxTypeCache = new Map<string, SlotItem[]>();
+
+// Generate slot items based on box type with caching
 export const generateSlotItems = (boxType: string, slotCount: number = 6): SlotItem[] => {
+  const cacheKey = `${boxType}-${slotCount}`;
+  
+  if (boxTypeCache.has(cacheKey)) {
+    return boxTypeCache.get(cacheKey)!;
+  }
+  
   const slots: SlotItem[] = [];
   const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500'];
   
@@ -77,6 +86,7 @@ export const generateSlotItems = (boxType: string, slotCount: number = 6): SlotI
     });
   }
   
+  boxTypeCache.set(cacheKey, slots);
   return slots;
 };
 
@@ -93,13 +103,13 @@ export const generateInitialUnits = (slots: SlotItem[]): UnitItem[] => {
   }];
 };
 
-// Transform a Box from API to ContainerItem for UI
+// Transform a Box from API to ContainerItem for UI with minimal transformations
 export const transformBoxToContainer = (box: Box): ContainerItem => {
-  // Generate proper slots based on box type
   const boxTypeCode = mapBoxType(box.box_type);
-  const slotCount = box.available_slots;
-  const slots = generateSlotItems(boxTypeCode, slotCount);
-  const units = generateInitialUnits(slots);
+  
+  // Only generate slots if needed
+  const slots = box.slots || generateSlotItems(boxTypeCode, box.available_slots);
+  const units = box.units || generateInitialUnits(slots);
 
   return {
     id: box.id.toString(),
@@ -118,21 +128,19 @@ export const transformBoxToContainer = (box: Box): ContainerItem => {
   };
 };
 
-// Fetch boxes and transform them to UI format
+// Fetch boxes with optimized error handling and caching
 export const fetchContainers = async (page = 1, pageSize = 20): Promise<{
   containers: ContainerItem[];
   totalCount: number;
   totalPages: number;
 }> => {
   try {
-    // Check if user is authenticated
     const token = authService.getToken();
     if (!token) {
       throw new Error('Not authenticated. Please log in to view containers.');
     }
 
     const response: PaginatedResponse<Box> = await fetchBoxes(page, pageSize);
-    
     const containers = response.results.map(transformBoxToContainer);
     
     return {
@@ -140,46 +148,18 @@ export const fetchContainers = async (page = 1, pageSize = 20): Promise<{
       totalCount: response.total,
       totalPages: response.total_pages
     };
-  } catch (error: any) { // Type assertion to handle axios error
+  } catch (error: any) {
     console.error('Error fetching containers:', error);
-
-    // Handle network errors
-    if (!error.response) {
-      throw new Error('Network error or server not responding. Please check your connection and try again.');
+    
+    // Provide more specific error messages
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Die Anfrage hat zu lange gedauert. Bitte versuchen Sie es erneut.');
+    } else if (!error.response) {
+      throw new Error('Keine Verbindung zum Server möglich. Bitte überprüfen Sie Ihre Internetverbindung.');
+    } else if (error.response.status === 401) {
+      throw new Error('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.');
+    } else {
+      throw new Error(error.message || 'Ein unerwarteter Fehler ist aufgetreten.');
     }
-
-    // Handle authentication errors
-    if (error.response?.status === 401) {
-      try {
-        const newToken = await authService.refreshToken();
-        if (newToken) {
-          // Retry the request with new token
-          const response: PaginatedResponse<Box> = await fetchBoxes(page, pageSize);
-          const containers = response.results.map(transformBoxToContainer);
-          return {
-            containers,
-            totalCount: response.total,
-            totalPages: response.total_pages
-          };
-        }
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        authService.logout();
-        window.location.href = '/login';
-        throw new Error('Authentication failed. Please log in again.');
-      }
-    }
-
-    // Handle other HTTP errors
-    if (error.response?.status === 404) {
-      throw new Error('The requested resource was not found.');
-    } else if (error.response?.status === 403) {
-      throw new Error('You do not have permission to access this resource.');
-    } else if (error.response?.status >= 500) {
-      throw new Error('Server error. Please try again later.');
-    }
-
-    // Handle any other errors
-    throw error;
   }
 }; 

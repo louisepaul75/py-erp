@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Printer, Plus, History, ChevronLeft, ChevronRight, Warehouse, Package2, Settings, RotateCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,6 +20,7 @@ import ContainerManagementTable from "./container/container-management-table"
 import type { ContainerItem } from "@/types/warehouse-types"
 import Link from "next/link"
 import SettingsDialog from "./settings/settings-dialog"
+import ErrorMessage from "@/components/ui/error-message"
 
 const PRINTERS = [
   { value: "none", label: "Drucker auswählen" },
@@ -64,57 +65,103 @@ export default function ContainerManagement() {
   const [selectedContainer, setSelectedContainer] = useState<ContainerItem | null>(null)
   const [lastPrintDate, setLastPrintDate] = useState<Date | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(500)
+  const [itemsPerPage, setItemsPerPage] = useState(20)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+  const [isRetrying, setIsRetrying] = useState(false)
 
-  useEffect(() => {
-    // Replace mock data load with real API call
-    const loadContainers = async () => {
-      try {
-        // Show loading state
-        setIsLoading(true)
-        setError(null)
+  const loadContainers = useCallback(async (retry = false) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      if (retry) {
+        setIsRetrying(true)
+      }
+      
+      // Fetch containers with reasonable page size
+      const { containers: apiContainers, totalCount, totalPages } = await fetchContainers(currentPage, itemsPerPage);
+      
+      // Transform containers efficiently
+      const enhancedContainers = apiContainers.map((container) => {
+        // Only generate slots and units if not already present
+        const slots = container.slots || generateSlotItems(container.type);
+        const units = container.units || generateInitialUnits(slots);
         
-        // Fetch containers from API
-        const { containers: apiContainers, totalCount } = await fetchContainers(1, 500);
+        return {
+          ...container,
+          slots,
+          units,
+        };
+      });
+      
+      setContainers(prevContainers => {
+        // Update only the current page data
+        const newContainers = [...prevContainers];
+        const startIndex = (currentPage - 1) * itemsPerPage;
         
-        // Transform and enhance containers with slots and units
-        const enhancedContainers = apiContainers.map((container) => {
-          // Generate slots based on container type
-          const slots = generateSlotItems(container.type);
-          // Generate initial units for the slots
-          const units = generateInitialUnits(slots);
-          
-          // Assign any article data if available
-          if (units.length > 0) {
-            units[0].articleNumber = container.articleNumber || '';
-            units[0].oldArticleNumber = container.oldArticleNumber || '';
-            units[0].description = container.description || '';
-            units[0].stock = container.stock || 0;
-          }
-          
-          return {
-            ...container,
-            slots,
-            units,
-          };
+        enhancedContainers.forEach((container, index) => {
+          newContainers[startIndex + index] = container;
         });
         
-        setContainers(enhancedContainers);
-        setFilteredContainers(enhancedContainers);
-      } catch (error) {
-        console.error("Error loading containers:", error);
-        // Show error state
-        setError("Fehler beim Laden der Schütten. Bitte versuchen Sie es später erneut.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+        return newContainers;
+      });
+      
+      setFilteredContainers(enhancedContainers);
+      setRetryCount(0);
+      setIsRetrying(false);
+    } catch (error) {
+      console.error("Error loading containers:", error);
+      setError(`Fehler beim Laden der Schütten: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+      setIsRetrying(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, itemsPerPage]);
+
+  // Optimize page data loading
+  const loadPageData = useCallback(async () => {
+    if (containers.length === 0) return;
     
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Only fetch if not filtering locally
+      if (searchTerm === "" && typeFilter === "all" && purposeFilter === "all") {
+        const { containers: apiContainers } = await fetchContainers(currentPage, itemsPerPage);
+        
+        setContainers(prevContainers => {
+          const newContainers = [...prevContainers];
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          
+          apiContainers.forEach((container, index) => {
+            newContainers[startIndex + index] = container;
+          });
+          
+          return newContainers;
+        });
+        
+        setFilteredContainers(apiContainers);
+      }
+    } catch (error) {
+      console.error("Error loading page data:", error);
+      setError(`Fehler beim Laden der Seite: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, itemsPerPage, containers.length, searchTerm, typeFilter, purposeFilter]);
+
+  useEffect(() => {
     // Call the async function to load containers
     loadContainers();
-  }, []);
+  }, [loadContainers]);
+
+  // Add effect to reload containers when page changes
+  useEffect(() => {
+    loadPageData();
+  }, [loadPageData]);
 
   // Memoize filtered containers to improve performance
   const filteredContainersMemo = useMemo(() => {
@@ -336,23 +383,17 @@ export default function ContainerManagement() {
         <div className="flex justify-center items-center py-10">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
-            <p className="text-gray-500">Schütten werden geladen...</p>
+            <p className="text-gray-500">
+              {isRetrying ? "Verbindung wird erneut hergestellt..." : "Schütten werden geladen..."}
+            </p>
           </div>
         </div>
       ) : error ? (
-        <div className="border rounded-md p-6 bg-red-50 text-red-600 flex justify-center">
-          <div className="flex flex-col items-center">
-            <p className="mb-2 font-medium">{error}</p>
-            <Button 
-              variant="outline" 
-              onClick={() => window.location.reload()}
-              className="flex items-center gap-2 mt-2"
-            >
-              <RotateCw className="h-4 w-4" />
-              Erneut versuchen
-            </Button>
-          </div>
-        </div>
+        <ErrorMessage 
+          message={error}
+          onRetry={loadContainers}
+          retryDisabled={isRetrying}
+        />
       ) : (
         <ContainerManagementTable
           filteredContainers={paginatedContainers}
@@ -374,21 +415,34 @@ export default function ContainerManagement() {
               value={itemsPerPage === filteredContainers.length ? "all" : itemsPerPage.toString()}
               onValueChange={handleItemsPerPageChange}
               options={[
+                { value: "20", label: "20" },
+                { value: "50", label: "50" },
                 { value: "100", label: "100" },
-                { value: "500", label: "500" },
-                { value: "1000", label: "1000" },
                 { value: "all", label: "Alle" },
               ]}
             />
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2">
+            <div className="flex items-center justify-center space-x-2 overflow-x-auto max-w-full py-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                title="Erste Seite"
+              >
+                <span className="sr-only">Erste Seite</span>
+                <ChevronLeft className="h-3 w-3 mr-1" />
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
+                title="Vorherige Seite"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -417,6 +471,7 @@ export default function ContainerManagement() {
                     variant={currentPage === pageNum ? "default" : "outline"}
                     size="sm"
                     onClick={() => handlePageChange(pageNum)}
+                    className="min-w-8"
                   >
                     {pageNum}
                   </Button>
@@ -437,14 +492,27 @@ export default function ContainerManagement() {
                 size="sm"
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
+                title="Nächste Seite"
               >
                 <ChevronRight className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                title="Letzte Seite"
+              >
+                <span className="sr-only">Letzte Seite</span>
+                <ChevronRight className="h-3 w-3 mr-1" />
+                <ChevronRight className="h-3 w-3" />
               </Button>
             </div>
           )}
 
-          <div className="text-sm text-gray-500">
-            Zeige {(currentPage - 1) * itemsPerPage + 1} bis{" "}
+          <div className="text-sm text-gray-500 whitespace-nowrap">
+            Zeige {filteredContainers.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} bis{" "}
             {Math.min(currentPage * itemsPerPage, filteredContainers.length)} von {filteredContainers.length} Einträgen
           </div>
         </div>

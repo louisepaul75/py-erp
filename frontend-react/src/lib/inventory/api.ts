@@ -1,6 +1,13 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 import { API_URL } from '../config';
 import { authService } from '../auth/authService';
+
+// Extend AxiosRequestConfig to include retryCount
+declare module 'axios' {
+  export interface InternalAxiosRequestConfig {
+    retryCount?: number;
+  }
+}
 
 // Types based on the backend models
 export interface BoxType {
@@ -69,9 +76,24 @@ export interface PaginatedResponse<T> {
 // Create axios instance with auth interceptor
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
-  withCredentials: true // Include cookies
+  timeout: 30000, // Increased timeout to 30 seconds
+  withCredentials: true, // Include cookies
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  }
 });
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Timeout error message helper
+const getTimeoutMessage = (ms: number) => {
+  return `Die Anfrage hat das Zeitlimit von ${ms/1000} Sekunden überschritten. Bitte überprüfen Sie Ihre Netzwerkverbindung und versuchen Sie es später erneut.`;
+};
 
 // Add request interceptor to add auth token
 api.interceptors.request.use(
@@ -80,18 +102,38 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Initialize retry count
+    config.retryCount = config.retryCount || 0;
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor to handle token refresh
+// Add response interceptor to handle token refresh and retries
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Handle timeout errors with retry logic
+    if ((error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'))) 
+        && originalRequest?.retryCount < MAX_RETRIES) {
+      originalRequest.retryCount = (originalRequest.retryCount || 0) + 1;
+      console.log(`Retrying request (${originalRequest.retryCount}/${MAX_RETRIES})...`);
+      
+      // Wait before retrying
+      await sleep(RETRY_DELAY * originalRequest.retryCount);
+      return api(originalRequest);
+    }
+
+    // If we've exhausted retries or it's not a timeout error
+    if (error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'))) {
+      console.error('Request timeout after retries:', error);
+      return Promise.reject(new Error(getTimeoutMessage(originalRequest?.timeout || 30000)));
+    }
 
     // Check if error has response and status is 401 and we haven't tried to refresh token yet
     if (error.response?.status === 401 && !originalRequest?._retry) {
@@ -119,7 +161,16 @@ api.interceptors.response.use(
     // For network errors or other issues where response might not exist
     if (!error.response) {
       console.error('Network error or server not responding:', error.message);
-      return Promise.reject(new Error('Network error or server not responding. Please check your connection.'));
+      if (navigator.onLine) {
+        return Promise.reject(new Error('Server ist nicht erreichbar. Bitte versuchen Sie es später erneut.'));
+      } else {
+        return Promise.reject(new Error('Keine Internetverbindung. Bitte überprüfen Sie Ihre Netzwerkverbindung.'));
+      }
+    }
+
+    // For server errors
+    if (error.response?.status >= 500) {
+      return Promise.reject(new Error('Der Server hat einen internen Fehler gemeldet. Bitte versuchen Sie es später erneut.'));
     }
 
     return Promise.reject(error);
@@ -137,14 +188,15 @@ export const fetchBoxTypes = async (): Promise<BoxType[]> => {
   }
 };
 
-// Fetch boxes with pagination
-export const fetchBoxes = async (page = 1, pageSize = 20): Promise<PaginatedResponse<Box>> => {
+// Fetch boxes with pagination and configurable timeout
+export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Promise<PaginatedResponse<Box>> => {
   try {
     const response = await api.get('/inventory/boxes/', {
       params: {
         page,
         page_size: pageSize
-      }
+      },
+      timeout // Allow custom timeout for this specific request
     });
     return response.data;
   } catch (error) {

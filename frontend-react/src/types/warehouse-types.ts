@@ -65,6 +65,7 @@ export interface ContainerItem {
   lastPrintDate?: Date | null;
   slots: SlotItem[]; // Box slots
   units: UnitItem[]; // Logical units within the box
+  customSlotCount?: number; // Custom number of slots for the container
 }
 
 export interface SlotItem {
