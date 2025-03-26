@@ -34,7 +34,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
  * // Icon only button
  * <Button size="icon" icon={Plus} aria-label="Add item" />
  */
-export function Button({
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'primary',
   size = 'default',
   icon: Icon,
@@ -44,7 +44,7 @@ export function Button({
   className,
   children,
   ...props
-}: ButtonProps) {
+}, ref) => {
   // Get the appropriate styles
   const baseStyle = componentStyles.button.base;
   const variantStyle = componentStyles.button.variants[variant];
@@ -52,6 +52,7 @@ export function Button({
   
   return (
     <ShadcnButton
+      ref={ref}
       variant={variant === 'primary' ? 'default' : variant}
       size={size}
       className={cn(
@@ -82,4 +83,6 @@ export function Button({
       )}
     </ShadcnButton>
   );
-} 
+});
+
+Button.displayName = "Button"; 

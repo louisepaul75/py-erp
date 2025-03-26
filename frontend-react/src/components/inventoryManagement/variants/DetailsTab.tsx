@@ -14,6 +14,7 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import React from "react";
 
 interface VariantDetails {
   tags: string[];
@@ -218,14 +219,17 @@ export default function DetailsTab({
       <div className="mt-6 flex justify-end">
         <AlertDialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
           <AlertDialogTrigger asChild>
-            <Button
-              className="rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+            <Button 
+              variant="primary" 
+              size="sm" 
+              className="w-full"
+              type="button"
               onClick={() => {
                 console.log("Saving variant details:", variantDetails);
                 onSaveDetails();
               }}
             >
-              <Zap className="h-4 w-4 mr-2" />
+              <Zap className="h-3.5 w-3.5 mr-1" />
               Speichern
             </Button>
           </AlertDialogTrigger>
