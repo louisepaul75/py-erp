@@ -48,12 +48,6 @@ import {
   CardContent,
   CardFooter,
   Input,
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
   StatusBadge,
   Badge
 } from '@/components/ui';
@@ -84,6 +78,19 @@ import {
   ScatterChart,
   Cell
 } from 'recharts';
+
+import { SkinnyTable } from "@/components/ui/skinny-table";
+
+// Import table components
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from '@/components/ui/table';
 
 // Sample data for charts
 const lineData = [
@@ -354,12 +361,12 @@ export default function UIComponentsPage() {
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -420,12 +427,12 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -500,58 +507,79 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="flex items-center gap-1 dark:text-gray-100">
-                        <span>Name</span>
-                        <ArrowUpDown className="h-4 w-4 dark:text-amber-400" />
+                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                      <TableHead className="w-[40px] font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                          <Check className="h-3 w-3" />
+                        </div>
                       </TableHead>
-                      <TableHead className="flex items-center gap-1 dark:text-gray-100">
-                        <span>Email</span>
-                        <ArrowUpDown className="h-4 w-4 dark:text-amber-400" />
-                      </TableHead>
-                      <TableHead className="flex items-center gap-1 dark:text-gray-100">
-                        <span>Role</span>
-                        <ArrowUpDown className="h-4 w-4 dark:text-amber-400" />
-                      </TableHead>
-                      <TableHead className="flex items-center gap-1 dark:text-gray-100">
-                        <span>Status</span>
-                        <ArrowUpDown className="h-4 w-4 dark:text-amber-400" />
-                      </TableHead>
-                      <TableHead className="text-right dark:text-gray-100">Actions</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Created</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Last Login</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      </TableCell>
                       <TableCell>John Doe</TableCell>
                       <TableCell>john@example.com</TableCell>
                       <TableCell>Admin</TableCell>
                       <TableCell>
                         <StatusBadge status="active">Active</StatusBadge>
                       </TableCell>
+                      <TableCell>2023-05-12</TableCell>
+                      <TableCell>2023-06-01</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
                       </TableCell>
                     </TableRow>
                     <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        </div>
+                      </TableCell>
                       <TableCell>Jane Smith</TableCell>
                       <TableCell>jane@example.com</TableCell>
                       <TableCell>User</TableCell>
                       <TableCell>
                         <StatusBadge status="pending">Pending</StatusBadge>
                       </TableCell>
+                      <TableCell>2023-05-15</TableCell>
+                      <TableCell>2023-05-30</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
                       </TableCell>
                     </TableRow>
                     <TableRow>
+                      <TableCell>
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      </TableCell>
                       <TableCell>Robert Johnson</TableCell>
                       <TableCell>robert@example.com</TableCell>
                       <TableCell>User</TableCell>
                       <TableCell>
                         <StatusBadge status="inactive">Inactive</StatusBadge>
                       </TableCell>
+                      <TableCell>2023-05-20</TableCell>
+                      <TableCell>2023-05-25</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
+                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -576,12 +604,12 @@ export default function UIComponentsPage() {
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow className="h-8">
-                      <TableHead className="text-xs">Name</TableHead>
-                      <TableHead className="text-xs">Email</TableHead>
-                      <TableHead className="text-xs">Role</TableHead>
-                      <TableHead className="text-xs">Status</TableHead>
-                      <TableHead className="text-right text-xs">Actions</TableHead>
+                    <TableRow className="h-8 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -625,6 +653,42 @@ export default function UIComponentsPage() {
 
             <Card>
               <CardHeader>
+                <CardTitle>Skinny Sidebar Table</CardTitle>
+                <CardDescription>Compact table optimized for sidebar display with sorting and selection</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="w-full md:w-80 lg:w-96 border border-slate-200 dark:border-slate-800">
+                  <SkinnyTable
+                    data={[
+                      { id: 1, sku: "PRD001", name: "Product One", status: "active" },
+                      { id: 2, sku: "PRD002", name: "Product Two", status: "inactive" },
+                      { id: 3, sku: "PRD003", name: "Product Three", status: "active" },
+                    ]}
+                    columns={[
+                      { field: "sku", header: "SKU" },
+                      { field: "name", header: "Name" },
+                      {
+                        field: "status",
+                        header: "Status",
+                        render: (item) => (
+                          <StatusBadge
+                            status={item.status as "active" | "inactive"}
+                            className="text-xs"
+                          >
+                            {item.status === "active" ? "Active" : "Inactive"}
+                          </StatusBadge>
+                        ),
+                      },
+                    ]}
+                    selectedItem={2}
+                    onItemSelect={(item) => console.log("Selected item:", item)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Selectable Table</CardTitle>
                 <CardDescription>Table with row selection capabilities</CardDescription>
               </CardHeader>
@@ -650,24 +714,26 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px]">
+                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                      <TableHead className="w-[40px] font-medium cursor-pointer text-slate-700 dark:text-slate-300">
                         <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
-                          <Check className="h-3 w-3 text-amber-500" />
+                          <Check className="h-3 w-3" />
                         </div>
                       </TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Created</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Last Login</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
                       <TableCell>
                         <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
-                          <Check className="h-3 w-3 text-amber-500" />
+                          <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
                       <TableCell>John Doe</TableCell>
@@ -676,6 +742,8 @@ export default function UIComponentsPage() {
                       <TableCell>
                         <StatusBadge status="active">Active</StatusBadge>
                       </TableCell>
+                      <TableCell>2023-05-12</TableCell>
+                      <TableCell>2023-06-01</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
@@ -694,6 +762,8 @@ export default function UIComponentsPage() {
                       <TableCell>
                         <StatusBadge status="pending">Pending</StatusBadge>
                       </TableCell>
+                      <TableCell>2023-05-15</TableCell>
+                      <TableCell>2023-05-30</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
@@ -704,7 +774,7 @@ export default function UIComponentsPage() {
                     <TableRow>
                       <TableCell>
                         <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
-                          <Check className="h-3 w-3 text-amber-500" />
+                          <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
                       <TableCell>Robert Johnson</TableCell>
@@ -713,6 +783,8 @@ export default function UIComponentsPage() {
                       <TableCell>
                         <StatusBadge status="inactive">Inactive</StatusBadge>
                       </TableCell>
+                      <TableCell>2023-05-20</TableCell>
+                      <TableCell>2023-05-25</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
@@ -780,28 +852,44 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px]">
+                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                      <TableHead className="w-[40px] font-medium cursor-pointer text-slate-700 dark:text-slate-300">
                         <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                          <Check className="h-3 w-3" />
                         </div>
                       </TableHead>
-                      <TableHead className="flex items-center gap-1">
-                        <span>Name</span>
-                        <ChevronUp className="h-4 w-4 text-amber-500" />
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-1">
+                          <span>Name</span>
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
                       </TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-1">
+                          <span>Email</span>
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-1">
+                          <span>Role</span>
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-1">
+                          <span>Status</span>
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
                       <TableCell>
                         <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
-                          <Check className="h-3 w-3 text-amber-500" />
+                          <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">John Doe</TableCell>
@@ -842,7 +930,7 @@ export default function UIComponentsPage() {
                     <TableRow>
                       <TableCell>
                         <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
-                          <Check className="h-3 w-3 text-amber-500" />
+                          <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">Robert Johnson</TableCell>
@@ -883,7 +971,7 @@ export default function UIComponentsPage() {
                     <TableRow>
                       <TableCell>
                         <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
-                          <Check className="h-3 w-3 text-amber-500" />
+                          <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">Michael Wilson</TableCell>
