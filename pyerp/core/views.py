@@ -9,7 +9,7 @@ from django.db import connection
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
 from rest_framework import status
@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.middleware.csrf import get_token
 
 # Set up logging using the centralized logging system
 from pyerp.utils.logging import get_logger
@@ -516,3 +517,16 @@ class ReactAppView(TemplateView):
         context = super().get_context_data(**kwargs)
         context["debug"] = settings.DEBUG
         return context
+
+
+@require_GET
+@ensure_csrf_cookie
+def csrf_token(request):
+    """
+    Returns a new CSRF token. The @ensure_csrf_cookie decorator ensures that
+    a CSRF cookie is set in the response. This cookie can then be used for
+    subsequent requests that require CSRF protection.
+    """
+    return JsonResponse({
+        'csrf_token': get_token(request)
+    })

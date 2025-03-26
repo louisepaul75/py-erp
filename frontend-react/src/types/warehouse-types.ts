@@ -47,18 +47,42 @@ export type ContainerArticle = {
   stock: number
 }
 
-export type ContainerItem = {
-  id: string
-  containerCode: string
-  type: string
-  articleNumber: string
-  oldArticleNumber: string
-  description: string
-  stock: number
-  slots: ContainerSlot[]
-  units: ContainerUnit[]
-  location?: ContainerLocation
-  articles?: ContainerArticle[]
+export interface ContainerItem {
+  id: string;
+  containerCode: string; // Box code
+  displayCode?: string; // For display purposes
+  type: string; // Box type code (e.g., "AR", "KC")
+  description: string;
+  status: string;
+  purpose: string;
+  location?: string; // Storage location name
+  shelf?: number;
+  compartment?: number;
+  floor?: number;
+  stock: number;
+  articleNumber?: string; // Primary article number (if any)
+  oldArticleNumber?: string; // Legacy article number (if any)
+  lastPrintDate?: Date | null;
+  slots: SlotItem[]; // Box slots
+  units: UnitItem[]; // Logical units within the box
+}
+
+export interface SlotItem {
+  id: string;
+  code: {
+    code: string; // Slot code
+    color: string; // CSS class for slot color
+  };
+}
+
+export interface UnitItem {
+  id: string;
+  unitNumber: number;
+  slots: string[]; // IDs of slots that belong to this unit
+  articleNumber?: string;
+  oldArticleNumber?: string;
+  description?: string;
+  stock?: number;
 }
 
 export type ContainerTypeDefinition = {

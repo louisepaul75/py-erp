@@ -3,13 +3,12 @@
 import type React from "react"
 
 import { useState, useEffect, useMemo } from "react"
-import { Printer, Plus, History, ChevronLeft, ChevronRight, Warehouse, Package2, Settings } from "lucide-react"
+import { Printer, Plus, History, ChevronLeft, ChevronRight, Warehouse, Package2, Settings, RotateCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { generateMockContainers } from "@/lib/warehouse-service"
-import { generateContainerSlots, generateInitialUnits } from "@/lib/container-utils"
+import { fetchContainers, generateSlotItems, generateInitialUnits } from "@/lib/inventory/service"
 import ActivityLogDialog from "./activity-log-dialog"
 import ContainerDetailDialog from "./container-detail-dialog"
 import CreateContainerDialog from "./create-container-dialog"
@@ -66,31 +65,56 @@ export default function ContainerManagement() {
   const [lastPrintDate, setLastPrintDate] = useState<Date | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(500)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load mock data for containers and enhance with slots and units
-    const mockData = generateMockContainers(100).map((container) => {
-      const slots = generateContainerSlots(container.type)
-      const units = generateInitialUnits(slots)
-
-      // Assign article data to the first unit
-      if (units.length > 0) {
-        units[0].articleNumber = container.articleNumber
-        units[0].oldArticleNumber = container.oldArticleNumber
-        units[0].description = container.description
-        units[0].stock = container.stock
+    // Replace mock data load with real API call
+    const loadContainers = async () => {
+      try {
+        // Show loading state
+        setIsLoading(true)
+        setError(null)
+        
+        // Fetch containers from API
+        const { containers: apiContainers, totalCount } = await fetchContainers(1, 500);
+        
+        // Transform and enhance containers with slots and units
+        const enhancedContainers = apiContainers.map((container) => {
+          // Generate slots based on container type
+          const slots = generateSlotItems(container.type);
+          // Generate initial units for the slots
+          const units = generateInitialUnits(slots);
+          
+          // Assign any article data if available
+          if (units.length > 0) {
+            units[0].articleNumber = container.articleNumber || '';
+            units[0].oldArticleNumber = container.oldArticleNumber || '';
+            units[0].description = container.description || '';
+            units[0].stock = container.stock || 0;
+          }
+          
+          return {
+            ...container,
+            slots,
+            units,
+          };
+        });
+        
+        setContainers(enhancedContainers);
+        setFilteredContainers(enhancedContainers);
+      } catch (error) {
+        console.error("Error loading containers:", error);
+        // Show error state
+        setError("Fehler beim Laden der Schütten. Bitte versuchen Sie es später erneut.");
+      } finally {
+        setIsLoading(false);
       }
-
-      return {
-        ...container,
-        slots,
-        units,
-      }
-    })
-
-    setContainers(mockData)
-    setFilteredContainers(mockData)
-  }, [])
+    };
+    
+    // Call the async function to load containers
+    loadContainers();
+  }, []);
 
   // Memoize filtered containers to improve performance
   const filteredContainersMemo = useMemo(() => {
@@ -164,10 +188,10 @@ export default function ContainerManagement() {
     }
   }
 
-  // Update the handleCreateContainer function to ensure proper unit numbering
+  // Function to handle creating a new container
   const handleCreateContainer = (newContainer: ContainerItem) => {
     // Generate slots and units for the new container
-    const slots = generateContainerSlots(newContainer.type, [], newContainer.customSlotCount)
+    const slots = generateSlotItems(newContainer.type, newContainer.customSlotCount)
     const units = generateInitialUnits(slots)
 
     // Create the enhanced container with proper unit numbering
@@ -307,17 +331,40 @@ export default function ContainerManagement() {
         setPurposeFilter={setPurposeFilter}
       />
 
-      {/* Container Table */}
-      <ContainerManagementTable
-        filteredContainers={paginatedContainers}
-        selectedContainers={selectedContainers}
-        handleSelectContainer={handleSelectContainer}
-        handleSelectAll={handleSelectAll}
-        handleEditClick={handleEditClick}
-        handleDeleteClick={handleDeleteClick}
-        lastPrintDate={lastPrintDate}
-        onLocationClick={handleLocationClick}
-      />
+      {/* Loading, Error, and Container Table */}
+      {isLoading ? (
+        <div className="flex justify-center items-center py-10">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-500">Schütten werden geladen...</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="border rounded-md p-6 bg-red-50 text-red-600 flex justify-center">
+          <div className="flex flex-col items-center">
+            <p className="mb-2 font-medium">{error}</p>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-2 mt-2"
+            >
+              <RotateCw className="h-4 w-4" />
+              Erneut versuchen
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <ContainerManagementTable
+          filteredContainers={paginatedContainers}
+          selectedContainers={selectedContainers}
+          handleSelectContainer={handleSelectContainer}
+          handleSelectAll={handleSelectAll}
+          handleEditClick={handleEditClick}
+          handleDeleteClick={handleDeleteClick}
+          lastPrintDate={lastPrintDate}
+          onLocationClick={handleLocationClick}
+        />
+      )}
 
       {filteredContainers.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">

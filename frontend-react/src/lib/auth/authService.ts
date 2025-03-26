@@ -79,18 +79,11 @@ export const csrfService = {
   // Fetch fresh CSRF token from the server
   fetchToken: async (): Promise<string | null> => {
     try {
-      const token = authService.getToken();
-      if (!token) {
-        console.error("No JWT token available for CSRF token fetch");
-        return null;
-      }
-      
       // Try to fetch from dedicated CSRF endpoint
       const csrfResponse = await fetch(`${API_URL}/csrf/`, {
         method: "GET",
         headers: {
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Accept": "application/json"
         },
         credentials: "include" // Include cookies
       });

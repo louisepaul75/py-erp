@@ -23,10 +23,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
     // Try to fetch and store a fresh CSRF token
     const initializeCsrf = async () => {
       try {
-        await csrfService.fetchToken();
-        console.log("CSRF token initialized on app load");
+        // First check if we already have a token
+        const existingToken = csrfService.getToken();
+        if (existingToken) {
+          console.log("Using existing CSRF token");
+          return;
+        }
+
+        // If no token exists, try to fetch a new one
+        const token = await csrfService.fetchToken();
+        if (token) {
+          console.log("CSRF token initialized on app load");
+        } else {
+          console.warn("Could not fetch CSRF token - will retry on next API call");
+        }
       } catch (error) {
-        console.warn("Could not initialize CSRF token:", error);
+        console.warn("Error initializing CSRF token:", error);
       }
     };
     

@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -30,14 +30,15 @@ export default function ContainerManagementTable({
   onLocationClick,
 }: ContainerManagementTableProps) {
   // State to track which containers are expanded
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
+  const [expandedContainers, setExpandedContainers] = useState<string[]>([])
 
   // Toggle expanded state for a container
-  const toggleRowExpanded = (containerId: string) => {
-    setExpandedRows((prev) => ({
-      ...prev,
-      [containerId]: !prev[containerId],
-    }))
+  const handleToggleExpand = (containerId: string) => {
+    setExpandedContainers(prev => 
+      prev.includes(containerId) 
+        ? prev.filter(id => id !== containerId) 
+        : [...prev, containerId]
+    )
   }
 
   // Function to navigate to warehouse location
@@ -81,31 +82,43 @@ export default function ContainerManagementTable({
               <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Aktionen</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-gray-200">
             {filteredContainers.length > 0 ? (
               filteredContainers.map((container) => {
-                // Get the purpose based on container type
-                const purpose =
-                  container.type === "OD" || container.type === "KC"
-                    ? "Transport"
-                    : container.type === "PT" || container.type === "JK"
-                      ? "Picken"
-                      : "Lager"
-
-                // Generate a random location string
-                const locationString = `${Math.floor(Math.random() * 20) + 1}-${Math.floor(Math.random() * 10) + 1}-${Math.floor(Math.random() * 5) + 1}`
-
-                // Check if this row is expanded
-                const isExpanded = expandedRows[container.id] || false
+                // Format today's date for display
+                const today = new Date();
+                const formattedDate = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
+                const formattedTime = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
+                
+                // Get the number of slots and units
+                const slotCount = container.slots?.length || 0;
+                const unitCount = container.units?.length || 0;
+                
+                // Set the purpose class for color coding
+                let purposeClass = "";
+                switch (container.purpose) {
+                  case "Lager":
+                    purposeClass = "bg-blue-100 text-blue-800";
+                    break;
+                  case "Picken":
+                    purposeClass = "bg-green-100 text-green-800";
+                    break;
+                  case "Transport":
+                    purposeClass = "bg-yellow-100 text-yellow-800";
+                    break;
+                  case "Werkstatt":
+                    purposeClass = "bg-purple-100 text-purple-800";
+                    break;
+                  default:
+                    purposeClass = "bg-gray-100 text-gray-800";
+                }
 
                 return (
-                  <>
+                  <React.Fragment key={container.id}>
                     <tr
-                      key={container.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => toggleRowExpanded(container.id)}
+                      className={`hover:bg-gray-50 ${expandedContainers.includes(container.id) ? "bg-gray-50" : ""}`}
                     >
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="w-10 px-4 py-3">
                         <Checkbox
                           checked={selectedContainers.includes(container.id)}
                           onCheckedChange={(checked) => handleSelectContainer(container.id, !!checked)}
@@ -114,42 +127,60 @@ export default function ContainerManagementTable({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center">
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4 mr-2 flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 mr-2 flex-shrink-0" />
-                          )}
-                          {container.containerCode}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mr-2 p-0 h-6 w-6"
+                            onClick={() => handleToggleExpand(container.id)}
+                          >
+                            {expandedContainers.includes(container.id) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <div>
+                            <div className="font-medium">{container.containerCode}</div>
+                            <div className="text-xs text-gray-500">{container.displayCode || ''}</div>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">{container.type}</td>
-                      <td className="px-4 py-3">{purpose}</td>
-                      <td className="px-4 py-3">{container.slots?.length || 0}</td>
                       <td className="px-4 py-3">
-                        {container.units?.filter((u) => u.articleNumber || u.description || u.stock).length || 0}/
-                        {container.units?.length || 0}
+                        <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
+                          {container.type || 'AR'}
+                        </div>
                       </td>
-                      <td className="px-4 py-3">{new Date().toLocaleDateString("de-DE")}</td>
                       <td className="px-4 py-3">
-                        {new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${purposeClass}`}>
+                          {container.purpose || 'Lager'}
+                        </div>
                       </td>
-                      <td className="px-4 py-3">{lastPrintDate ? lastPrintDate.toLocaleDateString("de-DE") : "-"}</td>
+                      <td className="px-4 py-3">{slotCount}</td>
+                      <td className="px-4 py-3">{unitCount}/{slotCount}</td>
+                      <td className="px-4 py-3">{formattedDate}</td>
+                      <td className="px-4 py-3">{formattedTime}</td>
                       <td className="px-4 py-3">
-                        {lastPrintDate
-                          ? lastPrintDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })
+                        {lastPrintDate && container.id === selectedContainers[0]
+                          ? lastPrintDate.toLocaleDateString("de-DE")
                           : "-"}
                       </td>
-                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-4 py-3">
+                        {lastPrintDate && container.id === selectedContainers[0]
+                          ? lastPrintDate.toLocaleTimeString("de-DE", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={(e) => handleEditClick(container, e)}
-                            title="Details"
-                            className="flex items-center gap-1"
+                            title="Bearbeiten"
                           >
                             <Edit className="h-4 w-4 text-blue-500" />
-                            <span className="text-xs text-blue-500">Details</span>
                           </Button>
                           <Button
                             variant="ghost"
@@ -162,109 +193,116 @@ export default function ContainerManagementTable({
                         </div>
                       </td>
                     </tr>
-
-                    {/* Expanded row with container details */}
-                    {isExpanded && (
-                      <tr key={`expanded-${container.id}`}>
-                        <td colSpan={11} className="p-0 border-t border-gray-100">
-                          <div className="p-4 bg-gray-50">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                              {/* Container Visualization - smaller (1/4 width) */}
-                              <div className="space-y-2">
-                                <h3 className="text-sm font-medium">Schütten-Visualisierung</h3>
-                                <div className="border-2 border-gray-300 rounded-lg p-2 bg-white">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    {container.slots?.map((slot) => {
-                                      const unit = container.units?.find(
-                                        (u) => Array.isArray(u.slots) && u.slots.includes(slot.id),
-                                      )
-
-                                      return (
-                                        <div
-                                          key={slot.id}
-                                          className={`flex flex-col items-center justify-center ${slot.code.color} text-white font-bold rounded-md h-14 p-1`}
+                    {expandedContainers.includes(container.id) && (
+                      <tr>
+                        <td colSpan={11} className="p-0">
+                          <div className="pl-10 pr-4 pb-4">
+                            <div className="bg-gray-50 rounded-md p-3">
+                              <h4 className="font-medium mb-2">Details</h4>
+                              <div className="grid grid-cols-3 gap-4 mb-4">
+                                <div>
+                                  <p className="text-sm font-medium">Lagerdaten</p>
+                                  <div className="text-sm mt-1">
+                                    <p>
+                                      <span className="font-medium">Lagerort:</span>{" "}
+                                      {container.location ? (
+                                        <button
+                                          onClick={() =>
+                                            onLocationClick(
+                                              container.shelf,
+                                              container.compartment,
+                                              container.floor
+                                            )
+                                          }
+                                          className="text-blue-600 hover:underline"
                                         >
-                                          <div className="text-base">{slot.code.code}</div>
-                                          <div className="text-xs">Einheit {unit?.unitNumber || "-"}</div>
-                                        </div>
-                                      )
-                                    })}
+                                          {container.location}
+                                        </button>
+                                      ) : (
+                                        "Kein Lagerort zugewiesen"
+                                      )}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Status:</span> {container.status || 'Verfügbar'}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">Zweck:</span> {container.purpose || 'Lager'}
+                                    </p>
                                   </div>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">Beschreibung</p>
+                                  <p className="text-sm mt-1">
+                                    {container.description || "Keine Beschreibung verfügbar"}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">Inhalt</p>
+                                  <p className="text-sm mt-1">
+                                    {container.units && container.units.some(
+                                      (unit) => unit.articleNumber || unit.description
+                                    )
+                                      ? `${container.units.filter(
+                                          (unit) => unit.articleNumber || unit.description
+                                        ).length} Artikel`
+                                      : "Keine Artikel"}
+                                  </p>
                                 </div>
                               </div>
 
-                              {/* Units and Articles Table - larger (3/4 width) */}
-                              <div className="space-y-2 md:col-span-3">
-                                <h3 className="text-sm font-medium">Einheiten und Artikel</h3>
-                                <div className="border rounded-md overflow-hidden bg-white">
-                                  <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-100">
-                                      <tr>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Einh.</th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Code</th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                          Artikel-Nr.
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                          alte Art.-Nr.
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                          Bezeichnung
-                                        </th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                          Bestand
-                                        </th>
+                              <h4 className="font-medium mb-2">Einheiten</h4>
+                              <div className="bg-white rounded border">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                  <thead className="bg-gray-100">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                        Einheit Nr.
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                        Artikelnummer
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                        Alte Artikelnummer
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
+                                        Beschreibung
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Bestand</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {container.units?.map((unit) => (
+                                      <tr key={unit.id} className="border-t border-gray-200">
+                                        <td className="px-3 py-2 text-sm">{unit.unitNumber}</td>
+                                        <td className="px-3 py-2 text-sm">
+                                          {unit.articleNumber || "Nicht zugewiesen"}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm">
+                                          {unit.oldArticleNumber || "Nicht zugewiesen"}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm">
+                                          {unit.description || "Keine Beschreibung"}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm">{unit.stock || 0}</td>
                                       </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                      {container.units?.map((unit) => {
-                                        // Get all slots for this unit
-                                        const unitSlots = container.slots?.filter(
-                                          (slot) => Array.isArray(unit.slots) && unit.slots.includes(slot.id),
-                                        )
-
-                                        return (
-                                          <tr key={unit.id} className="hover:bg-gray-50">
-                                            <td className="px-3 py-2 text-sm">{unit.unitNumber}</td>
-                                            <td className="px-3 py-2">
-                                              <div className="flex flex-wrap gap-1">
-                                                {unitSlots?.map((slot) => (
-                                                  <span
-                                                    key={slot.id}
-                                                    className={`inline-flex items-center justify-center w-10 h-6 ${slot.code.color} text-white font-medium rounded`}
-                                                  >
-                                                    {slot.code.code}
-                                                  </span>
-                                                ))}
-                                              </div>
-                                            </td>
-                                            <td className="px-3 py-2 text-sm font-medium">
-                                              {unit.articleNumber || "-"}
-                                            </td>
-                                            <td className="px-3 py-2 text-sm">{unit.oldArticleNumber || "-"}</td>
-                                            <td className="px-3 py-2 text-sm">{unit.description || "-"}</td>
-                                            <td className="px-3 py-2 text-sm">{unit.stock || 0}</td>
-                                          </tr>
-                                        )
-                                      })}
-                                      {(!container.units || container.units.length === 0) && (
-                                        <tr>
-                                          <td colSpan={6} className="px-3 py-2 text-center text-sm text-gray-500">
-                                            Keine Einheiten vorhanden
-                                          </td>
-                                        </tr>
-                                      )}
-                                    </tbody>
-                                  </table>
-                                </div>
+                                    ))}
+                                    {(!container.units || container.units.length === 0) && (
+                                      <tr>
+                                        <td colSpan={6} className="px-3 py-2 text-center text-sm text-gray-500">
+                                          Keine Einheiten vorhanden
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           </div>
                         </td>
                       </tr>
                     )}
-                  </>
-                )
+                  </React.Fragment>
+                );
               })
             ) : (
               <tr>
@@ -277,6 +315,6 @@ export default function ContainerManagementTable({
         </table>
       </div>
     </div>
-  )
+  );
 }
 

@@ -124,4 +124,72 @@ export const renumberUnits = (container: ContainerItem): ContainerItem => {
     ...container,
     units: updatedUnits
   }
+}
+
+/**
+ * Creates a new unit from selected slots
+ */
+export const createUnitFromSlots = (
+  container: ContainerItem,
+  slotIds: string[]
+): ContainerItem => {
+  const newUnit: ContainerUnit = {
+    id: crypto.randomUUID(),
+    unitNumber: container.units.length + 1,
+    slots: slotIds,
+    articleNumber: "",
+    oldArticleNumber: "",
+    description: "",
+    stock: 0
+  }
+
+  // Update slot unitIds
+  const updatedSlots = container.slots.map(slot => {
+    if (slotIds.includes(slot.id)) {
+      return { ...slot, unitId: newUnit.id }
+    }
+    return slot
+  })
+
+  return {
+    ...container,
+    slots: updatedSlots,
+    units: [...container.units, newUnit]
+  }
+}
+
+/**
+ * Finds a unit by its article number
+ */
+export const findArticleByNumber = (
+  container: ContainerItem,
+  articleNumber: string
+): ContainerUnit | undefined => {
+  return container.units.find(unit => unit.articleNumber === articleNumber)
+}
+
+/**
+ * Assigns an article to a unit
+ */
+export const assignArticleToUnit = (
+  container: ContainerItem,
+  unitId: string,
+  articleNumber: string,
+  description: string
+): ContainerItem => {
+  const updatedUnits = container.units.map(unit => {
+    if (unit.id === unitId) {
+      return {
+        ...unit,
+        articleNumber,
+        description
+      }
+    }
+    return unit
+  })
+
+  return {
+    ...container,
+    units: updatedUnits
+  }
 } 
