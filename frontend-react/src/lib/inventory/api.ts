@@ -1,7 +1,6 @@
 import axios from 'axios';
-
-// Define base URL - adjust this based on your actual API configuration
-const API_BASE_URL = '/api/inventory';
+import { API_URL } from '../config';
+import { authService } from '../auth/authService';
 
 // Types based on the backend models
 export interface BoxType {
@@ -25,16 +24,19 @@ export interface StorageLocation {
 export interface Box {
   id: number;
   code: string;
-  barcode?: string;
+  barcode: string;
   box_type: {
     id: number;
     name: string;
   };
-  storage_location?: StorageLocation;
+  storage_location?: {
+    id: number;
+    name: string;
+  };
   status: string;
   purpose: string;
-  notes?: string;
-  available_slots?: number;
+  notes: string;
+  available_slots: number;
 }
 
 export interface BoxWithSlots extends Box {
@@ -64,106 +66,116 @@ export interface PaginatedResponse<T> {
   total_pages: number;
 }
 
-// Mock data generation for boxes
-const generateMockBoxes = (count: number = 10): Box[] => {
-  const boxTypes = [
-    { id: 1, name: 'Karton', slot_count: 6 },
-    { id: 2, name: 'Behälter', slot_count: 8 },
-    { id: 3, name: 'Palette', slot_count: 4 },
-    { id: 4, name: 'Gitterbox', slot_count: 12 },
-  ];
+// Create axios instance with auth interceptor
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 30000,
+  withCredentials: true // Include cookies
+});
 
-  const locations = [
-    { id: 1, name: 'Hauptlager A', location_code: 'HL-A' },
-    { id: 2, name: 'Hauptlager B', location_code: 'HL-B' },
-    { id: 3, name: 'Außenlager', location_code: 'AL' },
-    { id: 4, name: 'Werkstatt', location_code: 'WS' },
-  ];
-
-  const statuses = ['AVAILABLE', 'IN_USE', 'RESERVED', 'DAMAGED', 'RETIRED'];
-  const purposes = ['STORAGE', 'PICKING', 'TRANSPORT', 'WORKSHOP'];
-
-  return Array.from({ length: count }, (_, i) => ({
-    id: i + 1,
-    code: `BOX${String(i + 1).padStart(5, '0')}`,
-    barcode: `BAR${String(i + 1).padStart(8, '0')}`,
-    box_type: boxTypes[i % boxTypes.length],
-    storage_location: i % 5 === 0 ? undefined : locations[i % locations.length],
-    status: statuses[i % statuses.length],
-    purpose: purposes[i % purposes.length],
-    notes: i % 3 === 0 ? `Notes for box ${i + 1}` : '',
-    available_slots: Math.floor(Math.random() * 6) + 1,
-  }));
-};
-
-// Fetch all box types (mock)
-export const fetchBoxTypes = async (): Promise<BoxType[]> => {
-  // Return mock data
-  return [
-    { id: 1, name: 'Karton', description: 'Standard cardboard box', slot_count: 6, slot_naming_scheme: 'alpha-numeric' },
-    { id: 2, name: 'Behälter', description: 'Plastic container', slot_count: 8, slot_naming_scheme: 'alpha-numeric' },
-    { id: 3, name: 'Palette', description: 'Wooden pallet', slot_count: 4, slot_naming_scheme: 'numeric' },
-    { id: 4, name: 'Gitterbox', description: 'Metal grid box', slot_count: 12, slot_naming_scheme: 'alpha-numeric' }
-  ];
-};
-
-// Fetch boxes with pagination (mock)
-export const fetchBoxes = async (page = 1, pageSize = 10): Promise<PaginatedResponse<Box>> => {
-  // Generate mock data
-  const allBoxes = generateMockBoxes(100);
-  
-  // Apply pagination
-  const start = (page - 1) * pageSize;
-  const end = start + pageSize;
-  const results = allBoxes.slice(start, end);
-  
-  return {
-    results,
-    total: allBoxes.length,
-    page,
-    page_size: pageSize,
-    total_pages: Math.ceil(allBoxes.length / pageSize)
-  };
-};
-
-// Fetch all storage locations (mock)
-export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
-  // Return mock data
-  return [
-    { id: 1, name: 'Hauptlager A', location_code: 'HL-A' },
-    { id: 2, name: 'Hauptlager B', location_code: 'HL-B' },
-    { id: 3, name: 'Außenlager', location_code: 'AL' },
-    { id: 4, name: 'Werkstatt', location_code: 'WS' }
-  ];
-};
-
-// Fetch products by location (mock)
-export const fetchProductsByLocation = async (locationId: number): Promise<any[]> => {
-  // Mock data with products for a given location
-  return [
-    {
-      box_id: 1,
-      box_code: 'BOX00001',
-      slots: [
-        {
-          slot_id: 101,
-          slot_code: 'A1',
-          products: [
-            {
-              product_id: 1001,
-              product_name: 'Schrauben M5',
-              quantity: 50,
-              batch_number: 'BT-2024-01',
-              expiry_date: '2025-12-31'
-            }
-          ]
-        }
-      ]
+// Add request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = authService.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-  ];
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Check if error has response and status is 401 and we haven't tried to refresh token yet
+    if (error.response?.status === 401 && !originalRequest?._retry) {
+      // Mark the request as retried to prevent infinite loops
+      if (originalRequest) {
+        originalRequest._retry = true;
+      }
+
+      try {
+        // Try to refresh the token
+        const newToken = await authService.refreshToken();
+        if (newToken && originalRequest) {
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // If refresh fails, redirect to login
+        authService.logout();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // For network errors or other issues where response might not exist
+    if (!error.response) {
+      console.error('Network error or server not responding:', error.message);
+      return Promise.reject(new Error('Network error or server not responding. Please check your connection.'));
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Fetch all box types
+export const fetchBoxTypes = async (): Promise<BoxType[]> => {
+  try {
+    const response = await api.get('/inventory/box-types/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching box types:', error);
+    throw error;
+  }
 };
 
-// Add a product to a box (mock)
+// Fetch boxes with pagination
+export const fetchBoxes = async (page = 1, pageSize = 20): Promise<PaginatedResponse<Box>> => {
+  try {
+    const response = await api.get('/inventory/boxes/', {
+      params: {
+        page,
+        page_size: pageSize
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching boxes:', error);
+    throw error;
+  }
+};
+
+// Fetch all storage locations
+export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
+  try {
+    const response = await api.get('/inventory/storage-locations/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching storage locations:', error);
+    throw error;
+  }
+};
+
+// Fetch products by location
+export const fetchProductsByLocation = async (locationId: number): Promise<any[]> => {
+  try {
+    const response = await api.get(`/inventory/products-by-location/${locationId}/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching products by location:', error);
+    throw error;
+  }
+};
+
+// Add a product to a box
 export const addProductToBox = async (
   productId: number,
   boxSlotId: number,
@@ -171,66 +183,69 @@ export const addProductToBox = async (
   batchNumber?: string,
   expiryDate?: string
 ): Promise<any> => {
-  // Return mock success response
-  return {
-    status: 'success',
-    message: `Added ${quantity} of product ${productId} to box slot ${boxSlotId}`,
-    data: {
-      box_storage_id: Math.floor(Math.random() * 1000) + 1,
-      product: {
-        id: productId,
-        name: 'Product ' + productId,
-      },
-      box_slot: {
-        id: boxSlotId,
-        code: 'A1',
-        box_code: 'BOX00001',
-      },
-      quantity: quantity,
-    }
-  };
+  try {
+    const response = await api.post('/inventory/add-product-to-box/', {
+      product_id: productId,
+      box_slot_id: boxSlotId,
+      quantity,
+      batch_number: batchNumber,
+      expiry_date: expiryDate
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding product to box:', error);
+    throw error;
+  }
 };
 
-// Move a box to a different location (mock)
+// Move a box to a different location
 export const moveBox = async (boxId: number, targetLocationId: number): Promise<any> => {
-  // Return mock success response
-  return {
-    status: 'success',
-    message: 'Box moved successfully',
-    data: {
+  try {
+    const response = await api.post('/inventory/move-box/', {
       box_id: boxId,
-      current_location: {
-        id: targetLocationId,
-        name: 'Location ' + targetLocationId,
-      },
-      moved_at: new Date().toISOString(),
-      moved_by: 'Current User',
-    },
-  };
+      target_location_id: targetLocationId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error moving box:', error);
+    throw error;
+  }
 };
 
-// Remove a product from a box (mock)
+// Move products between box slots
+export const moveProductBetweenBoxes = async (
+  sourceBoxStorageId: number,
+  targetBoxSlotId: number,
+  quantity: number
+): Promise<any> => {
+  try {
+    const response = await api.post('/inventory/move-product-between-boxes/', {
+      source_box_storage_id: sourceBoxStorageId,
+      target_box_slot_id: targetBoxSlotId,
+      quantity
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error moving product between boxes:', error);
+    throw error;
+  }
+};
+
+// Remove a product from a box
 export const removeProductFromBox = async (
   boxStorageId: number,
   quantity: number,
   reason?: string
 ): Promise<any> => {
-  // Return mock success response
-  return {
-    status: 'success',
-    message: `Removed ${quantity} units of product from box storage ${boxStorageId}`,
-    data: {
-      product: {
-        id: 1001,
-        name: 'Product 1001',
-      },
-      box_slot: {
-        id: 101,
-        code: 'A1',
-        box_code: 'BOX00001',
-      },
-      quantity_removed: quantity,
-      remaining_quantity: 0,
-    }
-  };
+  try {
+    const response = await api.post('/inventory/remove-product-from-box/', {
+      box_storage_id: boxStorageId,
+      quantity,
+      reason
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error removing product from box:', error);
+    throw error;
+  }
 }; 
