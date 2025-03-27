@@ -411,4 +411,29 @@ class PipelineFactory:
         Returns:
             Instantiated component
         """
+        # For DjangoModelLoader, ensure required fields are set
+        if component_class.__name__ == 'DjangoModelLoader':
+            # Extract model path if provided
+            model_path = config.get('model_path')
+            if model_path and 'app_name' not in config:
+                # Extract app_name and model_name from model_path
+                path_parts = model_path.split('.')
+                if len(path_parts) >= 3:
+                    # Extract model_name from last part
+                    config['model_name'] = path_parts[-1]  # Last element
+                    
+                    # Extract app_name 
+                    if path_parts[-2] == 'models':
+                        # If the path follows the pattern app.models.Model,
+                        # then app_name is the part before 'models'
+                        if len(path_parts) >= 3:
+                            config['app_name'] = path_parts[-3]
+                    else:
+                        # Otherwise use the second-to-last segment
+                        config['app_name'] = path_parts[-2]
+            
+            # Set a default unique_field if not provided
+            if 'unique_field' not in config:
+                config['unique_field'] = config.get('key_field') or 'legacy_id'
+
         return component_class(config)
