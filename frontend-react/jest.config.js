@@ -1,14 +1,15 @@
 /** @type {import('jest').Config} */
 const config = {
-  preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.tsx'],
+  testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.tsx'],
   testPathIgnorePatterns: [
     '/node_modules/',
+    '/__mocks__/',
     '/.next/',
     '<rootDir>/src/__tests__/setup/mockWindowSetup.js',
     '<rootDir>/src/__tests__/components/LanguageSelector.mock.tsx',
