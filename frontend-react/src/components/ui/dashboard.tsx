@@ -508,26 +508,37 @@ const Dashboard = () => {
 
   // Update the width calculation with adjustment for sidebar
   useEffect(() => {
-    // Only set up the resize listener after initial load is complete
     if (!isLoading) {
       const updateWidth = () => {
-        // Get sidebar width to adjust available space
         const sidebar = document.querySelector('.sidebar');
-        const sidebarWidth = sidebar ? sidebar.clientWidth : 0;
+        const sidebarWidth = sidebar?.getBoundingClientRect().width || 0;
+        const mainContentWidth = window.innerWidth - sidebarWidth;
         
-        // Calculate available width accounting for sidebar
-        const availableWidth = window.innerWidth - sidebarWidth;
-        setWidth(availableWidth);
+        // Set width to full window width minus sidebar width
+        setWidth(mainContentWidth);
       }
 
-      // Set initial width
+      // Initial width calculation
       updateWidth();
 
-      // Add event listener for resize
+      // Update width on window resize
       window.addEventListener('resize', updateWidth);
 
+      // Update width when sidebar state changes
+      const sidebarObserver = new ResizeObserver(() => {
+        updateWidth();
+      });
+
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar) {
+        sidebarObserver.observe(sidebar);
+      }
+
       // Cleanup
-      return () => window.removeEventListener('resize', updateWidth);
+      return () => {
+        window.removeEventListener('resize', updateWidth);
+        sidebarObserver.disconnect();
+      }
     }
   }, [isLoading]);
 
@@ -785,9 +796,9 @@ const Dashboard = () => {
       <div className="w-full h-full">
         <div className="relative w-full h-full">
           <AlwaysVisibleSidebarToggle />
-          <div className="absolute inset-0 top-[60px] z-[1] flex justify-center">
-            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full">
-              <div className="dashboard-grid-container w-full h-full px-2">
+          <div className="absolute inset-0 top-[60px] z-[1]">
+            <div className="h-[calc(100vh-180px)] w-full">
+              <div className="w-full h-full">
                 <ResponsiveGridLayout
                   className="layout"
                   layouts={layouts}
@@ -796,7 +807,7 @@ const Dashboard = () => {
                   rowHeight={gridRowHeight}
                   width={width}
                   margin={[10, 10]}
-                  containerPadding={[0, 0]}
+                  containerPadding={[20, 0]}
                   onLayoutChange={handleLayoutChange}
                   isDraggable={isEditMode}
                   isResizable={isEditMode}
@@ -1052,9 +1063,9 @@ const DashboardContent = ({
       <div className="w-full h-full">
         <div className="relative w-full h-full">
           <AlwaysVisibleSidebarToggle />
-          <div className="absolute inset-0 top-[60px] z-[1] flex justify-center">
-            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full">
-              <div className="dashboard-grid-container w-full h-full px-2">
+          <div className="absolute inset-0 top-[60px] z-[1]">
+            <div className="h-[calc(100vh-180px)] w-full">
+              <div className="w-full h-full">
                 <ResponsiveGridLayout
                   className="layout"
                   layouts={layouts}
@@ -1063,7 +1074,7 @@ const DashboardContent = ({
                   rowHeight={gridRowHeight}
                   width={width}
                   margin={[10, 10]}
-                  containerPadding={[0, 0]}
+                  containerPadding={[20, 0]}
                   onLayoutChange={handleLayoutChange}
                   isDraggable={isEditMode}
                   isResizable={isEditMode}

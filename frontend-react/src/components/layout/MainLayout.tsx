@@ -202,9 +202,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
         <SidebarProvider defaultOpen={isDashboard}>
           <SidebarContents />
           <main className="flex-1 p-6 relative z-10" style={{ 
-            marginLeft: 'var(--sidebar-width)',
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - var(--sidebar-width))',
+            maxWidth: '1400px'
           }}>
-            <div className="mx-auto max-w-7xl">
+            <div className="mx-auto">
               {children}
             </div>
           </main>
