@@ -187,23 +187,20 @@ const Dashboard = () => {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [layouts, setLayouts] = useState<Layouts>({
     lg: [
-      { i: "recent-orders", x: 0, y: 0, w: 12, h: 8, title: "Letzte Bestellungen nach Liefertermin" },
-      { i: "menu-tiles", x: 0, y: 8, w: 12, h: 10, title: "Menü" },
-      { i: "quick-links", x: 0, y: 18, w: 6, h: 6, title: "Schnellzugriff" },
-      { i: "news-pinboard", x: 6, y: 18, w: 6, h: 6, title: "Pinnwand" },
+      { w: 8, h: 11, x: 2, y: 0, i: "menu-tiles", moved: false, static: false },
+      { w: 4, h: 12, x: 2, y: 11, i: "quick-links", moved: false, static: false },
+      { w: 4, h: 12, x: 6, y: 11, i: "news-pinboard", moved: false, static: false }
     ],
     md: [
-      { i: "recent-orders", x: 0, y: 0, w: 12, h: 8, title: "Letzte Bestellungen nach Liefertermin" },
       { i: "menu-tiles", x: 0, y: 8, w: 12, h: 12, title: "Menü" },
       { i: "quick-links", x: 0, y: 20, w: 6, h: 6, title: "Schnellzugriff" },
-      { i: "news-pinboard", x: 6, y: 20, w: 6, h: 6, title: "Pinnwand" },
+      { i: "news-pinboard", x: 6, y: 20, w: 6, h: 6, title: "Pinnwand" }
     ],
     sm: [
-      { i: "recent-orders", x: 0, y: 0, w: 12, h: 8, title: "Letzte Bestellungen nach Liefertermin" },
       { i: "menu-tiles", x: 0, y: 8, w: 12, h: 14, title: "Menü" },
       { i: "quick-links", x: 0, y: 22, w: 12, h: 6, title: "Schnellzugriff" },
-      { i: "news-pinboard", x: 0, y: 28, w: 12, h: 6, title: "Pinnwand" },
-    ],
+      { i: "news-pinboard", x: 0, y: 28, w: 12, h: 6, title: "Pinnwand" }
+    ]
   })
 
   const [menuTiles, setMenuTiles] = useState<MenuTile[]>([
