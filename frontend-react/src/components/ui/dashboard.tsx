@@ -28,6 +28,7 @@ import {
   Menu,
   Grip,
   Save,
+  ChevronRight,
 } from "lucide-react"
 import { Responsive as ResponsiveGridLayout, Layout } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
@@ -61,8 +62,6 @@ import { useRouter } from "next/navigation"
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
-  
-
   const { state, toggleSidebar } = useSidebar()
   const isCollapsed = state === "collapsed"
 
@@ -70,12 +69,12 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="fixed top-20 left-4 z-[5] h-10 w-10 rounded-full shadow-md bg-background"
+      className="fixed top-1/2 -translate-y-1/2 left-0 z-[60] h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-200"
       onClick={toggleSidebar}
-      style={{ display: isCollapsed ? "flex" : "none" }}
+      style={{ transform: `translateY(-50%) translateX(${isCollapsed ? '0' : '-100%'})` }}
     >
-      <Menu className="h-4 w-4" />
-      <span className="sr-only">Seitenleiste einblenden</span>
+      <ChevronRight className="h-5 w-5" />
+      <span className="sr-only">Show Sidebar</span>
     </Button>
   )
 }
@@ -921,6 +920,7 @@ const DashboardContent = ({
       </Sidebar>
       <div className="w-full h-full">
         <div className="relative">
+          <AlwaysVisibleSidebarToggle />
           <div className="fixed inset-0 top-[60px] z-[1]" style={{ left: "50px" }}>
             <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full px-4">
               <div className="dashboard-grid-container w-full h-full">
