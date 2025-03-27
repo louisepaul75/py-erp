@@ -1,5 +1,6 @@
 // components/ProductList.tsx
 import { useState, useMemo } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,8 @@ export default function ProductList({
   setPagination,
   isLoading,
 }: ProductListProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [sortField, setSortField] = useState<keyof Product>("id");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -66,6 +69,17 @@ export default function ProductList({
   const handleSort = (field: keyof Product) => {
     setSortField(field);
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
+
+  const handleItemSelect = (item: any) => {
+    setSelectedItem(item.id);
+    const newPath = item.variants_count > 0
+      ? `/products/parent/${item.id}`
+      : `/products/variant/${item.id}`;
+    
+    if (pathname !== newPath) {
+      router.push(newPath);
+    }
   };
 
   return (
@@ -147,7 +161,7 @@ export default function ProductList({
             },
           ]}
           selectedItem={selectedItem}
-          onItemSelect={(item) => setSelectedItem(item.id)}
+          onItemSelect={handleItemSelect}
           isLoading={isLoading}
           noDataMessage="No products found"
         />

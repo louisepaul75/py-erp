@@ -3,6 +3,7 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
 import { productApi } from "@/lib/products/api";
@@ -19,8 +20,16 @@ import {
   Input,
 } from "@/components/ui";
 
-export default function InventoryManagement() {
-  const [selectedItem, setSelectedItem] = useState<number | string | null>("");
+interface InventoryManagementProps {
+  initialVariantId?: string;
+  initialParentId?: string;
+}
+
+export function InventoryManagement({ initialVariantId, initialParentId }: InventoryManagementProps) {
+  const [selectedItem, setSelectedItem] = useState<number | string | null>(
+    initialVariantId ? parseInt(initialVariantId) : 
+    initialParentId ? parseInt(initialParentId) : ""
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
@@ -63,24 +72,41 @@ export default function InventoryManagement() {
     pageSize: 20,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // Update your fetchProducts useEffect
+  // Update fetchProducts useEffect to handle both IDs
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         console.log("Fetching products...");
         setIsLoading(true);
         const response = (await productApi.getProducts({
-          page: pagination.pageIndex + 1, // Backend uses 1-based index
+          page: pagination.pageIndex + 1,
           page_size: pagination.pageSize,
         })) as ApiResponse;
 
         setProducts(response.results);
         setFilteredProducts(response.results);
-        setSelectedItem(response.results[0]?.id || null);
-        if (response.results.length > 0 && !selectedProduct.id) {
-          setSelectedProduct(response.results[0]);
+        
+        // Handle initial product selection
+        if (initialVariantId || initialParentId) {
+          const id = initialVariantId || initialParentId;
+          const initialProduct = response.results.find(
+            (product) => product.id === parseInt(id!)
+          );
+          if (initialProduct) {
+            setSelectedItem(initialProduct.id);
+            setSelectedProduct(initialProduct);
+          }
+        } else {
+          // Default behavior
+          setSelectedItem(response.results[0]?.id || null);
+          if (response.results.length > 0 && !selectedProduct.id) {
+            setSelectedProduct(response.results[0]);
+          }
         }
+        
         console.log("Fetched products:", response);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -89,7 +115,7 @@ export default function InventoryManagement() {
       }
     };
     fetchProducts();
-  }, [pagination.pageIndex, pagination.pageSize]);
+  }, [pagination.pageIndex, pagination.pageSize, initialVariantId, initialParentId]);
 
   useEffect(() => {
     console.log("Filtering products by search term");
@@ -102,17 +128,25 @@ export default function InventoryManagement() {
     );
   }, [searchTerm, products]);
 
+  // Update product selection handling
   useEffect(() => {
-    // Find the product in filteredProducts that matches the selectedItem
-    const selected = filteredProducts.find(
-      (product) => product.id === selectedItem
-    );
-  
-    // Update the selectedProduct state
-    if (selected) {
-      setSelectedProduct(selected);
+    if (selectedItem) {
+      const selected = filteredProducts.find(
+        (product) => product.id === selectedItem
+      );
+    
+      if (selected) {
+        setSelectedProduct(selected);
+        const newPath = selected.variants_count > 0
+          ? `/products/parent/${selected.id}`
+          : `/products/variant/${selected.id}`;
+        
+        if (pathname !== newPath) {
+          router.push(newPath);
+        }
+      }
     }
-  }, [selectedItem, filteredProducts]);
+  }, [selectedItem, filteredProducts, pathname, router]);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -163,4 +197,9 @@ export default function InventoryManagement() {
       </div>
     </div>
   );
+}
+
+// Default export for the page
+export default function InventoryManagementPage() {
+  return <InventoryManagement />;
 }
