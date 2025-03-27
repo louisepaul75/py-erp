@@ -132,9 +132,9 @@ const Dashboard = () => {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [layouts, setLayouts] = useState<Layouts>({
     lg: [
-      { w: 8, h: 11, x: 2, y: 0, i: "menu-tiles", moved: false, static: false },
-      { w: 4, h: 12, x: 2, y: 11, i: "quick-links", moved: false, static: false },
-      { w: 4, h: 12, x: 6, y: 11, i: "news-pinboard", moved: false, static: false }
+      { w: 8, h: 11, x: 0, y: 0, i: "menu-tiles", moved: false, static: false },
+      { w: 4, h: 12, x: 0, y: 11, i: "quick-links", moved: false, static: false },
+      { w: 4, h: 12, x: 4, y: 11, i: "news-pinboard", moved: false, static: false }
     ],
     md: [
       { i: "menu-tiles", x: 0, y: 8, w: 12, h: 12, title: "Menü" },
@@ -367,7 +367,7 @@ const Dashboard = () => {
   const layoutKeys = Array.from(new Set(Object.values(layouts).flatMap(layouts => layouts.map(layout => layout.i))))
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="w-full max-w-screen-xl mx-auto py-10">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-2">
