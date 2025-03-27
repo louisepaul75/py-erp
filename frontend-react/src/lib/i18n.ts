@@ -12,9 +12,9 @@ export const resources = {
     common: {
       "navigation.home": "Home",
       "navigation.products": "Produkte",
-      "navigation.sales": "Verkauf",
+      "navigation.sales": "Vertrieb",
       "navigation.production": "Produktion",
-      "navigation.inventory": "Inventar",
+      "navigation.inventory": "Lager",
       "navigation.settings": "Einstellungen",
     },
     mutterTab: {
