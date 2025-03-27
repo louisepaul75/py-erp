@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 
-from pyerp.core.views import ReactAppView
+from pyerp.core.views import ReactAppView, UserProfileView
 from pyerp.external_api.search.views import GlobalSearchViewSet
 
 # Check if drf_yasg is available
@@ -62,6 +62,8 @@ urlpatterns = [
     ),
     # API URLs
     path("api/", include(router.urls)),
+    # Add auth/user endpoint
+    path("api/auth/user/", UserProfileView.as_view(), name="auth-user-profile"),
     path(
         "api/token/",
         TokenObtainPairView.as_view(permission_classes=[]),
