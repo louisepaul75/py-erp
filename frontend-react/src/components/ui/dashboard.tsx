@@ -918,8 +918,8 @@ const DashboardContent = ({
       <div className="w-full h-full">
         <div className="relative">
           <AlwaysVisibleSidebarToggle />
-          <div className="fixed inset-0 top-[60px] z-[1]" style={{ left: "50px" }}>
-            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full px-4">
+          <div className="fixed inset-0 top-[60px] z-[1] flex justify-center" style={{ left: "50px" }}>
+            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full max-w-[1400px] mx-auto px-4">
               <div className="dashboard-grid-container w-full h-full">
                 <ResponsiveGridLayout
                   className="layout"

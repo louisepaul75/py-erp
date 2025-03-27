@@ -40,12 +40,11 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="fixed top-1/2 -translate-y-1/2 left-0 z-[60] h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-200"
+      className="absolute top-1/2 -translate-y-1/2 -right-8 z-[60] h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
       onClick={toggleSidebar}
-      style={{ transform: `translateY(-50%) translateX(${isCollapsed ? '0' : '-100%'})` }}
     >
-      <ChevronRight className="h-5 w-5" />
-      <span className="sr-only">Show Sidebar</span>
+      <ChevronRight className={`h-5 w-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
+      <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
 }
@@ -65,23 +64,14 @@ const SidebarContents = () => {
   ]
   
   return (
-    <>
+    <div className="relative">
       <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center px-2 py-2 relative">
+        <SidebarHeader className="z-[1]">
+          <div className="flex items-center px-2 py-2">
             <Input
               placeholder="Suchen..."
               className="w-full bg-background"
             />
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute right-3 h-6 w-6 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-              onClick={toggleSidebar}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Hide Sidebar</span>
-            </Button>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -119,7 +109,7 @@ const SidebarContents = () => {
         </SidebarContent>
       </Sidebar>
       <AlwaysVisibleSidebarToggle />
-    </>
+    </div>
   )
 }
 
@@ -137,8 +127,12 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <div className="flex pt-16">
         <SidebarProvider defaultOpen={isDashboard}>
           <SidebarContents />
-          <main className="flex-1 p-6">
-            {children}
+          <main className="flex-1 p-6 relative z-10" style={{ 
+            marginLeft: 'var(--sidebar-width)',
+          }}>
+            <div className="mx-auto max-w-7xl">
+              {children}
+            </div>
           </main>
         </SidebarProvider>
       </div>
