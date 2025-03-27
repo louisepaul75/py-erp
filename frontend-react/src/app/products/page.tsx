@@ -1,9 +1,5 @@
 import Products from "@/components/ui/products"
 
 export default function ProductsPage() {
-  return (
-    <main>
-      <Products />
-    </main>
-  )
+  return <Products />
 } 

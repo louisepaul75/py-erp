@@ -13,18 +13,20 @@ import {
   Truck,
   Database,
   MoreHorizontal,
+  X,
 } from "lucide-react";
 
 interface MainSidebarProps {
   showSidebar: boolean;
+  onHideSidebar?: () => void;
 }
 
-export default function MainSidebar({ showSidebar }: MainSidebarProps) {
+export default function MainSidebar({ showSidebar, onHideSidebar }: MainSidebarProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   return (
     <div
-      className={`${sidebarExpanded ? "w-64" : "w-20"} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out  ${showSidebar ? "" : "hidden md:flex"}`}
+      className={`${sidebarExpanded ? "w-64" : "w-20"} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out ${showSidebar ? "" : "hidden md:flex"} relative`}
     >
       {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
@@ -34,14 +36,25 @@ export default function MainSidebar({ showSidebar }: MainSidebarProps) {
           </div>
           {sidebarExpanded && <span className="font-semibold text-lg">Inventory</span>}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-          onClick={() => setSidebarExpanded(!sidebarExpanded)}
-        >
-          {sidebarExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+            onClick={() => setSidebarExpanded(!sidebarExpanded)}
+          >
+            {sidebarExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-full text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 md:block"
+            onClick={onHideSidebar}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Hide Sidebar</span>
+          </Button>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -53,9 +66,6 @@ export default function MainSidebar({ showSidebar }: MainSidebarProps) {
           </Button>
         </div>
         <div className="px-3 space-y-1">
-          {sidebarExpanded && (
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 ml-3">MENÜ</p>
-          )}
           <Button
             variant="ghost"
             className="w-full justify-start gap-3 text-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 h-11 rounded-xl"
