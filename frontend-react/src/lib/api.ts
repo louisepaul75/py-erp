@@ -1,290 +1,185 @@
-import type { Order, OrderItem, BinLocation } from "@/types/types"
+import type { Item, BookingItem, HistoryEntry } from "./types"
 
-// Helper function to generate bin locations
-function generateBinLocations(count: number, baseId: string): BinLocation[] {
-  const bins: BinLocation[] = []
+// Mock data for demonstration
+const mockItems: Item[] = [
+  {
+    id: "1",
+    articleOld: "A1001",
+    articleNew: "N2001",
+    description: "Wireless Headphones",
+    quantity: 10,
+    slotCodes: ["S101", "S102"],
+    boxNumber: "B001",
+  },
+  {
+    id: "2",
+    articleOld: "A1002",
+    articleNew: "N2002",
+    description: "USB-C Cable",
+    quantity: 25,
+    slotCodes: ["S103"],
+    boxNumber: "B001",
+  },
+  {
+    id: "3",
+    articleOld: "A1003",
+    articleNew: "N2003",
+    description: "Wireless Mouse",
+    quantity: 15,
+    slotCodes: ["S104", "S105"],
+    boxNumber: "B002",
+  },
+  {
+    id: "4",
+    articleOld: "A1004",
+    articleNew: "N2004",
+    description: "Power Bank",
+    quantity: 8,
+    slotCodes: ["S106"],
+    orderNumber: "O001",
+  },
+  {
+    id: "5",
+    articleOld: "A1005",
+    articleNew: "N2005",
+    description: "Bluetooth Speaker",
+    quantity: 12,
+    slotCodes: ["S107"],
+    orderNumber: "O001",
+  },
+]
 
-  for (let i = 1; i <= count; i++) {
-    const shelf = Math.floor(10 + Math.random() * 20)
-    const compartment = Math.floor(1 + Math.random() * 5)
-    const floor = Math.floor(1 + Math.random() * 5)
+// Aktualisiere die Mock-History-Einträge, um Korrekturen zu enthalten
+export const mockHistoryEntries: HistoryEntry[] = [
+  {
+    id: "h1",
+    timestamp: "2023-06-15T10:30:00Z",
+    user: "John Doe",
+    articleOld: "A1001",
+    articleNew: "N2001",
+    quantity: 5,
+    sourceSlot: "S101",
+    targetSlot: "T201",
+    boxNumber: "B001",
+  },
+  {
+    id: "h2",
+    timestamp: "2023-06-15T11:45:00Z",
+    user: "Jane Smith",
+    articleOld: "A1002",
+    articleNew: "N2002",
+    quantity: 10,
+    sourceSlot: "S103",
+    targetSlot: "T202",
+    boxNumber: "B001",
+  },
+  {
+    id: "h3",
+    timestamp: "2023-06-16T09:15:00Z",
+    user: "John Doe",
+    articleOld: "A1004",
+    articleNew: "N2004",
+    quantity: 3,
+    sourceSlot: "S106",
+    targetSlot: "T203",
+    orderNumber: "O001",
+  },
+  {
+    id: "mock-h4",
+    timestamp: "2023-06-17T14:20:00Z",
+    user: "mock-admin",
+    articleOld: "A1001",
+    articleNew: "N2001",
+    quantity: 2,
+    sourceSlot: "mock-inventory",
+    targetSlot: "mock-inventory",
+    boxNumber: "B001",
+    correction: {
+      type: "inventory_correction",
+      reason: "additional_found",
+      amount: 2,
+      note: "Zusätzliche Artikel im Lager gefunden",
+      oldQuantity: 8,
+      newQuantity: 10,
+    },
+  },
+  {
+    id: "mock-h5",
+    timestamp: "2023-06-18T09:30:00Z",
+    user: "mock-warehouse",
+    articleOld: "A1003",
+    articleNew: "N2003",
+    quantity: 3,
+    sourceSlot: "mock-inventory",
+    targetSlot: "mock-inventory",
+    boxNumber: "B002",
+    correction: {
+      type: "inventory_correction",
+      reason: "damage_broken_irrepairable",
+      amount: 3,
+      note: "Beschädigte Artikel aussortiert",
+      oldQuantity: 18,
+      newQuantity: 15,
+    },
+  },
+  {
+    id: "mock-h6",
+    timestamp: "2023-06-18T15:45:00Z",
+    user: "mock-supervisor",
+    articleOld: "A1005",
+    articleNew: "N2005",
+    quantity: 2,
+    sourceSlot: "S107",
+    targetSlot: "T205",
+    orderNumber: "O001",
+    correction: {
+      type: "excess",
+      reason: "wrong_previous_booking",
+      amount: 2,
+      note: "Falsche Buchung korrigiert",
+    },
+  },
+]
 
-    bins.push({
-      id: `${baseId}-bin-${i}`,
-      binCode: `SC${Math.floor(10000 + Math.random() * 90000)}.X${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`,
-      location: `${shelf}/${compartment}/${floor}`,
-    })
-  }
+// Simulate API delay
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-  return bins
+// API functions
+export async function fetchItemsByBox(boxNumber: string): Promise<Item[]> {
+  await delay(500) // Simulate network delay
+  return mockItems.filter((item) => item.boxNumber === boxNumber)
 }
 
-// Helper function to generate a large number of mock items with bin assignments
-function generateMockItems(count: number, baseId: string, bins: BinLocation[]): OrderItem[] {
-  const items: OrderItem[] = []
+export async function fetchItemsByOrder(orderNumber: string): Promise<Item[]> {
+  await delay(500) // Simulate network delay
+  return mockItems.filter((item) => item.orderNumber === orderNumber)
+}
 
-  for (let i = 1; i <= count; i++) {
-    const oldNumber = `ALT-${Math.floor(1000 + Math.random() * 9000)}`
-    const newNumber = `NEU-${Math.floor(2000 + Math.random() * 9000)}`
-    const quantityTotal = Math.floor(1 + Math.random() * 10)
-    const quantityPicked = Math.floor(Math.random() * (quantityTotal + 1))
+export async function bookItems(items: BookingItem[]): Promise<BookingItem[]> {
+  await delay(1000) // Simulate network delay
 
-    // Assign 1-3 random bins to this item
-    const binCount = Math.floor(1 + Math.random() * 3)
-    const itemBins: string[] = []
+  // In a real implementation, this would send the booking to the server
+  // and update the inventory
 
-    if (bins.length > 0) {
-      const availableBins = [...bins]
-      for (let j = 0; j < binCount && availableBins.length > 0; j++) {
-        const randomIndex = Math.floor(Math.random() * availableBins.length)
-        itemBins.push(availableBins[randomIndex].id)
-        // Remove the bin to avoid duplicates (uncomment if you want unique bins per item)
-        // availableBins.splice(randomIndex, 1)
-      }
-    }
-
-    items.push({
-      id: `${baseId}-item-${i}`,
-      oldArticleNumber: oldNumber,
-      newArticleNumber: newNumber,
-      description: `Artikel ${i} (${oldNumber})`,
-      quantityPicked,
-      quantityTotal,
-      binLocations: itemBins,
+  // Simulate WebSocket message to other clients using our custom event
+  if (typeof window !== "undefined") {
+    const mockEvent = new CustomEvent("mock-ws-message", {
+      detail: {
+        type: "INVENTORY_UPDATED",
+        items: items.map((item) => item.id),
+        timestamp: new Date().toISOString(),
+      },
     })
+
+    window.dispatchEvent(mockEvent)
   }
 
   return items
 }
 
-// Mock data function - replace with actual API call
-export async function fetchOrders(): Promise<Order[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  // Generate a large number of orders
-  const orders: Order[] = []
-
-  // First add our detailed sample orders
-  const order1Bins = [{ id: "1-bin-1", binCode: "SC12345.XA", location: "11/2/3" }]
-
-  const order3Bins = [
-    { id: "3-bin-1", binCode: "SC23456.XB", location: "12/1/2" },
-    { id: "3-bin-2", binCode: "SC34567.XC", location: "12/1/3" },
-  ]
-
-  const sampleOrders = [
-    {
-      id: "1",
-      orderNumber: "A-10001",
-      customerNumber: "K-5001",
-      customerName: "Müller GmbH",
-      deliveryDate: new Date(2023, 11, 15),
-      orderDate: new Date(2023, 11, 10),
-      isOrder: true,
-      isDeliveryNote: false,
-      itemsPicked: 5,
-      totalItems: 10,
-      pickingStatus: "inProgress",
-      pickingSequence: 1,
-      customerAddress: "Industriestraße 45, 70565 Stuttgart",
-      contactPerson: "Thomas Müller",
-      phoneNumber: "+49 711 123456",
-      email: "info@mueller-gmbh.de",
-      notes: "Lieferung bitte bis 14 Uhr",
-      binLocations: order1Bins,
-      items: generateMockItems(300, "1", order1Bins), // Generate 300 items for this order
-    },
-    {
-      id: "2",
-      orderNumber: "A-10002",
-      customerNumber: "K-3045",
-      customerName: "Schmidt & Co KG",
-      deliveryDate: new Date(2023, 11, 16),
-      orderDate: new Date(2023, 11, 9),
-      isOrder: true,
-      isDeliveryNote: true,
-      itemsPicked: 0,
-      totalItems: 5,
-      pickingStatus: "notStarted",
-      pickingSequence: 2,
-      customerAddress: "Hauptstraße 28, 80331 München",
-      contactPerson: "Julia Schmidt",
-      phoneNumber: "+49 89 987654",
-      email: "j.schmidt@schmidt-co.de",
-      binLocations: [],
-      items: generateMockItems(5, "2", []),
-    },
-    {
-      id: "3",
-      orderNumber: "L-2001",
-      customerNumber: "K-1022",
-      customerName: "Bauer Logistik",
-      deliveryDate: new Date(2023, 11, 14),
-      orderDate: new Date(2023, 11, 8),
-      isOrder: false,
-      isDeliveryNote: true,
-      itemsPicked: 8,
-      totalItems: 8,
-      pickingStatus: "completed",
-      pickingSequence: 3,
-      customerAddress: "Logistikweg 12, 60306 Frankfurt",
-      contactPerson: "Michael Bauer",
-      phoneNumber: "+49 69 555666",
-      email: "m.bauer@bauer-logistik.de",
-      binLocations: order3Bins,
-      items: generateMockItems(8, "3", order3Bins),
-    },
-    {
-      id: "4",
-      orderNumber: "A-10003",
-      customerNumber: "K-7890",
-      customerName: "Weber Industrie",
-      deliveryDate: new Date(2023, 11, 17),
-      orderDate: new Date(2023, 11, 11),
-      isOrder: true,
-      isDeliveryNote: false,
-      itemsPicked: 2,
-      totalItems: 15,
-      pickingStatus: "problem",
-      pickingSequence: 4,
-      customerAddress: "Industriepark 78, 40474 Düsseldorf",
-      contactPerson: "Stefan Weber",
-      phoneNumber: "+49 211 778899",
-      email: "s.weber@weber-industrie.de",
-      notes: "Artikel 5001 nicht auf Lager",
-      binLocations: [{ id: "4-bin-1", binCode: "SC45678.XD", location: "13/3/1" }],
-      items: generateMockItems(15, "4", [{ id: "4-bin-1", binCode: "SC45678.XD", location: "13/3/1" }]),
-    },
-    {
-      id: "5",
-      orderNumber: "L-2002",
-      customerNumber: "K-4567",
-      customerName: "Fischer AG",
-      deliveryDate: new Date(2023, 11, 18),
-      orderDate: new Date(2023, 11, 12),
-      isOrder: false,
-      isDeliveryNote: true,
-      itemsPicked: 0,
-      totalItems: 3,
-      pickingStatus: "notStarted",
-      pickingSequence: 5,
-      customerAddress: "Fischerstraße 10, 50667 Köln",
-      contactPerson: "Anna Fischer",
-      phoneNumber: "+49 221 112233",
-      email: "a.fischer@fischer-ag.de",
-      binLocations: [],
-      items: generateMockItems(3, "5", []),
-    },
-    {
-      id: "6",
-      orderNumber: "A-10004",
-      customerNumber: "K-9876",
-      customerName: "Hoffmann Elektronik",
-      deliveryDate: new Date(2023, 11, 20),
-      orderDate: new Date(2023, 11, 13),
-      isOrder: true,
-      isDeliveryNote: true,
-      itemsPicked: 6,
-      totalItems: 12,
-      pickingStatus: "inProgress",
-      pickingSequence: 6,
-      customerAddress: "Elektronikweg 5, 01067 Dresden",
-      contactPerson: "Peter Hoffmann",
-      phoneNumber: "+49 351 445566",
-      email: "p.hoffmann@hoffmann-elektronik.de",
-      binLocations: [
-        { id: "6-bin-1", binCode: "SC56789.XE", location: "14/2/2" },
-        { id: "6-bin-2", binCode: "SC67890.XF", location: "14/2/3" },
-      ],
-      items: generateMockItems(12, "6", [
-        { id: "6-bin-1", binCode: "SC56789.XE", location: "14/2/2" },
-        { id: "6-bin-2", binCode: "SC67890.XF", location: "14/2/3" },
-      ]),
-    },
-    {
-      id: "7",
-      orderNumber: "A-10005",
-      customerNumber: "K-2345",
-      customerName: "Schulz Metallbau",
-      deliveryDate: new Date(2023, 11, 21),
-      orderDate: new Date(2023, 11, 14),
-      isOrder: true,
-      isDeliveryNote: false,
-      itemsPicked: 9,
-      totalItems: 9,
-      pickingStatus: "completed",
-      pickingSequence: 7,
-      customerAddress: "Metallstraße 22, 30159 Hannover",
-      contactPerson: "Klaus Schulz",
-      phoneNumber: "+49 511 334455",
-      email: "k.schulz@schulz-metallbau.de",
-      binLocations: [
-        { id: "7-bin-1", binCode: "SC78901.XG", location: "15/1/1" },
-        { id: "7-bin-2", binCode: "SC89012.XH", location: "15/1/2" },
-      ],
-      items: generateMockItems(9, "7", [
-        { id: "7-bin-1", binCode: "SC78901.XG", location: "15/1/1" },
-        { id: "7-bin-2", binCode: "SC89012.XH", location: "15/1/2" },
-      ]),
-    },
-    {
-      id: "8",
-      orderNumber: "L-2003",
-      customerNumber: "K-6543",
-      customerName: "Koch Versand",
-      deliveryDate: new Date(2023, 11, 19),
-      orderDate: new Date(2023, 11, 10),
-      isOrder: false,
-      isDeliveryNote: true,
-      itemsPicked: 1,
-      totalItems: 7,
-      pickingStatus: "problem",
-      pickingSequence: 8,
-      customerAddress: "Versandweg 33, 20095 Hamburg",
-      contactPerson: "Maria Koch",
-      phoneNumber: "+49 40 667788",
-      email: "m.koch@koch-versand.de",
-      notes: "Lieferung verzögert wegen Artikelmangel",
-      binLocations: [{ id: "8-bin-1", binCode: "SC90123.XI", location: "16/3/2" }],
-      items: generateMockItems(7, "8", [{ id: "8-bin-1", binCode: "SC90123.XI", location: "16/3/2" }]),
-    },
-  ]
-
-  orders.push(...sampleOrders)
-
-  // Then generate additional orders to reach a large number
-  for (let i = sampleOrders.length + 1; i <= 500; i++) {
-    const itemCount = Math.floor(1 + Math.random() * 20)
-    const itemsPicked = Math.floor(Math.random() * (itemCount + 1))
-    const binCount = Math.floor(Math.random() * 3) + 1
-
-    const bins = generateBinLocations(binCount, i.toString())
-
-    const order: Order = {
-      id: i.toString(),
-      orderNumber: `A-${10000 + i}`,
-      customerNumber: `K-${1000 + Math.floor(Math.random() * 9000)}`,
-      customerName: `Kunde ${i}`,
-      deliveryDate: new Date(2023, 11, Math.floor(1 + Math.random() * 30)),
-      orderDate: new Date(2023, 11, Math.floor(1 + Math.random() * 30)),
-      isOrder: Math.random() > 0.3,
-      isDeliveryNote: Math.random() > 0.5,
-      itemsPicked,
-      totalItems: itemCount,
-      pickingStatus: ["notStarted", "inProgress", "completed", "problem"][Math.floor(Math.random() * 4)] as any,
-      pickingSequence: i,
-      customerAddress: `Adresse ${i}`,
-      contactPerson: `Kontakt ${i}`,
-      phoneNumber: `+49 ${Math.floor(100 + Math.random() * 900)} ${Math.floor(100000 + Math.random() * 900000)}`,
-      email: `kontakt${i}@example.com`,
-      binLocations: bins,
-      items: generateMockItems(Math.floor(3 + Math.random() * 10), i.toString(), bins),
-    }
-
-    orders.push(order)
-  }
-
-  return orders
+export async function fetchMovementHistory(fromDate?: Date, toDate?: Date): Promise<HistoryEntry[]> {
+  // Diese Funktion wird nicht mehr verwendet, da wir jetzt den HistoryContext verwenden
+  await delay(500) // Simulate network delay
+  return []
 }
 
