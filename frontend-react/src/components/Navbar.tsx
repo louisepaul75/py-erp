@@ -71,10 +71,10 @@ export function Navbar() {
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-full mx-0 px-2 sm:px-3 lg:px-4">
         <div className="flex justify-between h-16">
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="flex-shrink-0 flex items-center pl-2">
             <Link href="/dashboard">
               <Image 
                 src="/wsz_logo_long.png" 
@@ -129,7 +129,7 @@ export function Navbar() {
           </div>
 
           {/* User Menu - Desktop */}
-          <div className="hidden lg:flex items-center ml-auto">
+          <div className="hidden lg:flex items-center pr-2">
             <div className="relative" id="user-dropdown">
               <div>
                 <button
