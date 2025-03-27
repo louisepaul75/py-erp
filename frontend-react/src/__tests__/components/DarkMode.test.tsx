@@ -152,25 +152,28 @@ describe('Dark Mode Integration Tests', () => {
       render(<Button variant="default">Test Button</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('bg-primary');
-      expect(button).toHaveClass('text-primary-foreground');
+      expect(button).toHaveClass('bg-blue-600');
+      expect(button).toHaveClass('dark:bg-blue-600');
+      expect(button).toHaveClass('dark:text-white');
     });
 
     it('applies dark mode styles to secondary button', () => {
       render(<Button variant="secondary">Test Button</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('bg-secondary');
-      expect(button).toHaveClass('text-secondary-foreground');
+      expect(button).toHaveClass('bg-slate-100');
+      expect(button).toHaveClass('dark:bg-slate-800');
+      expect(button).toHaveClass('dark:text-slate-300');
     });
 
     it('applies dark mode styles to outline button', () => {
       render(<Button variant="outline">Test Button</Button>);
       
       const button = screen.getByRole('button');
-      expect(button).toHaveClass('border-input');
-      expect(button).toHaveClass('hover:bg-accent');
-      expect(button).toHaveClass('hover:text-accent-foreground');
+      expect(button).toHaveClass('border-slate-300');
+      expect(button).toHaveClass('dark:border-slate-700');
+      expect(button).toHaveClass('dark:bg-slate-900');
+      expect(button).toHaveClass('dark:text-slate-300');
     });
   });
 

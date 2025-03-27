@@ -231,14 +231,17 @@ const api = ky.extend({
   },
 });
 
+// Export the auth service functions
 export const authService = {
   getCurrentUser: async (): Promise<User | null> => {
     try {
-      const user = await api.get('profile/').json<User>();
-      return user;
+      const response = await api.get('auth/user/').json<User>();
+      return response;
     } catch (error) {
-      console.error('Error getting current user:', error);
-      return null;
+      if (error instanceof HTTPError && error.response.status === 401) {
+        return null;
+      }
+      throw error;
     }
   },
   
@@ -248,131 +251,66 @@ export const authService = {
   
   login: async (credentials: LoginCredentials): Promise<User> => {
     try {
-      // Log cookies before login attempt
-      console.log('Cookies before login:');
-      cookieStorage.listAll();
-      
-      // Send login request - backend will set cookies
-      const response = await authApi.post(AUTH_CONFIG.tokenEndpoint, {
-        json: credentials,
-        credentials: 'include'  // Ensure cookies are included
-      }).json<{ access: string; refresh: string }>();
-      
-      console.log('Login response received', { 
-        hasAccess: !!response.access, 
-        hasRefresh: !!response.refresh,
-        accessTokenLength: response.access?.length,
-        refreshTokenLength: response.refresh?.length 
-      });
-      
-      // Store tokens in cookies
-      if (response.access) {
-        cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
-        console.log('Access token stored in cookie');
-      }
-      
-      if (response.refresh) {
-        cookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, response.refresh);
-        console.log('Refresh token stored in cookie');
-      }
-      
-      // Log cookies after setting them
-      console.log('Cookies after login:');
-      cookieStorage.listAll();
-      
-      // Fetch CSRF token after successful login
+      // Ensure we have a CSRF token for the login request
       await csrfService.fetchToken();
       
-      // Decode token to get basic user info
-      const decoded: JwtPayload = jwtDecode(response.access);
+      const response = await authApi.post('auth/login/', { json: credentials }).json<{
+        user: User;
+        access: string;
+        refresh: string;
+      }>();
       
-      // Get full user profile
-      try {
-        const userProfile = await api.get('profile/').json<User>();
-        return userProfile;
-      } catch (profileError) {
-        console.warn('Error getting full profile, using basic info from token:', profileError);
-        
-        // Return basic user info from token if profile fetch fails
-        return {
-          id: decoded.user_id,
-          username: decoded.username || '',
-          email: decoded.email || '',
-          firstName: decoded.first_name || '',
-          lastName: decoded.last_name || '',
-          isAdmin: decoded.is_staff || false,
-        };
-      }
+      // Store tokens
+      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
+      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, response.refresh);
+      
+      return response.user;
     } catch (error) {
       console.error('Login error:', error);
-      if (error instanceof HTTPError) {
-        const errorText = await error.response.text();
-        throw new Error(errorText || 'Ungültige Anmeldedaten. Bitte versuche es erneut.');
-      }
-      throw new Error('Ungültige Anmeldedaten. Bitte versuche es erneut.');
+      throw error;
     }
   },
   
   logout: async (): Promise<void> => {
     try {
-      await api.post('logout/');
-    } catch (error) {
-      console.error('Logout error:', error);
+      await api.post('auth/logout/');
+    } finally {
+      // Always clear tokens, even if the API call fails
+      cookieStorage.removeItem(AUTH_CONFIG.tokenStorage.accessToken);
+      cookieStorage.removeItem(AUTH_CONFIG.tokenStorage.refreshToken);
     }
   },
   
   refreshToken: async (): Promise<boolean> => {
     try {
-      // Log cookies before refresh
-      console.log('Cookies before token refresh:');
-      cookieStorage.listAll();
-      
-      // Get refresh token from cookie
       const refreshToken = cookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
-      
       if (!refreshToken) {
-        console.error('No refresh token available');
         return false;
       }
-      
-      console.log('Refreshing token with refresh token:', refreshToken);
-      
-      // Send refresh token in request body
-      const response = await authApi.post(AUTH_CONFIG.refreshEndpoint, {
-        json: {
-          refresh: refreshToken
-        },
-        credentials: 'include'  // Ensure cookies are included
+
+      const response = await authApi.post('auth/token/refresh/', {
+        json: { refresh: refreshToken }
       }).json<{ access: string }>();
-      
-      console.log('Refresh token response received');
-      
-      // Store the new access token
-      if (response.access) {
-        cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
-        console.log('New access token stored in cookie');
-      }
-      
-      // Log cookies after refresh
-      console.log('Cookies after token refresh:');
-      cookieStorage.listAll();
-      
+
+      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
       return true;
     } catch (error) {
-      console.error('Error refreshing token:', error);
+      console.error('Token refresh failed:', error);
       return false;
     }
   },
   
   updateProfile: async (userData: Partial<User>): Promise<User> => {
-    return await api.patch('profile/', {
-      json: userData
-    }).json<User>();
+    const response = await api.patch('auth/user/', { json: userData }).json<User>();
+    return response;
   },
   
   changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
-    await api.post('profile/change-password/', {
-      json: { old_password: oldPassword, new_password: newPassword }
+    await api.post('auth/password/change/', {
+      json: {
+        old_password: oldPassword,
+        new_password: newPassword
+      }
     });
   }
 };

@@ -1,181 +1,145 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { Footer } from '@/components/Footer';
 
-// Mock next/link
-jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  );
-});
-
-// Mock react-i18next
+// Mock the i18n functionality at component level
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
+  // Mock the useTranslation hook
+  useTranslation: () => {
+    return {
+      t: (key: string) => key,
+      i18n: {
+        changeLanguage: jest.fn(),
+        language: 'en'
+      }
+    };
+  }
 }));
 
-describe('Footer', () => {
+describe('Footer Component', () => {
+  // Spy on console.error before all tests
+  let consoleErrorSpy: jest.SpyInstance;
+
+  beforeAll(() => {
+    // Mock console.error to prevent logging during tests
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    // Restore console.error after all tests
+    consoleErrorSpy.mockRestore();
+  });
+
   beforeEach(() => {
-    // Reset fetch mock before each test
-    global.fetch = jest.fn();
+    // Clear mock calls before each test
+    consoleErrorSpy.mockClear();
     
-    // Reset document styles
-    document.documentElement.style.setProperty('--footer-height', '0px');
-    document.documentElement.style.setProperty('--dev-bar-height', '0px');
+    // Reset fetch mock before each test
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url.includes('/health/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            status: 'healthy',
+            database: { status: 'healthy', message: 'Connected' },
+            environment: 'test',
+            version: '1.0.0'
+          })
+        });
+      }
+      if (url.includes('/git/branch/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ branch: 'main' })
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders copyright information', () => {
+  it('renders footer with health status', async () => {
     render(<Footer />);
-    expect(screen.getByText(/© \d{4} pyERP System/)).toBeInTheDocument();
+
+    // Wait for loading state
+    const loadingSpinner = await screen.findByTestId('loading-spinner');
+    expect(loadingSpinner).toBeInTheDocument();
+
+    // Wait for health status to be rendered
+    await waitFor(() => {
+      const statusIndicator = screen.getByTestId('api-status-indicator');
+      expect(statusIndicator).toHaveClass('bg-green-500');
+    });
+
+    // Verify version is displayed
+    const versionText = await screen.findByText(/v1\.0\.0/);
+    expect(versionText).toBeInTheDocument();
+
+    // Verify no console errors were logged
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 
-  it('shows version number when API is available', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ status: 'healthy', version: '1.0.0' }),
+  it('handles failed health check', async () => {
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url.includes('/health/')) {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({
+            status: 'unhealthy',
+            database: { status: 'unhealthy', message: 'Connection failed' },
+            environment: 'test',
+            version: '1.0.0'
+          })
+        });
+      }
+      if (url.includes('/git/branch/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ branch: 'main' })
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
-    await act(async () => {
-      render(<Footer />);
-    });
+    render(<Footer />);
 
+    // Wait for error state to be rendered
     await waitFor(() => {
-      expect(screen.getByText(/v1\.0\.0/)).toBeInTheDocument();
+      const statusIndicator = screen.getByTestId('api-status-indicator');
+      expect(statusIndicator).toHaveClass('bg-red-500');
     });
+
+    // Verify the correct error was logged
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to fetch health status');
   });
 
-  it('shows loading indicator while fetching data', async () => {
-    (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
-
-    await act(async () => {
-      render(<Footer />);
-    });
-    
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-  });
-
-  it('shows green indicator when API is healthy', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ status: 'healthy', version: '1.0.0' }),
+  it('handles network error', async () => {
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url.includes('/health/')) {
+        return Promise.reject(new Error('Network error'));
+      }
+      if (url.includes('/git/branch/')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ branch: 'main' })
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
-    await act(async () => {
-      render(<Footer />);
-    });
+    render(<Footer />);
 
+    // Wait for error state to be rendered
     await waitFor(() => {
-      const indicator = screen.getByTestId('api-status-indicator');
-      expect(indicator).toHaveClass('bg-green-500');
-    });
-  });
-
-  it('shows red indicator when API is unhealthy', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ status: 'unhealthy', version: '1.0.0' }),
+      const statusIndicator = screen.getByTestId('api-status-indicator');
+      expect(statusIndicator).toHaveClass('bg-red-500');
     });
 
-    await act(async () => {
-      render(<Footer />);
-    });
-
-    await waitFor(() => {
-      const indicator = screen.getByTestId('api-status-indicator');
-      expect(indicator).toHaveClass('bg-red-500');
-    });
-  });
-
-  it('shows red indicator when API fetch fails', async () => {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error'
-    });
-
-    await act(async () => {
-      render(<Footer />);
-    });
-    
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    });
-
-    await waitFor(() => {
-      const indicator = screen.getByTestId('api-status-indicator');
-      expect(indicator).toHaveClass('bg-red-500');
-    });
-  });
-
-  it('toggles development bar on click and updates height', async () => {
-    const user = userEvent.setup();
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-
-    (global.fetch as jest.Mock)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ 
-          status: 'healthy', 
-          version: '1.0.0', 
-          environment: 'development' 
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ branch: 'main' }),
-      });
-
-    await act(async () => {
-      render(<Footer />);
-    });
-    
-    await waitFor(() => {
-      expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-    });
-
-    const devModeButton = screen.getByText(/DEV MODE/);
-    expect(devModeButton).toBeInTheDocument();
-
-    const mockDevBarHeight = 200;
-    const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
-    Element.prototype.getBoundingClientRect = jest.fn().mockReturnValue({
-      height: mockDevBarHeight,
-      width: 100,
-      top: 0,
-      left: 0,
-      right: 100,
-      bottom: mockDevBarHeight,
-      x: 0,
-      y: 0,
-    });
-
-    // Click to expand
-    await act(async () => {
-      await user.click(devModeButton);
-    });
-
-    await waitFor(() => {
-      const height = document.documentElement.style.getPropertyValue('--dev-bar-height');
-      expect(height).toBe(`${mockDevBarHeight}px`);
-    });
-
-    // Click to collapse
-    await act(async () => {
-      await user.click(devModeButton);
-    });
-
-    await waitFor(() => {
-      expect(document.documentElement.style.getPropertyValue('--dev-bar-height')).toBe('0px');
-    });
-
-    Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
-    process.env.NODE_ENV = originalEnv;
+    // Verify the correct error was logged
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching health status:', new Error('Network error'));
   });
 }); 

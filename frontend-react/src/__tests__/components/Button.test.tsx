@@ -9,31 +9,31 @@ describe('Button Component', () => {
     
     const button = screen.getByRole('button', { name: /click me/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass('bg-primary');
-    expect(button).toHaveClass('text-primary-foreground');
+    expect(button).toHaveClass('bg-blue-600');
+    expect(button).toHaveClass('text-white');
   });
 
   it('renders with different variants', () => {
     const { rerender } = render(<Button variant="destructive">Destructive</Button>);
     
     let button = screen.getByRole('button', { name: /destructive/i });
-    expect(button).toHaveClass('bg-destructive');
+    expect(button).toHaveClass('bg-red-600');
     
     rerender(<Button variant="outline">Outline</Button>);
     button = screen.getByRole('button', { name: /outline/i });
-    expect(button).toHaveClass('border-input');
+    expect(button).toHaveClass('border-slate-300');
     
     rerender(<Button variant="secondary">Secondary</Button>);
     button = screen.getByRole('button', { name: /secondary/i });
-    expect(button).toHaveClass('bg-secondary');
+    expect(button).toHaveClass('bg-slate-100');
     
     rerender(<Button variant="ghost">Ghost</Button>);
     button = screen.getByRole('button', { name: /ghost/i });
-    expect(button).not.toHaveClass('bg-primary');
+    expect(button).toHaveClass('text-slate-700');
     
     rerender(<Button variant="link">Link</Button>);
     button = screen.getByRole('button', { name: /link/i });
-    expect(button).toHaveClass('text-primary');
+    expect(button).toHaveClass('text-blue-600');
   });
 
   it('renders with different sizes', () => {
@@ -66,7 +66,7 @@ describe('Button Component', () => {
     expect(linkButton).toBeInTheDocument();
     expect(linkButton.tagName).toBe('A');
     expect(linkButton).toHaveAttribute('href', '#test');
-    expect(linkButton).toHaveClass('bg-primary');
+    expect(linkButton).toHaveClass('bg-blue-600');
   });
 
   it('passes additional props to the button element', () => {
@@ -81,6 +81,6 @@ describe('Button Component', () => {
     
     const button = screen.getByRole('button', { name: /custom class/i });
     expect(button).toHaveClass('custom-class');
-    expect(button).toHaveClass('bg-primary');
+    expect(button).toHaveClass('bg-blue-600');
   });
 }); 

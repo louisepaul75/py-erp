@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Switch } from '@/components/ui/switch';
-import { act } from 'react-dom/test-utils';
+import { act } from 'react';
 
 // Mock the cn function from utils
 jest.mock('@/lib/utils', () => ({

@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
+import { api } from '@/lib/auth/authService';
 
 // Define types
 export interface SearchResult {
@@ -41,32 +42,73 @@ export interface SearchResponse {
   };
 }
 
-// Completely disabled version of useGlobalSearch
 export function useGlobalSearch() {
-  // No state, no effects, no DOM operations
-  
-  // Empty callback that does nothing
+  const [query, setQueryState] = useState('');
+  const [results, setResults] = useState<SearchResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const fetchResults = async () => {
+      if (!query) {
+        setResults(null);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await api.get(`search/search/?q=${query}`);
+        const data = await response.json();
+        setResults(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'API error');
+        setResults(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Debounce the search
+    timeoutId = setTimeout(fetchResults, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [query]);
+
   const setQuery = useCallback((newQuery: string) => {
-    // Do nothing
+    setQueryState(newQuery);
   }, []);
-  
-  // Empty reset function
+
   const reset = useCallback(() => {
-    // Do nothing
+    setQueryState('');
+    setResults(null);
+    setError(null);
   }, []);
 
-  // Empty results function
   const getAllResults = useCallback((): SearchResult[] => {
-    return [];
-  }, []);
+    if (!results) return [];
 
-  // Return an object with dummy values
+    return [
+      ...results.results.customers,
+      ...results.results.sales_records,
+      ...results.results.parent_products,
+      ...results.results.variant_products,
+      ...results.results.box_slots,
+      ...results.results.storage_locations,
+    ];
+  }, [results]);
+
   return {
-    query: '',
+    query,
     setQuery,
-    results: null,
-    isLoading: false,
-    error: null,
+    results,
+    isLoading,
+    error,
     reset,
     getAllResults
   };
