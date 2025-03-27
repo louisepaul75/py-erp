@@ -187,19 +187,19 @@ const Dashboard = () => {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [layouts, setLayouts] = useState<Layouts>({
     lg: [
-      { w: 8, h: 11, x: 0, y: 0, i: "menu-tiles", moved: false, static: false },
-      { w: 4, h: 12, x: 0, y: 11, i: "quick-links", moved: false, static: false },
-      { w: 4, h: 12, x: 4, y: 11, i: "news-pinboard", moved: false, static: false }
+      { w: 16, h: 11, x: 0, y: 0, i: "menu-tiles", moved: false, static: false },
+      { w: 8, h: 12, x: 0, y: 11, i: "quick-links", moved: false, static: false },
+      { w: 8, h: 12, x: 8, y: 11, i: "news-pinboard", moved: false, static: false }
     ],
     md: [
-      { i: "menu-tiles", x: 0, y: 8, w: 12, h: 12, title: "Menü" },
-      { i: "quick-links", x: 0, y: 20, w: 6, h: 6, title: "Schnellzugriff" },
-      { i: "news-pinboard", x: 6, y: 20, w: 6, h: 6, title: "Pinnwand" }
+      { i: "menu-tiles", x: 0, y: 0, w: 20, h: 12, title: "Menü" },
+      { i: "quick-links", x: 0, y: 12, w: 10, h: 6, title: "Schnellzugriff" },
+      { i: "news-pinboard", x: 10, y: 12, w: 10, h: 6, title: "Pinnwand" }
     ],
     sm: [
-      { i: "menu-tiles", x: 0, y: 8, w: 12, h: 14, title: "Menü" },
-      { i: "quick-links", x: 0, y: 22, w: 12, h: 6, title: "Schnellzugriff" },
-      { i: "news-pinboard", x: 0, y: 28, w: 12, h: 6, title: "Pinnwand" }
+      { i: "menu-tiles", x: 0, y: 0, w: 12, h: 14, title: "Menü" },
+      { i: "quick-links", x: 0, y: 14, w: 12, h: 6, title: "Schnellzugriff" },
+      { i: "news-pinboard", x: 0, y: 20, w: 12, h: 6, title: "Pinnwand" }
     ]
   })
 
@@ -506,16 +506,18 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Update the width calculation in useEffect
+  // Update the width calculation with adjustment for sidebar
   useEffect(() => {
     // Only set up the resize listener after initial load is complete
     if (!isLoading) {
       const updateWidth = () => {
-        // Get the container width instead of using fixed width
-        const container = document.querySelector('.dashboard-grid-container');
-        if (container) {
-          setWidth(container.clientWidth);
-        }
+        // Get sidebar width to adjust available space
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarWidth = sidebar ? sidebar.clientWidth : 0;
+        
+        // Calculate available width accounting for sidebar
+        const availableWidth = window.innerWidth - sidebarWidth;
+        setWidth(availableWidth);
       }
 
       // Set initial width
@@ -683,143 +685,8 @@ const Dashboard = () => {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      {isLoading ? (
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        <DashboardContent 
-          isEditMode={isEditMode}
-          width={width}
-          layouts={currentLayouts}
-          setLayouts={setLayouts}
-          menuTiles={menuTiles}
-          setMenuTiles={setMenuTiles}
-          toggleEditMode={toggleEditMode}
-          saveLayout={saveLayout}
-          handleRemoveWidget={handleRemoveWidget}
-          toggleFavorite={toggleFavorite}
-          recentAccessed={recentAccessed}
-          handleLayoutChange={handleLayoutChange}
-          getWidgetTitle={getWidgetTitle}
-          renderWidgetContent={renderWidgetContent}
-          recentOrders={recentOrders}
-          quickLinks={quickLinks}
-          newsItems={newsItems}
-        />
-      )}
-    </SidebarProvider>
-  )
-}
-
-// Separate component for the dashboard content
-const DashboardContent = ({
-  isEditMode,
-  width,
-  layouts,
-  setLayouts,
-  menuTiles,
-  setMenuTiles,
-  toggleEditMode,
-  saveLayout,
-  handleRemoveWidget,
-  toggleFavorite,
-  recentAccessed,
-  handleLayoutChange,
-  getWidgetTitle,
-  renderWidgetContent,
-  recentOrders,
-  quickLinks,
-  newsItems,
-}: {
-  isEditMode: boolean
-  width: number
-  layouts: Layouts
-  setLayouts: React.Dispatch<React.SetStateAction<Layouts>>
-  menuTiles: MenuTile[]
-  setMenuTiles: React.Dispatch<React.SetStateAction<MenuTile[]>>
-  toggleEditMode: () => void
-  saveLayout: () => void
-  handleRemoveWidget: (id: string) => void
-  toggleFavorite: (id: string) => void
-  recentAccessed: RecentItem[]
-  handleLayoutChange: (currentLayout: Layout[], allLayouts: any) => void
-  getWidgetTitle: (id: string) => string | null
-  renderWidgetContent: (widgetId: string) => React.ReactNode
-  recentOrders: Order[]
-  quickLinks: QuickLink[]
-  newsItems: NewsItem[]
-}) => {
-
-  const { state: sidebarState } = useSidebar()
-  const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
-  const [showResults, setShowResults] = useState(false)
-  const router = useRouter()
-
-  const handleMenuClick = (id: string) => {
-    // Navigate based on the clicked menu item
-    switch(id) {
-      case "inventory":
-        router.push("/warehouse");  // Navigate to the inventory route
-        break;
-      // You can add more cases here for other menu items
-      default:
-        break;
-    }
-  };
-  
-  const handleInputFocus = () => {
-    setShowResults(true)
-  }
-
-  const handleInputBlur = () => {
-    // Delay hiding results to allow for click events
-    setTimeout(() => setShowResults(false), 200)
-  }
-
-  const handleSearchResultSelect = (result: SearchResult) => {
-    // Handle navigation based on result type
-    switch (result.type) {
-      case "customer":
-        router.push(`/customers/${result.id}`)
-        break
-      case "sales_record":
-        router.push(`/sales/${result.id}`)
-        break
-      case "parent_product":
-        router.push(`/products/parent/${result.id}`)
-        break
-      case "variant_product":
-        router.push(`/products/variant/${result.id}`)
-        break
-      case "box_slot":
-        router.push(`/inventory/boxes/${result.id}`)
-        break
-      case "storage_location":
-        router.push(`/inventory/locations/${result.id}`)
-        break
-      default:
-        console.warn(`Unknown result type: ${result.type}`)
-    }
-    reset()
-  }
-
-  // Use memoized values for grid layout props to prevent unnecessary re-renders
-  const gridBreakpoints = useMemo(() => ({ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }), []);
-  const gridCols = useMemo(() => ({ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }), []);
-  const gridRowHeight = useMemo(() => 30, []);
-  const gridMargin = useMemo<[number, number]>(() => [16, 16], [])
-  
-  // Generate a stable list of layout IDs to prevent re-renders
-  const layoutKeys = useMemo(() => {
-    if (!layouts || !layouts.lg) return [];
-    return layouts.lg.map(item => item.i);
-  }, [layouts]);
-
-  return (
     <div className="flex h-screen">
-      <Sidebar className="border-r fixed h-full z-[5]">
+      <Sidebar className="border-r fixed h-full z-[5] sidebar">
         <SidebarHeader>
           <div className="flex items-center justify-between px-2 py-2 mt-4">
             <div className="flex items-center gap-2">
@@ -916,11 +783,11 @@ const DashboardContent = ({
         </SidebarContent>
       </Sidebar>
       <div className="w-full h-full">
-        <div className="relative">
+        <div className="relative w-full h-full">
           <AlwaysVisibleSidebarToggle />
-          <div className="fixed inset-0 top-[60px] z-[1] flex justify-center" style={{ left: "50px" }}>
-            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full max-w-[1400px] mx-auto px-4">
-              <div className="dashboard-grid-container w-full h-full">
+          <div className="absolute inset-0 top-[60px] z-[1] flex justify-center">
+            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full">
+              <div className="dashboard-grid-container w-full h-full px-2">
                 <ResponsiveGridLayout
                   className="layout"
                   layouts={layouts}
@@ -928,7 +795,275 @@ const DashboardContent = ({
                   cols={gridCols}
                   rowHeight={gridRowHeight}
                   width={width}
-                  margin={gridMargin}
+                  margin={[10, 10]}
+                  containerPadding={[0, 0]}
+                  onLayoutChange={handleLayoutChange}
+                  isDraggable={isEditMode}
+                  isResizable={isEditMode}
+                  draggableHandle=".draggable-handle"
+                  compactType="vertical"
+                  useCSSTransforms={true}
+                  preventCollision={false}
+                >
+                  {layoutKeys.map((key) => (
+                    <div key={key} className="relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border">
+                      <DashboardWidget
+                        id={key}
+                        title={getWidgetTitle(key)}
+                        isEditMode={isEditMode}
+                        onRemove={isEditMode ? handleRemoveWidget : undefined}
+                      >
+                        {renderWidgetContent(key)}
+                      </DashboardWidget>
+                    </div>
+                  ))}
+                </ResponsiveGridLayout>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="fixed bottom-24 right-6 z-30">
+          {isEditMode ? (
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={saveLayout}>
+                <Save className="h-4 w-4 mr-2" />
+                Speichern
+              </Button>
+              <Button variant="outline" size="sm" onClick={toggleEditMode}>
+                <X className="h-4 w-4 mr-2" />
+                Abbrechen
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" size="sm" onClick={toggleEditMode} className="bg-background shadow-md">
+              <Edit className="h-4 w-4 mr-2" />
+              Bearbeiten
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Separate component for the dashboard content
+const DashboardContent = ({
+  isEditMode,
+  width,
+  layouts,
+  setLayouts,
+  menuTiles,
+  setMenuTiles,
+  toggleEditMode,
+  saveLayout,
+  handleRemoveWidget,
+  toggleFavorite,
+  recentAccessed,
+  handleLayoutChange,
+  getWidgetTitle,
+  renderWidgetContent,
+  recentOrders,
+  quickLinks,
+  newsItems,
+}: {
+  isEditMode: boolean
+  width: number
+  layouts: Layouts
+  setLayouts: React.Dispatch<React.SetStateAction<Layouts>>
+  menuTiles: MenuTile[]
+  setMenuTiles: React.Dispatch<React.SetStateAction<MenuTile[]>>
+  toggleEditMode: () => void
+  saveLayout: () => void
+  handleRemoveWidget: (id: string) => void
+  toggleFavorite: (id: string) => void
+  recentAccessed: RecentItem[]
+  handleLayoutChange: (currentLayout: Layout[], allLayouts: any) => void
+  getWidgetTitle: (id: string) => string | null
+  renderWidgetContent: (widgetId: string) => React.ReactNode
+  recentOrders: Order[]
+  quickLinks: QuickLink[]
+  newsItems: NewsItem[]
+}) => {
+
+  const { state: sidebarState } = useSidebar()
+  const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
+  const [showResults, setShowResults] = useState(false)
+  const router = useRouter()
+
+  const handleMenuClick = (id: string) => {
+    // Navigate based on the clicked menu item
+    switch(id) {
+      case "inventory":
+        router.push("/warehouse");  // Navigate to the inventory route
+        break;
+      // You can add more cases here for other menu items
+      default:
+        break;
+    }
+  };
+  
+  const handleInputFocus = () => {
+    setShowResults(true)
+  }
+
+  const handleInputBlur = () => {
+    // Delay hiding results to allow for click events
+    setTimeout(() => setShowResults(false), 200)
+  }
+
+  const handleSearchResultSelect = (result: SearchResult) => {
+    // Handle navigation based on result type
+    switch (result.type) {
+      case "customer":
+        router.push(`/customers/${result.id}`)
+        break
+      case "sales_record":
+        router.push(`/sales/${result.id}`)
+        break
+      case "parent_product":
+        router.push(`/products/parent/${result.id}`)
+        break
+      case "variant_product":
+        router.push(`/products/variant/${result.id}`)
+        break
+      case "box_slot":
+        router.push(`/inventory/boxes/${result.id}`)
+        break
+      case "storage_location":
+        router.push(`/inventory/locations/${result.id}`)
+        break
+      default:
+        console.warn(`Unknown result type: ${result.type}`)
+    }
+    reset()
+  }
+
+  // Use memoized values for grid layout props to prevent unnecessary re-renders
+  const gridBreakpoints = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
+  const gridCols = { lg: 24, md: 20, sm: 12, xs: 6, xxs: 4 };
+  const gridRowHeight = 30;
+  const gridMargin = useMemo<[number, number]>(() => [16, 16], [])
+  
+  // Generate a stable list of layout IDs to prevent re-renders
+  const layoutKeys = useMemo(() => {
+    if (!layouts || !layouts.lg) return [];
+    return layouts.lg.map(item => item.i);
+  }, [layouts]);
+
+  return (
+    <div className="flex h-screen">
+      <Sidebar className="border-r fixed h-full z-[5] sidebar">
+        <SidebarHeader>
+          <div className="flex items-center justify-between px-2 py-2 mt-4">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger className="flex md:flex" />
+            </div>
+          </div>
+          <div className="px-2 pb-2 mt-2 relative">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="search" 
+                placeholder="Suchen..." 
+                className="h-9 pl-8 pr-8"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+              />
+              {query && (
+                <button 
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    reset()
+                    setShowResults(false)
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {error && (
+              <div className="mt-1 text-xs text-red-500">
+                Fehler beim Suchen. Bitte versuchen Sie es später erneut.
+              </div>
+            )}
+            <SearchResultsDropdown
+              results={getAllResults()}
+              isLoading={isLoading}
+              open={!!(showResults && (isLoading || (results && typeof results === 'object' && 'total_count' in results && (results as any).total_count > 0)))}
+              onSelect={handleSearchResultSelect}
+            />
+          </div>
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Favoriten</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {menuTiles.filter((tile) => tile.favorited).length > 0 ? (
+                  menuTiles
+                    .filter((tile) => tile.favorited)
+                    .map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton asChild>
+                          <Link href="#" onClick={() => handleMenuClick(item.id)}>
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))
+                ) : (
+                  <div className="px-2 py-1 text-sm text-muted-foreground">
+                    Keine Favoriten vorhanden. Klicken Sie auf den Stern bei einem Menüpunkt, um ihn zu den
+                    Favoriten hinzuzufügen.
+                  </div>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup>
+            <SidebarGroupLabel>Zuletzt aufgerufen</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {recentAccessed.map((item) => (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton asChild>
+                      <Link href="#">
+                        {item.type === "Kunde" ? (
+                          <Users className="h-4 w-4" />
+                        ) : (
+                          <ShoppingCart className="h-4 w-4" />
+                        )}
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+      <div className="w-full h-full">
+        <div className="relative w-full h-full">
+          <AlwaysVisibleSidebarToggle />
+          <div className="absolute inset-0 top-[60px] z-[1] flex justify-center">
+            <div className="h-[calc(100vh-180px)] bg-muted/20 rounded-lg w-full">
+              <div className="dashboard-grid-container w-full h-full px-2">
+                <ResponsiveGridLayout
+                  className="layout"
+                  layouts={layouts}
+                  breakpoints={gridBreakpoints}
+                  cols={gridCols}
+                  rowHeight={gridRowHeight}
+                  width={width}
+                  margin={[10, 10]}
+                  containerPadding={[0, 0]}
                   onLayoutChange={handleLayoutChange}
                   isDraggable={isEditMode}
                   isResizable={isEditMode}

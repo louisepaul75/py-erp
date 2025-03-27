@@ -1,6 +1,6 @@
 "use client"
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Navbar } from '../Navbar'
 import {
   Sidebar,
@@ -26,10 +26,14 @@ import {
   Database,
   ChevronRight,
   X,
+  Search,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
+import { SearchResultsDropdown } from "@/components/ui/search-results-dropdown"
+import { useState } from 'react'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -53,6 +57,9 @@ const AlwaysVisibleSidebarToggle = () => {
 const SidebarContents = () => {
   const { toggleSidebar } = useSidebar()
   const pathname = usePathname()
+  const router = useRouter()
+  const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
+  const [showResults, setShowResults] = useState(false)
   
   // Recent accessed items
   const recentAccessed = [
@@ -62,15 +69,82 @@ const SidebarContents = () => {
     { id: "ORD-7340", name: "Auftrag #7340", type: "Auftrag" },
     { id: "KD-1089", name: "Weber KG", type: "Kunde" },
   ]
+
+  const handleInputFocus = () => {
+    setShowResults(true)
+  }
+
+  const handleInputBlur = () => {
+    // Delay hiding results to allow for click events
+    setTimeout(() => setShowResults(false), 200)
+  }
+
+  const handleSearchResultSelect = (result: SearchResult) => {
+    // Handle navigation based on result type
+    switch (result.type) {
+      case "customer":
+        router.push(`/customers/${result.id}`)
+        break
+      case "sales_record":
+        router.push(`/sales/${result.id}`)
+        break
+      case "parent_product":
+        router.push(`/products/parent/${result.id}`)
+        break
+      case "variant_product":
+        router.push(`/products/variant/${result.id}`)
+        break
+      case "box_slot":
+        router.push(`/inventory/boxes/${result.id}`)
+        break
+      case "storage_location":
+        router.push(`/inventory/locations/${result.id}`)
+        break
+      default:
+        console.warn(`Unknown result type: ${result.type}`)
+    }
+    reset()
+    setShowResults(false)
+  }
   
   return (
     <div className="relative">
       <Sidebar>
         <SidebarHeader className="z-[1]">
-          <div className="flex items-center px-2 py-2">
-            <Input
-              placeholder="Suchen..."
-              className="w-full bg-background"
+          <div className="flex items-center px-2 py-2 relative">
+            <div className="relative w-full">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Suchen..."
+                className="w-full bg-background pl-8 pr-8"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+              />
+              {query && (
+                <button 
+                  className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    reset()
+                    setShowResults(false)
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {error && (
+              <div className="mt-1 text-xs text-red-500">
+                Fehler beim Suchen. Bitte versuchen Sie es später erneut.
+              </div>
+            )}
+            <SearchResultsDropdown
+              results={getAllResults()}
+              isLoading={isLoading}
+              open={!!(showResults && (isLoading || (results && typeof results === 'object' && 'total_count' in results && (results as any).total_count > 0)))}
+              onSelect={handleSearchResultSelect}
             />
           </div>
         </SidebarHeader>
