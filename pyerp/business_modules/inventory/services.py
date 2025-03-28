@@ -166,7 +166,7 @@ class InventoryService:
             defaults={
                 "quantity": 0,
                 "date_stored": datetime.now(),
-                "created_by": user.username if user else None,
+                "created_by": user if user else None,
             }
         )
         
@@ -202,7 +202,6 @@ class InventoryService:
             movement_type=InventoryMovement.MovementType.TRANSFER,
             reference=f"Transfer between boxes",
             notes=f"Moved {quantity} units from {source_slot} to {target_box_slot}",
-            created_by=user.username if user else None,
         )
         
         logger.info(
@@ -257,7 +256,6 @@ class InventoryService:
             movement_type=movement_type,
             reference=reason or "Product removal",
             notes=f"Removed {quantity} units from {box_slot}",
-            created_by=user.username if user else None,
         )
         
         # Handle complete removal
