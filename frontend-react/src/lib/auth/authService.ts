@@ -254,17 +254,23 @@ export const authService = {
       // Ensure we have a CSRF token for the login request
       await csrfService.fetchToken();
       
-      const response = await authApi.post('auth/login/', { json: credentials }).json<{
-        user: User;
+      // Get tokens from the token endpoint
+      const tokenResponse = await authApi.post('token/', { json: credentials }).json<{
         access: string;
         refresh: string;
       }>();
       
       // Store tokens
-      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
-      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, response.refresh);
+      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, tokenResponse.access);
+      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, tokenResponse.refresh);
       
-      return response.user;
+      // Get user info with the new token
+      const user = await authService.getCurrentUser();
+      if (!user) {
+        throw new Error('Failed to get user info after login');
+      }
+      
+      return user;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -288,7 +294,7 @@ export const authService = {
         return false;
       }
 
-      const response = await authApi.post('auth/token/refresh/', {
+      const response = await authApi.post('token/refresh/', {
         json: { refresh: refreshToken }
       }).json<{ access: string }>();
 
