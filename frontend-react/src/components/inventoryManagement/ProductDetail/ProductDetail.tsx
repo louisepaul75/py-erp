@@ -15,7 +15,7 @@ export default function ProductDetail({
   console.log("selectedProduct",selectedProduct)
 
   return (
-    <div className="flex-1 overflow-auto z-20 bg-slate-50 dark:bg-slate-950 ">
+    <div className="h-full flex-1 overflow-auto z-20 bg-slate-50 dark:bg-slate-950 ">
       {/* Mutter/Varianten Tabs */}
       <TabsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
 

@@ -83,10 +83,10 @@ export default function ProductList({
   };
 
   return (
-    <div className="w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+    <div className="h-full w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
       {/* Search and Filters */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="relative md:hidden mb-4">
+        {/* <div className="relative md:hidden mb-4">
           <Input
             className="w-full pl-9 h-10 rounded-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus-visible:ring-blue-500"
             placeholder="Suchen..."
@@ -106,7 +106,7 @@ export default function ProductList({
               <X className="h-3 w-3" />
             </Button>
           )}
-        </div>
+        </div> */}
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-slate-900 dark:text-slate-100">
             Produkte
@@ -140,7 +140,7 @@ export default function ProductList({
       </div>
 
       {/* Product List */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto ">
         <SkinnyTable
           data={filteredProducts}
           columns={[

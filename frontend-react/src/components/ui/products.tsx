@@ -152,7 +152,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
     <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="max-w-full mx-auto">
         <Card>
-          <CardHeader>
+          <CardHeader >
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-2xl font-bold text-primary">Produkte</CardTitle>
@@ -170,9 +170,9 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 ">
             <div className="flex overflow-hidden h-[calc(100vh-15rem)]">
-              <div className="w-1/3 border-r border-slate-200 dark:border-slate-800">
+              <div className="w-1/3 border-r  dark:border-slate-800">
                 <ProductList
                   showSidebar={true}
                   searchTerm={searchTerm}
