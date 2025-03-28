@@ -22,22 +22,40 @@ export function middleware(request: NextRequest) {
   
   // Check for authentication cookie
   const hasAuthCookie = request.cookies.has('access_token')
+  
+  // Check if this is a loop by counting redirects in the cookie
+  const redirectCount = parseInt(request.cookies.get('redirect_count')?.value || '0')
+  
+  // If we've redirected too many times, break the loop and clear cookies
+  if (redirectCount > 5) {
+    const response = NextResponse.redirect(new URL('/login', request.url))
+    response.cookies.delete('access_token')
+    response.cookies.delete('refresh_token')
+    response.cookies.delete('redirect_count')
+    return response
+  }
 
   // Redirect logic based on auth status
   if (isPublicPath && hasAuthCookie && path === '/login') {
     // If user has auth cookie and tries to access login page, redirect to dashboard
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const response = NextResponse.redirect(new URL('/dashboard', request.url))
+    response.cookies.set('redirect_count', String(redirectCount + 1))
+    return response
   }
 
   if (!isPublicPath && !hasAuthCookie) {
     // Store the original URL to redirect back after login
     const url = new URL('/login', request.url)
     url.searchParams.set('from', request.nextUrl.pathname)
-    return NextResponse.redirect(url)
+    const response = NextResponse.redirect(url)
+    response.cookies.set('redirect_count', String(redirectCount + 1))
+    return response
   }
-
-  // Allow the request to proceed
-  return NextResponse.next()
+  
+  // Reset redirect count for normal navigation
+  const response = NextResponse.next()
+  response.cookies.set('redirect_count', '0')
+  return response
 }
 
 // See "Matching Paths" below to learn more

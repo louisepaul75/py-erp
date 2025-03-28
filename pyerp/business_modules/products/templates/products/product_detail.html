@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'products:product_list' %}">{% trans "Products" %}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-6">
+            {% if has_front_produktfoto %}
+            <div class="product-image">
+                {% for image in product.images.all %}
+                    {% if image.image_type == "Produktfoto" and image.is_front %}
+                    <img src="{{ image.image_url }}" class="img-fluid" alt="{{ product.name }}">
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <h1>{{ product.name }}</h1>
+            <p class="lead">{{ product.short_description }}</p>
+            <div class="description">
+                {{ product.description|linebreaks }}
+            </div>
+
+            {% if product.tags.exists %}
+            <div class="tags mt-3">
+                <h4>{% trans "Tags" %}</h4>
+                {% for tag in product.tags.all %}
+                <span class="badge bg-secondary">{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if variants %}
+    <div class="variants mt-4">
+        <h2>{% trans "Variants" %}</h2>
+        <div class="row">
+            {% for variant in variants %}
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    {% if variant.id in variant_images %}
+                    <img src="{{ variant_images.variant.id.image_url }}" class="card-img-top" alt="{{ variant.name }}">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ variant.name }}</h5>
+                        <p class="card-text">{{ variant.short_description|truncatewords:20 }}</p>
+                        <a href="{% url 'products:variant_detail' pk=variant.pk %}" class="btn btn-primary">{% trans "View Details" %}</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

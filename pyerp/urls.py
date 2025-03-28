@@ -8,7 +8,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from django.views.i18n import JavaScriptCatalog, set_language
 from django.conf.urls.i18n import i18n_patterns
 from django.utils.translation import gettext_lazy as _
@@ -19,6 +19,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
+from django.views.static import serve
 
 from pyerp.core.views import ReactAppView, UserProfileView
 from pyerp.external_api.search.views import GlobalSearchViewSet
@@ -94,8 +95,10 @@ urlpatterns = [
         "api/email/",
         include("pyerp.utils.email_system.urls", namespace="email_system"),
     ),
-    # Add products API URLs directly
-    path("api/products/", include("pyerp.business_modules.products.api_urls")),
+    # Add products API URLs with namespace
+    path("api/products/", include("pyerp.business_modules.products.api_urls", namespace="products_api")),
+    # Add products UI URLs with namespace
+    path("products/", include("pyerp.business_modules.products.urls", namespace="products")),
     # Add sales API URLs
     path("api/sales/", include("pyerp.business_modules.sales.urls")),
     # Add inventory API URLs with namespace
@@ -106,6 +109,15 @@ urlpatterns = [
     path("api/users/", include("users.urls", namespace="users")),
     # Admin tools API
     path("api/admin/", include("admin_tools.urls")),
+    
+    # Serve Next.js built files - adjusted for Docker environment
+    # These paths need to match the structure in the Docker container
+    re_path(r'^_next/static/(?P<path>.*)$', serve, {
+        'document_root': '/app/frontend-react/.next/static'
+    }),
+    re_path(r'^_next/(?P<path>.*)$', serve, {
+        'document_root': '/app/frontend-react/.next'
+    }),
 ]
 
 # Add API documentation URLs if available

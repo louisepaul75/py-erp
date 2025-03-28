@@ -516,6 +516,8 @@ class ReactAppView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["debug"] = settings.DEBUG
+        # Pass information about the environment to the template
+        context["is_docker"] = os.environ.get("IS_DOCKER", "False").lower() == "true"
         return context
 
 

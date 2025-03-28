@@ -1,52 +1,75 @@
 /**
  * This script exports the dashboard layout from localStorage to a JSON file.
- * Run this in the browser console when you have your desired dashboard layout.
+ * Can be run in browser or Node.js environment.
  */
 
 // Function to export the dashboard layout
-function exportDashboardLayout() {
+async function exportDashboardLayout(providedLayout) {
   try {
-    // Check if we're in a browser environment
-    if (typeof localStorage === 'undefined' || typeof document === 'undefined') {
-      console.error('Not in a browser environment');
-      return false;
+    let layout;
+
+    // Validate input first
+    if (providedLayout === null || providedLayout === undefined) {
+      throw new Error('Invalid layout format');
     }
 
-    // Get the current layout from localStorage
-    const layoutJson = localStorage.getItem('dashboard-grid-layout');
-    
-    if (!layoutJson) {
-      console.error('No dashboard layout found in localStorage');
-      return false;
+    // If we're in a browser environment and no layout provided, try localStorage
+    if (typeof window !== 'undefined' && !providedLayout) {
+      const layoutJson = localStorage.getItem('dashboard-grid-layout');
+      if (!layoutJson) {
+        throw new Error('No dashboard layout found in localStorage');
+      }
+      layout = JSON.parse(layoutJson);
+    } else {
+      layout = providedLayout;
     }
-    
-    // Parse to validate it's proper JSON
-    const layout = JSON.parse(layoutJson);
-    
-    // Create a Blob with the JSON data
-    const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
-    
-    // Create a download link
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'dashboard-layout.json';
-    document.body.appendChild(a);
-    
-    // Trigger the download
-    a.click();
-    
-    // Clean up
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 0);
-    
-    console.log('Dashboard layout exported successfully!');
-    return true;
+
+    // Validate layout
+    if (typeof layout !== 'object') {
+      throw new Error('Invalid layout format');
+    }
+
+    // Additional validation for layout format
+    if (layout.lg && !Array.isArray(layout.lg)) {
+      throw new Error('Invalid layout format');
+    }
+
+    const layoutJson = JSON.stringify(layout, null, 2);
+
+    // Check for Node.js environment first
+    if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+      const fs = require('fs');
+      const path = require('path');
+      const outputPath = path.join(process.cwd(), 'dashboard-layout.json');
+      try {
+        fs.writeFileSync(outputPath, layoutJson);
+      } catch (err) {
+        throw new Error('Write error');
+      }
+    } 
+    // In browser environment
+    else {
+      // Create a Blob with the JSON data
+      const blob = new Blob([layoutJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'dashboard-layout.json';
+      document.body.appendChild(a);
+      
+      // Trigger the download
+      a.click();
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+    }
+
+    return layout;
   } catch (error) {
-    console.error('Failed to export dashboard layout:', error);
-    return false;
+    throw error;
   }
 }
 

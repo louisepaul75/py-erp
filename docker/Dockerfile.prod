@@ -10,17 +10,12 @@ COPY frontend-react/package*.json ./
 # Create .npmrc to reduce warnings and optimize installation
 RUN echo "legacy-peer-deps=true\nloglevel=error" > .npmrc
 
-# Install production dependencies and required Babel plugins
-RUN npm ci --prefer-offline --no-audit --no-optional --production && \
-    npm install --no-save \
-    @babel/plugin-transform-private-methods \
-    @babel/plugin-proposal-private-property-in-object \
-    @babel/plugin-proposal-class-properties
+# Install production dependencies
+RUN npm ci --prefer-offline --no-audit --no-optional --production
 
 # Copy only the necessary files for the build
 COPY frontend-react/tsconfig.json ./
 COPY frontend-react/next.config.js ./
-COPY frontend-react/.babelrc ./
 COPY frontend-react/src ./src
 COPY frontend-react/public ./public
 
@@ -121,7 +116,8 @@ EXPOSE 80 443 8050
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    REDIS_URL=redis://localhost:6379/0
+    REDIS_URL=redis://localhost:6379/0 \
+    IS_DOCKER=True
 
 # Set up entrypoint
 COPY docker/entrypoint.prod.sh /entrypoint.sh

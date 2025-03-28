@@ -27,7 +27,7 @@ const cookieStorage = {
 };
 
 // Token refresh handling
-let isRefreshing = false;
+const isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value: void | PromiseLike<void>) => void;
   reject: (error: any) => void;

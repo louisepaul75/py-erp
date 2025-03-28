@@ -139,8 +139,8 @@ describe('SearchResultsDropdown Component', () => {
   });
   
   it('handles null or invalid results gracefully', () => {
-    // @ts-ignore - deliberately passing invalid data to test error handling
-    const invalidResults: any[] = [
+    // @ts-expect-error - deliberately passing invalid data to test error handling
+    const invalidResults: SearchResult[] = [
       null,
       undefined,
       { id: 'string-id', type: 'customer' }, // Invalid id type
@@ -166,8 +166,8 @@ describe('SearchResultsDropdown Component', () => {
       {
         id: 6,
         type: 'customer',
-        name: null as any,
-        customer_number: undefined as any
+        name: null as unknown as string,
+        customer_number: undefined as unknown as string
       }
     ];
     

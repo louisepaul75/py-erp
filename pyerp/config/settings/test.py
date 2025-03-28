@@ -16,15 +16,14 @@ from pyerp.utils.env_loader import load_environment_variables
 load_environment_variables(verbose=True)
 
 # Remove debug toolbar from installed apps
-if "debug_toolbar" in INSTALLED_APPS:
-    INSTALLED_APPS.remove("debug_toolbar")
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]
 
 # Remove debug toolbar middleware
-if "debug_toolbar.middleware.DebugToolbarMiddleware" in MIDDLEWARE:
-    MIDDLEWARE.remove("debug_toolbar.middleware.DebugToolbarMiddleware")
+MIDDLEWARE = [mw for mw in MIDDLEWARE if "debug_toolbar" not in mw]
 
 # Configure debug toolbar for tests
 DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK": lambda request: False,
     "IS_RUNNING_TESTS": True,
 }
 
@@ -35,16 +34,43 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
+        "NAME": os.path.join(BASE_DIR, "test_db.sqlite3"),
+        "TEST": {
+            "NAME": os.path.join(BASE_DIR, "test_db.sqlite3"),
+        },
     }
 }
 
-# Disable migrations during tests to avoid field type issues
-MIGRATION_MODULES = {}  # Empty dictionary instead of None
+# Configure migrations for tests
+MIGRATION_MODULES = {}  # Empty dictionary for migrations
 
-# Configure test-specific model settings
+# Disable transaction management for tests to avoid SQLite issues
 DATABASE_ROUTERS = []
 TEST_NON_SERIALIZED_APPS = []
+
+# Configure URL patterns for tests
+ROOT_URLCONF = 'pyerp.urls'
+
+# Configure template settings for tests
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [
+            str(BASE_DIR / "pyerp" / "templates"),
+            str(BASE_DIR / "pyerp" / "business_modules" / "products" / "templates"),
+        ],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+            "debug": True,
+        },
+    },
+]
 
 # Disable password hashing for faster tests
 PASSWORD_HASHERS = [
