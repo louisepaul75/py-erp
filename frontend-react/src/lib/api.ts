@@ -3,20 +3,9 @@ import ky from 'ky';
 import { API_URL, AUTH_CONFIG } from './config';
 import { csrfService } from './auth/authService';
 import { cookies } from 'next/headers';
+import { clientCookieStorage } from './auth/clientCookies';
 
 // Create an API client instance with the correct base URL and auth
-const addAuthHeaders = async (request: Request) => {
-  'use server';
-  const cookieStore = cookies();
-  const token = cookieStore.get(AUTH_CONFIG.tokenStorage.accessToken)?.value;
-  
-  if (token) {
-    request.headers.set('Authorization', `Bearer ${token}`);
-  }
-  
-  return request;
-};
-
 const instance = ky.create({
   prefixUrl: API_URL,
   timeout: 30000,
@@ -24,11 +13,54 @@ const instance = ky.create({
   hooks: {
     beforeRequest: [
       async (request) => {
+        // Get token from client cookie storage
+        const token = typeof window !== 'undefined' 
+          ? clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken)
+          : null;
+        
+        if (token) {
+          request.headers.set('Authorization', `Bearer ${token}`);
+        }
+        
+        // Add CSRF token if available
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (csrfToken) {
           request.headers.set('X-CSRFToken', csrfToken);
         }
-        return await addAuthHeaders(request);
+      }
+    ],
+    beforeError: [
+      async (error) => {
+        const { response } = error;
+        
+        // Handle 401 Unauthorized errors (token expired)
+        if (response?.status === 401) {
+          try {
+            // Try to refresh the token
+            const refreshToken = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
+            if (refreshToken) {
+              const refreshResponse = await ky.post(`${API_URL}/token/refresh/`, {
+                json: { refresh: refreshToken },
+                credentials: 'include'
+              }).json<{ access: string }>();
+              
+              clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, refreshResponse.access);
+              
+              // Retry the original request with the new token
+              const request = error.request.clone();
+              request.headers.set('Authorization', `Bearer ${refreshResponse.access}`);
+              return ky(request);
+            }
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+            // Clear tokens and redirect to login
+            clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.accessToken);
+            clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.refreshToken);
+            window.location.href = '/login';
+          }
+        }
+        
+        return error;
       }
     ]
   }

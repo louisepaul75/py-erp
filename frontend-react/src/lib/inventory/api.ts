@@ -73,104 +73,74 @@ export interface PaginatedResponse<T> {
   total_pages: number;
 }
 
-// Create axios instance with auth interceptor
+// Create axios instance with default config
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000, // Increased timeout to 30 seconds
-  withCredentials: true, // Include cookies
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
+  timeout: 30000,
+  withCredentials: true // Include cookies in requests
 });
 
-// Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Timeout error message helper
-const getTimeoutMessage = (ms: number) => {
-  return `Die Anfrage hat das Zeitlimit von ${ms/1000} Sekunden überschritten. Bitte überprüfen Sie Ihre Netzwerkverbindung und versuchen Sie es später erneut.`;
-};
-
-// Add request interceptor to add auth token
+// Add request interceptor to handle auth
 api.interceptors.request.use(
-  (config) => {
-    const token = authService.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config: InternalAxiosRequestConfig) => {
+    try {
+      // Get the token
+      const token = await authService.getToken();
+      
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        // If no token and not a login request, redirect to login
+        if (!config.url?.includes('token')) {
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          throw new Error('No authentication token available');
+        }
+      }
+      
+      return config;
+    } catch (error) {
+      return Promise.reject(error);
     }
-    // Initialize retry count
-    config.retryCount = config.retryCount || 0;
-    return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor to handle token refresh and retries
+// Add response interceptor to handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle timeout errors with retry logic
-    if ((error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'))) 
-        && originalRequest?.retryCount < MAX_RETRIES) {
-      originalRequest.retryCount = (originalRequest.retryCount || 0) + 1;
-      console.log(`Retrying request (${originalRequest.retryCount}/${MAX_RETRIES})...`);
-      
-      // Wait before retrying
-      await sleep(RETRY_DELAY * originalRequest.retryCount);
-      return api(originalRequest);
-    }
-
-    // If we've exhausted retries or it's not a timeout error
-    if (error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'))) {
-      console.error('Request timeout after retries:', error);
-      return Promise.reject(new Error(getTimeoutMessage(originalRequest?.timeout || 30000)));
-    }
-
-    // Check if error has response and status is 401 and we haven't tried to refresh token yet
-    if (error.response?.status === 401 && !originalRequest?._retry) {
-      // Mark the request as retried to prevent infinite loops
-      if (originalRequest) {
-        originalRequest._retry = true;
-      }
+    // If the error is 401 and we haven't tried to refresh the token yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
 
       try {
         // Try to refresh the token
-        const newToken = await authService.refreshToken();
-        if (newToken && originalRequest) {
-          // Retry the original request with new token
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return api(originalRequest);
+        const refreshSuccess = await authService.refreshToken();
+        
+        if (refreshSuccess) {
+          // Get the new token
+          const token = await authService.getToken();
+          
+          if (token) {
+            // Update the authorization header
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            // Retry the original request
+            return api(originalRequest);
+          }
         }
+        
+        // If refresh failed, redirect to login
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        return Promise.reject(error);
       } catch (refreshError) {
         // If refresh fails, redirect to login
-        authService.logout();
-        window.location.href = '/login';
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return Promise.reject(refreshError);
       }
-    }
-
-    // For network errors or other issues where response might not exist
-    if (!error.response) {
-      console.error('Network error or server not responding:', error.message);
-      if (navigator.onLine) {
-        return Promise.reject(new Error('Server ist nicht erreichbar. Bitte versuchen Sie es später erneut.'));
-      } else {
-        return Promise.reject(new Error('Keine Internetverbindung. Bitte überprüfen Sie Ihre Netzwerkverbindung.'));
-      }
-    }
-
-    // For server errors
-    if (error.response?.status >= 500) {
-      return Promise.reject(new Error('Der Server hat einen internen Fehler gemeldet. Bitte versuchen Sie es später erneut.'));
     }
 
     return Promise.reject(error);
@@ -196,7 +166,7 @@ export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Prom
         page,
         page_size: pageSize
       },
-      timeout // Allow custom timeout for this specific request
+      timeout
     });
     return response.data;
   } catch (error) {

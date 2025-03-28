@@ -152,12 +152,14 @@ export const fetchContainers = async (page = 1, pageSize = 20): Promise<{
   totalPages: number;
 }> => {
   try {
-    const token = authService.getToken();
+    // Get the token first
+    const token = await authService.getToken();
     if (!token) {
-      throw new Error('Not authenticated. Please log in to view containers.');
+      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      throw new Error('Authentication required. Please log in to view containers.');
     }
 
-    const response: PaginatedResponse<Box> = await fetchBoxes(page, pageSize);
+    const response = await fetchBoxes(page, pageSize);
     const containers = response.results.map(transformBoxToContainer);
     
     return {
@@ -168,15 +170,27 @@ export const fetchContainers = async (page = 1, pageSize = 20): Promise<{
   } catch (error: any) {
     console.error('Error fetching containers:', error);
     
-    // Provide more specific error messages
+    if (error.response?.status === 401) {
+      // Try to refresh the token
+      const refreshSuccess = await authService.refreshToken();
+      if (refreshSuccess) {
+        // Retry the request
+        return fetchContainers(page, pageSize);
+      } else {
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        throw new Error('Your session has expired. Please log in again.');
+      }
+    }
+    
+    // Handle other types of errors
     if (error.code === 'ECONNABORTED') {
-      throw new Error('Die Anfrage hat zu lange gedauert. Bitte versuchen Sie es erneut.');
+      throw new Error('The request timed out. Please try again.');
     } else if (!error.response) {
-      throw new Error('Keine Verbindung zum Server möglich. Bitte überprüfen Sie Ihre Internetverbindung.');
-    } else if (error.response.status === 401) {
-      throw new Error('Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.');
+      throw new Error('Could not connect to the server. Please check your internet connection.');
+    } else if (error.response.status >= 500) {
+      throw new Error('Server error. Please try again later.');
     } else {
-      throw new Error(error.message || 'Ein unerwarteter Fehler ist aufgetreten.');
+      throw new Error(error.message || 'An unexpected error occurred.');
     }
   }
 }; 

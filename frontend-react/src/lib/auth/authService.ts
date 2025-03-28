@@ -205,10 +205,27 @@ const api = ky.extend({
 export const authService = {
   getCurrentUser: async (): Promise<User | null> => {
     try {
+      const token = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      if (!token) {
+        return null;
+      }
+
       const response = await api.get('auth/user/').json<User>();
       return response;
     } catch (error) {
       if (error instanceof HTTPError && error.response.status === 401) {
+        // Try to refresh the token
+        const refreshSuccess = await authService.refreshToken();
+        if (refreshSuccess) {
+          // Retry getting user info
+          try {
+            const response = await api.get('auth/user/').json<User>();
+            return response;
+          } catch (retryError) {
+            console.error('Failed to get user info after token refresh:', retryError);
+            return null;
+          }
+        }
         return null;
       }
       throw error;
@@ -216,7 +233,16 @@ export const authService = {
   },
   
   getToken: async (): Promise<string | null> => {
-    return await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+    const token = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+    if (!token) {
+      // Try to refresh if we have a refresh token
+      const refreshSuccess = await authService.refreshToken();
+      if (refreshSuccess) {
+        return await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      }
+      return null;
+    }
+    return token;
   },
   
   login: async (credentials: LoginCredentials): Promise<User> => {
@@ -248,9 +274,14 @@ export const authService = {
   
   logout: async (): Promise<void> => {
     try {
-      await api.post('auth/logout/');
+      // Try to call logout endpoint, but don't fail if it doesn't work
+      try {
+        await api.post('auth/logout/');
+      } catch (error) {
+        console.warn('Logout endpoint call failed:', error);
+      }
     } finally {
-      // Always clear tokens, even if the API call fails
+      // Always clear tokens
       await clearAuthTokens();
     }
   },
@@ -270,6 +301,8 @@ export const authService = {
       return true;
     } catch (error) {
       console.error('Token refresh failed:', error);
+      // Clear tokens on refresh failure
+      await clearAuthTokens();
       return false;
     }
   },

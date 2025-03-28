@@ -6,14 +6,15 @@ import ky, {
 } from "ky";
 import { API_URL, AUTH_CONFIG } from "../config";
 import { Product } from "@/components/types/product";
-import { cookies } from 'next/headers';
+import { getServerCookie } from "../auth/serverCookies";
 
-// Cookie storage utility
+// Cookie storage utility for client-side operations
 const cookieStorage = {
-  getItem: async (key: string): Promise<string | null> => {
-    'use server';
-    const cookieStore = cookies();
-    return cookieStore.get(key)?.value ?? null;
+  getItem: (name: string): string | null => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() ?? null;
+    return null;
   },
   setItem: (name: string, value: string, options = {}) => {
     document.cookie = `${name}=${value}; path=/; ${Object.entries(options)
@@ -46,32 +47,35 @@ const processQueue = (error: any) => {
 // Create ky instance
 const api = ky.create({
   prefixUrl: API_URL,
-  timeout: 30000,
-  credentials: "include", // Added for consistency with original
+  timeout: 60000,
+  credentials: "include",
   hooks: {
     beforeRequest: [
       async (request) => {
-        const csrfToken = document
-          .querySelector('meta[name="csrf-token"]')
-          ?.getAttribute("content");
-        if (csrfToken) {
-          request.headers.set("X-CSRFToken", csrfToken);
-        }
+        // Only run in browser environment
+        if (typeof window !== 'undefined') {
+          const csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+          if (csrfToken) {
+            request.headers.set("X-CSRFToken", csrfToken);
+          }
 
-        // Get the access token from cookies
-        const accessToken = await cookieStorage.getItem(
-          AUTH_CONFIG.tokenStorage.accessToken
-        );
-        if (accessToken && !request.url.includes("token/")) {
-          request.headers.set("Authorization", `Bearer ${accessToken}`);
-        }
+          // Get the access token from client-side cookies
+          const accessToken = cookieStorage.getItem(
+            AUTH_CONFIG.tokenStorage.accessToken
+          );
+          if (accessToken && !request.url.includes("token/")) {
+            request.headers.set("Authorization", `Bearer ${accessToken}`);
+          }
 
-        console.log("Making request:", {
-          method: request.method,
-          url: request.url,
-          headers: Object.fromEntries(request.headers.entries()),
-          token: accessToken ? "Present" : "Not present",
-        });
+          console.log("Making request:", {
+            method: request.method,
+            url: request.url,
+            headers: Object.fromEntries(request.headers.entries()),
+            token: accessToken ? "Present" : "Not present",
+          });
+        }
       },
     ],
     beforeError: [
@@ -130,9 +134,9 @@ interface ProductListParams {
 export const productApi = {
   getProducts: async (params: ProductListParams = {}) => {
     console.log("Fetching products in getProducts");
-    if (params._ude_variants !== undefined) {
-      params.include_variants = params._ude_variants;
-      delete params._ude_variants;
+    if (params._include_variants !== undefined) {
+      params.include_variants = params._include_variants;
+      delete params._include_variants;
     }
 
     // Default query parameters

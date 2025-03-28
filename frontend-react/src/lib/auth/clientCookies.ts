@@ -7,12 +7,18 @@ export const clientCookieStorage = {
   
   setItem: (key: string, value: string): void => {
     Cookies.set(key, value, {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      secure: true,
+      sameSite: 'strict',
+      path: '/',
+      expires: 7
     });
   },
   
   removeItem: (key: string): void => {
-    Cookies.remove(key);
+    Cookies.remove(key, {
+      path: '/',
+      secure: true,
+      sameSite: 'strict'
+    });
   }
 }; 

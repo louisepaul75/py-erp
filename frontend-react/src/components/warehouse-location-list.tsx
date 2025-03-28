@@ -61,30 +61,49 @@ export default function WarehouseLocationList() {
       
       try {
         // Get the authentication token
-        const token = authService.getToken();
+        const token = await authService.getToken();
         
-        // Get CSRF token from cookies if available
-        const getCookie = (name: string) => {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) return parts.pop()?.split(';').shift();
-          return undefined;
-        };
-        
-        const csrfToken = getCookie('csrftoken');
+        if (!token) {
+          // No token found, redirect to login
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
         
         const response = await fetch(`${API_URL}/inventory/storage-locations/`, {
           headers: {
             "Accept": "application/json",
-            "Authorization": token ? `Bearer ${token}` : "",
-            ...(csrfToken && { "X-CSRFToken": csrfToken }),
+            "Authorization": `Bearer ${token}`,
           },
           credentials: "include" // Include cookies for session auth
         });
         
         if (!response.ok) {
           if (response.status === 401) {
-            throw new Error('Authentication required. Please log in to access warehouse locations.');
+            // Try to refresh the token
+            const refreshSuccess = await authService.refreshToken();
+            if (refreshSuccess) {
+              // Retry the request with new token
+              const newToken = await authService.getToken();
+              const retryResponse = await fetch(`${API_URL}/inventory/storage-locations/`, {
+                headers: {
+                  "Accept": "application/json",
+                  "Authorization": `Bearer ${newToken}`,
+                },
+                credentials: "include"
+              });
+              
+              if (!retryResponse.ok) {
+                throw new Error('Authentication failed after token refresh. Please log in again.');
+              }
+              
+              const data = await retryResponse.json();
+              handleSuccessResponse(data);
+              return;
+            } else {
+              // Token refresh failed, redirect to login
+              window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+              return;
+            }
           } else if (response.status === 403) {
             throw new Error('Permission denied. You may need to refresh the page to update your session.');
           } else if (response.status === 404) {
@@ -94,34 +113,41 @@ export default function WarehouseLocationList() {
         }
         
         const data = await response.json();
+        handleSuccessResponse(data);
         
-        // Map the API response to match our WarehouseLocation type
-        const warehouseLocations: WarehouseLocation[] = data.map((item: any) => ({
-          id: item.id.toString(),
-          laNumber: item.location_code || `LA-${item.id}`,
-          location: item.name,
-          forSale: item.sale || false,
-          specialStorage: item.special_spot || false,
-          shelf: parseInt(item.shelf) || 0,
-          compartment: parseInt(item.compartment) || 0,
-          floor: parseInt(item.unit) || 0,
-          containerCount: item.product_count || 0,
-          status: item.product_count > 0 ? "in-use" : "free"
-        }));
-        
-        setLocations(warehouseLocations);
-        setFilteredLocations(warehouseLocations);
       } catch (error) {
         console.error("Error fetching storage locations:", error);
-        setError("Failed to load storage locations. Using mock data instead.");
+        setError(error instanceof Error ? error.message : "Failed to load storage locations");
         
-        // Fallback to mock data if the API request fails
-        const mockData = generateMockData(50);
-        setLocations(mockData);
-        setFilteredLocations(mockData);
+        // Only use mock data in development
+        if (process.env.NODE_ENV === 'development') {
+          const mockData = generateMockData(50);
+          setLocations(mockData);
+          setFilteredLocations(mockData);
+        }
       } finally {
         setIsLoading(false);
       }
+    };
+    
+    // Helper function to handle successful response
+    const handleSuccessResponse = (data: any[]) => {
+      // Map the API response to match our WarehouseLocation type
+      const warehouseLocations: WarehouseLocation[] = data.map((item: any) => ({
+        id: item.id.toString(),
+        laNumber: item.location_code || `LA-${item.id}`,
+        location: item.name,
+        forSale: item.sale || false,
+        specialStorage: item.special_spot || false,
+        shelf: parseInt(item.shelf) || 0,
+        compartment: parseInt(item.compartment) || 0,
+        floor: parseInt(item.unit) || 0,
+        containerCount: item.product_count || 0,
+        status: item.product_count > 0 ? "in-use" : "free"
+      }));
+      
+      setLocations(warehouseLocations);
+      setFilteredLocations(warehouseLocations);
     };
     
     fetchStorageLocations();
