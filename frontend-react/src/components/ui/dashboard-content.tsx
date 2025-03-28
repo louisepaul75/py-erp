@@ -130,22 +130,36 @@ const Dashboard = () => {
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([])
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
-  const [layouts, setLayouts] = useState<Layouts>({
-    lg: [
-      { w: 8, h: 11, x: 0, y: 0, i: "menu-tiles", moved: false, static: false },
-      { w: 4, h: 12, x: 0, y: 11, i: "quick-links", moved: false, static: false },
-      { w: 4, h: 12, x: 4, y: 11, i: "news-pinboard", moved: false, static: false }
-    ],
-    md: [
-      { i: "menu-tiles", x: 0, y: 8, w: 12, h: 12, title: "Menü" },
-      { i: "quick-links", x: 0, y: 20, w: 6, h: 6, title: "Schnellzugriff" },
-      { i: "news-pinboard", x: 6, y: 20, w: 6, h: 6, title: "Pinnwand" }
-    ],
-    sm: [
-      { i: "menu-tiles", x: 0, y: 8, w: 12, h: 14, title: "Menü" },
-      { i: "quick-links", x: 0, y: 22, w: 12, h: 6, title: "Schnellzugriff" },
-      { i: "news-pinboard", x: 0, y: 28, w: 12, h: 6, title: "Pinnwand" }
-    ]
+  const [layouts, setLayouts] = useState<Layouts>(() => {
+    // Try to load saved layout from localStorage
+    if (typeof window !== 'undefined') {
+      const savedLayout = localStorage.getItem('dashboard-layout')
+      if (savedLayout) {
+        try {
+          return JSON.parse(savedLayout)
+        } catch (e) {
+          console.error('Failed to parse saved layout:', e)
+        }
+      }
+    }
+    // Default layout if no saved layout exists
+    return {
+      lg: [
+        { w: 16, h: 11, x: 0, y: 0, i: "menu-tiles", moved: false, static: false },
+        { w: 8, h: 12, x: 0, y: 11, i: "quick-links", moved: false, static: false },
+        { w: 8, h: 12, x: 8, y: 11, i: "news-pinboard", moved: false, static: false }
+      ],
+      md: [
+        { i: "menu-tiles", x: 0, y: 0, w: 24, h: 12, title: "Menü" },
+        { i: "quick-links", x: 0, y: 12, w: 12, h: 6, title: "Schnellzugriff" },
+        { i: "news-pinboard", x: 12, y: 12, w: 12, h: 6, title: "Pinnwand" }
+      ],
+      sm: [
+        { i: "menu-tiles", x: 0, y: 0, w: 24, h: 14, title: "Menü" },
+        { i: "quick-links", x: 0, y: 14, w: 24, h: 6, title: "Schnellzugriff" },
+        { i: "news-pinboard", x: 0, y: 20, w: 24, h: 6, title: "Pinnwand" }
+      ]
+    }
   })
 
   const [menuTiles, setMenuTiles] = useState<MenuTile[]>([
@@ -241,8 +255,10 @@ const Dashboard = () => {
 
   // Function to save layout changes
   const saveLayout = () => {
-    // In a real app, you would save the layout to a backend here
-    console.log("Saving layout:", layouts)
+    // Save the current layout to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dashboard-layout', JSON.stringify(layouts))
+    }
     setIsEditMode(false)
   }
 
@@ -256,6 +272,10 @@ const Dashboard = () => {
     })
     
     setLayouts(newLayouts)
+    // Save to localStorage after removing widget
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dashboard-layout', JSON.stringify(newLayouts))
+    }
   }
 
   // Function to toggle favorite status for menu tiles
@@ -269,6 +289,10 @@ const Dashboard = () => {
   // Handle layout changes
   const handleLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
     setLayouts(allLayouts)
+    // Save to localStorage whenever layout changes
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dashboard-layout', JSON.stringify(allLayouts))
+    }
   }
 
   // Function to get widget title based on id
@@ -361,6 +385,12 @@ const Dashboard = () => {
     }
   }
 
+  // Use memoized values for grid layout props to prevent unnecessary re-renders
+  const gridBreakpoints = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
+  const gridCols = { lg: 48, md: 40, sm: 24, xs: 12, xxs: 8 };
+  const gridRowHeight = 30;
+  const gridMargin = useMemo<[number, number]>(() => [8, 8], [])
+
   // Get current layout based on breakpoints
   const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
   const currentLayouts = layouts
@@ -400,11 +430,11 @@ const Dashboard = () => {
           <ResponsiveGridLayout
             className="layout"
             layouts={layouts}
-            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-            cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-            rowHeight={30}
+            breakpoints={gridBreakpoints}
+            cols={gridCols}
+            rowHeight={gridRowHeight}
             width={width}
-            margin={[16, 16]}
+            margin={gridMargin}
             onLayoutChange={handleLayoutChange}
             isDraggable={isEditMode}
             isResizable={isEditMode}
