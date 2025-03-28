@@ -3,40 +3,27 @@ const path = require('path');
 const nextConfig = {
   reactStrictMode: process.env.NODE_ENV === 'development',
   experimental: {
-    // appDir is now the default in Next.js 14+
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'localhost:3001']
+    },
+    typedRoutes: true
   },
-  // Add this to disable favicon requests
   webpack: (config) => {
-    // Add alias for @ to point to the root directory
     config.resolve.alias['@'] = path.resolve(__dirname, 'src');
-
-    // Existing rule for handling image files
     config.module.rules.push({
       test: /\.(ico|png|jpg|jpeg|gif|svg)$/,
       type: 'asset/resource',
     });
-
     return config;
   },
-  // Add output configuration to ensure static files are generated correctly
   output: 'standalone',
   poweredByHeader: false,
-  // Configure the build to handle dynamic routes properly
   distDir: '.next',
-  // Enable optimizations
-  optimizeFonts: true,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
-  // Enable SWC minification and configure compiler
-  swcMinify: true,
   compiler: {
-    // Remove console.logs in production
     removeConsole: process.env.NODE_ENV === 'production',
-    // Configure SWC features
-    styledComponents: true,
-    emotion: true,
   },
   productionBrowserSourceMaps: true,
-  // Increase timeout for builds
   staticPageGenerationTimeout: 180,
   async rewrites() {
     return [
@@ -60,4 +47,4 @@ const nextConfig = {
   }
 }
 
-module.exports = nextConfig 
+module.exports = nextConfig

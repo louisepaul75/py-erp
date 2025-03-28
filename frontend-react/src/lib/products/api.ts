@@ -6,11 +6,14 @@ import ky, {
 } from "ky";
 import { API_URL, AUTH_CONFIG } from "../config";
 import { Product } from "@/components/types/product";
+import { cookies } from 'next/headers';
+
 // Cookie storage utility
 const cookieStorage = {
-  getItem: (name: string) => {
-    const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-    return match ? match[2] : null;
+  getItem: async (key: string): Promise<string | null> => {
+    'use server';
+    const cookieStore = cookies();
+    return cookieStore.get(key)?.value ?? null;
   },
   setItem: (name: string, value: string, options = {}) => {
     document.cookie = `${name}=${value}; path=/; ${Object.entries(options)
@@ -47,7 +50,7 @@ const api = ky.create({
   credentials: "include", // Added for consistency with original
   hooks: {
     beforeRequest: [
-      (request) => {
+      async (request) => {
         const csrfToken = document
           .querySelector('meta[name="csrf-token"]')
           ?.getAttribute("content");
@@ -56,7 +59,7 @@ const api = ky.create({
         }
 
         // Get the access token from cookies
-        const accessToken = cookieStorage.getItem(
+        const accessToken = await cookieStorage.getItem(
           AUTH_CONFIG.tokenStorage.accessToken
         );
         if (accessToken && !request.url.includes("token/")) {

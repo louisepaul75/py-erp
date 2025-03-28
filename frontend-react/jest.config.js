@@ -16,8 +16,12 @@ const config = {
     '<rootDir>/src/__tests__/utils/fuzz-utils.ts'
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': 'babel-jest',
-    '^.+\\.(js|jsx)$': 'babel-jest',
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: 'tsconfig.jest.json'
+    }],
+    '^.+\\.(js|jsx)$': ['ts-jest', {
+      tsconfig: 'tsconfig.jest.json'
+    }]
   },
   transformIgnorePatterns: [
     '/node_modules/(?!jest-fuzz)',

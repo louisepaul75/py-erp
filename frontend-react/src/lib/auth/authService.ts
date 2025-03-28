@@ -1,8 +1,8 @@
 import ky, { KyResponse, HTTPError } from 'ky';
 import { jwtDecode } from 'jwt-decode';
-import { cookies } from 'next/headers';
 import { API_URL, AUTH_CONFIG } from '../config';
 import { User, LoginCredentials, JwtPayload } from './authTypes';
+import { clientCookieStorage } from './clientCookies';
 
 // API-Instanz ohne Auth für Token-Endpunkte
 const authApi = ky.create({
@@ -13,9 +13,8 @@ const authApi = ky.create({
     beforeRequest: [
       request => {
         // For token/refresh endpoint, add the Authorization header if we have a token
-        // This is a backup in case cookies aren't working properly
         if (request.url.toString().includes('token/refresh')) {
-          const token = cookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+          const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
           if (token) {
             request.headers.set('Authorization', `Bearer ${token}`);
             console.log(`Adding Bearer token to refresh request (token length: ${token.length})`);
@@ -39,35 +38,6 @@ const authApi = ky.create({
   },
 });
 
-// Client-side cookie operations
-const cookieStorage = {
-  setItem: (name: string, value: string, options = {}) => {
-    document.cookie = `${name}=${value}; path=/; ${Object.entries(options).map(([k, v]) => `${k}=${v}`).join('; ')}`;
-  },
-  getItem: (name: string) => {
-    const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-    return match ? match[2] : null;
-  },
-  removeItem: (name: string) => {
-    document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT`;
-  },
-  // Helper to list all cookies for debugging
-  listAll: () => {
-    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
-    const cookieMap: Record<string, string> = {};
-    
-    cookies.forEach(cookie => {
-      if (cookie) {
-        const [name, value] = cookie.split('=');
-        cookieMap[name] = value;
-      }
-    });
-    
-    console.log('All cookies:', cookieMap);
-    return cookieMap;
-  }
-};
-
 // CSRF token management
 export const csrfService = {
   // Get CSRF token from various sources
@@ -79,7 +49,7 @@ export const csrfService = {
     }
     
     // Try cookie
-    const cookieToken = cookieStorage.getItem('csrftoken');
+    const cookieToken = clientCookieStorage.getItem('csrftoken');
     if (cookieToken) {
       return cookieToken;
     }
@@ -128,7 +98,7 @@ export const csrfService = {
       }
       
       // Fallback: check if the server set a CSRF cookie during the request
-      const newCookieToken = cookieStorage.getItem('csrftoken');
+      const newCookieToken = clientCookieStorage.getItem('csrftoken');
       if (newCookieToken) {
         csrfService.setToken(newCookieToken);
         return newCookieToken;
@@ -162,7 +132,7 @@ const api = ky.extend({
         }
         
         // Add Authorization header with JWT token if available
-        const token = cookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+        const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
         if (token) {
           request.headers.set('Authorization', `Bearer ${token}`);
           console.log(`Adding Bearer token to request to ${request.url} (token length: ${token.length})`);
@@ -183,7 +153,7 @@ const api = ky.extend({
             
             if (refreshSuccess) {
               // Request mit neuem Token wiederholen
-              const token = cookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+              const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
               const request = error.request.clone();
               if (token) {
                 request.headers.set('Authorization', `Bearer ${token}`);
@@ -245,8 +215,8 @@ export const authService = {
     }
   },
   
-  getToken: (): string | null => {
-    return cookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+  getToken: async (): Promise<string | null> => {
+    return await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
   },
   
   login: async (credentials: LoginCredentials): Promise<User> => {
@@ -261,8 +231,7 @@ export const authService = {
       }>();
       
       // Store tokens
-      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, tokenResponse.access);
-      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, tokenResponse.refresh);
+      await setAuthTokens(tokenResponse);
       
       // Get user info with the new token
       const user = await authService.getCurrentUser();
@@ -282,14 +251,13 @@ export const authService = {
       await api.post('auth/logout/');
     } finally {
       // Always clear tokens, even if the API call fails
-      cookieStorage.removeItem(AUTH_CONFIG.tokenStorage.accessToken);
-      cookieStorage.removeItem(AUTH_CONFIG.tokenStorage.refreshToken);
+      await clearAuthTokens();
     }
   },
   
   refreshToken: async (): Promise<boolean> => {
     try {
-      const refreshToken = cookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
+      const refreshToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
       if (!refreshToken) {
         return false;
       }
@@ -298,7 +266,7 @@ export const authService = {
         json: { refresh: refreshToken }
       }).json<{ access: string }>();
 
-      cookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
+      await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
       return true;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -318,6 +286,48 @@ export const authService = {
         new_password: newPassword
       }
     });
+  }
+};
+
+const getAuthToken = async () => {
+  return await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+};
+
+const setAuthTokens = async (tokenResponse: TokenResponse) => {
+  await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, tokenResponse.access);
+  await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, tokenResponse.refresh);
+};
+
+const clearAuthTokens = async () => {
+  await clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.accessToken);
+  await clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.refreshToken);
+};
+
+const refreshAuthToken = async () => {
+  const refreshToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
+  if (!refreshToken) {
+    throw new Error('No refresh token available');
+  }
+
+  try {
+    const response = await fetch('/api/auth/token/refresh/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh: refreshToken }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh token');
+    }
+
+    const data = await response.json();
+    await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, data.access);
+    return data.access;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    throw error;
   }
 };
 

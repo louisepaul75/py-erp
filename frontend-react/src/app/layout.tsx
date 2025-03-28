@@ -1,14 +1,19 @@
 import './globals.css'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Footer } from '@/components/Footer'
 import { Providers } from './providers'
 import MainLayout from '@/components/layout/MainLayout'
 // import { Theme } from '@radix-ui/themes';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
+
 export const metadata: Metadata = {
   title: 'pyERP - Enterprise Resource Planning',
   description: 'Modern ERP system built with Python and React',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
   icons: {
     icon: [
       { url: '/favicon.ico' },

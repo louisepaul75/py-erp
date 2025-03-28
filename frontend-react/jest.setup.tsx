@@ -13,7 +13,7 @@ if (typeof global.TextEncoder === 'undefined') {
 try {
   const jestFuzz = require('jest-fuzz');
   // Add any additional jest-fuzz configuration here if needed
-} catch (error: any) {
+} catch (error) {
   console.warn('jest-fuzz not available:', error.message);
 }
 
@@ -53,7 +53,7 @@ jest.mock('next/navigation', () => ({
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: function MockImage(props: any) {
+  default: function MockImage(props) {
     return <img {...props} />;
   },
 }));

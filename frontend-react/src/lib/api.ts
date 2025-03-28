@@ -2,28 +2,33 @@ import type { Item, BookingItem, HistoryEntry, Order, OrderItem, BinLocation } f
 import ky from 'ky';
 import { API_URL, AUTH_CONFIG } from './config';
 import { csrfService } from './auth/authService';
+import { cookies } from 'next/headers';
 
 // Create an API client instance with the correct base URL and auth
-const api = ky.create({
+const addAuthHeaders = async (request: Request) => {
+  'use server';
+  const cookieStore = cookies();
+  const token = cookieStore.get(AUTH_CONFIG.tokenStorage.accessToken)?.value;
+  
+  if (token) {
+    request.headers.set('Authorization', `Bearer ${token}`);
+  }
+  
+  return request;
+};
+
+const instance = ky.create({
   prefixUrl: API_URL,
   timeout: 30000,
   credentials: 'include', // Include cookies in requests
   hooks: {
     beforeRequest: [
-      request => {
-        // Add CSRF token to non-GET requests if available
-        if (request.method !== 'GET') {
-          const csrfToken = csrfService.getToken();
-          if (csrfToken) {
-            request.headers.set('X-CSRFToken', csrfToken);
-          }
+      async (request) => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+          request.headers.set('X-CSRFToken', csrfToken);
         }
-        
-        // Add Authorization header with JWT token if available
-        const token = document.cookie.match(new RegExp(`(^| )${AUTH_CONFIG.tokenStorage.accessToken}=([^;]+)`))?.at(2);
-        if (token) {
-          request.headers.set('Authorization', `Bearer ${token}`);
-        }
+        return await addAuthHeaders(request);
       }
     ]
   }
@@ -297,13 +302,13 @@ const mockOrders = [
 export async function fetchOrders(): Promise<Order[]> {
   try {
     // Fetch sales records and their items using the configured api client
-    const response = await api.get('sales/records/').json<{results: any[]}>();
+    const response = await instance.get('sales/records/').json<{results: any[]}>();
     const salesRecords = response.results;
     
     // Transform the sales records into the Order format
     const orders: Order[] = await Promise.all(salesRecords.map(async (record) => {
       // Fetch items for this sales record
-      const items = await api.get(`sales/records/${record.id}/items/`).json<any[]>();
+      const items = await instance.get(`sales/records/${record.id}/items/`).json<any[]>();
       
       // Transform items into OrderItems
       const orderItems: OrderItem[] = items.map(item => ({
@@ -317,7 +322,7 @@ export async function fetchOrders(): Promise<Order[]> {
       }));
 
       // Get bin locations for this order
-      const binLocations: BinLocation[] = await api.get(`inventory/bin-locations/by-order/${record.id}/`).json<BinLocation[]>();
+      const binLocations: BinLocation[] = await instance.get(`inventory/bin-locations/by-order/${record.id}/`).json<BinLocation[]>();
 
       // Calculate picking progress
       const itemsPicked = orderItems.reduce((sum, item) => sum + item.quantityPicked, 0);
