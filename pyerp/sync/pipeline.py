@@ -1,11 +1,14 @@
 """Pipeline orchestration for sync operations."""
 
+import json
 import traceback
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
 import math
+import pandas as pd
 from django.utils import timezone
+from pyerp.utils.json_utils import DateTimeEncoder, json_serialize
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .extractors.base import BaseExtractor
@@ -166,14 +169,23 @@ class SyncPipeline:
             error_msg = str(e)
 
             # Update sync state
-            self.sync_state.update_sync_completed(success=False, error=error_msg)
-
-            # Update sync log
+            self.sync_state.update_sync_completed(success=False)
+            
+            # Update error in sync log
             if self.sync_log:
                 self.sync_log.status = "failed"
                 self.sync_log.error_message = error_msg
-                self.sync_log.save()
-
+                
+                # Ensure all fields are JSON serializable
+                if hasattr(self.sync_log, 'sync_params') and self.sync_log.sync_params:
+                    self.sync_log.sync_params = json_serialize(self.sync_log.sync_params)
+                
+                try:
+                    self.sync_log.save()
+                except Exception as save_error:
+                    logger.error(f"Error saving sync log: {save_error}")
+            
+            # Log the event
             log_data_sync_event(
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
@@ -184,7 +196,8 @@ class SyncPipeline:
                     "error": error_msg,
                 },
             )
-
+            
+            # Re-raise the exception
             raise
 
     def _process_batch(self, batch: List[Dict[str, Any]]) -> tuple:
@@ -249,25 +262,7 @@ class SyncPipeline:
         Returns:
             Cleaned data safe for JSON serialization
         """
-        if isinstance(data, dict):
-            return {k: self._clean_for_json(v) for k, v in data.items()}
-        elif isinstance(data, list):
-            return [self._clean_for_json(v) for v in data]
-        elif isinstance(data, (datetime, timezone.datetime)):
-            return data.isoformat()
-        elif isinstance(data, (int, float, str, bool, type(None))):
-            # Handle NaN values
-            if isinstance(data, float) and math.isnan(data):
-                return None
-            return data
-        elif hasattr(data, "_asdict") and callable(data._asdict):
-            # Handle NamedTuple objects like LoadResult
-            return self._clean_for_json(data._asdict())
-        elif hasattr(data, "to_dict") and callable(data.to_dict):
-            # Handle objects with to_dict method like LoadResult from base.py
-            return self._clean_for_json(data.to_dict())
-        else:
-            return str(data)
+        return json_serialize(data)
 
 
 class PipelineFactory:
@@ -316,6 +311,7 @@ class PipelineFactory:
                 transformer_class
                 or mapping_config.get("transformer_class")
                 or mapping_config.get("transformation", {}).get("transformer_class")
+                or mapping_config.get("transformation", {}).get("class")
             )
             transformer = cls._create_component(
                 cls._import_class(transformer_class_path),
@@ -323,8 +319,22 @@ class PipelineFactory:
             )
             logger.info(f"Created transformer: {transformer.__class__.__name__}")
 
+            # Get loader class from config
+            loader_class_path = None
+            if loader_class:
+                loader_class_path = loader_class
+            else:
+                # Try multiple possible locations for the loader class
+                loader_class_path = (
+                    target_config.get("loader_class")
+                    or mapping_config.get("loader", {}).get("class")
+                    or "pyerp.sync.loaders.django_model.DjangoModelLoader"  # Default fallback
+                )
+            
+            logger.info(f"Using loader class: {loader_class_path}")
+            
             loader = cls._create_component(
-                loader_class or cls._import_class(target_config.get("loader_class")),
+                cls._import_class(loader_class_path),
                 target_config,
             )
             logger.info(f"Created loader: {loader.__class__.__name__}")

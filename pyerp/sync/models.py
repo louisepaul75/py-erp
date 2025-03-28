@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.utils import timezone
+from pyerp.utils.json_utils import json_serialize
 
 
 class SyncSource(models.Model):
@@ -111,6 +112,12 @@ class SyncLog(models.Model):
         self.trace = trace
         self.save()
 
+    def save(self, *args, **kwargs):
+        """Override save to ensure JSON-serializable data."""
+        if hasattr(self, 'sync_params') and self.sync_params:
+            self.sync_params = json_serialize(self.sync_params)
+        super().save(*args, **kwargs)
+
 
 class SyncLogDetail(models.Model):
     """Detailed log entries for individual record syncs."""
@@ -128,3 +135,9 @@ class SyncLogDetail(models.Model):
 
     def __str__(self):
         return f"{self.record_id} - {self.status}"
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure JSON-serializable data."""
+        if hasattr(self, 'record_data') and self.record_data:
+            self.record_data = json_serialize(self.record_data)
+        super().save(*args, **kwargs)
