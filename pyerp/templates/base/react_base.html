@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>pyERP - Enterprise Resource Planning</title>
+    <title>{% block title %}{% endblock %}</title>
     <meta name="description" content="Enterprise Resource Planning System">
     <meta name="csrf-token" content="{{ csrf_token }}">
     {% block extra_head %}{% endblock %}
@@ -88,5 +88,6 @@
     {% endif %}
     
     {% block extra_js %}{% endblock %}
+    {% block extra_body %}{% endblock %}
 </body>
 </html> 

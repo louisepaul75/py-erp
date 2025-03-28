@@ -33,6 +33,28 @@ describe('Dashboard Layout Export Script', () => {
     mockFs.existsSync.mockImplementation(() => true);
     mockPath.join.mockImplementation((...args) => args.join('/'));
     mockPath.resolve.mockImplementation((...args) => args.join('/'));
+
+    // Mock browser APIs
+    global.localStorage = {
+      getItem: jest.fn(),
+      setItem: jest.fn(),
+    };
+    global.document = {
+      createElement: jest.fn(() => ({
+        click: jest.fn(),
+        href: '',
+        download: '',
+      })),
+      body: {
+        appendChild: jest.fn(),
+        removeChild: jest.fn(),
+      },
+    };
+    global.URL = {
+      createObjectURL: jest.fn(),
+      revokeObjectURL: jest.fn(),
+    };
+    global.Blob = jest.fn();
   });
 
   it('exports dashboard layout correctly', async () => {
@@ -44,10 +66,10 @@ describe('Dashboard Layout Export Script', () => {
     };
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
     
-    await exportDashboardLayout(mockLayout);
-    
+    const result = await exportDashboardLayout(mockLayout);
+    expect(result).toEqual(mockLayout);
     expect(mockFs.writeFileSync).toHaveBeenCalled();
     expect(mockFs.writeFileSync.mock.calls[0][1]).toContain('widget1');
   });
@@ -56,10 +78,10 @@ describe('Dashboard Layout Export Script', () => {
     const mockLayout = {};
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
     
-    await exportDashboardLayout(mockLayout);
-    
+    const result = await exportDashboardLayout(mockLayout);
+    expect(result).toEqual(mockLayout);
     expect(mockFs.writeFileSync).toHaveBeenCalled();
     expect(mockFs.writeFileSync.mock.calls[0][1]).toBe('{}');
   });
@@ -68,9 +90,9 @@ describe('Dashboard Layout Export Script', () => {
     const mockLayout = null;
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
     
-    await expect(exportDashboardLayout(mockLayout)).rejects.toThrow();
+    await expect(exportDashboardLayout(mockLayout)).rejects.toThrow('Invalid layout format');
   });
 
   it('handles filesystem errors', async () => {
@@ -83,7 +105,7 @@ describe('Dashboard Layout Export Script', () => {
     });
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
     
     await expect(exportDashboardLayout(mockLayout)).rejects.toThrow('Write error');
   });
@@ -94,8 +116,8 @@ describe('Dashboard Layout Export Script', () => {
     };
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
     
-    await expect(exportDashboardLayout(mockLayout)).rejects.toThrow();
+    await expect(exportDashboardLayout(mockLayout)).rejects.toThrow('Invalid layout format');
   });
 }); 

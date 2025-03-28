@@ -91,7 +91,7 @@ class ProductModelsTestCase(TestCase):
 
     def test_str_representation(self):
         """Test string representation of parent product."""
-        self.assertEqual(str(self.parent_product), "Test Parent Product (TEST123)")
+        self.assertEqual(str(self.parent_product), "Test Parent Product (PARENT001)")
 
     def test_is_active_default(self):
         """Test default value of is_active field."""
