@@ -13,7 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Search, Download, Database, Users, Sliders, Save, User, X } from 'lucide-react';
 import { useUpdateProfile } from '@/lib/auth/authHooks';
 import { authService } from '@/lib/auth/authService';
-
+import { UserManagement } from "@/components/users/user-management"
+import { GroupManagement } from "@/components/users/group-management"
+import { PermissionManagement } from "@/components/users/permission-management"
+import { PasswordPolicyManagement } from "@/components/users/password-policy"
 // Form interface for user profile
 interface ProfileForm {
   username: string;
@@ -591,19 +594,34 @@ export default function SettingsPage() {
         {/* Admin Only: User Management */}
         {isAdmin && (
           <TabsContent value="user-management" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('user_management')}</CardTitle>
-                <CardDescription>
-                  {t('manage_users_and_permissions')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground italic">
-                  {t('user_management_placeholder')}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="container py-6 md:py-10">
+              <h1 className="text-3xl font-bold mb-6">User Management</h1>
+
+              <Tabs defaultValue="users" className="w-full">
+                <TabsList className="grid grid-cols-4 mb-8">
+                  <TabsTrigger value="users">Users</TabsTrigger>
+                  <TabsTrigger value="groups">Groups</TabsTrigger>
+                  <TabsTrigger value="permissions">Permissions</TabsTrigger>
+                  <TabsTrigger value="password-policy">Password Policy</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="users" className="space-y-4">
+                  <UserManagement />
+                </TabsContent>
+
+                <TabsContent value="groups" className="space-y-4">
+                  <GroupManagement />
+                </TabsContent>
+
+                <TabsContent value="permissions" className="space-y-4">
+                  <PermissionManagement />
+                </TabsContent>
+
+                <TabsContent value="password-policy" className="space-y-4">
+                  <PasswordPolicyManagement />
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
         )}
 
