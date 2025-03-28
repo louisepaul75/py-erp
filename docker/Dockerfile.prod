@@ -116,7 +116,8 @@ EXPOSE 80 443 8050
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    REDIS_URL=redis://localhost:6379/0
+    REDIS_URL=redis://localhost:6379/0 \
+    IS_DOCKER=True
 
 # Set up entrypoint
 COPY docker/entrypoint.prod.sh /entrypoint.sh

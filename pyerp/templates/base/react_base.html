@@ -7,11 +7,42 @@
     <meta name="description" content="Enterprise Resource Planning System">
     <meta name="csrf-token" content="{{ csrf_token }}">
     {% block extra_head %}{% endblock %}
+    
+    {% if is_docker %}
+    <!-- In Docker, Next.js runs as a separate service through Nginx -->
+    <script>
+        // Save authentication data in localStorage for Next.js
+        window.localStorage.setItem('DJANGO_SETTINGS', JSON.stringify({
+            DEBUG: {{ debug|yesno:"true,false" }},
+            API_URL: "{% url 'api-root' %}",
+            CSRF_TOKEN: "{{ csrf_token }}",
+            USER: {% if request.user.is_authenticated %}
+                {
+                    "id": {{ request.user.id }},
+                    "username": "{{ request.user.username }}",
+                    "email": "{{ request.user.email }}",
+                    "is_staff": {{ request.user.is_staff|yesno:"true,false" }},
+                    "is_superuser": {{ request.user.is_superuser|yesno:"true,false" }}
+                }
+            {% else %}
+                null
+            {% endif %}
+        }));
+        
+        // Redirect to Next.js on load
+        window.location.href = "/dashboard";
+    </script>
+    {% else %}
+    <!-- Development environment - load Next.js static files -->
+    <link rel="stylesheet" href="/_next/static/css/app.css">
+    {% endif %}
 </head>
 <body>
     <div id="root"></div>
     {% block content %}{% endblock %}
     
+    {% if not is_docker %}
+    <!-- Settings for development environment -->
     <script>
         window.DJANGO_SETTINGS = {
             DEBUG: {{ debug|yesno:"true,false" }},
@@ -30,6 +61,31 @@
             {% endif %}
         };
     </script>
+    
+    <!-- Include Next.js built JavaScript files - development only -->
+    <script src="/_next/static/chunks/webpack.js" defer></script>
+    <script src="/_next/static/chunks/main.js" defer></script>
+    <script src="/_next/static/chunks/pages/_app.js" defer></script>
+    <script src="/_next/static/chunks/pages/index.js" defer></script>
+    
+    <!-- Fallback initialization script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Attempt to load React if not already loaded
+            if (window.__NEXT_DATA__ === undefined) {
+                console.log('Initializing React application manually...');
+                // This is a fallback in case the Next.js scripts don't automatically hydrate
+                try {
+                    if (window.next && window.next.hydrate) {
+                        window.next.hydrate();
+                    }
+                } catch (error) {
+                    console.error('Failed to initialize React application:', error);
+                }
+            }
+        });
+    </script>
+    {% endif %}
     
     {% block extra_js %}{% endblock %}
 </body>

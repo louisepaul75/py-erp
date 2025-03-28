@@ -210,6 +210,25 @@ export const authService = {
         return null;
       }
 
+      // Validate the token before using it
+      try {
+        const decoded = jwtDecode<JwtPayload>(token);
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+        // If token is expired, try to refresh before proceeding
+        if (decoded.exp && decoded.exp < currentTime) {
+          const refreshSuccess = await authService.refreshToken();
+          if (!refreshSuccess) {
+            await clearAuthTokens();
+            return null;
+          }
+        }
+      } catch (tokenError) {
+        console.error('Invalid token format:', tokenError);
+        await clearAuthTokens();
+        return null;
+      }
+
       const response = await api.get('auth/user/').json<User>();
       return response;
     } catch (error) {
@@ -223,12 +242,15 @@ export const authService = {
             return response;
           } catch (retryError) {
             console.error('Failed to get user info after token refresh:', retryError);
+            await clearAuthTokens();
             return null;
           }
         }
+        await clearAuthTokens();
         return null;
       }
-      throw error;
+      console.error('Error getting current user:', error);
+      return null;
     }
   },
   
@@ -290,6 +312,16 @@ export const authService = {
     try {
       const refreshToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
       if (!refreshToken) {
+        console.warn('No refresh token available');
+        return false;
+      }
+
+      // Validate refresh token format before using
+      try {
+        jwtDecode(refreshToken);
+      } catch (tokenError) {
+        console.error('Invalid refresh token format:', tokenError);
+        await clearAuthTokens();
         return false;
       }
 

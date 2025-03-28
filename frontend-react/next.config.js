@@ -18,7 +18,6 @@ const nextConfig = {
   },
   output: 'standalone',
   poweredByHeader: false,
-  distDir: '.next',
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
