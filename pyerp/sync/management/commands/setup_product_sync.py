@@ -31,13 +31,19 @@ class Command(BaseCommand):
             self.stderr.write(f"Failed to load sync configuration: {e}")
             return
 
+        # Get parent products configuration
+        parent_config = config.get("parent_products", {})
+        if not parent_config:
+            self.stderr.write("No parent products configuration found")
+            return
+
         # Create or update source for parent products
-        source_name = config.get("name", "products_sync")
-        source_config = config.get("source", {})
+        source_name = parent_config.get("name", "products_sync")
+        source_config = parent_config.get("source", {})
         source, created = SyncSource.objects.update_or_create(
             name=source_name,
             defaults={
-                "description": config.get("description", ""),
+                "description": parent_config.get("description", ""),
                 "config": source_config,
                 "active": True,
             },
@@ -48,7 +54,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync source: {source}")
 
         # Create or update target for parent products
-        target_config = config.get("target", {})
+        target_config = parent_config.get("loader", {}).get("config", {})
         app_name = target_config.get("app_name", "products")
         model_name = target_config.get("model_name", "ParentProduct")
         target_name = f"{app_name}.{model_name}"
@@ -68,9 +74,9 @@ class Command(BaseCommand):
 
         # Create or update mapping for parent products
         mapping_config = {
-            "transformation": config.get("transformation", {}),
-            "scheduling": config.get("scheduling", {}),
-            "incremental": config.get("incremental", {}),
+            "transformation": parent_config.get("transformer", {}),
+            "scheduling": parent_config.get("schedule", {}),
+            "incremental": parent_config.get("incremental", {}),
         }
         mapping, created = SyncMapping.objects.update_or_create(
             source=source,
@@ -106,15 +112,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"Updated sync source for variants: {variant_source}")
 
             # Create or update target for variant products
-            variant_target_name = "products.VariantProduct"
-            loader_class = "pyerp.sync.loaders.django_model.DjangoModelLoader"
-            variant_target_config = {
-                "loader_class": loader_class,
-                "app_name": "products",
-                "model_name": "VariantProduct",
-                "unique_field": "sku",
-                "conflict_strategy": "newest_wins",
-            }
+            variant_target_config = variant_config.get("loader", {}).get("config", {})
+            variant_target_name = f"{variant_target_config.get('app_name', 'products')}.{variant_target_config.get('model_name', 'VariantProduct')}"
 
             target_desc = f"Target for {source_name} variant products"
             variant_target, created = SyncTarget.objects.update_or_create(
@@ -132,9 +131,9 @@ class Command(BaseCommand):
 
             # Create or update mapping for variant products
             variant_mapping_config = {
-                "transformation": variant_config.get("transformation", {}),
-                "scheduling": config.get("scheduling", {}),
-                "incremental": config.get("incremental", {}),
+                "transformation": variant_config.get("transformer", {}),
+                "scheduling": variant_config.get("schedule", {}),
+                "incremental": variant_config.get("incremental", {}),
             }
             variant_mapping, created = SyncMapping.objects.update_or_create(
                 source=variant_source,

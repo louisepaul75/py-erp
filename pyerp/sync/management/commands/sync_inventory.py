@@ -2,6 +2,7 @@
 
 import logging
 from datetime import timedelta
+from typing import Dict, List, Set
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -82,58 +83,66 @@ class Command(BaseCommand):
         # Build query parameters
         query_params = self._build_query_params(options)
 
-        # Process each mapping
-        for mapping in mappings:
-            self.stdout.write(f"\nProcessing mapping: {mapping}")
+        # Build dependency graph and get ordered components
+        dependency_graph = self._build_dependency_graph(mappings)
+        ordered_components = self._get_ordered_components(dependency_graph)
 
-            try:
-                # Create and run pipeline
-                pipeline = PipelineFactory.create_pipeline(mapping)
+        # Process each component in dependency order
+        for component_name in ordered_components:
+            component_mappings = [m for m in mappings if m.entity_type == component_name]
+            if not component_mappings:
+                continue
 
-                start_time = timezone.now()
-                self.stdout.write(f"Starting sync at {start_time}...")
+            self.stdout.write(f"\nProcessing {component_name} sync...")
+            for mapping in component_mappings:
+                self.stdout.write(f"Processing mapping: {mapping}")
 
-                sync_log = pipeline.run(
-                    incremental=not options["full"],
-                    batch_size=options["batch_size"],
-                    query_params=query_params,
-                    fail_on_filter_error=options["fail_on_filter_error"],
-                )
+                try:
+                    # Create and run pipeline
+                    pipeline = PipelineFactory.create_pipeline(mapping)
 
-                end_time = timezone.now()
-                duration = (end_time - start_time).total_seconds()
+                    start_time = timezone.now()
+                    self.stdout.write(f"Starting sync at {start_time}...")
 
-                # Report results
-                if sync_log.status == "completed":
-                    success_msg = (
-                        f"Sync completed successfully in {duration:.2f} " f"seconds"
+                    sync_log = pipeline.run(
+                        incremental=not options["full"],
+                        batch_size=options["batch_size"],
+                        query_params=query_params,
+                        fail_on_filter_error=options["fail_on_filter_error"],
                     )
-                    self.stdout.write(self.style.SUCCESS(success_msg))
-                elif sync_log.status == "partial":
-                    warning_msg = (
-                        f"Sync completed with some errors in {duration:.2f} " f"seconds"
-                    )
-                    self.stdout.write(self.style.WARNING(warning_msg))
-                else:
-                    error_msg = f"Sync failed in {duration:.2f} seconds"
-                    self.stdout.write(self.style.ERROR(error_msg))
 
-                self.stdout.write("\nStatistics:")
-                self.stdout.write(f"  Processed: {sync_log.records_processed}")
-                self.stdout.write(f"  Succeeded: {sync_log.records_succeeded}")
-                self.stdout.write(f"  Failed: {sync_log.records_failed}")
+                    end_time = timezone.now()
+                    duration = (end_time - start_time).total_seconds()
 
-                if sync_log.error_message:
+                    if sync_log.status == "completed":
+                        self.stdout.write(
+                            self.style.SUCCESS(
+                                f"{component_name} sync completed in {duration:.2f} seconds"
+                            )
+                        )
+                    else:
+                        self.stdout.write(
+                            self.style.WARNING(
+                                f"{component_name} sync completed with status {sync_log.status} "
+                                f"in {duration:.2f} seconds"
+                            )
+                        )
+
                     self.stdout.write(
-                        self.style.ERROR(f"\nError: {sync_log.error_message}")
+                        f"Processed {sync_log.records_processed} records, "
+                        f"succeeded {sync_log.records_succeeded}, "
+                        f"failed {sync_log.records_failed}"
                     )
 
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Sync failed: {str(e)}"))
-                if options["debug"]:
-                    import traceback
+                    if sync_log.error_message:
+                        self.stdout.write(
+                            self.style.ERROR(f"Error: {sync_log.error_message}")
+                        )
 
-                    traceback.print_exc()
+                except Exception as e:
+                    self.stdout.write(
+                        self.style.ERROR(f"Error processing {component_name}: {e}")
+                    )
 
     def _get_mappings(self, component=None):
         """Get inventory mappings based on filter criteria."""
@@ -176,6 +185,65 @@ class Command(BaseCommand):
             self.stdout.write(f"{filter_msg} ({days} days ago)")
 
         return query_params
+
+    def _build_dependency_graph(self, mappings: List[SyncMapping]) -> Dict[str, Set[str]]:
+        """Build a dependency graph from mappings.
+
+        Args:
+            mappings: List of sync mappings
+
+        Returns:
+            Dictionary mapping component names to their dependencies
+        """
+        graph = {}
+        for mapping in mappings:
+            component = mapping.entity_type
+            if component not in graph:
+                graph[component] = set()
+
+            # Add dependencies from mapping config
+            dependencies = mapping.mapping_config.get("dependencies", [])
+            graph[component].update(dependencies)
+
+        return graph
+
+    def _get_ordered_components(self, graph: Dict[str, Set[str]]) -> List[str]:
+        """Get components in dependency order using topological sort.
+
+        Args:
+            graph: Dependency graph
+
+        Returns:
+            List of components in dependency order
+        """
+        # Track visited and temporary marks for cycle detection
+        visited = set()
+        temp = set()
+        ordered = []
+
+        def visit(node):
+            """Visit a node in the graph."""
+            if node in temp:
+                raise ValueError(f"Cyclic dependency detected involving {node}")
+            if node in visited:
+                return
+
+            temp.add(node)
+
+            # Visit dependencies
+            for dep in graph.get(node, []):
+                visit(dep)
+
+            temp.remove(node)
+            visited.add(node)
+            ordered.append(node)
+
+        # Visit each node
+        for node in graph:
+            if node not in visited:
+                visit(node)
+
+        return ordered
 
 
 if __name__ == "__main__":

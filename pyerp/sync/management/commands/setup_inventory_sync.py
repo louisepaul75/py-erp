@@ -109,14 +109,17 @@ class Command(BaseCommand):
 
         # Create or update mapping
         transformer_config = config.get("transformer", {})
-
-        # Add transformer class to transformation section
         transformer_class = transformer_config.get("class")
-        if transformer_class:
-            transformer_config["transformer_class"] = transformer_class
+
+        # Create transformation section with transformer class and config
+        transformation = {
+            "transformer_class": transformer_class,
+            "config": transformer_config.get("config", {}),
+            "type": transformer_config.get("type", "custom"),
+        }
 
         mapping_config = {
-            "transformation": transformer_config,
+            "transformation": transformation,
             "scheduling": config.get("schedule", {}),
             "incremental": config.get("incremental", {}),
             "dependencies": config.get("dependencies", []),

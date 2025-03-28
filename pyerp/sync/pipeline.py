@@ -57,159 +57,134 @@ class SyncPipeline:
         """Run the sync pipeline.
 
         Args:
-            incremental: If True, only sync records modified since last sync
+            incremental: Whether to perform an incremental sync
             batch_size: Number of records to process in each batch
-            query_params: Optional additional query parameters
-            fail_on_filter_error: If True, fail if filter doesn't work correctly
+            query_params: Additional query parameters for the extractor
+            fail_on_filter_error: Whether to fail if filter query fails
 
         Returns:
-            SyncLog: The completed sync log record
+            SyncLog: The sync log entry for this run
         """
+        # Create sync log entry
+        self.sync_log = SyncLog.objects.create(
+            mapping=self.mapping,
+            status="started",
+            is_full_sync=not incremental,
+            sync_params={
+                "batch_size": batch_size,
+                "query_params": query_params or {},
+            },
+        )
+
+        # Update sync state
+        self.sync_state.update_sync_started()
+
+        # Build query parameters
+        params = query_params or {}
+        if incremental and self.sync_state.last_sync_time:
+            # Add timestamp filter for incremental sync
+            params["timestamp_filter"] = self.sync_state.last_sync_time
+
+        log_data_sync_event(
+            source=self.mapping.source.name,
+            destination=self.mapping.target.name,
+            record_count=0,
+            status="started",
+            details={
+                "entity_type": self.mapping.entity_type,
+                "incremental": incremental,
+                "batch_size": batch_size,
+            },
+        )
+
         try:
-            # Initialize sync log
-            self.sync_log = SyncLog.objects.create(
-                mapping=self.mapping,
-                status="started",
-                is_full_sync=not incremental,
-                sync_params={
+            # Extract data
+            with self.extractor:
+                source_data = self.extractor.extract(
+                    query_params=params, fail_on_filter_error=fail_on_filter_error
+                )
+
+            log_data_sync_event(
+                source=self.mapping.source.name,
+                destination=self.mapping.target.name,
+                record_count=len(source_data),
+                status="extracted",
+                details={
+                    "entity_type": self.mapping.entity_type,
                     "incremental": incremental,
-                    "batch_size": batch_size,
-                    "query_params": query_params or {},
-                    "fail_on_filter_error": fail_on_filter_error,
                 },
             )
 
+            # Process data in batches
+            total_processed = 0
+            total_success = 0
+            total_failed = 0
+
+            # Process all records in a single batch if batch_size is 0
+            if batch_size <= 0:
+                batch_size = len(source_data)
+
+            # Process data in batches
+            for i in range(0, len(source_data), batch_size):
+                batch = source_data[i:i + batch_size]
+                success_count, failure_count = self._process_batch(batch)
+
+                total_processed += len(batch)
+                total_success += success_count
+                total_failed += failure_count
+
+                # Update sync log with progress
+                self.sync_log.records_processed = total_processed
+                self.sync_log.records_succeeded = total_success
+                self.sync_log.records_failed = total_failed
+                self.sync_log.save()
+
+            # Update sync state on successful completion
+            self.sync_state.update_sync_completed(success=True)
+
+            # Update final sync log status
+            self.sync_log.status = "completed"
+            self.sync_log.save()
+
+            log_data_sync_event(
+                source=self.mapping.source.name,
+                destination=self.mapping.target.name,
+                record_count=total_processed,
+                status="completed",
+                details={
+                    "entity_type": self.mapping.entity_type,
+                    "success_count": total_success,
+                    "failure_count": total_failed,
+                },
+            )
+
+            return self.sync_log
+
+        except Exception as e:
+            # Log the error
+            logger.exception("Error in sync pipeline")
+            error_msg = str(e)
+
             # Update sync state
-            self.sync_state.update_sync_started()
+            self.sync_state.update_sync_completed(success=False, error=error_msg)
 
-            # Add modified_date filter for incremental sync
-            params = query_params or {}
-            if incremental and self.sync_state.last_successful_sync_time:
-                # Format date according to extractor's requirements
-                modified_since = self.sync_state.last_successful_sync_time
-                incremental_config = self.mapping.mapping_config.get("incremental", {})
-                filter_format = incremental_config.get(
-                    "timestamp_filter_format",
-                    "'modified_date > '{value}'",  # Default format
-                )
-
-                # Handle both string and list formats for timestamp_filter_format
-                if isinstance(filter_format, str):
-                    params["filter"] = filter_format.format(
-                        value=modified_since.strftime("%Y-%m-%d")
-                    )
-                elif isinstance(filter_format, list):
-                    # Handle the list format by constructing a filter query
-                    # Assuming the format is [['field', 'operator', 'value_template']]
-                    filter_query = []
-                    for filter_item in filter_format:
-                        if len(filter_item) >= 3:
-                            field, operator, value_template = filter_item
-                            value = value_template.format(
-                                value=modified_since.strftime("%Y-%m-%d")
-                            )
-                            filter_query.append([field, operator, value])
-                    params["filter"] = filter_query
-                else:
-                    logger.warning(
-                        f"Unsupported timestamp_filter_format type: {type(filter_format)}"
-                    )
+            # Update sync log
+            if self.sync_log:
+                self.sync_log.status = "failed"
+                self.sync_log.error_message = error_msg
+                self.sync_log.save()
 
             log_data_sync_event(
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=0,
-                status="started",
+                status="failed",
                 details={
                     "entity_type": self.mapping.entity_type,
-                    "incremental": incremental,
-                    "batch_size": batch_size,
+                    "error": error_msg,
                 },
             )
 
-            try:
-                # Extract data
-                with self.extractor:
-                    source_data = self.extractor.extract(
-                        query_params=params, fail_on_filter_error=fail_on_filter_error
-                    )
-
-                log_data_sync_event(
-                    source=self.mapping.source.name,
-                    destination=self.mapping.target.name,
-                    record_count=len(source_data),
-                    status="extracted",
-                    details={
-                        "entity_type": self.mapping.entity_type,
-                        "incremental": incremental,
-                    },
-                )
-
-                # Process data in batches
-                total_processed = 0
-                total_success = 0
-                total_failed = 0
-
-                for i in range(0, len(source_data), batch_size):
-                    batch = source_data[i : i + batch_size]
-                    logger.info(
-                        f"Processing batch {i//batch_size + 1} "
-                        f"({len(batch)} records)"
-                    )
-
-                    # Process batch
-                    batch_success, batch_failed = self._process_batch(batch)
-
-                    total_success += batch_success
-                    total_failed += batch_failed
-                    total_processed += len(batch)
-
-                    # Update log with progress
-                    self.sync_log.records_processed = total_processed
-                    self.sync_log.records_succeeded = total_success
-                    self.sync_log.records_failed = total_failed
-                    self.sync_log.save()
-
-                # Mark sync as completed
-                self.sync_log.mark_completed(total_success, total_failed)
-                self.sync_state.update_sync_completed(success=total_failed == 0)
-
-                # Log final status
-                status = "completed" if total_failed == 0 else "completed_with_errors"
-                log_data_sync_event(
-                    source=self.mapping.source.name,
-                    destination=self.mapping.target.name,
-                    record_count=total_processed,
-                    status=status,
-                    details={
-                        "entity_type": self.mapping.entity_type,
-                        "succeeded": total_success,
-                        "failed": total_failed,
-                    },
-                )
-
-                return self.sync_log
-
-            except Exception as e:
-                logger.exception("Error during sync pipeline execution")
-                # Log error and mark sync as failed
-                self.sync_log.mark_failed(
-                    error_message=str(e), trace=traceback.format_exc()
-                )
-
-                # Log failure event
-                log_data_sync_event(
-                    source=self.mapping.source.name,
-                    destination=self.mapping.target.name,
-                    record_count=0,
-                    status="failed",
-                    details={"entity_type": self.mapping.entity_type, "error": str(e)},
-                )
-
-                return self.sync_log
-
-        except Exception:
-            logger.exception("Error initializing sync pipeline")
             raise
 
     def _process_batch(self, batch: List[Dict[str, Any]]) -> tuple:
@@ -219,64 +194,34 @@ class SyncPipeline:
             batch: List of records to process
 
         Returns:
-            Tuple of (success_count, failure_count)
+            tuple: (success_count, failure_count)
         """
         success_count = 0
         failure_count = 0
 
         try:
-            # Transform the batch
-            transformed_data = self.transformer.transform(batch)
-            if not transformed_data:
-                logger.warning("Transformer returned no data for batch")
-                for record in batch:
-                    failure_count += 1
-                    cleaned_record = self._clean_for_json(record)
-                    SyncLogDetail.objects.create(
-                        sync_log=self.sync_log,
-                        record_id=record.get("id", str(record)),
-                        status="failed",
-                        error_message="Transformation produced no data",
-                        record_data={"source": cleaned_record},
-                    )
-                return success_count, failure_count
+            # Transform batch
+            transformed_records = self.transformer.transform(batch)
 
             # Load transformed records
-            try:
-                # Load all transformed records at once
-                result = self.loader.load(transformed_data)
-
-                # Log success for each record
-                for record, transformed in zip(batch, transformed_data):
-                    cleaned_record = self._clean_for_json(record)
-                    cleaned_transformed = self._clean_for_json(transformed)
-                    cleaned_result = self._clean_for_json(result)
-                    SyncLogDetail.objects.create(
-                        sync_log=self.sync_log,
-                        record_id=record.get("id", str(record)),
-                        status="success",
-                        record_data={
-                            "source": cleaned_record,
-                            "transformed": cleaned_transformed,
-                            "result": cleaned_result,
-                        },
-                    )
-                    success_count += 1
-
-            except Exception as e:
-                # Log failure for each record
-                error_msg = str(e)
-                logger.error("Failed to load transformed records: {}".format(error_msg))
-                for record in batch:
-                    failure_count += 1
-                    cleaned_record = self._clean_for_json(record)
-                    SyncLogDetail.objects.create(
-                        sync_log=self.sync_log,
-                        record_id=record.get("id", str(record)),
-                        status="failed",
-                        error_message=f"Loading failed: {error_msg}",
-                        record_data={"source": cleaned_record},
-                    )
+            load_result = self.loader.load(transformed_records)
+            
+            # Process load results - LoadResult is an object, not a dictionary
+            # Count the successes and failures
+            success_count = load_result.created + load_result.updated
+            failure_count = load_result.errors
+            
+            # Create log entries for errors
+            for error_detail in load_result.error_details:
+                SyncLogDetail.objects.create(
+                    sync_log=self.sync_log,
+                    record_id=str(error_detail.get("record", {}).get("id", "unknown")),
+                    status="failed",
+                    error_message=error_detail.get("error", "Unknown error"),
+                    record_data={
+                        "source": self._clean_for_json(error_detail.get("record", {})),
+                    },
+                )
 
         except Exception as e:
             # Log batch transformation failure
@@ -367,10 +312,14 @@ class PipelineFactory:
             logger.info(f"Created extractor: {extractor.__class__.__name__}")
 
             # Get transformer class from mapping config
-            transformer = cls._create_component(
+            transformer_class_path = (
                 transformer_class
-                or cls._import_class(mapping_config.get("transformer_class")),
-                mapping_config,
+                or mapping_config.get("transformer_class")
+                or mapping_config.get("transformation", {}).get("transformer_class")
+            )
+            transformer = cls._create_component(
+                cls._import_class(transformer_class_path),
+                mapping_config.get("transformation", {}),
             )
             logger.info(f"Created transformer: {transformer.__class__.__name__}")
 
