@@ -5,16 +5,11 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'localhost:3001']
-    },
-    typedRoutes: true
+    }
   },
-  webpack: (config) => {
-    config.resolve.alias['@'] = path.resolve(__dirname, 'src');
-    config.module.rules.push({
-      test: /\.(ico|png|jpg|jpeg|gif|svg)$/,
-      type: 'asset/resource',
-    });
-    return config;
+  // Turbopack will use these settings when not using webpack
+  images: {
+    remotePatterns: [],
   },
   output: 'standalone',
   poweredByHeader: false,
@@ -45,6 +40,18 @@ const nextConfig = {
       }
     ]
   }
+}
+
+// Only include webpack config when not using Turbopack
+if (!process.env.TURBOPACK) {
+  nextConfig.webpack = (config) => {
+    config.resolve.alias['@'] = path.resolve(__dirname, 'src');
+    config.module.rules.push({
+      test: /\.(ico|png|jpg|jpeg|gif|svg)$/,
+      type: 'asset/resource',
+    });
+    return config;
+  };
 }
 
 module.exports = nextConfig
