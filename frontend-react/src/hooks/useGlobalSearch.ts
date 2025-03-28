@@ -49,8 +49,6 @@ export function useGlobalSearch() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
     const fetchResults = async () => {
       if (!query) {
         setResults(null);
@@ -73,7 +71,7 @@ export function useGlobalSearch() {
     };
 
     // Debounce the search
-    timeoutId = setTimeout(fetchResults, 300);
+    const timeoutId = setTimeout(fetchResults, 300);
 
     return () => {
       clearTimeout(timeoutId);

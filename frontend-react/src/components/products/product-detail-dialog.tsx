@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Product } from "../types/product"
+import Image from 'next/image'
 
 interface ProductDetailDialogProps {
   isOpen: boolean
@@ -128,10 +129,12 @@ export default function ProductDetailDialog({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {product.images.map((image, index) => (
                     <div key={index} className="relative aspect-square rounded-md overflow-hidden">
-                      <img
+                      <Image
                         src={image}
                         alt={`${product.name} - Bild ${index + 1}`}
                         className="object-cover w-full h-full"
+                        width={200}
+                        height={200}
                       />
                       {product.primary_image === image && (
                         <div className="absolute top-2 right-2">

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useContainerTypeStore, type ContainerType, type ContainerTypeImage } from "@/lib/stores/container-type-store"
+import Image from 'next/image'
 
 interface ContainerTypeDialogProps {
   isOpen: boolean
@@ -297,10 +298,12 @@ export default function ContainerTypeDialog({ isOpen, onClose, containerType, is
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {formData.images.map((image, index) => (
                     <div key={image.id} className="relative">
-                      <img
-                        src={image.url || "/placeholder.svg"}
-                        alt={`Bild ${index + 1}`}
-                        className="w-full h-32 object-cover border rounded-md"
+                      <Image
+                        src={image.url || '/placeholder-container.png'}
+                        alt={`Container type image for ${formData.name}`}
+                        width={200}
+                        height={200}
+                        className="rounded-lg object-cover"
                       />
                       <Button
                         type="button"

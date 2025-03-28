@@ -16,15 +16,14 @@ from pyerp.utils.env_loader import load_environment_variables
 load_environment_variables(verbose=True)
 
 # Remove debug toolbar from installed apps
-if "debug_toolbar" in INSTALLED_APPS:
-    INSTALLED_APPS.remove("debug_toolbar")
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]
 
 # Remove debug toolbar middleware
-if "debug_toolbar.middleware.DebugToolbarMiddleware" in MIDDLEWARE:
-    MIDDLEWARE.remove("debug_toolbar.middleware.DebugToolbarMiddleware")
+MIDDLEWARE = [mw for mw in MIDDLEWARE if "debug_toolbar" not in mw]
 
 # Configure debug toolbar for tests
 DEBUG_TOOLBAR_CONFIG = {
+    "SHOW_TOOLBAR_CALLBACK": lambda request: False,
     "IS_RUNNING_TESTS": True,
 }
 
@@ -45,6 +44,9 @@ MIGRATION_MODULES = {}  # Empty dictionary instead of None
 # Configure test-specific model settings
 DATABASE_ROUTERS = []
 TEST_NON_SERIALIZED_APPS = []
+
+# Configure URL patterns for tests
+ROOT_URLCONF = 'pyerp.urls'
 
 # Disable password hashing for faster tests
 PASSWORD_HASHERS = [

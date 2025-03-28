@@ -16,6 +16,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
+from rest_framework import status
 
 from pyerp.business_modules.products.forms import ProductSearchForm, TagInheritanceForm
 from pyerp.business_modules.products.models import (
@@ -24,6 +25,7 @@ from pyerp.business_modules.products.models import (
     VariantProduct,
 )
 from pyerp.business_modules.products.tag_models import Tag
+from pyerp.business_modules.products.serializers import ParentProductSerializer
 
 
 class ProductListView(LoginRequiredMixin, ListView):
@@ -134,12 +136,11 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
 
     def get_object(self, queryset=None):
         """
-        Get product by ID or slug.
+        Get product by ID.
         """
         if self.kwargs.get("pk"):
             return get_object_or_404(ParentProduct, pk=self.kwargs["pk"])
-        if self.kwargs.get("slug"):
-            return get_object_or_404(ParentProduct, slug=self.kwargs["slug"])
+        return None
 
     def get_context_data(self, **kwargs):
         """
@@ -390,7 +391,6 @@ class ProductAPIView(APIView):
                         tags_data.append({
                             "id": tag.id,
                             "name": tag.name,
-                            "slug": getattr(tag, "slug", None),
                             "description": getattr(tag, "description", "")
                         })
                     product_data["tags"] = tags_data
@@ -585,10 +585,22 @@ class ProductListAPIView(ProductAPIView):
 
             # Add variants data if requested
             if include_variants:
+                # Add variants data to response
                 variants_data = []
-                # This will use the prefetched data
                 for variant in product.variants.all():
-                    variant_data = self.get_product_data(variant)
+                    variant_data = {
+                        "id": variant.id,
+                        "sku": variant.sku,
+                        "name": variant.name,
+                        "variant_code": variant.variant_code,
+                        "is_active": variant.is_active,
+                        "parent": {
+                            "id": product.id,
+                            "name": product.name,
+                            "sku": product.sku,
+                        },
+                        "primary_image": None,
+                    }
                     variants_data.append(variant_data)
                 product_data["variants"] = variants_data
 
@@ -606,56 +618,29 @@ class ProductListAPIView(ProductAPIView):
         )
 
 
-class ProductDetailAPIView(ProductAPIView):
-    """API view for product details"""
+class ProductDetailAPIView(APIView):
+    """
+    Get product by ID.
+    """
 
-    def get(self, request, pk=None, slug=None):
-        """Handle GET request for product detail"""
-        if pk:
-            product = get_object_or_404(ParentProduct, pk=pk)
-        elif slug:
-            product = get_object_or_404(ParentProduct, slug=slug)
-        else:
-            return Response({"error": "Product not found"}, status=404)
+    def get_object(self, pk):
+        """Get product by ID."""
+        return get_object_or_404(ParentProduct, pk=pk)
 
-        # Get basic product data
-        product_data = self.get_product_data(product)
+    def get(self, request, pk=None):
+        """Get product details."""
+        product = self.get_object(pk)
+        serializer = ParentProductSerializer(product)
+        return Response(serializer.data)
 
-        # Add variants with prefetch_related for optimization
-        variants = VariantProduct.objects.filter(parent=product).prefetch_related("images", "tags")
-        variants_data = []
-        for variant in variants:
-            variant_data = self.get_product_data(variant)
-            variants_data.append(variant_data)
-        product_data["variants"] = variants_data
-
-        # Return JSON response
-        return Response(product_data)
-
-    def patch(self, request, pk=None, slug=None):
-        """Handle PATCH request for product update"""
-        if pk:
-            product = get_object_or_404(ParentProduct, pk=pk)
-        elif slug:
-            product = get_object_or_404(ParentProduct, slug=slug)
-        else:
-            return Response({"error": "Product not found"}, status=404)
-
-        # Update fields
-        if "name" in request.data:
-            product.name = request.data["name"]
-        if "description" in request.data:
-            product.description = request.data["description"]
-        if "is_hanging" in request.data:
-            product.is_hanging = request.data["is_hanging"]
-        if "is_one_sided" in request.data:
-            product.is_one_sided = request.data["is_one_sided"]
-
-        # Save changes
-        product.save()
-
-        # Return updated product data
-        return Response(self.get_product_data(product))
+    def patch(self, request, pk=None):
+        """Update product details."""
+        product = self.get_object(pk)
+        serializer = ParentProductSerializer(product, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VariantDetailAPIView(ProductAPIView):
@@ -674,8 +659,6 @@ class VariantDetailAPIView(ProductAPIView):
                 "id": variant.parent.id,
                 "name": variant.parent.name,
                 "sku": variant.parent.sku,
-                "slug": getattr(variant.parent, "slug", None),
-                "legacy_id": getattr(variant.parent, "legacy_id", None),
             }
 
         # Add all images
@@ -855,51 +838,33 @@ class VariantProductTagUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class ProductListWithTagFilterView(ListView):
-    """
-    View for listing products filtered by tag
-    """
-    template_name = 'products/product_list.html'
-    context_object_name = 'products'
-    
+    """List products filtered by tag."""
+    model = ParentProduct
+    template_name = "products/product_list.html"
+    context_object_name = "products"
+    paginate_by = 20
+
     def get_queryset(self):
-        tag_slug = self.kwargs.get('tag_slug')
-        
-        if tag_slug:
-            tag = get_object_or_404(Tag, slug=tag_slug)
-            
-            # Get parent products with this tag
-            parent_products = ParentProduct.objects.filter(tags=tag)
-            
-            # Get variant products with this tag directly assigned
-            direct_variants = VariantProduct.objects.filter(tags=tag)
-            
-            # Get variant products that inherit this tag from parent
-            inheriting_variants = VariantProduct.objects.filter(
-                parent__in=parent_products
-            ).exclude(
-                id__in=direct_variants
-            )
-            
-            # Filter inheriting variants to only those that actually inherit
-            inheriting_variants_filtered = [
-                variant for variant in inheriting_variants
-                if variant.inherits_tags()
-            ]
-            
-            # Combine the two sets of variants
-            variant_ids = list(direct_variants.values_list('id', flat=True))
-            variant_ids.extend([v.id for v in inheriting_variants_filtered])
-            
-            return VariantProduct.objects.filter(id__in=variant_ids)
-        else:
-            return VariantProduct.objects.filter(is_active=True)
-    
+        """Get products filtered by tag."""
+        queryset = super().get_queryset()
+        tag = get_object_or_404(Tag, id=self.kwargs.get('tag_id'))
+        return queryset.filter(tags=tag)
+
     def get_context_data(self, **kwargs):
+        """Add tag to context for filter display."""
         context = super().get_context_data(**kwargs)
-        
-        tag_slug = self.kwargs.get('tag_slug')
-        if tag_slug:
-            context['filter_tag'] = get_object_or_404(Tag, slug=tag_slug)
-        
-        context['tags'] = Tag.objects.all()
+        context['filter_tag'] = get_object_or_404(Tag, id=self.kwargs.get('tag_id'))
+        return context
+
+
+class TagDetailView(DetailView):
+    """View for displaying tag details."""
+    model = Tag
+    template_name = "products/tag_detail.html"
+    context_object_name = "tag"
+
+    def get_context_data(self, **kwargs):
+        """Add products with this tag to context."""
+        context = super().get_context_data(**kwargs)
+        context["products"] = ParentProduct.objects.filter(tags=self.object)
         return context

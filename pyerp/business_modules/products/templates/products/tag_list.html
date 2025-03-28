@@ -1,72 +1,59 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% load static %}
 
 {% block title %}{% translate "Product Tags" %}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>{% translate "Product Tags" %}</h1>
-        <a href="{% url 'products:tag_create' %}" class="btn btn-primary">
-            <i class="fa fa-plus"></i> {% translate "Add Tag" %}
-        </a>
+        <h1>{% trans "Tags" %}</h1>
+        <a href="{% url 'products:tag_create' %}" class="btn btn-primary">{% trans "Add Tag" %}</a>
     </div>
 
-    {% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
-            {{ message }}
+    <div class="row">
+        {% for tag in object_list %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ tag.name }}</h5>
+                    <p class="card-text">{{ tag.description }}</p>
+                    <div class="btn-group">
+                        <a href="{% url 'products:tag_update' pk=tag.pk %}" class="btn btn-outline-primary">{% trans "Edit" %}</a>
+                        <a href="{% url 'products:tag_delete' pk=tag.pk %}" class="btn btn-outline-danger">{% trans "Delete" %}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <p>{% trans "No tags found." %}</p>
         </div>
         {% endfor %}
     </div>
-    {% endif %}
 
-    <div class="card">
-        <div class="card-body">
-            {% if tags %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>{% translate "Name" %}</th>
-                            <th>{% translate "Description" %}</th>
-                            <th>{% translate "Slug" %}</th>
-                            <th>{% translate "Created" %}</th>
-                            <th>{% translate "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tag in tags %}
-                        <tr>
-                            <td>{{ tag.name }}</td>
-                            <td>{{ tag.description|truncatechars:50 }}</td>
-                            <td>{{ tag.slug }}</td>
-                            <td>{{ tag.created_at|date }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'products:tag_update' tag.pk %}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fa fa-edit"></i> {% translate "Edit" %}
-                                    </a>
-                                    <a href="{% url 'products:tag_delete' tag.pk %}" class="btn btn-sm btn-outline-danger">
-                                        <i class="fa fa-trash"></i> {% translate "Delete" %}
-                                    </a>
-                                    <a href="{% url 'products:product_by_tag' tag.slug %}" class="btn btn-sm btn-outline-info">
-                                        <i class="fa fa-filter"></i> {% translate "View Products" %}
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="alert alert-info">
-                {% translate "No tags found. Click 'Add Tag' to create your first tag." %}
-            </div>
+    {% if is_paginated %}
+    <nav aria-label="{% trans 'Page navigation' %}">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% trans "Previous" %}</a>
+            </li>
             {% endif %}
-        </div>
-    </div>
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">{% trans "Next" %}</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 {% endblock %} 

@@ -1,12 +1,5 @@
-import React from "react";
-import { InventoryManagement } from "@/components/ui/products";
+import { InventoryManagement } from '@/components/ui/products';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function ProductParentPage({ params }: PageProps) {
+export default function Page({ params }: { params: { id: string } }) {
   return <InventoryManagement initialParentId={params.id} />;
 } 

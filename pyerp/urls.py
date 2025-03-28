@@ -94,8 +94,10 @@ urlpatterns = [
         "api/email/",
         include("pyerp.utils.email_system.urls", namespace="email_system"),
     ),
-    # Add products API URLs directly
-    path("api/products/", include("pyerp.business_modules.products.api_urls")),
+    # Add products API URLs with namespace
+    path("api/products/", include("pyerp.business_modules.products.api_urls", namespace="products_api")),
+    # Add products UI URLs with namespace
+    path("products/", include("pyerp.business_modules.products.urls", namespace="products")),
     # Add sales API URLs
     path("api/sales/", include("pyerp.business_modules.sales.urls")),
     # Add inventory API URLs with namespace

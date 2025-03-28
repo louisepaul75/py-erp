@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertTriangle, Copy, CheckCircle2, Smartphone, Key } from "lucide-react"
 import { setupTwoFactor, enableTwoFactor } from "@/lib/api/profile"
 import type { TwoFactorSetup, User } from "@/lib/types"
+import Image from 'next/image'
 
 interface TwoFactorSetupDialogProps {
   user: User
@@ -162,9 +163,9 @@ export function TwoFactorSetupDialog({ user, open, onOpenChange, onSuccess }: Tw
                 <div className="flex justify-center">
                   <Card className="border p-4 rounded bg-white">
                     <CardContent className="p-0">
-                      <img
+                      <Image
                         src={setupData.qrCodeUrl || "/placeholder.svg"}
-                        alt="QR Code for Two-Factor Authentication"
+                        alt="QR Code for two-factor authentication setup"
                         width={200}
                         height={200}
                         className="mx-auto"

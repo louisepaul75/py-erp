@@ -30,46 +30,31 @@ export const useLogin = () => {
 
 // Hook for logout
 export const useLogout = () => {
-  let queryClient;
-  let router;
+  const queryClient = useQueryClient();
+  const router = useRouter();
   
-  try {
-    queryClient = useQueryClient();
-    router = useRouter();
-  } catch (error) {
-    // Fallback for when QueryClient is not available
-    console.warn('QueryClient not available, using fallback logout behavior');
-    
-    return {
-      mutate: () => {
-        authService.logout();
-        window.location.href = '/login';
-      },
-      isPending: false,
-      isError: false,
-      error: null,
-      isSuccess: false,
-      reset: () => {}
-    };
-  }
-  
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: () => {
       authService.logout();
       return Promise.resolve();
     },
     onSuccess: () => {
-      if (queryClient) {
-        queryClient.setQueryData(['user'], null);
-        queryClient.invalidateQueries();
-      }
-      if (router) {
-        router.push('/login');
-      } else {
-        window.location.href = '/login';
-      }
+      queryClient.setQueryData(['user'], null);
+      queryClient.invalidateQueries();
+      router.push('/login');
     },
   });
+
+  // Provide a fallback method that can be used outside React components
+  const fallbackLogout = () => {
+    authService.logout();
+    window.location.href = '/login';
+  };
+
+  return {
+    ...mutation,
+    fallbackLogout
+  };
 };
 
 // Hook for profile update

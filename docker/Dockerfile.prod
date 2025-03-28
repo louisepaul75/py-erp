@@ -10,17 +10,12 @@ COPY frontend-react/package*.json ./
 # Create .npmrc to reduce warnings and optimize installation
 RUN echo "legacy-peer-deps=true\nloglevel=error" > .npmrc
 
-# Install production dependencies and required Babel plugins
-RUN npm ci --prefer-offline --no-audit --no-optional --production && \
-    npm install --no-save \
-    @babel/plugin-transform-private-methods \
-    @babel/plugin-proposal-private-property-in-object \
-    @babel/plugin-proposal-class-properties
+# Install production dependencies
+RUN npm ci --prefer-offline --no-audit --no-optional --production
 
 # Copy only the necessary files for the build
 COPY frontend-react/tsconfig.json ./
 COPY frontend-react/next.config.js ./
-COPY frontend-react/.babelrc ./
 COPY frontend-react/src ./src
 COPY frontend-react/public ./public
 
