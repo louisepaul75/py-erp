@@ -364,8 +364,12 @@ export function PicklistTable({ orders, isLoading, totalOrders }: PicklistTableP
           </Button>
         ),
         cell: ({ row }) => {
-          const date = row.getValue("deliveryDate") as Date
-          return format(date, "dd.MM.yyyy", { locale: de })
+          const value = row.getValue("deliveryDate");
+          // Check if value is a valid date before formatting
+          if (!value || !(value instanceof Date) || isNaN(value.getTime())) {
+            return "-";
+          }
+          return format(value as Date, "dd.MM.yyyy", { locale: de });
         },
       },
       {
@@ -463,8 +467,12 @@ export function PicklistTable({ orders, isLoading, totalOrders }: PicklistTableP
           </Button>
         ),
         cell: ({ row }) => {
-          const date = row.getValue("orderDate") as Date
-          return format(date, "dd.MM.yyyy", { locale: de })
+          const value = row.getValue("orderDate");
+          // Check if value is a valid date before formatting
+          if (!value || !(value instanceof Date) || isNaN(value.getTime())) {
+            return "-";
+          }
+          return format(value as Date, "dd.MM.yyyy", { locale: de });
         },
       },
       {

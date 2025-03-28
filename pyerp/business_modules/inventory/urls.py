@@ -9,6 +9,7 @@ from datetime import datetime
 
 from .models import BoxType, StorageLocation, Box, ProductStorage, BoxStorage, BoxSlot
 from .services import InventoryService
+from pyerp.business_modules.sales.models import SalesRecord, SalesRecordItem
 
 app_name = "inventory"
 logger = logging.getLogger(__name__)
@@ -372,6 +373,77 @@ def locations_by_product(request, product_id=None):
         logger.error(f"Error fetching locations by product: {e}")
         return Response({
             "detail": "Failed to fetch locations by product"
+        }, status=500)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def bin_locations_by_order(request, order_id=None):
+    """
+    API endpoint to list bin locations for a specific order.
+    
+    Path Parameters:
+        order_id: ID of the sales record (order)
+        
+    Returns:
+        200: List of bin locations associated with the order
+        404: Order not found
+        500: Server error
+    """
+    try:
+        if not order_id:
+            return Response([], status=200)
+
+        # Try to get the sales record
+        try:
+            sales_record = SalesRecord.objects.get(id=order_id)
+        except SalesRecord.DoesNotExist:
+            return Response({
+                "status": "error",
+                "message": f"Order with ID {order_id} not found",
+                "code": "ORDER_NOT_FOUND"
+            }, status=404)
+            
+        # Get all items in this order
+        record_items = SalesRecordItem.objects.filter(sales_record=sales_record)
+        
+        # Get all product IDs from the order items
+        product_ids = [item.product_id for item in record_items if item.product_id]
+        
+        # Find storage locations for these products
+        product_storage_items = ProductStorage.objects.filter(
+            product_id__in=product_ids
+        ).select_related("storage_location")
+        
+        # Extract unique locations
+        bin_locations = []
+        seen_locations = set()
+        
+        for item in product_storage_items:
+            if item.storage_location and item.storage_location.id not in seen_locations:
+                location = item.storage_location
+                seen_locations.add(location.id)
+                
+                # Format location code based on available fields
+                location_code = "-".join(filter(None, [
+                    location.country,
+                    location.city_building,
+                    location.unit,
+                    location.compartment,
+                    location.shelf
+                ]))
+                
+                bin_locations.append({
+                    "id": str(location.id),  # Convert to string to match frontend expectation
+                    "binCode": location.location_code or location_code,
+                    "location": location.name
+                })
+                
+        return Response(bin_locations)
+    except Exception as e:
+        logger.error(f"Error fetching bin locations for order {order_id}: {e}")
+        return Response({
+            "detail": f"Failed to fetch bin locations for order: {str(e)}"
         }, status=500)
 
 
@@ -750,6 +822,11 @@ urlpatterns = [
         "products/<int:product_id>/locations/",
         locations_by_product,
         name="locations_by_product",
+    ),
+    path(
+        "bin-locations/by-order/<int:order_id>/",
+        bin_locations_by_order,
+        name="bin_locations_by_order",
     ),
     path("move-box/", move_box, name="move_box"),
     path(

@@ -317,7 +317,7 @@ export async function fetchOrders(): Promise<Order[]> {
       }));
 
       // Get bin locations for this order
-      const binLocations: BinLocation[] = await api.get(`warehouse/bin-locations/by-order/${record.id}/`).json<BinLocation[]>();
+      const binLocations: BinLocation[] = await api.get(`inventory/bin-locations/by-order/${record.id}/`).json<BinLocation[]>();
 
       // Calculate picking progress
       const itemsPicked = orderItems.reduce((sum, item) => sum + item.quantityPicked, 0);
