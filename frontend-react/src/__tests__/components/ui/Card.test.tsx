@@ -92,7 +92,7 @@ describe('Card Components', () => {
           Title with Icon
         </CardTitle>
       );
-      const icon = screen.getByTestId('alertcircle');
+      const icon = screen.getByTestId('circlealert');
       expect(icon).toBeInTheDocument();
       expect(icon).toHaveClass('mr-2', 'h-5', 'w-5');
     });

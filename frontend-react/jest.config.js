@@ -17,10 +17,12 @@ const config = {
   ],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json'
+      tsconfig: 'tsconfig.jest.json',
+      useESM: true
     }],
     '^.+\\.(js|jsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json'
+      tsconfig: 'tsconfig.jest.json',
+      useESM: true
     }]
   },
   transformIgnorePatterns: [
@@ -31,6 +33,11 @@ const config = {
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
   ],
+  globals: {
+    'ts-jest': {
+      isolatedModules: true
+    }
+  }
 };
 
 module.exports = config; 

@@ -95,12 +95,17 @@ describe('ResponsiveCard', () => {
     );
     
     expect(screen.getByTestId('touchfeedback-mock')).toBeInTheDocument();
-    expect(TouchFeedback).toHaveBeenCalledWith(
-      expect.objectContaining({
-        onClick: handleClick,
-      }),
-      expect.anything()
-    );
+    
+    // Simplified expectation to avoid React 19 object structure issues
+    expect(TouchFeedback).toHaveBeenCalled();
+    
+    // Verify that props were passed correctly by checking the onClick handler directly
+    const mockCalls = (TouchFeedback as jest.Mock).mock.calls;
+    expect(mockCalls.length).toBeGreaterThan(0);
+    
+    // Extract and check the onClick prop from the first argument of the first call
+    const firstCallFirstArg = mockCalls[0][0];
+    expect(firstCallFirstArg.onClick).toBe(handleClick);
   });
 
   it('does not use TouchFeedback when onClick is not provided', () => {

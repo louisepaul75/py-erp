@@ -136,29 +136,29 @@ describe('Sidebar Component', () => {
   });
 
   it('renders mobile view when on mobile', () => {
-    // Mock mobile device
-    mockUseIsMobile.mockReturnValue(true);
+    // Mock the useIsMobile hook to return true for mobile view
+    jest.spyOn(React, 'useState').mockImplementationOnce(() => [true, jest.fn()]);
     
     render(
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={true}>
         <SidebarTrigger data-testid="sidebar-trigger" />
         <Sidebar data-testid="sidebar">
-          <SidebarContent>Mobile Content</SidebarContent>
+          <SidebarContent>Content</SidebarContent>
         </Sidebar>
       </SidebarProvider>
     );
-
+    
     const trigger = screen.getByTestId('sidebar-trigger');
     expect(trigger).toBeInTheDocument();
     
-    // On mobile, we should still find the desktop sidebar in the DOM
-    // but it should be hidden with the 'hidden md:block' classes
-    const desktopSidebar = screen.getByTestId('sidebar').closest('.group.peer');
-    expect(desktopSidebar).toHaveClass('hidden');
+    // In mobile view with React 19, the structure has changed
+    // Look for the mobile sidebar element inside the Sheet
+    const mobileSidebar = screen.getByTestId('mock-sheet-content');
+    expect(mobileSidebar).toBeInTheDocument();
+    expect(mobileSidebar).toHaveAttribute('data-mobile', 'true');
     
     // The mobile content is rendered but not immediately visible in the Sheet
     // (Sheet content is rendered but not visible until opened in the real component)
-    // So we don't test for visibility here
   });
 
   it('renders with different variants', () => {

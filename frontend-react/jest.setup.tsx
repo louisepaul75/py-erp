@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import React from 'react';
+import * as React from 'react';
 
 // Add polyfills for TextEncoder and TextDecoder
 // This is needed for JSDOM in some tests
@@ -54,7 +54,7 @@ jest.mock('next/navigation', () => ({
 jest.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage(props) {
-    return <img {...props} />;
+    return React.createElement('img', { ...props });
   },
 }));
 
