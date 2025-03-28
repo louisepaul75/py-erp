@@ -10,7 +10,8 @@ import {
   LogOut, 
   ChevronDown,
   User,
-  Palette
+  Palette,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useTheme from '@/hooks/useTheme';
@@ -20,6 +21,12 @@ import useAppTranslation from '@/hooks/useTranslationWrapper';
 import { useIsAuthenticated } from '@/lib/auth/authHooks';
 import { MobileMenu } from './MobileMenu';
 import { useScreenSize } from '@/utils/responsive';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,10 +73,6 @@ export function Navbar() {
     { href: '/products', label: t('navigation.products') },
     { href: '/sales', label: t('navigation.sales') },
     { href: '/production', label: t('navigation.production') },
-    { href: '/warehouse', label: t('navigation.inventory') },
-    { href: '/inventory', label: t('navigation.inventory') },
-    { href: '/ui-components', label: 'UI Components' },
-    { href: '/picklist', label: 'Picklist' },
   ];
 
   return (
@@ -91,7 +94,7 @@ export function Navbar() {
 
           {/* Mobile menu */}
           <div className="flex items-center lg:hidden">
-            <MobileMenu items={navigationItems} />
+            <MobileMenu items={[...navigationItems, { href: '/warehouse', label: t('navigation.inventory') }, { href: '/picklist', label: 'Picklist' }]} />
           </div>
 
           {/* Navigation Links - Desktop */}
@@ -101,6 +104,29 @@ export function Navbar() {
                 <NavLink key={item.href} href={item.href} label={item.label} />
               ))}
               
+              {/* Inventory Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                    <Package className="h-4 w-4 mr-2" />
+                    <span>{t('navigation.inventory')}</span>
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem asChild>
+                    <Link href="/warehouse" className="flex items-center">
+                      Warehouse Management
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/picklist" className="flex items-center">
+                      Picklist
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {/* Test dropdown */}
               <div className="relative" id="test-dropdown">
                 <button

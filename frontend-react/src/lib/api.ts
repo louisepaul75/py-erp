@@ -1,4 +1,33 @@
-import type { Item, BookingItem, HistoryEntry } from "./types"
+import type { Item, BookingItem, HistoryEntry, Order, OrderItem, BinLocation } from "@/types/types"
+import ky from 'ky';
+import { API_URL, AUTH_CONFIG } from './config';
+import { csrfService } from './auth/authService';
+
+// Create an API client instance with the correct base URL and auth
+const api = ky.create({
+  prefixUrl: API_URL,
+  timeout: 30000,
+  credentials: 'include', // Include cookies in requests
+  hooks: {
+    beforeRequest: [
+      request => {
+        // Add CSRF token to non-GET requests if available
+        if (request.method !== 'GET') {
+          const csrfToken = csrfService.getToken();
+          if (csrfToken) {
+            request.headers.set('X-CSRFToken', csrfToken);
+          }
+        }
+        
+        // Add Authorization header with JWT token if available
+        const token = document.cookie.match(new RegExp(`(^| )${AUTH_CONFIG.tokenStorage.accessToken}=([^;]+)`))?.at(2);
+        if (token) {
+          request.headers.set('Authorization', `Bearer ${token}`);
+        }
+      }
+    ]
+  }
+});
 
 // Mock data for demonstration
 const mockItems: Item[] = [
@@ -181,5 +210,154 @@ export async function fetchMovementHistory(fromDate?: Date, toDate?: Date): Prom
   // Diese Funktion wird nicht mehr verwendet, da wir jetzt den HistoryContext verwenden
   await delay(500) // Simulate network delay
   return []
+}
+
+// Mock orders data
+const mockOrders = [
+  {
+    id: "1",
+    orderNumber: "ORD-001",
+    customerNumber: "CUST-001",
+    customerName: "Acme Corp",
+    deliveryDate: new Date("2024-04-10"),
+    orderDate: new Date("2024-04-01"),
+    isOrder: true,
+    isDeliveryNote: false,
+    itemsPicked: 3,
+    totalItems: 5,
+    pickingStatus: "in_progress",
+    pickingSequence: 1,
+    items: [
+      {
+        id: "1",
+        oldArticleNumber: "A1001",
+        newArticleNumber: "N2001",
+        description: "Wireless Headphones",
+        quantityPicked: 2,
+        quantityTotal: 3,
+        binLocations: ["S101", "S102"]
+      },
+      {
+        id: "2",
+        oldArticleNumber: "A1002",
+        newArticleNumber: "N2002",
+        description: "USB-C Cable",
+        quantityPicked: 1,
+        quantityTotal: 2,
+        binLocations: ["S103"]
+      }
+    ],
+    binLocations: [
+      { id: "S101", name: "Shelf A1" },
+      { id: "S102", name: "Shelf A2" },
+      { id: "S103", name: "Shelf B1" }
+    ]
+  },
+  {
+    id: "2",
+    orderNumber: "ORD-002",
+    customerNumber: "CUST-002",
+    customerName: "TechCo Ltd",
+    deliveryDate: new Date("2024-04-12"),
+    orderDate: new Date("2024-04-02"),
+    isOrder: true,
+    isDeliveryNote: false,
+    itemsPicked: 0,
+    totalItems: 3,
+    pickingStatus: "pending",
+    pickingSequence: 2,
+    items: [
+      {
+        id: "3",
+        oldArticleNumber: "A1003",
+        newArticleNumber: "N2003",
+        description: "Wireless Mouse",
+        quantityPicked: 0,
+        quantityTotal: 2,
+        binLocations: ["S104", "S105"]
+      },
+      {
+        id: "4",
+        oldArticleNumber: "A1004",
+        newArticleNumber: "N2004",
+        description: "Power Bank",
+        quantityPicked: 0,
+        quantityTotal: 1,
+        binLocations: ["S106"]
+      }
+    ],
+    binLocations: [
+      { id: "S104", name: "Shelf B2" },
+      { id: "S105", name: "Shelf B3" },
+      { id: "S106", name: "Shelf C1" }
+    ]
+  }
+];
+
+export async function fetchOrders(): Promise<Order[]> {
+  try {
+    // Fetch sales records and their items using the configured api client
+    const response = await api.get('sales/records/').json<{results: any[]}>();
+    const salesRecords = response.results;
+    
+    // Transform the sales records into the Order format
+    const orders: Order[] = await Promise.all(salesRecords.map(async (record) => {
+      // Fetch items for this sales record
+      const items = await api.get(`sales/records/${record.id}/items/`).json<any[]>();
+      
+      // Transform items into OrderItems
+      const orderItems: OrderItem[] = items.map(item => ({
+        id: item.id.toString(),
+        oldArticleNumber: item.product?.old_sku || item.legacy_sku || '',
+        newArticleNumber: item.product?.sku || '',
+        description: item.product?.name || item.description || '',
+        quantityPicked: item.quantity_picked || 0,
+        quantityTotal: item.quantity,
+        binLocations: item.bin_locations || []
+      }));
+
+      // Get bin locations for this order
+      const binLocations: BinLocation[] = await api.get(`warehouse/bin-locations/by-order/${record.id}/`).json<BinLocation[]>();
+
+      // Calculate picking progress
+      const itemsPicked = orderItems.reduce((sum, item) => sum + item.quantityPicked, 0);
+      const totalItems = orderItems.reduce((sum, item) => sum + item.quantityTotal, 0);
+
+      // Determine picking status
+      let pickingStatus: Order['pickingStatus'] = 'notStarted';
+      if (itemsPicked === totalItems) {
+        pickingStatus = 'completed';
+      } else if (itemsPicked > 0) {
+        pickingStatus = 'inProgress';
+      }
+
+      return {
+        id: record.id.toString(),
+        orderNumber: record.order_number,
+        customerNumber: record.customer.customer_number,
+        customerName: record.customer.name,
+        deliveryDate: new Date(record.delivery_date),
+        orderDate: new Date(record.created_at),
+        isOrder: record.type === 'order',
+        isDeliveryNote: record.type === 'delivery_note',
+        itemsPicked,
+        totalItems,
+        pickingStatus,
+        pickingSequence: record.picking_sequence || 0,
+        customerAddress: record.customer.address,
+        contactPerson: record.customer.contact_person,
+        phoneNumber: record.customer.phone,
+        email: record.customer.email,
+        notes: record.notes,
+        items: orderItems,
+        binLocations
+      };
+    }));
+
+    return orders;
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    throw error;
+  }
 }
 

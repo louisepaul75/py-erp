@@ -71,7 +71,10 @@
     "recharts": "^2.15.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dnd-touch-backend": "^16.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.26.10",
