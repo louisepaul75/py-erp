@@ -1,0 +1,37 @@
+# Production dependencies
+-r requirements.prod.in
+
+# API Documentation
+coreapi
+
+# Debugging
+django-debug-toolbar
+django-extensions
+ipython
+
+# Testing
+pytest
+pytest-django
+pytest-cov
+factory-boy
+faker
+mutmut  # Mutation testing
+hypothesis  # Property-based testing
+
+# Code quality
+black
+flake8
+isort
+
+# Documentation
+sphinx
+sphinx-rtd-theme
+
+# Development tools
+django-browser-reload
+watchdog
+
+# Linting and formatting
+mypy
+ruff
+bandit[toml]  # Security testing 

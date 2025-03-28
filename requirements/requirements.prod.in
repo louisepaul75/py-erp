@@ -1,0 +1,77 @@
+# Core Django packages
+Django
+djangorestframework
+django-filter
+django-cors-headers
+
+# Database
+psycopg2-binary
+dj-database-url
+
+# Environment variables
+python-dotenv
+
+# Background processing
+celery
+redis
+django-redis
+django-celery-results
+django-celery-beat
+kombu
+billiard
+amqp
+vine
+click-didyoumean
+click-plugins
+click-repl
+python-crontab
+django-timezone-field
+
+# API Documentation
+drf-yasg
+inflection
+uritemplate
+pyyaml
+coreapi
+
+# Authentication
+django-allauth
+djangorestframework-simplejwt
+
+# User management
+django-guardian
+
+# AWS
+boto3
+django-storages
+
+# PDF Generation
+WeasyPrint
+reportlab
+
+# Utilities
+Pillow
+python-dateutil
+pytz
+requests
+pydantic
+tabulate
+pandas
+psutil
+
+# Logging
+structlog
+python-json-logger
+
+# Email
+django-anymail
+
+# Production
+gunicorn
+whitenoise
+
+# Datadog APM and tracing
+ddtrace
+
+# 1Password Connect SDK
+onepasswordconnectsdk 
