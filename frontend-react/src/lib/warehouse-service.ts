@@ -1,4 +1,5 @@
-import { faker } from '@faker-js/faker/locale/de'
+import { faker } from '@faker-js/faker'
+import { de } from '@faker-js/faker/locales'
 import type {
   ContainerItem,
   ContainerSlot,
@@ -8,6 +9,8 @@ import type {
   ContainerArticle,
   WarehouseLocation
 } from "@/types/warehouse-types"
+
+faker.locale = 'de'
 
 interface ActivityLogEntry {
   id: string
