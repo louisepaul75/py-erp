@@ -54,18 +54,22 @@ class TestInventoryViewFunctions:
         """Test the box_types_list view returns expected response."""
         from pyerp.business_modules.inventory.urls import box_types_list
         
-        # Create mock box types
-        mock_box_type = MagicMock()
+        # Create mock box type with proper attribute values
+        mock_box_type = MagicMock(spec=[
+            'id', 'name', 'description', 'length', 'width', 
+            'height', 'weight_empty', 'slot_count', 'slot_naming_scheme'
+        ])
         mock_box_type.id = 1
         mock_box_type.name = "Test Box Type"
         mock_box_type.description = "Test Description"
-        mock_box_type.length = 10
-        mock_box_type.width = 10
-        mock_box_type.height = 10
-        mock_box_type.weight_capacity = 100
+        mock_box_type.length = 10.0
+        mock_box_type.width = 10.0
+        mock_box_type.height = 10.0
+        mock_box_type.weight_empty = 100.0
         mock_box_type.slot_count = 4
         mock_box_type.slot_naming_scheme = "numeric"
         
+        # Configure the mock to return a list with our mock box type
         mock_box_types.return_value = [mock_box_type]
         
         # Create a proper request object
@@ -92,12 +96,16 @@ class TestInventoryViewFunctions:
         # Mock the count
         mock_count.return_value = 1
         
-        # Create mock objects and relationships
-        mock_box_type = MagicMock()
+        # Create mock box type
+        mock_box_type = MagicMock(spec=['id', 'name'])
         mock_box_type.id = 1
         mock_box_type.name = "Test Box Type"
         
-        mock_box = MagicMock()
+        # Create mock box with proper spec
+        mock_box = MagicMock(spec=[
+            'id', 'code', 'barcode', 'box_type', 'status',
+            'purpose', 'notes', 'available_slots', 'slots'
+        ])
         mock_box.id = 1
         mock_box.code = "BOX001"
         mock_box.barcode = "12345"
@@ -109,12 +117,11 @@ class TestInventoryViewFunctions:
         
         # Mock the slots
         mock_slot = MagicMock()
-        mock_slot.box_storage_items.select_related.return_value.first.return_value = None
         mock_box.slots.all.return_value = [mock_slot]
         
         # Set up the chain of mocks
         mock_prefetch = MagicMock()
-        mock_prefetch.all.return_value.__getitem__.return_value = [mock_box]
+        mock_prefetch.all.return_value = [mock_box]
         mock_select_related.return_value.prefetch_related.return_value = mock_prefetch
         
         # Create a proper request object

@@ -67,8 +67,8 @@
 ## Frontend Frameworks and Libraries
 
 ### React Frontend
-- React 18.3.1 - UI library
-- Next.js 14.2.24 - React framework
+- React 19.x - UI library
+- Next.js 15.x - React framework
 - TypeScript 5.3.3 - Type-safe JavaScript
 - Recharts 2.x - React Charts
 

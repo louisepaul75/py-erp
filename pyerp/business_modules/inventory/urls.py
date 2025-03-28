@@ -91,51 +91,13 @@ def boxes_list(request):
             # Optimize query with joins and annotations
             boxes = (
                 Box.objects.select_related("box_type")
-                .prefetch_related(
-                    models.Prefetch(
-                        "slots",
-                        queryset=BoxSlot.objects.prefetch_related(
-                            models.Prefetch(
-                                "box_storage_items",
-                                queryset=BoxStorage.objects.select_related(
-                                    "product_storage__storage_location"
-                                )
-                            )
-                        )
-                    )
-                )
-                .annotate(
-                    computed_storage_location_id=models.Subquery(
-                        BoxSlot.objects.filter(
-                            box=models.OuterRef("pk"),
-                            box_storage_items__isnull=False
-                        ).values(
-                            "box_storage_items__product_storage__storage_location__id"
-                        )[:1]
-                    ),
-                    computed_storage_location_name=models.Subquery(
-                        BoxSlot.objects.filter(
-                            box=models.OuterRef("pk"),
-                            box_storage_items__isnull=False
-                        ).values(
-                            "box_storage_items__product_storage__storage_location__name"
-                        )[:1]
-                    )
-                )
+                .prefetch_related("slots")
+                .all()[offset:offset + limit]
             )
+            
             logger.info("Base query constructed successfully")
-
-            # Apply pagination
-            boxes = boxes[offset:offset + limit]
             logger.info(f"Fetched {len(boxes)} boxes for page {page}")
 
-        except Exception as query_error:
-            logger.error(f"Database query error: {str(query_error)}", exc_info=True)
-            return Response({
-                "detail": f"Database query error: {str(query_error)}"
-            }, status=500)
-
-        try:
             data = []
             for box in boxes:
                 box_data = {
@@ -146,14 +108,6 @@ def boxes_list(request):
                         "id": box.box_type.id,
                         "name": box.box_type.name,
                     },
-                    "storage_location": (
-                        {
-                            "id": box.computed_storage_location_id,
-                            "name": box.computed_storage_location_name
-                        }
-                        if box.computed_storage_location_id
-                        else None
-                    ),
                     "status": box.status,
                     "purpose": box.purpose,
                     "notes": box.notes,
@@ -163,24 +117,24 @@ def boxes_list(request):
                 
             logger.info(f"Successfully processed {len(data)} boxes")
 
-        except Exception as transform_error:
-            logger.error(f"Data transformation error: {str(transform_error)}", exc_info=True)
             return Response({
-                "detail": f"Error processing box data: {str(transform_error)}"
+                "results": data,
+                "total": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total_count + page_size - 1) // page_size,
+            })
+            
+        except Exception as e:
+            logger.error(f"Database query error: {str(e)}", exc_info=True)
+            return Response({
+                "detail": "Failed to fetch boxes"
             }, status=500)
-
-        return Response({
-            "results": data,
-            "total": total_count,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": (total_count + page_size - 1) // page_size,
-        })
-        
+            
     except Exception as e:
         logger.error(f"Unexpected error in boxes_list: {str(e)}", exc_info=True)
         return Response({
-            "detail": f"An unexpected error occurred: {str(e)}"
+            "detail": f"Failed to fetch boxes"
         }, status=500)
 
 
