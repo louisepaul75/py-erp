@@ -145,19 +145,85 @@ const Dashboard = () => {
     // Default layout if no saved layout exists
     return {
       lg: [
-        { w: 16, h: 11, x: 0, y: 0, i: "menu-tiles", moved: false, static: false },
-        { w: 8, h: 12, x: 0, y: 11, i: "quick-links", moved: false, static: false },
-        { w: 8, h: 12, x: 8, y: 11, i: "news-pinboard", moved: false, static: false }
+        {
+          w: 28,
+          h: 13,
+          x: 0,
+          y: 0,
+          i: "menu-tiles",
+          moved: false,
+          static: false
+        },
+        {
+          w: 14,
+          h: 12,
+          x: 0,
+          y: 13,
+          i: "quick-links",
+          moved: false,
+          static: false
+        },
+        {
+          w: 14,
+          h: 12,
+          x: 14,
+          y: 13,
+          i: "news-pinboard",
+          moved: false,
+          static: false
+        }
       ],
       md: [
-        { i: "menu-tiles", x: 0, y: 0, w: 24, h: 12, title: "Menü" },
-        { i: "quick-links", x: 0, y: 12, w: 12, h: 6, title: "Schnellzugriff" },
-        { i: "news-pinboard", x: 12, y: 12, w: 12, h: 6, title: "Pinnwand" }
+        {
+          i: "menu-tiles",
+          x: 0,
+          y: 0,
+          w: 24,
+          h: 12,
+          title: "Menü"
+        },
+        {
+          i: "quick-links",
+          x: 0,
+          y: 12,
+          w: 12,
+          h: 6,
+          title: "Schnellzugriff"
+        },
+        {
+          i: "news-pinboard",
+          x: 12,
+          y: 12,
+          w: 12,
+          h: 6,
+          title: "Pinnwand"
+        }
       ],
       sm: [
-        { i: "menu-tiles", x: 0, y: 0, w: 24, h: 14, title: "Menü" },
-        { i: "quick-links", x: 0, y: 14, w: 24, h: 6, title: "Schnellzugriff" },
-        { i: "news-pinboard", x: 0, y: 20, w: 24, h: 6, title: "Pinnwand" }
+        {
+          i: "menu-tiles",
+          x: 0,
+          y: 0,
+          w: 24,
+          h: 14,
+          title: "Menü"
+        },
+        {
+          i: "quick-links",
+          x: 0,
+          y: 14,
+          w: 24,
+          h: 6,
+          title: "Schnellzugriff"
+        },
+        {
+          i: "news-pinboard",
+          x: 0,
+          y: 20,
+          w: 24,
+          h: 6,
+          title: "Pinnwand"
+        }
       ]
     }
   })
@@ -397,8 +463,8 @@ const Dashboard = () => {
   const layoutKeys = Array.from(new Set(Object.values(layouts).flatMap(layouts => layouts.map(layout => layout.i))))
 
   return (
-    <div className="w-full max-w-screen-xl mx-auto py-10">
-      <div className="flex items-center justify-between mb-8">
+    <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-2">
           {isEditMode ? (
