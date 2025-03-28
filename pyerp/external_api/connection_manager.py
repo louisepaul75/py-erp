@@ -20,6 +20,11 @@ logger = get_logger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONNECTIONS_FILE = BASE_DIR / "config" / "external_connections.json"
 
+# Debug logging for path resolution
+logger.debug(f"__file__: {__file__}")
+logger.debug(f"BASE_DIR: {BASE_DIR}")
+logger.debug(f"CONNECTIONS_FILE: {CONNECTIONS_FILE}")
+
 # Default connection settings - all connections disabled by default
 DEFAULT_CONNECTIONS = {
     "legacy_erp": False,
