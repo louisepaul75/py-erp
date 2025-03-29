@@ -1,5 +1,6 @@
 """Legacy API data extractor implementation."""
 
+import os
 from datetime import datetime
 from typing import Any, Dict, List
 
@@ -23,6 +24,35 @@ class LegacyAPIExtractor(BaseExtractor):
             List of required field names
         """
         return ["environment", "table_name"]
+
+    def _validate_config(self) -> None:
+        """Validate the extractor configuration, checking environment variables as fallback.
+
+        Overrides the base class method to also check environment variables.
+
+        Raises:
+            ValueError: If required configuration is missing
+        """
+        # First check for environment variables and add them to config if available
+        if "environment" not in self.config:
+            env_value = os.environ.get("LEGACY_ERP_ENVIRONMENT")
+            if env_value:
+                logger.info(f"Using environment variable LEGACY_ERP_ENVIRONMENT: {env_value}")
+                self.config["environment"] = env_value
+
+        if "table_name" not in self.config:
+            env_value = os.environ.get("LEGACY_ERP_TABLE_NAME")
+            if env_value:
+                logger.info(f"Using environment variable LEGACY_ERP_TABLE_NAME: {env_value}")
+                self.config["table_name"] = env_value
+
+        # Now proceed with normal validation
+        required_fields = self.get_required_config_fields()
+        missing = [field for field in required_fields if field not in self.config]
+        if missing:
+            raise ValueError(
+                f"Missing required configuration fields: {', '.join(missing)}"
+            )
 
     def connect(self) -> None:
         """Establish connection to legacy API.

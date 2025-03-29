@@ -71,8 +71,9 @@ run_customer_sync() {
     echo "========================================"
     
     # Set environment variables required by the extractor
-    export LEGACY_ERP_TABLE_NAME="Kunden"
+    # These will be picked up by our custom _validate_config method
     export LEGACY_ERP_ENVIRONMENT="live"
+    export LEGACY_ERP_TABLE_NAME="Kunden"
     
     # Run the command directly with the entity type flag
     run_sync "python manage.py run_sync --entity-type customer $DEBUG_FLAG $FORCE_FLAG"
