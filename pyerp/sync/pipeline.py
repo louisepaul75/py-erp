@@ -298,13 +298,22 @@ class PipelineFactory:
             logger.info(f"Target config: {target_config}")
             logger.info(f"Mapping config: {mapping_config}")
 
-            # Import and instantiate components based on config or overrides
-            extractor = cls._create_component(
-                extractor_class
-                or cls._import_class(source_config.get("extractor_class")),
-                source_config,
+            # Determine the extractor class
+            extractor_class_instance = extractor_class or cls._import_class(
+                source_config.get("extractor_class")
             )
-            logger.info(f"Created extractor: {extractor.__class__.__name__}")
+
+            # Merge source_config with mapping's extractor_config
+            merged_extractor_config = source_config.copy()  # Start with base source config
+            if mapping_config and "extractor_config" in mapping_config:
+                merged_extractor_config.update(mapping_config["extractor_config"]) # Override with specific config
+
+            # Create the extractor using the merged config
+            extractor = cls._create_component(
+                extractor_class_instance,
+                merged_extractor_config, # Pass the merged configuration
+            )
+            logger.info(f"Created extractor: {extractor.__class__.__name__} with config: {merged_extractor_config}")
 
             # Get transformer class from mapping config
             transformer_class_path = (
@@ -333,11 +342,16 @@ class PipelineFactory:
             
             logger.info(f"Using loader class: {loader_class_path}")
             
+            # Merge target_config with mapping's loader_config
+            merged_loader_config = target_config.copy() # Start with base target config
+            if mapping_config and "loader_config" in mapping_config:
+                merged_loader_config.update(mapping_config["loader_config"]) # Override with specific config
+            
             loader = cls._create_component(
                 cls._import_class(loader_class_path),
-                target_config,
+                merged_loader_config, # Pass the merged configuration
             )
-            logger.info(f"Created loader: {loader.__class__.__name__}")
+            logger.info(f"Created loader: {loader.__class__.__name__} with config: {merged_loader_config}")
 
             return SyncPipeline(mapping, extractor, transformer, loader)
 

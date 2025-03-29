@@ -92,6 +92,7 @@ class ProductionOrder(models.Model):
         related_name='created_production_orders',
         on_delete=models.SET_NULL, 
         null=True,
+        blank=True,
         verbose_name=_('Created By')
     )
     

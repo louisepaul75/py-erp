@@ -7,9 +7,11 @@ to the pyERP system, either as a full sync or an incremental update.
 
 import time
 from typing import Any, Dict, List, Optional
+from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 from pyerp.utils.logging import get_logger
 
 from pyerp.sync.tasks import (
@@ -53,12 +55,17 @@ class Command(BaseCommand):
         parser.add_argument(
             "--items-only",
             action="store_true",
-            help="Only sync production order items, not orders",
+            help="Only sync production order items, not order items",
         )
         parser.add_argument(
             "--verbose",
             action="store_true",
             help="Enable verbose output",
+        )
+        parser.add_argument(
+            "--days",
+            type=int,
+            help="Only sync records modified in the last N days",
         )
 
     def handle(self, *args, **options):
@@ -69,6 +76,7 @@ class Command(BaseCommand):
         orders_only = options["orders_only"]
         items_only = options["items_only"]
         verbose = options["verbose"]
+        days = options.get("days")
 
         if orders_only and items_only:
             raise CommandError("Cannot specify both --orders-only and --items-only")
@@ -91,18 +99,39 @@ class Command(BaseCommand):
                 )
             )
 
+            # Apply days filter if specified
+            query_params_orders = {}
+            query_params_items = {}
+            if days is not None:
+                modified_since = timezone.now() - timedelta(days=days)
+                date_str = modified_since.strftime("%Y-%m-%d")
+                
+                # Use 'modified_date' field for filtering when --days is specified
+                query_params_orders = {
+                    "filter_query": [["modified_date", ">", date_str]]
+                }
+                
+                # Use 'modified_date' field for filtering when --days is specified
+                query_params_items = {
+                    "filter_query": [["modified_date", ">", date_str]]
+                }
+                
+                self.stdout.write(f"Filtering records modified in the last {days} days (since {date_str})")
+
             start_time = time.time()
             results = []
 
             if not items_only:
                 # Sync production orders
                 self.stdout.write("Syncing production orders...")
+                self.stdout.write(f"Using filter: {query_params_orders}")
                 from pyerp.sync.tasks import run_entity_sync
                 
                 order_result = run_entity_sync(
                     mapping_id=production_order_mapping_id,
                     incremental=incremental,
                     batch_size=batch_size,
+                    query_params=query_params_orders,
                 )
                 
                 results.append(order_result)
@@ -111,7 +140,7 @@ class Command(BaseCommand):
                     self.stdout.write(str(order_result))
                 
                 order_status = order_result.get("status", "unknown")
-                order_count = order_result.get("processed", 0)
+                order_count = order_result.get("records_processed", 0)
                 
                 self.stdout.write(
                     self.style.SUCCESS(
@@ -129,12 +158,14 @@ class Command(BaseCommand):
             if not orders_only:
                 # Sync production order items
                 self.stdout.write("Syncing production order items...")
+                self.stdout.write(f"Using filter: {query_params_items}")
                 from pyerp.sync.tasks import run_entity_sync
                 
                 item_result = run_entity_sync(
                     mapping_id=production_order_item_mapping_id,
                     incremental=incremental,
                     batch_size=batch_size,
+                    query_params=query_params_items,
                 )
                 
                 results.append(item_result)
@@ -143,7 +174,7 @@ class Command(BaseCommand):
                     self.stdout.write(str(item_result))
                 
                 item_status = item_result.get("status", "unknown")
-                item_count = item_result.get("processed", 0)
+                item_count = item_result.get("records_processed", 0)
                 
                 self.stdout.write(
                     self.style.SUCCESS(
@@ -163,7 +194,8 @@ class Command(BaseCommand):
                 )
             )
             
-            return results
+            # Return results as string to avoid error
+            return str(results)
 
         except Exception as e:
             logger.error(f"Production sync failed: {e}", exc_info=True)

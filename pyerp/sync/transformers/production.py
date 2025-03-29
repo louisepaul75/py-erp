@@ -8,6 +8,8 @@ from .base import BaseTransformer, ValidationError
 
 # Import ParentProduct model
 from pyerp.business_modules.products.models import ParentProduct
+# Import ProductionOrder model for relationship lookup
+from pyerp.business_modules.production.models import ProductionOrder
 
 # Configure logger
 logger = logging.getLogger("pyerp.sync.transformers.production")
@@ -83,6 +85,9 @@ class ProductionOrderTransformer(BaseTransformer):
                     logger.warning("Skipping record with missing order_number")
                     continue
                 
+                # Explicitly set created_by to None for sync
+                transformed['created_by'] = None
+                
                 # Log transformed record for debugging
                 logger.debug("Transformed record: %s", transformed)
                 
@@ -142,13 +147,24 @@ class ProductionOrderItemTransformer(BaseTransformer):
                 # Apply custom transformations
                 transformed = self.apply_custom_transformers(transformed, record)
                 
-                # Set required fields
+                # Set required fields and lookup ProductionOrder instance
+                order_number_str = None
                 if "W_Auftr_Nr" in record:
-                    transformed["production_order"] = {
-                        "order_number": str(record["W_Auftr_Nr"]).strip()
-                    }
-                    logger.debug("Set production_order reference to %s", 
-                                transformed["production_order"])
+                    order_number_str = str(record["W_Auftr_Nr"]).strip()
+                    try:
+                        parent_order = ProductionOrder.objects.filter(order_number=order_number_str).first()
+                        if parent_order:
+                            transformed["production_order"] = parent_order
+                            logger.debug(f"Set production_order instance: {parent_order}")
+                        else:
+                            logger.warning(f"Parent ProductionOrder with order_number '{order_number_str}' not found. Skipping item.")
+                            continue # Skip this item if parent order not found
+                    except Exception as e:
+                        logger.error(f"Error looking up ProductionOrder '{order_number_str}': {e}")
+                        continue # Skip on error
+                else:
+                    logger.warning("Skipping item record missing W_Auftr_Nr")
+                    continue
                 
                 if "WAP_Nr" in record:
                     transformed["item_number"] = int(record["WAP_Nr"])

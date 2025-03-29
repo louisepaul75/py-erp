@@ -477,7 +477,7 @@ def create_production_mappings():
 
 @shared_task(name="sync.run_production_sync")
 def run_production_sync(
-    incremental: bool = True, batch_size: int = 100
+    incremental: bool = True, batch_size: int = 100, query_params: Optional[Dict] = None
 ) -> List[Dict]:
     """Run synchronization for production data.
     
@@ -487,6 +487,7 @@ def run_production_sync(
     Args:
         incremental: If True, only sync new/updated records
         batch_size: Number of records to process in each batch
+        query_params: Optional additional query parameters
     
     Returns:
         List of results from each sync operation
@@ -521,6 +522,7 @@ def run_production_sync(
             mapping_id=production_order_mapping_id,
             incremental=incremental,
             batch_size=batch_size,
+            query_params=query_params,
         )
         
         results.append(production_order_result)
@@ -543,6 +545,7 @@ def run_production_sync(
             mapping_id=production_order_item_mapping_id,
             incremental=incremental,
             batch_size=batch_size,
+            query_params=query_params,
         )
         
         results.append(production_order_item_result)
@@ -554,29 +557,35 @@ def run_production_sync(
 
 
 @shared_task(name="sync.run_incremental_production_sync")
-def run_incremental_production_sync() -> List[Dict]:
+def run_incremental_production_sync(query_params: Optional[Dict] = None) -> List[Dict]:
     """Run incremental synchronization for production data.
     
     Synchronizes only new/updated records from the last successful sync.
+    
+    Args:
+        query_params: Optional additional query parameters
     
     Returns:
         List of results from each sync operation
     """
     logger.info("Starting incremental production sync")
-    return run_production_sync(incremental=True)
+    return run_production_sync(incremental=True, query_params=query_params)
 
 
 @shared_task(name="sync.run_full_production_sync")
-def run_full_production_sync() -> List[Dict]:
+def run_full_production_sync(query_params: Optional[Dict] = None) -> List[Dict]:
     """Run full synchronization for production data.
     
     Synchronizes all records regardless of when they were last updated.
+    
+    Args:
+        query_params: Optional additional query parameters
     
     Returns:
         List of results from each sync operation
     """
     logger.info("Starting full production sync")
-    return run_production_sync(incremental=False)
+    return run_production_sync(incremental=False, query_params=query_params)
 
 
 def _load_business_yaml() -> Dict:
