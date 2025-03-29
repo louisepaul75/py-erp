@@ -290,7 +290,25 @@ class TestEmployeeTransformer(TestCase):
                     "Arb_Std_Tag": "daily_hours",
                     "Jahrs_Urlaub": "annual_vacation_days",
                     "__KEY": "legacy_id",
-                }
+                },
+                # ADD validation rules required by the base transformer
+                "validation_rules": [
+                    {
+                        "field": "employee_number",
+                        "validator": "validate_not_empty",
+                        "error_message": "Employee number is required."
+                    },
+                    {
+                        "field": "last_name",
+                        "validator": "validate_not_empty",
+                        "error_message": "Last name is required."
+                    },
+                    {
+                        "field": "email",
+                        "validator": "validate_email_format",
+                        "error_message": "Invalid email format provided."
+                    }                    
+                ]
             }
         )
 
@@ -375,6 +393,7 @@ class TestEmployeeTransformer(TestCase):
             "email": "john.doe@example.com",
         }
         
+        # Use the validate method, which expects a single record
         errors = self.transformer.validate(valid_record)
         self.assertEqual(len(errors), 0)
         
@@ -384,6 +403,7 @@ class TestEmployeeTransformer(TestCase):
             "email": "john.doe@example.com",
         }
         
+        # Use the validate method
         errors = self.transformer.validate(invalid_record)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].field, "employee_number")
@@ -395,10 +415,11 @@ class TestEmployeeTransformer(TestCase):
             "email": "not-an-email",
         }
         
+        # Use the validate method
         errors = self.transformer.validate(invalid_email_record)
         self.assertEqual(len(errors), 1)
         self.assertEqual(errors[0].field, "email")
-        self.assertEqual(errors[0].error_type, "warning")
+        self.assertEqual(errors[0].error_type, "warning") # Check for warning type
 
     def test_transform_error_handling(self):
         """Test error handling during transformation."""

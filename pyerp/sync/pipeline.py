@@ -118,6 +118,12 @@ class SyncPipeline:
                 },
             )
 
+            # Initialize counts before the loop
+            self.sync_log.records_processed = 0
+            self.sync_log.records_succeeded = 0
+            self.sync_log.records_failed = 0
+            self.sync_log.save(update_fields=['records_processed', 'records_succeeded', 'records_failed'])
+
             # Process data in batches
             total_processed = 0
             total_success = 0
@@ -143,10 +149,12 @@ class SyncPipeline:
                 self.sync_log.save()
 
             # Update sync state on successful completion
-            self.sync_state.update_sync_completed(success=True)
+            # Determine success based on whether any records failed
+            success = total_failed == 0
+            self.sync_state.update_sync_completed(success=success)
 
             # Update final sync log status
-            self.sync_log.status = "completed"
+            self.sync_log.status = "completed" if success else "completed_with_errors" # More granular status
             self.sync_log.save()
 
             log_data_sync_event(
@@ -197,8 +205,8 @@ class SyncPipeline:
                 },
             )
             
-            # Re-raise the exception
-            raise
+            # Return the failed log, don't re-raise
+            return self.sync_log
 
     def _process_batch(self, batch: List[Dict[str, Any]]) -> tuple:
         """Process a batch of records.
@@ -254,7 +262,7 @@ class SyncPipeline:
         return success_count, failure_count
 
     def _clean_for_json(self, data):
-        """Clean data to ensure it can be JSON serialized.
+        """Clean data recursively to ensure it can be JSON serialized.
 
         Args:
             data: Data to clean
@@ -262,6 +270,7 @@ class SyncPipeline:
         Returns:
             Cleaned data safe for JSON serialization
         """
+        # Use the utility function which handles recursion and types
         return json_serialize(data)
 
 
@@ -299,9 +308,13 @@ class PipelineFactory:
             logger.info(f"Mapping config: {mapping_config}")
 
             # Determine the extractor class
-            extractor_class_instance = extractor_class or cls._import_class(
-                source_config.get("extractor_class")
-            )
+            if extractor_class and isinstance(extractor_class, type):
+                extractor_class_instance = extractor_class
+            else:
+                extractor_class_instance = cls._import_class(
+                    # Use provided path string or path from config
+                    extractor_class or source_config.get("extractor_class")
+                )
 
             # Merge source_config with mapping's extractor_config
             merged_extractor_config = source_config.copy()  # Start with base source config
@@ -315,32 +328,54 @@ class PipelineFactory:
             )
             logger.info(f"Created extractor: {extractor.__class__.__name__} with config: {merged_extractor_config}")
 
-            # Get transformer class from mapping config
-            transformer_class_path = (
-                transformer_class
-                or mapping_config.get("transformer_class")
-                or mapping_config.get("transformation", {}).get("transformer_class")
-                or mapping_config.get("transformation", {}).get("class")
-            )
+            # Get transformer class
+            transformer_instance = None
+            if transformer_class and isinstance(transformer_class, type):
+                transformer_instance = transformer_class
+            else:
+                # Determine path from argument or config
+                transformer_class_path = (
+                    transformer_class # String path from arg
+                    or mapping_config.get("transformer_class")
+                    or mapping_config.get("transformation", {}).get("transformer_class")
+                    or mapping_config.get("transformation", {}).get("class")
+                )
+                if transformer_class_path:
+                    transformer_instance = cls._import_class(transformer_class_path)
+                else:
+                    # Handle case where no transformer class is defined
+                    # You might want a default or raise an error
+                    logger.warning("No transformer class defined for mapping.")
+                    # Assign a default pass-through transformer or handle as needed
+                    # from .transformers.base import BaseTransformer # Example default
+                    # transformer_instance = BaseTransformer 
+                    raise ValueError("Transformer class must be provided or defined in mapping config.")
+
             transformer = cls._create_component(
-                cls._import_class(transformer_class_path),
+                transformer_instance,
                 mapping_config.get("transformation", {}),
             )
             logger.info(f"Created transformer: {transformer.__class__.__name__}")
 
-            # Get loader class from config
-            loader_class_path = None
-            if loader_class:
-                loader_class_path = loader_class
+            # Get loader class
+            loader_instance = None
+            if loader_class and isinstance(loader_class, type):
+                loader_instance = loader_class
             else:
-                # Try multiple possible locations for the loader class
+                # Determine path from argument or config
                 loader_class_path = (
-                    target_config.get("loader_class")
+                    loader_class # String path from arg
+                    or target_config.get("loader_class")
                     or mapping_config.get("loader", {}).get("class")
-                    or "pyerp.sync.loaders.django_model.DjangoModelLoader"  # Default fallback
+                    # Consider removing default fallback if loader must always be specified
+                    or "pyerp.sync.loaders.django_model.DjangoModelLoader" 
                 )
+                if loader_class_path:
+                     loader_instance = cls._import_class(loader_class_path)
+                else:
+                     raise ValueError("Loader class must be provided or defined in target/mapping config.")
             
-            logger.info(f"Using loader class: {loader_class_path}")
+            logger.info(f"Using loader class: {loader_instance.__name__ if loader_instance else 'None'}")
             
             # Merge target_config with mapping's loader_config
             merged_loader_config = target_config.copy() # Start with base target config
@@ -348,7 +383,7 @@ class PipelineFactory:
                 merged_loader_config.update(mapping_config["loader_config"]) # Override with specific config
             
             loader = cls._create_component(
-                cls._import_class(loader_class_path),
+                loader_instance,
                 merged_loader_config, # Pass the merged configuration
             )
             logger.info(f"Created loader: {loader.__class__.__name__} with config: {merged_loader_config}")

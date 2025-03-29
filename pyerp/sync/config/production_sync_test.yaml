@@ -17,7 +17,7 @@ mappings:
       linked_Form: legacy_form_id
     incremental:
       timestamp_filter_format:
-      - - __TIMESTAMP
+      - - modified_date
         - '>'
         - '{value}'
     loader_config:
@@ -52,7 +52,7 @@ mappings:
       linked_Kostenstelle: legacy_kostenstelle_id
     incremental:
       timestamp_filter_format:
-      - - __TIMESTAMP
+      - - modified_date
         - '>'
         - '{value}'
     loader_config:
