@@ -61,6 +61,10 @@ class StammLagerorteTransformer(BaseTransformer):
 
             # Apply field mappings for all fields
             for target_field, source_field in self.field_mappings.items():
+                # Skip legacy_id as it's already handled
+                if target_field == "legacy_id":
+                    continue
+
                 if source_field in record and record[source_field] is not None:
                     value = record[source_field]
                     # Convert numeric values to strings for unit, compartment, shelf
@@ -354,8 +358,8 @@ class BoxTypeTransformer(BaseTransformer):
             if decimal_value > 0:
                 # Convert to Decimal with exact decimal places
                 converted = decimal_value * unit_conversion
-                # Format to exactly 2 decimal places
-                return Decimal(f"{converted:.2f}")
+                # Format to the specified number of decimal places
+                return Decimal(f"{converted:.{round_to}f}")
             return None
         except (ValueError, TypeError):
             return None
