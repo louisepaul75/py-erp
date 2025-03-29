@@ -63,7 +63,9 @@ class ProductionOrder(models.Model):
     priority = models.IntegerField(
         default=0,
         verbose_name=_('Priority'),
-        help_text=_('Production priority (higher values indicate higher priority)')
+        help_text=_(
+            'Production priority (higher values indicate higher priority)'
+        )
     )
     
     # Legacy reference fields for sync
@@ -144,7 +146,9 @@ class ProductionOrderItem(models.Model):
         blank=True,
         related_name='production_items',
         verbose_name=_('Parent Product'),
-        help_text=_('Reference to parent product (maps to Art_Nr in WerksauftrPos)')
+        help_text=_(
+            'Reference to parent product (maps to Art_Nr in WerksauftrPos)'
+        )
     )
     
     operation_type = models.CharField(
@@ -250,5 +254,141 @@ class ProductionOrderItem(models.Model):
     def save(self, *args, **kwargs):
         """Override save to update remaining quantity automatically."""
         if self.target_quantity and self.completed_quantity is not None:
-            self.remaining_quantity = self.target_quantity - self.completed_quantity
+            self.remaining_quantity = (
+                self.target_quantity - self.completed_quantity
+            )
         super().save(*args, **kwargs) 
+
+
+class Mold(models.Model):
+    """
+    Represents a production mold/form, synced from the legacy ERP 'Formen' table.
+    """
+    legacy_uuid = models.CharField(
+        _("Legacy UUID"),
+        max_length=36, 
+        unique=True, 
+        db_index=True, 
+        help_text=_("UUID (__KEY) from the legacy 'Formen' table")
+    )
+    legacy_form_nr = models.CharField(
+        _("Legacy Form Number"), 
+        max_length=50, 
+        db_index=True, 
+        help_text=_("Form Number (FormNr) from the legacy 'Formen' table")
+    )
+    description = models.CharField(
+        _("Description"), 
+        max_length=255, 
+        blank=True, 
+        help_text=_("Description (Bezeichnung) from the legacy 'Formen' table")
+    )
+    storage_location = models.CharField(
+        _("Storage Location"), 
+        max_length=100, 
+        blank=True, 
+        help_text=_(
+            "Storage location (Lagerort) from the legacy 'Formen' table"
+        )
+    )
+    is_active = models.BooleanField(
+        _("Is Active"), 
+        default=True, 
+        help_text=_(
+            "Indicates if the mold is currently active (approximated, "
+            "might need adjustment based on legacy 'Sperre')"
+        )
+    )
+    notes = models.TextField(
+        _("Notes"), 
+        blank=True, 
+        help_text=_("Notes (Bemerkung) from the legacy 'Formen' table")
+    )
+    legacy_timestamp = models.DateTimeField(
+        _("Legacy Timestamp"), 
+        null=True, 
+        blank=True, 
+        help_text=_("Timestamp (__TIMESTAMP) from the legacy 'Formen' table")
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Mold")
+        verbose_name_plural = _("Molds")
+        ordering = ["legacy_form_nr"]
+
+    def __str__(self):
+        return f"{self.description} ({self.legacy_form_nr})"
+
+
+class MoldProduct(models.Model):
+    """
+    Represents the relationship between a Mold and a ParentProduct, 
+    indicating which products are made with which mold and in what quantity per cycle.
+    Synced from the legacy ERP 'Form_Artikel' table.
+    """
+    legacy_uuid = models.CharField(
+        _("Legacy UUID"),
+        max_length=36, 
+        unique=True, 
+        db_index=True, 
+        help_text=_("UUID (__KEY) from the legacy 'Form_Artikel' table")
+    )
+    mold = models.ForeignKey(
+        Mold, 
+        on_delete=models.CASCADE, 
+        related_name="products", 
+        verbose_name=_("Mold"),
+        help_text=_("The mold used to produce this product")
+    )
+    parent_product = models.ForeignKey(
+        ParentProduct, 
+        on_delete=models.CASCADE, 
+        related_name="molds", 
+        verbose_name=_("Parent Product"),
+        help_text=_("The product produced by this mold relationship")
+    )
+    products_per_mold = models.IntegerField(
+        _("Products per Mold"), 
+        default=1, 
+        help_text=_(
+            "Number of products produced per mold cycle "
+            "(Anzahl from Form_Artikel)"
+        )
+    )
+    weight_per_product = models.DecimalField(
+        _("Weight per Product"), 
+        max_digits=10, 
+        decimal_places=3, 
+        null=True, 
+        blank=True, 
+        help_text=_(
+            "Weight of a single product produced by this mold "
+            "(Gewichtung from Form_Artikel)"
+        )
+    )
+    legacy_timestamp = models.DateTimeField(
+        _("Legacy Timestamp"), 
+        null=True, 
+        blank=True, 
+        help_text=_(
+            "Timestamp (__TIMESTAMP) from the legacy 'Form_Artikel' table"
+        )
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Mold Product")
+        verbose_name_plural = _("Mold Products")
+        ordering = ["mold", "parent_product"]
+        unique_together = ('mold', 'parent_product')
+
+    def __str__(self):
+        return (
+            f"{self.parent_product} on {self.mold} "
+            f"({self.products_per_mold} per cycle)"
+        ) 

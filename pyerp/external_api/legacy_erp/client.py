@@ -169,11 +169,15 @@ class LegacyERPClient(BaseAPIClient):
                 filter_query=filter_query,
             )
             
-            logger.info(f"Found {len(variants_df)} variants for parent {parent_sku}")
+            logger.info(
+                f"Found {len(variants_df)} variants for parent {parent_sku}"
+            )
             return variants_df
             
         except Exception as e:
-            error_msg = f"Failed to fetch variants for parent {parent_sku}: {e}"
+            error_msg = (
+                f"Failed to fetch variants for parent {parent_sku}: {e}"
+            )
             logger.error(error_msg)
             raise LegacyERPError(error_msg)
 
@@ -190,7 +194,10 @@ class LegacyERPClient(BaseAPIClient):
         Raises:
             LegacyERPError: If an error occurs during the API request
         """
-        logger.info(f"Fetching inventory data {f'for SKU: {product_sku}' if product_sku else ''}")
+        logger.info(
+            f"Fetching inventory data "
+            f"{f'for SKU: {product_sku}' if product_sku else ''}"
+        )
         try:
             # Define filter query if a specific product is requested
             filter_query = None
@@ -211,6 +218,98 @@ class LegacyERPClient(BaseAPIClient):
             logger.error(error_msg)
             raise LegacyERPError(error_msg)
 
+    def fetch_molds(
+        self,
+        top: Optional[int] = None,
+        skip: int = 0,
+        filter_query: Optional[str] = None,
+        all_records: bool = False,
+        new_data_only: bool = True,
+        date_created_start: Optional[str] = None,
+        fail_on_filter_error: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Fetch records from the 'Formen' (Molds) table in the legacy ERP system.
+
+        Args:
+            top: Number of records to fetch per request (None for no limit).
+            skip: Number of records to skip.
+            filter_query: Optional filter query list (e.g., [['field', 'op', 'value']]).
+            all_records: Whether to fetch all records, handling pagination.
+            new_data_only: Only fetch records newer than last sync timestamp.
+            date_created_start: Optional start date for filtering.
+            fail_on_filter_error: Whether to raise an error on filter issues.
+
+        Returns:
+            DataFrame containing the fetched mold records.
+
+        Raises:
+            LegacyERPError: If an error occurs during the API request.
+        """
+        logger.info("Fetching molds (Formen) data.")
+        try:
+            return self.fetch_table(
+                table_name="Formen",
+                top=top,
+                skip=skip,
+                filter_query=filter_query,
+                all_records=all_records,
+                new_data_only=new_data_only,
+                date_created_start=date_created_start,
+                fail_on_filter_error=fail_on_filter_error,
+            )
+        except Exception as e:
+            error_msg = f"Failed to fetch molds data: {e}"
+            logger.error(error_msg)
+            raise LegacyERPError(error_msg)
+
+    def fetch_mold_articles(
+        self,
+        top: Optional[int] = None,
+        skip: int = 0,
+        filter_query: Optional[str] = None,
+        all_records: bool = False,
+        new_data_only: bool = True,
+        date_created_start: Optional[str] = None,
+        fail_on_filter_error: bool = False,
+    ) -> pd.DataFrame:
+        """
+        Fetch records from the 'Form_Artikel' (Mold Articles) table.
+
+        This table links molds (Formen) to articles/products (Artikel).
+
+        Args:
+            top: Number of records to fetch per request (None for no limit).
+            skip: Number of records to skip.
+            filter_query: Optional filter query list.
+            all_records: Whether to fetch all records, handling pagination.
+            new_data_only: Only fetch records newer than last sync timestamp.
+            date_created_start: Optional start date for filtering.
+            fail_on_filter_error: Whether to raise an error on filter issues.
+
+        Returns:
+            DataFrame containing the fetched mold article records.
+
+        Raises:
+            LegacyERPError: If an error occurs during the API request.
+        """
+        logger.info("Fetching mold articles (Form_Artikel) data.")
+        try:
+            return self.fetch_table(
+                table_name="Form_Artikel",
+                top=top,
+                skip=skip,
+                filter_query=filter_query,
+                all_records=all_records,
+                new_data_only=new_data_only,
+                date_created_start=date_created_start,
+                fail_on_filter_error=fail_on_filter_error,
+            )
+        except Exception as e:
+            error_msg = f"Failed to fetch mold articles data: {e}"
+            logger.error(error_msg)
+            raise LegacyERPError(error_msg)
+
 
 if __name__ == "__main__":
     pd.set_option("display.max_columns", None)
@@ -219,10 +318,19 @@ if __name__ == "__main__":
 
     client = LegacyERPClient(environment="live")
 
-    employees = client.fetch_table(
-        table_name="Personal",
+    form_artikel = client.fetch_table(
+        table_name="Form_Artikel",
         top=10  # Just get a sample of 10 employees
     )
-    print(employees.tail())
+    print(form_artikel.tail())
+
+    formen = client.fetch_table(
+        table_name="Formen",
+        top=10  # Just get a sample of 10 employees
+    )
+    print(formen.tail())
+    
+    merged = form_artikel.merge(formen, on="FormNr", how="left")
+    print(merged.tail())
     
     
