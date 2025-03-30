@@ -112,6 +112,9 @@ class SyncLog(models.Model):
         self.trace = trace
         self.save()
 
+    class Meta:
+        db_table = 'audit_synclog'
+
     def save(self, *args, **kwargs):
         """Override save to ensure JSON-serializable data."""
         if hasattr(self, 'sync_params') and self.sync_params:
