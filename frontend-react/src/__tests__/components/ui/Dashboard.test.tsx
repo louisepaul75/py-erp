@@ -1,11 +1,15 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 
+// Create a named mock component
+const DashboardMock = () => <div data-testid="dashboard-mock">Dashboard Component Mock</div>;
+DashboardMock.displayName = 'DashboardMock';
+
 // Mock the entire Dashboard component since it's complex with many dependencies
 jest.mock('@/components/ui/dashboard', () => {
   return {
     __esModule: true,
-    default: () => <div data-testid="dashboard-mock">Dashboard Component Mock</div>
+    default: DashboardMock
   };
 });
 
@@ -39,11 +43,16 @@ jest.mock('react-grid-layout', () => ({
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => (
+  const NextLinkMock = ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href} data-testid="next-link">
       {children}
     </a>
   );
+  NextLinkMock.displayName = 'NextLinkMock';
+  return {
+    __esModule: true,
+    default: NextLinkMock
+  };
 });
 
 // Mock API calls

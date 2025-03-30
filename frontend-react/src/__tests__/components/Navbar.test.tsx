@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Navbar from '../../components/Navbar';
 import { useTheme } from '../../hooks/useTheme';
-import { useAuth } from '../../lib/auth/authHooks';
+import { useIsAuthenticated, useLogout } from '../../lib/auth/authHooks';
 import { useTranslation } from '../../hooks/useTranslationWrapper';
 import { useScreenSize } from '../../utils/responsive';
 
@@ -112,24 +112,21 @@ describe('Navbar', () => {
     // Reset mocks
     jest.clearAllMocks();
 
-    // Setup mock return values
-    const mockUseTheme = require('../../hooks/useTheme').default;
-    mockUseTheme.mockReturnValue({
+    // Setup mock return values using imported mocks
+    (useTheme as jest.Mock).mockReturnValue({
       theme: 'dark',
       toggleTheme: jest.fn(),
     });
     
-    const { useIsAuthenticated, useLogout } = require('../../lib/auth/authHooks');
-    useIsAuthenticated.mockReturnValue({
+    (useIsAuthenticated as jest.Mock).mockReturnValue({
       user: { username: 'testuser', isAdmin: false },
     });
     
-    useLogout.mockReturnValue({
+    (useLogout as jest.Mock).mockReturnValue({
       mutate: jest.fn(),
     });
     
-    const mockTranslation = require('../../hooks/useTranslationWrapper').default;
-    mockTranslation.mockReturnValue({
+    (useTranslation as jest.Mock).mockReturnValue({
       t: (key: string) => translations[key] || key,
       i18n: { language: 'en' },
     });

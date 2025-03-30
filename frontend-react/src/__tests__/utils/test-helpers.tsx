@@ -22,11 +22,15 @@ export function createQueryClientWrapper() {
     },
   });
   
-  return ({ children }: { children: React.ReactNode }) => (
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       {children}
     </QueryClientProvider>
   );
+  
+  Wrapper.displayName = 'QueryClientWrapper';
+  
+  return Wrapper;
 }
 
 /**
@@ -131,11 +135,15 @@ export function setupReactQueryTest() {
     queryClient.clear();
   });
   
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  
+  Wrapper.displayName = 'QueryClientTestWrapper';
+  
   return {
     queryClient,
-    wrapper: ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    ),
+    wrapper: Wrapper,
   };
 }
 

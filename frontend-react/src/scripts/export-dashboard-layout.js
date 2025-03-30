@@ -38,8 +38,8 @@ async function exportDashboardLayout(providedLayout) {
 
     // Check for Node.js environment first
     if (typeof process !== 'undefined' && process.versions && process.versions.node) {
-      const fs = require('fs');
-      const path = require('path');
+      const fs = await import('fs');
+      const path = await import('path');
       const outputPath = path.join(process.cwd(), 'dashboard-layout.json');
       try {
         fs.writeFileSync(outputPath, layoutJson);

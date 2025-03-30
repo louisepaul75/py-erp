@@ -9,10 +9,22 @@ jest.mock('lucide-react', () => ({
 }));
 
 // Mock the content components since they might be problematic in tests
-jest.mock('@/components/lagerorte-tab', () => () => <div data-testid="lagerorte-content">Lagerorte Content</div>);
-jest.mock('@/components/gewogen-tab', () => () => <div data-testid="gewogen-content">Gewogen Content</div>);
-jest.mock('@/components/umsatze-tab', () => () => <div data-testid="umsatze-content">Umsätze Content</div>);
-jest.mock('@/components/bewegungen-tab', () => () => <div data-testid="bewegungen-content">Bewegungen Content</div>);
+const LagerorteTabMock = () => <div data-testid="lagerorte-content">Lagerorte Content</div>;
+LagerorteTabMock.displayName = 'LagerorteTabMock';
+
+const GewogenTabMock = () => <div data-testid="gewogen-content">Gewogen Content</div>;
+GewogenTabMock.displayName = 'GewogenTabMock';
+
+const UmsatzeTabMock = () => <div data-testid="umsatze-content">Umsätze Content</div>;
+UmsatzeTabMock.displayName = 'UmsatzeTabMock';
+
+const BewegungenTabMock = () => <div data-testid="bewegungen-content">Bewegungen Content</div>;
+BewegungenTabMock.displayName = 'BewegungenTabMock';
+
+jest.mock('@/components/lagerorte-tab', () => LagerorteTabMock);
+jest.mock('@/components/gewogen-tab', () => GewogenTabMock);
+jest.mock('@/components/umsatze-tab', () => UmsatzeTabMock);
+jest.mock('@/components/bewegungen-tab', () => BewegungenTabMock);
 
 describe('VariantenTab', () => {
   it('renders correctly with default props', () => {

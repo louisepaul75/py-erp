@@ -66,7 +66,7 @@ describe('Dashboard Layout Export Script', () => {
     };
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = await import('../../scripts/export-dashboard-layout');
     
     const result = await exportDashboardLayout(mockLayout);
     expect(result).toEqual(mockLayout);
@@ -78,7 +78,7 @@ describe('Dashboard Layout Export Script', () => {
     const mockLayout = {};
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = await import('../../scripts/export-dashboard-layout');
     
     const result = await exportDashboardLayout(mockLayout);
     expect(result).toEqual(mockLayout);
@@ -90,7 +90,7 @@ describe('Dashboard Layout Export Script', () => {
     const mockLayout = null;
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = await import('../../scripts/export-dashboard-layout');
     
     await expect(exportDashboardLayout(mockLayout)).rejects.toThrow('Invalid layout format');
   });
@@ -105,7 +105,7 @@ describe('Dashboard Layout Export Script', () => {
     });
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = await import('../../scripts/export-dashboard-layout');
     
     await expect(exportDashboardLayout(mockLayout)).rejects.toThrow('Write error');
   });
@@ -116,7 +116,7 @@ describe('Dashboard Layout Export Script', () => {
     };
 
     // Import the script after setting up mocks
-    const { exportDashboardLayout } = require('../../scripts/export-dashboard-layout');
+    const { exportDashboardLayout } = await import('../../scripts/export-dashboard-layout');
     
     await expect(exportDashboardLayout(mockLayout)).rejects.toThrow('Invalid layout format');
   });

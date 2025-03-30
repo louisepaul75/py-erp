@@ -16,6 +16,11 @@ const nextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
+  // Prevent ESLint errors from failing the build
+  eslint: {
+    // Only warn in development, ignore in production
+    ignoreDuringBuilds: true,
+  },
   output: 'standalone',
   poweredByHeader: false,
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],

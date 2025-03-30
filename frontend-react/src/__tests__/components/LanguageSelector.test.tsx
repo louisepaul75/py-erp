@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import LanguageSelector from '@/components/LanguageSelector';
+import { I18nextProvider } from 'react-i18next';
+import i18n from '@/i18n'; // Adjust path as necessary
+import LanguageSelector from '@/components/ui/LanguageSelector';
+import { useTranslation } from 'react-i18next';
 
 // Mock the react-i18next hook
 jest.mock('react-i18next', () => {
@@ -55,7 +58,6 @@ describe('LanguageSelector', () => {
 
   it('changes language when an option is selected', () => {
     // Get the mock implementation to verify the call
-    const { useTranslation } = require('react-i18next');
     const { i18n } = useTranslation();
     
     render(<LanguageSelector />);
