@@ -22,7 +22,7 @@ from pyerp.business_modules.products.models import (
     ProductCategory,
     VariantProduct,
 )
-from pyerp.business_modules.products.tag_models import Tag
+from pyerp.core.models import Tag
 
 
 class ProductListView(LoginRequiredMixin, ListView):

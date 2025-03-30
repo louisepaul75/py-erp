@@ -7,7 +7,8 @@ from django.contrib.contenttypes.models import ContentType
 import pytest
 
 from pyerp.business_modules.products.models import ParentProduct, VariantProduct
-from pyerp.business_modules.products.tag_models import Tag, M2MOverride
+from pyerp.business_modules.products.tag_models import M2MOverride
+from pyerp.core.models import Tag
 
 
 @pytest.mark.backend

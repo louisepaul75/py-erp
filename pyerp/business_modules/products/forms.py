@@ -10,7 +10,8 @@ from pyerp.business_modules.products.models import (
     UnifiedProduct,
     VariantProduct,
 )
-from pyerp.business_modules.products.tag_models import Tag, M2MOverride
+from pyerp.business_modules.products.tag_models import M2MOverride
+from pyerp.core.models import Tag
 
 
 class ProductCategoryForm(forms.ModelForm):
@@ -208,6 +209,7 @@ class ProductSearchForm(forms.Form):
 class TagInheritanceForm(forms.ModelForm):
     """
     Form for managing variant product tags and inheritance settings.
+    NOTE: The inheritance logic needs review after switching to GenericRelation for tags.
     """
     inherit_tags = forms.BooleanField(
         label=_("Inherit tags from parent"),
@@ -217,10 +219,7 @@ class TagInheritanceForm(forms.ModelForm):
     
     class Meta:
         model = VariantProduct
-        fields = ['tags', 'inherit_tags']
-        widgets = {
-            'tags': forms.CheckboxSelectMultiple(),
-        }
+        fields = ['inherit_tags']
     
     def __init__(self, *args, **kwargs):
         instance = kwargs.get('instance')
@@ -248,14 +247,15 @@ class TagInheritanceForm(forms.ModelForm):
             self.fields['inherit_tags'].help_text = _("Tag inheritance requires a parent product.")
     
     def save(self, commit=True):
-        instance = super().save(commit=False)
+        instance = self.instance
         
         if commit:
-            instance.save()
-            self.save_m2m()
-            
-            # Save the inheritance setting
-            if instance.parent:
-                instance.set_tags_inheritance(self.cleaned_data['inherit_tags'])
+            content_type = ContentType.objects.get_for_model(VariantProduct)
+            override, created = M2MOverride.objects.update_or_create(
+                content_type=content_type,
+                object_id=instance.id,
+                relationship_name='tags',
+                defaults={'inherit': self.cleaned_data['inherit_tags']}
+            )
         
         return instance
