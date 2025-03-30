@@ -3,6 +3,7 @@
 from django.db import models
 from django.utils import timezone
 from pyerp.utils.json_utils import json_serialize
+import json
 
 
 class SyncSource(models.Model):
@@ -71,76 +72,28 @@ class SyncState(models.Model):
 
 
 class SyncLog(models.Model):
-    """Logs synchronization operations and results."""
+    """Logs synchronization operations (using the legacy structure)."""
 
-    STATUS_CHOICES = [
-        ("started", "Started"),
-        ("completed", "Completed"),
-        ("failed", "Failed"),
-        ("partial", "Partially Completed"),
-    ]
-
-    mapping = models.ForeignKey(SyncMapping, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
-    start_time = models.DateTimeField(auto_now_add=True)
-    end_time = models.DateTimeField(null=True, blank=True)
-    records_processed = models.IntegerField(default=0)
-    records_succeeded = models.IntegerField(default=0)
-    records_failed = models.IntegerField(default=0)
-    is_full_sync = models.BooleanField(default=False)
-    sync_params = models.JSONField(default=dict)
+    # Fields matching legacy_sync_synclog / audit_synclog structure
+    entity_type = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=50, default='unknown')
+    started_at = models.DateTimeField(default=timezone.now)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    records_processed = models.BigIntegerField(default=0)
+    records_created = models.BigIntegerField(default=0)   # New field
+    records_updated = models.BigIntegerField(default=0)   # New field
+    records_failed = models.BigIntegerField(default=0)    # Changed to BigIntegerField
     error_message = models.TextField(blank=True)
-    trace = models.TextField(blank=True)
 
-    def __str__(self):
-        return f"{self.mapping} - {self.start_time} - {self.status}"
-
-    def mark_completed(self, records_succeeded, records_failed):
-        """Mark a sync log as completed."""
-        self.status = "completed" if records_failed == 0 else "partial"
-        self.end_time = timezone.now()
-        self.records_succeeded = records_succeeded
-        self.records_failed = records_failed
-        self.records_processed = records_succeeded + records_failed
-        self.save()
-
-    def mark_failed(self, error_message, trace=""):
-        """Mark a sync log as failed."""
-        self.status = "failed"
-        self.end_time = timezone.now()
-        self.error_message = error_message
-        self.trace = trace
-        self.save()
+    # Removed fields: mapping, is_full_sync, sync_params, trace, records_succeeded
+    # Removed STATUS_CHOICES if they differ significantly from legacy data
 
     class Meta:
         db_table = 'audit_synclog'
 
-    def save(self, *args, **kwargs):
-        """Override save to ensure JSON-serializable data."""
-        if hasattr(self, 'sync_params') and self.sync_params:
-            self.sync_params = json_serialize(self.sync_params)
-        super().save(*args, **kwargs)
-
-
-class SyncLogDetail(models.Model):
-    """Detailed log entries for individual record syncs."""
-
-    sync_log = models.ForeignKey(
-        SyncLog, on_delete=models.CASCADE, related_name="details"
-    )
-    record_id = models.TextField()
-    status = models.CharField(
-        max_length=20, choices=[("success", "Success"), ("failed", "Failed")]
-    )
-    timestamp = models.DateTimeField(auto_now_add=True)
-    error_message = models.TextField(blank=True)
-    record_data = models.JSONField(default=dict)
-
     def __str__(self):
-        return f"{self.record_id} - {self.status}"
+        # Updated str representation
+        return f"{self.entity_type or 'Sync'} - {self.started_at} - {self.status}"
 
-    def save(self, *args, **kwargs):
-        """Override save to ensure JSON-serializable data."""
-        if hasattr(self, 'record_data') and self.record_data:
-            self.record_data = json_serialize(self.record_data)
-        super().save(*args, **kwargs)
+    # Removed methods: mark_completed, mark_failed as they used old fields
+    # Removed save override related to sync_params

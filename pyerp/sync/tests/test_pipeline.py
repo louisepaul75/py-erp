@@ -6,7 +6,7 @@ import pytest
 from django.test import TestCase
 
 from pyerp.sync.pipeline import SyncPipeline
-from pyerp.sync.models import SyncMapping, SyncLog, SyncState, SyncLogDetail
+from pyerp.sync.models import SyncMapping, SyncLog, SyncState
 from pyerp.sync.extractors.base import BaseExtractor
 from pyerp.sync.transformers.base import BaseTransformer
 from pyerp.sync.loaders.base import BaseLoader, LoadResult
@@ -141,10 +141,10 @@ class TestSyncPipeline(TestCase):
         self.mock_sync_log_class.objects.create.return_value = self.mock_sync_log
 
         # Mock SyncLogDetail.objects.create to avoid database operations
-        self.sync_log_detail_patcher = mock.patch("pyerp.sync.pipeline.SyncLogDetail")
-        self.mock_sync_log_detail_class = self.sync_log_detail_patcher.start()
-        self.mock_sync_log_detail = mock.MagicMock(spec=SyncLogDetail)
-        self.mock_sync_log_detail_class.objects.create.return_value = self.mock_sync_log_detail
+        # self.sync_log_detail_patcher = mock.patch("pyerp.sync.pipeline.SyncLogDetail") # Comment out patcher
+        # self.mock_sync_log_detail_class = self.sync_log_detail_patcher.start()
+        # self.mock_sync_log_detail = mock.MagicMock(spec=SyncLogDetail)
+        # self.mock_sync_log_detail_class.objects.create.return_value = self.mock_sync_log_detail
 
         # Create a SyncPipeline instance for testing
         self.pipeline = SyncPipeline(
@@ -185,7 +185,7 @@ class TestSyncPipeline(TestCase):
         """Clean up after tests."""
         self.sync_state_patcher.stop()
         self.sync_log_patcher.stop()
-        self.sync_log_detail_patcher.stop()
+        # self.sync_log_detail_patcher.stop() # Comment out patcher stop
 
 
 
@@ -482,8 +482,8 @@ class TestSyncPipeline(TestCase):
         self.loader.load_result.created = 2 # Simulate successful loading
         
         # Mock SyncLogDetail to avoid database operations during load
-        with mock.patch("pyerp.sync.pipeline.SyncLogDetail.objects.create"):
-            result_log = self.pipeline.run(incremental=True, batch_size=0)
+        # with mock.patch("pyerp.sync.pipeline.SyncLogDetail.objects.create"):
+        result_log = self.pipeline.run(incremental=True, batch_size=0)
             
         # Verify that it completed successfully
         self.assertEqual(result_log.status, "completed")

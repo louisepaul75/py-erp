@@ -26,6 +26,7 @@ const config = {
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
   ],
+  coverageProvider: 'v8',
 };
 
 module.exports = config; 

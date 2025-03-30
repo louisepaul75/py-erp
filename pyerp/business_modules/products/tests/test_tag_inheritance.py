@@ -8,7 +8,7 @@ import pytest
 
 from pyerp.business_modules.products.models import ParentProduct, VariantProduct
 from pyerp.business_modules.products.tag_models import M2MOverride
-from pyerp.core.models import Tag
+from pyerp.core.models import Tag, TaggedItem
 
 
 @pytest.mark.backend
@@ -29,7 +29,9 @@ class TagInheritanceTestCase(TestCase):
             name="Parent Product",
             legacy_base_sku="PARENT001",
         )
-        self.parent.tags.add(self.tag1, self.tag2)
+        # Create TaggedItem instances explicitly
+        TaggedItem.objects.create(tag=self.tag1, content_object=self.parent)
+        TaggedItem.objects.create(tag=self.tag2, content_object=self.parent)
         
         # Create minimal variant product
         self.variant = VariantProduct.objects.create(
@@ -46,7 +48,8 @@ class TagInheritanceTestCase(TestCase):
             parent=self.parent,
             legacy_base_sku="VAR002",
         )
-        self.variant2.tags.add(self.tag3)
+        # Create TaggedItem instance explicitly for variant2
+        TaggedItem.objects.create(tag=self.tag3, content_object=self.variant2)
     
 
 

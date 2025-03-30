@@ -11,7 +11,7 @@ from pyerp.sync.models import (
     SyncMapping,
     SyncState,
     SyncLog,
-    SyncLogDetail,
+    # SyncLogDetail, # Comment out import
 )
 
 
@@ -58,13 +58,14 @@ class TestSyncModels(TestCase):
         self.sync_log.sync_params = {"batch_size": 100}
         self.sync_log.__str__.return_value = f"Sync {self.mapping} - started"
 
-        # Create sync log detail
-        self.sync_log_detail = mock.MagicMock(spec=SyncLogDetail)
-        self.sync_log_detail.sync_log = self.sync_log
-        self.sync_log_detail.record_id = "456"
-        self.sync_log_detail.status = "success"
-        self.sync_log_detail.record_data = {"id": "456", "name": "Test"}
-        self.sync_log_detail.__str__.return_value = f"{self.sync_log} - 456"
+        # Comment out SyncLogDetail creation
+        # # Create sync log detail
+        # self.sync_log_detail = mock.MagicMock(spec=SyncLogDetail)
+        # self.sync_log_detail.sync_log = self.sync_log
+        # self.sync_log_detail.record_id = "456"
+        # self.sync_log_detail.status = "success"
+        # self.sync_log_detail.record_data = {"id": "456", "name": "Test"}
+        # self.sync_log_detail.__str__.return_value = f"{self.sync_log} - 456"
 
 
 
@@ -296,7 +297,8 @@ class TestSyncModels(TestCase):
         self.sync_log.save.assert_called_once()
 
 
-    def test_sync_log_detail_str(self):
-        """Test the string representation of SyncLogDetail."""
-        expected = f"{self.sync_log} - 456"
-        self.assertEqual(str(self.sync_log_detail), expected)
+    # Comment out the test for SyncLogDetail as the model is gone
+    # def test_sync_log_detail_str(self):
+    #     """Test the string representation of SyncLogDetail."""
+    #     expected = f"{self.sync_log} - 456"
+    #     self.assertEqual(str(self.sync_log_detail), expected)

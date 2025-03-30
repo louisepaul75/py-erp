@@ -9,7 +9,6 @@ from .models import (
     SyncMapping,
     SyncState,
     SyncLog,
-    SyncLogDetail,
 )
 
 
@@ -80,16 +79,27 @@ class SyncMappingAdmin(admin.ModelAdmin):
     last_sync_status.short_description = "Last Sync"
 
 
-class SyncLogDetailInline(admin.TabularInline):
-    """Inline admin for sync log details."""
+@admin.register(SyncState)
+class SyncStateAdmin(admin.ModelAdmin):
+    """Admin interface for sync states."""
 
-    model = SyncLogDetail
-    readonly_fields = ("record_id", "status", "timestamp", "error_message")
-    fields = readonly_fields
-    extra = 0
-    max_num = 20
+    list_display = (
+        "mapping",
+        "last_sync_time",
+        "last_successful_sync_time",
+        "last_sync_id",
+        "last_successful_id",
+    )
+    readonly_fields = (
+        "last_sync_time",
+        "last_successful_sync_time",
+    )
+    search_fields = ("mapping__entity_type",)
 
-    def has_add_permission(self, request, obj=None):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False
 
 
@@ -99,53 +109,30 @@ class SyncLogAdmin(admin.ModelAdmin):
 
     list_display = (
         "id",
-        "mapping",
+        "entity_type",
         "status",
-        "start_time",
-        "end_time",
+        "started_at",
+        "completed_at",
         "records_processed",
-        "records_succeeded",
+        "records_created",
+        "records_updated",
         "records_failed",
-        "is_full_sync",
     )
-    list_filter = ("status", "is_full_sync", "mapping__entity_type")
-    search_fields = ("mapping__entity_type",)
+    list_filter = ("status", "entity_type")
+    search_fields = ("entity_type", "status", "error_message")
     readonly_fields = (
-        "mapping",
+        "id",
+        "entity_type",
         "status",
-        "start_time",
-        "end_time",
+        "started_at",
+        "completed_at",
         "records_processed",
-        "records_succeeded",
+        "records_created",
+        "records_updated",
         "records_failed",
-        "is_full_sync",
-        "sync_params",
         "error_message",
-        "trace",
     )
-    date_hierarchy = "start_time"
-    inlines = [SyncLogDetailInline]
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
-@admin.register(SyncState)
-class SyncStateAdmin(admin.ModelAdmin):
-    """Admin interface for sync states."""
-
-    list_display = ("mapping", "last_sync_time", "last_successful_sync_time")
-    list_filter = ("mapping__entity_type",)
-    readonly_fields = (
-        "mapping",
-        "last_sync_time",
-        "last_successful_sync_time",
-        "last_sync_id",
-        "last_successful_id",
-    )
+    date_hierarchy = "started_at"
 
     def has_add_permission(self, request):
         return False

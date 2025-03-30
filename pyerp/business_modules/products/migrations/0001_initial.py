@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ("contenttypes", "0002_remove_content_type_name"),
+        ("core", "0002_tag_taggeditem"),
     ]
 
     operations = [

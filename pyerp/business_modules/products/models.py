@@ -420,8 +420,10 @@ class VariantProduct(BaseProduct):
         parent_tags = Tag.objects.filter(tagged_items__content_type=ContentType.objects.get_for_model(self.parent), tagged_items__object_id=self.parent.pk)
         
         # Combine the querysets
-        # Using union() is generally efficient
-        all_tags_queryset = direct_variant_tags.union(parent_tags)
+        # Using union() is generally efficient, but remove ordering for SQLite compatibility
+        direct_variant_tags = direct_variant_tags.order_by() # Remove default ordering if any
+        parent_tags = parent_tags.order_by() # Remove default ordering if any
+        all_tags_queryset = direct_variant_tags.union(parent_tags).order_by('name') # Apply ordering *after* union
         
         return all_tags_queryset
 
