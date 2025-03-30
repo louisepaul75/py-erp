@@ -983,7 +983,6 @@ class SalesRecordTransformer(BaseTransformer):
                             legacy_id=customer_id,
                             customer_number=str(customer_id),
                             name=name or f"Customer {customer_id}",
-                            is_active=True,
                         )
                         return customer
         except Exception as e:

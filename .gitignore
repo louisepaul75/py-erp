@@ -121,6 +121,7 @@ test_db.sqlite3
 
 # Session cookies
 pyerp/direct_api/.global_session_cookie
+pyerp/external_api/legacy_erp/.global_session_cookie
 
 # External connections configuration
 pyerp/config/external_connections.json

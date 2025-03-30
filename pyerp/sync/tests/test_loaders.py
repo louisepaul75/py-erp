@@ -161,6 +161,7 @@ class TestDjangoModelLoader:
         """Test preparing a record for loading."""
         # Setup mock
         mock_model = MagicMock()
+        mock_model.__name__ = 'MockModel'
         field_mock = MagicMock()
         field_mock.name = "code"
         field_mock.primary_key = False

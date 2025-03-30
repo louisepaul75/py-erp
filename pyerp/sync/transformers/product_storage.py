@@ -550,6 +550,8 @@ class BoxStorageTransformer(BaseTransformer):
             except json.JSONDecodeError:
                 self.log.warning(f"Failed to parse JSON data: {json_data}")
                 json_data = {}
+        elif json_data is None:
+            json_data = {}
 
         # Extract key fields
         box_data["legacy_id"] = data.get("ID")
@@ -573,6 +575,7 @@ class BoxStorageTransformer(BaseTransformer):
                 box_data["slot_id"] = slot_data.get("ID_Lager_Schuetten_Slots")
             except (json.JSONDecodeError, AttributeError):
                 self.log.warning(f"Failed to parse slot relation data: {relation_data}")
+                box_data["slot_id"] = None
 
         return box_data
 

@@ -36,6 +36,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Ensure we're in the project root directory
+cd "$(dirname "$0")"
+
 # Create Docker network if it doesn't exist
 echo "Ensuring Docker network exists..."
 docker network create pyerp-network 2>/dev/null || true
@@ -87,7 +90,10 @@ elif [ "$MONITORING_MODE" == "remote" ]; then
     fi
 fi
 
-# Start the pyERP container
+# Create necessary directories if they don't exist
+mkdir -p static media logs data
+
+# Start the pyERP container with improved mount points
 echo "Starting new pyerp-dev container..."
 docker run -d \
   --name pyerp-dev \
@@ -97,10 +103,14 @@ docker run -d \
   -p 3000:3000 \
   -p 6379:6379 \
   -p 80:80 \
-  -v $(pwd):/app \
+  -v "$(pwd)":/app \
+  -v "$(pwd)/static":/app/static \
+  -v "$(pwd)/media":/app/media \
+  -v "$(pwd)/logs":/app/logs \
+  -v "$(pwd)/data":/app/data \
   --network pyerp-network \
   pyerp-dev-image \
-  bash -c "cd /app && bash /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+  bash -c "cd /app && chmod +x /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_static_dirs.sh && chmod +x /app/docker/ensure_frontend_deps.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
 # Show the last 50 lines of container logs
 echo "Showing last 50 lines of container logs..."
@@ -133,3 +143,53 @@ elif [ "$MONITORING_MODE" == "remote" ]; then
 fi
 
 echo -e "To run frontend tests manually, use: docker exec -it pyerp-dev bash -c 'cd /app/frontend-react && npm test'"
+
+echo "Waiting 10 seconds before starting health checks..."
+sleep 10
+
+# --- Health Checks ---
+echo -e "\n--- Running Health Checks ---"
+MAX_RETRIES=24
+RETRY_DELAY=5
+FRONTEND_URL="http://localhost:3000"
+BACKEND_URL="http://localhost:8050"
+
+# Check Next.js Frontend
+echo "Checking Next.js frontend ($FRONTEND_URL)..."
+FRONTEND_SUCCESS=false
+for i in $(seq 1 $MAX_RETRIES); do
+    if curl -fsS $FRONTEND_URL > /dev/null; then
+        echo "✅ Next.js frontend is responsive."
+        FRONTEND_SUCCESS=true
+        break
+    fi
+    echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
+    sleep $RETRY_DELAY
+done
+if [ "$FRONTEND_SUCCESS" = false ]; then
+    echo "❌ Error: Next.js frontend failed to respond after $MAX_RETRIES attempts."
+fi
+
+# Check Django Backend
+echo "Checking Django backend ($BACKEND_URL)..."
+BACKEND_SUCCESS=false
+for i in $(seq 1 $MAX_RETRIES); do
+    # Using a simple HEAD request which should be faster and sufficient
+    if curl -fsS --head $BACKEND_URL > /dev/null; then
+        echo "✅ Django backend is responsive."
+        BACKEND_SUCCESS=true
+        break
+    fi
+    # Check if container is still running, maybe it crashed
+    if ! docker ps --filter "name=pyerp-dev" --filter "status=running" --format "{{.Names}}" | grep -q pyerp-dev; then
+        echo "❌ Error: Container pyerp-dev seems to have stopped."
+        break # No point retrying if container is down
+    fi
+    echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
+    sleep $RETRY_DELAY
+done
+if [ "$BACKEND_SUCCESS" = false ] && docker ps --filter "name=pyerp-dev" --filter "status=running" --format "{{.Names}}" | grep -q pyerp-dev; then
+    echo "❌ Error: Django backend failed to respond after $MAX_RETRIES attempts."
+fi
+
+echo "--- Health Checks Complete ---"
