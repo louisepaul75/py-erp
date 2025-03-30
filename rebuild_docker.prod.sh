@@ -1,5 +1,14 @@
 #!/bin/bash
 
+echo "Running all tests..."
+./run_all_tests.sh
+if [ $? -ne 0 ]; then
+    echo "Tests failed. Aborting build."
+    exit 1
+fi
+echo "All tests passed. Proceeding with build..."
+echo "" # Add a newline for spacing
+
 # Parse command line arguments
 DEBUG_MODE=false
 LIVE_EDIT=false
