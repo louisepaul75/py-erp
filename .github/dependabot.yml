@@ -28,8 +28,4 @@ updates:
       - "javascript"
     commit-message:
       prefix: "npm"
-      include: "scope"
-    ignore:
-      # Ignore major version updates for these packages (optional)
-      # - dependency-name: "express"
-      #   update-types: ["version-update:semver-major"] 
+      include: "scope" 
