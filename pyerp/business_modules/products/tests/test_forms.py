@@ -19,7 +19,7 @@ from pyerp.business_modules.products.models import (
     ProductCategory,
     UnifiedProduct
 )
-from pyerp.business_modules.products.tag_models import Tag
+from pyerp.core.models import Tag
 
 @pytest.mark.backend
 @pytest.mark.unit
