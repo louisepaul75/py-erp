@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('products', '0003_auto_20250320_2156'),
+        ('products', '0001_initial'),
         # Add dependency on the core migration that creates TaggedItem, if needed later
         # ('core', '0002_tag_taggeditem'), 
     ]
