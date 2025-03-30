@@ -69,3 +69,40 @@ for i in {1..30}; do
         echo "You can check logs with: docker logs pyerp-elastic-kibana"
     fi
 done
+
+echo "Waiting 10 seconds before starting health checks..."
+sleep 10
+
+# --- Health Checks ---
+echo -e "\n--- Running Health Checks ---"
+MAX_RETRIES=12
+RETRY_DELAY=5
+APP_URL="http://localhost:80" # Nginx serves the app on port 80
+
+# Check Main Application Endpoint
+echo "Checking main application endpoint ($APP_URL)..."
+APP_SUCCESS=false
+for i in $(seq 1 $MAX_RETRIES); do
+    # Using --head and -L to follow redirects if any (e.g., HTTP to HTTPS)
+    if curl -fsSL --head $APP_URL > /dev/null; then
+        echo "✅ Main application endpoint is responsive."
+        APP_SUCCESS=true
+        break
+    fi
+    # Check if container is still running
+    if ! docker ps --filter "name=pyerp-prod" --filter "status=running" --format "{{.Names}}" | grep -q pyerp-prod; then
+        echo "❌ Error: Container pyerp-prod seems to have stopped."
+        break # No point retrying if container is down
+    fi
+    echo "Attempt $i/$MAX_RETRIES failed. Retrying in $RETRY_DELAY seconds..."
+    sleep $RETRY_DELAY
+done
+
+if [ "$APP_SUCCESS" = false ]; then
+    if docker ps --filter "name=pyerp-prod" --filter "status=running" --format "{{.Names}}" | grep -q pyerp-prod; then
+        echo "❌ Error: Main application endpoint failed to respond after $MAX_RETRIES attempts."
+    fi
+    echo "Please check container logs: docker logs pyerp-prod"
+fi
+
+echo "--- Health Checks Complete ---"
