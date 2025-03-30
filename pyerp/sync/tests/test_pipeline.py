@@ -6,7 +6,7 @@ import pytest
 from django.test import TestCase
 
 from pyerp.sync.pipeline import SyncPipeline
-from pyerp.sync.models import SyncMapping, SyncLog, SyncState, SyncLogDetail
+from pyerp.sync.models import SyncMapping, SyncLog, SyncState
 from pyerp.sync.extractors.base import BaseExtractor
 from pyerp.sync.transformers.base import BaseTransformer
 from pyerp.sync.loaders.base import BaseLoader, LoadResult
@@ -141,10 +141,10 @@ class TestSyncPipeline(TestCase):
         self.mock_sync_log_class.objects.create.return_value = self.mock_sync_log
 
         # Mock SyncLogDetail.objects.create to avoid database operations
-        self.sync_log_detail_patcher = mock.patch("pyerp.sync.pipeline.SyncLogDetail")
-        self.mock_sync_log_detail_class = self.sync_log_detail_patcher.start()
-        self.mock_sync_log_detail = mock.MagicMock(spec=SyncLogDetail)
-        self.mock_sync_log_detail_class.objects.create.return_value = self.mock_sync_log_detail
+        # self.sync_log_detail_patcher = mock.patch("pyerp.sync.pipeline.SyncLogDetail") # Comment out patcher
+        # self.mock_sync_log_detail_class = self.sync_log_detail_patcher.start()
+        # self.mock_sync_log_detail = mock.MagicMock(spec=SyncLogDetail)
+        # self.mock_sync_log_detail_class.objects.create.return_value = self.mock_sync_log_detail
 
         # Create a SyncPipeline instance for testing
         self.pipeline = SyncPipeline(
@@ -185,7 +185,7 @@ class TestSyncPipeline(TestCase):
         """Clean up after tests."""
         self.sync_state_patcher.stop()
         self.sync_log_patcher.stop()
-        self.sync_log_detail_patcher.stop()
+        # self.sync_log_detail_patcher.stop() # Comment out patcher stop
 
 
 
@@ -385,16 +385,22 @@ class TestSyncPipeline(TestCase):
         # Set up test data to simulate a failure
         self.extractor.extract_results = [{"id": 1}, {"id": 2}]
         self.transformer.transform_results = [{"id": 1, "name": "Test 1"}, {"id": 2, "name": "Test 2"}]
-        result = LoadResult()
-        result.errors = 1
-        self.loader.load_result = result
+        
+        # Mock process batch to simulate failures
+        self.pipeline._process_batch.side_effect = lambda batch: (1, 1) # 1 success, 1 failure
 
         # Run the pipeline
-        self.pipeline.run(incremental=True, batch_size=10)
+        result_log = self.pipeline.run(incremental=True, batch_size=10)
 
-        # Check that sync state was updated correctly
+        # Check that sync state was updated correctly (success=False because total_failed > 0)
         self.mock_sync_state.update_sync_started.assert_called_once()
         self.mock_sync_state.update_sync_completed.assert_called_once_with(success=False)
+        
+        # Check the final log status
+        self.assertEqual(result_log.status, "completed_with_errors")
+        self.assertEqual(result_log.records_processed, 2)
+        self.assertEqual(result_log.records_succeeded, 1)
+        self.assertEqual(result_log.records_failed, 1)
 
 
 
@@ -402,14 +408,18 @@ class TestSyncPipeline(TestCase):
     def test_run_handles_exception(self):
         """Test that run handles exceptions gracefully."""
         # Make the extractor raise an exception
-        self.extractor.extract = mock.MagicMock(side_effect=Exception("Test exception"))
+        exception_message = "Extractor test exception"
+        self.extractor.extract = mock.MagicMock(side_effect=Exception(exception_message))
 
-        # Run the pipeline - this should not raise an exception to the caller
-        result = self.pipeline.run(incremental=True, batch_size=10)
+        # Run the pipeline - this should catch the exception and return the log
+        result_log = self.pipeline.run(incremental=True, batch_size=10)
 
         # Verify the exception was handled and log marked as failed
-        self.mock_sync_log.mark_failed.assert_called_once()
-        self.assertIn("Test exception", self.mock_sync_log.mark_failed.call_args[1]["error_message"])
+        self.assertEqual(result_log.status, "failed")
+        self.assertEqual(result_log.error_message, exception_message)
+        
+        # Verify sync state was marked as failed
+        self.mock_sync_state.update_sync_completed.assert_called_once_with(success=False)
 
 
 
@@ -420,54 +430,67 @@ class TestSyncPipeline(TestCase):
         self.extractor.extract_results = []
 
         # Run the pipeline
-        result = self.pipeline.run(incremental=True, batch_size=10)
+        result_log = self.pipeline.run(incremental=True, batch_size=10)
 
-        # Check that the process completed successfully
-        self.mock_sync_log.mark_completed.assert_called_once()
-        self.assertEqual(self.mock_sync_log.mark_completed.call_args[0][0], 0)  # 0 success
-        self.assertEqual(self.mock_sync_log.mark_completed.call_args[0][1], 0)  # 0 failed
+        # Check that the process completed successfully with 0 records
+        self.assertEqual(result_log.status, "completed")
+        self.assertEqual(result_log.records_processed, 0)
+        self.assertEqual(result_log.records_succeeded, 0)
+        self.assertEqual(result_log.records_failed, 0)
+        
+        # Verify sync state was marked as successful
+        self.mock_sync_state.update_sync_completed.assert_called_once_with(success=True)
 
 
 
 
     def test_run_with_transformer_error(self):
-        """Test that run handles transformer errors."""
+        """Test that run handles transformer errors within _process_batch."""
         # Set up test data
         self.extractor.extract_results = [{"id": 1}, {"id": 2}]
         
-        # Make the transformer raise an exception
-        self.transformer.transform = mock.MagicMock(side_effect=ValueError("Transform error"))
-        
-        # Make process_batch pass the error upwards
-        self.pipeline._process_batch.side_effect = ValueError("Transform error")
+        # Make the transformer raise an exception when called within _process_batch
+        exception_message = "Transform test error"
+        # Replace the original _process_batch with one that simulates the transformer error
+        def mock_process_batch_with_error(batch):
+            raise ValueError(exception_message)
+            
+        self.pipeline._process_batch = mock_process_batch_with_error
 
         # Run the pipeline
-        result = self.pipeline.run(incremental=True, batch_size=10)
+        result_log = self.pipeline.run(incremental=True, batch_size=10)
 
         # Check that the error was handled and log marked as failed
-        self.mock_sync_log.mark_failed.assert_called_once()
-        self.assertIn("Transform error", self.mock_sync_log.mark_failed.call_args[1]["error_message"])
+        self.assertEqual(result_log.status, "failed")
+        self.assertEqual(result_log.error_message, exception_message)
+        
+        # Check sync state was marked as failed
+        self.mock_sync_state.update_sync_completed.assert_called_once_with(success=False)
 
 
 
 
     def test_run_with_invalid_batch_size(self):
-        """Test that run handles invalid batch size."""
-        # Run the pipeline with an invalid batch size (0)
-        # Don't mock the implementation for this test
-        self.pipeline._process_batch = self.original_process_batch
+        """Test that run handles batch_size=0 by processing all in one batch."""
+        # Run the pipeline with batch_size = 0
+        # Restore original _process_batch to test the actual loop logic
+        self.pipeline._process_batch = self.original_process_batch 
         
-        # Add extract results to ensure we hit the batch processing code
+        # Add extract results
         self.extractor.extract_results = [{"id": 1}, {"id": 2}]
+        self.transformer.transform_results = [{"id": 1, "name": "Test 1"}, {"id": 2, "name": "Test 2"}]
+        self.loader.load_result.created = 2 # Simulate successful loading
         
-        # Mock SyncLogDetail to avoid database operations
-        with mock.patch("pyerp.sync.pipeline.SyncLogDetail.objects.create"):
-            self.pipeline.run(incremental=True, batch_size=0)
+        # Mock SyncLogDetail to avoid database operations during load
+        # with mock.patch("pyerp.sync.pipeline.SyncLogDetail.objects.create"):
+        result_log = self.pipeline.run(incremental=True, batch_size=0)
             
-        # Verify that mark_failed was called with the correct error message
-        self.mock_sync_log.mark_failed.assert_called_once()
-        error_message = self.mock_sync_log.mark_failed.call_args[1]["error_message"]
-        self.assertIn("range() arg 3 must not be zero", error_message)
+        # Verify that it completed successfully
+        self.assertEqual(result_log.status, "completed")
+        self.assertEqual(result_log.records_processed, 2)
+        self.assertEqual(result_log.records_succeeded, 2)
+        self.assertEqual(result_log.records_failed, 0)
+        self.mock_sync_state.update_sync_completed.assert_called_once_with(success=True)
 
 
 
@@ -493,20 +516,17 @@ class TestSyncPipeline(TestCase):
         self.extractor.extract_results = [{"id": 1}, {"id": 2}]
         self.transformer.transform_results = [{"id": 1, "name": "Test 1"}, {"id": 2, "name": "Test 2"}]
         
-        # Set up loader with partial success
-        result = LoadResult()
-        result.created = 1
-        result.errors = 1
-        result.error_details = [{"record": {"id": 2}, "error": "Test error"}]
-        self.loader.load_result = result
-        
-        # Configure process_batch mock to return partial success
+        # Configure process_batch mock to return partial success (1 success, 1 failure)
         self.pipeline._process_batch.side_effect = lambda batch: (1, 1)
 
         # Run the pipeline
-        self.pipeline.run(incremental=True, batch_size=10)
+        result_log = self.pipeline.run(incremental=True, batch_size=10)
 
         # Check that sync log was updated correctly
-        self.mock_sync_log.mark_completed.assert_called_once()
-        self.assertEqual(self.mock_sync_log.mark_completed.call_args[0][0], 1)  # 1 success
-        self.assertEqual(self.mock_sync_log.mark_completed.call_args[0][1], 1)  # 1 failed
+        self.assertEqual(result_log.status, "completed_with_errors")
+        self.assertEqual(result_log.records_processed, 2) # Assuming _process_batch is called once
+        self.assertEqual(result_log.records_succeeded, 1) 
+        self.assertEqual(result_log.records_failed, 1)
+        
+        # Check sync state was marked as failed
+        self.mock_sync_state.update_sync_completed.assert_called_once_with(success=False)

@@ -4,50 +4,8 @@ Models for the product tagging and inheritance system.
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.utils.text import slugify
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
-
-
-class Tag(models.Model):
-    """
-    Tag model for product categorization.
-    """
-    name = models.CharField(
-        max_length=100, 
-        unique=True,
-        help_text=_("Tag name")
-    )
-    slug = models.SlugField(
-        max_length=100,
-        unique=True,
-        help_text=_("URL-friendly tag name"),
-    )
-    description = models.TextField(
-        blank=True,
-        help_text=_("Tag description"),
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text=_("Creation timestamp"),
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        help_text=_("Last update timestamp"),
-    )
-
-    class Meta:
-        verbose_name = _("Tag")
-        verbose_name_plural = _("Tags")
-        ordering = ["name"]
-
-    def __str__(self) -> str:
-        return self.name
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
 
 
 class InheritableField:

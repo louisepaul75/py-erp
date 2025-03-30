@@ -37,7 +37,8 @@ const config = {
     'ts-jest': {
       isolatedModules: true
     }
-  }
+  },
+  coverageProvider: 'v8'
 };
 
 module.exports = config; 

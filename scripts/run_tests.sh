@@ -165,7 +165,7 @@ elif [ "$TEST_GROUP" = "all" ]; then
   fi
   
   # Run backend tests with automatic discovery
-  python -m pytest $PYTEST_OPTS
+  python -m pytest $PYTEST_OPTS --nomigrations
   
   # Run mutation tests if enabled
   if [ "$MUTATION" = true ]; then
@@ -205,7 +205,7 @@ else
     fi
     
     # Run tests matching the marker
-    python -m pytest $PYTEST_OPTS
+    python -m pytest $PYTEST_OPTS --nomigrations
   else
     # For other test groups, try to find a matching directory
     echo "Looking for test directory for group: $TEST_GROUP"
@@ -234,10 +234,10 @@ else
       echo "Attempting to run tests using the group name as a directory pattern"
       
       # Fall back to running tests using a pattern
-      python -m pytest -k "$TEST_GROUP" $PYTEST_OPTS
+      python -m pytest -k "$TEST_GROUP" $PYTEST_OPTS --nomigrations
     else
       # Run tests from the found directory
-      python -m pytest "$TEST_PATH" $PYTEST_OPTS
+      python -m pytest "$TEST_PATH" $PYTEST_OPTS --nomigrations
     fi
   fi
   

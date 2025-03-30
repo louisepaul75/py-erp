@@ -10,8 +10,11 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.text import slugify
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericRelation
 
-from pyerp.business_modules.products.tag_models import Tag, M2MOverride, FieldOverride, InheritableField
+from pyerp.business_modules.products.tag_models import M2MOverride, FieldOverride, InheritableField
+from pyerp.core.models import Tag
+from pyerp.core.models import TaggedItem
 
 
 class ProductCategory(models.Model):
@@ -206,12 +209,12 @@ class ParentProduct(BaseProduct):
         help_text=_("Height in millimeters"),
     )
 
-    # Tags
-    tags = models.ManyToManyField(
-        Tag,
-        blank=True,
-        related_name="parent_products",
-        help_text=_("Tags assigned to this parent product"),
+    # Tags - Replaced ManyToManyField with GenericRelation
+    tags = GenericRelation(
+        TaggedItem,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='parent_product' # Custom related query name
     )
 
     class Meta:
@@ -348,12 +351,12 @@ class VariantProduct(BaseProduct):
         help_text=_("Whether this is a bestselling variant"),
     )
 
-    # Add tags field for direct tag assignment
-    tags = models.ManyToManyField(
-        Tag,
-        blank=True,
-        related_name="variant_products",
-        help_text=_("Tags assigned directly to this variant product"),
+    # Add tags field for direct tag assignment - Replaced ManyToManyField
+    tags = GenericRelation(
+        TaggedItem,
+        content_type_field='content_type',
+        object_id_field='object_id',
+        related_query_name='variant_product' # Custom related query name
     )
 
     class Meta:
@@ -404,21 +407,25 @@ class VariantProduct(BaseProduct):
         Returns:
             QuerySet of Tag objects
         """
-        from pyerp.business_modules.products.tag_models import Tag
+        from pyerp.core.models import Tag # Keep local import for Tag query
+        
+        # Get direct tags for this variant through the generic relation
+        direct_variant_tags = Tag.objects.filter(tagged_items__content_type=ContentType.objects.get_for_model(self), tagged_items__object_id=self.pk)
         
         # If no parent or not inheriting, return only direct tags
         if not self.parent or not self.inherits_tags():
-            return self.tags.all()
+            return direct_variant_tags
         
-        # Get tag IDs from both parent and variant
-        parent_tag_ids = list(self.parent.tags.values_list('id', flat=True))
-        variant_tag_ids = list(self.tags.values_list('id', flat=True))
+        # Get tag IDs from parent (also via generic relation)
+        parent_tags = Tag.objects.filter(tagged_items__content_type=ContentType.objects.get_for_model(self.parent), tagged_items__object_id=self.parent.pk)
         
-        # Combine the IDs
-        all_tag_ids = list(set(parent_tag_ids + variant_tag_ids))
+        # Combine the querysets
+        # Using union() is generally efficient, but remove ordering for SQLite compatibility
+        direct_variant_tags = direct_variant_tags.order_by() # Remove default ordering if any
+        parent_tags = parent_tags.order_by() # Remove default ordering if any
+        all_tags_queryset = direct_variant_tags.union(parent_tags).order_by('name') # Apply ordering *after* union
         
-        # Return a queryset with all tags
-        return Tag.objects.filter(id__in=all_tag_ids)
+        return all_tags_queryset
 
 
 class Product(models.Model):

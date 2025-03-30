@@ -588,9 +588,13 @@ class BaseAPIClient:
             if key in date_fields and isinstance(value, str):
                 try:
                     parsed_date = self._parse_legacy_date(value)
-                    transformed[key] = parsed_date if parsed_date is not None else value
+                    transformed[key] = (
+                        parsed_date if parsed_date is not None else value
+                    )
                 except ValueError as e:
-                    logger.debug("Failed to parse date for field %s: %s", key, str(e))
+                    logger.debug(
+                        "Failed to parse date for field %s: %s", key, str(e)
+                    )
                     transformed[key] = value
             else:
                 transformed[key] = value
@@ -609,128 +613,149 @@ class BaseAPIClient:
         fail_on_filter_error: bool = False,
     ) -> pd.DataFrame:
         """
-        Fetch records from a table in the legacy ERP system.
+        Fetch records from a table in the legacy ERP system, handling pagination
+        if all_records is True.
 
         Args:
             table_name: Name of the table to fetch from
-            top: Number of records to fetch per request (None for no limit,
-                though the API server may still apply a default limit,
-                typically 100 records)
-            skip: Number of records to skip
-            filter_query: [['field', 'operator', 'value']]
-            all_records: Whether to fetch all records (may take a long time)
-            new_data_only: Only fetch records newer than last sync
-            date_created_start: Optional start date for filtering
-            fail_on_filter_error: Whether to raise an error on filter issues
+            top: Max number of records to fetch per request if not fetching all.
+                 When all_records=True, this acts as the page size (defaulting to 100).
+            skip: Initial number of records to skip.
+            filter_query: Filter criteria (list of lists or string).
+            all_records: If True, fetch all records using pagination.
+            new_data_only: Currently unused in this base method.
+            date_created_start: Currently unused.
+            fail_on_filter_error: Whether to raise an error on filter issues.
 
         Returns:
-            DataFrame containing the fetched records
+            DataFrame containing the fetched records.
         """
         logger.info(
-            "Fetching table %s (top=%s, skip=%d, filter=%s)",
+            "Fetching table %s (all_records=%s, top=%s, skip=%d, filter=%s)",
             table_name,
-            top if top is not None else "None",
+            all_records,
+            top if top is not None else "API Default",
             skip,
             filter_query or "None",
         )
 
         try:
-            # Ensure we have a valid session
             if not self.ensure_session():
                 raise RuntimeError("Failed to establish a valid session")
 
-            # Build the URL and parameters
-            url = table_name
-            params = {"$skip": skip}
+            all_fetched_records = []
+            current_skip = skip
+            page_size = top if top is not None else 100  # Use top as page size or default
 
-            # Only add top parameter if it's specified
-            if top is not None:
-                params["$top"] = top
+            while True:
+                params = {"$skip": current_skip}
+                # If fetching all, use page_size for $top, otherwise use original top
+                request_top = page_size if all_records else top
+                if request_top is not None:
+                    params["$top"] = request_top
 
-            if filter_query:
-                print(f"filter_query: {filter_query}")
-
-                # Check if filter_query is already a list format
-                if isinstance(filter_query, list):
-                    filter_parts = []
-                    for filter_item in filter_query:
-                        try:
-                            # Handle both list and tuple formats
-                            if len(filter_item) != 3:
-                                logger.warning(
-                                    f"Invalid filter item format: {filter_item}. "
-                                    "Expected [field, operator, value]."
-                                )
-                                continue
-
-                            field = filter_item[0]
-                            operator = filter_item[1]
-                            value = filter_item[2]
-
-                            print(field, operator, value)
-                            # breakpoint()
-                            # Format date values if needed
-                            if hasattr(value, "strftime"):
-                                value = value.strftime("%Y-%m-%d")
-
-                            filter_parts.append(f"'{field} {operator} {value}'")
-                        except Exception as e:
-                            error_msg = (
-                                f"Error processing filter item {filter_item}: {str(e)}"
-                            )
-                            logger.error(error_msg)
-                            if fail_on_filter_error:
-                                raise RuntimeError(error_msg) from e
-
-                    if not filter_parts:
-                        logger.warning("No valid filter parts found in filter query")
+                # --- Filter Query Processing (same as before) ---
+                if filter_query:
+                    if isinstance(filter_query, list):
+                        filter_parts = []
+                        for filter_item in filter_query:
+                            try:
+                                if len(filter_item) != 3:
+                                    logger.warning(
+                                        f"Invalid filter item format: {filter_item}. "
+                                        "Expected [field, operator, value]."
+                                    )
+                                    continue
+                                field, operator, value = filter_item
+                                if hasattr(value, "strftime"):
+                                    value = value.strftime("%Y-%m-%d")
+                                filter_parts.append(f"'{field} {operator} {value}'")
+                            except Exception as e:
+                                error_msg = f"Error processing filter item {filter_item}: {str(e)}"
+                                logger.error(error_msg)
+                                if fail_on_filter_error:
+                                    raise RuntimeError(error_msg) from e
+                        if filter_parts:
+                            params["$filter"] = " and ".join(filter_parts)
+                        else:
+                             logger.warning("No valid filter parts found in filter query")
                     else:
-                        # Join all filter parts with 'and'
-                        params["$filter"] = " and ".join(filter_parts)
-                else:
-                    # Handle legacy string format
-                    params["$filter"] = filter_query
-                # params["$filter"] = '"' + params["$filter"] + '"'
+                        params["$filter"] = filter_query
+                # --- End Filter Query Processing ---
 
-            # Make the request
-            response = self._make_request(
-                "GET",
-                url,
-                params=params,
-                timeout=self.timeout,
+                logger.debug(
+                    f"Fetching page for {table_name}: skip={current_skip}, "
+                    f"top={params.get('$top')}"
+                )
+                response = self._make_request(
+                    "GET",
+                    table_name,
+                    params=params,
+                    timeout=self.timeout,
+                )
+
+                if response.status_code != 200:
+                    error_msg = (
+                        f"Failed to fetch table {table_name} (page starting at {current_skip}): "
+                        f"Status {response.status_code}"
+                    )
+                    logger.error(error_msg)
+                    # Decide whether to raise immediately or try to return partial data
+                    raise RuntimeError(error_msg) 
+
+                try:
+                    data = response.json()
+                except json.JSONDecodeError as e:
+                    error_msg = f"Failed to parse JSON response (page starting at {current_skip}): {str(e)}"
+                    logger.error(error_msg)
+                    raise RuntimeError(error_msg)
+
+                records = data.get("__ENTITIES", [])
+                num_fetched = len(records)
+                logger.debug(f"Fetched {num_fetched} records for this page.")
+
+                if num_fetched > 0:
+                    # Transform dates before adding
+                    transformed_records = [
+                        self._transform_dates_in_record(record) for record in records
+                    ]
+                    all_fetched_records.extend(transformed_records)
+                
+                # --- Loop termination logic ---
+                if not all_records: 
+                    # If not fetching all, break after the first successful fetch
+                    break 
+                
+                if num_fetched < page_size:
+                    # If we fetched less than requested, it must be the last page
+                    logger.info(f"Last page reached for {table_name}, fetched {num_fetched} records.")
+                    break
+
+                if num_fetched == 0:
+                     # If API returns 0 records, we are done.
+                    logger.info(f"Empty page received for {table_name}, assuming end of data.")
+                    break
+                # --- End Loop termination logic ---
+
+                # Prepare for the next iteration
+                current_skip += num_fetched
+
+            # --- End While Loop ---
+
+            total_records_fetched = len(all_fetched_records)
+            logger.info(
+                "Finished fetching for table %s. Total records retrieved: %d",
+                table_name,
+                total_records_fetched,
             )
 
-            if response.status_code != 200:
-                error_msg = (
-                    f"Failed to fetch table {table_name}: "
-                    f"Status {response.status_code}"
-                )
-                logger.error(error_msg)
-                raise RuntimeError(error_msg)
-
-            # Parse the response
-            try:
-                data = response.json()
-            except json.JSONDecodeError as e:
-                error_msg = f"Failed to parse JSON response: {str(e)}"
-                logger.error(error_msg)
-                raise RuntimeError(error_msg)
-            # print(pd.DataFrame(data))
-            # breakpoint()
-            # Convert to DataFrame
-            if not data or "__ENTITIES" not in data:
-                logger.warning("No records found in response")
-                return pd.DataFrame()
-
-            records = data["__ENTITIES"]
-            logger.info("Successfully fetched %d records", len(records))
-
-            # Transform dates in records
-            records = [self._transform_dates_in_record(record) for record in records]
-
-            return pd.DataFrame(records)
+            if not all_fetched_records:
+                return pd.DataFrame()  # Return empty DataFrame if no records found
+            
+            return pd.DataFrame(all_fetched_records)
 
         except Exception as e:
+            # Catch any other unexpected errors during the process
             error_msg = f"Error fetching table {table_name}: {str(e)}"
-            logger.error(error_msg)
+            logger.exception(error_msg) # Use exception to log traceback
             raise RuntimeError(error_msg) from e
