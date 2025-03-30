@@ -18,7 +18,7 @@ mappings:
         UUID: legacy_id
         linked_Form: legacy_form_id
       incremental:
-        timestamp_filter_format: [["__TIMESTAMP", ">", "{value}"]]
+        timestamp_filter_format: [["modified_date", ">", "{value}"]]
       extractor_config:
         table_name: Werksauftraege
         page_size: 500
@@ -51,7 +51,7 @@ mappings:
         linked_Kostenstelle: legacy_kostenstelle_id
         linked_Form_Artikel: legacy_form_artikel_id
       incremental:
-        timestamp_filter_format: [["__TIMESTAMP", ">", "{value}"]]
+        timestamp_filter_format: [["modified_date", ">", "{value}"]]
       extractor_config:
         table_name: WerksauftrPos
         page_size: 500

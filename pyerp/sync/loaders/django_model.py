@@ -17,6 +17,16 @@ logger = logging.getLogger(__name__)
 class DjangoModelLoader(BaseLoader):
     """Loader for Django model data."""
 
+    @staticmethod
+    def _import_class(class_path: str) -> Type:
+        """Import a class from its dotted path."""
+        try:
+            module_path, class_name = class_path.rsplit(".", 1)
+            module = __import__(module_path, fromlist=[class_name])
+            return getattr(module, class_name)
+        except (ImportError, AttributeError, ValueError) as e:
+            raise ImportError(f"Could not import class '{class_path}': {e}") from e
+
     def get_required_config_fields(self) -> List[str]:
         """Get required configuration fields.
 
@@ -34,13 +44,29 @@ class DjangoModelLoader(BaseLoader):
         Raises:
             ValueError: If model cannot be found
         """
-        try:
-            return apps.get_model(self.config["app_name"], self.config["model_name"])
-        except Exception as e:
-            raise ValueError(
-                f"Failed to get model {self.config['app_name']}."
-                f"{self.config['model_name']}: {e}"
-            )
+        model_path = self.config.get('model')
+        app_name = self.config.get('app_name')
+        model_name = self.config.get('model_name')
+
+        if model_path:
+            logger.info(f"Attempting to load model directly from path: {model_path}")
+            try:
+                model_class = self._import_class(model_path)
+                logger.info(f"Successfully loaded model {model_class.__name__} from path.")
+                return model_class
+            except ImportError as e:
+                logger.warning(f"Failed to load model from path '{model_path}': {e}. Falling back to app/model name.")
+        
+        if app_name and model_name:
+            logger.info(f"Attempting to load model using app_name='{app_name}' and model_name='{model_name}'")
+            try:
+                model_class = apps.get_model(app_name, model_name)
+                logger.info(f"Successfully loaded model {model_class.__name__} using app/model name.")
+                return model_class
+            except LookupError as e:
+                 raise ValueError(f"Failed to get model {app_name}.{model_name}: {e}") from e
+
+        raise ValueError("Loader configuration must provide either 'model' path or 'app_name' and 'model_name'")
 
     def prepare_record(
         self, record: Dict[str, Any]

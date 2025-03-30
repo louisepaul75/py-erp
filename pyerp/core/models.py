@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
+from django.utils.text import slugify
 
 User = get_user_model()
 
@@ -250,3 +251,95 @@ class UserPreference(models.Model):
             
         self.save()
         return self.dashboard_config
+
+
+# --- Tagging System ---
+
+class Tag(models.Model):
+    """
+    Generic Tag model for categorizing various entities.
+    Moved from products module.
+    """
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text=_("Tag name")
+    )
+    slug = models.SlugField(
+        max_length=100,
+        unique=True,
+        help_text=_("URL-friendly tag name"),
+    )
+    description = models.TextField(
+        blank=True,
+        help_text=_("Tag description"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("Creation timestamp"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text=_("Last update timestamp"),
+    )
+
+    class Meta:
+        verbose_name = _("Tag")
+        verbose_name_plural = _("Tags")
+        ordering = ["name"]
+        # Ensure the table name remains consistent during the move,
+        # or handle renaming explicitly in migrations later.
+        # db_table = 'products_tag' # Temporarily uncomment if needed for migration
+
+    def __str__(self) -> str:
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class TaggedItem(models.Model):
+    """
+    Associates a Tag with any other model instance using GenericForeignKey.
+    """
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.CASCADE,
+        related_name="tagged_items",
+        help_text=_("The tag being applied")
+    )
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        help_text=_("Content type of the tagged object")
+    )
+    object_id = models.PositiveIntegerField(
+        db_index=True, # Add index for faster lookups
+        help_text=_("Primary key of the tagged object")
+    )
+    content_object = GenericForeignKey('content_type', 'object_id')
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text=_("Timestamp when the tag was applied")
+    )
+
+    class Meta:
+        verbose_name = _("Tagged Item")
+        verbose_name_plural = _("Tagged Items")
+        # Ensure a tag is applied only once to a specific object
+        unique_together = ('tag', 'content_type', 'object_id')
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+        ]
+
+    def __str__(self) -> str:
+        # Use try-except for potentially missing content_object during deletion phases
+        try:
+            content_obj_str = str(self.content_object)
+        except AttributeError:
+            content_obj_str = f"{self.content_type}({self.object_id})" # Fallback representation
+        return f"'{self.tag}' tag on {content_obj_str}"
+
+# --- End Tagging System ---

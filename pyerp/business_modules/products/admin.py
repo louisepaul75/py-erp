@@ -9,12 +9,10 @@ from pyerp.business_modules.products.models import (
     ParentProduct,
     ProductCategory,
     VariantProduct,
+    ProductImage,
 )
-from pyerp.business_modules.products.tag_models import (
-    Tag,
-    FieldOverride,
-    M2MOverride,
-)
+from pyerp.business_modules.products.tag_models import FieldOverride, M2MOverride
+from pyerp.core.models import Tag
 
 
 @admin.register(Tag)
@@ -66,6 +64,14 @@ class VariantInline(admin.TabularInline):
     readonly_fields = ("sku",)
 
 
+# Define the inline admin for ProductImage
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1 # Allow adding one image at a time
+    fields = ('image', 'is_primary')
+    # You might want readonly_fields or other customizations here
+
+
 @admin.register(ParentProduct)
 class ParentProductAdmin(admin.ModelAdmin):
     list_display = ("sku", "name", "legacy_base_sku", "is_active", "is_new", "release_date")
@@ -98,7 +104,6 @@ class ParentProductAdmin(admin.ModelAdmin):
         ),
     )
     inlines = [VariantInline]
-    filter_horizontal = ('tags',)
 
 
 @admin.register(VariantProduct)
@@ -148,4 +153,10 @@ class VariantProductAdmin(admin.ModelAdmin):
         "category_id",
     )
     
-    filter_horizontal = ('tags',)
+    inlines = [ProductImageInline]
+
+
+@admin.register(ProductImage)
+class ProductImageAdmin(admin.ModelAdmin):
+    list_display = ("product", "image_url", "is_primary")
+    search_fields = ("product__name", "image_url")

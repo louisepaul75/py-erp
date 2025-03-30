@@ -13,7 +13,7 @@ from pyerp.business_modules.products.models import (
     ProductCategory,
     ProductImage
 )
-from pyerp.business_modules.products.tag_models import Tag
+from pyerp.core.models import Tag
 
 User = get_user_model()
 

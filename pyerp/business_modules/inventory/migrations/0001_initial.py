@@ -11,6 +11,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ("products", "0001_initial"),
+        ("core", "0002_tag_taggeditem"),
     ]
 
     operations = [

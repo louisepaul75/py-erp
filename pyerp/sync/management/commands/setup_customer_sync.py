@@ -49,13 +49,19 @@ class Command(BaseCommand):
         Args:
             config: Configuration dictionary
         """
+        # Get customer configuration
+        customer_config = config.get("customers", {})
+        if not customer_config:
+            self.stderr.write("No customer configuration found")
+            return
+
         # Create or update source
-        source_name = config.get("name", "customers_sync")
-        source_config = config.get("source", {})
+        source_name = customer_config.get("name", "customers_sync")
+        source_config = customer_config.get("source", {})
         source, created = SyncSource.objects.update_or_create(
             name=source_name,
             defaults={
-                "description": config.get("description", ""),
+                "description": customer_config.get("description", ""),
                 "config": source_config,
                 "active": True,
             },
@@ -66,7 +72,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync source: {source}")
 
         # Create or update target
-        target_config = config.get("target", {})
+        target_config = customer_config.get("loader", {}).get("config", {})
         app_name = target_config.get("app_name", "sales")
         model_name = target_config.get("model_name", "Customer")
         target_name = f"{app_name}.{model_name}"
@@ -85,9 +91,9 @@ class Command(BaseCommand):
 
         # Create or update mapping
         mapping_config = {
-            "transformation": config.get("transformation", {}),
-            "scheduling": config.get("scheduling", {}),
-            "incremental": config.get("incremental", {}),
+            "transformation": customer_config.get("transformer", {}),
+            "scheduling": customer_config.get("schedule", {}),
+            "incremental": customer_config.get("incremental", {}),
         }
         mapping, created = SyncMapping.objects.update_or_create(
             source=source,
