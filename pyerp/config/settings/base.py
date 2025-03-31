@@ -45,15 +45,20 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
 ]
 
 THIRD_PARTY_APPS = [
     "rest_framework",
     "django_filters",
     "corsheaders",
-    "drf_yasg",
+    "drf_spectacular",
     "django_celery_results",
     "django_celery_beat",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "rest_framework_simplejwt",
 ]
 
 LOCAL_APPS = [
@@ -85,6 +90,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "pyerp.urls"
@@ -214,6 +220,40 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# Spectacular API Schema configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'pyERP API',
+    'DESCRIPTION': 'API documentation for pyERP system',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'CONTACT': {
+        'name': 'Support',
+        'email': 'support@pyerp.example.com',
+    },
+    'LICENSE': {'name': 'Proprietary'},
+    'TOS': 'https://www.pyerp.example.com/terms/',
+    'COMPONENT_SPLIT_PATCH': True,
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': True,
+        'defaultModelsExpandDepth': 2,
+    },
+    'EXCLUDE_PATH_REGEX': [r'/api/token/'],
+    
+    # Verbessertes Filter-Handling
+    'PREPROCESSING_HOOKS': ['pyerp.utils.api_docs.preprocess_filter_fields'],
+    'ENUM_NAME_OVERRIDES': {
+        'CustomerGroupEnum': ['Premium', 'Standard', 'Business'],
+        'RecordTypeEnum': ['Order', 'Invoice', 'Return'],
+        'PaymentStatusEnum': ['Pending', 'Paid', 'Cancelled', 'Refunded'],
+        'FulfillmentStatusEnum': ['Pending', 'Shipped', 'Delivered', 'Cancelled'],
+    },
 }
 
 # JWT Settings

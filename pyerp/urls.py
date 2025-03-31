@@ -20,30 +20,30 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 from django.views.static import serve
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view, renderer_classes, permission_classes
+from rest_framework.renderers import JSONRenderer
+from rest_framework.permissions import AllowAny
 
 from pyerp.core.views import ReactAppView, UserProfileView
 from pyerp.external_api.search.views import GlobalSearchViewSet
 
-# Check if drf_yasg is available
-try:
-    from drf_yasg import openapi
-    from drf_yasg.views import get_schema_view
+# Flag to track API doc availability
+has_spectacular = False
 
-    # Create the API schema view
-    schema_view = get_schema_view(
-        openapi.Info(
-            title="pyERP API",
-            default_version="v1",
-            description="API for pyERP system",
-        ),
-        public=False,
-        permission_classes=(permissions.IsAuthenticated,),
+# Check if drf_spectacular is available
+try:
+    from drf_spectacular.views import (
+        SpectacularAPIView,
+        SpectacularSwaggerView,
+        SpectacularRedocView,
     )
-    has_swagger = True
-    print("Swagger documentation enabled")
+    has_spectacular = True
+    print("Spectacular documentation enabled")
 except ImportError:
-    has_swagger = False
-    print("WARNING: drf_yasg not available, API documentation will be disabled")
+    has_spectacular = False
+    print("WARNING: drf_spectacular not available, API documentation will be disabled")
 
 # Create a router for API endpoints
 router = routers.DefaultRouter()
@@ -103,7 +103,7 @@ urlpatterns = [
     path("api/sales/", include("pyerp.business_modules.sales.urls")),
     # Add inventory API URLs with namespace
     path("api/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory"), namespace="inventory")),
-    # API documentation
+    # API documentation with drf-docs (basic)
     path("api/docs/", include_docs_urls(title="pyERP API Documentation")),
     # Users API
     path("api/users/", include("users.urls", namespace="users")),
@@ -120,18 +120,28 @@ urlpatterns = [
     }),
 ]
 
-# Add API documentation URLs if available
-if has_swagger:
+# Add drf-spectacular API documentation URLs if available
+if has_spectacular:
     urlpatterns += [
-        path(
-            "api/docs/",
-            schema_view.with_ui("swagger", cache_timeout=0),
-            name="schema-swagger-ui",
+        # API Schema generation
+        path("api/schema/", 
+            SpectacularAPIView.as_view(
+                permission_classes=[AllowAny],
+                authentication_classes=[]
+            ), 
+            name="schema"
         ),
+        # Swagger UI
+        path(
+            "api/swagger/",
+            SpectacularSwaggerView.as_view(url_name="schema"),
+            name="swagger-ui",
+        ),
+        # ReDoc UI
         path(
             "api/redoc/",
-            schema_view.with_ui("redoc", cache_timeout=0),
-            name="schema-redoc",
+            SpectacularRedocView.as_view(url_name="schema"),
+            name="redoc",
         ),
     ]
 

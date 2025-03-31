@@ -32,7 +32,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
-    filterset_fields = ["customer_type", "country"]
+    filterset_fields = ["customer_group", "delivery_block"]
     search_fields = ["name", "customer_number", "email"]
     ordering_fields = ["name", "customer_number", "created_at"]
 

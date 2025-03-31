@@ -4,7 +4,25 @@ Serializers for the products app.
 
 from rest_framework import serializers
 
-from pyerp.business_modules.products.models import ParentProduct
+from pyerp.business_modules.products.models import ParentProduct, ProductCategory
+
+
+class ProductCategorySerializer(serializers.ModelSerializer):
+    """
+    Serializer for the ProductCategory model with drf-spectacular documentation.
+    """
+    
+    class Meta:
+        model = ProductCategory
+        fields = ['id', 'code', 'name', 'description', 'parent']
+        
+    def to_representation(self, instance):
+        """Customize the representation to handle parent as a simple ID."""
+        ret = super().to_representation(instance)
+        # Get the parent's ID if parent exists, otherwise return None
+        if instance.parent:
+            ret['parent'] = instance.parent.id
+        return ret
 
 
 class ParentProductSerializer(serializers.ModelSerializer):

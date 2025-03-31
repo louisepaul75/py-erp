@@ -22,6 +22,7 @@ except ImportError:
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
+DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Prevent Django from automatically appending trailing slashes to URLs
 # This fixes issues with PATCH requests where the browser might strip the trailing slash

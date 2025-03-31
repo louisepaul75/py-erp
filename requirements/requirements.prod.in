@@ -28,7 +28,7 @@ python-crontab
 django-timezone-field
 
 # API Documentation
-drf-yasg
+drf-spectacular
 inflection
 uritemplate
 pyyaml
