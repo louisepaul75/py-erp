@@ -128,6 +128,9 @@ urlpatterns = [
     # Add sales API URLs (both versioned and non-versioned)
     path("api/sales/", include("pyerp.business_modules.sales.urls")),
     path("api/v1/sales/", include("pyerp.business_modules.sales.urls", namespace="sales_v1")),
+    # Add production API URLs with namespace (both versioned and non-versioned)
+    path("api/production/", include("pyerp.business_modules.production.urls", namespace="production_api")),
+    path("api/v1/production/", include("pyerp.business_modules.production.urls", namespace="production_api_v1")),
     # Add inventory API URLs with namespace (both versioned and non-versioned)
     path("api/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory"), namespace="inventory")),
     path("api/v1/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory_v1"), namespace="inventory_v1")),
@@ -196,7 +199,7 @@ if has_spectacular:
 # Optional API modules (excluding products since we added it directly)
 OPTIONAL_API_MODULES = [
     ("sales", "pyerp.sales.urls"),
-    ("production", "pyerp.production.urls"),
+    # Removed production as it's now added directly
     ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),
 ]
 

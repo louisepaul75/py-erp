@@ -2,8 +2,6 @@
 
 from django.db import models
 from django.utils import timezone
-from pyerp.utils.json_utils import json_serialize
-import json
 
 
 class SyncSource(models.Model):
@@ -74,6 +72,8 @@ class SyncState(models.Model):
 class SyncLog(models.Model):
     """Logs synchronization operations (using the legacy structure)."""
 
+    id = models.BigAutoField(primary_key=True)  # Explicitly define the PK
+
     # Fields matching legacy_sync_synclog / audit_synclog structure
     entity_type = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=50, default='unknown')
@@ -82,7 +82,7 @@ class SyncLog(models.Model):
     records_processed = models.BigIntegerField(default=0)
     records_created = models.BigIntegerField(default=0)   # New field
     records_updated = models.BigIntegerField(default=0)   # New field
-    records_failed = models.BigIntegerField(default=0)    # Changed to BigIntegerField
+    records_failed = models.BigIntegerField(default=0)
     error_message = models.TextField(blank=True)
 
     # Removed fields: mapping, is_full_sync, sync_params, trace, records_succeeded

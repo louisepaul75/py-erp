@@ -12,63 +12,57 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Separate state and database operations for Tag model
-        # State operation defines the model in Django's state
-        # Database operation is empty because the table 'products_tag' already exists
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.CreateModel(
-                    name="Tag",
-                    fields=[
-                        (
-                            "id",
-                            models.BigAutoField(
-                                auto_created=True,
-                                primary_key=True,
-                                serialize=False,
-                                verbose_name="ID",
-                            ),
-                        ),
-                        (
-                            "name",
-                            models.CharField(
-                                help_text="Tag name", max_length=100, unique=True
-                            ),
-                        ),
-                        (
-                            "slug",
-                            models.SlugField(
-                                help_text="URL-friendly tag name",
-                                max_length=100,
-                                unique=True,
-                            ),
-                        ),
-                        (
-                            "description",
-                            models.TextField(blank=True, help_text="Tag description"),
-                        ),
-                        (
-                            "created_at",
-                            models.DateTimeField(
-                                auto_now_add=True, help_text="Creation timestamp"
-                            ),
-                        ),
-                        (
-                            "updated_at",
-                            models.DateTimeField(
-                                auto_now=True, help_text="Last update timestamp"
-                            ),
-                        ),
-                    ],
-                    options={
-                        "verbose_name": "Tag",
-                        "verbose_name_plural": "Tags",
-                        "ordering": ["name"],
-                        "db_table": "products_tag", # Explicitly manage the existing table
-                    },
+        # Use standard CreateModel as the table doesn't exist in fresh test DBs
+        migrations.CreateModel(
+            name="Tag",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        help_text="Tag name", max_length=100, unique=True
+                    ),
+                ),
+                (
+                    "slug",
+                    models.SlugField(
+                        help_text="URL-friendly tag name",
+                        max_length=100,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(blank=True, help_text="Tag description"),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(
+                        auto_now_add=True, help_text="Creation timestamp"
+                    ),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(
+                        auto_now=True, help_text="Last update timestamp"
+                    ),
                 ),
             ],
-            database_operations=[], # Table already exists, do nothing in the database
+            options={
+                "verbose_name": "Tag",
+                "verbose_name_plural": "Tags",
+                "ordering": ["name"],
+                # Remove db_table option to use default 'core_tag'
+                # "db_table": "products_tag", 
+            },
         ),
         migrations.CreateModel(
             name="TaggedItem",
@@ -109,7 +103,7 @@ class Migration(migrations.Migration):
                         help_text="The tag being applied",
                         on_delete=django.db.models.deletion.CASCADE,
                         related_name="tagged_items",
-                        to="core.tag",
+                        to="core.tag", # This should now correctly point to the created 'core_tag' table
                     ),
                 ),
             ],
