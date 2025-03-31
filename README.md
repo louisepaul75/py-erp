@@ -45,3 +45,37 @@ All monitoring-related scripts are located in the `scripts/monitoring` directory
 For manual setup of remote monitoring:
 ```bash
 ./scripts/monitoring/setup_monitoring_complete.sh 
+```
+
+## API Documentation
+
+The API documentation is generated using [drf-spectacular](https://drf-spectacular.readthedocs.io/) and deployed automatically to Netlify when changes are pushed to the main branch.
+
+### Automatic Deployment
+
+The Swagger documentation is automatically deployed to Netlify using GitHub Actions when changes are made to the API code or configuration. To set up the deployment:
+
+1. Ensure you have a Netlify account and have created a site for the API documentation
+2. Add the following secrets to your GitHub repository:
+   - `NETLIFY_SITE_ID`: Your Netlify Site ID
+   - `NETLIFY_AUTH_TOKEN`: Your Netlify Auth Token
+
+The deployment will automatically trigger when changes are pushed to:
+- `pyerp/config/settings/**`
+- `pyerp/api/**`
+- `requirements/**`
+- `.github/workflows/swagger-netlify.yml`
+- `netlify.toml`
+
+### Local Development
+
+To generate and view the Swagger documentation locally:
+
+```bash
+# Generate Swagger JSON
+python manage.py spectacular --file swagger.json
+
+# To view the documentation using the built-in Swagger UI:
+python manage.py runserver
+# Then visit: http://localhost:8000/api/schema/swagger-ui/
+```

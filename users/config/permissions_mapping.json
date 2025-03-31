@@ -1,0 +1,2234 @@
+{
+    "admin.add_logentry": {
+        "category": "Others",
+        "codename": "add_logentry",
+        "content_type": "admin.logentry",
+        "id": 1,
+        "name": "Can add log entry",
+        "order": 0,
+        "subcategory": ""
+    },
+    "admin.change_logentry": {
+        "category": "Others",
+        "codename": "change_logentry",
+        "content_type": "admin.logentry",
+        "id": 2,
+        "name": "Can change log entry",
+        "order": 0,
+        "subcategory": ""
+    },
+    "admin.delete_logentry": {
+        "category": "Others",
+        "codename": "delete_logentry",
+        "content_type": "admin.logentry",
+        "id": 3,
+        "name": "Can delete log entry",
+        "order": 0,
+        "subcategory": ""
+    },
+    "admin.view_logentry": {
+        "category": "Others",
+        "codename": "view_logentry",
+        "content_type": "admin.logentry",
+        "id": 4,
+        "name": "Can view log entry",
+        "order": 0,
+        "subcategory": ""
+    },
+    "auth.add_group": {
+        "category": "Users & Access",
+        "codename": "add_group",
+        "content_type": "auth.group",
+        "id": 9,
+        "name": "Can add group",
+        "order": 0,
+        "subcategory": "Group Management"
+    },
+    "auth.add_permission": {
+        "category": "Users & Access",
+        "codename": "add_permission",
+        "content_type": "auth.permission",
+        "id": 5,
+        "name": "Can add permission",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "auth.add_user": {
+        "category": "Users & Access",
+        "codename": "add_user",
+        "content_type": "auth.user",
+        "id": 13,
+        "name": "Can add user",
+        "order": 0,
+        "subcategory": "User Management"
+    },
+    "auth.change_group": {
+        "category": "Users & Access",
+        "codename": "change_group",
+        "content_type": "auth.group",
+        "id": 10,
+        "name": "Can change group",
+        "order": 0,
+        "subcategory": "Group Management"
+    },
+    "auth.change_permission": {
+        "category": "Users & Access",
+        "codename": "change_permission",
+        "content_type": "auth.permission",
+        "id": 6,
+        "name": "Can change permission",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "auth.change_user": {
+        "category": "Users & Access",
+        "codename": "change_user",
+        "content_type": "auth.user",
+        "id": 14,
+        "name": "Can change user",
+        "order": 0,
+        "subcategory": "User Management"
+    },
+    "auth.delete_group": {
+        "category": "Users & Access",
+        "codename": "delete_group",
+        "content_type": "auth.group",
+        "id": 11,
+        "name": "Can delete group",
+        "order": 0,
+        "subcategory": "Group Management"
+    },
+    "auth.delete_permission": {
+        "category": "Users & Access",
+        "codename": "delete_permission",
+        "content_type": "auth.permission",
+        "id": 7,
+        "name": "Can delete permission",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "auth.delete_user": {
+        "category": "Users & Access",
+        "codename": "delete_user",
+        "content_type": "auth.user",
+        "id": 15,
+        "name": "Can delete user",
+        "order": 0,
+        "subcategory": "User Management"
+    },
+    "auth.view_group": {
+        "category": "Users & Access",
+        "codename": "view_group",
+        "content_type": "auth.group",
+        "id": 12,
+        "name": "Can view group",
+        "order": 0,
+        "subcategory": "Group Management"
+    },
+    "auth.view_permission": {
+        "category": "Users & Access",
+        "codename": "view_permission",
+        "content_type": "auth.permission",
+        "id": 8,
+        "name": "Can view permission",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "auth.view_user": {
+        "category": "Users & Access",
+        "codename": "view_user",
+        "content_type": "auth.user",
+        "id": 16,
+        "name": "Can view user",
+        "order": 0,
+        "subcategory": "User Management"
+    },
+    "business.add_employee": {
+        "category": "Others",
+        "codename": "add_employee",
+        "content_type": "business.employee",
+        "id": 221,
+        "name": "Can add Employee",
+        "order": 0,
+        "subcategory": ""
+    },
+    "business.change_employee": {
+        "category": "Others",
+        "codename": "change_employee",
+        "content_type": "business.employee",
+        "id": 222,
+        "name": "Can change Employee",
+        "order": 0,
+        "subcategory": ""
+    },
+    "business.delete_employee": {
+        "category": "Others",
+        "codename": "delete_employee",
+        "content_type": "business.employee",
+        "id": 223,
+        "name": "Can delete Employee",
+        "order": 0,
+        "subcategory": ""
+    },
+    "business.view_employee": {
+        "category": "Others",
+        "codename": "view_employee",
+        "content_type": "business.employee",
+        "id": 224,
+        "name": "Can view Employee",
+        "order": 0,
+        "subcategory": ""
+    },
+    "contenttypes.add_contenttype": {
+        "category": "Others",
+        "codename": "add_contenttype",
+        "content_type": "contenttypes.contenttype",
+        "id": 17,
+        "name": "Can add content type",
+        "order": 0,
+        "subcategory": ""
+    },
+    "contenttypes.change_contenttype": {
+        "category": "Others",
+        "codename": "change_contenttype",
+        "content_type": "contenttypes.contenttype",
+        "id": 18,
+        "name": "Can change content type",
+        "order": 0,
+        "subcategory": ""
+    },
+    "contenttypes.delete_contenttype": {
+        "category": "Others",
+        "codename": "delete_contenttype",
+        "content_type": "contenttypes.contenttype",
+        "id": 19,
+        "name": "Can delete content type",
+        "order": 0,
+        "subcategory": ""
+    },
+    "contenttypes.view_contenttype": {
+        "category": "Others",
+        "codename": "view_contenttype",
+        "content_type": "contenttypes.contenttype",
+        "id": 20,
+        "name": "Can view content type",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.add_auditlog": {
+        "category": "Others",
+        "codename": "add_auditlog",
+        "content_type": "core.auditlog",
+        "id": 81,
+        "name": "Can add Audit Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.add_tag": {
+        "category": "Others",
+        "codename": "add_tag",
+        "content_type": "core.tag",
+        "id": 245,
+        "name": "Can add Tag",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.add_taggeditem": {
+        "category": "Others",
+        "codename": "add_taggeditem",
+        "content_type": "core.taggeditem",
+        "id": 241,
+        "name": "Can add Tagged Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.add_userpreference": {
+        "category": "Others",
+        "codename": "add_userpreference",
+        "content_type": "core.userpreference",
+        "id": 85,
+        "name": "Can add user preference",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.change_auditlog": {
+        "category": "Others",
+        "codename": "change_auditlog",
+        "content_type": "core.auditlog",
+        "id": 82,
+        "name": "Can change Audit Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.change_tag": {
+        "category": "Others",
+        "codename": "change_tag",
+        "content_type": "core.tag",
+        "id": 246,
+        "name": "Can change Tag",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.change_taggeditem": {
+        "category": "Others",
+        "codename": "change_taggeditem",
+        "content_type": "core.taggeditem",
+        "id": 242,
+        "name": "Can change Tagged Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.change_userpreference": {
+        "category": "Others",
+        "codename": "change_userpreference",
+        "content_type": "core.userpreference",
+        "id": 86,
+        "name": "Can change user preference",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.delete_auditlog": {
+        "category": "Others",
+        "codename": "delete_auditlog",
+        "content_type": "core.auditlog",
+        "id": 83,
+        "name": "Can delete Audit Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.delete_tag": {
+        "category": "Others",
+        "codename": "delete_tag",
+        "content_type": "core.tag",
+        "id": 247,
+        "name": "Can delete Tag",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.delete_taggeditem": {
+        "category": "Others",
+        "codename": "delete_taggeditem",
+        "content_type": "core.taggeditem",
+        "id": 243,
+        "name": "Can delete Tagged Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.delete_userpreference": {
+        "category": "Others",
+        "codename": "delete_userpreference",
+        "content_type": "core.userpreference",
+        "id": 87,
+        "name": "Can delete user preference",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.view_auditlog": {
+        "category": "Others",
+        "codename": "view_auditlog",
+        "content_type": "core.auditlog",
+        "id": 84,
+        "name": "Can view Audit Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.view_tag": {
+        "category": "Others",
+        "codename": "view_tag",
+        "content_type": "core.tag",
+        "id": 248,
+        "name": "Can view Tag",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.view_taggeditem": {
+        "category": "Others",
+        "codename": "view_taggeditem",
+        "content_type": "core.taggeditem",
+        "id": 244,
+        "name": "Can view Tagged Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "core.view_userpreference": {
+        "category": "Others",
+        "codename": "view_userpreference",
+        "content_type": "core.userpreference",
+        "id": 88,
+        "name": "Can view user preference",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.add_clockedschedule": {
+        "category": "Others",
+        "codename": "add_clockedschedule",
+        "content_type": "django_celery_beat.clockedschedule",
+        "id": 45,
+        "name": "Can add clocked",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.add_crontabschedule": {
+        "category": "Others",
+        "codename": "add_crontabschedule",
+        "content_type": "django_celery_beat.crontabschedule",
+        "id": 49,
+        "name": "Can add crontab",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.add_intervalschedule": {
+        "category": "Others",
+        "codename": "add_intervalschedule",
+        "content_type": "django_celery_beat.intervalschedule",
+        "id": 41,
+        "name": "Can add interval",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.add_periodictask": {
+        "category": "Others",
+        "codename": "add_periodictask",
+        "content_type": "django_celery_beat.periodictask",
+        "id": 57,
+        "name": "Can add periodic task",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.add_periodictasks": {
+        "category": "Others",
+        "codename": "add_periodictasks",
+        "content_type": "django_celery_beat.periodictasks",
+        "id": 53,
+        "name": "Can add periodic task track",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.add_solarschedule": {
+        "category": "Others",
+        "codename": "add_solarschedule",
+        "content_type": "django_celery_beat.solarschedule",
+        "id": 37,
+        "name": "Can add solar event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.change_clockedschedule": {
+        "category": "Others",
+        "codename": "change_clockedschedule",
+        "content_type": "django_celery_beat.clockedschedule",
+        "id": 46,
+        "name": "Can change clocked",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.change_crontabschedule": {
+        "category": "Others",
+        "codename": "change_crontabschedule",
+        "content_type": "django_celery_beat.crontabschedule",
+        "id": 50,
+        "name": "Can change crontab",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.change_intervalschedule": {
+        "category": "Others",
+        "codename": "change_intervalschedule",
+        "content_type": "django_celery_beat.intervalschedule",
+        "id": 42,
+        "name": "Can change interval",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.change_periodictask": {
+        "category": "Others",
+        "codename": "change_periodictask",
+        "content_type": "django_celery_beat.periodictask",
+        "id": 58,
+        "name": "Can change periodic task",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.change_periodictasks": {
+        "category": "Others",
+        "codename": "change_periodictasks",
+        "content_type": "django_celery_beat.periodictasks",
+        "id": 54,
+        "name": "Can change periodic task track",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.change_solarschedule": {
+        "category": "Others",
+        "codename": "change_solarschedule",
+        "content_type": "django_celery_beat.solarschedule",
+        "id": 38,
+        "name": "Can change solar event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.delete_clockedschedule": {
+        "category": "Others",
+        "codename": "delete_clockedschedule",
+        "content_type": "django_celery_beat.clockedschedule",
+        "id": 47,
+        "name": "Can delete clocked",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.delete_crontabschedule": {
+        "category": "Others",
+        "codename": "delete_crontabschedule",
+        "content_type": "django_celery_beat.crontabschedule",
+        "id": 51,
+        "name": "Can delete crontab",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.delete_intervalschedule": {
+        "category": "Others",
+        "codename": "delete_intervalschedule",
+        "content_type": "django_celery_beat.intervalschedule",
+        "id": 43,
+        "name": "Can delete interval",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.delete_periodictask": {
+        "category": "Others",
+        "codename": "delete_periodictask",
+        "content_type": "django_celery_beat.periodictask",
+        "id": 59,
+        "name": "Can delete periodic task",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.delete_periodictasks": {
+        "category": "Others",
+        "codename": "delete_periodictasks",
+        "content_type": "django_celery_beat.periodictasks",
+        "id": 55,
+        "name": "Can delete periodic task track",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.delete_solarschedule": {
+        "category": "Others",
+        "codename": "delete_solarschedule",
+        "content_type": "django_celery_beat.solarschedule",
+        "id": 39,
+        "name": "Can delete solar event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.view_clockedschedule": {
+        "category": "Others",
+        "codename": "view_clockedschedule",
+        "content_type": "django_celery_beat.clockedschedule",
+        "id": 48,
+        "name": "Can view clocked",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.view_crontabschedule": {
+        "category": "Others",
+        "codename": "view_crontabschedule",
+        "content_type": "django_celery_beat.crontabschedule",
+        "id": 52,
+        "name": "Can view crontab",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.view_intervalschedule": {
+        "category": "Others",
+        "codename": "view_intervalschedule",
+        "content_type": "django_celery_beat.intervalschedule",
+        "id": 44,
+        "name": "Can view interval",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.view_periodictask": {
+        "category": "Others",
+        "codename": "view_periodictask",
+        "content_type": "django_celery_beat.periodictask",
+        "id": 60,
+        "name": "Can view periodic task",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.view_periodictasks": {
+        "category": "Others",
+        "codename": "view_periodictasks",
+        "content_type": "django_celery_beat.periodictasks",
+        "id": 56,
+        "name": "Can view periodic task track",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_beat.view_solarschedule": {
+        "category": "Others",
+        "codename": "view_solarschedule",
+        "content_type": "django_celery_beat.solarschedule",
+        "id": 40,
+        "name": "Can view solar event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.add_chordcounter": {
+        "category": "Others",
+        "codename": "add_chordcounter",
+        "content_type": "django_celery_results.chordcounter",
+        "id": 29,
+        "name": "Can add chord counter",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.add_groupresult": {
+        "category": "Others",
+        "codename": "add_groupresult",
+        "content_type": "django_celery_results.groupresult",
+        "id": 33,
+        "name": "Can add group result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.add_taskresult": {
+        "category": "Others",
+        "codename": "add_taskresult",
+        "content_type": "django_celery_results.taskresult",
+        "id": 25,
+        "name": "Can add task result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.change_chordcounter": {
+        "category": "Others",
+        "codename": "change_chordcounter",
+        "content_type": "django_celery_results.chordcounter",
+        "id": 30,
+        "name": "Can change chord counter",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.change_groupresult": {
+        "category": "Others",
+        "codename": "change_groupresult",
+        "content_type": "django_celery_results.groupresult",
+        "id": 34,
+        "name": "Can change group result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.change_taskresult": {
+        "category": "Others",
+        "codename": "change_taskresult",
+        "content_type": "django_celery_results.taskresult",
+        "id": 26,
+        "name": "Can change task result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.delete_chordcounter": {
+        "category": "Others",
+        "codename": "delete_chordcounter",
+        "content_type": "django_celery_results.chordcounter",
+        "id": 31,
+        "name": "Can delete chord counter",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.delete_groupresult": {
+        "category": "Others",
+        "codename": "delete_groupresult",
+        "content_type": "django_celery_results.groupresult",
+        "id": 35,
+        "name": "Can delete group result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.delete_taskresult": {
+        "category": "Others",
+        "codename": "delete_taskresult",
+        "content_type": "django_celery_results.taskresult",
+        "id": 27,
+        "name": "Can delete task result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.view_chordcounter": {
+        "category": "Others",
+        "codename": "view_chordcounter",
+        "content_type": "django_celery_results.chordcounter",
+        "id": 32,
+        "name": "Can view chord counter",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.view_groupresult": {
+        "category": "Others",
+        "codename": "view_groupresult",
+        "content_type": "django_celery_results.groupresult",
+        "id": 36,
+        "name": "Can view group result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "django_celery_results.view_taskresult": {
+        "category": "Others",
+        "codename": "view_taskresult",
+        "content_type": "django_celery_results.taskresult",
+        "id": 28,
+        "name": "Can view task result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.add_emailevent": {
+        "category": "Others",
+        "codename": "add_emailevent",
+        "content_type": "email_system.emailevent",
+        "id": 229,
+        "name": "Can add Email Event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.add_emaillog": {
+        "category": "Others",
+        "codename": "add_emaillog",
+        "content_type": "email_system.emaillog",
+        "id": 225,
+        "name": "Can add Email Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.change_emailevent": {
+        "category": "Others",
+        "codename": "change_emailevent",
+        "content_type": "email_system.emailevent",
+        "id": 230,
+        "name": "Can change Email Event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.change_emaillog": {
+        "category": "Others",
+        "codename": "change_emaillog",
+        "content_type": "email_system.emaillog",
+        "id": 226,
+        "name": "Can change Email Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.delete_emailevent": {
+        "category": "Others",
+        "codename": "delete_emailevent",
+        "content_type": "email_system.emailevent",
+        "id": 231,
+        "name": "Can delete Email Event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.delete_emaillog": {
+        "category": "Others",
+        "codename": "delete_emaillog",
+        "content_type": "email_system.emaillog",
+        "id": 227,
+        "name": "Can delete Email Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.view_emailevent": {
+        "category": "Others",
+        "codename": "view_emailevent",
+        "content_type": "email_system.emailevent",
+        "id": 232,
+        "name": "Can view Email Event",
+        "order": 0,
+        "subcategory": ""
+    },
+    "email_system.view_emaillog": {
+        "category": "Others",
+        "codename": "view_emaillog",
+        "content_type": "email_system.emaillog",
+        "id": 228,
+        "name": "Can view Email Log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "inventory.add_box": {
+        "category": "Warehouse",
+        "codename": "add_box",
+        "content_type": "inventory.box",
+        "id": 165,
+        "name": "Can add Box",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.add_boxslot": {
+        "category": "Warehouse",
+        "codename": "add_boxslot",
+        "content_type": "inventory.boxslot",
+        "id": 169,
+        "name": "Can add Box Slot",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.add_boxstorage": {
+        "category": "Warehouse",
+        "codename": "add_boxstorage",
+        "content_type": "inventory.boxstorage",
+        "id": 177,
+        "name": "Can add Box Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.add_boxtype": {
+        "category": "Warehouse",
+        "codename": "add_boxtype",
+        "content_type": "inventory.boxtype",
+        "id": 161,
+        "name": "Can add Box Type",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.add_inventorymovement": {
+        "category": "Warehouse",
+        "codename": "add_inventorymovement",
+        "content_type": "inventory.inventorymovement",
+        "id": 181,
+        "name": "Can add Inventory Movement",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.add_productstorage": {
+        "category": "Warehouse",
+        "codename": "add_productstorage",
+        "content_type": "inventory.productstorage",
+        "id": 173,
+        "name": "Can add Product Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.add_storagelocation": {
+        "category": "Warehouse",
+        "codename": "add_storagelocation",
+        "content_type": "inventory.storagelocation",
+        "id": 157,
+        "name": "Can add Storage Location",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.change_box": {
+        "category": "Warehouse",
+        "codename": "change_box",
+        "content_type": "inventory.box",
+        "id": 166,
+        "name": "Can change Box",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.change_boxslot": {
+        "category": "Warehouse",
+        "codename": "change_boxslot",
+        "content_type": "inventory.boxslot",
+        "id": 170,
+        "name": "Can change Box Slot",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.change_boxstorage": {
+        "category": "Warehouse",
+        "codename": "change_boxstorage",
+        "content_type": "inventory.boxstorage",
+        "id": 178,
+        "name": "Can change Box Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.change_boxtype": {
+        "category": "Warehouse",
+        "codename": "change_boxtype",
+        "content_type": "inventory.boxtype",
+        "id": 162,
+        "name": "Can change Box Type",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.change_inventorymovement": {
+        "category": "Warehouse",
+        "codename": "change_inventorymovement",
+        "content_type": "inventory.inventorymovement",
+        "id": 182,
+        "name": "Can change Inventory Movement",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.change_productstorage": {
+        "category": "Warehouse",
+        "codename": "change_productstorage",
+        "content_type": "inventory.productstorage",
+        "id": 174,
+        "name": "Can change Product Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.change_storagelocation": {
+        "category": "Warehouse",
+        "codename": "change_storagelocation",
+        "content_type": "inventory.storagelocation",
+        "id": 158,
+        "name": "Can change Storage Location",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.delete_box": {
+        "category": "Warehouse",
+        "codename": "delete_box",
+        "content_type": "inventory.box",
+        "id": 167,
+        "name": "Can delete Box",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.delete_boxslot": {
+        "category": "Warehouse",
+        "codename": "delete_boxslot",
+        "content_type": "inventory.boxslot",
+        "id": 171,
+        "name": "Can delete Box Slot",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.delete_boxstorage": {
+        "category": "Warehouse",
+        "codename": "delete_boxstorage",
+        "content_type": "inventory.boxstorage",
+        "id": 179,
+        "name": "Can delete Box Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.delete_boxtype": {
+        "category": "Warehouse",
+        "codename": "delete_boxtype",
+        "content_type": "inventory.boxtype",
+        "id": 163,
+        "name": "Can delete Box Type",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.delete_inventorymovement": {
+        "category": "Warehouse",
+        "codename": "delete_inventorymovement",
+        "content_type": "inventory.inventorymovement",
+        "id": 183,
+        "name": "Can delete Inventory Movement",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.delete_productstorage": {
+        "category": "Warehouse",
+        "codename": "delete_productstorage",
+        "content_type": "inventory.productstorage",
+        "id": 175,
+        "name": "Can delete Product Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.delete_storagelocation": {
+        "category": "Warehouse",
+        "codename": "delete_storagelocation",
+        "content_type": "inventory.storagelocation",
+        "id": 159,
+        "name": "Can delete Storage Location",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.view_box": {
+        "category": "Warehouse",
+        "codename": "view_box",
+        "content_type": "inventory.box",
+        "id": 168,
+        "name": "Can view Box",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.view_boxslot": {
+        "category": "Warehouse",
+        "codename": "view_boxslot",
+        "content_type": "inventory.boxslot",
+        "id": 172,
+        "name": "Can view Box Slot",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.view_boxstorage": {
+        "category": "Warehouse",
+        "codename": "view_boxstorage",
+        "content_type": "inventory.boxstorage",
+        "id": 180,
+        "name": "Can view Box Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.view_boxtype": {
+        "category": "Warehouse",
+        "codename": "view_boxtype",
+        "content_type": "inventory.boxtype",
+        "id": 164,
+        "name": "Can view Box Type",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.view_inventorymovement": {
+        "category": "Warehouse",
+        "codename": "view_inventorymovement",
+        "content_type": "inventory.inventorymovement",
+        "id": 184,
+        "name": "Can view Inventory Movement",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.view_productstorage": {
+        "category": "Warehouse",
+        "codename": "view_productstorage",
+        "content_type": "inventory.productstorage",
+        "id": 176,
+        "name": "Can view Product Storage",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "inventory.view_storagelocation": {
+        "category": "Warehouse",
+        "codename": "view_storagelocation",
+        "content_type": "inventory.storagelocation",
+        "id": 160,
+        "name": "Can view Storage Location",
+        "order": 0,
+        "subcategory": "Inventory"
+    },
+    "monitoring.add_healthcheckresult": {
+        "category": "Others",
+        "codename": "add_healthcheckresult",
+        "content_type": "monitoring.healthcheckresult",
+        "id": 193,
+        "name": "Can add Health Check Result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "monitoring.change_healthcheckresult": {
+        "category": "Others",
+        "codename": "change_healthcheckresult",
+        "content_type": "monitoring.healthcheckresult",
+        "id": 194,
+        "name": "Can change Health Check Result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "monitoring.delete_healthcheckresult": {
+        "category": "Others",
+        "codename": "delete_healthcheckresult",
+        "content_type": "monitoring.healthcheckresult",
+        "id": 195,
+        "name": "Can delete Health Check Result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "monitoring.view_healthcheckresult": {
+        "category": "Others",
+        "codename": "view_healthcheckresult",
+        "content_type": "monitoring.healthcheckresult",
+        "id": 196,
+        "name": "Can view Health Check Result",
+        "order": 0,
+        "subcategory": ""
+    },
+    "production.add_mold": {
+        "category": "Production",
+        "codename": "add_mold",
+        "content_type": "production.mold",
+        "id": 237,
+        "name": "Can add Mold",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.add_moldproduct": {
+        "category": "Production",
+        "codename": "add_moldproduct",
+        "content_type": "production.moldproduct",
+        "id": 233,
+        "name": "Can add Mold Product",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.add_productionorder": {
+        "category": "Production",
+        "codename": "add_productionorder",
+        "content_type": "production.productionorder",
+        "id": 185,
+        "name": "Can add Production Order",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.add_productionorderitem": {
+        "category": "Production",
+        "codename": "add_productionorderitem",
+        "content_type": "production.productionorderitem",
+        "id": 189,
+        "name": "Can add Production Order Item",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.change_mold": {
+        "category": "Production",
+        "codename": "change_mold",
+        "content_type": "production.mold",
+        "id": 238,
+        "name": "Can change Mold",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.change_moldproduct": {
+        "category": "Production",
+        "codename": "change_moldproduct",
+        "content_type": "production.moldproduct",
+        "id": 234,
+        "name": "Can change Mold Product",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.change_productionorder": {
+        "category": "Production",
+        "codename": "change_productionorder",
+        "content_type": "production.productionorder",
+        "id": 186,
+        "name": "Can change Production Order",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.change_productionorderitem": {
+        "category": "Production",
+        "codename": "change_productionorderitem",
+        "content_type": "production.productionorderitem",
+        "id": 190,
+        "name": "Can change Production Order Item",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.delete_mold": {
+        "category": "Production",
+        "codename": "delete_mold",
+        "content_type": "production.mold",
+        "id": 239,
+        "name": "Can delete Mold",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.delete_moldproduct": {
+        "category": "Production",
+        "codename": "delete_moldproduct",
+        "content_type": "production.moldproduct",
+        "id": 235,
+        "name": "Can delete Mold Product",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.delete_productionorder": {
+        "category": "Production",
+        "codename": "delete_productionorder",
+        "content_type": "production.productionorder",
+        "id": 187,
+        "name": "Can delete Production Order",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.delete_productionorderitem": {
+        "category": "Production",
+        "codename": "delete_productionorderitem",
+        "content_type": "production.productionorderitem",
+        "id": 191,
+        "name": "Can delete Production Order Item",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.view_mold": {
+        "category": "Production",
+        "codename": "view_mold",
+        "content_type": "production.mold",
+        "id": 240,
+        "name": "Can view Mold",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.view_moldproduct": {
+        "category": "Production",
+        "codename": "view_moldproduct",
+        "content_type": "production.moldproduct",
+        "id": 236,
+        "name": "Can view Mold Product",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.view_productionorder": {
+        "category": "Production",
+        "codename": "view_productionorder",
+        "content_type": "production.productionorder",
+        "id": 188,
+        "name": "Can view Production Order",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "production.view_productionorderitem": {
+        "category": "Production",
+        "codename": "view_productionorderitem",
+        "content_type": "production.productionorderitem",
+        "id": 192,
+        "name": "Can view Production Order Item",
+        "order": 0,
+        "subcategory": "Manufacturing"
+    },
+    "products.add_fieldoverride": {
+        "category": "Warehouse",
+        "codename": "add_fieldoverride",
+        "content_type": "products.fieldoverride",
+        "id": 93,
+        "name": "Can add Field Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_imagesynclog": {
+        "category": "Warehouse",
+        "codename": "add_imagesynclog",
+        "content_type": "products.imagesynclog",
+        "id": 121,
+        "name": "Can add Image Sync Log",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_m2moverride": {
+        "category": "Warehouse",
+        "codename": "add_m2moverride",
+        "content_type": "products.m2moverride",
+        "id": 97,
+        "name": "Can add M2M Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_parentproduct": {
+        "category": "Warehouse",
+        "codename": "add_parentproduct",
+        "content_type": "products.parentproduct",
+        "id": 105,
+        "name": "Can add Parent Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_product": {
+        "category": "Warehouse",
+        "codename": "add_product",
+        "content_type": "products.product",
+        "id": 113,
+        "name": "Can add Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_productcategory": {
+        "category": "Warehouse",
+        "codename": "add_productcategory",
+        "content_type": "products.productcategory",
+        "id": 101,
+        "name": "Can add Product Category",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_productimage": {
+        "category": "Warehouse",
+        "codename": "add_productimage",
+        "content_type": "products.productimage",
+        "id": 117,
+        "name": "Can add Product Image",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_tag": {
+        "category": "Warehouse",
+        "codename": "add_tag",
+        "content_type": "products.tag",
+        "id": 89,
+        "name": "Can add Tag",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_unifiedproduct": {
+        "category": "Warehouse",
+        "codename": "add_unifiedproduct",
+        "content_type": "products.unifiedproduct",
+        "id": 125,
+        "name": "Can add Unified Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.add_variantproduct": {
+        "category": "Warehouse",
+        "codename": "add_variantproduct",
+        "content_type": "products.variantproduct",
+        "id": 109,
+        "name": "Can add Variant Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_fieldoverride": {
+        "category": "Warehouse",
+        "codename": "change_fieldoverride",
+        "content_type": "products.fieldoverride",
+        "id": 94,
+        "name": "Can change Field Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_imagesynclog": {
+        "category": "Warehouse",
+        "codename": "change_imagesynclog",
+        "content_type": "products.imagesynclog",
+        "id": 122,
+        "name": "Can change Image Sync Log",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_m2moverride": {
+        "category": "Warehouse",
+        "codename": "change_m2moverride",
+        "content_type": "products.m2moverride",
+        "id": 98,
+        "name": "Can change M2M Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_parentproduct": {
+        "category": "Warehouse",
+        "codename": "change_parentproduct",
+        "content_type": "products.parentproduct",
+        "id": 106,
+        "name": "Can change Parent Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_product": {
+        "category": "Warehouse",
+        "codename": "change_product",
+        "content_type": "products.product",
+        "id": 114,
+        "name": "Can change Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_productcategory": {
+        "category": "Warehouse",
+        "codename": "change_productcategory",
+        "content_type": "products.productcategory",
+        "id": 102,
+        "name": "Can change Product Category",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_productimage": {
+        "category": "Warehouse",
+        "codename": "change_productimage",
+        "content_type": "products.productimage",
+        "id": 118,
+        "name": "Can change Product Image",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_tag": {
+        "category": "Warehouse",
+        "codename": "change_tag",
+        "content_type": "products.tag",
+        "id": 90,
+        "name": "Can change Tag",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_unifiedproduct": {
+        "category": "Warehouse",
+        "codename": "change_unifiedproduct",
+        "content_type": "products.unifiedproduct",
+        "id": 126,
+        "name": "Can change Unified Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.change_variantproduct": {
+        "category": "Warehouse",
+        "codename": "change_variantproduct",
+        "content_type": "products.variantproduct",
+        "id": 110,
+        "name": "Can change Variant Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_fieldoverride": {
+        "category": "Warehouse",
+        "codename": "delete_fieldoverride",
+        "content_type": "products.fieldoverride",
+        "id": 95,
+        "name": "Can delete Field Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_imagesynclog": {
+        "category": "Warehouse",
+        "codename": "delete_imagesynclog",
+        "content_type": "products.imagesynclog",
+        "id": 123,
+        "name": "Can delete Image Sync Log",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_m2moverride": {
+        "category": "Warehouse",
+        "codename": "delete_m2moverride",
+        "content_type": "products.m2moverride",
+        "id": 99,
+        "name": "Can delete M2M Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_parentproduct": {
+        "category": "Warehouse",
+        "codename": "delete_parentproduct",
+        "content_type": "products.parentproduct",
+        "id": 107,
+        "name": "Can delete Parent Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_product": {
+        "category": "Warehouse",
+        "codename": "delete_product",
+        "content_type": "products.product",
+        "id": 115,
+        "name": "Can delete Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_productcategory": {
+        "category": "Warehouse",
+        "codename": "delete_productcategory",
+        "content_type": "products.productcategory",
+        "id": 103,
+        "name": "Can delete Product Category",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_productimage": {
+        "category": "Warehouse",
+        "codename": "delete_productimage",
+        "content_type": "products.productimage",
+        "id": 119,
+        "name": "Can delete Product Image",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_tag": {
+        "category": "Warehouse",
+        "codename": "delete_tag",
+        "content_type": "products.tag",
+        "id": 91,
+        "name": "Can delete Tag",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_unifiedproduct": {
+        "category": "Warehouse",
+        "codename": "delete_unifiedproduct",
+        "content_type": "products.unifiedproduct",
+        "id": 127,
+        "name": "Can delete Unified Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.delete_variantproduct": {
+        "category": "Warehouse",
+        "codename": "delete_variantproduct",
+        "content_type": "products.variantproduct",
+        "id": 111,
+        "name": "Can delete Variant Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_fieldoverride": {
+        "category": "Warehouse",
+        "codename": "view_fieldoverride",
+        "content_type": "products.fieldoverride",
+        "id": 96,
+        "name": "Can view Field Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_imagesynclog": {
+        "category": "Warehouse",
+        "codename": "view_imagesynclog",
+        "content_type": "products.imagesynclog",
+        "id": 124,
+        "name": "Can view Image Sync Log",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_m2moverride": {
+        "category": "Warehouse",
+        "codename": "view_m2moverride",
+        "content_type": "products.m2moverride",
+        "id": 100,
+        "name": "Can view M2M Override",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_parentproduct": {
+        "category": "Warehouse",
+        "codename": "view_parentproduct",
+        "content_type": "products.parentproduct",
+        "id": 108,
+        "name": "Can view Parent Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_product": {
+        "category": "Warehouse",
+        "codename": "view_product",
+        "content_type": "products.product",
+        "id": 116,
+        "name": "Can view Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_productcategory": {
+        "category": "Warehouse",
+        "codename": "view_productcategory",
+        "content_type": "products.productcategory",
+        "id": 104,
+        "name": "Can view Product Category",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_productimage": {
+        "category": "Warehouse",
+        "codename": "view_productimage",
+        "content_type": "products.productimage",
+        "id": 120,
+        "name": "Can view Product Image",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_tag": {
+        "category": "Warehouse",
+        "codename": "view_tag",
+        "content_type": "products.tag",
+        "id": 92,
+        "name": "Can view Tag",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_unifiedproduct": {
+        "category": "Warehouse",
+        "codename": "view_unifiedproduct",
+        "content_type": "products.unifiedproduct",
+        "id": 128,
+        "name": "Can view Unified Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "products.view_variantproduct": {
+        "category": "Warehouse",
+        "codename": "view_variantproduct",
+        "content_type": "products.variantproduct",
+        "id": 112,
+        "name": "Can view Variant Product",
+        "order": 0,
+        "subcategory": "Product"
+    },
+    "sales.add_address": {
+        "category": "Others",
+        "codename": "add_address",
+        "content_type": "sales.address",
+        "id": 133,
+        "name": "Can add Address",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.add_customer": {
+        "category": "Others",
+        "codename": "add_customer",
+        "content_type": "sales.customer",
+        "id": 129,
+        "name": "Can add Customer",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.add_paymentmethod": {
+        "category": "Others",
+        "codename": "add_paymentmethod",
+        "content_type": "sales.paymentmethod",
+        "id": 141,
+        "name": "Can add Payment Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.add_paymentterms": {
+        "category": "Others",
+        "codename": "add_paymentterms",
+        "content_type": "sales.paymentterms",
+        "id": 137,
+        "name": "Can add Payment Terms",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.add_salesrecord": {
+        "category": "Others",
+        "codename": "add_salesrecord",
+        "content_type": "sales.salesrecord",
+        "id": 149,
+        "name": "Can add Sales Record",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.add_salesrecorditem": {
+        "category": "Others",
+        "codename": "add_salesrecorditem",
+        "content_type": "sales.salesrecorditem",
+        "id": 153,
+        "name": "Can add Sales Record Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.add_shippingmethod": {
+        "category": "Others",
+        "codename": "add_shippingmethod",
+        "content_type": "sales.shippingmethod",
+        "id": 145,
+        "name": "Can add Shipping Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.change_address": {
+        "category": "Others",
+        "codename": "change_address",
+        "content_type": "sales.address",
+        "id": 134,
+        "name": "Can change Address",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.change_customer": {
+        "category": "Others",
+        "codename": "change_customer",
+        "content_type": "sales.customer",
+        "id": 130,
+        "name": "Can change Customer",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.change_paymentmethod": {
+        "category": "Others",
+        "codename": "change_paymentmethod",
+        "content_type": "sales.paymentmethod",
+        "id": 142,
+        "name": "Can change Payment Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.change_paymentterms": {
+        "category": "Others",
+        "codename": "change_paymentterms",
+        "content_type": "sales.paymentterms",
+        "id": 138,
+        "name": "Can change Payment Terms",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.change_salesrecord": {
+        "category": "Others",
+        "codename": "change_salesrecord",
+        "content_type": "sales.salesrecord",
+        "id": 150,
+        "name": "Can change Sales Record",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.change_salesrecorditem": {
+        "category": "Others",
+        "codename": "change_salesrecorditem",
+        "content_type": "sales.salesrecorditem",
+        "id": 154,
+        "name": "Can change Sales Record Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.change_shippingmethod": {
+        "category": "Others",
+        "codename": "change_shippingmethod",
+        "content_type": "sales.shippingmethod",
+        "id": 146,
+        "name": "Can change Shipping Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.delete_address": {
+        "category": "Others",
+        "codename": "delete_address",
+        "content_type": "sales.address",
+        "id": 135,
+        "name": "Can delete Address",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.delete_customer": {
+        "category": "Others",
+        "codename": "delete_customer",
+        "content_type": "sales.customer",
+        "id": 131,
+        "name": "Can delete Customer",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.delete_paymentmethod": {
+        "category": "Others",
+        "codename": "delete_paymentmethod",
+        "content_type": "sales.paymentmethod",
+        "id": 143,
+        "name": "Can delete Payment Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.delete_paymentterms": {
+        "category": "Others",
+        "codename": "delete_paymentterms",
+        "content_type": "sales.paymentterms",
+        "id": 139,
+        "name": "Can delete Payment Terms",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.delete_salesrecord": {
+        "category": "Others",
+        "codename": "delete_salesrecord",
+        "content_type": "sales.salesrecord",
+        "id": 151,
+        "name": "Can delete Sales Record",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.delete_salesrecorditem": {
+        "category": "Others",
+        "codename": "delete_salesrecorditem",
+        "content_type": "sales.salesrecorditem",
+        "id": 155,
+        "name": "Can delete Sales Record Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.delete_shippingmethod": {
+        "category": "Others",
+        "codename": "delete_shippingmethod",
+        "content_type": "sales.shippingmethod",
+        "id": 147,
+        "name": "Can delete Shipping Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.view_address": {
+        "category": "Others",
+        "codename": "view_address",
+        "content_type": "sales.address",
+        "id": 136,
+        "name": "Can view Address",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.view_customer": {
+        "category": "Others",
+        "codename": "view_customer",
+        "content_type": "sales.customer",
+        "id": 132,
+        "name": "Can view Customer",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.view_paymentmethod": {
+        "category": "Others",
+        "codename": "view_paymentmethod",
+        "content_type": "sales.paymentmethod",
+        "id": 144,
+        "name": "Can view Payment Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.view_paymentterms": {
+        "category": "Others",
+        "codename": "view_paymentterms",
+        "content_type": "sales.paymentterms",
+        "id": 140,
+        "name": "Can view Payment Terms",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.view_salesrecord": {
+        "category": "Others",
+        "codename": "view_salesrecord",
+        "content_type": "sales.salesrecord",
+        "id": 152,
+        "name": "Can view Sales Record",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.view_salesrecorditem": {
+        "category": "Others",
+        "codename": "view_salesrecorditem",
+        "content_type": "sales.salesrecorditem",
+        "id": 156,
+        "name": "Can view Sales Record Item",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sales.view_shippingmethod": {
+        "category": "Others",
+        "codename": "view_shippingmethod",
+        "content_type": "sales.shippingmethod",
+        "id": 148,
+        "name": "Can view Shipping Method",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sessions.add_session": {
+        "category": "Others",
+        "codename": "add_session",
+        "content_type": "sessions.session",
+        "id": 21,
+        "name": "Can add session",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sessions.change_session": {
+        "category": "Others",
+        "codename": "change_session",
+        "content_type": "sessions.session",
+        "id": 22,
+        "name": "Can change session",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sessions.delete_session": {
+        "category": "Others",
+        "codename": "delete_session",
+        "content_type": "sessions.session",
+        "id": 23,
+        "name": "Can delete session",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sessions.view_session": {
+        "category": "Others",
+        "codename": "view_session",
+        "content_type": "sessions.session",
+        "id": 24,
+        "name": "Can view session",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.add_synclog": {
+        "category": "Others",
+        "codename": "add_synclog",
+        "content_type": "sync.synclog",
+        "id": 213,
+        "name": "Can add sync log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.add_synclogdetail": {
+        "category": "Others",
+        "codename": "add_synclogdetail",
+        "content_type": "sync.synclogdetail",
+        "id": 217,
+        "name": "Can add sync log detail",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.add_syncmapping": {
+        "category": "Others",
+        "codename": "add_syncmapping",
+        "content_type": "sync.syncmapping",
+        "id": 205,
+        "name": "Can add sync mapping",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.add_syncsource": {
+        "category": "Others",
+        "codename": "add_syncsource",
+        "content_type": "sync.syncsource",
+        "id": 197,
+        "name": "Can add sync source",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.add_syncstate": {
+        "category": "Others",
+        "codename": "add_syncstate",
+        "content_type": "sync.syncstate",
+        "id": 209,
+        "name": "Can add sync state",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.add_synctarget": {
+        "category": "Others",
+        "codename": "add_synctarget",
+        "content_type": "sync.synctarget",
+        "id": 201,
+        "name": "Can add sync target",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.change_synclog": {
+        "category": "Others",
+        "codename": "change_synclog",
+        "content_type": "sync.synclog",
+        "id": 214,
+        "name": "Can change sync log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.change_synclogdetail": {
+        "category": "Others",
+        "codename": "change_synclogdetail",
+        "content_type": "sync.synclogdetail",
+        "id": 218,
+        "name": "Can change sync log detail",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.change_syncmapping": {
+        "category": "Others",
+        "codename": "change_syncmapping",
+        "content_type": "sync.syncmapping",
+        "id": 206,
+        "name": "Can change sync mapping",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.change_syncsource": {
+        "category": "Others",
+        "codename": "change_syncsource",
+        "content_type": "sync.syncsource",
+        "id": 198,
+        "name": "Can change sync source",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.change_syncstate": {
+        "category": "Others",
+        "codename": "change_syncstate",
+        "content_type": "sync.syncstate",
+        "id": 210,
+        "name": "Can change sync state",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.change_synctarget": {
+        "category": "Others",
+        "codename": "change_synctarget",
+        "content_type": "sync.synctarget",
+        "id": 202,
+        "name": "Can change sync target",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.delete_synclog": {
+        "category": "Others",
+        "codename": "delete_synclog",
+        "content_type": "sync.synclog",
+        "id": 215,
+        "name": "Can delete sync log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.delete_synclogdetail": {
+        "category": "Others",
+        "codename": "delete_synclogdetail",
+        "content_type": "sync.synclogdetail",
+        "id": 219,
+        "name": "Can delete sync log detail",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.delete_syncmapping": {
+        "category": "Others",
+        "codename": "delete_syncmapping",
+        "content_type": "sync.syncmapping",
+        "id": 207,
+        "name": "Can delete sync mapping",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.delete_syncsource": {
+        "category": "Others",
+        "codename": "delete_syncsource",
+        "content_type": "sync.syncsource",
+        "id": 199,
+        "name": "Can delete sync source",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.delete_syncstate": {
+        "category": "Others",
+        "codename": "delete_syncstate",
+        "content_type": "sync.syncstate",
+        "id": 211,
+        "name": "Can delete sync state",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.delete_synctarget": {
+        "category": "Others",
+        "codename": "delete_synctarget",
+        "content_type": "sync.synctarget",
+        "id": 203,
+        "name": "Can delete sync target",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.view_synclog": {
+        "category": "Others",
+        "codename": "view_synclog",
+        "content_type": "sync.synclog",
+        "id": 216,
+        "name": "Can view sync log",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.view_synclogdetail": {
+        "category": "Others",
+        "codename": "view_synclogdetail",
+        "content_type": "sync.synclogdetail",
+        "id": 220,
+        "name": "Can view sync log detail",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.view_syncmapping": {
+        "category": "Others",
+        "codename": "view_syncmapping",
+        "content_type": "sync.syncmapping",
+        "id": 208,
+        "name": "Can view sync mapping",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.view_syncsource": {
+        "category": "Others",
+        "codename": "view_syncsource",
+        "content_type": "sync.syncsource",
+        "id": 200,
+        "name": "Can view sync source",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.view_syncstate": {
+        "category": "Others",
+        "codename": "view_syncstate",
+        "content_type": "sync.syncstate",
+        "id": 212,
+        "name": "Can view sync state",
+        "order": 0,
+        "subcategory": ""
+    },
+    "sync.view_synctarget": {
+        "category": "Others",
+        "codename": "view_synctarget",
+        "content_type": "sync.synctarget",
+        "id": 204,
+        "name": "Can view sync target",
+        "order": 0,
+        "subcategory": ""
+    },
+    "users.add_datapermission": {
+        "category": "Users & Access",
+        "codename": "add_datapermission",
+        "content_type": "users.datapermission",
+        "id": 77,
+        "name": "Can add data permission",
+        "order": 0,
+        "subcategory": "Data Access Control"
+    },
+    "users.add_permissioncategory": {
+        "category": "Users & Access",
+        "codename": "add_permissioncategory",
+        "content_type": "users.permissioncategory",
+        "id": 69,
+        "name": "Can add permission category",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.add_permissioncategoryitem": {
+        "category": "Users & Access",
+        "codename": "add_permissioncategoryitem",
+        "content_type": "users.permissioncategoryitem",
+        "id": 73,
+        "name": "Can add permission category item",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.add_role": {
+        "category": "Users & Access",
+        "codename": "add_role",
+        "content_type": "users.role",
+        "id": 65,
+        "name": "Can add role",
+        "order": 0,
+        "subcategory": "Role Management"
+    },
+    "users.add_userprofile": {
+        "category": "Users & Access",
+        "codename": "add_userprofile",
+        "content_type": "users.userprofile",
+        "id": 61,
+        "name": "Can add user profile",
+        "order": 0,
+        "subcategory": "User Management"
+    },
+    "users.change_datapermission": {
+        "category": "Users & Access",
+        "codename": "change_datapermission",
+        "content_type": "users.datapermission",
+        "id": 78,
+        "name": "Can change data permission",
+        "order": 0,
+        "subcategory": "Data Access Control"
+    },
+    "users.change_permissioncategory": {
+        "category": "Users & Access",
+        "codename": "change_permissioncategory",
+        "content_type": "users.permissioncategory",
+        "id": 70,
+        "name": "Can change permission category",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.change_permissioncategoryitem": {
+        "category": "Users & Access",
+        "codename": "change_permissioncategoryitem",
+        "content_type": "users.permissioncategoryitem",
+        "id": 74,
+        "name": "Can change permission category item",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.change_role": {
+        "category": "Users & Access",
+        "codename": "change_role",
+        "content_type": "users.role",
+        "id": 66,
+        "name": "Can change role",
+        "order": 0,
+        "subcategory": "Role Management"
+    },
+    "users.change_userprofile": {
+        "category": "Users & Access",
+        "codename": "change_userprofile",
+        "content_type": "users.userprofile",
+        "id": 62,
+        "name": "Can change user profile",
+        "order": 0,
+        "subcategory": "User Management"
+    },
+    "users.delete_datapermission": {
+        "category": "Users & Access",
+        "codename": "delete_datapermission",
+        "content_type": "users.datapermission",
+        "id": 79,
+        "name": "Can delete data permission",
+        "order": 0,
+        "subcategory": "Data Access Control"
+    },
+    "users.delete_permissioncategory": {
+        "category": "Users & Access",
+        "codename": "delete_permissioncategory",
+        "content_type": "users.permissioncategory",
+        "id": 71,
+        "name": "Can delete permission category",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.delete_permissioncategoryitem": {
+        "category": "Users & Access",
+        "codename": "delete_permissioncategoryitem",
+        "content_type": "users.permissioncategoryitem",
+        "id": 75,
+        "name": "Can delete permission category item",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.delete_role": {
+        "category": "Users & Access",
+        "codename": "delete_role",
+        "content_type": "users.role",
+        "id": 67,
+        "name": "Can delete role",
+        "order": 0,
+        "subcategory": "Role Management"
+    },
+    "users.delete_userprofile": {
+        "category": "Users & Access",
+        "codename": "delete_userprofile",
+        "content_type": "users.userprofile",
+        "id": 63,
+        "name": "Can delete user profile",
+        "order": 0,
+        "subcategory": "User Management"
+    },
+    "users.view_datapermission": {
+        "category": "Users & Access",
+        "codename": "view_datapermission",
+        "content_type": "users.datapermission",
+        "id": 80,
+        "name": "Can view data permission",
+        "order": 0,
+        "subcategory": "Data Access Control"
+    },
+    "users.view_permissioncategory": {
+        "category": "Users & Access",
+        "codename": "view_permissioncategory",
+        "content_type": "users.permissioncategory",
+        "id": 72,
+        "name": "Can view permission category",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.view_permissioncategoryitem": {
+        "category": "Users & Access",
+        "codename": "view_permissioncategoryitem",
+        "content_type": "users.permissioncategoryitem",
+        "id": 76,
+        "name": "Can view permission category item",
+        "order": 0,
+        "subcategory": "Permission Management"
+    },
+    "users.view_role": {
+        "category": "Users & Access",
+        "codename": "view_role",
+        "content_type": "users.role",
+        "id": 68,
+        "name": "Can view role",
+        "order": 0,
+        "subcategory": "Role Management"
+    },
+    "users.view_userprofile": {
+        "category": "Users & Access",
+        "codename": "view_userprofile",
+        "content_type": "users.userprofile",
+        "id": 64,
+        "name": "Can view user profile",
+        "order": 0,
+        "subcategory": "User Management"
+    }
+}

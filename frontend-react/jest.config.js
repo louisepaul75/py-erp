@@ -18,15 +18,13 @@ const config = {
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: 'tsconfig.jest.json',
-      useESM: true
     }],
     '^.+\\.(js|jsx)$': ['ts-jest', {
       tsconfig: 'tsconfig.jest.json',
-      useESM: true
     }]
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!jest-fuzz)',
+    '/node_modules/(?!jest-fuzz|ky/)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   collectCoverageFrom: [

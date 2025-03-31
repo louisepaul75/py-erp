@@ -42,11 +42,12 @@ DATABASES = {
 }
 
 # Configure migrations for tests
-MIGRATION_MODULES = {}  # Empty dictionary for migrations
+# MIGRATION_MODULES = {}  # Empty dictionary for migrations - Commented out to allow normal migrations
 
 # Disable transaction management for tests to avoid SQLite issues
 DATABASE_ROUTERS = []
-TEST_NON_SERIALIZED_APPS = []
+# Add 'pyerp.sync' to prevent serialization issues during test setup
+TEST_NON_SERIALIZED_APPS = ['pyerp.sync']
 
 # Configure URL patterns for tests
 ROOT_URLCONF = 'pyerp.urls'

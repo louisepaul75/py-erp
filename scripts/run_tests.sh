@@ -138,7 +138,8 @@ if [ "$TEST_GROUP" = "ui" ]; then
   
   # Run tests with prepared options
   echo "Running Jest tests with options: $JEST_OPTS"
-  npm test -- $JEST_OPTS
+  # Add --runInBand to potentially fix worker issues
+  npm test -- $JEST_OPTS --runInBand
   
   # Copy test results to the expected location for the CI pipeline
   if [ "$COVERAGE" = true ]; then

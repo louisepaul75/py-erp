@@ -130,7 +130,8 @@ class Command(BaseCommand):
 
                     self.stdout.write(
                         f"Processed {sync_log.records_processed} records, "
-                        f"succeeded {sync_log.records_succeeded}, "
+                        f"created {sync_log.records_created}, "
+                        f"updated {sync_log.records_updated}, "
                         f"failed {sync_log.records_failed}"
                     )
 

@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom';
 import * as React from 'react';
+import fetchMock from 'jest-fetch-mock';
+
+// Enable fetch mocks globally
+fetchMock.enableMocks();
 
 // Add polyfills for TextEncoder and TextDecoder
 // This is needed for JSDOM in some tests
@@ -57,39 +61,6 @@ jest.mock('next/image', () => ({
     return React.createElement('img', { ...props });
   },
 }));
-
-// Mock ky
-jest.mock('ky', () => {
-  interface MockKy {
-    extend: jest.Mock;
-    post: jest.Mock;
-    get: jest.Mock;
-    put: jest.Mock;
-    delete: jest.Mock;
-    create: jest.Mock;
-  }
-
-  const mockKy: MockKy = {
-    extend: jest.fn(),
-    post: jest.fn(),
-    get: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-    create: jest.fn(() => mockKy),
-  };
-  return {
-    __esModule: true,
-    default: mockKy,
-  };
-});
-
-// Mock fetch API
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({ status: 'ok', branch: 'main' }),
-  })
-) as jest.Mock;
 
 // Mock i18next
 const mockI18n = {

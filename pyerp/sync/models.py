@@ -74,6 +74,8 @@ class SyncState(models.Model):
 class SyncLog(models.Model):
     """Logs synchronization operations (using the legacy structure)."""
 
+    id = models.BigAutoField(primary_key=True)  # Explicitly define the PK
+
     # Fields matching legacy_sync_synclog / audit_synclog structure
     entity_type = models.CharField(max_length=100, blank=True)
     status = models.CharField(max_length=50, default='unknown')
@@ -89,7 +91,8 @@ class SyncLog(models.Model):
     # Removed STATUS_CHOICES if they differ significantly from legacy data
 
     class Meta:
-        db_table = 'audit_synclog'
+        # db_table = 'audit_synclog' # Removed to use default table name 'sync_synclog'
+        pass # Add pass if Meta class becomes empty
 
     def __str__(self):
         # Updated str representation
