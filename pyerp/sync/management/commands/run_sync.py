@@ -124,7 +124,8 @@ class Command(BaseCommand):
 
                 self.stdout.write("\nStatistics:")
                 self.stdout.write(f"  Processed: {sync_log.records_processed}")
-                self.stdout.write(f"  Succeeded: {sync_log.records_succeeded}")
+                self.stdout.write(f"  Created: {sync_log.records_created}")
+                self.stdout.write(f"  Updated: {sync_log.records_updated}")
                 self.stdout.write(f"  Failed: {sync_log.records_failed}")
 
                 if sync_log.error_message:
