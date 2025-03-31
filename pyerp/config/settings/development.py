@@ -245,4 +245,13 @@ Some endpoints might appear duplicated in this documentation - always prefer the
     'SCHEMA_PATH_PREFIX': r'/api/',
     'SCHEMA_PATH_PREFIX_INCLUDE': [r'/api/v1/'],
     'SCHEMA_PATH_PREFIX_EXCLUDE': [],
+    # Add table of contents and search functionality
+    'SWAGGER_UI_SETTINGS': {
+        'docExpansion': 'list',
+        'filter': True,
+        'deepLinking': True,
+    },
+    # Add tag sorting for better organization
+    'TAGS_SORTER': 'alpha',
+    'OPERATIONS_SORTER': 'alpha',
 }
