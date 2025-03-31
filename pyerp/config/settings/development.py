@@ -22,6 +22,7 @@ except ImportError:
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
+DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Prevent Django from automatically appending trailing slashes to URLs
 # This fixes issues with PATCH requests where the browser might strip the trailing slash
@@ -226,3 +227,31 @@ REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [  # noqa
 CELERY_TASK_ALWAYS_EAGER = (
     os.environ.get("CELERY_TASK_ALWAYS_EAGER", "True").lower() == "true"
 )
+
+# Override Spectacular settings to only show v1 endpoints
+SPECTACULAR_SETTINGS = {
+    **SPECTACULAR_SETTINGS,
+    'TITLE': 'pyERP API (v1)',
+    'DESCRIPTION': """
+## API Versioning Notice
+
+**IMPORTANT:** This API supports both versioned (/api/v1/...) and non-versioned (/api/...) endpoints. 
+
+⚠️ **Please use only versioned endpoints (/api/v1/...) for all new integrations.**
+
+Non-versioned endpoints are maintained for backward compatibility but may be removed in future releases. 
+Some endpoints might appear duplicated in this documentation - always prefer the versioned variant.
+    """,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'SCHEMA_PATH_PREFIX_INCLUDE': [r'/api/v1/'],
+    'SCHEMA_PATH_PREFIX_EXCLUDE': [],
+    # Add table of contents and search functionality
+    'SWAGGER_UI_SETTINGS': {
+        'docExpansion': 'list',
+        'filter': True,
+        'deepLinking': True,
+    },
+    # Add tag sorting for better organization
+    'TAGS_SORTER': 'alpha',
+    'OPERATIONS_SORTER': 'alpha',
+}

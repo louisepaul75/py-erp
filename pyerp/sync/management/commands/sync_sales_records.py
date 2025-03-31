@@ -357,7 +357,8 @@ class Command(BaseCommand):
 
             # Initialize counters
             records_processed = 0
-            records_succeeded = 0
+            records_created = 0
+            records_updated = 0
             records_failed = 0
             synced_ids = []
 
@@ -474,7 +475,7 @@ class Command(BaseCommand):
 
                                 # Handle LoadResult object
                                 if result.created > 0 or result.updated > 0:
-                                    records_succeeded += 1
+                                    records_created += 1
 
                                     # Get AbsNr safely
                                     if isinstance(record, dict) and "AbsNr" in record:
@@ -823,7 +824,8 @@ class Command(BaseCommand):
                                                     )
 
                                             if result.created > 0 or result.updated > 0:
-                                                records_succeeded += 1
+                                                records_created += 1
+                                                records_updated += 1
 
                                                 # Log detail
                                                 SyncLogDetail.objects.create(
@@ -883,18 +885,20 @@ class Command(BaseCommand):
             # Update sync log
             sync_log.status = "completed"
             sync_log.records_processed = records_processed
-            sync_log.records_succeeded = records_succeeded
+            sync_log.records_created = records_created
+            sync_log.records_updated = records_updated
             sync_log.records_failed = records_failed
             sync_log.save()
 
             self.stdout.write(
-                f"Sync completed for {component}: {records_succeeded} succeeded, {records_failed} failed"
+                f"Sync completed for {component}: {records_created + records_updated} succeeded ({records_created} created, {records_updated} updated), {records_failed} failed"
             )
 
             return {
                 "status": "success",
                 "records_processed": records_processed,
-                "records_succeeded": records_succeeded,
+                "records_created": records_created,
+                "records_updated": records_updated,
                 "records_failed": records_failed,
                 "synced_ids": synced_ids,
             }

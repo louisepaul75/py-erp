@@ -159,8 +159,9 @@ docutils==0.21.2
     # via
     #   sphinx
     #   sphinx-rtd-theme
-drf-yasg==1.21.10
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+
+drf-spectacular==0.27.1
+    # via -r requirements.dev.in
 envier==0.6.1
     # via ddtrace
 executing==2.2.0

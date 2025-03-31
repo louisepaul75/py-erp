@@ -3,7 +3,8 @@
 from typing import Any, Dict, List, Optional, Type
 
 from django.utils import timezone
-from pyerp.utils.json_utils import json_serialize
+from django.db import connection
+from pyerp.utils.json_utils import DateTimeEncoder, json_serialize
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .extractors.base import BaseExtractor
@@ -65,11 +66,18 @@ class SyncPipeline:
         Returns:
             SyncLog: The sync log entry for this run
         """
-        # Create sync log entry
+        # Get the next available ID using MAX(id) + 1
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM audit_synclog")
+            next_id = cursor.fetchone()[0]
+
+        # Create sync log entry with explicit ID
+        start_time = timezone.now()
         self.sync_log = SyncLog.objects.create(
+            id=next_id,
             entity_type=self.mapping.entity_type,
             status="started",
-            started_at=timezone.now(),
+            started_at=start_time,
             records_processed=0,
             records_created=0,
             records_updated=0,
@@ -99,6 +107,27 @@ class SyncPipeline:
         )
 
         try:
+            # Update sync state
+            self.sync_state.update_sync_started()
+
+            # Build query parameters
+            params = query_params or {}
+            if incremental and self.sync_state.last_sync_time:
+                # Add timestamp filter for incremental sync
+                params["timestamp_filter"] = self.sync_state.last_sync_time
+
+            log_data_sync_event(
+                source=self.mapping.source.name,
+                destination=self.mapping.target.name,
+                record_count=0,
+                status="started",
+                details={
+                    "entity_type": self.mapping.entity_type,
+                    "incremental": incremental,
+                    "batch_size": batch_size,
+                },
+            )
+
             # Extract data
             with self.extractor:
                 source_data = self.extractor.extract(
@@ -119,15 +148,15 @@ class SyncPipeline:
 
             # Initialize counts before the loop
             self.sync_log.records_processed = 0
+            self.sync_log.records_created = 0
+            self.sync_log.records_updated = 0
             self.sync_log.records_failed = 0
-            self.sync_log.save(update_fields=[
-                'records_processed',
-                'records_failed'
-            ])
+            self.sync_log.save(update_fields=['records_processed', 'records_created', 'records_updated', 'records_failed'])
 
             # Process data in batches
             total_processed = 0
-            total_success = 0
+            total_created = 0
+            total_updated = 0
             total_failed = 0
 
             # Process all records in a single batch if batch_size is 0
@@ -137,16 +166,17 @@ class SyncPipeline:
             # Process data in batches
             for i in range(0, len(source_data), batch_size):
                 batch = source_data[i:i + batch_size]
-                success_count, failure_count = self._process_batch(batch)
+                created_count, updated_count, failure_count = self._process_batch(batch)
 
                 total_processed += len(batch)
-                total_success += success_count
+                total_created += created_count
+                total_updated += updated_count
                 total_failed += failure_count
 
                 # Update sync log with progress
                 self.sync_log.records_processed = total_processed
-                self.sync_log.records_created = total_success
-                self.sync_log.records_updated = 0
+                self.sync_log.records_created = total_created
+                self.sync_log.records_updated = total_updated
                 self.sync_log.records_failed = total_failed
                 self.sync_log.save()
 
@@ -154,15 +184,9 @@ class SyncPipeline:
             success = total_failed == 0
             self.sync_state.update_sync_completed(success=success)
 
-            # Update final sync log status
-            self.sync_log.status = (
-                "completed" if success else "completed_with_errors"
-            )
+            # Update final sync log status and completion time
+            self.sync_log.status = "completed" if success else "completed_with_errors"
             self.sync_log.completed_at = timezone.now()
-            self.sync_log.records_processed = total_processed
-            self.sync_log.records_created = total_success
-            self.sync_log.records_updated = 0
-            self.sync_log.records_failed = total_failed
             self.sync_log.save()
 
             log_data_sync_event(
@@ -172,7 +196,8 @@ class SyncPipeline:
                 status="completed",
                 details={
                     "entity_type": self.mapping.entity_type,
-                    "success_count": total_success,
+                    "created_count": total_created,
+                    "updated_count": total_updated,
                     "failure_count": total_failed,
                 },
             )
@@ -192,11 +217,7 @@ class SyncPipeline:
                 self.sync_log.status = "failed"
                 self.sync_log.error_message = error_msg
                 self.sync_log.completed_at = timezone.now()
-                
-                try:
-                    self.sync_log.save()
-                except Exception as save_error:
-                    logger.error(f"Error saving sync log: {save_error}")
+                self.sync_log.save()
             
             # Log the event
             log_data_sync_event(
@@ -220,9 +241,10 @@ class SyncPipeline:
             batch: List of records to process
 
         Returns:
-            tuple: (success_count, failure_count)
+            tuple: (created_count, updated_count, failure_count)
         """
-        success_count = 0
+        created_count = 0
+        updated_count = 0
         failure_count = 0
 
         try:
@@ -234,43 +256,17 @@ class SyncPipeline:
             
             # Process load results - LoadResult is an object, not a dictionary
             # Count the successes and failures
-            success_count = load_result.created + load_result.updated
+            created_count = load_result.created
+            updated_count = load_result.updated
             failure_count = load_result.errors
-            
-            # Create log entries for errors
-            # for error_detail in load_result.error_details:
-            #     SyncLogDetail.objects.create(
-            #         sync_log=self.sync_log,
-            #         record_id=str(
-            #             error_detail.get("record", {}).get("id", "unknown")
-            #         ),
-            #         status="failed",
-            #         error_message=error_detail.get("error", "Unknown error"),
-            #         record_data={
-            #             "source": self._clean_for_json(
-            #                 error_detail.get("record", {})
-            #             ),
-            #         },
-            #     )
 
         except Exception as e:
             # Log batch transformation failure
             error_msg = str(e)
             logger.error("Failed to transform batch: {}".format(error_msg))
-            for record in batch:
-                failure_count += 1
-                # cleaned_record = self._clean_for_json(record) # Unused
-                # SyncLogDetail.objects.create(
-                #     sync_log=self.sync_log,
-                #     record_id=record.get("id", str(record)),
-                #     status="failed",
-                #     error_message=(
-                #         f"Batch transformation failed: {error_msg}"
-                #     ),
-                #     record_data={"source": cleaned_record},
-                # )
+            failure_count = len(batch)
 
-        return success_count, failure_count
+        return created_count, updated_count, failure_count
 
     def _clean_for_json(self, data):
         """Clean data recursively to ensure it can be JSON serialized.
@@ -327,12 +323,13 @@ class PipelineFactory:
                     extractor_class or source_config.get("extractor_class")
                 )
 
-            # Merge source_config with mapping's extractor_config
-            merged_extractor_config = source_config.copy()
+            # Extract the inner config values from source_config
+            base_extractor_config = source_config.get("config", {})
+            merged_extractor_config = base_extractor_config.copy()  # Start with inner config values
+
+            # Merge with mapping's extractor_config if present
             if mapping_config and "extractor_config" in mapping_config:
-                merged_extractor_config.update(
-                    mapping_config["extractor_config"]
-                )
+                merged_extractor_config.update(mapping_config["extractor_config"])
 
             # Create the extractor using the merged config
             extractor = cls._create_component(
