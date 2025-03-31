@@ -16,7 +16,7 @@ services:
     env_file:
       - ../config/env/.env.prod
     environment:
-      - DJANGO_SETTINGS_MODULE=pyerp.settings.production
+      - DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
       - REDIS_URL=redis://localhost:6379/0
       # ELK stack configuration
       - ELASTICSEARCH_HOST=localhost
