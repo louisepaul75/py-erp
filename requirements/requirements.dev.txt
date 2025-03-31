@@ -8,7 +8,7 @@ alabaster==1.0.0
     # via sphinx
 amqp==5.3.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   kombu
 annotated-types==0.7.0
     # via pydantic
@@ -23,19 +23,22 @@ asgiref==3.8.1
 asttokens==3.0.0
     # via stack-data
 attrs==25.3.0
-    # via hypothesis
+    # via
+    #   hypothesis
+    #   jsonschema
+    #   referencing
 babel==2.17.0
     # via sphinx
 bandit[toml]==1.8.3
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 billiard==4.2.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
 black==25.1.0
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 boto3==1.37.22
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 botocore==1.37.22
     # via
     #   boto3
@@ -46,7 +49,7 @@ bytecode==0.16.1
     # via ddtrace
 celery==5.4.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-celery-beat
     #   django-celery-results
 certifi==2025.1.31
@@ -70,20 +73,20 @@ click==8.1.8
     #   mutmut
 click-didyoumean==0.3.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
 click-plugins==1.1.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
 click-repl==0.3.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
 coreapi==2.3.3
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
-    #   -r requirements.dev.in
+    #   -r requirements/requirements.dev.in
+    #   -r requirements/requirements.prod.in
 coreschema==0.0.4
     # via coreapi
 coverage[toml]==7.7.1
@@ -93,16 +96,16 @@ cron-descriptor==1.4.5
 cssselect2==0.8.0
     # via weasyprint
 ddtrace==3.3.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 decorator==5.2.1
     # via ipython
 deprecated==1.2.18
     # via opentelemetry-api
 dj-database-url==2.3.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django==5.1.7
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   dj-database-url
     #   django-allauth
     #   django-anymail
@@ -119,65 +122,64 @@ django==5.1.7
     #   django-timezone-field
     #   djangorestframework
     #   djangorestframework-simplejwt
-    #   drf-yasg
+    #   drf-spectacular
 django-allauth==65.6.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-anymail==12.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-browser-reload==1.18.0
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 django-celery-beat==2.7.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-celery-results==2.5.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-cors-headers==4.7.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-debug-toolbar==5.1.0
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 django-extensions==3.2.3
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 django-filter==25.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-guardian==2.4.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-redis==5.4.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-storages==1.14.5
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-timezone-field==7.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-celery-beat
 djangorestframework==3.15.2
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   djangorestframework-simplejwt
-    #   drf-yasg
+    #   drf-spectacular
 djangorestframework-simplejwt==5.5.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 docutils==0.21.2
     # via
     #   sphinx
     #   sphinx-rtd-theme
-
 drf-spectacular==0.27.1
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.prod.in
 envier==0.6.1
     # via ddtrace
 executing==2.2.0
     # via stack-data
 factory-boy==3.3.3
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 faker==37.1.0
     # via
-    #   -r requirements.dev.in
+    #   -r requirements/requirements.dev.in
     #   factory-boy
-flake8==7.1.2
-    # via -r requirements.dev.in
+flake8==7.2.0
+    # via -r requirements/requirements.dev.in
 fonttools[woff]==4.56.0
     # via weasyprint
 gunicorn==23.0.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 h11==0.14.0
     # via httpcore
 httpcore==0.16.3
@@ -185,7 +187,7 @@ httpcore==0.16.3
 httpx==0.23.3
     # via onepasswordconnectsdk
 hypothesis==6.130.5
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 idna==3.10
     # via
     #   anyio
@@ -197,16 +199,16 @@ importlib-metadata==8.6.1
     # via opentelemetry-api
 inflection==0.5.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
-    #   drf-yasg
+    #   -r requirements/requirements.prod.in
+    #   drf-spectacular
 iniconfig==2.1.0
     # via pytest
 ipython==9.0.2
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 ipython-pygments-lexers==1.1.1
     # via ipython
 isort==6.0.1
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 itypes==1.2.0
     # via coreapi
 jedi==0.19.2
@@ -219,11 +221,15 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
+jsonschema==4.23.0
+    # via drf-spectacular
+jsonschema-specifications==2024.10.1
+    # via jsonschema
 junit-xml==1.8
     # via mutmut
 kombu==5.5.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
 linkify-it-py==2.0.3
     # via markdown-it-py
@@ -243,9 +249,9 @@ mdit-py-plugins==0.4.2
 mdurl==0.1.2
     # via markdown-it-py
 mutmut==3.2.3
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 mypy==1.15.0
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 mypy-extensions==1.0.0
     # via
     #   black
@@ -253,18 +259,17 @@ mypy-extensions==1.0.0
 numpy==2.2.4
     # via pandas
 onepasswordconnectsdk==1.5.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 opentelemetry-api==1.31.1
     # via ddtrace
 packaging==24.2
     # via
     #   black
-    #   drf-yasg
     #   gunicorn
     #   pytest
     #   sphinx
 pandas==2.2.3
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 parso==0.8.4
     # via
     #   jedi
@@ -277,7 +282,7 @@ pexpect==4.9.0
     # via ipython
 pillow==11.1.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   reportlab
     #   weasyprint
 platformdirs==4.3.7
@@ -293,24 +298,24 @@ prompt-toolkit==3.0.50
 protobuf==6.30.2
     # via ddtrace
 psutil==7.0.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 psycopg2-binary==2.9.10
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pycodestyle==2.12.1
+pycodestyle==2.13.0
     # via flake8
 pycparser==2.22
     # via cffi
 pydantic==2.11.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 pydantic-core==2.33.0
     # via pydantic
 pydyf==0.11.0
     # via weasyprint
-pyflakes==3.2.0
+pyflakes==3.3.2
     # via flake8
 pygments==2.19.1
     # via
@@ -324,48 +329,51 @@ pyphen==0.17.2
     # via weasyprint
 pytest==8.3.5
     # via
-    #   -r requirements.dev.in
+    #   -r requirements/requirements.dev.in
     #   pytest-cov
     #   pytest-django
 pytest-cov==6.0.0
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 pytest-django==4.10.0
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 python-crontab==3.2.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-celery-beat
 python-dateutil==2.9.0.post0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   botocore
     #   celery
     #   onepasswordconnectsdk
     #   pandas
     #   python-crontab
 python-dotenv==1.1.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 python-json-logger==3.3.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 pytz==2025.2
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
-    #   drf-yasg
+    #   -r requirements/requirements.prod.in
     #   pandas
 pyyaml==6.0.2
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   bandit
-    #   drf-yasg
+    #   drf-spectacular
 redis==5.2.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-redis
+referencing==0.36.2
+    # via
+    #   jsonschema
+    #   jsonschema-specifications
 reportlab==4.3.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 requests==2.32.3
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   coreapi
     #   django-anymail
     #   sphinx
@@ -377,8 +385,12 @@ rich==13.9.4
     #   textual
 roman-numerals-py==3.1.0
     # via sphinx
+rpds-py==0.24.0
+    # via
+    #   jsonschema
+    #   referencing
 ruff==0.11.2
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 s3transfer==0.11.4
     # via boto3
 setproctitle==1.3.5
@@ -398,11 +410,11 @@ sortedcontainers==2.4.0
     # via hypothesis
 sphinx==8.2.3
     # via
-    #   -r requirements.dev.in
+    #   -r requirements/requirements.dev.in
     #   sphinx-rtd-theme
     #   sphinxcontrib-jquery
 sphinx-rtd-theme==3.0.2
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 sphinxcontrib-applehelp==2.0.0
     # via sphinx
 sphinxcontrib-devhelp==2.0.0
@@ -426,9 +438,9 @@ stack-data==0.6.3
 stevedore==5.4.1
     # via bandit
 structlog==25.2.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 tabulate==0.9.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 textual==3.0.0
     # via mutmut
 tinycss2==1.4.0
@@ -449,6 +461,7 @@ typing-extensions==4.13.0
     #   mypy
     #   pydantic
     #   pydantic-core
+    #   referencing
     #   textual
     #   typing-inspection
 typing-inspection==0.4.0
@@ -464,9 +477,9 @@ uc-micro-py==1.0.3
     # via linkify-it-py
 uritemplate==4.1.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   coreapi
-    #   drf-yasg
+    #   drf-spectacular
 urllib3==2.3.0
     # via
     #   botocore
@@ -474,23 +487,23 @@ urllib3==2.3.0
     #   requests
 vine==5.1.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   amqp
     #   celery
     #   kombu
 watchdog==6.0.0
-    # via -r requirements.dev.in
+    # via -r requirements/requirements.dev.in
 wcwidth==0.2.13
     # via prompt-toolkit
 weasyprint==65.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 webencodings==0.5.1
     # via
     #   cssselect2
     #   tinycss2
     #   tinyhtml5
 whitenoise==6.9.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 wrapt==1.17.2
     # via
     #   ddtrace
