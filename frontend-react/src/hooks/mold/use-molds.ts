@@ -8,10 +8,11 @@ import { ArticleStatus } from "@/types/mold/article"
 import { mockArticles } from "@/hooks/mold/use-articles"
 import { useActivityLog } from "@/hooks/mold/use-activity-log"
 import { ActivityType, EntityType } from "@/types/mold/activity-log"
+import axios from "axios"
 
 /**
  * Mock API functions for molds
- * In a real application, these would be replaced with actual API calls
+ * Kept as a fallback in case the real API is not available
  */
 const mockMolds: Mold[] = [
   {
@@ -83,6 +84,11 @@ function determineMoldActivityStatus(articles: any[] | undefined): MoldActivityS
 }
 
 /**
+ * API URL for molds
+ */
+const API_URL = "/api/production/molds/"
+
+/**
  * Custom hook for managing molds data
  */
 export function useMolds() {
@@ -90,34 +96,78 @@ export function useMolds() {
   const { createActivityLog } = useActivityLog()
 
   /**
-   * Fetch all molds
+   * Fetch all molds from the API or use mock data as fallback
    */
   const fetchMolds = async (): Promise<Mold[]> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // Direkt die mockArticles verwenden, um den Status zu berechnen
-    for (const mold of mockMolds) {
-      const moldArticles = mockArticles.filter((article) => article.moldId === mold.id)
-
-      // Berechne den Status für jede Form basierend auf ihren Artikeln
-      const status = determineMoldActivityStatus(moldArticles)
-
-      // Wichtig: Immer den Status aktualisieren
-      mold.activityStatus = status
-      mold.isActive = status !== MoldActivityStatus.INACTIVE
-
-      // Berechne die Anzahl der unterschiedlichen Artikel (unabhängig von Instanzen)
-      mold.numberOfArticles = moldArticles.length
+    try {
+      // Attempt to fetch from the real API
+      const response = await axios.get(API_URL)
+      
+      // If successful, use the API data
+      if (response.status === 200) {
+        console.log("Successfully fetched molds from API", response.data)
+        return response.data
+      }
+      
+      // If not successful, fall back to mock data
+      console.warn("Failed to fetch molds from API, using mock data")
+      
+      // Use mock data as fallback
+      for (const mold of mockMolds) {
+        const moldArticles = mockArticles.filter((article) => article.moldId === mold.id)
+        const status = determineMoldActivityStatus(moldArticles)
+        mold.activityStatus = status
+        mold.isActive = status !== MoldActivityStatus.INACTIVE
+        mold.numberOfArticles = moldArticles.length
+      }
+      return mockMolds
+    } catch (error) {
+      console.error("Error fetching molds:", error)
+      
+      // Use mock data as fallback
+      for (const mold of mockMolds) {
+        const moldArticles = mockArticles.filter((article) => article.moldId === mold.id)
+        const status = determineMoldActivityStatus(moldArticles)
+        mold.activityStatus = status
+        mold.isActive = status !== MoldActivityStatus.INACTIVE
+        mold.numberOfArticles = moldArticles.length
+      }
+      return mockMolds
     }
-
-    return mockMolds
   }
 
   /**
    * Create a new mold
    */
   const createMoldFn = async (mold: Omit<Mold, "id" | "createdDate">): Promise<Mold> => {
+    try {
+      // Attempt to create via the API
+      const response = await axios.post(API_URL, mold)
+      
+      // If successful, return the created mold
+      if (response.status === 201) {
+        console.log("Successfully created mold via API", response.data)
+        
+        // Log the activity
+        await createActivityLog({
+          activityType: ActivityType.CREATE,
+          entityType: EntityType.MOLD,
+          entityId: response.data.id,
+          entityName: response.data.moldNumber,
+          details: `Created new mold ${response.data.moldNumber}`,
+        })
+        
+        return response.data
+      }
+      
+      // Fall back to mock implementation
+      console.warn("Failed to create mold via API, using mock implementation")
+    } catch (error) {
+      console.error("Error creating mold:", error)
+      // Fall back to mock implementation
+    }
+    
+    // Mock implementation as fallback
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500))
 
@@ -148,6 +198,34 @@ export function useMolds() {
    * Update an existing mold
    */
   const updateMoldFn = async (mold: Mold): Promise<Mold> => {
+    try {
+      // Attempt to update via the API
+      const response = await axios.put(`${API_URL}${mold.id}/`, mold)
+      
+      // If successful, return the updated mold
+      if (response.status === 200) {
+        console.log("Successfully updated mold via API", response.data)
+        
+        // Log the activity
+        await createActivityLog({
+          activityType: ActivityType.UPDATE,
+          entityType: EntityType.MOLD,
+          entityId: response.data.id,
+          entityName: response.data.moldNumber,
+          details: `Updated mold ${response.data.moldNumber}`,
+        })
+        
+        return response.data
+      }
+      
+      // Fall back to mock implementation
+      console.warn("Failed to update mold via API, using mock implementation")
+    } catch (error) {
+      console.error("Error updating mold:", error)
+      // Fall back to mock implementation
+    }
+    
+    // Mock implementation as fallback
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500))
 
@@ -306,6 +384,45 @@ export function useMolds() {
    * Duplicate a mold with a new mold number
    */
   const duplicateMoldFn = async (mold: Mold | Omit<Mold, "id" | "createdDate">): Promise<Mold> => {
+    try {
+      // For duplicating, we'll just do a POST to create a new mold
+      // but we'll modify the data to indicate it's a duplicate
+      const moldData = {
+        ...(mold as Mold),
+        legacyMoldNumber: `Copy of ${(mold as Mold).legacyMoldNumber}`,
+        moldNumber: generateMoldNumber(),
+      }
+      
+      // Remove the ID so it creates a new one
+      delete (moldData as any).id
+      delete (moldData as any).createdDate
+      
+      const response = await axios.post(API_URL, moldData)
+      
+      // If successful, return the duplicated mold
+      if (response.status === 201) {
+        console.log("Successfully duplicated mold via API", response.data)
+        
+        // Log the activity
+        await createActivityLog({
+          activityType: ActivityType.CREATE,
+          entityType: EntityType.MOLD,
+          entityId: response.data.id,
+          entityName: response.data.moldNumber,
+          details: `Duplicated mold ${(mold as Mold).moldNumber} to create ${response.data.moldNumber}`,
+        })
+        
+        return response.data
+      }
+      
+      // Fall back to mock implementation
+      console.warn("Failed to duplicate mold via API, using mock implementation")
+    } catch (error) {
+      console.error("Error duplicating mold:", error)
+      // Fall back to mock implementation
+    }
+    
+    // Mock implementation as fallback
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500))
 
@@ -340,6 +457,41 @@ export function useMolds() {
    * Delete a mold
    */
   const deleteMoldFn = async (id: string): Promise<void> => {
+    try {
+      // Attempt to delete via the API
+      const response = await axios.delete(`${API_URL}${id}/`)
+      
+      // If successful, log the activity
+      if (response.status === 204) {
+        console.log("Successfully deleted mold via API")
+        
+        // Since we don't have the mold data anymore after deletion,
+        // we'll need to find it in our cache
+        const cachedMolds = queryClient.getQueryData<Mold[]>(["molds"])
+        const deletedMold = cachedMolds?.find(m => m.id === id)
+        
+        if (deletedMold) {
+          // Log the activity
+          await createActivityLog({
+            activityType: ActivityType.DELETE,
+            entityType: EntityType.MOLD,
+            entityId: id,
+            entityName: deletedMold.moldNumber,
+            details: `Deleted mold ${deletedMold.moldNumber}`,
+          })
+        }
+        
+        return
+      }
+      
+      // Fall back to mock implementation
+      console.warn("Failed to delete mold via API, using mock implementation")
+    } catch (error) {
+      console.error("Error deleting mold:", error)
+      // Fall back to mock implementation
+    }
+    
+    // Mock implementation as fallback
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500))
 

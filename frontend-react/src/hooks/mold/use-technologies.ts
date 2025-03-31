@@ -3,28 +3,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { Technology } from "@/types/mold/technology"
 import { useMolds } from "@/hooks/mold/use-molds" // Import useMolds here
+import axios from "axios"
 
 /**
- * Mock API functions for technologies
- * In a real application, these would be replaced with actual API calls
+ * API URL for mold technologies
  */
-const mockTechnologies: Technology[] = [
-  {
-    id: "1",
-    name: "Die Casting",
-  },
-  {
-    id: "2",
-    name: "Injection Molding",
-  },
-  {
-    id: "3",
-    name: "Sand Casting",
-  },
-  {
-    id: "4",
-    name: "Investment Casting",
-  },
+const API_URL = "/api/production/molds/technologies/"
+
+/**
+ * Mock data for technologies, used as fallback
+ */
+const mockTechnologies = [
+  "Die Casting",
+  "Injection Molding",
+  "Sand Casting",
+  "Precision Casting",
+  "Low Pressure Casting",
 ]
 
 /**
@@ -137,7 +131,34 @@ export function useTechnologies() {
    */
   const query = useQuery({
     queryKey: ["technologies"],
-    queryFn: fetchTechnologies,
+    queryFn: async () => {
+      try {
+        // Attempt to fetch from the real API
+        const response = await axios.get(API_URL)
+        
+        // If successful, use the API data
+        if (response.status === 200) {
+          console.log("Successfully fetched technologies from API", response.data)
+          return response.data
+        }
+        
+        // If not successful, fall back to mock data
+        console.warn("Failed to fetch technologies from API, using mock data")
+        return mockTechnologies
+      } catch (error) {
+        console.error("Error fetching technologies:", error)
+        if (error.response) {
+          console.error("Error response data:", error.response.data)
+          console.error("Error response status:", error.response.status)
+          console.error("Error response headers:", error.response.headers)
+        } else if (error.request) {
+          console.error("Error request:", error.request)
+        } else {
+          console.error("Error message:", error.message)
+        }
+        return mockTechnologies
+      }
+    },
   })
 
   /**

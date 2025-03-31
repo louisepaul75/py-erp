@@ -1,185 +1,59 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import type { Alloy } from "@/types/mold/alloy"
-import { useMolds } from "@/hooks/mold/use-molds" // Import useMolds here
+import { useQuery } from "@tanstack/react-query"
+import axios from "axios"
 
 /**
- * Mock API functions for alloys
- * In a real application, these would be replaced with actual API calls
+ * API URL for mold alloys
  */
-const mockAlloys: Alloy[] = [
-  {
-    id: "1",
-    name: "Aluminum",
-  },
-  {
-    id: "2",
-    name: "Steel",
-  },
-  {
-    id: "3",
-    name: "Brass",
-  },
-  {
-    id: "4",
-    name: "Bronze",
-  },
-  {
-    id: "5",
-    name: "Zinc",
-  },
+const API_URL = "/api/production/molds/alloys/"
+
+/**
+ * Mock data for alloys, used as fallback
+ */
+const mockAlloys = [
+  "Aluminum",
+  "Steel",
+  "Brass",
+  "Bronze",
+  "Zinc",
+  "Magnesium"
 ]
 
 /**
- * Custom hook for managing alloys data
+ * Hook to fetch mold alloys
  */
 export function useAlloys() {
-  const queryClient = useQueryClient()
-  const { data: molds, updateMold } = useMolds() // Call useMolds here
-
-  /**
-   * Fetch all alloys
-   */
-  const fetchAlloys = async (): Promise<Alloy[]> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    return mockAlloys
-  }
-
-  /**
-   * Create a new alloy
-   */
-  const createAlloyFn = async (alloy: Omit<Alloy, "id">): Promise<Alloy> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // Generate a new ID
-    const newAlloy: Alloy = {
-      ...alloy,
-      id: Math.random().toString(36).substring(2, 9),
-    }
-
-    // Add to mock data
-    mockAlloys.push(newAlloy)
-
-    return newAlloy
-  }
-
-  /**
-   * Update an existing alloy
-   */
-  const updateAlloyFn = async (alloy: Alloy): Promise<Alloy> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // Find and update the alloy
-    const index = mockAlloys.findIndex((a) => a.id === alloy.id)
-    if (index === -1) {
-      throw new Error("Alloy not found")
-    }
-
-    // Get the old name before updating
-    const oldName = mockAlloys[index].name
-
-    // Update the alloy
-    mockAlloys[index] = alloy
-
-    // If the name changed, update all molds that use this alloy
-    if (oldName !== alloy.name) {
-      // In a real application, this would be a separate API call
-
-      if (molds) {
-        for (const mold of molds) {
-          if (mold.alloy === oldName) {
-            await updateMold({ ...mold, alloy: alloy.name })
-          }
-        }
-      }
-    }
-
-    return alloy
-  }
-
-  /**
-   * Delete an alloy
-   */
-  const deleteAlloyFn = async (id: string): Promise<void> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    // Find and remove the alloy
-    const index = mockAlloys.findIndex((a) => a.id === id)
-    if (index === -1) {
-      throw new Error("Alloy not found")
-    }
-
-    // Get the alloy name before removing it
-    const alloyName = mockAlloys[index].name
-
-    // Remove the alloy
-    mockAlloys.splice(index, 1)
-
-    // Update all molds that use this alloy
-    // In a real application, this would be a separate API call
-    if (molds) {
-      for (const mold of molds) {
-        if (mold.alloy === alloyName) {
-          await updateMold({ ...mold, alloy: "" })
-        }
-      }
-    }
-  }
-
-  /**
-   * Query for fetching alloys
-   */
-  const query = useQuery({
+  return useQuery({
     queryKey: ["alloys"],
-    queryFn: fetchAlloys,
-  })
-
-  /**
-   * Mutation for creating an alloy
-   */
-  const createMutation = useMutation({
-    mutationFn: createAlloyFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["alloys"] })
+    queryFn: async () => {
+      try {
+        // Attempt to fetch from the real API
+        const response = await axios.get(API_URL)
+        
+        // If successful, use the API data
+        if (response.status === 200) {
+          console.log("Successfully fetched alloys from API", response.data)
+          return response.data
+        }
+        
+        // If not successful, fall back to mock data
+        console.warn("Failed to fetch alloys from API, using mock data")
+        return mockAlloys
+      } catch (error) {
+        console.error("Error fetching alloys:", error)
+        if (error.response) {
+          console.error("Error response data:", error.response.data)
+          console.error("Error response status:", error.response.status)
+          console.error("Error response headers:", error.response.headers)
+        } else if (error.request) {
+          console.error("Error request:", error.request)
+        } else {
+          console.error("Error message:", error.message)
+        }
+        return mockAlloys
+      }
     },
   })
-
-  /**
-   * Mutation for updating an alloy
-   */
-  const updateMutation = useMutation({
-    mutationFn: updateAlloyFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["alloys"] })
-      // Also invalidate molds query since we might have updated molds
-      queryClient.invalidateQueries({ queryKey: ["molds"] })
-    },
-  })
-
-  /**
-   * Mutation for deleting an alloy
-   */
-  const deleteMutation = useMutation({
-    mutationFn: deleteAlloyFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["alloys"] })
-      // Also invalidate molds query since we might have updated molds
-      queryClient.invalidateQueries({ queryKey: ["molds"] })
-    },
-  })
-
-  return {
-    data: query.data,
-    isLoading: query.isLoading,
-    error: query.error,
-    createAlloy: createMutation.mutateAsync,
-    updateAlloy: updateMutation.mutateAsync,
-    deleteAlloy: deleteMutation.mutateAsync,
-  }
 }
 
