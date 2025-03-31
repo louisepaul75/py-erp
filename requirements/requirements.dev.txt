@@ -227,7 +227,7 @@ jsonschema-specifications==2024.10.1
     # via jsonschema
 junit-xml==1.8
     # via mutmut
-kombu==5.5.1
+kombu==5.5.2
     # via
     #   -r requirements/requirements.prod.in
     #   celery
@@ -466,7 +466,7 @@ typing-extensions==4.13.0
     #   typing-inspection
 typing-inspection==0.4.0
     # via pydantic
-tzdata==2025.1
+tzdata==2025.2
     # via
     #   celery
     #   django-celery-beat
