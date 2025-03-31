@@ -1,26 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { 
-  Sun, 
-  Moon, 
-  Settings, 
-  LogOut, 
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  Sun,
+  Moon,
+  Settings,
+  LogOut,
   ChevronDown,
   User,
   Palette,
-  Package
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import useTheme from '@/hooks/useTheme';
-import LanguageSelector from './LanguageSelector';
-import { useLogout } from '@/lib/auth/authHooks';
-import useAppTranslation from '@/hooks/useTranslationWrapper';
-import { useIsAuthenticated } from '@/lib/auth/authHooks';
-import { MobileMenu } from './MobileMenu';
-import { useScreenSize } from '@/utils/responsive';
+  Package,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import useTheme from "@/hooks/useTheme";
+import LanguageSelector from "./LanguageSelector";
+import { useLogout } from "@/lib/auth/authHooks";
+import useAppTranslation from "@/hooks/useTranslationWrapper";
+import { useIsAuthenticated } from "@/lib/auth/authHooks";
+import { MobileMenu } from "./MobileMenu";
+import { useScreenSize } from "@/utils/responsive";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -46,21 +46,21 @@ export function Navbar() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const dropdown = document.getElementById('user-dropdown');
-      const testDropdown = document.getElementById('test-dropdown');
-      
+      const dropdown = document.getElementById("user-dropdown");
+      const testDropdown = document.getElementById("test-dropdown");
+
       if (dropdown && !dropdown.contains(event.target as Node)) {
         setIsOpen(false);
       }
-      
+
       if (testDropdown && !testDropdown.contains(event.target as Node)) {
         setTestMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -69,10 +69,10 @@ export function Navbar() {
   };
 
   const navigationItems = [
-    { href: '/dashboard', label: t('navigation.home') },
-    { href: '/products', label: t('navigation.products') },
-    { href: '/sales', label: t('navigation.sales') },
-    { href: '/production', label: t('navigation.production') },
+    { href: "/dashboard", label: t("navigation.home") },
+    { href: "/products", label: t("navigation.products") },
+    { href: "/sales", label: t("navigation.sales") },
+    // { href: '/production', label: t('navigation.production') },
   ];
 
   return (
@@ -82,11 +82,11 @@ export function Navbar() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center pl-2">
             <Link href="/dashboard">
-              <Image 
-                src="/wsz_logo_long.png" 
-                alt="Wilhelm Schweizer Zinnmanufaktur" 
-                width={200} 
-                height={50} 
+              <Image
+                src="/wsz_logo_long.png"
+                alt="Wilhelm Schweizer Zinnmanufaktur"
+                width={200}
+                height={50}
                 className="h-10 w-auto"
               />
             </Link>
@@ -94,22 +94,50 @@ export function Navbar() {
 
           {/* Mobile menu */}
           <div className="flex items-center lg:hidden">
-            <MobileMenu items={[...navigationItems, { href: '/warehouse', label: t('navigation.inventory') }, { href: '/picklist', label: 'Picklist' }]} />
+            <MobileMenu
+              items={[
+                ...navigationItems,
+                { href: "/warehouse", label: t("navigation.inventory") },
+                { href: "/picklist", label: "Picklist" },
+              ]}
+            />
           </div>
 
           {/* Navigation Links - Desktop */}
           <div className="hidden lg:flex items-center justify-center flex-1">
             <div className="flex space-x-4">
-              {navigationItems.map(item => (
+              {navigationItems.map((item) => (
                 <NavLink key={item.href} href={item.href} label={item.label} />
               ))}
-              
+
+              {/*  Production dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                    <span>{t("navigation.production")}</span>
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem asChild>
+                    <Link href="/production" className="flex items-center">
+                      {t("navigation.production")}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/mold-management" className="flex items-center">
+                      {t("navigation.mold_management")}
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {/* Inventory Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
                     <Package className="h-4 w-4 mr-2" />
-                    <span>{t('navigation.inventory')}</span>
+                    <span>{t("navigation.inventory")}</span>
                     <ChevronDown className="ml-1 h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
@@ -136,10 +164,14 @@ export function Navbar() {
                   <span>Test</span>
                   <ChevronDown className="ml-1 h-4 w-4" />
                 </button>
-                
+
                 {testMenuOpen && (
                   <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                    <div className="py-1" role="menu" aria-orientation="vertical">
+                    <div
+                      className="py-1"
+                      role="menu"
+                      aria-orientation="vertical"
+                    >
                       <DropdownItem href="/ui-components">
                         <Palette className="mr-3 h-5 w-5" />
                         UI Components / Style Guide
@@ -168,9 +200,15 @@ export function Navbar() {
                   onClick={toggleDropdown}
                 >
                   <span className="sr-only">Open user menu</span>
-                  <span className="mr-2 text-gray-700 dark:text-gray-200">{user?.username || 'Guest'}</span>
+                  <span className="mr-2 text-gray-700 dark:text-gray-200">
+                    {user?.username || "Guest"}
+                  </span>
                   <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
-                  <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`ml-1 h-4 w-4 transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
               </div>
 
@@ -182,12 +220,12 @@ export function Navbar() {
                   aria-labelledby="user-menu"
                 >
                   <DropdownItem onClick={toggleTheme}>
-                    {theme === 'dark' ? (
+                    {theme === "dark" ? (
                       <Sun className="mr-3 h-5 w-5" />
                     ) : (
                       <Moon className="mr-3 h-5 w-5" />
                     )}
-                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    {theme === "dark" ? "Light Mode" : "Dark Mode"}
                   </DropdownItem>
 
                   <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
@@ -196,7 +234,9 @@ export function Navbar() {
 
                   <DropdownItem href="/settings">
                     <Settings className="mr-3 h-5 w-5" />
-                    {user?.isAdmin ? t('navigation.admin_settings') : t('navigation.settings')}
+                    {user?.isAdmin
+                      ? t("navigation.admin_settings")
+                      : t("navigation.settings")}
                   </DropdownItem>
 
                   <DropdownItem onClick={handleLogout}>
@@ -227,12 +267,12 @@ export function Navbar() {
                     aria-orientation="vertical"
                   >
                     <DropdownItem onClick={toggleTheme}>
-                      {theme === 'dark' ? (
+                      {theme === "dark" ? (
                         <Sun className="mr-3 h-5 w-5" />
                       ) : (
                         <Moon className="mr-3 h-5 w-5" />
                       )}
-                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                      {theme === "dark" ? "Light Mode" : "Dark Mode"}
                     </DropdownItem>
 
                     <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
@@ -241,7 +281,7 @@ export function Navbar() {
 
                     <DropdownItem href="/settings">
                       <Settings className="mr-3 h-5 w-5" />
-                      {t('navigation.settings')}
+                      {t("navigation.settings")}
                     </DropdownItem>
 
                     <DropdownItem onClick={handleLogout}>
@@ -270,13 +310,13 @@ function NavLink({ href, label }: { href: string; label: string }) {
   );
 }
 
-function DropdownItem({ 
-  children, 
-  href, 
-  onClick 
-}: { 
-  children: React.ReactNode; 
-  href?: string; 
+function DropdownItem({
+  children,
+  href,
+  onClick,
+}: {
+  children: React.ReactNode;
+  href?: string;
   onClick?: () => void;
 }) {
   if (href) {
@@ -290,7 +330,7 @@ function DropdownItem({
       </Link>
     );
   }
-  
+
   return (
     <button
       onClick={onClick}
@@ -305,4 +345,4 @@ function DropdownItem({
   );
 }
 
-export default Navbar; 
+export default Navbar;
