@@ -37,9 +37,9 @@ billiard==4.2.1
     #   celery
 black==25.1.0
     # via -r requirements/requirements.dev.in
-boto3==1.37.22
+boto3==1.37.23
     # via -r requirements/requirements.prod.in
-botocore==1.37.22
+botocore==1.37.23
     # via
     #   boto3
     #   s3transfer
@@ -52,7 +52,7 @@ celery==5.4.0
     #   -r requirements/requirements.prod.in
     #   django-celery-beat
     #   django-celery-results
-certifi==2025.1.31
+certifi==20.2.5
     # via
     #   httpcore
     #   httpx
@@ -151,7 +151,7 @@ django-timezone-field==7.1
     # via
     #   -r requirements/requirements.prod.in
     #   django-celery-beat
-djangorestframework==3.15.2
+djangorestframework==3.16.0
     # via
     #   -r requirements/requirements.prod.in
     #   djangorestframework-simplejwt
@@ -309,7 +309,7 @@ pycodestyle==2.13.0
     # via flake8
 pycparser==2.22
     # via cffi
-pydantic==2.11.0
+pydantic==2.11.1
     # via -r requirements/requirements.prod.in
 pydantic-core==2.33.0
     # via pydantic
