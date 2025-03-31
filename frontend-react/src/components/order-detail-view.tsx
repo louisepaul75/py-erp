@@ -139,11 +139,15 @@ export function OrderDetailView({ order, onClose, onStartPicking }: OrderDetailV
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <div className="font-medium">Auftragsdatum:</div>
-                    <div>{format(order.orderDate, "dd.MM.yyyy", { locale: de })}</div>
+                    <div>{order.orderDate instanceof Date && !isNaN(order.orderDate.getTime()) 
+                      ? format(order.orderDate, "dd.MM.yyyy", { locale: de })
+                      : "Kein Datum"}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <div className="font-medium">Lieferdatum:</div>
-                    <div>{format(order.deliveryDate, "dd.MM.yyyy", { locale: de })}</div>
+                    <div>{order.deliveryDate instanceof Date && !isNaN(order.deliveryDate.getTime())
+                      ? format(order.deliveryDate, "dd.MM.yyyy", { locale: de })
+                      : "Kein Datum"}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-1">
                     <div className="font-medium">Status:</div>
