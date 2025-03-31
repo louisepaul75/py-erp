@@ -7,15 +7,17 @@ with Django forms.
 """
 
 import unittest
-from unittest.mock import patch  # Used in the cleaned_data mock setup
-
 from django import forms
 
-from pyerp.core.form_validation import ValidatedForm, ValidatedFormMixin
+from pyerp.core.form_validation import ValidatedForm
 from pyerp.core.validators import (
     ValidationResult,
     RequiredValidator,
     LengthValidator,
+    RegexValidator,
+    RangeValidator,
+    ChoiceValidator,
+    DecimalValidator,
 )
 
 
@@ -148,4 +150,153 @@ class ValidatedFormMixinTests(unittest.TestCase):
         
         # Calling the method should apply validators and raise ValidationError
         with self.assertRaises(forms.ValidationError):
-            form.clean_name() 
+            form.clean_name()
+
+
+class ComplexValidatedForm(ValidatedForm):
+    """Test form with multiple validation types."""
+    
+    email = forms.EmailField()
+    price = forms.DecimalField(max_digits=10, decimal_places=2)
+    quantity = forms.IntegerField()
+    category = forms.ChoiceField(choices=[
+        ('electronics', 'Electronics'),
+        ('clothing', 'Clothing'),
+        ('books', 'Books')
+    ])
+    
+    def setup_validators(self):
+        # Email validation
+        self.add_validator('email', RequiredValidator(
+            error_message="Email is required"
+        ))
+        self.add_validator('email', RegexValidator(
+            r'^[\w.+-]+@[\w-]+\.[\w.-]+$',
+            error_message="Please enter a valid email address"
+        ))
+        
+        # Price validation
+        self.add_validator('price', DecimalValidator(
+            max_digits=10, 
+            decimal_places=2,
+            error_message="Price must be a valid amount with at most 2 decimal places"
+        ))
+        self.add_validator('price', RangeValidator(
+            min_value=0.01,
+            max_value=9999.99,
+            error_message="Price must be between $0.01 and $9,999.99"
+        ))
+        
+        # Quantity validation
+        self.add_validator('quantity', RequiredValidator(
+            error_message="Quantity is required"
+        ))
+        self.add_validator('quantity', RangeValidator(
+            min_value=1,
+            max_value=100,
+            error_message="Quantity must be between 1 and 100"
+        ))
+        
+        # Category validation
+        self.add_validator('category', ChoiceValidator(
+            choices=['electronics', 'clothing', 'books'],
+            error_message="Please select a valid category"
+        ))
+
+
+class ComplexValidationTests(unittest.TestCase):
+    """Tests for various validator types."""
+    
+    def test_valid_complex_form(self):
+        """Test complex form with valid data."""
+        form = ComplexValidatedForm(data={
+            'email': 'user@example.com',
+            'price': '99.99',
+            'quantity': 5,
+            'category': 'electronics'
+        })
+        self.assertTrue(form.is_valid())
+    
+    def test_invalid_email(self):
+        """Test validation with invalid email."""
+        form = ComplexValidatedForm(data={
+            'email': 'not-an-email',
+            'price': '99.99',
+            'quantity': 5,
+            'category': 'electronics'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+        # Django's built-in validation error message for email field
+        self.assertIn('Gib eine gültige E-Mail Adresse an.', 
+                     form.errors['email'][0])
+    
+    def test_invalid_price_format(self):
+        """Test validation with invalid price format."""
+        form = ComplexValidatedForm(data={
+            'email': 'user@example.com',
+            'price': 'not-a-price',
+            'quantity': 5,
+            'category': 'electronics'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('price', form.errors)
+    
+    def test_price_out_of_range(self):
+        """Test validation with price out of range."""
+        form = ComplexValidatedForm(data={
+            'email': 'user@example.com',
+            'price': '10000.00',  # Over max
+            'quantity': 5,
+            'category': 'electronics'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('price', form.errors)
+        self.assertEqual(form.errors['price'][0], 
+                        "Price must be between $0.01 and $9,999.99")
+        
+        # Test below minimum
+        form = ComplexValidatedForm(data={
+            'email': 'user@example.com',
+            'price': '0.00',  # Under min
+            'quantity': 5,
+            'category': 'electronics'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('price', form.errors)
+    
+    def test_quantity_out_of_range(self):
+        """Test validation with quantity out of range."""
+        form = ComplexValidatedForm(data={
+            'email': 'user@example.com',
+            'price': '99.99',
+            'quantity': 101,  # Over max
+            'category': 'electronics'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('quantity', form.errors)
+        self.assertEqual(form.errors['quantity'][0], 
+                        "Quantity must be between 1 and 100")
+        
+        # Test below minimum
+        form = ComplexValidatedForm(data={
+            'email': 'user@example.com',
+            'price': '99.99',
+            'quantity': 0,  # Under min
+            'category': 'electronics'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('quantity', form.errors)
+    
+    def test_invalid_category(self):
+        """Test validation with invalid category."""
+        form = ComplexValidatedForm(data={
+            'email': 'user@example.com',
+            'price': '99.99',
+            'quantity': 5,
+            'category': 'not-a-category'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('category', form.errors)
+        # Django's built-in validation error message for choice field
+        self.assertTrue('not-a-category' in form.errors['category'][0]) 
