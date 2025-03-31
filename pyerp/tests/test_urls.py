@@ -4,6 +4,7 @@ Tests for the URLs configuration.
 
 import sys
 from unittest.mock import patch, MagicMock
+import importlib
 
 import pytest
 from django.urls import path
@@ -30,10 +31,10 @@ class TestURLConfigurations:
         
         assert jwt_related_urls, "JWT token related URL patterns not found"
 
-    def test_has_swagger_setting(self):
-        """Verify the has_swagger variable exists."""
-        from pyerp.urls import has_swagger
-        assert isinstance(has_swagger, bool), "has_swagger should be a boolean"
+    def test_has_spectacular_setting(self):
+        """Verify the has_spectacular variable exists."""
+        from pyerp.urls import has_spectacular
+        assert isinstance(has_spectacular, bool), "has_spectacular should be a boolean"
 
     @patch('django.conf.settings.DEBUG', True)
     def test_debug_settings(self):
@@ -69,35 +70,35 @@ class TestURLConfigurations:
             # Check the module was imported successfully
             assert hasattr(pyerp.urls, 'urlpatterns'), "urlpatterns not defined"
 
-    @patch('pyerp.urls.has_swagger', True)
-    @patch('drf_yasg.views.get_schema_view')
-    def test_swagger_urls_when_available(self, mock_get_schema_view):
-        """Test Swagger URLs are added when has_swagger is True."""
-        # Setup mock for schema_view
-        mock_schema_view = MagicMock()
-        mock_get_schema_view.return_value = mock_schema_view
-        
+    @patch('pyerp.urls.has_spectacular', True)
+    @patch('drf_spectacular.views.SpectacularAPIView')
+    @patch('drf_spectacular.views.SpectacularSwaggerView')
+    @patch('drf_spectacular.views.SpectacularRedocView')
+    def test_spectacular_urls_when_available(self, mock_redoc, mock_swagger, mock_api):
+        """Test Spectacular URLs are added when has_spectacular is True."""
+        # Setup mocks for spectacular views (optional, as we mainly check names)
+        mock_api.as_view.return_value = MagicMock()
+        mock_swagger.as_view.return_value = MagicMock()
+        mock_redoc.as_view.return_value = MagicMock()
+
         # Force reload of urls module
         if 'pyerp.urls' in sys.modules:
             del sys.modules['pyerp.urls']
-        
-        # Create a mock path function to capture URL pattern creation
-        original_path = path
-        paths_created = []
-        
-        def mock_path(*args, **kwargs):
-            paths_created.append((args, kwargs))
-            return original_path(*args, **kwargs)
-        
-        # Apply path patch and import urls
-        with patch('django.urls.path', mock_path):
-            # Re-import with patched dependencies
-            import importlib
-            import pyerp.urls
-            importlib.reload(pyerp.urls)  # Force reload to apply patches
-            
-            # Verify we have urlpatterns
-            assert hasattr(pyerp.urls, 'urlpatterns'), "urlpatterns not defined"
+
+        import pyerp.urls
+        importlib.reload(pyerp.urls)  # Force reload to apply patches
+
+        # Verify we have urlpatterns
+        assert hasattr(pyerp.urls, 'urlpatterns'), "urlpatterns not defined"
+
+        # Check if expected URL names are present
+        url_names = [pattern.name for pattern in pyerp.urls.urlpatterns if hasattr(pattern, 'name')]
+        assert 'schema' in url_names, "URL pattern named 'schema' not found"
+        assert 'swagger-ui' in url_names, "URL pattern named 'swagger-ui' not found"
+        assert 'redoc' in url_names, "URL pattern named 'redoc' not found"
+        assert 'schema_v1' in url_names, "URL pattern named 'schema_v1' not found"
+        assert 'swagger-ui-v1' in url_names, "URL pattern named 'swagger-ui-v1' not found"
+        assert 'redoc-v1' in url_names, "URL pattern named 'redoc-v1' not found"
 
     @patch('pyerp.urls.OPTIONAL_API_MODULES', [("test", "pyerp.core.urls")])
     def test_optional_modules_success(self):

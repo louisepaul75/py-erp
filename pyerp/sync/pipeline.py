@@ -107,9 +107,6 @@ class SyncPipeline:
         )
 
         try:
-            # Update sync state
-            self.sync_state.update_sync_started()
-
             # Build query parameters
             params = query_params or {}
             if incremental and self.sync_state.last_sync_time:

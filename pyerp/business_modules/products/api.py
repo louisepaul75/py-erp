@@ -22,6 +22,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 
 from pyerp.business_modules.products.models import ProductCategory, ParentProduct, VariantProduct
 from pyerp.business_modules.products.serializers import ProductCategorySerializer, ParentProductSerializer
@@ -148,6 +149,7 @@ class ProductCategoryViewSet(viewsets.ModelViewSet):
     filterset_fields = ['code', 'name', 'parent']
     search_fields = ['name', 'code', 'description']
     ordering_fields = ['name', 'code']
+    pagination_class = PageNumberPagination
     
     @extend_schema(
         summary="List child categories",

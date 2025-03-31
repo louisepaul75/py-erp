@@ -67,17 +67,17 @@ class ProductAPIViewsTestCase(APITestCase):
 
     def test_category_list_api(self):
         """Test the category list API endpoint."""
-        url = reverse('products_api:api_category_list')
+        url = reverse('products_api:category-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertIn('results', response.data)
-        self.assertTrue(len(response.data['results']) >= 1)
+        self.assertIsInstance(response.data, list)
+        self.assertTrue(len(response.data) >= 1)
         self.assertTrue(any(category['name'] == self.category.name 
-                            for category in response.data['results']))
+                            for category in response.data))
 
     def test_product_list_api(self):
         """Test the product list API endpoint."""
-        url = reverse('products_api:api_product_list')
+        url = reverse('products_api:product_list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIn('results', response.data)
@@ -87,7 +87,7 @@ class ProductAPIViewsTestCase(APITestCase):
 
     def test_product_detail_api(self):
         """Test the product detail API endpoint."""
-        url = reverse('products_api:api_product_detail', 
+        url = reverse('products_api:product-detail',
                       kwargs={'pk': self.parent_product.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -96,7 +96,7 @@ class ProductAPIViewsTestCase(APITestCase):
 
     def test_variant_detail_api(self):
         """Test the variant detail API endpoint."""
-        url = reverse('products_api:api_variant_detail', 
+        url = reverse('products_api:variant_detail',
                       kwargs={'pk': self.variant1.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
