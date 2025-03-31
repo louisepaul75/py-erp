@@ -144,57 +144,77 @@ const api = ky.extend({
     beforeError: [
       async (error: HTTPError) => {
         const { response } = error;
+        console.log(`[Hook:beforeError] Encountered error. Status: ${response?.status}, URL: ${error.request.url}`); // Log entry
         
         // 401 Unauthorized Fehler behandeln (Token abgelaufen)
         if (response.status === 401) {
+          console.log('[Hook:401] Status is 401. Attempting token refresh...'); // Log 401 entry
           try {
             // Versuche, den Token zu erneuern
             const refreshSuccess = await authService.refreshToken();
             
             if (refreshSuccess) {
+              console.log('[Hook:401] Refresh successful. Retrying original request...'); // Log refresh success
               // Request mit neuem Token wiederholen
               const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
               const request = error.request.clone();
               if (token) {
+                console.log(`[Hook:401] Adding new token (len: ${token ? token.length : 'null'}) to retry request.`); // Log token add
                 request.headers.set('Authorization', `Bearer ${token}`);
+              } else {
+                console.warn('[Hook:401] No token found after successful refresh? Retrying without Authorization.');
               }
-              // Explicitly handle the response type to satisfy TypeScript
-              const newResponse = await ky(request);
-              // Don't return the response directly, throw a new error with the right type
-              throw new HTTPError(newResponse, request, error.options);
+              // Retry the request using the api instance. DO NOT return the promise.
+              await api(request);
+              // Let ky handle the successful retry transparently.
+              return; // Explicitly return undefined to signal the error is handled.
+            } else {
+              console.log('[Hook:401] Refresh failed. Re-throwing original 401 error.'); // Log refresh fail
+              throw error; // Re-throw if refresh failed
             }
           } catch (refreshError) {
-            // Wenn Token-Erneuerung fehlschlägt, ausloggen
-            authService.logout();
-            window.location.href = '/login';
+            console.error('[Hook:401] Exception during refresh attempt:', refreshError); // Log refresh exception
+            console.log('[Hook:401] Re-throwing original 401 after refresh exception.');
+            throw error;
           }
         }
         
         // 403 Forbidden could be CSRF related
         if (response.status === 403) {
+           console.log('[Hook:403] Status is 403. Attempting CSRF token refresh...');
           try {
             // Try to refresh CSRF token
             const newCsrfToken = await csrfService.fetchToken();
             if (newCsrfToken && error.request.method !== 'GET') {
+              console.log('[Hook:403] CSRF refresh successful. Retrying original request...');
               // Retry request with new CSRF token
               const request = error.request.clone();
               request.headers.set('X-CSRFToken', newCsrfToken);
-              // Explicitly handle the response type to satisfy TypeScript
-              const newResponse = await ky(request);
-              // Don't return the response directly, throw a new error with the right type
-              throw new HTTPError(newResponse, request, error.options);
+              // Retry the request using the api instance
+              await api(request);
+              // Do not return the response directly, let ky handle it
+              return; // Explicitly return undefined to signal error handled.
             }
           } catch (csrfError) {
-            console.error('CSRF token refresh failed:', csrfError);
+            console.error('[Hook:403] CSRF token refresh failed:', csrfError);
           }
+          // If CSRF refresh didn't happen or failed, re-throw original 403
+          console.log('[Hook:403] Re-throwing original 403 after processing.');
+          throw error;
         }
         
+        // For other errors, try to parse the message and return the modified error
         try {
-          error.message = await response.text();
+          // Use response.clone() in case the body is needed elsewhere
+          const errorBodyText = await response.clone().text(); 
+          error.message = errorBodyText || response.statusText;
+          console.log(`[Hook:beforeError] Parsed error message for status ${response?.status}: ${error.message}`);
         } catch (e) {
+          console.log(`[Hook:beforeError] Failed to parse error body for status ${response?.status}. Using statusText.`);
           error.message = response.statusText;
         }
         
+        // Return the error for ky to handle/throw
         return error;
       },
     ],
@@ -204,52 +224,25 @@ const api = ky.extend({
 // Export the auth service functions
 export const authService = {
   getCurrentUser: async (): Promise<User | null> => {
+    console.log('[getCurrentUser] Starting function.');
     try {
-      const token = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-      if (!token) {
-        return null;
-      }
-
-      // Validate the token before using it
-      try {
-        const decoded = jwtDecode<JwtPayload>(token);
-        const currentTime = Math.floor(Date.now() / 1000);
-        
-        // If token is expired, try to refresh before proceeding
-        if (decoded.exp && decoded.exp < currentTime) {
-          const refreshSuccess = await authService.refreshToken();
-          if (!refreshSuccess) {
-            await clearAuthTokens();
-            return null;
-          }
-        }
-      } catch (tokenError) {
-        console.error('Invalid token format:', tokenError);
-        await clearAuthTokens();
-        return null;
-      }
-
-      const response = await api.get('auth/user/').json<User>();
-      return response;
+      // Directly attempt the fetch. Let the hook handle 401s.
+      console.log(`[getCurrentUser] Attempting api.get('auth/user/')...`);
+      const user = await api.get('auth/user/').json<User>();
+      console.log('[getCurrentUser] Fetched user successfully:', user);
+      return user;
     } catch (error) {
-      if (error?.response?.status === 401) {
-        // Try to refresh the token
-        const refreshSuccess = await authService.refreshToken();
-        if (refreshSuccess) {
-          // Retry getting user info
-          try {
-            const response = await api.get('auth/user/').json<User>();
-            return response;
-          } catch (retryError) {
-            console.error('Failed to get user info after token refresh:', retryError);
-            await clearAuthTokens();
-            return null;
-          }
-        }
-        await clearAuthTokens();
-        return null;
+      // This catch block handles errors *after* the hook mechanism.
+      // If the hook successfully refreshed and retried, this shouldn't be reached.
+      // If the hook failed to refresh, or if it was a non-401 error, it lands here.
+      console.error('[getCurrentUser] Final catch block reached. Error:', error);
+      // We assume any error reaching here is unrecoverable for this specific call.
+      if (error instanceof HTTPError && error.response.status === 401) {
+         console.log('[getCurrentUser] Clearing tokens due to final 401 error (likely refresh failure).');
+      } else {
+         console.log(`[getCurrentUser] Clearing tokens due to non-401 final error: ${error?.message}`);
       }
-      console.error('Error getting current user:', error);
+      await clearAuthTokens();
       return null;
     }
   },
@@ -309,30 +302,36 @@ export const authService = {
   },
   
   refreshToken: async (): Promise<boolean> => {
+    console.log('[refreshToken] Starting function.'); // Log start
     try {
       const refreshToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
       if (!refreshToken) {
-        console.warn('No refresh token available');
+        console.warn('[refreshToken] No refresh token available. Returning false.'); // Log no token
         return false;
       }
+      console.log(`[refreshToken] Refresh token found (len: ${refreshToken.length}). Decoding...`); // Log found
 
       // Validate refresh token format before using
       try {
         jwtDecode(refreshToken);
+        console.log('[refreshToken] Refresh token format valid.'); // Log valid format
       } catch (tokenError) {
-        console.error('Invalid refresh token format:', tokenError);
+        console.error('[refreshToken] Invalid refresh token format. Clearing tokens & returning false:', tokenError); // Log invalid format
         await clearAuthTokens();
         return false;
       }
-
+      
+      console.log(`[refreshToken] Attempting authApi.post('token/refresh/')...`); // Log refresh attempt
       const response = await authApi.post('token/refresh/', {
         json: { refresh: refreshToken }
       }).json<{ access: string }>();
+      console.log('[refreshToken] Refresh API call successful. New access token received.'); // Log refresh success
 
       await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, response.access);
+      console.log('[refreshToken] New access token stored. Returning true.'); // Log store success
       return true;
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error('[refreshToken] Refresh failed during API call or processing. Clearing tokens & returning false:', error); // Log refresh fail
       // Clear tokens on refresh failure
       await clearAuthTokens();
       return false;
