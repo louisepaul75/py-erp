@@ -97,7 +97,36 @@ class Migration(migrations.Migration):
             # Note: These assume audit_synclog ALREADY EXISTS and has the OLD structure
             # This part might need adjustment if audit_synclog has the new structure already!
             # For now, assuming audit_synclog needs these changes applied.
-            database_operations=[], # Keep this empty if schema is already correct or handled elsewhere
+            database_operations=[
+                # Ensure the id column exists and is a BigIntegerField initially
+                # This might need adjustment based on the *actual* state of audit_synclog
+                # If it's already bigint, this won't hurt.
+                migrations.RunSQL(
+                    "ALTER TABLE audit_synclog ALTER COLUMN id TYPE bigint;",
+                    reverse_sql=migrations.RunSQL.noop, # Simplification for reversion
+                ),
+                # Create a sequence for the id column
+                migrations.RunSQL(
+                    "CREATE SEQUENCE IF NOT EXISTS audit_synclog_id_seq OWNED BY audit_synclog.id;",
+                    reverse_sql="DROP SEQUENCE IF EXISTS audit_synclog_id_seq;",
+                ),
+                # Set the default value of the id column to use the sequence
+                migrations.RunSQL(
+                    "ALTER TABLE audit_synclog ALTER COLUMN id SET DEFAULT nextval('audit_synclog_id_seq');",
+                    reverse_sql="ALTER TABLE audit_synclog ALTER COLUMN id DROP DEFAULT;",
+                ),
+                # Add primary key constraint if it doesn't exist
+                migrations.RunSQL(
+                    "ALTER TABLE audit_synclog ADD CONSTRAINT audit_synclog_pkey PRIMARY KEY (id);",
+                    reverse_sql="ALTER TABLE audit_synclog DROP CONSTRAINT IF EXISTS audit_synclog_pkey;",
+                ),
+                # Potentially needed: Update the sequence to the max current ID + 1
+                # To avoid conflicts if data was manually inserted without using sequence
+                migrations.RunSQL(
+                    "SELECT setval('audit_synclog_id_seq', COALESCE(MAX(id), 1)) FROM audit_synclog;",
+                    reverse_sql=migrations.RunSQL.noop, # No easy reverse
+                ),
+            ], 
         ),
 
         # Drop the old sync_synclog table (can happen after data migration and schema change)
