@@ -101,19 +101,50 @@ class Role(models.Model):
 class PermissionCategory(models.Model):
     """
     Organizes permissions into logical categories for UI representation.
+    Supports hierarchical structure with parent-child relationships.
     """
 
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     icon = models.CharField(max_length=50, blank=True)
     order = models.IntegerField(default=0)
+    
+    # Hierarchy support
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="subcategories"
+    )
+    is_subcategory = models.BooleanField(default=False)
+    
+    # Code identifier (optional, for mapping in UI)
+    code = models.CharField(max_length=50, blank=True)
 
     class Meta:
         verbose_name_plural = "Permission Categories"
         ordering = ["order", "name"]
 
     def __str__(self):
+        if self.parent:
+            return f"{self.parent.name} > {self.name}"
         return self.name
+    
+    @property
+    def full_path(self):
+        """Return the full hierarchical path of this category."""
+        if self.parent:
+            return f"{self.parent.full_path} > {self.name}"
+        return self.name
+    
+    @property
+    def permissions_count(self):
+        """Return total count of permissions in this category and its subcategories."""
+        count = self.permissions.count()
+        for subcategory in self.subcategories.all():
+            count += subcategory.permissions.count()
+        return count
 
 
 class PermissionCategoryItem(models.Model):
