@@ -159,7 +159,7 @@ export default function MoldTable() {
   /**
    * Filters molds based on search term and filters
    */
-  const filteredMolds = molds?.filter((mold) => {
+  const filteredMolds = Array.isArray(molds) ? molds.filter((mold) => {
     // Search term filter
     const searchMatch =
       searchTerm === "" ||
@@ -201,7 +201,7 @@ export default function MoldTable() {
       activeMatch &&
       moldSizeMatch
     );
-  });
+  }) : [];
 
   /**
    * Renders the table content based on loading state

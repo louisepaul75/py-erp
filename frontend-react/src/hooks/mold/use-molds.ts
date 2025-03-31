@@ -9,6 +9,9 @@ import { mockArticles } from "@/hooks/mold/use-articles"
 import { useActivityLog } from "@/hooks/mold/use-activity-log"
 import { ActivityType, EntityType } from "@/types/mold/activity-log"
 import axios from "axios"
+import { API_URL as BASE_URL } from "@/lib/config"
+import { clientCookieStorage } from "@/lib/auth/clientCookies"
+import { AUTH_CONFIG } from "@/lib/config"
 
 /**
  * Mock API functions for molds
@@ -86,7 +89,7 @@ function determineMoldActivityStatus(articles: any[] | undefined): MoldActivityS
 /**
  * API URL for molds
  */
-const API_URL = "/api/production/molds/"
+const API_URL = `${BASE_URL}/production/molds/`
 
 /**
  * Custom hook for managing molds data
@@ -100,16 +103,39 @@ export function useMolds() {
    */
   const fetchMolds = async (): Promise<Mold[]> => {
     try {
+      // Get token from clientCookieStorage
+      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      
       // Attempt to fetch from the real API
-      const response = await axios.get(API_URL)
+      const response = await axios.get(API_URL, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      })
       
       // If successful, use the API data
       if (response.status === 200) {
         console.log("Successfully fetched molds from API", response.data)
-        return response.data
+        
+        // Check the structure of the API response
+        if (Array.isArray(response.data)) {
+          return response.data;
+        } else if (response.data && typeof response.data === 'object') {
+          // Check if response.data has a results, data, or items property that is an array
+          if (Array.isArray(response.data.results)) {
+            return response.data.results;
+          } else if (Array.isArray(response.data.data)) {
+            return response.data.data;
+          } else if (Array.isArray(response.data.items)) {
+            return response.data.items;
+          } else {
+            // If no recognized array structure, log and fall back to mock data
+            console.warn("API response doesn't contain an array of molds:", response.data);
+          }
+        }
       }
       
-      // If not successful, fall back to mock data
+      // If not successful or unrecognized structure, fall back to mock data
       console.warn("Failed to fetch molds from API, using mock data")
       
       // Use mock data as fallback
@@ -141,8 +167,15 @@ export function useMolds() {
    */
   const createMoldFn = async (mold: Omit<Mold, "id" | "createdDate">): Promise<Mold> => {
     try {
+      // Get token from clientCookieStorage
+      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      
       // Attempt to create via the API
-      const response = await axios.post(API_URL, mold)
+      const response = await axios.post(API_URL, mold, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      })
       
       // If successful, return the created mold
       if (response.status === 201) {
@@ -199,8 +232,15 @@ export function useMolds() {
    */
   const updateMoldFn = async (mold: Mold): Promise<Mold> => {
     try {
+      // Get token from clientCookieStorage
+      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      
       // Attempt to update via the API
-      const response = await axios.put(`${API_URL}${mold.id}/`, mold)
+      const response = await axios.put(`${API_URL}${mold.id}/`, mold, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      })
       
       // If successful, return the updated mold
       if (response.status === 200) {
@@ -385,6 +425,9 @@ export function useMolds() {
    */
   const duplicateMoldFn = async (mold: Mold | Omit<Mold, "id" | "createdDate">): Promise<Mold> => {
     try {
+      // Get token from clientCookieStorage
+      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      
       // For duplicating, we'll just do a POST to create a new mold
       // but we'll modify the data to indicate it's a duplicate
       const moldData = {
@@ -397,7 +440,11 @@ export function useMolds() {
       delete (moldData as any).id
       delete (moldData as any).createdDate
       
-      const response = await axios.post(API_URL, moldData)
+      const response = await axios.post(API_URL, moldData, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      })
       
       // If successful, return the duplicated mold
       if (response.status === 201) {
@@ -458,8 +505,15 @@ export function useMolds() {
    */
   const deleteMoldFn = async (id: string): Promise<void> => {
     try {
+      // Get token from clientCookieStorage
+      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      
       // Attempt to delete via the API
-      const response = await axios.delete(`${API_URL}${id}/`)
+      const response = await axios.delete(`${API_URL}${id}/`, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      })
       
       // If successful, log the activity
       if (response.status === 204) {
