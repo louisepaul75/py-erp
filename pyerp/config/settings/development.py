@@ -227,3 +227,22 @@ REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [  # noqa
 CELERY_TASK_ALWAYS_EAGER = (
     os.environ.get("CELERY_TASK_ALWAYS_EAGER", "True").lower() == "true"
 )
+
+# Override Spectacular settings to only show v1 endpoints
+SPECTACULAR_SETTINGS = {
+    **SPECTACULAR_SETTINGS,
+    'TITLE': 'pyERP API (v1)',
+    'DESCRIPTION': """
+## API Versioning Notice
+
+**IMPORTANT:** This API supports both versioned (/api/v1/...) and non-versioned (/api/...) endpoints. 
+
+⚠️ **Please use only versioned endpoints (/api/v1/...) for all new integrations.**
+
+Non-versioned endpoints are maintained for backward compatibility but may be removed in future releases. 
+Some endpoints might appear duplicated in this documentation - always prefer the versioned variant.
+    """,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'SCHEMA_PATH_PREFIX_INCLUDE': [r'/api/v1/'],
+    'SCHEMA_PATH_PREFIX_EXCLUDE': [],
+}

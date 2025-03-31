@@ -51,6 +51,12 @@ router = routers.DefaultRouter()
 # Register API viewsets here
 router.register(r"search", GlobalSearchViewSet, basename="search")
 
+# Create a router for versioned API endpoints (v1)
+router_v1 = routers.DefaultRouter()
+
+# Register the same viewsets in the versioned router
+router_v1.register(r"search", GlobalSearchViewSet, basename="search")
+
 # Define URL patterns for non-internationalized URLs (API, static files, etc.)
 urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),  # For language switching
@@ -61,10 +67,17 @@ urlpatterns = [
         JavaScriptCatalog.as_view(),
         name="javascript-catalog",
     ),
-    # API URLs
+    # API URLs - maintain backward compatibility with non-versioned endpoints
     path("api/", include(router.urls)),
-    # Add auth/user endpoint
+    
+    # Versioned API endpoints (v1)
+    path("api/v1/", include(router_v1.urls)),
+    
+    # Add auth/user endpoint (both versioned and non-versioned)
     path("api/auth/user/", UserProfileView.as_view(), name="auth-user-profile"),
+    path("api/v1/auth/user/", UserProfileView.as_view(), name="auth-user-profile-v1"),
+    
+    # Authentication tokens (keep these non-versioned for simplicity)
     path(
         "api/token/",
         TokenObtainPairView.as_view(permission_classes=[]),
@@ -80,35 +93,52 @@ urlpatterns = [
         TokenVerifyView.as_view(permission_classes=[]),
         name="token_verify",
     ),
-    # Add monitoring API URL
+    # Add monitoring API URL (both versioned and non-versioned)
     path(
         "api/monitoring/",
         include("pyerp.monitoring.urls", namespace="api_monitoring"),
     ),
-    # Add external API connection management
+    path(
+        "api/v1/monitoring/",
+        include("pyerp.monitoring.urls", namespace="api_monitoring_v1"),
+    ),
+    # Add external API connection management (both versioned and non-versioned)
     path(
         "api/external/",
         include("pyerp.external_api.urls", namespace="external_api"),
     ),
-    # Add email system URLs
+    path(
+        "api/v1/external/",
+        include("pyerp.external_api.urls", namespace="external_api_v1"),
+    ),
+    # Add email system URLs (both versioned and non-versioned)
     path(
         "api/email/",
         include("pyerp.utils.email_system.urls", namespace="email_system"),
     ),
-    # Add products API URLs with namespace
+    path(
+        "api/v1/email/",
+        include("pyerp.utils.email_system.urls", namespace="email_system_v1"),
+    ),
+    # Add products API URLs with namespace (both versioned and non-versioned)
     path("api/products/", include("pyerp.business_modules.products.api_urls", namespace="products_api")),
+    path("api/v1/products/", include("pyerp.business_modules.products.api_urls", namespace="products_api_v1")),
     # Add products UI URLs with namespace
     path("products/", include("pyerp.business_modules.products.urls", namespace="products")),
-    # Add sales API URLs
+    # Add sales API URLs (both versioned and non-versioned)
     path("api/sales/", include("pyerp.business_modules.sales.urls")),
-    # Add inventory API URLs with namespace
+    path("api/v1/sales/", include("pyerp.business_modules.sales.urls", namespace="sales_v1")),
+    # Add inventory API URLs with namespace (both versioned and non-versioned)
     path("api/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory"), namespace="inventory")),
+    path("api/v1/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory_v1"), namespace="inventory_v1")),
     # API documentation with drf-docs (basic)
     path("api/docs/", include_docs_urls(title="pyERP API Documentation")),
-    # Users API
+    # Users API (both versioned and non-versioned)
     path("api/users/", include("users.urls", namespace="users")),
-    # Admin tools API
+    path("api/v1/users/", include("users.urls", namespace="users_v1")),
+    # Admin tools API (both versioned and non-versioned)
     path("api/admin/", include("admin_tools.urls")),
+    path("api/v1/admin/", include("admin_tools.urls", namespace="admin_tools_v1")),
     
     # Serve Next.js built files - adjusted for Docker environment
     # These paths need to match the structure in the Docker container
@@ -127,21 +157,39 @@ if has_spectacular:
         path("api/schema/", 
             SpectacularAPIView.as_view(
                 permission_classes=[AllowAny],
-                authentication_classes=[]
+                authentication_classes=[],
             ), 
             name="schema"
         ),
-        # Swagger UI
+        # Swagger UI - simplified configuration
         path(
             "api/swagger/",
-            SpectacularSwaggerView.as_view(url_name="schema"),
+            SpectacularSwaggerView.as_view(url_name="schema_v1"),  # Point to v1 schema
             name="swagger-ui",
         ),
         # ReDoc UI
         path(
             "api/redoc/",
-            SpectacularRedocView.as_view(url_name="schema"),
+            SpectacularRedocView.as_view(url_name="schema_v1"),  # Point to v1 schema
             name="redoc",
+        ),
+        # Versioned endpoints for documentation
+        path("api/v1/schema/", 
+            SpectacularAPIView.as_view(
+                permission_classes=[AllowAny],
+                authentication_classes=[],
+            ), 
+            name="schema_v1"
+        ),
+        path(
+            "api/v1/swagger/",
+            SpectacularSwaggerView.as_view(url_name="schema_v1"),
+            name="swagger-ui-v1",
+        ),
+        path(
+            "api/v1/redoc/",
+            SpectacularRedocView.as_view(url_name="schema_v1"),
+            name="redoc-v1",
         ),
     ]
 

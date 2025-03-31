@@ -221,6 +221,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ["v1"],
 }
 
 # Spectacular API Schema configuration
@@ -246,6 +249,12 @@ SPECTACULAR_SETTINGS = {
     },
     'EXCLUDE_PATH_REGEX': [r'/api/token/'],
     
+    # Show v1 endpoints in the schema, but continue to work with non-versioned endpoints
+    'SCHEMA_PATH_PREFIX_INCLUDE': [r'/api/v1/'],
+    
+    # Exclude non-versioned endpoints from the schema
+    'SCHEMA_PATH_PREFIX_EXCLUDE': [r'^/api/(?!v1/|schema/|swagger/|redoc/).*$'],
+    
     # Verbessertes Filter-Handling
     'PREPROCESSING_HOOKS': ['pyerp.utils.api_docs.preprocess_filter_fields'],
     'ENUM_NAME_OVERRIDES': {
@@ -253,6 +262,14 @@ SPECTACULAR_SETTINGS = {
         'RecordTypeEnum': ['Order', 'Invoice', 'Return'],
         'PaymentStatusEnum': ['Pending', 'Paid', 'Cancelled', 'Refunded'],
         'FulfillmentStatusEnum': ['Pending', 'Shipped', 'Delivered', 'Cancelled'],
+    },
+    
+    # Ensure tags work correctly with versioned endpoints
+    'TAGS_SORTER': 'alpha',
+    'OPERATIONS_SORTER': 'alpha',
+    'PATH_CONVERTER': {
+        'api_path': r'/api/v1',
+        'api_version': 'v1',
     },
 }
 
