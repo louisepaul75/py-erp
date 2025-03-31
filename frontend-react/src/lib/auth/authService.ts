@@ -232,7 +232,7 @@ export const authService = {
       const response = await api.get('auth/user/').json<User>();
       return response;
     } catch (error) {
-      if (error instanceof HTTPError && error.response.status === 401) {
+      if (error?.response?.status === 401) {
         // Try to refresh the token
         const refreshSuccess = await authService.refreshToken();
         if (refreshSuccess) {
