@@ -89,7 +89,8 @@ class SyncLog(models.Model):
     # Removed STATUS_CHOICES if they differ significantly from legacy data
 
     class Meta:
-        db_table = 'audit_synclog'
+        # db_table = 'audit_synclog' # Removed to use default table name 'sync_synclog'
+        pass # Add pass if Meta class becomes empty
 
     def __str__(self):
         # Updated str representation
