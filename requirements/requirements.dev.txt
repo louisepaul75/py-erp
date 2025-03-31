@@ -309,7 +309,7 @@ pycodestyle==2.12.1
     # via flake8
 pycparser==2.22
     # via cffi
-pydantic==2.11.0
+pydantic==2.11.1
     # via -r requirements/requirements.prod.in
 pydantic-core==2.33.0
     # via pydantic
