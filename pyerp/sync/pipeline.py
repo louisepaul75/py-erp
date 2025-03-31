@@ -1,14 +1,9 @@
 """Pipeline orchestration for sync operations."""
 
-import json
-import traceback
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-import math
-import pandas as pd
 from django.utils import timezone
-from pyerp.utils.json_utils import DateTimeEncoder, json_serialize
+from pyerp.utils.json_utils import json_serialize
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .extractors.base import BaseExtractor
@@ -26,7 +21,9 @@ logger = get_logger(__name__)
 
 
 class SyncPipeline:
-    """Orchestrates extraction, transformation, and loading for sync operations."""
+    """
+    Orchestrates extraction, transformation, and loading for sync operations.
+    """
 
     def __init__(
         self,
@@ -70,13 +67,14 @@ class SyncPipeline:
         """
         # Create sync log entry
         self.sync_log = SyncLog.objects.create(
-            mapping=self.mapping,
+            entity_type=self.mapping.entity_type,
             status="started",
-            is_full_sync=not incremental,
-            sync_params={
-                "batch_size": batch_size,
-                "query_params": query_params or {},
-            },
+            started_at=timezone.now(),
+            records_processed=0,
+            records_created=0,
+            records_updated=0,
+            records_failed=0,
+            error_message=""
         )
 
         # Update sync state
@@ -104,7 +102,8 @@ class SyncPipeline:
             # Extract data
             with self.extractor:
                 source_data = self.extractor.extract(
-                    query_params=params, fail_on_filter_error=fail_on_filter_error
+                    query_params=params,
+                    fail_on_filter_error=fail_on_filter_error
                 )
 
             log_data_sync_event(
@@ -120,9 +119,11 @@ class SyncPipeline:
 
             # Initialize counts before the loop
             self.sync_log.records_processed = 0
-            self.sync_log.records_succeeded = 0
             self.sync_log.records_failed = 0
-            self.sync_log.save(update_fields=['records_processed', 'records_succeeded', 'records_failed'])
+            self.sync_log.save(update_fields=[
+                'records_processed',
+                'records_failed'
+            ])
 
             # Process data in batches
             total_processed = 0
@@ -131,7 +132,7 @@ class SyncPipeline:
 
             # Process all records in a single batch if batch_size is 0
             if batch_size <= 0:
-                batch_size = len(source_data)
+                batch_size = len(source_data) if source_data else 0
 
             # Process data in batches
             for i in range(0, len(source_data), batch_size):
@@ -144,17 +145,24 @@ class SyncPipeline:
 
                 # Update sync log with progress
                 self.sync_log.records_processed = total_processed
-                self.sync_log.records_succeeded = total_success
+                self.sync_log.records_created = total_success
+                self.sync_log.records_updated = 0
                 self.sync_log.records_failed = total_failed
                 self.sync_log.save()
 
             # Update sync state on successful completion
-            # Determine success based on whether any records failed
             success = total_failed == 0
             self.sync_state.update_sync_completed(success=success)
 
             # Update final sync log status
-            self.sync_log.status = "completed" if success else "completed_with_errors" # More granular status
+            self.sync_log.status = (
+                "completed" if success else "completed_with_errors"
+            )
+            self.sync_log.completed_at = timezone.now()
+            self.sync_log.records_processed = total_processed
+            self.sync_log.records_created = total_success
+            self.sync_log.records_updated = 0
+            self.sync_log.records_failed = total_failed
             self.sync_log.save()
 
             log_data_sync_event(
@@ -183,10 +191,7 @@ class SyncPipeline:
             if self.sync_log:
                 self.sync_log.status = "failed"
                 self.sync_log.error_message = error_msg
-                
-                # Ensure all fields are JSON serializable
-                if hasattr(self.sync_log, 'sync_params') and self.sync_log.sync_params:
-                    self.sync_log.sync_params = json_serialize(self.sync_log.sync_params)
+                self.sync_log.completed_at = timezone.now()
                 
                 try:
                     self.sync_log.save()
@@ -236,11 +241,15 @@ class SyncPipeline:
             # for error_detail in load_result.error_details:
             #     SyncLogDetail.objects.create(
             #         sync_log=self.sync_log,
-            #         record_id=str(error_detail.get("record", {}).get("id", "unknown")),
+            #         record_id=str(
+            #             error_detail.get("record", {}).get("id", "unknown")
+            #         ),
             #         status="failed",
             #         error_message=error_detail.get("error", "Unknown error"),
             #         record_data={
-            #             "source": self._clean_for_json(error_detail.get("record", {})),
+            #             "source": self._clean_for_json(
+            #                 error_detail.get("record", {})
+            #             ),
             #         },
             #     )
 
@@ -250,12 +259,14 @@ class SyncPipeline:
             logger.error("Failed to transform batch: {}".format(error_msg))
             for record in batch:
                 failure_count += 1
-                cleaned_record = self._clean_for_json(record)
+                # cleaned_record = self._clean_for_json(record) # Unused
                 # SyncLogDetail.objects.create(
                 #     sync_log=self.sync_log,
                 #     record_id=record.get("id", str(record)),
                 #     status="failed",
-                #     error_message=f"Batch transformation failed: {error_msg}",
+                #     error_message=(
+                #         f"Batch transformation failed: {error_msg}"
+                #     ),
                 #     record_data={"source": cleaned_record},
                 # )
 
@@ -317,16 +328,21 @@ class PipelineFactory:
                 )
 
             # Merge source_config with mapping's extractor_config
-            merged_extractor_config = source_config.copy()  # Start with base source config
+            merged_extractor_config = source_config.copy()
             if mapping_config and "extractor_config" in mapping_config:
-                merged_extractor_config.update(mapping_config["extractor_config"]) # Override with specific config
+                merged_extractor_config.update(
+                    mapping_config["extractor_config"]
+                )
 
             # Create the extractor using the merged config
             extractor = cls._create_component(
                 extractor_class_instance,
-                merged_extractor_config, # Pass the merged configuration
+                merged_extractor_config,
             )
-            logger.info(f"Created extractor: {extractor.__class__.__name__} with config: {merged_extractor_config}")
+            logger.info(
+                f"Created extractor: {extractor.__class__.__name__} "
+                f"with config: {merged_extractor_config}"
+            )
 
             # Get transformer class
             transformer_instance = None
@@ -335,27 +351,38 @@ class PipelineFactory:
             else:
                 # Determine path from argument or config
                 transformer_class_path = (
-                    transformer_class # String path from arg
+                    transformer_class  # String path from arg
                     or mapping_config.get("transformer_class")
-                    or mapping_config.get("transformation", {}).get("transformer_class")
+                    or mapping_config.get("transformation", {}).get(
+                        "transformer_class"
+                    )
                     or mapping_config.get("transformation", {}).get("class")
                 )
                 if transformer_class_path:
-                    transformer_instance = cls._import_class(transformer_class_path)
+                    transformer_instance = cls._import_class(
+                        transformer_class_path
+                    )
                 else:
                     # Handle case where no transformer class is defined
                     # You might want a default or raise an error
-                    logger.warning("No transformer class defined for mapping.")
-                    # Assign a default pass-through transformer or handle as needed
-                    # from .transformers.base import BaseTransformer # Example default
-                    # transformer_instance = BaseTransformer 
-                    raise ValueError("Transformer class must be provided or defined in mapping config.")
+                    logger.warning(
+                        "No transformer class defined for mapping."
+                    )
+                    # Assign a default pass-through transformer?
+                    # from .transformers.base import BaseTransformer
+                    # transformer_instance = BaseTransformer
+                    raise ValueError(
+                        "Transformer class must be provided or "
+                        "defined in mapping config."
+                    )
 
             transformer = cls._create_component(
                 transformer_instance,
                 mapping_config.get("transformation", {}),
             )
-            logger.info(f"Created transformer: {transformer.__class__.__name__}")
+            logger.info(
+                f"Created transformer: {transformer.__class__.__name__}"
+            )
 
             # Get loader class
             loader_instance = None
@@ -364,29 +391,38 @@ class PipelineFactory:
             else:
                 # Determine path from argument or config
                 loader_class_path = (
-                    loader_class # String path from arg
+                    loader_class  # String path from arg
                     or target_config.get("loader_class")
                     or mapping_config.get("loader", {}).get("class")
-                    # Consider removing default fallback if loader must always be specified
-                    or "pyerp.sync.loaders.django_model.DjangoModelLoader" 
+                    # Consider removing default fallback
+                    or "pyerp.sync.loaders.django_model.DjangoModelLoader"
                 )
                 if loader_class_path:
-                     loader_instance = cls._import_class(loader_class_path)
+                    loader_instance = cls._import_class(loader_class_path)
                 else:
-                     raise ValueError("Loader class must be provided or defined in target/mapping config.")
-            
-            logger.info(f"Using loader class: {loader_instance.__name__ if loader_instance else 'None'}")
-            
+                    raise ValueError(
+                        "Loader class must be provided or "
+                        "defined in target/mapping config."
+                    )
+
+            logger.info(
+                f"Using loader class: "
+                f"{loader_instance.__name__ if loader_instance else 'None'}"
+            )
+
             # Merge target_config with mapping's loader_config
-            merged_loader_config = target_config.copy() # Start with base target config
+            merged_loader_config = target_config.copy()
             if mapping_config and "loader_config" in mapping_config:
-                merged_loader_config.update(mapping_config["loader_config"]) # Override with specific config
-            
+                merged_loader_config.update(mapping_config["loader_config"])
+
             loader = cls._create_component(
                 loader_instance,
-                merged_loader_config, # Pass the merged configuration
+                merged_loader_config,
             )
-            logger.info(f"Created loader: {loader.__class__.__name__} with config: {merged_loader_config}")
+            logger.info(
+                f"Created loader: {loader.__class__.__name__} "
+                f"with config: {merged_loader_config}"
+            )
 
             return SyncPipeline(mapping, extractor, transformer, loader)
 
@@ -409,7 +445,10 @@ class PipelineFactory:
         return getattr(module, class_name)
 
     @staticmethod
-    def _create_component(component_class: Type, config: Dict[str, Any]) -> Any:
+    def _create_component(
+        component_class: Type,
+        config: Dict[str, Any]
+    ) -> Any:
         """Create a component instance from its class and config.
 
         Args:

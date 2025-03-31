@@ -101,6 +101,8 @@ urlpatterns = [
     path("products/", include("pyerp.business_modules.products.urls", namespace="products")),
     # Add sales API URLs
     path("api/sales/", include("pyerp.business_modules.sales.urls")),
+    # Add production API URLs with namespace
+    path("api/production/", include("pyerp.business_modules.production.urls", namespace="production_api")),
     # Add inventory API URLs with namespace
     path("api/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory"), namespace="inventory")),
     # API documentation
@@ -138,7 +140,7 @@ if has_swagger:
 # Optional API modules (excluding products since we added it directly)
 OPTIONAL_API_MODULES = [
     ("sales", "pyerp.sales.urls"),
-    ("production", "pyerp.production.urls"),
+    # Removed production as it's now added directly
     ("legacy-sync", "pyerp.external_api.legacy_erp.urls"),
 ]
 
