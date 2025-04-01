@@ -86,6 +86,9 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           page_size: pagination.pageSize,
         })) as ApiResponse;
 
+        // Log raw API response
+        console.log("Raw API Response:", response);
+
         setProducts(response.results);
         setFilteredProducts(response.results);
         
@@ -122,6 +125,8 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   }, [pagination.pageIndex, pagination.pageSize, initialVariantId, initialParentId]);
 
   useEffect(() => {
+    // Log products state before filtering
+    console.log("Products state before filtering:", products);
     console.log("Filtering products by search term");
     // Ensure products is an array before filtering
     if (Array.isArray(products)) {
