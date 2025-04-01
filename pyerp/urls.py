@@ -57,6 +57,21 @@ router_v1 = routers.DefaultRouter()
 # Register the same viewsets in the versioned router
 router_v1.register(r"search", GlobalSearchViewSet, basename="search")
 
+# Define URL patterns with i18n (language prefix) support FIRST
+urlpatterns_i18n = i18n_patterns(
+    # Django admin URLs
+    path("admin/", admin.site.urls),
+    # Add monitoring UI URL
+    path(
+        "monitoring/",
+        include("pyerp.monitoring.urls", namespace="monitoring"),
+    ),
+    # Root URL for React application
+    path("", ReactAppView.as_view(), name="react_app"),
+    # Use language prefix by default
+    prefix_default_language=True
+)
+
 # Define URL patterns for non-internationalized URLs (API, static files, etc.)
 urlpatterns = [
     path("i18n/", include("django.conf.urls.i18n")),  # For language switching
@@ -215,31 +230,18 @@ for url_prefix, module_path in OPTIONAL_API_MODULES:
         print(f"WARNING: Could not import {module_path}: {e}")
         print(f"URL patterns for api/{url_prefix}/ will not be available")
 
-# Include core URLs at root level (for health check and other core functionality)
-urlpatterns += [
-    path("", include("pyerp.core.urls")),
-]
-
 # Include core API URLs
 urlpatterns += [
-    path("api/", include("pyerp.core.api_urls")),
+    path("api/", include(("pyerp.core.api_urls", "core_api"), namespace="core_api")),
 ]
 
-# Define URL patterns with i18n (language prefix) support
-# These will have language prefix in the URL, e.g., /de/admin/, /en/admin/
-urlpatterns += i18n_patterns(
-    # Django admin URLs
-    path("admin/", admin.site.urls),
-    # Add monitoring UI URL
-    path(
-        "monitoring/",
-        include("pyerp.monitoring.urls", namespace="monitoring"),
-    ),
-    # Root URL for React application
-    path("", ReactAppView.as_view(), name="react_app"),
-    # Use language prefix by default
-    prefix_default_language=True
-)
+# Add i18n patterns BEFORE the root core include
+urlpatterns += urlpatterns_i18n
+
+# Include core URLs at root level LAST (for health check and other core functionality)
+urlpatterns += [
+    path("", include(("pyerp.core.urls", "core"), namespace="core")),
+]
 
 # Serve static and media files in development
 if settings.DEBUG:

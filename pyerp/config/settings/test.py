@@ -136,6 +136,10 @@ STATIC_URL = "/static/test/"
 # Disable external API calls
 EXTERNAL_API_MOCK = True
 
+# Dummy locations for S3 storage backends during tests
+STATIC_LOCATION = "static-test"
+MEDIA_LOCATION = "media-test"
+
 # Test-specific settings
 TEST_RUNNER = "django.test.runner.DiscoverRunner"
 TEST_OUTPUT_DIR = Path(BASE_DIR).parent / "tests" / "output"

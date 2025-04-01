@@ -13,8 +13,8 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework.test import APIRequestFactory
 
 from pyerp.core.models import AuditLog, UserPreference, Tag, TaggedItem
+from users.serializers import UserSerializer
 from pyerp.core.serializers import (
-    UserSerializer,
     AuditLogSerializer,
     UserPreferenceSerializer,
     TagSerializer,

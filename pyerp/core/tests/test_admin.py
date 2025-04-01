@@ -10,6 +10,8 @@ from django.urls import reverse
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
+from unittest.mock import Mock
 
 from pyerp.core.models import AuditLog, UserPreference, Tag, TaggedItem
 from pyerp.core.admin import (
@@ -29,6 +31,7 @@ class MockRequest:
         self.user = user
 
 
+@override_settings(ROOT_URLCONF='pyerp.urls', LANGUAGE_CODE='en', LANGUAGES=(('en', 'English'),))
 class AdminConfigTests(TestCase):
     """Tests for admin configurations."""
     
@@ -130,46 +133,38 @@ class AdminConfigTests(TestCase):
         
     def test_admin_changelist_view(self):
         """Test admin changelist views."""
-        response = self.client.get(reverse('admin:core_auditlog_changelist'))
+        response = self.client.get('/en/admin/core/auditlog/')
         self.assertEqual(response.status_code, 200)
         
-        response = self.client.get(reverse('admin:core_userpreference_changelist'))
+        response = self.client.get('/en/admin/core/userpreference/')
         self.assertEqual(response.status_code, 200)
         
-        response = self.client.get(reverse('admin:core_tag_changelist'))
+        response = self.client.get('/en/admin/core/tag/')
         self.assertEqual(response.status_code, 200)
         
-        response = self.client.get(reverse('admin:core_taggeditem_changelist'))
+        response = self.client.get('/en/admin/core/taggeditem/')
         self.assertEqual(response.status_code, 200)
         
     def test_admin_change_view(self):
         """Test admin change views."""
-        response = self.client.get(
-            reverse('admin:core_auditlog_change', args=[self.audit_log.pk])
-        )
+        response = self.client.get(f'/en/admin/core/auditlog/{self.audit_log.pk}/change/')
         self.assertEqual(response.status_code, 200)
         
-        response = self.client.get(
-            reverse('admin:core_userpreference_change', args=[self.preference.pk])
-        )
+        response = self.client.get(f'/en/admin/core/userpreference/{self.preference.pk}/change/')
         self.assertEqual(response.status_code, 200)
         
-        response = self.client.get(
-            reverse('admin:core_tag_change', args=[self.tag.pk])
-        )
+        response = self.client.get(f'/en/admin/core/tag/{self.tag.pk}/change/')
         self.assertEqual(response.status_code, 200)
         
-        response = self.client.get(
-            reverse('admin:core_taggeditem_change', args=[self.tagged_item.pk])
-        )
+        response = self.client.get(f'/en/admin/core/taggeditem/{self.tagged_item.pk}/change/')
         self.assertEqual(response.status_code, 200)
         
     def test_admin_add_view(self):
         """Test admin add views."""
-        response = self.client.get(reverse('admin:core_tag_add'))
+        response = self.client.get('/en/admin/core/tag/add/')
         self.assertEqual(response.status_code, 200)
         
-        response = self.client.get(reverse('admin:core_taggeditem_add'))
+        response = self.client.get('/en/admin/core/taggeditem/add/')
         self.assertEqual(response.status_code, 200)
         
     def test_audit_log_admin_has_delete_permission(self):
@@ -196,9 +191,10 @@ class AdminConfigTests(TestCase):
         """Test TagAdmin save_model method."""
         # Create a new tag via admin
         response = self.client.post(
-            reverse('admin:core_tag_add'),
+            '/en/admin/core/tag/add/',
             {
                 'name': 'Admin Created Tag',
+                'slug': 'admin-created-tag',
                 'description': 'Created via admin'
             }
         )
@@ -215,14 +211,14 @@ class AdminConfigTests(TestCase):
         """Test admin filters."""
         # Test AuditLog event_type filter
         response = self.client.get(
-            reverse('admin:core_auditlog_changelist') + 
+            '/en/admin/core/auditlog/' +
             f'?event_type={AuditLog.EventType.LOGIN}'
         )
         self.assertEqual(response.status_code, 200)
         
         # Test Tag created_at filter
         response = self.client.get(
-            reverse('admin:core_tag_changelist') + 
+            '/en/admin/core/tag/' +
             '?created_at__gte=2023-01-01'
         )
         self.assertEqual(response.status_code, 200)
@@ -233,7 +229,7 @@ class AdminConfigTests(TestCase):
         tag2 = Tag.objects.create(name='Another Tag')
         
         response = self.client.post(
-            reverse('admin:core_tag_changelist'),
+            '/en/admin/core/tag/',
             {
                 'action': 'delete_selected',
                 '_selected_action': [self.tag.pk, tag2.pk]

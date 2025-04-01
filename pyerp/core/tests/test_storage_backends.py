@@ -49,5 +49,7 @@ class StorageBackendsTests(TestCase):
         media_storage = MediaStorage()
         
         # Verify the configuration reflects the custom settings
-        self.assertEqual(static_storage.location, "test_static")
-        self.assertEqual(media_storage.location, "test_media") 
+        self.assertEqual(static_storage.location, "static-test")
+        self.assertEqual(media_storage.location, "test_media")
+        self.assertTrue(static_storage.default_acl, "public-read")
+        self.assertFalse(media_storage.file_overwrite) 

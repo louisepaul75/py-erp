@@ -705,7 +705,12 @@ class ProductImage(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"Image for {self.product.sku} ({self.image_type})"
+        # Format expected by tests: "Image IMG<padded_id> for <sku>" or "Image IMG<padded_id> (unlinked)"
+        image_id_str = f"IMG{self.id:03}" # Pad ID to 3 digits
+        if self.product:
+            return f"Image {image_id_str} for {self.product.sku}"
+        else:
+            return f"Image {image_id_str} (unlinked)"
 
 
 class ImageSyncLog(models.Model):
@@ -760,9 +765,8 @@ class ImageSyncLog(models.Model):
         ordering = ["-started_at"]
 
     def __str__(self) -> str:
-        return (
-            f"Image Sync {self.started_at.strftime('%Y-%m-%d %H:%M')} - {self.status}"
-        )
+        # Use the ID and the display value of the status for a clearer representation
+        return f"Image Sync #{self.id} - {self.get_status_display()}"
 
 
 class UnifiedProduct(models.Model):

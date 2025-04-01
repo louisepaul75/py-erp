@@ -298,5 +298,5 @@ class ComplexValidationTests(unittest.TestCase):
         })
         self.assertFalse(form.is_valid())
         self.assertIn('category', form.errors)
-        # Django's built-in validation error message for choice field
+        # Django's built-in validation error message for choice field should contain the invalid value
         self.assertTrue('not-a-category' in form.errors['category'][0]) 

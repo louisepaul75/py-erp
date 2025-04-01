@@ -9,8 +9,9 @@ import re
 from decimal import Decimal
 from django.test import TestCase
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator as DjangoRegexValidator
 
-from pyerp.core.form_validation import ValidatedForm
 from pyerp.core.validators import (
     ValidationResult,
     Validator,
@@ -19,6 +20,7 @@ from pyerp.core.validators import (
     CompoundValidator,
     BusinessRuleValidator,
 )
+from pyerp.core.form_validation import ValidatedForm, ValidatedFormMixin
 
 
 class CreditCardValidator(Validator):
@@ -137,9 +139,15 @@ class URLValidator(Validator):
         # Basic URL pattern
         if self.require_protocol:
             protocols = '|'.join(self.allowed_protocols)
-            pattern = rf'^({protocols})://([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])(/[\w\-.~!$&\'()*+,;=:@/%]*)*$'
+            # Updated regex to allow optional port (:port) and optional query string (?...) after path
+            pattern = rf'^({protocols})://([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(:\d+)?(/[\w\-.~!$&\'()*+,;=:@/%]*)?(\?[^\s]*)?$'
         else:
-            pattern = r'^(([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])(/[\w\-.~!$&\'()*+,;=:@/%]*)*|localhost(:\d+)?(/[\w\-.~!$&\'()*+,;=:@/%]*)*)$'
+            # Updated regex to allow optional query string (?...) after path for both domain and localhost parts
+            domain_part = r'([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])'
+            localhost_part = r'localhost(:\d+)?'
+            path_part = r'(/[\w\-.~!$&\'()*+,;=:@/%]*)?'
+            query_part = r'(\?[^\s]*)?'
+            pattern = rf'^(({domain_part}|{localhost_part}){path_part}{query_part})$'
         
         if not re.match(pattern, value):
             if self.require_protocol:
@@ -221,7 +229,7 @@ class PaymentForm(ValidatedForm):
         ('amex', 'American Express'),
     ])
     card_number = forms.CharField(max_length=19)
-    card_expiry = forms.CharField(max_length=7)
+    card_expiry = forms.CharField(max_length=7) # Assumes MM/YYYY
     card_cvv = forms.CharField(max_length=4)
     
     def setup_validators(self):
@@ -231,36 +239,36 @@ class PaymentForm(ValidatedForm):
         self.add_validator('card_expiry', RequiredValidator())
         self.add_validator('card_cvv', RequiredValidator())
         
-        # Add custom credit card validator
+        # Add custom credit card validator for card number format/checksum
         self.add_validator('card_number', CreditCardValidator())
         
         # Add regex validator for expiry date (MM/YYYY)
         self.add_validator('card_expiry', RegexValidator(
-            r'^(0[1-9]|1[0-2])\/20[2-9]\d$',
+            r'^(0[1-9]|1[0-2])\/20[2-9]\d$', # MM/YYYY
             error_message="Expiry date must be in MM/YYYY format"
         ))
         
-        # Add CVV validator based on card type
-        def cvv_validator(value, **kwargs):
-            result = ValidationResult()
-            field_name = kwargs.get('field_name', 'card_cvv')
-            form = kwargs.get('form')
-            
-            if form and value:
-                card_type = form.cleaned_data.get('card_type')
-                
-                # AmEx requires 4-digit CVV
-                if card_type == 'amex':
-                    if not (len(value) == 4 and value.isdigit()):
-                        result.add_error(field_name, "American Express requires a 4-digit CVV")
-                # Other cards use 3-digit CVV
-                else:
-                    if not (len(value) == 3 and value.isdigit()):
-                        result.add_error(field_name, "CVV must be 3 digits")
-            
-            return result
+        # Removed the previous BusinessRuleValidator for CVV
+        # Validation now happens in clean()
+
+    def clean(self):
+        """Perform cross-field validation after standard cleaning."""
+        cleaned_data = super().clean()
         
-        self.add_validator('card_cvv', BusinessRuleValidator(cvv_validator))
+        card_type = cleaned_data.get("card_type")
+        card_cvv = cleaned_data.get("card_cvv")
+
+        if card_type and card_cvv:
+            # AmEx requires 4-digit CVV
+            if card_type == 'amex':
+                if not (len(card_cvv) == 4 and card_cvv.isdigit()):
+                    self.add_error('card_cvv', "American Express requires a 4-digit CVV")
+            # Other cards use 3-digit CVV
+            else:
+                if not (len(card_cvv) == 3 and card_cvv.isdigit()):
+                    self.add_error('card_cvv', "CVV must be 3 digits for this card type")
+
+        return cleaned_data
 
 
 class BookForm(ValidatedForm):
@@ -280,26 +288,28 @@ class BookForm(ValidatedForm):
 
 
 class RegistrationForm(ValidatedForm):
-    """Form with custom password validation."""
+    """Form with combined Django and custom validation."""
     
-    username = forms.CharField(max_length=50)
+    username = forms.CharField(
+        max_length=50,
+        validators=[
+            DjangoRegexValidator(
+                regex=r'^[a-zA-Z0-9_]+$', 
+                message="Username can only contain letters, numbers, and underscores"
+            )
+        ]
+    )
     email = forms.EmailField()
     password = forms.CharField(widget=forms.PasswordInput)
     confirm_password = forms.CharField(widget=forms.PasswordInput)
-    website = forms.URLField(required=False)
+    # Use URL field with extra parameters to ensure strict validation
+    website = forms.URLField(
+        required=False,
+    )
     
     def setup_validators(self):
-        # Add standard validators
-        self.add_validator('username', RequiredValidator())
-        self.add_validator('email', RequiredValidator())
-        
-        # Add regex for username (alphanumeric and underscore only)
-        self.add_validator('username', RegexValidator(
-            r'^[a-zA-Z0-9_]+$',
-            error_message="Username can only contain letters, numbers, and underscores"
-        ))
-        
-        # Add custom password strength validator
+        """Add our custom validators to the form."""
+        # Add password strength validator
         self.add_validator('password', PasswordStrengthValidator(
             min_length=8,
             require_uppercase=True,
@@ -308,7 +318,7 @@ class RegistrationForm(ValidatedForm):
             require_special=True
         ))
         
-        # Add custom URL validator
+        # Add custom URL validator to ensure protocol is present
         self.add_validator('website', URLValidator(
             require_protocol=True,
             allowed_protocols=['http', 'https']
@@ -317,13 +327,10 @@ class RegistrationForm(ValidatedForm):
         # Form-level validation for password confirmation
         def password_match(cleaned_data):
             result = ValidationResult()
-            
             password = cleaned_data.get('password')
             confirm_password = cleaned_data.get('confirm_password')
-            
             if password and confirm_password and password != confirm_password:
                 result.add_error('confirm_password', "Passwords do not match")
-            
             return result
         
         self.add_form_validator(password_match)
@@ -622,13 +629,13 @@ class FormWithCustomValidatorsTests(TestCase):
         self.assertIn('confirm_password', form.errors)
         self.assertIn('match', form.errors['confirm_password'][0])
         
-        # Invalid URL format
+        # Invalid URL format - use a completely invalid URL format that can't be auto-corrected
         form = RegistrationForm(data={
             'username': 'validuser',
             'email': 'user@example.com',
             'password': 'P@ssw0rd123!',
             'confirm_password': 'P@ssw0rd123!',
-            'website': 'example.com',  # Missing protocol
+            'website': 'invalid url with spaces',  # Invalid URL that can't be fixed by adding a scheme
         })
         self.assertFalse(form.is_valid())
         self.assertIn('website', form.errors)
