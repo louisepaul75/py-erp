@@ -300,3 +300,692 @@ class ComplexValidationTests(unittest.TestCase):
         self.assertIn('category', form.errors)
         # Django's built-in validation error message for choice field should contain the invalid value
         self.assertTrue('not-a-category' in form.errors['category'][0]) 
+
+
+class AdvancedValidatedForm(ValidatedForm):
+    """Test form with advanced validation scenarios."""
+    
+    username = forms.CharField(max_length=100)
+    website = forms.URLField(required=False)
+    birthday = forms.DateField(required=False)
+    agreement = forms.BooleanField()
+    product_code = forms.CharField(max_length=10, required=False)
+    
+    def setup_validators(self):
+        # Username validation with multiple requirements
+        self.add_validator('username', RequiredValidator())
+        self.add_validator('username', LengthValidator(min_length=4, max_length=20))
+        self.add_validator('username', RegexValidator(
+            r'^[a-zA-Z0-9_]+$',
+            error_message="Username can only contain letters, numbers, and underscores"
+        ))
+        
+        # Website validation - use standard URL validation
+        # (Testing Django's built-in URLField validation)
+        
+        # Product code format validation (when provided)
+        self.add_validator('product_code', RegexValidator(
+            r'^[A-Z]{2}-\d{4}$',
+            error_message="Product code must be in format XX-1234"
+        ))
+        
+        # Agreement must be checked
+        self.add_validator('agreement', RequiredValidator(
+            error_message="You must agree to the terms"
+        ))
+        
+        # Form-level validation: if birthday provided, must be reasonable
+        def validate_birthday(cleaned_data):
+            result = ValidationResult()
+            from datetime import date, timedelta
+            
+            birthday = cleaned_data.get('birthday')
+            if birthday and birthday > date.today():
+                result.add_error('birthday', "Birthday cannot be in the future")
+            elif birthday and birthday < date.today() - timedelta(days=365*120):
+                result.add_error('birthday', "Please enter a reasonable birth date")
+            
+            return result
+            
+        self.add_form_validator(validate_birthday)
+
+
+class AdvancedValidationTests(unittest.TestCase):
+    """Tests for advanced validation scenarios."""
+    
+    def test_valid_form(self):
+        """Test with valid data."""
+        from datetime import date
+        
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123',
+            'website': 'https://example.com',
+            'birthday': date(1990, 1, 1),
+            'agreement': True,
+            'product_code': 'AB-1234'
+        })
+        self.assertTrue(form.is_valid())
+    
+    def test_username_validation(self):
+        """Test username validation rules."""
+        # Too short
+        form = AdvancedValidatedForm(data={
+            'username': 'abc',
+            'agreement': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('username', form.errors)
+        
+        # Invalid characters
+        form = AdvancedValidatedForm(data={
+            'username': 'user@name',
+            'agreement': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('username', form.errors)
+        self.assertIn("Username can only contain letters, numbers, and underscores", form.errors['username'][0])
+        
+        # Too long
+        form = AdvancedValidatedForm(data={
+            'username': 'x' * 21,
+            'agreement': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('username', form.errors)
+    
+    def test_invalid_url(self):
+        """Test URL field validation."""
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123',
+            'website': 'not-a-valid-url',
+            'agreement': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('website', form.errors)
+    
+    def test_future_birthday(self):
+        """Test birthday validation (future date)."""
+        from datetime import date, timedelta
+        
+        future_date = date.today() + timedelta(days=10)
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123',
+            'birthday': future_date,
+            'agreement': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('birthday', form.errors)
+        self.assertEqual("Birthday cannot be in the future", form.errors['birthday'][0])
+    
+    def test_implausible_birthday(self):
+        """Test birthday validation (extremely old)."""
+        from datetime import date, timedelta
+        
+        old_date = date.today() - timedelta(days=365*150)
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123',
+            'birthday': old_date,
+            'agreement': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('birthday', form.errors)
+        self.assertEqual("Please enter a reasonable birth date", form.errors['birthday'][0])
+    
+    def test_invalid_product_code(self):
+        """Test product code validation."""
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123',
+            'agreement': True,
+            'product_code': 'invalid'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('product_code', form.errors)
+        
+        # Test empty product code (should be valid as field is optional)
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123',
+            'agreement': True,
+            'product_code': ''
+        })
+        self.assertTrue(form.is_valid())
+    
+    def test_agreement_required(self):
+        """Test agreement checkbox is required."""
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123',
+            'agreement': False
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('agreement', form.errors)
+        
+        # Not providing agreement field at all
+        form = AdvancedValidatedForm(data={
+            'username': 'valid_user123'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('agreement', form.errors)
+
+
+class ValidationPerformanceForm(ValidatedForm):
+    """Form to test validation performance with a large number of validators."""
+    
+    field1 = forms.CharField(max_length=100)
+    field2 = forms.CharField(max_length=100)
+    field3 = forms.CharField(max_length=100)
+    
+    def setup_validators(self):
+        # Add multiple validators to simulate complex form
+        for i in range(1, 4):
+            field_name = f'field{i}'
+            self.add_validator(field_name, RequiredValidator())
+            self.add_validator(field_name, LengthValidator(min_length=2, max_length=50))
+            self.add_validator(field_name, RegexValidator(r'^[a-zA-Z0-9 ]+$'))
+
+
+class ValidationPerformanceTests(unittest.TestCase):
+    """Tests for validation performance and edge cases."""
+    
+    def test_multiple_field_errors(self):
+        """Test form with multiple fields having errors."""
+        form = ValidationPerformanceForm(data={
+            'field1': 'a',  # Too short
+            'field2': 'valid',
+            'field3': 'invalid@$#'  # Invalid characters
+        })
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 2)  # Two fields should have errors
+        self.assertIn('field1', form.errors)
+        self.assertIn('field3', form.errors)
+    
+    def test_empty_form(self):
+        """Test form with no data."""
+        form = ValidationPerformanceForm(data={})
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 3)  # All fields should be required
+    
+    def test_validators_initialization(self):
+        """Test that validators are properly initialized."""
+        form = ValidationPerformanceForm()
+        # Each field has 3 validators
+        self.assertEqual(len(form.validators['field1']), 3)
+        self.assertEqual(len(form.validators['field2']), 3)
+        self.assertEqual(len(form.validators['field3']), 3)
+        
+        # Test validators are of correct types
+        self.assertIsInstance(form.validators['field1'][0], RequiredValidator)
+        self.assertIsInstance(form.validators['field1'][1], LengthValidator)
+        self.assertIsInstance(form.validators['field1'][2], RegexValidator)
+
+
+class RegistrationForm(ValidatedForm):
+    """Realistic user registration form with validation."""
+    
+    username = forms.CharField(max_length=30)
+    email = forms.EmailField()
+    password = forms.CharField(widget=forms.PasswordInput)
+    confirm_password = forms.CharField(widget=forms.PasswordInput)
+    first_name = forms.CharField(max_length=30, required=False)
+    last_name = forms.CharField(max_length=30, required=False)
+    terms_accepted = forms.BooleanField()
+    
+    def setup_validators(self):
+        # Username validation
+        self.add_validator('username', RequiredValidator())
+        self.add_validator('username', LengthValidator(min_length=3, max_length=30))
+        self.add_validator('username', RegexValidator(
+            r'^[a-zA-Z0-9_]+$',
+            error_message="Username can only contain letters, numbers, and underscores"
+        ))
+        
+        # Email validation
+        self.add_validator('email', RequiredValidator())
+        self.add_validator('email', RegexValidator(
+            r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$',
+            error_message="Please enter a valid email address"
+        ))
+        
+        # Password validation
+        self.add_validator('password', RequiredValidator())
+        self.add_validator('password', LengthValidator(
+            min_length=8,
+            error_message="Password must be at least 8 characters long"
+        ))
+        self.add_validator('password', RegexValidator(
+            r'.*[A-Z].*',
+            error_message="Password must contain at least one uppercase letter"
+        ))
+        self.add_validator('password', RegexValidator(
+            r'.*[a-z].*',
+            error_message="Password must contain at least one lowercase letter"
+        ))
+        self.add_validator('password', RegexValidator(
+            r'.*[0-9].*',
+            error_message="Password must contain at least one number"
+        ))
+        
+        # Terms acceptance
+        self.add_validator('terms_accepted', RequiredValidator(
+            error_message="You must accept the terms and conditions"
+        ))
+        
+        # Form-level validation
+        def passwords_match(cleaned_data):
+            result = ValidationResult()
+            password = cleaned_data.get('password')
+            confirm = cleaned_data.get('confirm_password')
+            
+            if password and confirm and password != confirm:
+                result.add_error('confirm_password', "Passwords do not match")
+                
+            return result
+            
+        self.add_form_validator(passwords_match)
+
+
+class RegistrationFormTests(unittest.TestCase):
+    """Tests for user registration form."""
+    
+    def test_valid_registration(self):
+        """Test registration with valid data."""
+        form = RegistrationForm(data={
+            'username': 'validuser',
+            'email': 'user@example.com',
+            'password': 'ValidPass123',
+            'confirm_password': 'ValidPass123',
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'terms_accepted': True
+        })
+        self.assertTrue(form.is_valid())
+    
+    def test_weak_password(self):
+        """Test registration with weak password."""
+        # Password without uppercase
+        form = RegistrationForm(data={
+            'username': 'validuser',
+            'email': 'user@example.com',
+            'password': 'password123',
+            'confirm_password': 'password123',
+            'terms_accepted': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('password', form.errors)
+        
+        # Password without number
+        form = RegistrationForm(data={
+            'username': 'validuser',
+            'email': 'user@example.com',
+            'password': 'PasswordOnly',
+            'confirm_password': 'PasswordOnly',
+            'terms_accepted': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('password', form.errors)
+        
+        # Password too short
+        form = RegistrationForm(data={
+            'username': 'validuser',
+            'email': 'user@example.com',
+            'password': 'Short1',
+            'confirm_password': 'Short1',
+            'terms_accepted': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('password', form.errors)
+    
+    def test_password_mismatch(self):
+        """Test registration with mismatched passwords."""
+        form = RegistrationForm(data={
+            'username': 'validuser',
+            'email': 'user@example.com',
+            'password': 'ValidPass123',
+            'confirm_password': 'DifferentPass123',
+            'terms_accepted': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('confirm_password', form.errors)
+        self.assertEqual("Passwords do not match", form.errors['confirm_password'][0])
+    
+    def test_invalid_username(self):
+        """Test registration with invalid username."""
+        form = RegistrationForm(data={
+            'username': 'invalid user@123',
+            'email': 'user@example.com',
+            'password': 'ValidPass123',
+            'confirm_password': 'ValidPass123',
+            'terms_accepted': True
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('username', form.errors)
+        
+    def test_terms_not_accepted(self):
+        """Test registration without accepting terms."""
+        form = RegistrationForm(data={
+            'username': 'validuser',
+            'email': 'user@example.com',
+            'password': 'ValidPass123',
+            'confirm_password': 'ValidPass123',
+            'terms_accepted': False
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('terms_accepted', form.errors)
+        
+    def test_multiple_validation_errors(self):
+        """Test with multiple validation errors at once."""
+        form = RegistrationForm(data={
+            'username': 'x',  # Too short
+            'email': 'invalid-email',  # Invalid email
+            'password': 'weak',  # Too short, no uppercase, no number
+            'confirm_password': 'different',  # Mismatch
+            'terms_accepted': False  # Not accepted
+        })
+        self.assertFalse(form.is_valid())
+        
+        # Check that we have errors for all problematic fields
+        error_fields = form.errors.keys()
+        self.assertGreaterEqual(len(error_fields), 4)  # At least 4 fields have errors
+        self.assertIn('username', error_fields)
+        self.assertIn('email', error_fields)
+        self.assertIn('password', error_fields)
+        self.assertIn('terms_accepted', error_fields)
+
+
+class ConditionalValidationForm(ValidatedForm):
+    """Form with conditional validation rules."""
+    
+    payment_method = forms.ChoiceField(choices=[
+        ('credit_card', 'Credit Card'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('paypal', 'PayPal')
+    ])
+    
+    credit_card_number = forms.CharField(max_length=19, required=False)
+    credit_card_expiry = forms.CharField(max_length=7, required=False)
+    credit_card_cvv = forms.CharField(max_length=4, required=False)
+    
+    bank_account = forms.CharField(max_length=20, required=False)
+    bank_routing = forms.CharField(max_length=9, required=False)
+    
+    paypal_email = forms.EmailField(required=False)
+    
+    def setup_validators(self):
+        # Base validation for payment method
+        self.add_validator('payment_method', RequiredValidator())
+        self.add_validator('payment_method', ChoiceValidator(
+            choices=['credit_card', 'bank_transfer', 'paypal']
+        ))
+        
+        # Conditional validation based on payment method
+        def validate_payment_details(cleaned_data):
+            result = ValidationResult()
+            payment_method = cleaned_data.get('payment_method')
+            
+            if payment_method == 'credit_card':
+                # Credit card fields are required
+                cc_number = cleaned_data.get('credit_card_number')
+                cc_expiry = cleaned_data.get('credit_card_expiry')
+                cc_cvv = cleaned_data.get('credit_card_cvv')
+                
+                if not cc_number:
+                    result.add_error('credit_card_number', 'Credit card number is required')
+                elif not any(char.isdigit() for char in cc_number):
+                    result.add_error('credit_card_number', 'Credit card number must contain digits')
+                
+                if not cc_expiry:
+                    result.add_error('credit_card_expiry', 'Expiry date is required')
+                
+                if not cc_cvv:
+                    result.add_error('credit_card_cvv', 'CVV is required')
+                elif not cc_cvv.isdigit():
+                    result.add_error('credit_card_cvv', 'CVV must be numeric')
+                
+            elif payment_method == 'bank_transfer':
+                # Bank fields are required
+                bank_account = cleaned_data.get('bank_account')
+                bank_routing = cleaned_data.get('bank_routing')
+                
+                if not bank_account:
+                    result.add_error('bank_account', 'Bank account number is required')
+                
+                if not bank_routing:
+                    result.add_error('bank_routing', 'Routing number is required')
+                
+            elif payment_method == 'paypal':
+                # PayPal email is required
+                paypal_email = cleaned_data.get('paypal_email')
+                
+                if not paypal_email:
+                    result.add_error('paypal_email', 'PayPal email is required')
+            
+            return result
+            
+        self.add_form_validator(validate_payment_details)
+
+
+class ConditionalValidationTests(unittest.TestCase):
+    """Tests for conditional validation."""
+    
+    def test_credit_card_payment(self):
+        """Test valid credit card payment."""
+        form = ConditionalValidationForm(data={
+            'payment_method': 'credit_card',
+            'credit_card_number': '4111111111111111',
+            'credit_card_expiry': '12/2025',
+            'credit_card_cvv': '123'
+        })
+        self.assertTrue(form.is_valid())
+    
+    def test_missing_credit_card_details(self):
+        """Test credit card payment with missing details."""
+        form = ConditionalValidationForm(data={
+            'payment_method': 'credit_card',
+            'credit_card_number': '4111111111111111',
+            # Missing expiry
+            'credit_card_cvv': '123'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('credit_card_expiry', form.errors)
+        
+        # Missing all credit card details
+        form = ConditionalValidationForm(data={
+            'payment_method': 'credit_card'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 3)  # All three cc fields should have errors
+    
+    def test_bank_transfer_payment(self):
+        """Test valid bank transfer payment."""
+        form = ConditionalValidationForm(data={
+            'payment_method': 'bank_transfer',
+            'bank_account': '12345678901234',
+            'bank_routing': '123456789'
+        })
+        self.assertTrue(form.is_valid())
+    
+    def test_missing_bank_details(self):
+        """Test bank transfer with missing details."""
+        form = ConditionalValidationForm(data={
+            'payment_method': 'bank_transfer',
+            # Missing both account and routing
+        })
+        self.assertFalse(form.is_valid())
+        self.assertEqual(len(form.errors), 2)  # Both bank fields should have errors
+    
+    def test_paypal_payment(self):
+        """Test valid PayPal payment."""
+        form = ConditionalValidationForm(data={
+            'payment_method': 'paypal',
+            'paypal_email': 'user@example.com'
+        })
+        self.assertTrue(form.is_valid())
+    
+    def test_missing_paypal_email(self):
+        """Test PayPal payment with missing email."""
+        form = ConditionalValidationForm(data={
+            'payment_method': 'paypal'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('paypal_email', form.errors)
+    
+    def test_invalid_payment_method(self):
+        """Test with invalid payment method."""
+        form = ConditionalValidationForm(data={
+            'payment_method': 'invalid_method'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('payment_method', form.errors)
+
+
+class ValidationErrorMessageForm(ValidatedForm):
+    """Form to test custom error messages."""
+    
+    name = forms.CharField(max_length=100, required=False)
+    age = forms.IntegerField(required=False)
+    email = forms.EmailField(required=False)
+    
+    def setup_validators(self):
+        self.add_validator('name', RequiredValidator(
+            error_message="Please provide your name"
+        ))
+        self.add_validator('age', RangeValidator(
+            min_value=18, 
+            max_value=100,
+            error_message="Age must be between {min_value} and {max_value}"
+        ))
+        self.add_validator('email', RegexValidator(
+            r'^[\w.+-]+@example\.com$',
+            error_message="Email must be an @example.com address"
+        ))
+
+
+class ValidationErrorMessageTests(unittest.TestCase):
+    """Tests for custom error messages in validators."""
+    
+    def test_custom_required_message(self):
+        """Test custom message for required field."""
+        form = ValidationErrorMessageForm(data={
+            'age': 25,
+            'email': 'test@example.com'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('name', form.errors)
+        self.assertEqual("Please provide your name", form.errors['name'][0])
+    
+    def test_custom_range_message(self):
+        """Test custom message for range validation."""
+        form = ValidationErrorMessageForm(data={
+            'name': 'John',
+            'age': 15,  # Below minimum
+            'email': 'test@example.com'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('age', form.errors)
+        self.assertEqual("Age must be between 18 and 100", form.errors['age'][0])
+    
+    def test_custom_regex_message(self):
+        """Test custom message for regex validation."""
+        form = ValidationErrorMessageForm(data={
+            'name': 'John',
+            'age': 25,
+            'email': 'test@gmail.com'  # Not example.com
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('email', form.errors)
+        self.assertEqual("Email must be an @example.com address", form.errors['email'][0])
+
+
+class ValidationErrorHandlingForm(ValidatedForm):
+    """Form to test error handling scenarios."""
+    
+    field = forms.CharField()
+    
+    def setup_validators(self):
+        # Add a validator that will raise an exception
+        def problematic_validator(value, **kwargs):
+            if value == 'trigger_error':
+                # Simulate a validator with a bug
+                raise RuntimeError("Validator error")
+            result = ValidationResult()
+            return result
+        
+        self.add_validator('field', problematic_validator)
+        
+        # Add a form validator that will raise an exception
+        def problematic_form_validator(cleaned_data):
+            if cleaned_data.get('field') == 'trigger_form_error':
+                # Simulate a form validator with a bug
+                raise ValueError("Form validator error")
+            result = ValidationResult()
+            return result
+            
+        self.add_form_validator(problematic_form_validator)
+        
+    # Override apply_validators to catch exceptions
+    def apply_validators(self, field_name, value):
+        try:
+            return super().apply_validators(field_name, value)
+        except Exception as e:
+            result = ValidationResult()
+            result.add_error(field_name, f"Validation error: {str(e)}")
+            return result
+            
+    # Override apply_form_validators to catch exceptions
+    def apply_form_validators(self, cleaned_data):
+        try:
+            return super().apply_form_validators(cleaned_data)
+        except Exception as e:
+            result = ValidationResult()
+            result.add_error('__all__', f"Form validation error: {str(e)}")
+            return result
+
+
+class EmptyStringValidationForm(ValidatedForm):
+    """Form to test validation of empty strings vs None."""
+    
+    required_field = forms.CharField()
+    optional_field = forms.CharField(required=False)
+    
+    def setup_validators(self):
+        # Required field should not be empty
+        self.add_validator('required_field', RequiredValidator())
+        
+        # Optional field validation when provided
+        self.add_validator('optional_field', LengthValidator(
+            min_length=2, 
+            error_message="If provided, must be at least 2 characters"
+        ))
+
+
+class EmptyStringValidationTests(unittest.TestCase):
+    """Tests for validation of empty strings vs None."""
+    
+    def test_required_field_empty_string(self):
+        """Test empty string in required field."""
+        form = EmptyStringValidationForm(data={
+            'required_field': '',
+            'optional_field': 'valid'
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('required_field', form.errors)
+    
+    def test_optional_field_empty_string(self):
+        """Test empty string in optional field."""
+        form = EmptyStringValidationForm(data={
+            'required_field': 'valid',
+            'optional_field': ''
+        })
+        # Empty string should pass since field is optional
+        self.assertTrue(form.is_valid())
+    
+    def test_optional_field_too_short(self):
+        """Test too short value in optional field."""
+        form = EmptyStringValidationForm(data={
+            'required_field': 'valid',
+            'optional_field': 'x'  # Too short when provided
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('optional_field', form.errors)
+        self.assertEqual(
+            "If provided, must be at least 2 characters", 
+            form.errors['optional_field'][0]
+        ) 

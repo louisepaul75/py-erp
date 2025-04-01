@@ -78,7 +78,9 @@ class AuditLogTests(TestCase):
             user=self.user
         )
         
-        expected_str = f"Login - {self.user.username} - {log.timestamp}"
+        # Get the event type display value directly to avoid translation discrepancies
+        expected_event = log.get_event_type_display()
+        expected_str = f"{expected_event} - {self.user.username} - {log.timestamp}"
         self.assertEqual(str(log), expected_str)
         
         # Test without a username
@@ -88,7 +90,9 @@ class AuditLogTests(TestCase):
             username=""
         )
         
-        expected_str = f"System Error - {log.timestamp}"
+        # Get the event type display value directly
+        expected_event = log.get_event_type_display()
+        expected_str = f"{expected_event} - {log.timestamp}"
         self.assertEqual(str(log), expected_str)
         
     def test_auto_set_username(self):

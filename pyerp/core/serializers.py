@@ -8,7 +8,7 @@ class UserPreferenceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserPreference
-        fields = ['id', 'dashboard_config', 'updated_at']
+        fields = ['id', 'user', 'dashboard_config', 'updated_at']
         read_only_fields = ['id', 'updated_at']
 
 

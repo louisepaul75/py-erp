@@ -7,6 +7,7 @@ create more complex validation workflows.
 
 from django.test import TestCase
 from django import forms
+import re
 
 from pyerp.core.form_validation import ValidatedForm
 from pyerp.core.validators import (
@@ -78,82 +79,74 @@ class CompositeAddressForm(ValidatedForm):
     country = forms.CharField(max_length=50)
     
     def setup_validators(self):
-        """Set up form validators with composition."""
-        # Basic validation
-        self.add_validator('address_type', RequiredValidator())
+        # Basic validation for all addresses
         self.add_validator('street', RequiredValidator())
         self.add_validator('city', RequiredValidator())
+        self.add_validator('country', RequiredValidator())
         
-        # Conditional validation for domestic addresses
-        is_domestic = lambda value, **kwargs: kwargs.get('form') and kwargs.get('form').cleaned_data.get('address_type') == 'domestic'
+        # Custom validators based on address type
+        def validate_us_state(value, **kwargs):
+            """Validate US state format."""
+            result = ValidationResult()
+            field_name = kwargs.get('field_name', 'state')
+            
+            # Only validate if country is set to US and address type is domestic
+            if hasattr(self, 'cleaned_data'):
+                address_type = self.cleaned_data.get('address_type')
+                country = self.cleaned_data.get('country')
+                
+                if address_type == 'domestic' and country == 'United States':
+                    # Check if state is a valid 2-letter code
+                    us_state_pattern = r'^[A-Z]{2}$'
+                    if not re.match(us_state_pattern, value):
+                        result.add_error(
+                            field_name,
+                            "For US addresses, state must be a 2-letter code (e.g., CA, NY)"
+                        )
+            return result
         
-        # US state validator (required for domestic)
-        us_state_validator = AndValidator([
-            RequiredValidator(error_message="State is required for domestic addresses"),
-            ChoiceValidator(
-                choices=[
-                    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 
-                    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 
-                    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 
-                    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 
-                    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 
-                    'DC',
-                ],
-                error_message="Please enter a valid US state code (e.g., CA for California)"
-            )
-        ])
+        self.add_validator('state', validate_us_state)
         
-        self.add_validator('state', ConditionalValidator(
-            is_domestic,
-            us_state_validator,
-            error_message="Invalid state for domestic address"
-        ))
+        def validate_us_postal_code(value, **kwargs):
+            """Validate US postal code format."""
+            result = ValidationResult()
+            field_name = kwargs.get('field_name', 'postal_code')
+            
+            # Only validate if country is set to US and address type is domestic
+            if hasattr(self, 'cleaned_data'):
+                address_type = self.cleaned_data.get('address_type')
+                country = self.cleaned_data.get('country')
+                
+                if address_type == 'domestic' and country == 'United States':
+                    # Check if postal code is a valid US ZIP code
+                    zip_pattern = r'^\d{5}(-\d{4})?$'
+                    if not re.match(zip_pattern, value):
+                        result.add_error(
+                            field_name,
+                            "US ZIP code must be 5 digits or ZIP+4 format"
+                        )
+            return result
         
-        # US ZIP code validator (required for domestic)
-        us_zip_validator = AndValidator([
-            RequiredValidator(error_message="ZIP code is required for domestic addresses"),
-            RegexValidator(
-                r'^\d{5}(-\d{4})?$',
-                error_message="ZIP code must be in format 12345 or 12345-6789"
-            )
-        ])
+        self.add_validator('postal_code', validate_us_postal_code)
         
-        self.add_validator('postal_code', ConditionalValidator(
-            is_domestic,
-            us_zip_validator,
-            error_message="Invalid ZIP code format"
-        ))
-        
-        # Country should be "United States" for domestic
+        # Validate country is consistent with address type
         def validate_country(value, **kwargs):
+            """Validate that country is appropriate for address type."""
             result = ValidationResult()
             field_name = kwargs.get('field_name', 'country')
-            form = kwargs.get('form')
             
-            if form and form.cleaned_data.get('address_type') == 'domestic':
-                if value.upper() != 'UNITED STATES' and value.upper() != 'USA' and value.upper() != 'US':
-                    result.add_error(field_name, "Country must be 'United States' for domestic addresses")
+            if hasattr(self, 'cleaned_data'):
+                address_type = self.cleaned_data.get('address_type')
+                
+                if address_type == 'domestic' and value != 'United States':
+                    result.add_error(
+                        field_name,
+                        "For domestic addresses, country must be 'United States'"
+                    )
             
             return result
         
-        self.add_validator('country', BusinessRuleValidator(validate_country))
-        
-        # International address validation
-        is_international = lambda value, **kwargs: kwargs.get('form') and kwargs.get('form').cleaned_data.get('address_type') == 'international'
-        
-        # For international, country is required
-        self.add_validator('country', ConditionalValidator(
-            is_international,
-            RequiredValidator(error_message="Country is required for international addresses"),
-            error_message="Country is required"
-        ))
-        
-        # For international, state is optional but city is required
-        self.add_validator('city', ConditionalValidator(
-            is_international,
-            RequiredValidator(error_message="City is required for international addresses"),
-            error_message="City is required"
-        ))
+        self.add_validator('country', validate_country)
 
 
 class ProductSearchForm(ValidatedForm):

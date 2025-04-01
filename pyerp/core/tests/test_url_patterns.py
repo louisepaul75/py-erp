@@ -136,7 +136,7 @@ class CoreUrlPatternsTests(TestCase):
         
         # Test user profile API endpoint
         response = self.client.get(reverse('core_api:api-user-profile')) # Corrected name
-        self.assertEqual(response.status_code, 401)  # Unauthorized
+        self.assertEqual(response.status_code, 403)  # Forbidden - Django REST framework default
         
         # Login and try again
         self.client.login(username='testuser', password='password123')

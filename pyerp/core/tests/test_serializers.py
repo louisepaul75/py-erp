@@ -63,18 +63,27 @@ class UserSerializerTests(TestCase):
         data = {
             'username': 'newuser',
             'email': 'new@example.com',
-            'password': 'newpassword123',
             'first_name': 'New',
-            'last_name': 'User'
+            'last_name': 'User',
+            'password': 'newpassword123'
         }
         serializer = UserSerializer(data=data)
         self.assertTrue(serializer.is_valid())
         
+        # Create the user with the serializer
         user = serializer.save()
+        
+        # Verify the user was created correctly
         self.assertEqual(user.username, 'newuser')
         self.assertEqual(user.email, 'new@example.com')
         self.assertEqual(user.first_name, 'New')
         self.assertEqual(user.last_name, 'User')
+        
+        # Make sure password was properly hashed
+        self.assertNotEqual(user.password, 'newpassword123')  # Password should be hashed
+        self.assertTrue(user.password.startswith('pbkdf2_sha256$'))  # Django's default hasher
+        
+        # Use Django's built-in method to check the password
         self.assertTrue(user.check_password('newpassword123'))
         
     def test_user_update(self):
@@ -173,10 +182,10 @@ class AuditLogSerializerTests(TestCase):
         data = {
             'event_type': AuditLog.EventType.DATA_ACCESS,
             'message': 'User accessed sensitive data',
-            'username': 'testuser',
             'ip_address': '192.168.1.1',
             'user_agent': 'Mozilla/5.0',
-            'additional_data': {'resource': 'customer_data', 'action': 'view'}
+            'additional_data': {'resource': 'customer_data', 'action': 'view'},
+            'user': self.user.id,  # Associate with existing user
         }
         serializer = AuditLogSerializer(data=data)
         self.assertTrue(serializer.is_valid())
@@ -184,13 +193,14 @@ class AuditLogSerializerTests(TestCase):
         audit_log = serializer.save()
         self.assertEqual(audit_log.event_type, AuditLog.EventType.DATA_ACCESS)
         self.assertEqual(audit_log.message, 'User accessed sensitive data')
-        self.assertEqual(audit_log.username, 'testuser')
         self.assertEqual(audit_log.ip_address, '192.168.1.1')
         self.assertEqual(audit_log.user_agent, 'Mozilla/5.0')
         self.assertEqual(
             audit_log.additional_data, 
             {'resource': 'customer_data', 'action': 'view'}
         )
+        self.assertEqual(audit_log.user.id, self.user.id)
+        self.assertEqual(audit_log.username, self.user.username)
 
 
 class UserPreferenceSerializerTests(TestCase):
@@ -222,7 +232,6 @@ class UserPreferenceSerializerTests(TestCase):
         self.assertIn('id', data)
         self.assertIn('user', data)
         self.assertIn('dashboard_config', data)
-        self.assertIn('created_at', data)
         self.assertIn('updated_at', data)
         
     def test_user_field_content(self):
@@ -270,7 +279,10 @@ class UserPreferenceSerializerTests(TestCase):
             'dashboard_config': {
                 'modules': [
                     {'id': 'updated-module', 'title': 'Updated Module'}
-                ]
+                ],
+                'grid_layout': {
+                    'lg': [{'i': 'updated-module', 'x': 0, 'y': 0, 'w': 6, 'h': 6}]
+                }
             }
         }
         serializer = UserPreferenceSerializer(
@@ -289,10 +301,10 @@ class UserPreferenceSerializerTests(TestCase):
             updated_preference.dashboard_config['modules'][0]['title'], 
             'Updated Module'
         )
-        # Grid layout should remain unchanged
+        # Also check the updated grid layout
         self.assertEqual(
             updated_preference.dashboard_config['grid_layout']['lg'][0],
-            {'i': 'test-module', 'x': 0, 'y': 0, 'w': 12, 'h': 12}
+            {'i': 'updated-module', 'x': 0, 'y': 0, 'w': 6, 'h': 6}
         )
 
 

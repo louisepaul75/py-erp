@@ -61,29 +61,29 @@ class ProductForm(ValidatedForm):
         
         self.add_validator('category', RequiredValidator())
         self.add_validator('category', ChoiceValidator(
-            choices=['electronics', 'clothing', 'books', 'food'],
+            ['electronics', 'clothing', 'books', 'food'],
             error_message="Please select a valid category"
         ))
         
         # Business rule: Sale price must be less than regular price
         def sale_price_rule(value, **kwargs):
+            """Validate that sale price is lower than regular price."""
             result = ValidationResult()
             field_name = kwargs.get('field_name', 'sale_price')
-            form = kwargs.get('form')
             
-            if form and value:
-                try:
-                    price = float(form.cleaned_data.get('price', 0))
-                    sale_price = float(value)
-                    
-                    if sale_price >= price:
-                        result.add_error(field_name, "Sale price must be less than regular price")
-                except (ValueError, TypeError):
-                    result.add_error(field_name, "Invalid price format")
+            if hasattr(self, 'cleaned_data') and value is not None:
+                regular_price = self.cleaned_data.get('price')
+                
+                if regular_price and value:
+                    if float(value) >= float(regular_price):
+                        result.add_error(
+                            field_name,
+                            "Sale price must be less than regular price"
+                        )
             
             return result
         
-        self.add_validator('sale_price', BusinessRuleValidator(sale_price_rule))
+        self.add_validator('sale_price', sale_price_rule)
         
         # Form-level business rule: Electronics products must have a SKU starting with 'E-'
         def electronics_sku_rule(cleaned_data):
@@ -125,9 +125,12 @@ class OrderForm(ValidatedForm):
     
     def setup_validators(self):
         # Basic validation
-        self.add_validator('customer_name', RequiredValidator())
-        self.add_validator('customer_type', RequiredValidator())
         self.add_validator('order_value', RequiredValidator())
+        self.add_validator('customer_name', RequiredValidator())
+        self.add_validator('customer_type', ChoiceValidator(
+            ['retail', 'wholesale', 'partner']
+        ))
+        
         self.add_validator('order_value', RangeValidator(
             min_value=0.01,
             error_message="Order value must be greater than zero"
@@ -139,27 +142,28 @@ class OrderForm(ValidatedForm):
             error_message="Discount must be between 0-100%"
         ))
         
-        # Business rule: Discount code required if discount percent > 0
+        # Discount code validation
         def discount_code_required(value, **kwargs):
+            """Validate discount code presence when discount is applied."""
             result = ValidationResult()
             field_name = kwargs.get('field_name', 'discount_code')
-            form = kwargs.get('form')
             
-            if form:
-                discount_percent = form.cleaned_data.get('discount_percent')
+            # Get cleaned data from form
+            if hasattr(self, 'cleaned_data'):
+                discount_percent = self.cleaned_data.get('discount_percent')
                 
-                if discount_percent and float(discount_percent) > 0 and not value:
-                    result.add_error(field_name, "Discount code is required when applying a discount")
+                # Check if discount is applied but no code is provided
+                if discount_percent and discount_percent > 0 and not value:
+                    result.add_error(
+                        field_name,
+                        "Discount code is required when applying a discount"
+                    )
             
             return result
         
-        self.add_validator('discount_code', BusinessRuleValidator(discount_code_required))
+        self.add_validator('discount_code', discount_code_required)
         
-        # Form-level validation rules
-        
-        # Rule 1: Wholesale customers get maximum 30% discount
-        # Rule 2: Partners can use bank transfer, retail must use credit or cash
-        # Rule 3: Order value limits for certain payment methods
+        # Form-level business rules
         def order_business_rules(cleaned_data):
             result = ValidationResult()
             
@@ -230,22 +234,25 @@ class UserSubscriptionForm(ValidatedForm):
         
         self.add_validator('plan', RequiredValidator())
         
-        # Compound validator - company info required for premium and enterprise plans
+        # Business rule: Premium and Enterprise plans require company information
         def company_required(value, **kwargs):
-            form = kwargs.get('form')
-            if not form:
-                return ValidationResult()
+            """Validate that company info is provided for premium plans."""
+            result = ValidationResult()
+            field_name = kwargs.get('field_name')
+            
+            if hasattr(self, 'cleaned_data'):
+                plan = self.cleaned_data.get('plan')
                 
-            plan = form.cleaned_data.get('plan')
-            return plan in ['premium', 'enterprise'] and not value
+                if plan in ['premium', 'enterprise'] and not value:
+                    result.add_error(
+                        field_name,
+                        f"{field_name.replace('_', ' ').title()} is required for {plan} plans"
+                    )
+            
+            return result
         
-        company_validator = BusinessRuleValidator(
-            lambda value, **kwargs: company_required(value, **kwargs),
-            error_message="Company information is required for premium and enterprise plans"
-        )
-        
-        self.add_validator('company_name', company_validator)
-        self.add_validator('company_size', company_validator)
+        self.add_validator('company_name', company_required)
+        self.add_validator('company_size', company_required)
         
         # Form-level validation rules
         def subscription_rules(cleaned_data):
