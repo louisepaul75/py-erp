@@ -22,6 +22,11 @@ class CoreConfig(AppConfig):
         from . import signals  # noqa
 
         # Initialize the centralized logging system
-        from pyerp.utils.logging.logging_init import initialize_logging
+        from pyerp.utils.logging.logging_init import (
+            initialize_logging,
+            register_app_loggers,
+        )
+        from django.apps import apps
 
         initialize_logging()
+        register_app_loggers(apps.get_app_configs())

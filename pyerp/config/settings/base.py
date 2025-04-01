@@ -21,6 +21,10 @@ if str(BASE_DIR) not in sys.path:
 
 from pyerp.version import get_version  # noqa: E402
 
+# --- Logging Level --- 
+# Define the log level, used by pyerp.utils.logging
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-production")
 
@@ -303,133 +307,134 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 logs_dir = BASE_DIR / "logs"
 logs_dir.mkdir(exist_ok=True)
 
-# Logging Configuration
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
-JSON_LOGGING = os.environ.get("JSON_LOGGING", "False").lower() == "true"
-try:
-    LOG_FILE_SIZE_LIMIT = int(
-        os.environ.get("LOG_FILE_SIZE_LIMIT", 2097152)
-    )  # Default to 2MB
-except ValueError:
-    LOG_FILE_SIZE_LIMIT = 2097152  # 2MB in bytes
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-        "simple": {
-            "format": "{levelname} {message}",
-            "style": "{",
-        },
-        "json": {
-            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
-            "rename_fields": {
-                "asctime": "@timestamp",
-                "levelname": "level",
-            },
-        },
-    },
-    "filters": {
-        "require_debug_true": {
-            "()": "django.utils.log.RequireDebugTrue",
-        },
-        "require_debug_false": {
-            "()": "django.utils.log.RequireDebugFalse",
-        },
-    },
-    "handlers": {
-        "console": {
-            "level": "DEBUG",
-            "class": "logging.StreamHandler",
-            "formatter": "json" if JSON_LOGGING else "verbose",
-        },
-        "app_file": {
-            "level": LOG_LEVEL,
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": BASE_DIR / "logs" / "app.log",
-            "maxBytes": LOG_FILE_SIZE_LIMIT,
-            "backupCount": 10,
-            "formatter": "json" if JSON_LOGGING else "verbose",
-        },
-        "security_file": {
-            "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": BASE_DIR / "logs" / "security.log",
-            "maxBytes": LOG_FILE_SIZE_LIMIT,
-            "backupCount": 10,
-            "formatter": "json" if JSON_LOGGING else "verbose",
-        },
-        "performance_file": {
-            "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": BASE_DIR / "logs" / "performance.log",
-            "maxBytes": LOG_FILE_SIZE_LIMIT,
-            "backupCount": 5,
-            "formatter": "json" if JSON_LOGGING else "verbose",
-        },
-        "data_sync_file": {
-            "level": "INFO",
-            "class": "logging.handlers.RotatingFileHandler",
-            "filename": BASE_DIR / "logs" / "data_sync.log",
-            "maxBytes": LOG_FILE_SIZE_LIMIT,
-            "backupCount": 10,
-            "formatter": "json" if JSON_LOGGING else "verbose",
-        },
-        "mail_admins": {
-            "level": "ERROR",
-            "filters": ["require_debug_false"],
-            "class": "django.utils.log.AdminEmailHandler",
-            "formatter": "verbose",
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["console", "app_file"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "django.server": {
-            "handlers": ["console", "app_file"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "django.request": {
-            "handlers": ["mail_admins", "console", "app_file"],
-            "level": "ERROR",
-            "propagate": False,
-        },
-        "django.security": {
-            "handlers": ["security_file", "mail_admins"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "pyerp": {
-            "handlers": ["console", "app_file"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
-        "pyerp.sync": {
-            "handlers": ["console", "data_sync_file"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
-        "pyerp.performance": {
-            "handlers": ["performance_file"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "pyerp.external_api.images_cms": {
-            "handlers": ["console", "data_sync_file"],
-            "level": LOG_LEVEL,
-            "propagate": False,
-        },
-    },
-}
+# Logging Configuration - COMMENTED OUT TO USE pyerp.utils.logging
+# LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+# JSON_LOGGING = os.environ.get("JSON_LOGGING", "False").lower() == "true"
+# try:
+#     LOG_FILE_SIZE_LIMIT = int(
+#         os.environ.get("LOG_FILE_SIZE_LIMIT", 2097152)
+#     )  # Default to 2MB
+# except ValueError:
+#     LOG_FILE_SIZE_LIMIT = 2097152  # 2MB in bytes
+# 
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "formatters": {
+#         "verbose": {
+#             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+#             "style": "{",
+#         },
+#         "simple": {
+#             "format": "{levelname} {message}",
+#             "style": "{",
+#         },
+#         "json": {
+#             "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+#             "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
+#             "rename_fields": {
+#                 "asctime": "@timestamp",
+#                 "levelname": "level",
+#             },
+#         },
+#     },
+#     "filters": {
+#         "require_debug_true": {
+#             "()": "django.utils.log.RequireDebugTrue",
+#         },
+#         "require_debug_false": {
+#             "()": "django.utils.log.RequireDebugFalse",
+#         },
+#     },
+#     "handlers": {
+#         "console": {
+#             "level": "DEBUG",
+#             "class": "logging.StreamHandler",
+#             "formatter": "json" if JSON_LOGGING else "verbose",
+#         },
+#         "app_file": {
+#             "level": LOG_LEVEL,
+#             "class": "logging.handlers.RotatingFileHandler",
+#             "filename": BASE_DIR / "logs" / "app.log",
+#             "maxBytes": LOG_FILE_SIZE_LIMIT,
+#             "backupCount": 10,
+#             "formatter": "json" if JSON_LOGGING else "verbose",
+#         },
+#         "security_file": {
+#             "level": "INFO",
+#             "class": "logging.handlers.RotatingFileHandler",
+#             "filename": BASE_DIR / "logs" / "security.log",
+#             "maxBytes": LOG_FILE_SIZE_LIMIT,
+#             "backupCount": 10,
+#             "formatter": "json" if JSON_LOGGING else "verbose",
+#         },
+#         "performance_file": {
+#             "level": "INFO",
+#             "class": "logging.handlers.RotatingFileHandler",
+#             "filename": BASE_DIR / "logs" / "performance.log",
+#             "maxBytes": LOG_FILE_SIZE_LIMIT,
+#             "backupCount": 5,
+#             "formatter": "json" if JSON_LOGGING else "verbose",
+#         },
+#         "data_sync_file": {
+#             "level": "INFO",
+#             "class": "logging.handlers.RotatingFileHandler",
+#             "filename": BASE_DIR / "logs" / "data_sync.log",
+#             "maxBytes": LOG_FILE_SIZE_LIMIT,
+#             "backupCount": 10,
+#             "formatter": "json" if JSON_LOGGING else "verbose",
+#         },
+#         "mail_admins": {
+#             "level": "ERROR",
+#             "filters": ["require_debug_false"],
+#             "class": "django.utils.log.AdminEmailHandler",
+#             "formatter": "verbose",
+#         },
+#     },
+#     "loggers": {
+#         "django": {
+#             "handlers": ["console", "app_file"],
+#             "level": "INFO",
+#             "propagate": False,
+#         },
+#         "django.server": {
+#             "handlers": ["console", "app_file"],
+#             "level": "INFO",
+#             "propagate": False,
+#         },
+#         "django.request": {
+#             "handlers": ["mail_admins", "console", "app_file"],
+#             "level": "ERROR",
+#             "propagate": False,
+#         },
+#         "django.security": {
+#             "handlers": ["security_file", "mail_admins"],
+#             "level": "INFO",
+#             "propagate": False,
+#         },
+#         "pyerp": {
+#             "handlers": ["console", "app_file"],
+#             "level": LOG_LEVEL,
+#             "propagate": False,
+#         },
+#         "pyerp.sync": {
+#             "handlers": ["console", "data_sync_file"],
+#             "level": LOG_LEVEL,
+#             "propagate": False,
+#         },
+#         "pyerp.performance": {
+#             "handlers": ["performance_file"],
+#             "level": "INFO",
+#             "propagate": False,
+#         },
+#         "pyerp.external_api.images_cms": {
+#             "handlers": ["console", "data_sync_file"],
+#             "level": LOG_LEVEL,
+#             "propagate": False,
+#         },
+#     },
+# }
+# End of commented out LOGGING dict
 
 # Image API Configuration
 IMAGE_API = {
@@ -446,9 +451,9 @@ IMAGE_API = {
     == "true",  # Default to not verifying SSL
 }
 
-# Update loggers for image API
-LOGGING["loggers"]["pyerp.external_api.images_cms"] = {
-    "handlers": ["console", "data_sync_file"],
-    "level": LOG_LEVEL,
-    "propagate": False,
-}
+# Update loggers for image API - COMMENTED OUT, handled by pyerp.utils.logging
+# LOGGING["loggers"]["pyerp.external_api.images_cms"] = {
+#     "handlers": ["console", "data_sync_file"],
+#     "level": LOG_LEVEL,
+#     "propagate": False,
+# }
