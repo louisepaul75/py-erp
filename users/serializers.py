@@ -302,16 +302,21 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 class PermissionCategorySerializer(serializers.ModelSerializer):
     """
-    Serializer for the PermissionCategory model.
+    Serializer for the PermissionCategory model with nested permissions.
     """
-
-    permissions = PermissionSerializer(
-        many=True, read_only=True, source="permissions.permission"
-    )
+    permissions = serializers.SerializerMethodField()
+    subcategories = serializers.SerializerMethodField()
 
     class Meta:
         model = PermissionCategory
-        fields = ["id", "name", "description", "icon", "order", "permissions"]
+        fields = ['id', 'name', 'description', 'icon', 'permissions', 'subcategories']
+
+    def get_permissions(self, obj):
+        permissions = Permission.objects.filter(permissioncategoryitem__category=obj)
+        return PermissionSerializer(permissions, many=True).data
+
+    def get_subcategories(self, obj):
+        return PermissionCategorySerializer(obj.subcategories.all(), many=True).data
 
 
 class PermissionCategoryItemSerializer(serializers.ModelSerializer):

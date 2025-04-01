@@ -8,13 +8,16 @@ import { API_URL } from '@/lib/config';
 import useAppTranslation from '@/hooks/useTranslationWrapper';
 
 interface HealthStatus {
-  status: string;
-  database: {
+  success: boolean;
+  results: Array<{
+    component: string;
     status: string;
-    message: string;
-  };
-  environment: string;
-  version: string;
+    details: string;
+    response_time: number;
+    timestamp: string;
+  }>;
+  authenticated: boolean;
+  server_time: string;
 }
 
 interface GitBranchInfo {
@@ -81,19 +84,19 @@ export function Footer() {
   useEffect(() => {
     const fetchHealthStatus = async () => {
       try {
-        const response = await fetch(`${API_URL}/health/`);
+        const response = await fetch(`${API_URL}/monitoring/health-checks/`);
         if (response.ok) {
           const data = await response.json();
           setHealthStatus(data);
           setApiAvailable(true);
         } else {
           console.error('Failed to fetch health status');
-          setHealthStatus({ status: 'unhealthy', database: { status: 'unhealthy', message: 'API unavailable' }, environment: 'unknown', version: 'unknown' });
+          setHealthStatus(null);
           setApiAvailable(false);
         }
       } catch (error) {
         console.error('Error fetching health status:', error);
-        setHealthStatus({ status: 'unhealthy', database: { status: 'unhealthy', message: 'API unavailable' }, environment: 'unknown', version: 'unknown' });
+        setHealthStatus(null);
         setApiAvailable(false);
       } finally {
         setIsLoading(false);
@@ -140,18 +143,27 @@ export function Footer() {
   }, []);
   
   // Always show dev mode bar in development
-  const isDevelopment = process.env.NODE_ENV === 'development' || healthStatus?.environment === 'development';
+  const isDevelopment = process.env.NODE_ENV === 'development' || healthStatus?.results.some(r => r.component === 'api' && r.status === 'error');
   
   // Mock data for when API is not available
   const mockHealthStatus = {
-    status: 'unhealthy',
-    database: { status: 'disconnected', message: 'API is not available' },
-    environment: 'development',
-    version: '1.0.0-dev'
+    success: false,
+    results: [{
+      component: 'api',
+      status: 'error',
+      details: 'API is not available',
+      response_time: 0,
+      timestamp: new Date().toISOString()
+    }],
+    authenticated: false,
+    server_time: new Date().toISOString()
   };
   
   // Use real data if available, otherwise use mock data
   const displayHealthStatus = apiAvailable ? healthStatus : mockHealthStatus;
+  
+  // Calculate overall status
+  const isHealthy = displayHealthStatus?.success && displayHealthStatus?.results.every(r => r.status === 'success');
   
   return (
     <>
@@ -166,7 +178,7 @@ export function Footer() {
             href="/health-status" 
             className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
           >
-            <span>v{displayHealthStatus?.version || '0.0.0'}</span>
+            <span>v{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}</span>
             {isLoading ? (
               <div 
                 data-testid="loading-spinner"
@@ -177,7 +189,7 @@ export function Footer() {
                 data-testid="api-status-indicator"
                 className={cn(
                   "h-3 w-3 rounded-full",
-                  displayHealthStatus?.status === 'healthy' ? "bg-green-500" : "bg-red-500"
+                  isHealthy ? "bg-green-500" : "bg-red-500"
                 )}
               />
             )}
@@ -209,16 +221,16 @@ export function Footer() {
               <h3 className="font-semibold text-orange-800 mb-2">{t('health.debugInfo')}</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-gray-600">{t('health.environment')}:</div>
-                <div>{displayHealthStatus?.environment || 'Development'}</div>
+                <div>Development</div>
                 
                 <div className="text-gray-600">{t('health.version')}:</div>
-                <div>{displayHealthStatus?.version || '1.0.0'}</div>
+                <div>{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}</div>
                 
                 <div className="text-gray-600">{t('health.databaseStatus')}:</div>
                 <div className={cn(
-                  displayHealthStatus?.database?.status === 'connected' ? 'text-green-600' : 'text-red-600'
+                  displayHealthStatus?.results.find(r => r.component === 'database')?.status === 'success' ? 'text-green-600' : 'text-red-600'
                 )}>
-                  {displayHealthStatus?.database?.status || 'Unknown'}
+                  {displayHealthStatus?.results.find(r => r.component === 'database')?.status === 'success' ? 'Healthy' : 'Unhealthy'}
                 </div>
                 
                 <div className="text-gray-600">{t('health.gitBranch')}:</div>

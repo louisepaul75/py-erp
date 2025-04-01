@@ -21,4 +21,9 @@ export interface JwtPayload {
   last_name?: string;
   is_staff?: boolean;
   exp?: number;
+}
+
+export interface TokenResponse {
+  access: string;
+  refresh: string;
 } 
