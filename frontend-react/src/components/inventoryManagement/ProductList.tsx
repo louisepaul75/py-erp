@@ -56,6 +56,7 @@ export default function ProductList({
 
   console.log("filteredProducts in ProductList", filteredProducts);
   const sortedFilteredProducts = useMemo(() => {
+    if (!filteredProducts) return [];
     return [...filteredProducts].sort((a, b) => {
       const aValue = a[sortField] ?? ""; // Fallback to an empty string if null/undefined
       const bValue = b[sortField] ?? ""; // Fallback to an empty string if null/undefined

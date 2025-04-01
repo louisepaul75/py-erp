@@ -92,6 +92,7 @@ RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
     && chown -R root:root /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data
 
 # Set Django settings module for collectstatic
+# IMPORTANT: Must include 'config' in the path - pyerp.config.settings.production
 ARG DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
 ENV DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}
 

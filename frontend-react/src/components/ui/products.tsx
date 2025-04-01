@@ -86,6 +86,13 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           page_size: pagination.pageSize,
         })) as ApiResponse;
 
+        if (!response?.results) {
+          setProducts([]);
+          setFilteredProducts([]);
+          setSelectedItem(null);
+          return;
+        }
+
         setProducts(response.results);
         setFilteredProducts(response.results);
         
@@ -99,10 +106,10 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
             setSelectedItem(initialProduct.id);
             setSelectedProduct(initialProduct);
           }
-        } else {
-          // Default behavior
-          setSelectedItem(response.results[0]?.id || null);
-          if (response.results.length > 0 && !selectedProduct.id) {
+        } else if (response.results.length > 0) {
+          // Only set default selection if there are results
+          setSelectedItem(response.results[0].id);
+          if (!selectedProduct.id) {
             setSelectedProduct(response.results[0]);
           }
         }
@@ -110,6 +117,9 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
         console.log("Fetched products:", response);
       } catch (error) {
         console.error("Error fetching products:", error);
+        setProducts([]);
+        setFilteredProducts([]);
+        setSelectedItem(null);
       } finally {
         setIsLoading(false);
       }
