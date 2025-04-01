@@ -226,50 +226,36 @@ export const authService = {
   getCurrentUser: async (): Promise<User | null> => {
     console.log('[getCurrentUser] Starting function.');
     try {
-      // Get the current access token
+      // Get the current access token (needed for the initial request header)
+      // Let the beforeError hook handle cases where the initial token might be missing/invalid
       const token = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      // If no token exists upfront, we can return null early
       if (!token) {
-        console.warn('[getCurrentUser] No access token found.');
-        return null;
+         console.warn('[getCurrentUser] No access token found in storage.');
+         return null;
       }
-
-      // Directly attempt the fetch with the token
+      
+      // Attempt the fetch. The beforeError hook will handle 401/refresh/retry.
       console.log(`[getCurrentUser] Attempting api.get('auth/user/')...`);
       const user = await api.get('auth/user/', {
+        // We still need to provide the initial token for the first attempt
         headers: {
           'Authorization': `Bearer ${token}`
         }
-      }).json<User>();
+      }).json<User>(); 
       console.log('[getCurrentUser] Fetched user successfully:', user);
       return user;
     } catch (error) {
-      console.error('[getCurrentUser] Error:', error);
-      if (error instanceof HTTPError && error.response.status === 401) {
-        // Try to refresh the token
-        const refreshSuccess = await authService.refreshToken();
-        if (refreshSuccess) {
-          // Retry with the new token
-          const newToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-          if (newToken) {
-            try {
-              const user = await api.get('auth/user/', {
-                headers: {
-                  'Authorization': `Bearer ${newToken}`
-                }
-              }).json<User>();
-              return user;
-            } catch (retryError) {
-              console.error('[getCurrentUser] Retry after refresh failed:', retryError);
-              await clearAuthTokens(); // Clear tokens on retry failure too
-              return null; // Explicitly return null here
-            }
-          }
-        }
+      // Catch ANY error during the process (initial 401 not handled by hook, non-401, hook refresh fail, hook retry fail, JSON parse error)
+      console.error('[getCurrentUser] Error caught during user fetch process:', error); 
+      // Regardless of the error, if we end up here, authentication failed or user couldn't be fetched.
+      // Attempt to clear tokens just in case, but don't await it strictly if it fails
+      try { 
+        await clearAuthTokens(); 
+      } catch (clearError) {
+        console.error('[getCurrentUser] Failed to clear tokens during error handling:', clearError);
       }
-      // If we reach here, it means the initial fetch failed (not 401), 
-      // OR it was 401 and refresh failed, OR refresh succeeded but retry failed.
-      // In all these error cases after the initial try, clear tokens and return null.
-      await clearAuthTokens(); 
+      console.log('[getCurrentUser] Returning null due to error.');
       return null;
     }
   },
