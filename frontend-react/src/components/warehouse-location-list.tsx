@@ -135,7 +135,7 @@ export default function WarehouseLocationList() {
       // Map the API response to match our WarehouseLocation type
       const warehouseLocations: WarehouseLocation[] = data.map((item: any) => ({
         id: item.id.toString(),
-        laNumber: item.location_code || `LA-${item.id}`,
+        laNumber: item.legacy_id ? `LA-${item.legacy_id}` : `LA-${item.id}`,
         location: item.name,
         forSale: item.sale || false,
         specialStorage: item.special_spot || false,
