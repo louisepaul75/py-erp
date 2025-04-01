@@ -1,6 +1,6 @@
 export const API_URL = process.env.NODE_ENV === 'production' 
   ? '/api' 
-  : 'http://localhost:8050/api';
+  : '/api';
 
 export const AUTH_CONFIG = {
   tokenEndpoint: 'token/',

@@ -31,18 +31,61 @@ const nextConfig = {
   staticPageGenerationTimeout: 180,
   async rewrites() {
     return [
+      // Handle URLs with trailing slashes
       {
-        source: '/api/core/health',
+        source: '/api/health/',
+        destination: 'http://localhost:8050/health/',
+      },
+      // Handle URLs without trailing slashes
+      {
+        source: '/api/health',
         destination: 'http://localhost:8050/health/',
       },
       {
-        source: '/api/core/git/branch',
+        source: '/api/monitoring/:path*/',
+        destination: 'http://localhost:8050/monitoring/:path*/',
+      },
+      {
+        source: '/api/monitoring/:path*',
+        destination: 'http://localhost:8050/monitoring/:path*/',
+      },
+      {
+        source: '/api/git/branch/',
         destination: 'http://localhost:8050/api/git/branch/',
       },
       {
-        source: '/monitoring/:path*',
-        destination: 'http://localhost:8050/monitoring/:path*',
+        source: '/api/git/branch',
+        destination: 'http://localhost:8050/api/git/branch/',
       },
+      // Add rules for /api/csrf
+      {
+        source: '/api/csrf/',
+        destination: 'http://localhost:8050/api/csrf/',
+      },
+      {
+        source: '/api/csrf',
+        destination: 'http://localhost:8050/api/csrf/',
+      },
+      // Add rules for /api/token
+      {
+        source: '/api/token/',
+        destination: 'http://localhost:8050/api/token/',
+      },
+      {
+        source: '/api/token',
+        destination: 'http://localhost:8050/api/token/',
+      },
+      // Add rules for /api/auth/user
+      {
+        source: '/api/auth/user/',
+        destination: 'http://localhost:8050/api/auth/user/',
+      },
+      {
+        source: '/api/auth/user',
+        destination: 'http://localhost:8050/api/auth/user/',
+      },
+      // Catch-all for other /api paths (like /api/v1/...)
+      // This MUST be last to avoid overriding specific rules above
       {
         source: '/api/:path*',
         destination: 'http://localhost:8050/api/:path*',

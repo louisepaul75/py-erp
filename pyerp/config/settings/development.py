@@ -180,7 +180,14 @@ INTERNAL_IPS = [
 
 # Django Debug Toolbar
 DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
+    "SHOW_TOOLBAR_CALLBACK": lambda request:\
+        DEBUG and \
+        not request.path.startswith('/api/') and \
+        not request.path.startswith('/health/') and \
+        'text/html' in request.META.get('HTTP_ACCEPT', ''),
+    "RESULTS_CACHE_SIZE": 100,  # Increase cache size slightly
+    "RENDER_PANELS": True,  # Ensure panels are rendered
+    "ENABLE_STACKTRACES": True,  # Show stacktraces
 }
 
 # Email backend for development
