@@ -42,12 +42,12 @@ const nextConfig = {
         destination: 'http://localhost:8050/health/',
       },
       {
-        source: '/api/monitoring/:path*/',
-        destination: 'http://localhost:8050/monitoring/:path*/',
+        source: '/api/monitoring/health-checks/',
+        destination: 'http://localhost:8050/monitoring/health-checks/',
       },
       {
-        source: '/api/monitoring/:path*',
-        destination: 'http://localhost:8050/monitoring/:path*/',
+        source: '/api/monitoring/:path+',
+        destination: 'http://localhost:8050/monitoring/:path+',
       },
       {
         source: '/api/git/branch/',
@@ -84,7 +84,21 @@ const nextConfig = {
         source: '/api/auth/user',
         destination: 'http://localhost:8050/api/auth/user/',
       },
-      // Catch-all for other /api paths (like /api/v1/...)
+      // Add explicit rules for sales records BEFORE the general v1 rule
+      {
+        source: '/api/v1/sales/records/', // With slash
+        destination: 'http://localhost:8050/api/v1/sales/records/',
+      },
+      {
+        source: '/api/v1/sales/records', // Without slash
+        destination: 'http://localhost:8050/api/v1/sales/records/', // Force slash
+      },
+      // Add a specific rule for OTHER /api/v1/ paths BEFORE the general catch-all
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://localhost:8050/api/v1/:path*',
+      },
+      // Catch-all for other /api paths
       // This MUST be last to avoid overriding specific rules above
       {
         source: '/api/:path*',

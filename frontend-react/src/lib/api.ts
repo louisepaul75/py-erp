@@ -156,7 +156,9 @@ const mockOrders = [
 
 export async function fetchOrders(): Promise<Order[]> {
   try {
-    const response = await instance.get('v1/sales/records/').json<{results: any[]}>();
+    const targetUrl = 'v1/sales/records/';
+    console.log(`[api.ts] Attempting to fetch: ${API_URL}/${targetUrl}`); // Log the intended URL using API_URL
+    const response = await instance.get(targetUrl).json<{results: any[]}>();
     const salesRecords = response.results;
     
     const orders: Order[] = await Promise.all(salesRecords.map(async (record) => {
