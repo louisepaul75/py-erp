@@ -76,7 +76,7 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-50">
+    <nav className="bg-[hsl(var(--header-background))] shadow-md fixed w-full z-50">
       <div className="max-w-full mx-0 px-2 sm:px-3 lg:px-4">
         <div className="flex justify-between h-16">
           {/* Logo */}

@@ -86,6 +86,9 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           page_size: pagination.pageSize,
         })) as ApiResponse;
 
+        // Log raw API response for debugging
+        console.log("Raw API Response:", response);
+
         if (!response?.results) {
           setProducts([]);
           setFilteredProducts([]);
@@ -106,11 +109,15 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
             setSelectedItem(initialProduct.id);
             setSelectedProduct(initialProduct);
           }
-        } else if (response.results.length > 0) {
-          // Only set default selection if there are results
-          setSelectedItem(response.results[0].id);
-          if (!selectedProduct.id) {
-            setSelectedProduct(response.results[0]);
+        } else {
+          // Default behavior
+          if (response.results && response.results.length > 0) {
+            setSelectedItem(response.results[0]?.id || null);
+            if (!selectedProduct?.id) {
+              setSelectedProduct(response.results[0]);
+            }
+          } else {
+            setSelectedItem(null);
           }
         }
         
@@ -128,14 +135,22 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   }, [pagination.pageIndex, pagination.pageSize, initialVariantId, initialParentId]);
 
   useEffect(() => {
+    // Log products state before filtering
+    console.log("Products state before filtering:", products);
     console.log("Filtering products by search term");
-    setFilteredProducts(
-      products.filter(
-        (product) =>
-          product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
+    // Ensure products is an array before filtering
+    if (Array.isArray(products)) {
+      setFilteredProducts(
+        products.filter(
+          (product) =>
+            product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    } else {
+      // If products isn't an array (e.g., initially undefined), set filteredProducts to empty
+      setFilteredProducts([]); 
+    }
   }, [searchTerm, products]);
 
   // Update product selection handling
