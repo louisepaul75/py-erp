@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { usePrinterStore } from "@/lib/stores/printer-store"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
 interface Printer {
   id: string
@@ -95,38 +103,39 @@ export default function PrinterSettings() {
   return (
     <div className="space-y-4">
       <div className="border rounded-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Drucker Name / Ort</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">IP-Adresse</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y  ">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Drucker Name / Ort</TableHead>
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">IP-Adresse</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {printers.length > 0 ? (
-              printers.map((printer) => (
-                <tr
+              printers.map((printer: Printer) => (
+                <TableRow
                   key={printer.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${selectedPrinterId === printer.id ? "bg-blue-50" : ""}`}
+                  data-state={selectedPrinterId === printer.id ? "selected" : undefined}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer"
                   onClick={() => handleSelectPrinter(printer)}
                 >
-                  <td className="px-4 py-3 text-sm text-black">{printer.name}</td>
-                  <td className="px-4 py-3 text-sm text-black">{printer.ipAddress}</td>
-                </tr>
+                  <TableCell className="text-sm">{printer.name}</TableCell>
+                  <TableCell className="text-sm">{printer.ipAddress}</TableCell>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td colSpan={2} className="px-4 py-6 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
                   Keine Drucker konfiguriert
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {(isAddingNew || selectedPrinterId) && (
-        <div className="border rounded-md p-4 space-y-4">
+        <div className="border rounded-md p-4 space-y-4 bg-slate-50 dark:bg-slate-800/50">
           <h3 className="font-medium">{isAddingNew ? "Neuen Drucker hinzufügen" : "Drucker bearbeiten"}</h3>
 
           <div className="space-y-2">

@@ -4,7 +4,6 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import PrinterSettings from "./printer-settings"
-import PurposeSettings from "./purpose-settings"
 import ContainerTypeSettings from "./container-type-settings"
 import ScaleSettings from "./scale-settings"
 
@@ -41,10 +40,9 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
 
           <div className="p-6 overflow-y-auto" style={{ maxHeight: "calc(85vh - 60px)" }}>
             <Tabs defaultValue="printers" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="printers">Drucker</TabsTrigger>
                 <TabsTrigger value="scales">Waagen</TabsTrigger>
-                <TabsTrigger value="purposes">Schüttenzwecke</TabsTrigger>
                 <TabsTrigger value="containerTypes">Schüttentypen</TabsTrigger>
               </TabsList>
 
@@ -54,10 +52,6 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
 
               <TabsContent value="scales" className="mt-0">
                 <ScaleSettings />
-              </TabsContent>
-
-              <TabsContent value="purposes" className="mt-0">
-                <PurposeSettings />
               </TabsContent>
 
               <TabsContent value="containerTypes" className="mt-0">
