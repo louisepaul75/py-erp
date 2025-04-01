@@ -260,11 +260,16 @@ export const authService = {
               return user;
             } catch (retryError) {
               console.error('[getCurrentUser] Retry after refresh failed:', retryError);
+              await clearAuthTokens(); // Clear tokens on retry failure too
+              return null; // Explicitly return null here
             }
           }
         }
       }
-      await clearAuthTokens();
+      // If we reach here, it means the initial fetch failed (not 401), 
+      // OR it was 401 and refresh failed, OR refresh succeeded but retry failed.
+      // In all these error cases after the initial try, clear tokens and return null.
+      await clearAuthTokens(); 
       return null;
     }
   },
