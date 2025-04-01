@@ -751,7 +751,7 @@ We have made significant progress on the inventory management system:
 
 ## Estimation
 - Story Points: 21
-- Time Estimate: 3 weeks 
+
 
 ### Product Storage Data Structure Analysis
 After examining the data from the `Artikel_Lagerorte` and `Lager_Schuetten` tables, we have a clearer understanding of how product storage is structured in the legacy system:
