@@ -101,9 +101,13 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           }
         } else {
           // Default behavior
-          setSelectedItem(response.results[0]?.id || null);
-          if (response.results.length > 0 && !selectedProduct.id) {
-            setSelectedProduct(response.results[0]);
+          if (response.results && response.results.length > 0) {
+            setSelectedItem(response.results[0]?.id || null);
+            if (!selectedProduct?.id) {
+              setSelectedProduct(response.results[0]);
+            }
+          } else {
+            setSelectedItem(null);
           }
         }
         
@@ -119,13 +123,19 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
 
   useEffect(() => {
     console.log("Filtering products by search term");
-    setFilteredProducts(
-      products.filter(
-        (product) =>
-          product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
+    // Ensure products is an array before filtering
+    if (Array.isArray(products)) {
+      setFilteredProducts(
+        products.filter(
+          (product) =>
+            product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    } else {
+      // If products isn't an array (e.g., initially undefined), set filteredProducts to empty
+      setFilteredProducts([]); 
+    }
   }, [searchTerm, products]);
 
   // Update product selection handling

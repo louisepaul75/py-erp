@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import React from "react"
 
 export interface SkinnyTableColumn<T> {
   field: keyof T
@@ -44,14 +45,18 @@ export function SkinnyTable<T extends { [key: string]: any }>({
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
   }
 
-  const sortedData = [...data].sort((a, b) => {
-    const aValue = a[sortField] ?? ""
-    const bValue = b[sortField] ?? ""
+  const sortedData = React.useMemo(() => {
+    // Ensure data is an array before sorting
+    const dataToSort = Array.isArray(data) ? data : []; 
+    return [...dataToSort].sort((a, b) => {
+      const aValue = a[sortField] ?? "";
+      const bValue = b[sortField] ?? "";
 
-    if (aValue < bValue) return sortOrder === "asc" ? -1 : 1
-    if (aValue > bValue) return sortOrder === "asc" ? 1 : -1
-    return 0
-  })
+      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [data, sortField, sortOrder]);
 
   return (
     <Table className={className}>
