@@ -2,6 +2,13 @@
 
 set -e
 
+# Ensure the DJANGO_SETTINGS_MODULE is correct
+if [[ "${DJANGO_SETTINGS_MODULE:-}" != "pyerp.config.settings.production" ]]; then
+    echo "DJANGO_SETTINGS_MODULE was incorrect: ${DJANGO_SETTINGS_MODULE:-none}"
+    echo "Setting it to the correct value: pyerp.config.settings.production"
+    export DJANGO_SETTINGS_MODULE="pyerp.config.settings.production"
+fi
+
 # Load environment variables first
 echo "Loading environment from /app/config/env/.env.prod"
 source /app/config/env/.env.prod 2>/dev/null || true

@@ -4,6 +4,13 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+# Ensure the DJANGO_SETTINGS_MODULE is correct
+if [[ "${DJANGO_SETTINGS_MODULE:-}" != "pyerp.config.settings.development" ]]; then
+    echo "DJANGO_SETTINGS_MODULE was incorrect: ${DJANGO_SETTINGS_MODULE:-none}"
+    echo "Setting it to the correct value: pyerp.config.settings.development"
+    export DJANGO_SETTINGS_MODULE="pyerp.config.settings.development"
+fi
+
 # Set the PYERP_ENV environment variable based on DJANGO_SETTINGS_MODULE
 if [[ "${DJANGO_SETTINGS_MODULE:-}" == *"production"* ]]; then
     export PYERP_ENV="prod"

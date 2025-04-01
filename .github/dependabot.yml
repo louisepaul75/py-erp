@@ -3,6 +3,7 @@ updates:
   # Python dependencies
   - package-ecosystem: "pip"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -17,6 +18,7 @@ updates:
   # Node.js dependencies
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -26,8 +28,4 @@ updates:
       - "javascript"
     commit-message:
       prefix: "npm"
-      include: "scope"
-    ignore:
-      # Ignore major version updates for these packages (optional)
-      # - dependency-name: "express"
-      #   update-types: ["version-update:semver-major"] 
+      include: "scope" 

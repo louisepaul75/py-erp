@@ -2,8 +2,6 @@
 
 from django.db import models
 from django.utils import timezone
-from pyerp.utils.json_utils import json_serialize
-import json
 
 
 class SyncSource(models.Model):
@@ -84,15 +82,14 @@ class SyncLog(models.Model):
     records_processed = models.BigIntegerField(default=0)
     records_created = models.BigIntegerField(default=0)   # New field
     records_updated = models.BigIntegerField(default=0)   # New field
-    records_failed = models.BigIntegerField(default=0)    # Changed to BigIntegerField
+    records_failed = models.BigIntegerField(default=0)
     error_message = models.TextField(blank=True)
 
     # Removed fields: mapping, is_full_sync, sync_params, trace, records_succeeded
     # Removed STATUS_CHOICES if they differ significantly from legacy data
 
     class Meta:
-        # db_table = 'audit_synclog' # Removed to use default table name 'sync_synclog'
-        pass # Add pass if Meta class becomes empty
+        db_table = 'audit_synclog'
 
     def __str__(self):
         # Updated str representation

@@ -226,11 +226,15 @@ export function GeneralTab({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {technologies.map((tech) => (
-                        <SelectItem key={tech.id} value={tech.name}>
-                          {tech.name}
-                        </SelectItem>
-                      ))}
+                      {technologies.map((tech: Technology | string) => {
+                        const value = typeof tech === 'string' ? tech : tech.name;
+                        const id = typeof tech === 'string' ? tech : tech.id;
+                        return (
+                          <SelectItem key={id} value={value}>
+                            {value}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                   <FormMessage />

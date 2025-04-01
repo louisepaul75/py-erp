@@ -88,6 +88,11 @@ urlpatterns = [
     # Versioned API endpoints (v1)
     path("api/v1/", include(router_v1.urls)),
     
+    # Custom API endpoints (Non-versioned)
+    path("api/", include("pyerp.api.urls", namespace="custom_api")),
+    # Custom API endpoints (Versioned v1)
+    path("api/v1/", include("pyerp.api.urls", namespace="custom_api_v1")),
+    
     # Add auth/user endpoint (both versioned and non-versioned)
     path("api/auth/user/", UserProfileView.as_view(), name="auth-user-profile"),
     path("api/v1/auth/user/", UserProfileView.as_view(), name="auth-user-profile-v1"),

@@ -1,0 +1,49 @@
+[
+  {
+    "id": "user_management",
+    "name": "User Management",
+    "description": "Manage users, groups, and their permissions.",
+    "icon": "UsersIcon",
+    "order": 1,
+    "permissions": [
+      "auth.add_user",
+      "auth.change_user",
+      "auth.delete_user",
+      "auth.view_user",
+      "auth.add_group",
+      "auth.change_group",
+      "auth.delete_group",
+      "auth.view_group"
+    ],
+    "subcategories": []
+  },
+  {
+    "id": "orders",
+    "name": "Orders",
+    "description": "Permissions related to sales orders.",
+    "icon": "ShoppingCartIcon",
+    "order": 2,
+    "permissions": [
+      "orders.add_order",
+      "orders.change_order",
+      "orders.delete_order",
+      "orders.view_order"
+    ],
+    "subcategories": []
+  },
+   {
+    "id": "inventory",
+    "name": "Inventory",
+    "description": "Permissions related to inventory management.",
+    "icon": "ArchiveBoxIcon",
+    "order": 3,
+    "permissions": [
+      "inventory.add_item",
+      "inventory.change_item",
+      "inventory.delete_item",
+      "inventory.view_item",
+      "inventory.view_inventory"
+    ],
+    "subcategories": []
+  }
+] 
