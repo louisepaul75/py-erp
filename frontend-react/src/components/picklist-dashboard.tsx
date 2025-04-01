@@ -406,13 +406,12 @@ export default function PicklistDashboard() {
         accessorKey: "deliveryDate",
         header: ({ column }) => (
           <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-            Lieferdatum
+            Datum
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         ),
         cell: ({ row }) => {
           const value = row.getValue("deliveryDate")
-          // Check if value is a valid date before formatting
           if (!value || !(value instanceof Date) || isNaN(value.getTime())) {
             return "-"
           }
