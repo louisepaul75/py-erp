@@ -38,8 +38,8 @@ class StorageBackendsTests(TestCase):
         self.assertFalse(media_storage.file_overwrite)
         
     @override_settings(
-        STATIC_LOCATION="test_static",
-        MEDIA_LOCATION="test_media"
+        STATIC_LOCATION="static-test",
+        MEDIA_LOCATION="media-test"
     )
     @patch('pyerp.core.storage_backends.S3Boto3Storage')
     def test_storage_with_custom_settings(self, mock_s3_storage):
@@ -49,7 +49,7 @@ class StorageBackendsTests(TestCase):
         media_storage = MediaStorage()
         
         # Verify the configuration reflects the custom settings
-        self.assertEqual(static_storage.location, "test_static")
-        self.assertEqual(media_storage.location, "test_media")
-        self.assertTrue(static_storage.default_acl, "public-read")
+        self.assertEqual(static_storage.location, "static-test")
+        self.assertEqual(media_storage.location, "media-test")
+        self.assertEqual(static_storage.default_acl, "public-read")
         self.assertFalse(media_storage.file_overwrite) 

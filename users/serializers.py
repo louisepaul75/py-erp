@@ -116,17 +116,15 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a User with associated UserProfile."""
         profile_data = validated_data.pop("profile", {})
-        password = validated_data.pop("password")
-        username = validated_data.pop("username")
-        email = validated_data.pop("email", None) 
+        password = validated_data.pop("password", None)
         
-        # Create user with core fields first
-        user = User.objects.create_user(username, email, password)
-        
-        # Set remaining fields from validated_data directly on the instance
-        for attr, value in validated_data.items():
-            setattr(user, attr, value)
-        user.save()
+        # Create user with create_user method to ensure proper password hashing
+        user = User.objects.create_user(
+            username=validated_data.pop('username'),
+            email=validated_data.pop('email', ''),
+            password=password,
+            **validated_data
+        )
 
         # Check if profile already exists (created by signal) and update it
         # instead of creating a new one
@@ -144,6 +142,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update the User and UserProfile together."""
         profile_data = validated_data.pop("profile", None)
+        
+        # Handle password update separately with proper hashing
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
 
         # Update User instance
         for attr, value in validated_data.items():

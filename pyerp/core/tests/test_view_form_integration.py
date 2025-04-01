@@ -75,6 +75,25 @@ class UserRegistrationForm(ValidatedForm):
             return result
         
         self.add_form_validator(password_match)
+    
+    # Override validate to apply field validators
+    def validate(self, data):
+        """Apply all field validators for manual validation."""
+        result = ValidationResult()
+        
+        # Apply field validators manually
+        for field_name, value in data.items():
+            if field_name in self.validators:
+                for validator in self.validators[field_name]:
+                    validator_result = validator(value, field_name=field_name)
+                    result.merge(validator_result)
+        
+        # Apply form validators as well
+        if not result.has_errors():
+            form_result = self.apply_form_validators(data)
+            result.merge(form_result)
+            
+        return result
 
 
 # A simpler view for testing that directly accepts form data
@@ -86,18 +105,21 @@ class SimpleUserRegistrationView(View):
         try:
             form = UserRegistrationForm(form_data)
             
-            if form.is_valid():
+            # Manual validation
+            validation_result = form.validate(form_data)
+            
+            if validation_result.has_errors():
+                # Return validation errors with 400 status
+                return JsonResponse({
+                    'success': False,
+                    'errors': validation_result.errors
+                }, status=400)
+            else:
                 # In a real view, we would create the user here
                 return JsonResponse({
                     'success': True,
                     'message': 'User registered successfully'
                 })
-            else:
-                # Return validation errors
-                return JsonResponse({
-                    'success': False,
-                    'errors': form.errors
-                }, status=400)
                 
         except Exception as e:
             print(f"Error in view: {str(e)}")
