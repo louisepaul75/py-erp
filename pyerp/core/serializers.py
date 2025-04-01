@@ -37,7 +37,6 @@ class AuditLogSerializer(serializers.ModelSerializer):
             'id',
             'timestamp',
             'uuid',
-            'user',
             'content_type',
             'object_id',
             'username',

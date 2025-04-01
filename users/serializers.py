@@ -96,6 +96,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "last_login",
             "profile",
             "groups",
+            "password",
         ]
         read_only_fields = [
             "is_active",
@@ -104,6 +105,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
         ]
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
     def get_groups(self, obj):
         """Return the user's groups with minimal information."""
@@ -112,7 +116,17 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a User with associated UserProfile."""
         profile_data = validated_data.pop("profile", {})
-        user = User.objects.create_user(**validated_data)
+        password = validated_data.pop("password")
+        username = validated_data.pop("username")
+        email = validated_data.pop("email", None) 
+        
+        # Create user with core fields first
+        user = User.objects.create_user(username, email, password)
+        
+        # Set remaining fields from validated_data directly on the instance
+        for attr, value in validated_data.items():
+            setattr(user, attr, value)
+        user.save()
 
         # Check if profile already exists (created by signal) and update it
         # instead of creating a new one

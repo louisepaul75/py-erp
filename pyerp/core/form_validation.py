@@ -147,11 +147,16 @@ class ValidatedFormMixin:
         Override attribute access to handle dynamic field cleaning methods.
 
         This allows field validators to be called during Django's form
-        validation.
+        validation. If the attribute is a clean_field method and it's not
+        explicitly defined, we create a dynamic one that applies the validators.
         """
+        # First try to get the attribute normally
         try:
-            return super().__getattribute__(name)
+            # Use object.__getattribute__ to avoid recursive calls
+            attr = object.__getattribute__(self, name)
+            return attr
         except AttributeError as e:
+            # Only create dynamic clean methods if they don't already exist
             if name.startswith("clean_") and name[6:] in self.validators:
                 field_name = name[6:]
 

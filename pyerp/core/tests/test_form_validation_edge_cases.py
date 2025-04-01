@@ -160,7 +160,9 @@ class CustomCleanMethodForm(ValidatedForm):
     def clean_username(self):
         """Custom clean method for username."""
         username = self.cleaned_data.get('username', '')
-        
+        if not username:  # If clean_data doesn't have it yet, try to get from initial data
+            username = self.data.get('username', '')
+            
         # Apply custom validation not covered by validators
         reserved_names = ['admin', 'administrator', 'root', 'superuser']
         if username.lower() in reserved_names:

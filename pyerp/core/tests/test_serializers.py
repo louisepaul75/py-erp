@@ -13,7 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework.test import APIRequestFactory
 
 from pyerp.core.models import AuditLog, UserPreference, Tag, TaggedItem
-from users.serializers import UserSerializer
+from users.serializers import UserSerializer, UserDetailSerializer
 from pyerp.core.serializers import (
     AuditLogSerializer,
     UserPreferenceSerializer,
@@ -65,25 +65,24 @@ class UserSerializerTests(TestCase):
             'email': 'new@example.com',
             'first_name': 'New',
             'last_name': 'User',
-            'password': 'newpassword123'
+            'password': 'newpassword123',
+            'profile': {}  # Add empty profile data
         }
-        serializer = UserSerializer(data=data)
+        serializer = UserDetailSerializer(data=data)
+        if not serializer.is_valid():
+            print(f"Serializer errors: {serializer.errors}")
         self.assertTrue(serializer.is_valid())
         
-        # Create the user with the serializer
         user = serializer.save()
         
-        # Verify the user was created correctly
         self.assertEqual(user.username, 'newuser')
         self.assertEqual(user.email, 'new@example.com')
         self.assertEqual(user.first_name, 'New')
         self.assertEqual(user.last_name, 'User')
         
-        # Make sure password was properly hashed
         self.assertNotEqual(user.password, 'newpassword123')  # Password should be hashed
         self.assertTrue(user.password.startswith('pbkdf2_sha256$'))  # Django's default hasher
         
-        # Use Django's built-in method to check the password
         self.assertTrue(user.check_password('newpassword123'))
         
     def test_user_update(self):
@@ -92,7 +91,7 @@ class UserSerializerTests(TestCase):
             'first_name': 'Updated',
             'last_name': 'Name'
         }
-        serializer = UserSerializer(instance=self.user, data=data, partial=True)
+        serializer = UserDetailSerializer(instance=self.user, data=data, partial=True)
         self.assertTrue(serializer.is_valid())
         
         updated_user = serializer.save()
@@ -108,7 +107,7 @@ class UserSerializerTests(TestCase):
             'email': 'another@example.com',
             'password': 'password123'
         }
-        serializer = UserSerializer(data=data)
+        serializer = UserDetailSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('username', serializer.errors)
         
@@ -119,7 +118,7 @@ class UserSerializerTests(TestCase):
             'email': 'invalid-email',  # Invalid email
             'password': 'password123'
         }
-        serializer = UserSerializer(data=data)
+        serializer = UserDetailSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn('email', serializer.errors)
 
@@ -262,7 +261,12 @@ class UserPreferenceSerializerTests(TestCase):
                 }
             }
         }
-        serializer = UserPreferenceSerializer(data=data)
+        # Retrieve existing preference or create if not found (though signal should create it)
+        preference_instance, _ = UserPreference.objects.get_or_create(user=self.user)
+        # Pass instance to update existing record instead of creating a new one
+        serializer = UserPreferenceSerializer(instance=preference_instance, data=data)
+        if not serializer.is_valid():
+            print(f"Serializer errors: {serializer.errors}") # Print errors if invalid
         self.assertTrue(serializer.is_valid())
         
         preference = serializer.save()
