@@ -8,7 +8,7 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
+import { Select } from "@/components/ui/select1"
 import type { ContainerItem } from "@/types/warehouse-types"
 
 interface CreateContainerDialogProps {

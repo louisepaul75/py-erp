@@ -226,8 +226,7 @@ export const resources = {
     mold: {
       // Settings Dialog (used in settings-dialog.tsx)
       settings_dialog_title: "Einstellungen",
-      settings_dialog_description:
-        "Verwalten Sie Ihre Technologien, Legierungen, Tags und Formgrößen",
+      settings_dialog_description: "Verwalten Sie Ihre Legierungen und Tags",
       settings_tab_technologies: "Technologien",
       settings_tab_alloys: "Legierungen",
       settings_tab_tags: "Tags",
@@ -321,6 +320,8 @@ export const resources = {
       dialog_submit_duplicate: "Duplikat erstellen",
       status: "Status",
       select_status: "Status auswählen",
+      enter_name: "Geben Sie einen Namen für den neuen Zweck ein",
+      enter_optional_name: "Geben Sie einen Namen und optional eine Beschreibung für die neue Größe ein.",
 
       // Mold Size Manager (mold-size-manager.tsx)
       card_title_mold_sizes: "Formgrößen verwalten",
@@ -502,6 +503,10 @@ export const resources = {
       number_of_articles_description: "Automatisch aus den Artikeln berechnet",
       start_date_label: "Startdatum",
       end_date_label: "Enddatum",
+      new_purpose: "Neuen Zweck hinzufügen",
+      delete_purpose: "Aktuellen Zweck löschen",
+      add_size: "Neue Größe hinzufügen",
+      delete_size: "Aktuelle Größe löschen",
 
       // Warehouse Location Dialog
       warehouse_dialog_title: "Lagerort auswählen",
@@ -749,8 +754,7 @@ export const resources = {
     mold: {
       // Settings Dialog (used in settings-dialog.tsx)
       settings_dialog_title: "Settings",
-      settings_dialog_description:
-        "Manage your technologies, alloys, tags, and mold sizes",
+      settings_dialog_description: "Manage your alloys and tags",
       settings_tab_technologies: "Technologies",
       settings_tab_alloys: "Alloys",
       settings_tab_tags: "Tags",
@@ -830,16 +834,16 @@ export const resources = {
       dialog_description_edit: "Edit the selected mold's details.",
       dialog_description_duplicate:
         "Create a duplicate of the selected mold with a new mold number.",
-      // English
       tab_general_information: "General Information",
       tab_articles: "Articles",
       saving: "Saving...",
-      // English translations
       dialog_submit_create: "Create",
       dialog_submit_edit: "Save Changes",
       dialog_submit_duplicate: "Create Duplicate",
       status: "Status",
       select_status: "Select status",
+      enter_name: "Enter a name for the new purpose.",
+      enter_optional_name: "Enter a name and optionally a description for the new size.",
 
       // Mold Size Manager (mold-size-manager.tsx)
       card_title_mold_sizes: "Manage Mold Sizes",
@@ -1017,6 +1021,10 @@ export const resources = {
       number_of_articles_description: "Automatically calculated from articles",
       start_date_label: "Start Date",
       end_date_label: "End Date",
+      new_purpose: "Add new purpose",
+      delete_purpose: "Add new purpose",
+      add_size: "Add new size.",
+      delete_size: "Delete current size.",
 
       // Warehouse Location Dialog
       warehouse_dialog_title: "Select Warehouse Location",

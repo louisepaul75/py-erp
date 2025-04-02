@@ -1,19 +1,12 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { MoldSize } from "@/types/mold/mold-size"
-import { API_URL as BASE_URL } from "@/lib/config"
-import { clientCookieStorage } from "@/lib/auth/clientCookies"
-import { AUTH_CONFIG } from "@/lib/config"
+import { useMolds } from "@/hooks/mold/use-molds"
 
 /**
- * API URL for mold sizes
- */
-const API_URL = `${BASE_URL}/production/molds/mold_sizes/`
-
-/**
- * Mock data for mold sizes, used as fallback
+ * Mock API functions for mold sizes
+ * In a real application, these would be replaced with actual API calls
  */
 const mockMoldSizes: MoldSize[] = [
   {
@@ -39,57 +32,149 @@ const mockMoldSizes: MoldSize[] = [
 ]
 
 /**
- * Hook to fetch mold sizes
+ * Custom hook for managing mold sizes data
  */
 export function useMoldSizes() {
-  return useQuery({
-    queryKey: ["moldSizes"],
-    queryFn: async () => {
-      try {
-        // Get token from clientCookieStorage
-        const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-        
-        // Attempt to fetch from the real API
-        const response = await axios.get(API_URL, {
-          headers: token ? {
-            'Authorization': `Bearer ${token}`
-          } : {}
-        })
-        
-        // If successful, use the API data
-        if (response.status === 200) {
-          console.log("Successfully fetched mold sizes from API", response.data)
-          
-          // Check the structure of the API response
-          if (Array.isArray(response.data)) {
-            return response.data;
-          } else if (response.data && typeof response.data === 'object') {
-            // Check if response.data has a results, data, or items property that is an array
-            if (Array.isArray(response.data.results)) {
-              return response.data.results;
-            } else if (Array.isArray(response.data.data)) {
-              return response.data.data;
-            } else if (Array.isArray(response.data.items)) {
-              return response.data.items;
-            } else if (Array.isArray(response.data.moldSizes)) {
-              return response.data.moldSizes;
-            } else if (Array.isArray(response.data.mold_sizes)) {
-              return response.data.mold_sizes;
-            } else {
-              // If no recognized array structure, log and fall back to mock data
-              console.warn("API response doesn't contain an array of mold sizes:", response.data);
-            }
-          }
+  const queryClient = useQueryClient()
+  const { data: molds, updateMold } = useMolds()
+
+  /**
+   * Fetch all mold sizes
+   */
+  const fetchMoldSizes = async (): Promise<MoldSize[]> => {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return mockMoldSizes
+  }
+
+  /**
+   * Create a new mold size
+   */
+  const createMoldSizeFn = async (moldSize: Omit<MoldSize, "id">): Promise<MoldSize> => {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Generate a new ID
+    const newMoldSize: MoldSize = {
+      ...moldSize,
+      id: Math.random().toString(36).substring(2, 9),
+    }
+
+    // Add to mock data
+    mockMoldSizes.push(newMoldSize)
+
+    return newMoldSize
+  }
+
+  /**
+   * Update an existing mold size
+   */
+  const updateMoldSizeFn = async (moldSize: MoldSize): Promise<MoldSize> => {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Find and update the mold size
+    const index = mockMoldSizes.findIndex((s) => s.id === moldSize.id)
+    if (index === -1) {
+      throw new Error("Mold size not found")
+    }
+
+    // Get the old name before updating
+    const oldName = mockMoldSizes[index].name
+
+    // Update the mold size
+    mockMoldSizes[index] = moldSize
+
+    // If the name changed, update all molds that use this mold size
+    if (oldName !== moldSize.name && molds) {
+      for (const mold of molds) {
+        if (mold.moldSize === oldName) {
+          await updateMold({ ...mold, moldSize: moldSize.name })
         }
-        
-        // If not successful or unrecognized structure, fall back to mock data
-        console.warn("Failed to fetch mold sizes from API, using mock data")
-        return mockMoldSizes
-      } catch (error) {
-        console.error("Error fetching mold sizes:", error)
-        return mockMoldSizes
       }
+    }
+
+    return moldSize
+  }
+
+  /**
+   * Delete a mold size
+   */
+  const deleteMoldSizeFn = async (id: string): Promise<void> => {
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Find and remove the mold size
+    const index = mockMoldSizes.findIndex((s) => s.id === id)
+    if (index === -1) {
+      throw new Error("Mold size not found")
+    }
+
+    // Get the mold size name before removing it
+    const sizeName = mockMoldSizes[index].name
+
+    // Remove the mold size
+    mockMoldSizes.splice(index, 1)
+
+    // Update all molds that use this mold size
+    if (molds) {
+      for (const mold of molds) {
+        if (mold.moldSize === sizeName) {
+          await updateMold({ ...mold, moldSize: "" })
+        }
+      }
+    }
+  }
+
+  /**
+   * Query for fetching mold sizes
+   */
+  const query = useQuery({
+    queryKey: ["moldSizes"],
+    queryFn: fetchMoldSizes,
+  })
+
+  /**
+   * Mutation for creating a mold size
+   */
+  const createMutation = useMutation({
+    mutationFn: createMoldSizeFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["moldSizes"] })
     },
   })
+
+  /**
+   * Mutation for updating a mold size
+   */
+  const updateMutation = useMutation({
+    mutationFn: updateMoldSizeFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["moldSizes"] })
+      // Also invalidate molds query since we might have updated molds
+      queryClient.invalidateQueries({ queryKey: ["molds"] })
+    },
+  })
+
+  /**
+   * Mutation for deleting a mold size
+   */
+  const deleteMutation = useMutation({
+    mutationFn: deleteMoldSizeFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["moldSizes"] })
+      // Also invalidate molds query since we might have updated molds
+      queryClient.invalidateQueries({ queryKey: ["molds"] })
+    },
+  })
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    error: query.error,
+    createMoldSize: createMutation.mutateAsync,
+    updateMoldSize: updateMutation.mutateAsync,
+    deleteMoldSize: deleteMutation.mutateAsync,
+  }
 }
 

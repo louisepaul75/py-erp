@@ -36,7 +36,7 @@ export function TagSelector({ control, name, tags }: TagSelectorProps) {
 
   // Filter tags based on search term
   const filteredTags = tags.filter((tag) =>
-    tag.name.toLowerCase().includes(tagSearchTerm.toLowerCase())
+    tag?.name?.toLowerCase().includes(tagSearchTerm?.toLowerCase())
   );
 
   return (

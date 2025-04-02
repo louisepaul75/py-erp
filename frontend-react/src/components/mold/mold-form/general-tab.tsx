@@ -17,10 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertTriangle,
+  Check,
+  Minus,
+  Barcode,
+  ChevronDown,
+  Plus,
+  Trash,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { AlertTriangle, Check, Minus, Barcode } from "lucide-react";
 import { DatePickerField } from "@/components/mold/form/date-picker-field";
 import { TagSelector } from "@/components/mold/form/tag-selector";
 import { ImageUploader } from "@/components/mold/form/image-uploader";
@@ -33,6 +41,13 @@ import type { MoldSize } from "@/types/mold/mold-size";
 import { MoldActivityStatus } from "@/types/mold/mold";
 import type { Mold } from "@/types/mold/mold";
 import useAppTranslation from "@/hooks/useTranslationWrapper";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Props for the GeneralTab component
@@ -48,6 +63,10 @@ interface GeneralTabProps {
   onSubmit: (data: MoldFormValues) => Promise<void>;
   onScanBarcode: () => void;
   onOpenLocationDialog: () => void;
+  onAddTechnology: () => void;
+  onDeleteTechnology: (name: string) => void;
+  onAddMoldSize: () => void;
+  onDeleteMoldSize: (name: string ) => void;
 }
 
 /**
@@ -110,10 +129,16 @@ export function GeneralTab({
   onSubmit,
   onScanBarcode,
   onOpenLocationDialog,
+  onAddTechnology,
+  onDeleteTechnology,
+  onAddMoldSize,
+  onDeleteMoldSize,
 }: GeneralTabProps) {
   const [statusChanged, setStatusChanged] = useState(false);
 
   const { t } = useAppTranslation("mold");
+
+
 
   return (
     <Form {...form}>
@@ -213,26 +238,54 @@ export function GeneralTab({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("entity_technology")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={t("technology_placeholder")}
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between"
+                      >
+                        <span>{field.value || "Zweck auswählen"}</span>
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
                       {technologies.map((tech) => (
-                        <SelectItem key={tech.id} value={tech.name}>
+                        <DropdownMenuItem
+                          key={tech.id}
+                          onSelect={() => field.onChange(tech.name)}
+                          className="flex items-center justify-between"
+                        >
                           {tech.name}
-                        </SelectItem>
+                          {field.value === tech.name && (
+                            <Check className="h-4 w-4 ml-2" />
+                          )}
+                        </DropdownMenuItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          onAddTechnology();
+                        }}
+                        className="text-primary flex items-center"
+                      >
+                        <Plus className="h-4 w-4 mr-2" /> {t("new_purpose")}
+                      </DropdownMenuItem>
+                      {field.value && (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            onDeleteTechnology(field.value);
+                            field.onChange("");
+                          }}
+                          className="text-destructive flex items-center"
+                        >
+                          <Trash className="h-4 w-4 mr-2" />{" "}
+                          {t("delete_purpose")}
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <FormMessage />
                 </FormItem>
               )}
@@ -243,7 +296,7 @@ export function GeneralTab({
               name="alloy"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Alloy</FormLabel>
+                  <FormLabel>{t("entity_alloy")}</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
@@ -272,25 +325,54 @@ export function GeneralTab({
               name="moldSize"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("mold_size_label")}</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("mold_size_placeholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
+                  <FormLabel>Mold Size</FormLabel>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between"
+                      >
+                        <span>{field.value || "Größe auswählen"}</span>
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
                       {moldSizes.map((size) => (
-                        <SelectItem key={size.id} value={size.name}>
+                        <DropdownMenuItem
+                          key={size.id}
+                          onSelect={() => field.onChange(size.name)}
+                          className="flex items-center justify-between"
+                        >
                           {size.name}
-                        </SelectItem>
+                          {field.value === size.name && (
+                            <Check className="h-4 w-4 ml-2" />
+                          )}
+                        </DropdownMenuItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          onAddMoldSize();
+                        }}
+                        className="text-primary flex items-center"
+                      >
+                        <Plus className="h-4 w-4 mr-2" /> {t("add_size")}
+                      </DropdownMenuItem>
+                      {field.value && (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            onDeleteMoldSize(field.value);
+                            field.onChange("");
+                          }}
+                          className="text-destructive flex items-center"
+                        >
+                          <Trash className="h-4 w-4 mr-2" /> {t("delete_size")}
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <FormMessage />
                 </FormItem>
               )}

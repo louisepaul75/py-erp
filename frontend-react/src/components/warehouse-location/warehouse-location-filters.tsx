@@ -2,7 +2,7 @@
 
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
+import { Select } from "@/components/ui/select1"
 
 interface WarehouseLocationFiltersProps {
   searchTerm: string
@@ -71,7 +71,7 @@ export default function WarehouseLocationFilters({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 ">
           <Select
             value={locationFilter}
             onValueChange={setLocationFilter}
