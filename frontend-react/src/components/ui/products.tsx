@@ -28,6 +28,29 @@ import {
   Input,
 } from "@/components/ui";
 
+// Add proper interface for the ProductList component
+interface ProductListProps {
+  showSidebar: boolean;
+  searchTerm: string;
+  setSearchTerm: (value: string) => void;
+  filteredProducts: Product[];
+  totalItems: number;
+  selectedItem: number | string | null;
+  setSelectedItem: (item: number | string | null) => void;
+  pagination: { pageIndex: number; pageSize: number };
+  setPagination: (pagination: { pageIndex: number; pageSize: number }) => void;
+  isLoading: boolean;
+}
+
+// Add proper interface for the ProductDetail component
+interface ProductDetailProps {
+  selectedItem: number | string | null;
+  selectedProduct: Product | null;
+  isCreatingParent?: boolean;
+  onProductCreated?: (product: Product) => void;
+  onCancel?: () => void;
+}
+
 interface ProductsPageProps {
   initialVariantId?: string;
   initialParentId?: string;
@@ -45,6 +68,10 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreatingParent, setIsCreatingParent] = useState(false);
   
+  // Separate loading states for list and detail
+  const [isListLoading, setIsListLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  
   const [pagination, setPagination] = useState<{
     pageIndex: number;
     pageSize: number;
@@ -52,7 +79,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     pageIndex: 0,
     pageSize: 20,
   });
-  const [isLoading, setIsLoading] = useState(false);
+  
   const [contentHeight, setContentHeight] = useState("calc(100vh - 15rem)");
   const router = useRouter();
   const pathname = usePathname();
@@ -61,8 +88,13 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   
   // Debounced item selection to prevent multiple rapid changes
   const debouncedSetSelectedItem = useCallback((item: number | string | null) => {
-    // Skip if the item is the same
-    if (item === selectedItem) return;
+    console.log("debouncedSetSelectedItem called with:", item);
+    
+    // Skip if the item is the same as current selection
+    if (item === selectedItem) {
+      console.log("Skipping selection - same as current item");
+      return;
+    }
     
     // Clear any pending timeouts
     if (window.debouncedSelectionTimeout) {
@@ -71,8 +103,9 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     
     // Set with a slight delay to prevent rapid changes
     window.debouncedSelectionTimeout = setTimeout(() => {
+      console.log("Setting selectedItem to:", item);
       setSelectedItem(item);
-    }, 100);
+    }, 150); // Increase delay to ensure any in-progress requests complete
   }, [selectedItem]);
   
   // Debounce search term to prevent too many API requests
@@ -95,13 +128,10 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     }
   }, [debouncedSearchTerm]);
 
-  // Memoized function to fetch products
-  const fetchProducts = useCallback(async () => {
-    // Create an abort controller for this request
-    const abortController = new AbortController();
-    
+  // Memoize the fetch function to prevent recreation on every render
+  const fetchProductsList = useCallback(async (signal: AbortSignal) => {
     try {
-      setIsLoading(true);
+      setIsListLoading(true);
       
       // Use direct search endpoint when a search term is provided
       let response;
@@ -110,92 +140,90 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
           page: pagination.pageIndex + 1,
           page_size: pagination.pageSize,
           q: debouncedSearchTerm,
-        }, abortController.signal) as ApiResponse;
+        }, signal) as ApiResponse;
       } else {
         // Use regular endpoint when no search term is provided
         response = await productApi.getProducts({
           page: pagination.pageIndex + 1,
           page_size: pagination.pageSize,
-        }, abortController.signal) as ApiResponse;
+        }, signal) as ApiResponse;
       }
 
-      if (response?.results) {
-        setFilteredProducts(response.results);
-        setTotalCount(response.count || 0);
+      if (!signal.aborted) {
+        if (response?.results) {
+          setFilteredProducts(response.results);
+          setTotalCount(response.count || 0);
 
-        // Determine if initial load/selection logic should apply
-        const isInitialLoad = 
-          (pagination.pageIndex === 0 && !debouncedSearchTerm && (initialVariantId || initialParentId)) || 
-          shouldKeepSelection;
+          // Determine if initial load/selection logic should apply
+          const isInitialLoad = 
+            (pagination.pageIndex === 0 && !debouncedSearchTerm && (initialVariantId || initialParentId)) || 
+            shouldKeepSelection;
 
-        if (isInitialLoad) {
-          const id = initialVariantId || initialParentId;
-          if (id) {
-            const initialProduct = response.results.find(
-              (product) => product.id === parseInt(id),
-            );
-            if (initialProduct) {
-              setSelectedItem(initialProduct.id);
-              setSelectedProduct(initialProduct);
+          if (isInitialLoad) {
+            const id = initialVariantId || initialParentId;
+            if (id) {
+              const initialProduct = response.results.find(
+                (product) => product.id === parseInt(id),
+              );
+              if (initialProduct) {
+                setSelectedItem(initialProduct.id);
+                setSelectedProduct(initialProduct);
+              } else if (response.results.length > 0 && !shouldKeepSelection) {
+                // Fallback if initial ID not found but results exist (only on first load)
+                setSelectedItem(response.results[0].id);
+                setSelectedProduct(response.results[0]);
+              }
             } else if (response.results.length > 0 && !shouldKeepSelection) {
-              // Fallback if initial ID not found but results exist (only on first load)
+              // No initial ID provided, select first item (only on first load)
               setSelectedItem(response.results[0].id);
               setSelectedProduct(response.results[0]);
             }
-          } else if (response.results.length > 0 && !shouldKeepSelection) {
-            // No initial ID provided, select first item (only on first load)
-            setSelectedItem(response.results[0].id);
-            setSelectedProduct(response.results[0]);
+            
+            // After initial load, reset shouldKeepSelection
+            if (shouldKeepSelection) {
+              setShouldKeepSelection(false);
+            }
+          } else if (response.results.length === 0) {
+            // Only clear selection if no results are found
+            setSelectedItem(null);
+            setSelectedProduct(null);
           }
-          
-          // After initial load, reset shouldKeepSelection
-          if (shouldKeepSelection) {
-            setShouldKeepSelection(false);
-          }
-        } else if (response.results.length === 0) {
-          // Only clear selection if no results are found
+        } else {
+          setFilteredProducts([]);
+          setTotalCount(0);
           setSelectedItem(null);
           setSelectedProduct(null);
         }
-        // Don't reset selection otherwise - this prevents flashing back to default
-
-      } else {
-        setFilteredProducts([]);
-        setTotalCount(0);
-        setSelectedItem(null);
-        setSelectedProduct(null);
       }
     } catch (error) {
       // Only handle error if it's not an abort error
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        console.error("Error fetching products:", error);
-        setFilteredProducts([]);
-        setTotalCount(0);
-        // Don't reset selection on error unless absolutely necessary
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        // Silently handle abort errors
+        return;
       }
+      console.error("Error fetching products:", error);
+      setFilteredProducts([]);
+      setTotalCount(0);
     } finally {
-      setIsLoading(false);
+      if (!signal.aborted) {
+        setIsListLoading(false);
+      }
     }
-    
-    // Return a cleanup function that aborts the request if component unmounts or dependencies change
-    return () => {
-      abortController.abort();
-    };
   }, [pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, initialVariantId, initialParentId, shouldKeepSelection]);
 
   // Initial fetch and refetch when dependencies change
   useEffect(() => {
-    // Create an abort controller for this effect's fetch
+    // Create a new controller specifically for this effect's execution
     const controller = new AbortController();
     
-    // Immediately invoke fetchProducts
-    fetchProducts();
+    // Fetch products immediately
+    fetchProductsList(controller.signal);
     
-    // Return cleanup function directly
+    // Return a cleanup function that aborts the request
     return () => {
       controller.abort();
     };
-  }, [fetchProducts, debouncedSearchTerm]);
+  }, [fetchProductsList]);
 
   // Handle search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,81 +250,89 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 
   // Update product selection handling AND URL push
   useEffect(() => {
+    console.log("Product selection effect running, selectedItem:", selectedItem);
+    
+    // Use a ref to track the latest request to prevent race conditions
+    let isCurrent = true;
+    
     // Skip if no selected item or if we're creating a parent
-    if (!selectedItem || isCreatingParent) return;
-    
-    // Use a ref to track the latest request
-    const abortController = new AbortController();
-    
-    // First, try to find the product in the current list
-    const selected = filteredProducts.find(
-      (product) => product.id === selectedItem
-    );
-
-    if (selected) {
-      // Set product directly from filtered list - this is immediate
-      setSelectedProduct(selected);
-      const newPath = selected.variants_count > 0
-        ? `/products/parent/${selected.id}`
-        : `/products/variant/${selected.id}`;
-
-      if (pathname !== newPath) {
-        // Only push if the path is actually changing
-        router.push(newPath);
-      }
-    } else {
-      // If not found in the filteredProducts list, fetch directly
-      // But first check if we're already loading or if we already have this product
-      // to prevent unnecessary flashing
-      if (!isLoading && (!selectedProduct || selectedProduct.id !== selectedItem)) {
-        // Use a timeout to stagger requests and prevent too many simultaneous requests
-        // This helps reduce the network waterfall and prevents flashing
-        const timeoutId = setTimeout(async () => {
-          try {
-            setIsLoading(true);
-            // Use the abort controller for this request
-            const product = await productApi.getProduct(selectedItem, abortController.signal);
-            
-            // Don't update if the selection changed while we were fetching
-            if (selectedItem === product.id) {
-              setSelectedProduct(product);
-              
-              const newPath = product.variants_count > 0
-                ? `/products/parent/${product.id}`
-                : `/products/variant/${product.id}`;
-  
-              if (pathname !== newPath) {
-                // Only push if the path is actually changing
-                router.push(newPath);
-              }
-            }
-          } catch (error) {
-            // Only log and reset if it's not an abort error
-            if (!(error instanceof DOMException && error.name === 'AbortError')) {
-              console.error(`Error fetching product ${selectedItem}:`, error);
-              // If the product cannot be fetched, reset selection
-              setSelectedItem(null);
-              setSelectedProduct(null);
-            }
-          } finally {
-            setIsLoading(false);
-          }
-        }, 50); // Small delay to prevent UI flashing
-
-        // Clear the timeout if component unmounts or dependencies change
-        return () => {
-          clearTimeout(timeoutId);
-          abortController.abort();
-        };
-      }
+    if (!selectedItem || isCreatingParent) {
+      console.log("Skipping product selection - no selected item or creating parent");
+      return;
     }
     
-    // Clean up function to abort any in-flight requests when the component unmounts
-    // or when selectedItem changes
-    return () => {
-      abortController.abort();
+    // First, try to find the product in the current list
+    // Compare as numbers to avoid string/number mismatches
+    const selectedItemId = typeof selectedItem === 'string' ? parseInt(selectedItem) : selectedItem;
+    
+    console.log("Looking for product with ID:", selectedItemId, "in", filteredProducts.length, "products");
+    
+    const selected = filteredProducts.find(product => {
+      const productId = typeof product.id === 'string' ? parseInt(product.id) : product.id;
+      return productId === selectedItemId;
+    });
+    
+    console.log("Found product in list?", selected ? "Yes" : "No");
+
+    const loadProductDetail = async () => {
+      // Skip if we're already loading the detail
+      if (isDetailLoading) {
+        console.log("Already loading detail, skipping");
+        return;
+      }
+      
+      console.log("Loading product detail for ID:", selectedItemId);
+      setIsDetailLoading(true);
+      
+      try {
+        // Create a new controller for this specific request
+        const controller = new AbortController();
+        
+        // Always fetch fresh product data from the API to ensure consistency
+        try {
+          console.log("Fetching product details from API for ID:", selectedItemId);
+          const product = await productApi.getProduct(selectedItemId, controller.signal);
+          
+          // Check if this is still the current request before updating state
+          if (isCurrent && !controller.signal.aborted) {
+            console.log("Received product from API:", product.id, product.name);
+            setSelectedProduct(product);
+            
+            const newPath = product.variants_count > 0
+              ? `/products/parent/${product.id}`
+              : `/products/variant/${product.id}`;
+  
+            if (pathname !== newPath) {
+              console.log("Navigating to:", newPath);
+              router.push(newPath);
+            }
+          }
+        } catch (error) {
+          if (!(error instanceof DOMException && error.name === 'AbortError') && isCurrent) {
+            console.error(`Error fetching product ${selectedItemId}:`, error);
+            setSelectedItem(null);
+            setSelectedProduct(null);
+          }
+        }
+      } finally {
+        // Only update loading state if this is still the current request
+        if (isCurrent) {
+          console.log("Finished loading product detail");
+          setIsDetailLoading(false);
+        }
+      }
     };
-  }, [selectedItem, filteredProducts, pathname, router, isCreatingParent, isLoading, selectedProduct]);
+
+    // Execute loadProductDetail immediately
+    loadProductDetail();
+    
+    // Clean up function
+    return () => {
+      // Mark this request as no longer current
+      console.log("Cleaning up product selection effect");
+      isCurrent = false;
+    };
+  }, [selectedItem, filteredProducts, pathname, router, isCreatingParent, isDetailLoading]);
 
   // Add useEffect for tracking visits
   useEffect(() => {
@@ -327,8 +363,10 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     setIsCreatingParent(false);
     setSelectedItem(newProduct.id);
     setSelectedProduct(newProduct);
-    // Refresh the products list
-    fetchProducts();
+    
+    // Create a new controller and fetch the updated product list
+    const controller = new AbortController();
+    fetchProductsList(controller.signal);
   };
 
   // Handler to cancel creating a new parent product
@@ -381,13 +419,15 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                     filteredProducts={filteredProducts}
                     totalItems={totalCount}
                     selectedItem={selectedItem}
-                    setSelectedItem={(item) => {
+                    setSelectedItem={(item: number | string | null) => {
                       setIsCreatingParent(false);
                       debouncedSetSelectedItem(item);
                     }}
                     pagination={pagination}
-                    setPagination={handlePaginationChange}
-                    isLoading={isLoading}
+                    setPagination={(value: { pageIndex: number; pageSize: number }) => {
+                      handlePaginationChange(value);
+                    }}
+                    isLoading={isListLoading}
                   />
                 </div>
                 <div className="p-4 border-t dark:border-slate-800 flex-shrink-0">
@@ -417,7 +457,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-slate-500">
-                    Select a product to view details or create a new one.
+                    {isDetailLoading ? (
+                      "Loading product details..."
+                    ) : (
+                      "Select a product to view details or create a new one."
+                    )}
                   </div>
                 )}
               </div>
