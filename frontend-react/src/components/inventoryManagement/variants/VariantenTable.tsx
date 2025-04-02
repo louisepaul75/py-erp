@@ -22,6 +22,11 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardHeader
+} from "@/components/ui/card";
 
 interface Variant {
   id: string;
@@ -80,8 +85,8 @@ export default function VariantenTable({
   );
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+    <Card>
+      <CardHeader className="p-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="relative w-full sm:w-64">
             <Input
@@ -104,133 +109,135 @@ export default function VariantenTable({
             Exportieren
           </Button>
         </div>
-      </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={variants.length > 0 && variants.every((v) => v.selected)}
-                  onCheckedChange={handleSelectAll}
-                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
-                />
-              </TableHead>
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Nummer</TableHead>
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Bezeichnung</TableHead>
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Ausprägung</TableHead>
-              <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
-                Prod.
-              </TableHead>
-              <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
-                Vertr.
-              </TableHead>
-              <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
-                VK Artikel
-              </TableHead>
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Releas</TableHead>
-              <TableHead className="w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredVariants.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center py-4 text-slate-600 dark:text-slate-400">
-                  Keine Varianten gefunden
-                </TableCell>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={variants.length > 0 && variants.every((v) => v.selected)}
+                    onCheckedChange={handleSelectAll}
+                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
+                  />
+                </TableHead>
+                <TableHead className="font-medium text-slate-700 dark:text-slate-300">Nummer</TableHead>
+                <TableHead className="font-medium text-slate-700 dark:text-slate-300">Bezeichnung</TableHead>
+                <TableHead className="font-medium text-slate-700 dark:text-slate-300">Ausprägung</TableHead>
+                <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
+                  Prod.
+                </TableHead>
+                <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
+                  Vertr.
+                </TableHead>
+                <TableHead className="w-12 text-center font-medium text-slate-700 dark:text-slate-300">
+                  VK Artikel
+                </TableHead>
+                <TableHead className="font-medium text-slate-700 dark:text-slate-300">Releas</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
-            ) : (
-              filteredVariants.map((variant) => (
-                <TableRow
-                  key={variant.id}
-                  className={
-                    variant.selected ? "bg-blue-50/50 dark:bg-blue-900/10 text-slate-800 dark:text-slate-200" : "text-slate-700 dark:text-slate-300"
-                  }
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={variant.selected}
-                      onCheckedChange={() => onToggleSelect(variant.id)}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {variant.nummer}
-                  </TableCell>
-                  <TableCell>{variant.bezeichnung}</TableCell>
-                  <TableCell>{variant.auspraegung}</TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={variant.prod}
-                      onCheckedChange={() => onToggleCheckbox(variant.id, "prod")}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
-                    />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={variant.vertr}
-                      onCheckedChange={() => onToggleCheckbox(variant.id, "vertr")}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
-                    />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={variant.vkArtikel}
-                      onCheckedChange={() => onToggleCheckbox(variant.id, "vkArtikel")}
-                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
-                    />
-                  </TableCell>
-                  <TableCell>{variant.releas}</TableCell>
-                  <TableCell>
-                    <AlertDialog
-                      open={selectedVariantId === variant.id}
-                      onOpenChange={(open) =>
-                        !open && setSelectedVariantId(null)
-                      }
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
-                          onClick={() => {
-                            setSelectedVariantId(variant.id);
-                            onMoreAction(variant.id);
-                          }}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-slate-900 dark:text-slate-100">
-                            Aktionen für Variante {selectedVariantId}
-                          </AlertDialogTitle>
-                          <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
-                            Wählen Sie eine Aktion für diese Variante aus.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
-                          <Button variant="outline" onClick={onEditVariant} className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700">
-                            Bearbeiten
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            onClick={onDeleteVariant}
-                          >
-                            Löschen
-                          </Button>
-                          <AlertDialogCancel className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700">Abbrechen</AlertDialogCancel>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+            </TableHeader>
+            <TableBody>
+              {filteredVariants.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-4 text-slate-600 dark:text-slate-400">
+                    Keine Varianten gefunden
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+              ) : (
+                filteredVariants.map((variant) => (
+                  <TableRow
+                    key={variant.id}
+                    className={
+                      variant.selected ? "bg-blue-50/50 dark:bg-blue-900/10 text-slate-800 dark:text-slate-200" : "text-slate-700 dark:text-slate-300"
+                    }
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={variant.selected}
+                        onCheckedChange={() => onToggleSelect(variant.id)}
+                        className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {variant.nummer}
+                    </TableCell>
+                    <TableCell>{variant.bezeichnung}</TableCell>
+                    <TableCell>{variant.auspraegung}</TableCell>
+                    <TableCell className="text-center">
+                      <Checkbox
+                        checked={variant.prod}
+                        onCheckedChange={() => onToggleCheckbox(variant.id, "prod")}
+                        className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
+                      />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Checkbox
+                        checked={variant.vertr}
+                        onCheckedChange={() => onToggleCheckbox(variant.id, "vertr")}
+                        className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
+                      />
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Checkbox
+                        checked={variant.vkArtikel}
+                        onCheckedChange={() => onToggleCheckbox(variant.id, "vkArtikel")}
+                        className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
+                      />
+                    </TableCell>
+                    <TableCell>{variant.releas}</TableCell>
+                    <TableCell>
+                      <AlertDialog
+                        open={selectedVariantId === variant.id}
+                        onOpenChange={(open) =>
+                          !open && setSelectedVariantId(null)
+                        }
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                            onClick={() => {
+                              setSelectedVariantId(variant.id);
+                              onMoreAction(variant.id);
+                            }}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-slate-900 dark:text-slate-100">
+                              Aktionen für Variante {selectedVariantId}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
+                              Wählen Sie eine Aktion für diese Variante aus.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
+                            <Button variant="outline" onClick={onEditVariant} className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700">
+                              Bearbeiten
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={onDeleteVariant}
+                            >
+                              Löschen
+                            </Button>
+                            <AlertDialogCancel className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700">Abbrechen</AlertDialogCancel>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

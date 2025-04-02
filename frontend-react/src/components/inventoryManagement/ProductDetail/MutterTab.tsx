@@ -30,6 +30,13 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import useAppTranslation from "@/hooks/useTranslationWrapper";
+import { cn } from "@/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 // Define an extended interface that includes the creation props
 interface MutterTabProps extends ProductDetailProps {
@@ -167,106 +174,115 @@ export default function MutterTab({
   return (
     <div className="p-4 lg:p-6">
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header with Product Info */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex flex-col flex-wrap md:flex-row md:items-center gap-4 md:gap-6 ">
-            <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
-              {isCreatingParent ? "NEW" : "AL"}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                <h1 className="text-2xl font-bold">
-                  {isCreatingParent 
-                    ? "Create New Parent Product" 
-                    : productData.name || "Product Details"}
-                </h1>
+        {/* Header Section using Card */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col flex-wrap md:flex-row md:items-center gap-4 md:gap-6">
+              <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
+                {isCreatingParent ? "NEW" : "AL"}
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                  <h1 className="text-2xl font-bold">
+                    {isCreatingParent 
+                      ? "Create New Parent Product" 
+                      : productData.name || "Product Details"}
+                  </h1>
+                  {!isCreatingParent && (
+                    <Badge
+                      variant={productData.is_active ? "default" : "secondary"} 
+                      className={cn("text-xs", productData.is_active 
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-900/50" 
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400 border border-gray-200 dark:border-gray-800/50")}
+                    >
+                      {productData.is_active ? t("active") : t("inactive")}
+                    </Badge>
+                  )}
+                </div>
                 {!isCreatingParent && (
-                  <StatusBadge status={productData.is_active ? "active" : "inactive"}>
-                    {productData.is_active ? t("active") : t("inactive")}
-                  </StatusBadge>
+                  <p className="text-slate-500 dark:text-slate-400 mt-1">
+                    {t("articleNumber")}: {selectedItem || "N/A"}
+                  </p>
                 )}
               </div>
-              {!isCreatingParent && (
-                <p className="text-slate-500 dark:text-slate-400 mt-1">
-                  {t("articleNumber")}: {selectedItem || "N/A"}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 md:justify-end ">
-              {!isCreatingParent && (
-                <AlertDialog
-                  open={isDeleteDialogOpen}
-                  onOpenChange={setIsDeleteDialogOpen}
-                >
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      onClick={confirmDeleteProduct}
-                      variant="outline"
-                      className="rounded-full"
-                    >
-                      <Minus className="h-4 w-4 mr-2" />
-                      {t("delete")}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {t("confirmDeleteTitle")}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t("confirmDeleteDescription")}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel variant="destructive" className="rounded-full px-5 py-2">
-                        {t("cancel")}
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDelete}
-                        variant="default"
-                        className="rounded-full px-5 py-2"
+              <div className="flex flex-col sm:flex-row gap-2 md:justify-end ">
+                {!isCreatingParent && (
+                  <AlertDialog
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        onClick={confirmDeleteProduct}
+                        variant="outline"
+                        className="rounded-full"
                       >
-                        {t("ok")}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              
-              {isCreatingParent && onCancel && (
+                        <Minus className="h-4 w-4 mr-2" />
+                        {t("delete")}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {t("confirmDeleteTitle")}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t("confirmDeleteDescription")}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel variant="destructive" className="rounded-full px-5 py-2">
+                          {t("cancel")}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          variant="default"
+                          className="rounded-full px-5 py-2"
+                        >
+                          {t("ok")}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                
+                {isCreatingParent && onCancel && (
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={onCancel}
+                  >
+                    {t("cancel")}
+                  </Button>
+                )}
+                
                 <Button
-                  variant="outline"
+                  variant="default"
                   className="rounded-full"
-                  onClick={onCancel}
+                  onClick={handleSave}
+                  disabled={isSaving}
                 >
-                  {t("cancel")}
+                  <Zap className="h-4 w-4 mr-2" />
+                  {isCreatingParent ? t("create") : t("save")}
                 </Button>
-              )}
-              
-              <Button
-                variant="default"
-                className="rounded-full"
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                <Zap className="h-4 w-4 mr-2" />
-                {isCreatingParent ? t("create") : t("save")}
-              </Button>
+              </div>
             </div>
-          </div>
-          
-          {/* Error message */}
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
-        </div>
+            
+            {/* Error message */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Bezeichnung & Beschreibung */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-          <h2 className="text-lg font-semibold mb-4">{t("productDetails")}</h2>
-          <div className="space-y-6">
+        {/* Bezeichnung & Beschreibung using Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("productDetails")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
               <label className="text-sm font-medium text-slate-500 dark:text-slate-400 md:pt-2.5">
                 {t("designation")}
@@ -293,176 +309,178 @@ export default function MutterTab({
                 />
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Maße */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">{t("dimensions")}</h2>
-            <Badge
-              variant="outline"
-              className="text-xs font-normal px-2 py-0.5 h-5 border-slate-200 dark:border-slate-700"
-            >
-              {t("unit")}
-            </Badge>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                {t("height")}
-              </label>
-              <Input
-                value={productData.height_mm ?? ""}
-                onChange={(e) => handleInputChange("height_mm", e.target.value ? parseFloat(e.target.value) : null)}
-                className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-              />
+        {/* Maße using Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>{t("dimensions")}</CardTitle>
+              <Badge
+                variant="outline"
+                className="text-xs font-normal px-2 py-0.5 h-5 border-slate-200 dark:border-slate-700"
+              >
+                {t("unit")}
+              </Badge>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                {t("length")}
-              </label>
-              <Input
-                value={productData.length_mm ?? ""}
-                onChange={(e) => handleInputChange("length_mm", e.target.value ? parseFloat(e.target.value) : null)}
-                className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-              />
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {t("height")}
+                </label>
+                <Input
+                  value={productData.height_mm ?? ""}
+                  onChange={(e) => handleInputChange("height_mm", e.target.value ? parseFloat(e.target.value) : null)}
+                  className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {t("length")}
+                </label>
+                <Input
+                  value={productData.length_mm ?? ""}
+                  onChange={(e) => handleInputChange("length_mm", e.target.value ? parseFloat(e.target.value) : null)}
+                  className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {t("width")}
+                </label>
+                <Input
+                  value={productData.width_mm ?? ""}
+                  onChange={(e) => handleInputChange("width_mm", e.target.value ? parseFloat(e.target.value) : null)}
+                  className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {t("weight")}
+                </label>
+                <Input
+                  value={productData.weight ?? ""}
+                  onChange={(e) => handleInputChange("weight", e.target.value ? parseFloat(e.target.value) : null)}
+                  className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                {t("width")}
-              </label>
-              <Input
-                value={productData.width_mm ?? ""}
-                onChange={(e) => handleInputChange("width_mm", e.target.value ? parseFloat(e.target.value) : null)}
-                className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="hangend"
+                  checked={productData.is_hanging ?? false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("is_hanging", !!checked)
+                  }
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                />
+                <label htmlFor="hangend" className="text-sm">
+                  {t("hanging")}
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="einseitig"
+                  checked={productData.is_one_sided ?? false}
+                  onCheckedChange={(checked) =>
+                    handleInputChange("is_one_sided", !!checked)
+                  }
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                />
+                <label htmlFor="einseitig" className="text-sm">
+                  {t("oneSided")}
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="neuheit"
+                  checked={productData.is_new ?? false}
+                  onCheckedChange={(checked) => handleInputChange("is_new", !!checked)}
+                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                />
+                <label htmlFor="neuheit" className="text-sm">
+                  {t("novelty")}
+                </label>
+              </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                {t("weight")}
-              </label>
-              <Input
-                value={productData.weight ?? ""}
-                onChange={(e) => handleInputChange("weight", e.target.value ? parseFloat(e.target.value) : null)}
-                className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-              />
+            <div className="mt-6">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-500 dark:text-slate-400 w-24">
+                  Boxgröße
+                </label>
+                {/* Input for Boxgröße removed, can be added back if needed */}
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="hangend"
-                checked={productData.is_hanging ?? false}
-                onCheckedChange={(checked) =>
-                  handleInputChange("is_hanging", !!checked)
-                }
-                className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-              />
-              <label htmlFor="hangend" className="text-sm">
-                {t("hanging")}
-              </label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="einseitig"
-                checked={productData.is_one_sided ?? false}
-                onCheckedChange={(checked) =>
-                  handleInputChange("is_one_sided", !!checked)
-                }
-                className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-              />
-              <label htmlFor="einseitig" className="text-sm">
-                {t("oneSided")}
-              </label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="neuheit"
-                checked={productData.is_new ?? false}
-                onCheckedChange={(checked) => handleInputChange("is_new", !!checked)}
-                className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-              />
-              <label htmlFor="neuheit" className="text-sm">
-                {t("novelty")}
-              </label>
-            </div>
-          </div>
-          <div className="mt-6">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-500 dark:text-slate-400 w-24">
-                Boxgröße
-              </label>
-              {/* <Input
-                value={productData.packaging_id || ""}
-                onChange={(e) =>
-                  handleInputChange("packaging_id", e.target.value)
-                }
-                className="w-32 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-              /> */}
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Kategorien */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Kategorien</h2>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full"
-                onClick={handleAddCategory}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                <span className="text-xs">{t("add")}</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full "
-                onClick={handleDelete}
-              >
-                <Minus className="h-3.5 w-3.5 mr-1 " />
-                <span className="text-xs">{t("remove")}</span>
-              </Button>
+        {/* Kategorien using Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Kategorien</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full"
+                  onClick={handleAddCategory}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  <span className="text-xs">{t("add")}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full "
+                  onClick={handleDelete} // Consider refining delete logic for categories
+                >
+                  <Minus className="h-3.5 w-3.5 mr-1 " />
+                  <span className="text-xs">{t("remove")}</span>
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                  <TableHead className="font-medium">Home</TableHead>
-                  <TableHead className="font-medium">Sortiment</TableHead>
-                  <TableHead className="font-medium">Tradition</TableHead>
-                  <TableHead className="font-medium">Maschinerie</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((row, rowIndex) => (
-                  <TableRow key={rowIndex}>
-                    {row.map((cell, colIndex) => (
-                      <TableCell key={colIndex}>
-                        <Input
-                          value={cell}
-                          onChange={(e) =>
-                            handleCategoryChange(
-                              rowIndex,
-                              colIndex,
-                              e.target.value
-                            )
-                          }
-                          className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                        />
-                      </TableCell>
-                    ))}
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <TableHead className="font-medium">Home</TableHead>
+                    <TableHead className="font-medium">Sortiment</TableHead>
+                    <TableHead className="font-medium">Tradition</TableHead>
+                    <TableHead className="font-medium">Maschinerie</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((row, rowIndex) => (
+                    <TableRow key={rowIndex}>
+                      {row.map((cell, colIndex) => (
+                        <TableCell key={colIndex}>
+                          <Input
+                            value={cell}
+                            onChange={(e) =>
+                              handleCategoryChange(
+                                rowIndex,
+                                colIndex,
+                                e.target.value
+                              )
+                            }
+                            className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                          />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // interface Product {
 //   nummer: string;
@@ -180,14 +181,22 @@ export default function ProductList({
             {
               field: "is_active",
               header: "Status",
-              render: (item) => (
-                <StatusBadge
-                  status={item.is_active ? "active" : "inactive"}
-                  className="text-xs"
-                >
-                  {item.is_active ? "Active" : "Inactive"}
-                </StatusBadge>
-              ),
+              render: (item) => {
+                const isActive = item.is_active;
+                const variant = isActive ? "default" : "secondary"; // Map active/inactive to variants
+                const colorClass = isActive 
+                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-900/50" 
+                  : "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400 border border-gray-200 dark:border-gray-800/50"; // Keep original colors for now
+                
+                return (
+                  <Badge
+                    variant={variant}
+                    className={cn("text-xs", colorClass)} // Apply original colors via className
+                  >
+                    {isActive ? "Active" : "Inactive"}
+                  </Badge>
+                );
+              }
             },
           ]}
           selectedItem={selectedItem}

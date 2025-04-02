@@ -18,6 +18,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import React from "react";
+import { cn } from "@/lib/utils";
 
 interface VariantDetails {
   tags: string[];
@@ -95,9 +96,12 @@ export default function DetailsTab({
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Status</span>
-                <StatusBadge status="active">
+                <Badge
+                  variant={"default"}
+                  className={cn("text-xs", "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-900/50")}
+                >
                   Aktiv
-                </StatusBadge>
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Sichtbarkeit</span>
