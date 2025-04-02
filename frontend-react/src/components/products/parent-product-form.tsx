@@ -7,12 +7,6 @@ import {
   Label,
   Checkbox,
   Textarea,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-  FormDescription,
 } from "@/components/ui";
 import { Loader2 } from "lucide-react";
 
@@ -124,71 +118,61 @@ const ParentProductForm: React.FC<ParentProductFormProps> = ({
         </div>
       )}
       
-      <FormField>
-        <FormItem>
-          <FormLabel htmlFor="name" className="text-base">Name *</FormLabel>
-          <FormControl>
-            <Input
-              id="name"
-              name="name"
-              value={formValues.name}
-              onChange={handleChange}
-              className={formErrors.name ? "border-red-500" : ""}
-              disabled={isLoading}
-            />
-          </FormControl>
-          {formErrors.name && <FormMessage>{formErrors.name}</FormMessage>}
-          <FormDescription>
-            The name of the parent product.
-          </FormDescription>
-        </FormItem>
-      </FormField>
+      <div className="space-y-2">
+        <Label htmlFor="name" className="text-base">Name *</Label>
+        <Input
+          id="name"
+          name="name"
+          value={formValues.name}
+          onChange={handleChange}
+          className={formErrors.name ? "border-red-500" : ""}
+          disabled={isLoading}
+        />
+        {formErrors.name && (
+          <p className="text-sm text-red-500">{formErrors.name}</p>
+        )}
+        <p className="text-sm text-gray-500">
+          The name of the parent product.
+        </p>
+      </div>
       
-      <FormField>
-        <FormItem>
-          <FormLabel htmlFor="description" className="text-base">Description</FormLabel>
-          <FormControl>
-            <Textarea
-              id="description"
-              name="description"
-              value={formValues.description || ""}
-              onChange={handleChange}
-              rows={4}
-              disabled={isLoading}
-            />
-          </FormControl>
-          <FormDescription>
-            A detailed description of the parent product.
-          </FormDescription>
-        </FormItem>
-      </FormField>
+      <div className="space-y-2">
+        <Label htmlFor="description" className="text-base">Description</Label>
+        <Textarea
+          id="description"
+          name="description"
+          value={formValues.description || ""}
+          onChange={handleChange}
+          rows={4}
+          disabled={isLoading}
+        />
+        <p className="text-sm text-gray-500">
+          A detailed description of the parent product.
+        </p>
+      </div>
       
-      <FormField>
-        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-          <FormControl>
-            <Checkbox
-              id="is_active"
-              name="is_active"
-              checked={formValues.is_active}
-              onCheckedChange={(checked) => {
-                setFormValues((prev) => ({
-                  ...prev,
-                  is_active: !!checked,
-                }));
-              }}
-              disabled={isLoading}
-            />
-          </FormControl>
-          <div className="space-y-1 leading-none">
-            <FormLabel htmlFor="is_active" className="text-base">
-              Active
-            </FormLabel>
-            <FormDescription>
-              Indicates if the product is active and should be shown in listings.
-            </FormDescription>
-          </div>
-        </FormItem>
-      </FormField>
+      <div className="flex items-start space-x-3">
+        <Checkbox
+          id="is_active"
+          name="is_active"
+          checked={formValues.is_active}
+          onCheckedChange={(checked) => {
+            setFormValues((prev) => ({
+              ...prev,
+              is_active: !!checked,
+            }));
+          }}
+          disabled={isLoading}
+        />
+        <div className="space-y-1 leading-none">
+          <Label htmlFor="is_active" className="text-base">
+            Active
+          </Label>
+          <p className="text-sm text-gray-500">
+            Indicates if the product is active and should be shown in listings.
+          </p>
+        </div>
+      </div>
       
       <div className="flex justify-end space-x-3">
         <Button
@@ -202,6 +186,7 @@ const ParentProductForm: React.FC<ParentProductFormProps> = ({
         <Button
           type="submit"
           disabled={isSaveDisabled || isLoading}
+          className="min-w-[100px]"
         >
           {isLoading ? (
             <>
@@ -209,7 +194,7 @@ const ParentProductForm: React.FC<ParentProductFormProps> = ({
               Saving...
             </>
           ) : (
-            "Save"
+            'Save'
           )}
         </Button>
       </div>
