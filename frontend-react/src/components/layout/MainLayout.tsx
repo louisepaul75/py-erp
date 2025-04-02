@@ -399,15 +399,17 @@ const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
       <AlwaysVisibleSidebarToggle />
       
       {/* Layer 4: Main content */}
-      <main className="flex-1 p-6 relative" style={{ 
-        position: 'absolute',
-        left: isCollapsed ? '0' : 'var(--sidebar-width)',
-        transform: 'none',
-        width: isCollapsed ? '100%' : 'calc(100% - var(--sidebar-width))',
-        maxWidth: '100%',
-        zIndex: 0,
-        transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out'
-      }}>
+      <main 
+        className="flex-1 p-6 relative min-h-[calc(100vh-4rem)]" 
+        style={{
+          position: 'absolute',
+          left: isCollapsed ? '0' : 'var(--sidebar-width)',
+          transform: 'none',
+          width: isCollapsed ? '100%' : 'calc(100% - var(--sidebar-width))',
+          maxWidth: '100%',
+          zIndex: 0,
+          transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out'
+        }}>
         <div className="mx-auto max-w-[1400px]">
           {children}
         </div>

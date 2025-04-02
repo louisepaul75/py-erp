@@ -361,12 +361,12 @@ export default function UIComponentsPage() {
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                    <TableRow> 
+                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -427,12 +427,12 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                    <TableRow>
+                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -507,25 +507,25 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                      <TableHead className="w-[40px] font-medium cursor-pointer text-slate-700 dark:text-slate-300">
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                    <TableRow>
+                      <TableHead className="w-[40px] font-medium cursor-pointer">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Created</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Last Login</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Created</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Last Login</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
@@ -543,7 +543,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                         </div>
                       </TableCell>
                       <TableCell>Jane Smith</TableCell>
@@ -563,7 +563,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
@@ -604,12 +604,12 @@ export default function UIComponentsPage() {
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow className="h-8 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                    <TableRow className="h-8">
+                      <TableHead className="text-xs font-medium cursor-pointer">Name</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer">Email</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer">Role</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer">Status</TableHead>
+                      <TableHead className="text-xs font-medium cursor-pointer text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -714,25 +714,25 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                      <TableHead className="w-[40px] font-medium cursor-pointer text-slate-700 dark:text-slate-300">
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                    <TableRow>
+                      <TableHead className="w-[40px] font-medium cursor-pointer">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Created</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">Last Login</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Created</TableHead>
+                      <TableHead className="font-medium cursor-pointer">Last Login</TableHead>
+                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
@@ -753,7 +753,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                         </div>
                       </TableCell>
                       <TableCell>Jane Smith</TableCell>
@@ -773,7 +773,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
@@ -852,43 +852,55 @@ export default function UIComponentsPage() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-                      <TableHead className="w-[40px] font-medium cursor-pointer text-slate-700 dark:text-slate-300">
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                    <TableRow>
+                      <TableHead className="w-[40px] font-medium cursor-pointer">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                      <TableHead className="font-medium cursor-pointer">
                         <div className="flex items-center gap-1">
                           <span>Name</span>
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                      <TableHead className="font-medium cursor-pointer">
                         <div className="flex items-center gap-1">
                           <span>Email</span>
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                      <TableHead className="font-medium cursor-pointer">
                         <div className="flex items-center gap-1">
                           <span>Role</span>
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300">
+                      <TableHead className="font-medium cursor-pointer">
                         <div className="flex items-center gap-1">
                           <span>Status</span>
                           <ArrowUpDown className="h-4 w-4" />
                         </div>
                       </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-slate-700 dark:text-slate-300 text-right">Actions</TableHead>
+                      <TableHead className="font-medium cursor-pointer">
+                        <div className="flex items-center gap-1">
+                          <span>Created</span>
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-medium cursor-pointer">
+                        <div className="flex items-center gap-1">
+                          <span>Last Login</span>
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
@@ -909,7 +921,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">Jane Smith</TableCell>
@@ -929,7 +941,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
@@ -950,7 +962,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">Emily Davis</TableCell>
@@ -970,7 +982,7 @@ export default function UIComponentsPage() {
                     </TableRow>
                     <TableRow>
                       <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 dark:border-gray-600">
+                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
                           <Check className="h-3 w-3" />
                         </div>
                       </TableCell>
