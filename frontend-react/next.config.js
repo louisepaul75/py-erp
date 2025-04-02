@@ -34,75 +34,75 @@ const nextConfig = {
       // Handle URLs with trailing slashes
       {
         source: '/api/health/',
-        destination: 'http://localhost:8050/health/',
+        destination: 'http://localhost:8000/health/',
       },
       // Handle URLs without trailing slashes
       {
         source: '/api/health',
-        destination: 'http://localhost:8050/health/',
+        destination: 'http://localhost:8000/health/',
       },
       {
         source: '/api/monitoring/health-checks/',
-        destination: 'http://localhost:8050/monitoring/health-checks/',
+        destination: 'http://localhost:8000/monitoring/health-checks/',
       },
       {
         source: '/api/monitoring/:path+',
-        destination: 'http://localhost:8050/monitoring/:path+',
+        destination: 'http://localhost:8000/monitoring/:path+',
       },
       {
         source: '/api/git/branch/',
-        destination: 'http://localhost:8050/api/git/branch/',
+        destination: 'http://localhost:8000/api/git/branch/',
       },
       {
         source: '/api/git/branch',
-        destination: 'http://localhost:8050/api/git/branch/',
+        destination: 'http://localhost:8000/api/git/branch/',
       },
       // Add rules for /api/csrf
       {
         source: '/api/csrf/',
-        destination: 'http://localhost:8050/api/csrf/',
+        destination: 'http://localhost:8000/api/csrf/',
       },
       {
         source: '/api/csrf',
-        destination: 'http://localhost:8050/api/csrf/',
+        destination: 'http://localhost:8000/api/csrf/',
       },
       // Add rules for /api/token
       {
         source: '/api/token/',
-        destination: 'http://localhost:8050/api/token/',
+        destination: 'http://localhost:8000/api/token/',
       },
       {
         source: '/api/token',
-        destination: 'http://localhost:8050/api/token/',
+        destination: 'http://localhost:8000/api/token/',
       },
       // Add rules for /api/auth/user
       {
         source: '/api/auth/user/',
-        destination: 'http://localhost:8050/api/auth/user/',
+        destination: 'http://localhost:8000/api/auth/user/',
       },
       {
         source: '/api/auth/user',
-        destination: 'http://localhost:8050/api/auth/user/',
+        destination: 'http://localhost:8000/api/auth/user/',
       },
       // Add explicit rules for sales records BEFORE the general v1 rule
       {
         source: '/api/v1/sales/records/', // With slash
-        destination: 'http://localhost:8050/api/v1/sales/records/',
+        destination: 'http://localhost:8000/api/v1/sales/records/',
       },
       {
         source: '/api/v1/sales/records', // Without slash
-        destination: 'http://localhost:8050/api/v1/sales/records/', // Force slash
+        destination: 'http://localhost:8000/api/v1/sales/records/', // Force slash
       },
       // Add a specific rule for OTHER /api/v1/ paths BEFORE the general catch-all
       {
         source: '/api/v1/:path*',
-        destination: 'http://localhost:8050/api/v1/:path*',
+        destination: 'http://localhost:8000/api/v1/:path*',
       },
       // Catch-all for other /api paths
       // This MUST be last to avoid overriding specific rules above
       {
         source: '/api/:path*',
-        destination: 'http://localhost:8050/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
       }
     ]
   }

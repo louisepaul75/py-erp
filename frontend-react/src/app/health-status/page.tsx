@@ -240,7 +240,7 @@ export default function HealthStatusPage() {
             Unable to connect to some backend API endpoints. The information shown may be incomplete or unavailable.
             {process.env.NODE_ENV === 'development' && (
               <span className="block mt-1 text-sm">
-                Make sure your Django backend is running on port 8050 and accessible.
+                Make sure your Django backend is running on port 8000 and accessible.
               </span>
             )}
           </p>

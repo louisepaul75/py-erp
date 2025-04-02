@@ -79,82 +79,77 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   const pathname = usePathname();
   const { addVisitedItem } = useLastVisited();
 
-  // Update fetchProducts useEffect to handle both IDs
+  // Consolidated useEffect for fetching products based on pagination AND search term
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        console.log("Fetching products...");
+        console.log(
+          `Fetching products... Page: ${pagination.pageIndex + 1}, Size: ${pagination.pageSize}, Search: '${searchTerm}'`,
+        );
         setIsLoading(true);
         const response = (await productApi.getProducts({
           page: pagination.pageIndex + 1,
           page_size: pagination.pageSize,
+          search: searchTerm, // Always include the search term
         })) as ApiResponse;
 
-        // Log raw API response for debugging
-        console.log("Raw API Response:", response);
-        
-        // Add detailed logging of legacy_base_sku values
-        if (response?.results && response.results.length > 0) {
-          console.log("First 5 products from API with legacy_base_sku:");
-          response.results.slice(0, 5).forEach(product => {
-            console.log(`Product ID: ${product.id}, SKU: ${product.sku}, Legacy SKU: "${product.legacy_base_sku}"`);
-          });
-          
-          // Specifically check for product with SKU 415220
-          const testProduct = response.results.find(p => p.sku === "415220");
-          if (testProduct) {
-            console.log("FOUND TEST PRODUCT 415220:");
-            console.log("Full product data:", testProduct);
-            console.log("legacy_base_sku value:", testProduct.legacy_base_sku);
-            console.log("Type of legacy_base_sku:", typeof testProduct.legacy_base_sku);
-          }
-        }
+        console.log("API Response:", response);
 
-        if (!response?.results) {
-          setProducts([]);
-          setFilteredProducts([]);
-          setSelectedItem(null);
-          return;
-        }
+        if (response?.results) {
+          // Update filteredProducts directly. No need for separate 'products' state for this logic.
+          setFilteredProducts(response.results);
+          setTotalCount(response.count || 0);
 
-        setProducts(response.results);
-        setFilteredProducts(response.results);
-        setTotalCount(response.count || 0);
-        
-        // Handle initial product selection
-        if (initialVariantId || initialParentId) {
-          const id = initialVariantId || initialParentId;
-          const initialProduct = response.results.find(
-            (product) => product.id === parseInt(id!)
-          );
-          if (initialProduct) {
-            setSelectedItem(initialProduct.id);
-            setSelectedProduct(initialProduct);
+          // Handle initial product selection or selection preservation logic if needed
+          if (
+            (initialVariantId || initialParentId) &&
+            pagination.pageIndex === 0 &&
+            !searchTerm // Only apply initial selection on first load without search
+          ) {
+            const id = initialVariantId || initialParentId;
+            const initialProduct = response.results.find(
+              (product) => product.id === parseInt(id!),
+            );
+            if (initialProduct) {
+              setSelectedItem(initialProduct.id);
+              setSelectedProduct(initialProduct);
+            }
+          } else if (
+            response.results.length > 0 &&
+            !response.results.some((p) => p.id === selectedItem) // Check if current selection is still in the list
+          ) {
+            // If current selection is not in the new list, select the first item
+            setSelectedItem(response.results[0].id);
+            setSelectedProduct(response.results[0]);
+          } else if (response.results.length === 0) {
+            // If no results, clear selection
+            setSelectedItem(null);
+            // Consider setting selectedProduct to a default empty state or null
           }
         } else {
-          // Default behavior
-          if (response.results && response.results.length > 0) {
-            setSelectedItem(response.results[0]?.id || null);
-            if (!selectedProduct?.id) {
-              setSelectedProduct(response.results[0]);
-            }
-          } else {
-            setSelectedItem(null);
-          }
+          // Handle cases where response.results is null/undefined
+          setFilteredProducts([]);
+          setTotalCount(0);
+          setSelectedItem(null);
         }
-        
-        console.log("Fetched products:", response);
       } catch (error) {
         console.error("Error fetching products:", error);
-        setProducts([]);
         setFilteredProducts([]);
+        setTotalCount(0);
         setSelectedItem(null);
       } finally {
         setIsLoading(false);
       }
     };
     fetchProducts();
-  }, [pagination.pageIndex, pagination.pageSize, initialVariantId, initialParentId]);
+    // Depend on pagination and searchTerm
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    searchTerm,
+    initialVariantId,
+    initialParentId,
+  ]);
 
   // Effect for updating content height based on window size
   useEffect(() => {
@@ -172,51 +167,6 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
     // Clean up the event listener on component unmount
     return () => window.removeEventListener("resize", updateContentHeight);
   }, []);
-
-  useEffect(() => {
-    // Log products state before filtering
-    console.log("Products state before filtering:", products);
-    console.log("Filtering products by search term");
-    // Ensure products is an array before filtering
-    if (Array.isArray(products)) {
-      // If there's a search term, we need to refetch data from the server
-      if (searchTerm.trim() !== "") {
-        // This would be better with a debounce
-        const fetchFilteredProducts = async () => {
-          try {
-            setIsLoading(true);
-            const response = (await productApi.getProducts({
-              page: 1,
-              page_size: pagination.pageSize,
-              search: searchTerm,
-            })) as ApiResponse;
-            
-            if (response?.results) {
-              setFilteredProducts(response.results);
-              setTotalCount(response.count || 0);
-              // Reset to first page when searching
-              setPagination(prev => ({
-                ...prev,
-                pageIndex: 0
-              }));
-            }
-          } catch (error) {
-            console.error("Error fetching filtered products:", error);
-          } finally {
-            setIsLoading(false);
-          }
-        };
-        
-        fetchFilteredProducts();
-      } else {
-        // Just use the products we already loaded if no search term
-        setFilteredProducts(products);
-      }
-    } else {
-      // If products isn't an array (e.g., initially undefined), set filteredProducts to empty
-      setFilteredProducts([]); 
-    }
-  }, [searchTerm]);
 
   // Update product selection handling AND URL push
   useEffect(() => {
@@ -256,30 +206,22 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   }, [selectedProduct, addVisitedItem]);
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
+    <div className="container mx-auto py-4 px-4 md:px-6">
       <div className="max-w-full mx-auto">
         <Card>
-          <CardHeader >
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl font-bold text-primary">Produkte</CardTitle>
-                <CardDescription>Verwalten Sie Ihre Produkte und Varianten</CardDescription>
-              </div>
-              <div className="relative w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input
-                  type="search"
-                  placeholder="Suche nach Produkt..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+          <CardContent className="p-4">
+            <div className="relative w-full md:w-80 mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Input
+                type="search"
+                placeholder="Suche nach Produkt..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-9 w-full"
+              />
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="flex overflow-hidden" style={{ height: contentHeight }}>
-              <div className="w-1/3 border-r dark:border-slate-800 h-full">
+            <div className="flex flex-col md:flex-row overflow-hidden" style={{ height: contentHeight }}>
+              <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r dark:border-slate-800 h-1/2 md:h-full mb-4 md:mb-0">
                 <ProductList
                   showSidebar={true}
                   searchTerm={searchTerm}
@@ -293,7 +235,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
                   isLoading={isLoading}
                 />
               </div>
-              <div className="w-2/3 h-full overflow-auto">
+              <div className="w-full md:w-2/3 h-1/2 md:h-full overflow-auto">
                 <ProductDetail
                   selectedItem={selectedItem}
                   selectedProduct={selectedProduct}

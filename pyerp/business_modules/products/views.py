@@ -1,15 +1,17 @@
-# Test comment to trigger reload
+# Test comment to trigger reload with FINAL FIX
 """
 Views for the products app.
 """
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch, Count, Q
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
-from django.views.generic import DetailView, ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import (
+    DetailView, ListView, CreateView, UpdateView, DeleteView
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.urls import reverse_lazy
@@ -17,8 +19,11 @@ from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from rest_framework.views import APIView
 from rest_framework import status
+import logging
 
-from pyerp.business_modules.products.forms import ProductSearchForm, TagInheritanceForm
+from pyerp.business_modules.products.forms import (
+    ProductSearchForm, TagInheritanceForm
+)
 from pyerp.business_modules.products.models import (
     ParentProduct,
     ProductCategory,
@@ -26,6 +31,9 @@ from pyerp.business_modules.products.models import (
 )
 from pyerp.core.models import Tag
 from pyerp.business_modules.products.serializers import ParentProductSerializer
+
+# Get standard logger instance
+logger = logging.getLogger(__name__)
 
 
 class ProductListView(LoginRequiredMixin, ListView):
@@ -300,7 +308,8 @@ def save_product_images(_, _pk):
     return JsonResponse(
         {
             "status": "error",
-            "message": "Image functionality has been removed in the simplified model",
+            "message": ("Image functionality has been removed "
+                        "in the simplified model"),
         },
     )
 
@@ -308,329 +317,22 @@ def save_product_images(_, _pk):
 # API Views
 # ---------
 
-
 class ProductAPIView(APIView):
-    """Base class for API views"""
-
+    """Base class for API views in the products module."""
     permission_classes = [IsAuthenticated]
+    # We can add back the get_product_data method later if needed
 
-    def get_product_data(self, product):
-        """Convert a product model to a dictionary for JSON response"""
-        try:
-            # Import models here to avoid circular imports
-            from pyerp.business_modules.products.models import ParentProduct, VariantProduct
-            
-            product_data = {
-                "id": product.id,
-                "name": product.name,
-                "sku": product.sku,
-                "description": getattr(product, "description", ""),
-                "is_active": getattr(product, "is_active", True),
-                "is_discontinued": getattr(product, "is_discontinued", False),
-                "is_new": getattr(product, "is_new", False),
-                "release_date": product.release_date.isoformat() if getattr(product, "release_date", None) else None,
-                "created_at": product.created_at.isoformat() if getattr(product, "created_at", None) else None,
-                "updated_at": product.updated_at.isoformat() if getattr(product, "updated_at", None) else None,
-                "weight": getattr(product, "weight", None),
-                "length_mm": float(product.length_mm) if getattr(product, "length_mm", None) else None,
-                "width_mm": float(product.width_mm) if getattr(product, "width_mm", None) else None,
-                "height_mm": float(product.height_mm) if getattr(product, "height_mm", None) else None,
-                "name_en": getattr(product, "name_en", ""),
-                "short_description": getattr(product, "short_description", ""),
-                "short_description_en": getattr(product, "short_description_en", ""),
-                "description_en": getattr(product, "description_en", ""),
-                "keywords": getattr(product, "keywords", ""),
-                "legacy_id": getattr(product, "legacy_id", None),
-                "legacy_base_sku": getattr(product, "legacy_base_sku", None),
-                "is_hanging": getattr(product, "is_hanging", False),
-                "is_one_sided": getattr(product, "is_one_sided", False),
-                "images": [],
-                "primary_image": None,
-                "category": None,
-                "tags": []
-            }
+class ProductListAPIView(APIView):
+    """API view for listing products - TEMPORARY DEBUGGING VERSION"""
 
-            # Add variant-specific fields if this is a VariantProduct
-            if isinstance(product, VariantProduct):
-                product_data.update({
-                    "variant_code": getattr(product, "variant_code", ""),
-                    "legacy_sku": getattr(product, "legacy_sku", None),
-                    "is_verkaufsartikel": getattr(product, "is_verkaufsartikel", False),
-                    "is_featured": getattr(product, "is_featured", False),
-                    "is_bestseller": getattr(product, "is_bestseller", False),
-                    "retail_price": float(product.retail_price) if getattr(product, "retail_price", None) else None,
-                    "wholesale_price": float(product.wholesale_price) if getattr(product, "wholesale_price", None) else None,
-                    "retail_unit": getattr(product, "retail_unit", None),
-                    "wholesale_unit": getattr(product, "wholesale_unit", None),
-                    "color": getattr(product, "color", None),
-                    "auslaufdatum": product.auslaufdatum.isoformat() if getattr(product, "auslaufdatum", None) else None,
-                    "refOld": getattr(product, "refOld", None),
-                })
-
-            # Add category if available
-            if product.category_id:
-                try:
-                    category = ProductCategory.objects.get(id=product.category_id)
-                    product_data["category"] = {
-                        "id": category.id,
-                        "name": category.name,
-                        "code": category.code,
-                    }
-                except (ProductCategory.DoesNotExist, Exception) as e:
-                    print(f"Error getting category for product {product.id}: {e!s}")
-                    product_data["category"] = None
-            else:
-                product_data["category"] = None
-
-            # Add tags if available
-            if hasattr(product, "tags"):
-                try:
-                    tags = list(product.tags.all())
-                    tags_data = []
-                    for tag in tags:
-                        tags_data.append({
-                            "id": tag.id,
-                            "name": tag.name,
-                            "description": getattr(tag, "description", "")
-                        })
-                    product_data["tags"] = tags_data
-                except Exception as e:
-                    print(f"Error getting tags for product {product.id}: {e!s}")
-                    product_data["tags"] = []
-            else:
-                product_data["tags"] = []
-
-            # Add variants count for parent products
-            if isinstance(product, ParentProduct):
-                try:
-                    # Skip the query if we already have the count from annotation
-                    if hasattr(product, "variants_count"):
-                        product_data["variants_count"] = product.variants_count
-                    else:
-                        variants_count = VariantProduct.objects.filter(
-                            parent=product,
-                        ).count()
-                        product_data["variants_count"] = variants_count
-                except Exception as e:
-                    print(
-                        f"Error getting variants count for product {product.id}: {e!s}",
-                    )
-                    product_data["variants_count"] = 0
-
-            # Add images if available
-            if hasattr(product, "images"):
-                try:
-                    images = list(product.images.all().select_related())
-
-                    # Find primary image using priority order
-                    primary_image = None
-                    for priority in [
-                        "Produktfoto_front",
-                        "Produktfoto",
-                        "front",
-                        "primary",
-                        "any",
-                    ]:
-                        if primary_image:
-                            break
-
-                        for img in images:
-                            if (
-                                (
-                                    priority == "Produktfoto_front"
-                                    and img.image_type == "Produktfoto"
-                                    and img.is_front
-                                )
-                                or (
-                                    priority == "Produktfoto"
-                                    and img.image_type == "Produktfoto"
-                                )
-                                or (priority == "front" and img.is_front)
-                                or (priority == "primary" and img.is_primary)
-                                or priority == "any"
-                            ):
-                                primary_image = img
-                                break
-
-                    # Add primary image if found
-                    if primary_image:
-                        product_data["primary_image"] = {
-                            "id": primary_image.id,
-                            "url": primary_image.image_url,
-                            "thumbnail_url": getattr(
-                                primary_image,
-                                "thumbnail_url",
-                                primary_image.image_url,
-                            ),
-                            "is_primary": primary_image.is_primary,
-                            "is_front": primary_image.is_front,
-                            "image_type": primary_image.image_type,
-                        }
-
-                    # Add all valid images
-                    for image in images:
-                        if hasattr(image, "image_url") and image.image_url:
-                            product_data["images"].append(
-                                {
-                                    "id": image.id,
-                                    "url": image.image_url,
-                                    "thumbnail_url": getattr(
-                                        image,
-                                        "thumbnail_url",
-                                        image.image_url,
-                                    ),
-                                    "is_primary": image.is_primary,
-                                    "is_front": image.is_front,
-                                    "image_type": image.image_type,
-                                },
-                            )
-                except Exception as e:
-                    print(f"Error processing images for product {product.id}: {e!s}")
-
-            return product_data
-
-        except Exception as e:
-            print(
-                f"Error in get_product_data for product {getattr(product, 'id', 'unknown')}: {e!s}",
-            )
-            return {
-                "id": getattr(product, "id", None),
-                "name": getattr(product, "name", "Unknown Product"),
-                "sku": getattr(product, "sku", ""),
-                "images": [],
-                "primary_image": None,
-            }
-
-
-class ProductListAPIView(ProductAPIView):
-    """API view for listing products"""
-
-    def get(self, request):
-        """Handle GET request for product listing"""
-        # Start with the base queryset
-        products = ParentProduct.objects.all()
-
-        # Use annotation to count variants in a single query instead of N+1 queries
-        products = products.annotate(variants_count=Count("variants"))
-
-        # Check if we need to include variants early to optimize the query
-        include_variants = request.GET.get("include_variants", "").lower() in (
-            "true",
-            "1",
-            "yes",
-        )
-
-        # Consolidate prefetch_related calls to avoid conflicts
-        if include_variants:
-            variant_qs = VariantProduct.objects.prefetch_related("images")
-            products = products.prefetch_related(
-                Prefetch("variants", queryset=variant_qs)
-            )
-        else:
-            # Only prefetch images for variants if we're not including full variant data
-            products = products.prefetch_related("variants__images")
-
-        # Apply filters from query parameters
-        category_id = request.GET.get("category")
-        if category_id:
-            try:
-                category_id = int(category_id)
-                products = products.filter(category_id=category_id)
-            except (ValueError, TypeError):
-                print(f"Invalid category_id format: {category_id}")
-
-        search_query = request.GET.get("q")
-        if search_query:
-            products = products.filter(name__icontains=search_query)
-
-        # Handle in_stock filter
-        in_stock = request.GET.get("in_stock")
-        if in_stock and in_stock.lower() in ("true", "1", "yes"):
-            products = products.exclude(stock_quantity__isnull=True).filter(
-                stock_quantity__gt=0,
-            )
-
-        # Handle is_active filter
-        is_active = request.GET.get("is_active")
-        if is_active is not None:  # Check if parameter was provided
-            is_active_bool = is_active.lower() in ("true", "1", "yes")
-            products = products.filter(is_active=is_active_bool)
-
-        # Handle pagination
-        try:
-            page = int(request.GET.get("page", 1))
-            page_size = int(request.GET.get("page_size", 12))
-        except (ValueError, TypeError):
-            page = 1
-            page_size = 12
-
-        # Calculate start and end indices
-        start_index = (page - 1) * page_size
-        end_index = start_index + page_size
-
-        # Get total count before slicing
-        total_count = products.count()
-
-        # Slice the queryset for pagination
-        products = products[start_index:end_index]
-
-        # Convert products to JSON-serializable format
-        products_data = []
-        for product in products:
-            # Add explicit debug logs for the legacy_base_sku field
-            raw_legacy_base_sku = getattr(product, 'legacy_base_sku', None)
-            print(f"DEBUG - Product {product.sku} raw legacy_base_sku: '{raw_legacy_base_sku}' (type: {type(raw_legacy_base_sku).__name__})")
-            
-            product_data = self.get_product_data(product)
-            
-            # Debug the product_data after get_product_data is called
-            if 'legacy_base_sku' in product_data:
-                print(f"DEBUG - Product {product.sku} processed legacy_base_sku: '{product_data['legacy_base_sku']}' (type: {type(product_data['legacy_base_sku']).__name__})")
-            else:
-                print(f"DEBUG - Product {product.sku} legacy_base_sku is MISSING from product_data")
-
-            # Use the annotated variants_count instead of making a separate query
-            if hasattr(product, "variants_count"):
-                product_data["variants_count"] = product.variants_count
-
-            # Add variants data if requested
-            if include_variants:
-                # Add variants data to response
-                variants_data = []
-                for variant in product.variants.all():
-                    variant_data = {
-                        "id": variant.id,
-                        "sku": variant.sku,
-                        "name": variant.name,
-                        "variant_code": variant.variant_code,
-                        "is_active": variant.is_active,
-                        "parent": {
-                            "id": product.id,
-                            "name": product.name,
-                            "sku": product.sku,
-                        },
-                        "primary_image": None,
-                    }
-                    variants_data.append(variant_data)
-                product_data["variants"] = variants_data
-
-            products_data.append(product_data)
-
-        # Add more debug logs for final serialized data
-        for product_data in products_data:
-            if 'sku' in product_data and 'legacy_base_sku' in product_data:
-                print(f"DEBUG - Final product {product_data['sku']} legacy_base_sku: '{product_data['legacy_base_sku']}' (type: {type(product_data['legacy_base_sku']).__name__})")
-            
-        # Return JSON response with pagination info
-        return Response(
-            {
-                "count": total_count,
-                "results": products_data,
-                "page": page,
-                "page_size": page_size,
-                "total_pages": (total_count + page_size - 1) // page_size,
-            },
-        )
+    def get(self, request, *args, **kwargs):
+        """Minimal GET method for debugging"""
+        message = "--- ProductListAPIView GET method executed ---"
+        print(message)
+        # In a real scenario, you might want basic authentication check
+        # if not request.user.is_authenticated:
+        #     return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message": message, "count": -1, "results": []})
 
 
 class ProductDetailAPIView(APIView):

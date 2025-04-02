@@ -99,7 +99,7 @@ docker run -d \
   --name pyerp-dev \
   $ENV_ARG \
   $MONITORING_ENV \
-  -p 8050:8050 \
+  -p 8000:8000 \
   -p 3000:3000 \
   -p 6379:6379 \
   -p 80:80 \
@@ -152,7 +152,7 @@ echo -e "\n--- Running Health Checks ---"
 MAX_RETRIES=24
 RETRY_DELAY=5
 FRONTEND_URL="http://localhost:3000"
-BACKEND_URL="http://localhost:8050"
+BACKEND_URL="http://localhost:8000"
 
 # Check Next.js Frontend
 echo "Checking Next.js frontend ($FRONTEND_URL)..."
