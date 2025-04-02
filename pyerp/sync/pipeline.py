@@ -321,7 +321,7 @@ class PipelineFactory:
                 )
 
             # Extract the inner config values from source_config
-            base_extractor_config = source_config.get("config", {})
+            base_extractor_config = source_config.copy() if source_config else {}
             merged_extractor_config = base_extractor_config.copy()  # Start with inner config values
 
             # Merge with mapping's extractor_config if present

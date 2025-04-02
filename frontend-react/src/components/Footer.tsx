@@ -97,10 +97,25 @@ export function Footer() {
     const fetchHealthChecksData = async () => {
       setIsLoadingChecks(true);
       try {
-        const response = await fetch(`${API_URL}/monitoring/health-checks/`);
+        const response = await fetch(`${API_URL}/monitoring/health-checks/`, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
         if (response.ok) {
-          const data = await response.json();
-          setHealthChecks(data);
+          try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await response.json();
+              setHealthChecks(data);
+            } else {
+              console.error('Health checks API returned non-JSON content');
+              setHealthChecks(null);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse health checks response as JSON:', parseError);
+            setHealthChecks(null);
+          }
         } else {
           console.error('Failed to fetch health checks');
           setHealthChecks(null);
@@ -128,15 +143,31 @@ export function Footer() {
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch(`${API_URL}/health/`, {
-          signal: controller.signal
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
         });
 
         clearTimeout(timeoutId);
 
         if (response.ok) {
-          const data = await response.json();
-          setOverallHealth(data);
-          setApiAvailable(true);
+          try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await response.json();
+              setOverallHealth(data);
+              setApiAvailable(true);
+            } else {
+              console.error('Health API returned non-JSON content');
+              setOverallHealth(null);
+              setApiAvailable(false);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse health response as JSON:', parseError);
+            setOverallHealth(null);
+            setApiAvailable(false);
+          }
         } else {
           console.error('Failed to fetch overall health status');
           setOverallHealth(null);
@@ -168,14 +199,28 @@ export function Footer() {
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
         const response = await fetch(`${API_URL}/git/branch/`, { 
-          signal: controller.signal 
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json'
+          }
         });
         
         clearTimeout(timeoutId);
         
         if (response.ok) {
-          const data = await response.json();
-          setGitBranch(data);
+          try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await response.json();
+              setGitBranch(data);
+            } else {
+              console.error('Git branch API returned non-JSON content');
+              setGitBranch(null);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse git branch response as JSON:', parseError);
+            setGitBranch(null);
+          }
         } else {
           console.error('Failed to fetch git branch info');
         }

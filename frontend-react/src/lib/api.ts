@@ -156,12 +156,14 @@ const mockOrders = [
 
 export async function fetchOrders(): Promise<Order[]> {
   try {
-    const response = await instance.get('api/v1/sales/records/').json<{results: any[]}>();
-    const salesRecords = response.results;
+    const targetUrl = 'v1/sales/records/';
+    console.log(`[api.ts] Attempting to fetch: ${API_URL}/${targetUrl}`); // Log the intended URL using API_URL
+    const response = await instance.get(targetUrl).json<{results: any[]}>();
+    const salesRecords = response?.results || [];
     
     const orders: Order[] = await Promise.all(salesRecords.map(async (record) => {
-      const itemsResponse = await instance.get(`api/v1/sales/records/${record.id}/items/`).json<{results: any[]}>(); 
-      const items = itemsResponse.results;
+      const itemsResponse = await instance.get(`v1/sales/records/${record.id}/items/`).json<{results: any[]}>();
+      const items = itemsResponse?.results || [];
       
       const orderItems: OrderItem[] = items.map(item => ({
         id: item.id.toString(),
@@ -173,8 +175,8 @@ export async function fetchOrders(): Promise<Order[]> {
         binLocations: item.product?.bin_locations?.map((loc: any) => loc.name) || [] 
       }));
 
-      const binLocationsResponse = await instance.get(`api/v1/inventory/bin-locations/by-order/${record.id}/`).json<{results: BinLocation[]}>();
-      const binLocations = binLocationsResponse.results;
+      const binLocationsResponse = await instance.get(`v1/inventory/bin-locations/by-order/${record.id}/`).json<{results: BinLocation[]}>();
+      const binLocations = binLocationsResponse?.results || [];
 
       const itemsPicked = orderItems.reduce((sum, item) => sum + item.quantityPicked, 0);
       const totalItems = orderItems.reduce((sum, item) => sum + item.quantityTotal, 0);

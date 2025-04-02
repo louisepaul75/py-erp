@@ -88,10 +88,9 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           page_size: pagination.pageSize,
         })) as ApiResponse;
 
-        // Log raw API response - Added from dev-ui
+        // Log raw API response for debugging
         console.log("Raw API Response:", response);
 
-        // Safety check from HEAD
         if (!response?.results) {
           setProducts([]);
           setFilteredProducts([]);
