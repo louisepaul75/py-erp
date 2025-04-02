@@ -304,9 +304,9 @@ export function Footer() {
                 data-testid="api-status-indicator"
                 className={cn(
                   "h-3 w-3 rounded-full",
-                  overallStatus === 'healthy' ? "bg-primary" :
-                  overallStatus === 'warning' ? "bg-accent" :
-                  "bg-destructive"
+                  overallStatus === 'healthy' ? "bg-status-success" :
+                  overallStatus === 'warning' ? "bg-status-warning" :
+                  "bg-status-error"
                 )}
               />
             )}
@@ -321,7 +321,7 @@ export function Footer() {
         }}>
           <button
             onClick={() => setIsDevBarExpanded(!isDevBarExpanded)}
-            className="w-full bg-destructive text-destructive-foreground py-1 px-4 flex items-center justify-between"
+            className="w-full bg-status-warning text-status-error-foreground py-1 px-4 flex items-center justify-between"
           >
             <span className="font-medium">
               DEV MODE {gitBranch?.branch ? `(${gitBranch.branch})` : '(local)'}
@@ -334,7 +334,7 @@ export function Footer() {
           </button>
           
           {isDevBarExpanded && (
-            <div className="bg-muted p-4 border-t border-destructive dev-bar-content absolute bottom-full w-full">
+            <div className="bg-muted p-4 border-t border-status-warning dev-bar-content absolute bottom-full w-full">
               <h3 className="font-semibold text-foreground mb-2">{t('health.debugInfo')}</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-muted-foreground">{t('health.environment')}:</div>

@@ -27,6 +27,14 @@
     --destructive: oklch(60% 0.2 20); /* Medium Red */
     --destructive-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
 
+    /* Status Colors */
+    --status-success: oklch(65% 0.15 150); /* Medium Green */
+    --status-success-foreground: oklch(98% 0.01 150); /* Very Light Green/White */
+    --status-warning: oklch(75% 0.18 80); /* Medium-Light Orange */
+    --status-warning-foreground: oklch(20% 0.05 80); /* Dark Orange/Brown */
+    --status-error: oklch(60% 0.2 20); /* Medium Red (Same as destructive) */
+    --status-error-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
+
     --border: oklch(90% 0.02 240); /* Light grey */
     --input: oklch(85% 0.02 240); /* Slightly darker light grey */
     --ring: oklch(55% 0.15 250 / 0.6); /* Primary blue with some transparency */
@@ -71,6 +79,14 @@
 
     --destructive: oklch(60% 0.2 20); /* Medium Red (same as light) */
     --destructive-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
+
+    /* Status Colors */
+    --status-success: oklch(65% 0.15 150); /* Medium Green */
+    --status-success-foreground: oklch(15% 0.03 150); /* Very Dark Green */
+    --status-warning: oklch(75% 0.18 80); /* Medium-Light Orange */
+    --status-warning-foreground: oklch(15% 0.05 80); /* Very Dark Orange/Brown */
+    --status-error: oklch(60% 0.2 20); /* Medium Red (Same as destructive) */
+    --status-error-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
 
     --border: oklch(40% 0.03 50); /* Dark orange-tinted grey */
     --input: oklch(25% 0.01 250); /* Dark grey */
@@ -131,6 +147,15 @@
       --destructive: oklch(0.63 0.24 29.2);
       --destructive-foreground: oklch(0.97 0.018 0);
       --destructive-border: oklch(0.43 0.24 29.2);
+      
+      /* Status Colors */
+      --status-success: oklch(65% 0.15 150); /* Medium Green */
+      --status-success-foreground: oklch(98% 0.01 150); /* Very Light Green/White */
+      --status-warning: oklch(75% 0.18 80); /* Medium-Light Orange */
+      --status-warning-foreground: oklch(20% 0.05 80); /* Dark Orange/Brown */
+      --status-error: oklch(0.63 0.24 29.2); /* Medium Red (Same as destructive) */
+      --status-error-foreground: oklch(0.97 0.018 0); /* Very Light Red/White */
+
       --border: oklch(0.74 0.063 80.8);
       --input: oklch(0.74 0.063 80.8);
       --ring: oklch(0.51 0.077 74.3);

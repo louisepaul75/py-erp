@@ -49,6 +49,14 @@ module.exports = {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",
         },
+        status: {
+          success: "var(--status-success)",
+          "success-foreground": "var(--status-success-foreground)",
+          warning: "var(--status-warning)",
+          "warning-foreground": "var(--status-warning-foreground)",
+          error: "var(--status-error)",
+          "error-foreground": "var(--status-error-foreground)",
+        },
         sidebar: {
           DEFAULT: "var(--sidebar-background)",
           foreground: "var(--sidebar-foreground)",

@@ -171,6 +171,16 @@ const semanticColors = [
   // ... other semantic colors from globals.css
 ];
 
+// Define the status colors based on CSS variables
+const statusColors = [
+  { name: "Status Success", variable: "--status-success" },
+  { name: "Status Success Foreground", variable: "--status-success-foreground" },
+  { name: "Status Warning", variable: "--status-warning" },
+  { name: "Status Warning Foreground", variable: "--status-warning-foreground" },
+  { name: "Status Error", variable: "--status-error" },
+  { name: "Status Error Foreground", variable: "--status-error-foreground" },
+];
+
 export default function UIComponentsPage() {
   const [activeTab, setActiveTab] = useState('buttons');
 
@@ -1443,12 +1453,21 @@ export default function UIComponentsPage() {
               <CardContent>
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-3">Semantic Colors</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                      {semanticColors.map(({ name, variable }) => (
-                        <ColorSwatch key={variable} name={name} cssVarName={variable} />
+                    <h3 className="text-lg font-medium mb-4">Semantic Colors</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">
+                      {semanticColors.map((color) => (
+                        <ColorSwatch key={color.name} name={color.name} cssVarName={color.variable} />
                       ))}
                     </div>
+                  </div>
+
+                  <Separator className="my-8" />
+
+                  <h3 className="text-lg font-medium mb-4">Status Colors</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">
+                    {statusColors.map((color) => (
+                      <ColorSwatch key={color.name} name={color.name} cssVarName={color.variable} />
+                    ))}
                   </div>
                 </div>
               </CardContent>
