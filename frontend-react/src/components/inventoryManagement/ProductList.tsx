@@ -259,10 +259,15 @@ export default function ProductList({
                 variant="outline"
                 size="sm"
                 className="h-8 px-2"
-                onClick={() => setPagination({
-                  ...pagination,
-                  pageIndex: Math.min(totalPages - 1, pagination.pageIndex + 1)
-                })}
+                onClick={() => {
+                  console.log('Next page button clicked, current pageIndex:', pagination.pageIndex);
+                  const newPageIndex = Math.min(totalPages - 1, pagination.pageIndex + 1);
+                  console.log('Setting new pageIndex:', newPageIndex);
+                  setPagination({
+                    ...pagination,
+                    pageIndex: newPageIndex
+                  });
+                }}
                 disabled={pagination.pageIndex >= totalPages - 1}
               >
                 <ChevronRight className="h-4 w-4" />

@@ -36,7 +36,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreatingParent, setIsCreatingParent] = useState(false);
   
-  const [pagination, setPagination] = React.useState<{
+  const [pagination, setPagination] = useState<{
     pageIndex: number;
     pageSize: number;
   }>({
@@ -48,6 +48,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   const router = useRouter();
   const pathname = usePathname();
   const { addVisitedItem } = useLastVisited();
+  const [shouldKeepSelection, setShouldKeepSelection] = useState(true);
 
   // Memoized function to fetch products
   const fetchProducts = useCallback(async () => {
@@ -58,44 +59,51 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
       const response = (await productApi.getProducts({
         page: pagination.pageIndex + 1,
         page_size: pagination.pageSize,
-        search: searchTerm,
+        q: searchTerm,
       })) as ApiResponse;
 
       console.log("API Response:", response);
+      console.log(`Pagination data - Current page: ${response.page}, Total pages: ${Math.ceil(response.count / response.page_size)}, Total items: ${response.count}`);
 
       if (response?.results) {
         setFilteredProducts(response.results);
         setTotalCount(response.count || 0);
 
         // Determine if initial load/selection logic should apply
-        const isInitialLoad = pagination.pageIndex === 0 && !searchTerm && (initialVariantId || initialParentId);
+        const isInitialLoad = 
+          (pagination.pageIndex === 0 && !searchTerm && (initialVariantId || initialParentId)) || 
+          shouldKeepSelection;
 
         if (isInitialLoad) {
           const id = initialVariantId || initialParentId;
-          const initialProduct = response.results.find(
-            (product) => product.id === parseInt(id!),
-          );
-          if (initialProduct) {
-            setSelectedItem(initialProduct.id);
-            setSelectedProduct(initialProduct);
-          } else if (response.results.length > 0) {
-            // Fallback if initial ID not found but results exist
+          if (id) {
+            const initialProduct = response.results.find(
+              (product) => product.id === parseInt(id),
+            );
+            if (initialProduct) {
+              setSelectedItem(initialProduct.id);
+              setSelectedProduct(initialProduct);
+            } else if (response.results.length > 0 && !shouldKeepSelection) {
+              // Fallback if initial ID not found but results exist (only on first load)
+              setSelectedItem(response.results[0].id);
+              setSelectedProduct(response.results[0]);
+            }
+          } else if (response.results.length > 0 && !shouldKeepSelection) {
+            // No initial ID provided, select first item (only on first load)
             setSelectedItem(response.results[0].id);
             setSelectedProduct(response.results[0]);
           }
-        } else if (response.results.length > 0) {
-          // Non-initial load: check if current selection is valid
-          const currentSelectionExists = response.results.some(p => p.id === selectedItem);
-          if (!currentSelectionExists) {
-            // Select first item if current selection is gone
-            setSelectedItem(response.results[0].id);
-            setSelectedProduct(response.results[0]);
+          
+          // After initial load, reset shouldKeepSelection
+          if (shouldKeepSelection) {
+            setShouldKeepSelection(false);
           }
-          // If currentSelectionExists, selection remains unchanged by this block
         } else {
-          // No results: clear selection
-          setSelectedItem(null);
-          setSelectedProduct(null);
+          // If no results, clear selection
+          if (response.results.length === 0) {
+            setSelectedItem(null);
+            setSelectedProduct(null);
+          }
         }
 
       } else {
@@ -113,12 +121,17 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageIndex, pagination.pageSize, searchTerm, initialVariantId, initialParentId, selectedItem]); // Added selectedItem dependency
+  }, [pagination.pageIndex, pagination.pageSize, searchTerm, initialVariantId, initialParentId, shouldKeepSelection]);
 
   // Initial fetch and refetch on dependencies change
   useEffect(() => {
+    console.log('Pagination values updated - triggering fetch:', {
+      pageIndex: pagination.pageIndex,
+      pageSize: pagination.pageSize,
+      searchTerm
+    });
     fetchProducts();
-  }, [fetchProducts]); // Depend only on the memoized fetch function
+  }, [fetchProducts]);
 
   // Effect for updating content height based on window size
   useEffect(() => {
@@ -201,6 +214,13 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     }
   };
 
+  // Custom function to handle pagination changes
+  const handlePaginationChange = (newPagination: { pageIndex: number, pageSize: number }) => {
+    // We want to keep the current selection when changing pages
+    setShouldKeepSelection(true);
+    setPagination(newPagination);
+  };
+
   return (
     <div className="container mx-auto py-4 px-4 md:px-6">
       <div className="max-w-full mx-auto">
@@ -233,7 +253,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                       setSelectedItem(item);
                     }}
                     pagination={pagination}
-                    setPagination={setPagination}
+                    setPagination={handlePaginationChange}
                     isLoading={isLoading}
                   />
                 </div>
