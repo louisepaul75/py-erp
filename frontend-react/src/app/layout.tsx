@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Footer } from '@/components/Footer'
 import { Providers } from './providers'
 import MainLayout from '@/components/layout/MainLayout'
+import { LastVisitedProvider } from '@/context/LastVisitedContext'
 // import { Theme } from '@radix-ui/themes';
 
 export const viewport: Viewport = {
@@ -58,11 +59,13 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-gray-50 dark:bg-gray-900 text-amber-950 dark:text-gray-100">
         <Providers>
-          <MainLayout>
-            {/* <Theme> */}
-            {children}
-            {/* </Theme> */}
-          </MainLayout>
+          <LastVisitedProvider>
+            <MainLayout>
+              {/* <Theme> */}
+              {children}
+              {/* </Theme> */}
+            </MainLayout>
+          </LastVisitedProvider>
           <Footer />
         </Providers>
       </body>

@@ -21,9 +21,13 @@
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --input: 240 5% 15%; /* Dark grey input background */
+    --ring: 35 100% 45%; /* Darker Orange focus ring */
     --radius: 0.5rem;
+
+    /* Header & Footer */
+    --header-background: 0 0% 100%; /* White for light mode */
+    --footer-background: 0 0% 96%; /* gray-100 for light mode */
 
     /* Dev bar */
     --dev-bar-height: 0px;
@@ -41,35 +45,48 @@
   }
 
   .dark {
-    --background: 24 15% 8%;
-    --foreground: 30 30% 96%;
-    --card: 24 15% 10%;
-    --card-foreground: 30 30% 96%;
-    --popover: 24 15% 10%;
-    --popover-foreground: 30 30% 96%;
-    --primary: 20 92% 45%;
-    --primary-foreground: 24 15% 8%;
-    --secondary: 25 20% 20%;
-    --secondary-foreground: 30 30% 96%;
-    --muted: 25 20% 20%;
-    --muted-foreground: 30 20% 75%;
-    --accent: 25 20% 20%;
-    --accent-foreground: 30 30% 96%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 30 30% 96%;
-    --border: 25 20% 20%;
-    --input: 25 20% 20%;
-    --ring: 24 91.2% 50.8%;
+    /* Bloomberg-inspired dark theme: Black background, darker orange text */
+    --background: 240 10% 4%; /* Very dark blue-grey (near black) */
+    --foreground: 35 100% 55%; /* Darker Orange */
+    
+    --card: 240 8% 8%; /* Slightly lighter dark grey for cards */
+    --card-foreground: 35 100% 55%; /* Darker Orange */
+    
+    --popover: 240 8% 8%; /* Dark grey for popovers */
+    --popover-foreground: 35 100% 55%; /* Darker Orange */
+    
+    --primary: 35 100% 45%; /* Darker Primary orange for interactive elements */
+    --primary-foreground: 0 0% 10%; /* Dark contrast for primary elements */
+    
+    --secondary: 240 5% 15%; /* Dark grey secondary */
+    --secondary-foreground: 35 100% 55%; /* Darker Orange */
+    
+    --muted: 240 5% 10%; /* Darker grey muted */
+    --muted-foreground: 35 70% 50%; /* Darker, slightly more saturated muted orange */
+    
+    --accent: 35 40% 25%; /* Darker, slightly more saturated orange accent */
+    --accent-foreground: 35 100% 55%; /* Darker Orange */
+    
+    --destructive: 0 70% 50%; /* Adjusted destructive red */
+    --destructive-foreground: 0 0% 98%; /* Light contrast for destructive */
+    
+    --border: 35 60% 25%; /* Darker, slightly more saturated orange-tinted border */
+    --input: 240 5% 15%; /* Dark grey input background */
+    --ring: 35 100% 45%; /* Darker Orange focus ring */
 
-    /* Sidebar */
-    --sidebar-background: 24 15% 10%;
-    --sidebar-foreground: 30 30% 96%;
-    --sidebar-primary: 20 92% 45%;
-    --sidebar-primary-foreground: 24 15% 8%;
-    --sidebar-accent: 25 20% 20%;
-    --sidebar-accent-foreground: 30 30% 96%;
-    --sidebar-border: 25 20% 20%;
-    --sidebar-ring: 24 91.2% 50.8%;
+    /* Header & Footer */
+    --header-background: 216 39% 21%; /* #253448 */
+    --footer-background: 216 39% 21%; /* #253448 */
+
+    /* Sidebar - Applying similar theme, adjust if needed */
+    --sidebar-background: 240 10% 6%; /* Dark sidebar */
+    --sidebar-foreground: 35 100% 55%; /* Darker Orange text */
+    --sidebar-primary: 35 100% 45%; /* Darker Orange primary */
+    --sidebar-primary-foreground: 0 0% 10%; /* Dark contrast */
+    --sidebar-accent: 35 40% 25%; /* Darker Orange accent */
+    --sidebar-accent-foreground: 35 100% 55%; /* Darker Orange */
+    --sidebar-border: 35 60% 25%; /* Darker Orange border */
+    --sidebar-ring: 35 100% 45%; /* Darker Orange ring */
   }
 }
 

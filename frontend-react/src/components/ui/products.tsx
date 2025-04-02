@@ -8,6 +8,7 @@ import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
 import { productApi } from "@/lib/products/api";
 import { Product, ApiResponse } from "../types/product";
+import { useLastVisited } from "@/context/LastVisitedContext";
 
 // Import from centralized component library
 import {
@@ -74,6 +75,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { addVisitedItem } = useLastVisited();
 
   // Update fetchProducts useEffect to handle both IDs
   useEffect(() => {
@@ -86,6 +88,10 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           page_size: pagination.pageSize,
         })) as ApiResponse;
 
+        // Log raw API response - Added from dev-ui
+        console.log("Raw API Response:", response);
+
+        // Safety check from HEAD
         if (!response?.results) {
           setProducts([]);
           setFilteredProducts([]);
@@ -106,11 +112,15 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
             setSelectedItem(initialProduct.id);
             setSelectedProduct(initialProduct);
           }
-        } else if (response.results.length > 0) {
-          // Only set default selection if there are results
-          setSelectedItem(response.results[0].id);
-          if (!selectedProduct.id) {
-            setSelectedProduct(response.results[0]);
+        } else {
+          // Default behavior
+          if (response.results && response.results.length > 0) {
+            setSelectedItem(response.results[0]?.id || null);
+            if (!selectedProduct?.id) {
+              setSelectedProduct(response.results[0]);
+            }
+          } else {
+            setSelectedItem(null);
           }
         }
         
@@ -128,35 +138,60 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   }, [pagination.pageIndex, pagination.pageSize, initialVariantId, initialParentId]);
 
   useEffect(() => {
+    // Log products state before filtering
+    console.log("Products state before filtering:", products);
     console.log("Filtering products by search term");
-    setFilteredProducts(
-      products.filter(
-        (product) =>
-          product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
+    // Ensure products is an array before filtering
+    if (Array.isArray(products)) {
+      setFilteredProducts(
+        products.filter(
+          (product) =>
+            product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    } else {
+      // If products isn't an array (e.g., initially undefined), set filteredProducts to empty
+      setFilteredProducts([]); 
+    }
   }, [searchTerm, products]);
 
-  // Update product selection handling
+  // Update product selection handling AND URL push
   useEffect(() => {
     if (selectedItem) {
       const selected = filteredProducts.find(
         (product) => product.id === selectedItem
       );
-    
+
       if (selected) {
         setSelectedProduct(selected);
         const newPath = selected.variants_count > 0
           ? `/products/parent/${selected.id}`
           : `/products/variant/${selected.id}`;
-        
+
         if (pathname !== newPath) {
+          // Only push if the path is actually changing
           router.push(newPath);
         }
       }
     }
   }, [selectedItem, filteredProducts, pathname, router]);
+
+  // Add useEffect for tracking visits
+  useEffect(() => {
+    if (selectedProduct && selectedProduct.id && selectedProduct.name) {
+      const path = selectedProduct.variants_count > 0
+        ? `/products/parent/${selectedProduct.id}`
+        : `/products/variant/${selectedProduct.id}`;
+
+      addVisitedItem({
+        type: 'product', // Or determine parent/variant specifically if needed
+        id: String(selectedProduct.id),
+        name: selectedProduct.name,
+        path: path,
+      });
+    }
+  }, [selectedProduct, addVisitedItem]);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">

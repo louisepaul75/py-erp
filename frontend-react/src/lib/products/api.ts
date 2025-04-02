@@ -148,7 +148,7 @@ export const productApi = {
     };
 
     try {
-      return await api.get("products/", { searchParams: defaultParams }).json();
+      return await api.get("products/list/", { searchParams: defaultParams }).json();
     } catch (error) {
       console.error("Error fetching products:", error);
       throw error;

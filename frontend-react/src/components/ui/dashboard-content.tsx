@@ -36,6 +36,7 @@ interface MenuTile {
   id: string;
   name: string;
   icon: React.ComponentType<any>;
+  iconName: string;
   favorited: boolean;
 }
 
@@ -229,18 +230,18 @@ const Dashboard = () => {
   })
 
   const [menuTiles, setMenuTiles] = useState<MenuTile[]>([
-    { id: "customers", name: "Kunden", icon: Users, favorited: false },
-    { id: "orders", name: "Aufträge", icon: ShoppingCart, favorited: false },
-    { id: "products", name: "Produkte", icon: Package, favorited: false },
-    { id: "reports", name: "Berichte", icon: BarChart3, favorited: false },
-    { id: "settings", name: "Einstellungen", icon: Settings, favorited: false },
-    { id: "users", name: "Benutzer", icon: Users, favorited: false },
-    { id: "finance", name: "Finanzen", icon: BarChart3, favorited: false },
-    { id: "inventory", name: "Lager", icon: Package, favorited: false },
-    { id: "picklist", name: "Picklist", icon: Package, favorited: false },
-    { id: "support", name: "Support", icon: Users, favorited: false },
-    { id: "documents", name: "Dokumente", icon: Package, favorited: false },
-    { id: "dashboard", name: "Dashboard", icon: Home, favorited: false },
+    { id: "customers", name: "Kunden", icon: Users, iconName: "Users", favorited: false },
+    { id: "orders", name: "Aufträge", icon: ShoppingCart, iconName: "ShoppingCart", favorited: false },
+    { id: "products", name: "Produkte", icon: Package, iconName: "Package", favorited: false },
+    { id: "reports", name: "Berichte", icon: BarChart3, iconName: "BarChart3", favorited: false },
+    { id: "settings", name: "Einstellungen", icon: Settings, iconName: "Settings", favorited: false },
+    { id: "users", name: "Benutzer", icon: Users, iconName: "Users", favorited: false },
+    { id: "finance", name: "Finanzen", icon: BarChart3, iconName: "BarChart3", favorited: false },
+    { id: "inventory", name: "Lager", icon: Package, iconName: "Package", favorited: false },
+    { id: "picklist", name: "Picklist", icon: Package, iconName: "Package", favorited: false },
+    { id: "support", name: "Support", icon: Users, iconName: "Users", favorited: false },
+    { id: "documents", name: "Dokumente", icon: Package, iconName: "Package", favorited: false },
+    { id: "dashboard", name: "Dashboard", icon: Home, iconName: "Home", favorited: false },
   ])
 
   // Quick links
@@ -292,6 +293,29 @@ const Dashboard = () => {
           setRecentOrders(recentOrdersData)
           setQuickLinks(quickLinksData)
           setNewsItems(newsItemsData)
+          
+          // Load favorites from localStorage
+          if (typeof window !== 'undefined') {
+            const savedFavorites = localStorage.getItem('dashboard-favorites')
+            if (savedFavorites) {
+              try {
+                const favoritesData = JSON.parse(savedFavorites)
+                // Map the icon names back to components
+                const fullTiles = menuTiles.map(tile => {
+                  // Find matching saved tile (if any)
+                  const savedTile = favoritesData.find((item: any) => item.id === tile.id)
+                  return savedTile ? { 
+                    ...tile, 
+                    favorited: savedTile.favorited 
+                  } : tile
+                })
+                setMenuTiles(fullTiles)
+              } catch (error) {
+                console.error('Failed to parse favorites data:', error)
+              }
+            }
+          }
+          
           setIsLoading(false)
         }, 1000)
       } catch (err) {
@@ -350,6 +374,24 @@ const Dashboard = () => {
       tile.id === id ? { ...tile, favorited: !tile.favorited } : tile
     )
     setMenuTiles(updatedTiles)
+    
+    // Save to localStorage with serializable data
+    if (typeof window !== 'undefined') {
+      // Create a simplified version of the tiles that's serializable
+      const simplifiedTiles = updatedTiles.map(tile => ({
+        id: tile.id,
+        name: tile.name,
+        iconName: tile.iconName,
+        favorited: tile.favorited
+      }))
+      
+      localStorage.setItem('dashboard-favorites', JSON.stringify(simplifiedTiles))
+      
+      // Dispatch a custom event to notify other components about the change
+      window.dispatchEvent(new CustomEvent('favoritesChanged', {
+        detail: { favorites: simplifiedTiles }
+      }))
+    }
   }
 
   // Handle layout changes
@@ -393,7 +435,11 @@ const Dashboard = () => {
             {menuTiles.map((tile) => {
               const IconComponent = tile.icon
               return (
-                <Card key={tile.id} className="relative group">
+                <Card 
+                  key={tile.id} 
+                  className="relative group cursor-pointer" 
+                  onClick={() => handleMenuClick(tile.id)}
+                >
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                     <Button
                       variant="ghost"
@@ -456,6 +502,54 @@ const Dashboard = () => {
   const gridCols = { lg: 48, md: 40, sm: 24, xs: 12, xxs: 8 };
   const gridRowHeight = 30;
   const gridMargin = useMemo<[number, number]>(() => [8, 8], [])
+
+  const router = useRouter()
+
+  const handleMenuClick = (id: string) => {
+    // Navigate based on the clicked menu item
+    switch(id) {
+      case "dashboard":
+        router.push("/dashboard");
+        break;
+      case "customers":
+        router.push("/customers");
+        break;
+      case "orders":
+        router.push("/orders");
+        break;
+      case "products":
+        router.push("/products");
+        break;
+      case "reports":
+        router.push("/reports");
+        break;
+      case "settings":
+        router.push("/settings");
+        break;
+      case "users":
+        router.push("/users");
+        break;
+      case "finance":
+        router.push("/finance");
+        break;
+      case "inventory":
+        router.push("/warehouse");
+        break;
+      case "picklist":
+        router.push("/picklist");
+        break;
+      case "support":
+        router.push("/support");
+        break;
+      case "documents":
+        router.push("/documents");
+        break;
+      default:
+        // For other menu items that don't have routes yet
+        console.log(`Clicked on menu item: ${id}`);
+        break;
+    }
+  };
 
   // Get current layout based on breakpoints
   const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"

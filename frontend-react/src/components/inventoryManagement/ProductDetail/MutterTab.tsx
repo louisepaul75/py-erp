@@ -265,7 +265,7 @@ export default function MutterTab({
               <input
                 type="checkbox"
                 id="hangend"
-                checked={selectedProduct?.is_hanging}
+                checked={selectedProduct?.is_hanging ?? false}
                 onChange={(e) =>
                   handleInputChange("is_hanging", e.target.checked)
                 }
@@ -279,7 +279,7 @@ export default function MutterTab({
               <input
                 type="checkbox"
                 id="einseitig"
-                checked={selectedProduct?.is_one_sided}
+                checked={selectedProduct?.is_one_sided ?? false}
                 onChange={(e) =>
                   handleInputChange("is_one_sided", e.target.checked)
                 }
@@ -293,7 +293,7 @@ export default function MutterTab({
               <input
                 type="checkbox"
                 id="neuheit"
-                checked={selectedProduct?.is_new}
+                checked={selectedProduct?.is_new ?? false}
                 onChange={(e) => handleInputChange("is_new", e.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />

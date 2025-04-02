@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useScaleStore } from "@/lib/stores/scale-store"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
 interface Scale {
   id: string
@@ -111,40 +119,41 @@ export default function ScaleSettings() {
   return (
     <div className="space-y-4">
       <div className="border rounded-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Waage / Ort</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">IP-Adresse</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Toleranz %</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Waage / Ort</TableHead>
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">IP-Adresse</TableHead>
+              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Toleranz %</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {scales.length > 0 ? (
-              scales.map((scale) => (
-                <tr
+              scales.map((scale: Scale) => (
+                <TableRow
                   key={scale.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${selectedScaleId === scale.id ? "bg-blue-50" : ""}`}
+                  data-state={selectedScaleId === scale.id ? "selected" : undefined}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer"
                   onClick={() => handleSelectScale(scale)}
                 >
-                  <td className="px-4 py-3 text-sm text-black">{scale.name}</td>
-                  <td className="px-4 py-3 text-sm text-black">{scale.ipAddress}</td>
-                  <td className="px-4 py-3 text-sm text-black">{scale.tolerance.toFixed(2)}</td>
-                </tr>
+                  <TableCell className="text-sm">{scale.name}</TableCell>
+                  <TableCell className="text-sm">{scale.ipAddress}</TableCell>
+                  <TableCell className="text-sm">{scale.tolerance.toFixed(2)}</TableCell>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                   Keine Waagen konfiguriert
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {(isAddingNew || selectedScaleId) && (
-        <div className="border rounded-md p-4 space-y-4">
+        <div className="border rounded-md p-4 space-y-4 bg-slate-50 dark:bg-slate-800/50">
           <h3 className="font-medium">{isAddingNew ? "Neue Waage hinzufügen" : "Waage bearbeiten"}</h3>
 
           <div className="space-y-2">

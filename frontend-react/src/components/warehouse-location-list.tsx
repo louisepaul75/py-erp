@@ -18,6 +18,7 @@ import { API_URL } from "@/lib/config"
 import { authService } from "@/lib/auth/authService"
 import Link from "next/link"
 import SettingsDialog from "./settings/settings-dialog"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 
 const PRINTERS = [
   { value: "none", label: "Drucker auswählen" },
@@ -49,7 +50,7 @@ export default function WarehouseLocationList() {
   const [selectedPrinter, setSelectedPrinter] = useState("")
   const [highlightedLocationId, setHighlightedLocationId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(500)
+  const [itemsPerPage, setItemsPerPage] = useState(20)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string>("/")
@@ -135,7 +136,7 @@ export default function WarehouseLocationList() {
       // Map the API response to match our WarehouseLocation type
       const warehouseLocations: WarehouseLocation[] = data.map((item: any) => ({
         id: item.id.toString(),
-        laNumber: item.location_code || `LA-${item.id}`,
+        laNumber: item.legacy_id ? `LA-${item.legacy_id}` : `LA-${item.id}`,
         location: item.name,
         forSale: item.sale || false,
         specialStorage: item.special_spot || false,
@@ -345,137 +346,142 @@ export default function WarehouseLocationList() {
         </div>
       )}
 
-      <WarehouseLocationFilters
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        locationFilter={locationFilter}
-        setLocationFilter={setLocationFilter}
-        shelfFilter={shelfFilter}
-        setShelfFilter={setShelfFilter}
-        compartmentFilter={compartmentFilter}
-        setCompartmentFilter={setCompartmentFilter}
-        floorFilter={floorFilter}
-        setFloorFilter={setFloorFilter}
-        saleFilter={saleFilter}
-        setSaleFilter={setSaleFilter}
-        specialFilter={specialFilter}
-        setSpecialFilter={setSpecialFilter}
-        statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
-      />
-
-      {/* Loading indicator */}
-      {isLoading ? (
-        <div className="flex justify-center items-center p-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-          <span className="ml-3">Lade Lagerorte...</span>
-        </div>
-      ) : (
-        <>
-          {/* Table and Mobile List */}
-          <div className="hidden md:block"> 
-            <WarehouseLocationTable
-              filteredLocations={paginatedLocations}
-              selectedLocations={selectedLocations}
-              handleSelectLocation={handleSelectLocation}
-              handleRowClick={handleRowClick}
-              handleDeleteClick={handleDeleteClick}
-              highlightedLocationId={highlightedLocationId}
-            />
-          </div>
-          <WarehouseLocationMobile
-            filteredLocations={paginatedLocations}
-            selectedLocations={selectedLocations}
-            handleSelectLocation={handleSelectLocation}
-            handleRowClick={handleRowClick}
-            handleDeleteClick={handleDeleteClick}
+      <Card>
+        <CardHeader>
+          <WarehouseLocationFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            locationFilter={locationFilter}
+            setLocationFilter={setLocationFilter}
+            shelfFilter={shelfFilter}
+            setShelfFilter={setShelfFilter}
+            compartmentFilter={compartmentFilter}
+            setCompartmentFilter={setCompartmentFilter}
+            floorFilter={floorFilter}
+            setFloorFilter={setFloorFilter}
+            saleFilter={saleFilter}
+            setSaleFilter={setSaleFilter}
+            specialFilter={specialFilter}
+            setSpecialFilter={setSpecialFilter}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
           />
-        </>
-      )}
-
-      {!isLoading && filteredLocations.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Einträge pro Seite:</span>
-            <Select
-              value={itemsPerPage === filteredLocations.length ? "all" : itemsPerPage.toString()}
-              onValueChange={handleItemsPerPageChange}
-              options={[
-                { value: "100", label: "100" },
-                { value: "500", label: "500" },
-                { value: "1000", label: "1000" },
-                { value: "all", label: "Alle" },
-              ]}
-            />
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                // Zeige maximal 5 Seiten an
-                let pageNum: number
-
-                if (totalPages <= 5) {
-                  // Wenn es 5 oder weniger Seiten gibt, zeige alle an
-                  pageNum = i + 1
-                } else if (currentPage <= 3) {
-                  // Wenn wir auf den ersten 3 Seiten sind
-                  pageNum = i + 1
-                } else if (currentPage >= totalPages - 2) {
-                  // Wenn wir auf den letzten 3 Seiten sind
-                  pageNum = totalPages - 4 + i
-                } else {
-                  // Sonst zeige 2 Seiten vor und 2 Seiten nach der aktuellen Seite
-                  pageNum = currentPage - 2 + i
-                }
-
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePageChange(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                )
-              })}
-
-              {totalPages > 5 && currentPage < totalPages - 2 && (
-                <>
-                  <span className="mx-1">...</span>
-                  <Button variant="outline" size="sm" onClick={() => handlePageChange(totalPages)}>
-                    {totalPages}
-                  </Button>
-                </>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+        </CardHeader>
+        <CardContent>
+          {/* Loading indicator */}
+          {isLoading ? (
+            <div className="flex justify-center items-center p-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              <span className="ml-3">Lade Lagerorte...</span>
             </div>
+          ) : (
+            <>
+              {/* Table and Mobile List */}
+              <div className="hidden md:block"> 
+                <WarehouseLocationTable
+                  filteredLocations={paginatedLocations}
+                  selectedLocations={selectedLocations}
+                  handleSelectLocation={handleSelectLocation}
+                  handleRowClick={handleRowClick}
+                  handleDeleteClick={handleDeleteClick}
+                  highlightedLocationId={highlightedLocationId}
+                />
+              </div>
+              <WarehouseLocationMobile
+                filteredLocations={paginatedLocations}
+                selectedLocations={selectedLocations}
+                handleSelectLocation={handleSelectLocation}
+                handleRowClick={handleRowClick}
+                handleDeleteClick={handleDeleteClick}
+              />
+            </>
           )}
 
-          <div className="text-sm text-gray-500">
-            Zeige {(currentPage - 1) * itemsPerPage + 1} bis{" "}
-            {Math.min(currentPage * itemsPerPage, filteredLocations.length)} von {filteredLocations.length} Einträgen
-          </div>
-        </div>
-      )}
+          {!isLoading && filteredLocations.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Einträge pro Seite:</span>
+                <Select
+                  value={itemsPerPage === filteredLocations.length ? "all" : itemsPerPage.toString()}
+                  onValueChange={handleItemsPerPageChange}
+                  options={[
+                    { value: "100", label: "100" },
+                    { value: "500", label: "500" },
+                    { value: "1000", label: "1000" },
+                    { value: "all", label: "Alle" },
+                  ]}
+                />
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    // Zeige maximal 5 Seiten an
+                    let pageNum: number
+
+                    if (totalPages <= 5) {
+                      // Wenn es 5 oder weniger Seiten gibt, zeige alle an
+                      pageNum = i + 1
+                    } else if (currentPage <= 3) {
+                      // Wenn wir auf den ersten 3 Seiten sind
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      // Wenn wir auf den letzten 3 Seiten sind
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      // Sonst zeige 2 Seiten vor und 2 Seiten nach der aktuellen Seite
+                      pageNum = currentPage - 2 + i
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  })}
+
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <>
+                      <span className="mx-1">...</span>
+                      <Button variant="outline" size="sm" onClick={() => handlePageChange(totalPages)}>
+                        {totalPages}
+                      </Button>
+                    </>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="text-sm text-gray-500">
+                Zeige {(currentPage - 1) * itemsPerPage + 1} bis{" "}
+                {Math.min(currentPage * itemsPerPage, filteredLocations.length)} von {filteredLocations.length} Einträgen
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Print Section */}
       {!isLoading && (

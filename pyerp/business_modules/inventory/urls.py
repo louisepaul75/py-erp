@@ -177,6 +177,7 @@ def storage_locations_list(request):
                 "is_active": location.is_active,
                 "product_count": location.product_count,
                 "location_code": location_code,
+                "legacy_id": location.legacy_id,
             })
 
         return Response(data)

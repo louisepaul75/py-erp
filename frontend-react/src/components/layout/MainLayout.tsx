@@ -27,13 +27,15 @@ import {
   ChevronRight,
   X,
   Search,
+  Settings,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
 import { SearchResultsDropdown } from "@/components/ui/search-results-dropdown"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLastVisited } from '@/context/LastVisitedContext'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -44,10 +46,14 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="absolute top-1/2 -translate-y-1/2 -right-8 z-[60] h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
+      className="absolute top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
+      style={{
+        left: isCollapsed ? '0' : 'var(--sidebar-width)',
+        marginLeft: isCollapsed ? '0' : '-1px' // Slight adjustment for border overlap
+      }}
       onClick={toggleSidebar}
     >
-      <ChevronRight className={`h-5 w-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
+      <ChevronRight className={`h-5 w-5 transition-transform duration-300 ${isCollapsed ? 'rotate-0' : 'rotate-180'}`} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
@@ -60,16 +66,99 @@ const SidebarContents = () => {
   const router = useRouter()
   const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
   const [showResults, setShowResults] = useState(false)
+  const [favorites, setFavorites] = useState<Array<{id: string; name: string; iconName: string; favorited: boolean}>>([])
+  const { lastVisitedItems } = useLastVisited()
   
-  // Recent accessed items
-  const recentAccessed = [
-    { id: "KD-1234", name: "Müller GmbH", type: "Kunde" },
-    { id: "ORD-7345", name: "Auftrag #7345", type: "Auftrag" },
-    { id: "KD-1156", name: "Schmidt AG", type: "Kunde" },
-    { id: "ORD-7340", name: "Auftrag #7340", type: "Auftrag" },
-    { id: "KD-1089", name: "Weber KG", type: "Kunde" },
-  ]
-
+  // Function to map icon string to component
+  const getIconComponent = (iconName: string | null | undefined) => {
+    try {
+      switch(iconName?.toLowerCase()) {
+        case 'home': return Home;
+        case 'shoppingcart':
+        case 'order':
+        case 'sales_record':
+          return ShoppingCart;
+        case 'package':
+        case 'product':
+        case 'parent_product':
+        case 'variant_product':
+          return Package;
+        case 'barchart3':
+        case 'barchart2':
+        case 'report':
+          return BarChart2;
+        case 'settings': return Settings;
+        case 'users':
+        case 'customer':
+          return Users;
+        case 'truck':
+        case 'inventory':
+        case 'box_slot':
+        case 'storage_location':
+          return Truck;
+        case 'database': return Database;
+        default:
+          return Package;
+      }
+    } catch (error) {
+      console.error('Error getting icon component:', error);
+      return Package;
+    }
+  };
+  
+  // Load favorites when component mounts
+  useEffect(() => {
+    const loadFavorites = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const savedFavorites = localStorage.getItem('dashboard-favorites')
+          if (savedFavorites) {
+            try {
+              const favoritesData = JSON.parse(savedFavorites)
+              if (Array.isArray(favoritesData)) {
+                // Only keep the favorited items
+                const filteredFavorites = favoritesData.filter((item: any) => 
+                  item && typeof item === 'object' && item.favorited && item.id && item.name
+                )
+                setFavorites(filteredFavorites)
+              } else {
+                console.error('Favorites data is not an array:', favoritesData)
+              }
+            } catch (error) {
+              console.error('Failed to parse favorites data:', error)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading favorites:', error)
+      }
+    }
+    
+    // Load favorites initially
+    loadFavorites()
+    
+    // Setup event listener for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'dashboard-favorites') {
+        loadFavorites()
+      }
+    }
+    
+    // Setup event listener for custom event (when favorites change on the same page)
+    const handleFavoritesChanged = () => {
+      loadFavorites()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('favoritesChanged', handleFavoritesChanged)
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('favoritesChanged', handleFavoritesChanged)
+    }
+  }, [])
+  
   const handleInputFocus = () => {
     setShowResults(true)
   }
@@ -106,9 +195,56 @@ const SidebarContents = () => {
     reset()
     setShowResults(false)
   }
+
+  const handleMenuItemClick = (id: string) => {
+    // Navigate based on the clicked menu item
+    switch(id) {
+      case "dashboard":
+        router.push("/dashboard");
+        break;
+      case "customers":
+        router.push("/customers");
+        break;
+      case "orders":
+        router.push("/orders");
+        break;
+      case "products":
+        router.push("/products");
+        break;
+      case "reports":
+        router.push("/reports");
+        break;
+      case "settings":
+        router.push("/settings");
+        break;
+      case "users":
+        router.push("/users");
+        break;
+      case "finance":
+        router.push("/finance");
+        break;
+      case "inventory":
+        router.push("/warehouse");
+        break;
+      case "picklist":
+        router.push("/picklist");
+        break;
+      case "support":
+        router.push("/support");
+        break;
+      case "documents":
+        router.push("/documents");
+        break;
+      // Add other menu navigation cases as needed
+      default:
+        // For other menu items that don't have routes yet
+        console.log(`Clicked on menu item: ${id}`);
+        break;
+    }
+  };
   
   return (
-    <div className="relative">
+    <div className="relative z-10">
       <Sidebar>
         <SidebarHeader className="z-[1]">
           <div className="flex items-center px-2 py-2 relative">
@@ -152,37 +288,72 @@ const SidebarContents = () => {
           <SidebarGroup>
             <SidebarGroupLabel>Favoriten</SidebarGroupLabel>
             <SidebarGroupContent>
-              <div className="px-2 py-2 text-sm text-muted-foreground">
-                Keine Favoriten vorhanden.
-                Klicken Sie auf den Stern bei einem Menüpunkt, um ihn zu den Favoriten hinzuzufügen.
-              </div>
+              {favorites && favorites.length > 0 ? (
+                <SidebarMenu>
+                  {favorites.map((item) => {
+                    // Safety check to ensure item has required properties
+                    if (!item || !item.id || !item.name) {
+                      return null;
+                    }
+                    
+                    // Get icon component safely
+                    const IconComponent = item.iconName ? getIconComponent(item.iconName) : Package;
+                    
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton asChild>
+                          <Link 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleMenuItemClick(item.id);
+                            }}
+                          >
+                            <IconComponent className="h-4 w-4" />
+                            <span>{item.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              ) : (
+                <div className="px-2 py-2 text-sm text-muted-foreground">
+                  Keine Favoriten vorhanden.
+                  Klicken Sie auf den Stern bei einem Menüpunkt, um ihn zu den Favoriten hinzuzufügen.
+                </div>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
 
           <SidebarGroup>
             <SidebarGroupLabel>Zuletzt aufgerufen</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {recentAccessed.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild>
-                      <Link href="#">
-                        {item.type === "Kunde" ? (
-                          <Users className="h-4 w-4" />
-                        ) : (
-                          <ShoppingCart className="h-4 w-4" />
-                        )}
-                        <span>{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
+              {lastVisitedItems && lastVisitedItems.length > 0 ? (
+                <SidebarMenu>
+                  {lastVisitedItems.map((item) => {
+                    const IconComponent = getIconComponent(item.type);
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton asChild>
+                          <Link href={item.path}>
+                            <IconComponent className="h-4 w-4" />
+                            <span>{item.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              ) : (
+                <div className="px-2 py-2 text-sm text-muted-foreground">
+                  Keine Einträge vorhanden. Besuchen Sie eine Seite.
+                </div>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
       </Sidebar>
-      <AlwaysVisibleSidebarToggle />
     </div>
   )
 }
@@ -200,20 +371,47 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <Navbar />
       <div className="flex pt-16">
         <SidebarProvider defaultOpen={isDashboard}>
-          <SidebarContents />
-          <main className="flex-1 p-6 relative z-10" style={{ 
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'calc(100% - var(--sidebar-width))',
-            maxWidth: '1400px'
-          }}>
-            <div className="mx-auto">
-              {children}
-            </div>
-          </main>
+          <MainLayoutContent>
+            {children}
+          </MainLayoutContent>
         </SidebarProvider>
       </div>
+    </div>
+  )
+}
+
+// New component that uses the sidebar context
+const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
+  
+  return (
+    <div className="relative w-full">
+      {/* Layer 1: Background */}
+      {/* Already provided by the min-h-screen bg-background in the parent div */}
+      
+      {/* Layer 2: Header already at the top outside this container */}
+      
+      {/* Layer 3: Sidebar */}
+      <SidebarContents />
+      
+      {/* Sidebar toggle button - positioned on the edge of the sidebar */}
+      <AlwaysVisibleSidebarToggle />
+      
+      {/* Layer 4: Main content */}
+      <main className="flex-1 p-6 relative" style={{ 
+        position: 'absolute',
+        left: isCollapsed ? '0' : 'var(--sidebar-width)',
+        transform: 'none',
+        width: isCollapsed ? '100%' : 'calc(100% - var(--sidebar-width))',
+        maxWidth: '100%',
+        zIndex: 0,
+        transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out'
+      }}>
+        <div className="mx-auto max-w-[1400px]">
+          {children}
+        </div>
+      </main>
     </div>
   )
 } 
