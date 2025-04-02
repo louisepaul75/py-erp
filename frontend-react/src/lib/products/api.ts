@@ -5,7 +5,7 @@ import ky, {
   type NormalizedOptions,
 } from "ky";
 import { API_URL, AUTH_CONFIG } from "../config";
-import { Product } from "@/components/types/product";
+import { Product, ApiResponse } from "@/components/types/product";
 import { getServerCookie } from "../auth/serverCookies";
 
 // Cookie storage utility for client-side operations
@@ -117,6 +117,7 @@ interface Variant {
   releas: string;
   price: number;
   selected?: boolean;
+  [key: string]: any;
 }
 
 interface ProductListParams {
@@ -156,7 +157,7 @@ export const productApi = {
       // Log that we're making the API call
       console.log(`Making API request to api/products/list/ with params:`, defaultParams);
       
-      const response = await api.get("api/products/list/", { searchParams: defaultParams }).json();
+      const response = await api.get("api/products/list/", { searchParams: defaultParams }).json<ApiResponse>();
       
       // Check for specific SKUs in the response
       if (response && response.results) {

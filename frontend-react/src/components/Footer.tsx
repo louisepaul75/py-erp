@@ -194,11 +194,12 @@ export function Footer() {
   // Fetch git branch info
   useEffect(() => {
     const fetchGitBranch = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const response = await fetch(`${API_URL}/git/branch/`, { 
+        const response = await fetch(`${API_URL}/api/git/branch/`, { 
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'
