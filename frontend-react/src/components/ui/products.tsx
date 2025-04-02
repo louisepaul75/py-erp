@@ -1,5 +1,13 @@
-// app/inventory-management/page.tsx (or wherever your component lives)
 "use client";
+
+// Add this at the top of the file after imports
+declare global {
+  interface Window {
+    debouncedSelectionTimeout?: ReturnType<typeof setTimeout>;
+  }
+}
+
+// app/inventory-management/page.tsx (or wherever your component lives)
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Search, PlusCircle } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -51,6 +59,22 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   const { addVisitedItem } = useLastVisited();
   const [shouldKeepSelection, setShouldKeepSelection] = useState(true);
   
+  // Debounced item selection to prevent multiple rapid changes
+  const debouncedSetSelectedItem = useCallback((item: number | string | null) => {
+    // Skip if the item is the same
+    if (item === selectedItem) return;
+    
+    // Clear any pending timeouts
+    if (window.debouncedSelectionTimeout) {
+      clearTimeout(window.debouncedSelectionTimeout);
+    }
+    
+    // Set with a slight delay to prevent rapid changes
+    window.debouncedSelectionTimeout = setTimeout(() => {
+      setSelectedItem(item);
+    }, 100);
+  }, [selectedItem]);
+  
   // Debounce search term to prevent too many API requests
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -73,30 +97,27 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 
   // Memoized function to fetch products
   const fetchProducts = useCallback(async () => {
+    // Create an abort controller for this request
+    const abortController = new AbortController();
+    
     try {
-      console.log(
-        `Fetching products... Page: ${pagination.pageIndex + 1}, Size: ${pagination.pageSize}, Search: '${debouncedSearchTerm}'`,);
       setIsLoading(true);
       
       // Use direct search endpoint when a search term is provided
       let response;
       if (debouncedSearchTerm) {
-        console.log(`Using direct search for term: '${debouncedSearchTerm}'`);
         response = await productApi.getProductsDirectSearch({
           page: pagination.pageIndex + 1,
           page_size: pagination.pageSize,
           q: debouncedSearchTerm,
-        }) as ApiResponse;
+        }, abortController.signal) as ApiResponse;
       } else {
         // Use regular endpoint when no search term is provided
         response = await productApi.getProducts({
           page: pagination.pageIndex + 1,
           page_size: pagination.pageSize,
-        }) as ApiResponse;
+        }, abortController.signal) as ApiResponse;
       }
-
-      console.log("API Response:", response);
-      console.log(`Pagination data - Current page: ${response.page}, Total pages: ${Math.ceil(response.count / response.page_size)}, Total items: ${response.count}`);
 
       if (response?.results) {
         setFilteredProducts(response.results);
@@ -131,13 +152,12 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
           if (shouldKeepSelection) {
             setShouldKeepSelection(false);
           }
-        } else {
-          // If no results, clear selection
-          if (response.results.length === 0) {
-            setSelectedItem(null);
-            setSelectedProduct(null);
-          }
+        } else if (response.results.length === 0) {
+          // Only clear selection if no results are found
+          setSelectedItem(null);
+          setSelectedProduct(null);
         }
+        // Don't reset selection otherwise - this prevents flashing back to default
 
       } else {
         setFilteredProducts([]);
@@ -146,30 +166,40 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
         setSelectedProduct(null);
       }
     } catch (error) {
-      console.error("Error fetching products:", error);
-      setFilteredProducts([]);
-      setTotalCount(0);
-      setSelectedItem(null);
-      setSelectedProduct(null);
+      // Only handle error if it's not an abort error
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        console.error("Error fetching products:", error);
+        setFilteredProducts([]);
+        setTotalCount(0);
+        // Don't reset selection on error unless absolutely necessary
+      }
     } finally {
       setIsLoading(false);
     }
+    
+    // Return a cleanup function that aborts the request if component unmounts or dependencies change
+    return () => {
+      abortController.abort();
+    };
   }, [pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, initialVariantId, initialParentId, shouldKeepSelection]);
 
   // Initial fetch and refetch when dependencies change
   useEffect(() => {
-    console.log('Fetch dependencies updated - triggering fetch:', {
-      pageIndex: pagination.pageIndex,
-      pageSize: pagination.pageSize,
-      searchTerm: debouncedSearchTerm
-    });
+    // Create an abort controller for this effect's fetch
+    const controller = new AbortController();
+    
+    // Immediately invoke fetchProducts
     fetchProducts();
+    
+    // Return cleanup function directly
+    return () => {
+      controller.abort();
+    };
   }, [fetchProducts, debouncedSearchTerm]);
 
   // Handle search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    console.log(`Search input changed: '${value}'`);
     setSearchTerm(value);
   };
 
@@ -192,24 +222,81 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 
   // Update product selection handling AND URL push
   useEffect(() => {
-    if (selectedItem && !isCreatingParent) {
-      const selected = filteredProducts.find(
-        (product) => product.id === selectedItem
-      );
+    // Skip if no selected item or if we're creating a parent
+    if (!selectedItem || isCreatingParent) return;
+    
+    // Use a ref to track the latest request
+    const abortController = new AbortController();
+    
+    // First, try to find the product in the current list
+    const selected = filteredProducts.find(
+      (product) => product.id === selectedItem
+    );
 
-      if (selected) {
-        setSelectedProduct(selected);
-        const newPath = selected.variants_count > 0
-          ? `/products/parent/${selected.id}`
-          : `/products/variant/${selected.id}`;
+    if (selected) {
+      // Set product directly from filtered list - this is immediate
+      setSelectedProduct(selected);
+      const newPath = selected.variants_count > 0
+        ? `/products/parent/${selected.id}`
+        : `/products/variant/${selected.id}`;
 
-        if (pathname !== newPath) {
-          // Only push if the path is actually changing
-          router.push(newPath);
-        }
+      if (pathname !== newPath) {
+        // Only push if the path is actually changing
+        router.push(newPath);
+      }
+    } else {
+      // If not found in the filteredProducts list, fetch directly
+      // But first check if we're already loading or if we already have this product
+      // to prevent unnecessary flashing
+      if (!isLoading && (!selectedProduct || selectedProduct.id !== selectedItem)) {
+        // Use a timeout to stagger requests and prevent too many simultaneous requests
+        // This helps reduce the network waterfall and prevents flashing
+        const timeoutId = setTimeout(async () => {
+          try {
+            setIsLoading(true);
+            // Use the abort controller for this request
+            const product = await productApi.getProduct(selectedItem, abortController.signal);
+            
+            // Don't update if the selection changed while we were fetching
+            if (selectedItem === product.id) {
+              setSelectedProduct(product);
+              
+              const newPath = product.variants_count > 0
+                ? `/products/parent/${product.id}`
+                : `/products/variant/${product.id}`;
+  
+              if (pathname !== newPath) {
+                // Only push if the path is actually changing
+                router.push(newPath);
+              }
+            }
+          } catch (error) {
+            // Only log and reset if it's not an abort error
+            if (!(error instanceof DOMException && error.name === 'AbortError')) {
+              console.error(`Error fetching product ${selectedItem}:`, error);
+              // If the product cannot be fetched, reset selection
+              setSelectedItem(null);
+              setSelectedProduct(null);
+            }
+          } finally {
+            setIsLoading(false);
+          }
+        }, 50); // Small delay to prevent UI flashing
+
+        // Clear the timeout if component unmounts or dependencies change
+        return () => {
+          clearTimeout(timeoutId);
+          abortController.abort();
+        };
       }
     }
-  }, [selectedItem, filteredProducts, pathname, router, isCreatingParent]);
+    
+    // Clean up function to abort any in-flight requests when the component unmounts
+    // or when selectedItem changes
+    return () => {
+      abortController.abort();
+    };
+  }, [selectedItem, filteredProducts, pathname, router, isCreatingParent, isLoading, selectedProduct]);
 
   // Add useEffect for tracking visits
   useEffect(() => {
@@ -296,7 +383,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                     selectedItem={selectedItem}
                     setSelectedItem={(item) => {
                       setIsCreatingParent(false);
-                      setSelectedItem(item);
+                      debouncedSetSelectedItem(item);
                     }}
                     pagination={pagination}
                     setPagination={handlePaginationChange}

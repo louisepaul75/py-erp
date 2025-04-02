@@ -68,13 +68,6 @@ const api = ky.create({
           if (accessToken && !request.url.includes("token/")) {
             request.headers.set("Authorization", `Bearer ${accessToken}`);
           }
-
-          console.log("Making request:", {
-            method: request.method,
-            url: request.url,
-            headers: Object.fromEntries(request.headers.entries()),
-            token: accessToken ? "Present" : "Not present",
-          });
         }
       },
     ],
@@ -134,8 +127,7 @@ interface ProductListParams {
 
 // Product API methods
 export const productApi = {
-  getProducts: async (params: ProductListParams = {}) => {
-    console.log("Fetching products in getProducts");
+  getProducts: async (params: ProductListParams = {}, signal?: AbortSignal) => {
     if (params._include_variants !== undefined) {
       params.include_variants = params._include_variants;
       delete params._include_variants;
@@ -150,27 +142,11 @@ export const productApi = {
       ...params, // Override defaults with any passed parameters
     };
 
-    // Log the parameters being used for debugging
-    console.log("API request parameters:", defaultParams);
-
     try {
-      // Log that we're making the API call
-      console.log(`Making API request to api/v1/products/ with params:`, defaultParams);
-      
-      const response = await api.get("api/v1/products/", { searchParams: defaultParams }).json<ApiResponse>();
-      
-      // Check for specific SKUs in the response
-      if (response && response.results) {
-        const testProduct = response.results.find((p: any) => p.sku === "415220");
-        if (testProduct) {
-          console.log("API response includes product 415220:", {
-            sku: testProduct.sku,
-            legacy_base_sku: testProduct.legacy_base_sku,
-            legacy_base_sku_type: typeof testProduct.legacy_base_sku
-          });
-        }
-      }
-      
+      const response = await api.get("api/v1/products/", { 
+        searchParams: defaultParams,
+        signal 
+      }).json<ApiResponse>();
       return response;
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -178,8 +154,7 @@ export const productApi = {
     }
   },
 
-  getProductsDirectSearch: async (params: ProductListParams = {}) => {
-    console.log("Using direct search endpoint for products");
+  getProductsDirectSearch: async (params: ProductListParams = {}, signal?: AbortSignal) => {
     if (params._include_variants !== undefined) {
       params.include_variants = params._include_variants;
       delete params._include_variants;
@@ -194,17 +169,11 @@ export const productApi = {
       ...params, // Override defaults with any passed parameters
     };
 
-    // Log the parameters being used for debugging
-    console.log("Direct search API request parameters:", defaultParams);
-
     try {
-      // Log that we're making the API call
-      console.log(`Making API request to api/products/direct-search/ with params:`, defaultParams);
-      
-      const response = await api.get("api/products/direct-search/", { searchParams: defaultParams }).json<ApiResponse>();
-      
-      console.log(`Direct search found ${response.count} products matching search term '${params.q || ""}'`);
-      
+      const response = await api.get("api/products/direct-search/", { 
+        searchParams: defaultParams,
+        signal 
+      }).json<ApiResponse>();
       return response;
     } catch (error) {
       console.error("Error with direct search for products:", error);
@@ -212,9 +181,9 @@ export const productApi = {
     }
   },
 
-  getProduct: async (id: string | number): Promise<Product> => {
+  getProduct: async (id: string | number, signal?: AbortSignal): Promise<Product> => {
     try {
-      return await api.get(`api/v1/products/${id}/`).json();
+      return await api.get(`api/v1/products/${id}/`, { signal }).json();
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
       throw error;
@@ -247,20 +216,11 @@ export const productApi = {
 
   createProduct: async (productData: Omit<Product, "id"> & { parent_id?: number | string }): Promise<Product> => {
     try {
-      // Log the data being sent for debugging
-      console.log("Creating product with data:", productData);
-      // Ensure the endpoint is correct for creation (e.g., /api/products/)
-      // Adjust endpoint if necessary, e.g., if create/list are different
       return await api.post("api/v1/products/", { json: productData }).json();
     } catch (error) {
       console.error("Error creating product:", error);
-      // Simplified error logging
       if (error instanceof HTTPError) {
-        // Log the error object itself. 
-        // Ky's HTTPError often includes response details directly.
-        console.error("HTTPError details:", error); 
-        // If the body text is crucial and not visible in the logged error, 
-        // we might need to investigate ky's error handling further, but avoid re-reading.
+        console.error("HTTPError details:", error);
       }
       throw error;
     }
@@ -279,7 +239,6 @@ export const productApi = {
   },
 
   deleteProduct: async (id: string): Promise<void> => {
-    console.log("product to be deleted", id);
     try {
       await api.delete(`api/v1/products/${id}/`);
     } catch (error) {
@@ -293,28 +252,6 @@ export const productApi = {
       return await api.get("api/v1/products/categories/").json();
     } catch (error) {
       console.error("Error fetching categories:", error);
-      throw error;
-    }
-  },
-
-  searchProductsBySku: async (sku: string = "11205"): Promise<ApiResponse> => {
-    try {
-      console.log(`Searching for products with SKU: ${sku}`);
-      
-      const params: ProductListParams = {
-        page: 1,
-        page_size: 10,
-        q: sku,
-        fields: "id,name,sku,is_active,variants_count,legacy_base_sku",
-      };
-      
-      console.log(`Making search API request with params:`, params);
-      const response = await api.get("api/v1/products/", { searchParams: params }).json<ApiResponse>();
-      console.log(`Found ${response.count} products matching search term '${sku}'`);
-      
-      return response;
-    } catch (error) {
-      console.error(`Error searching for products with SKU ${sku}:`, error);
       throw error;
     }
   },
