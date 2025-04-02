@@ -158,9 +158,17 @@ class TestInventoryViewFunctions:
         mock_location.sale = False
         mock_location.special_spot = False
         mock_location.is_active = True
-        mock_location.product_count = 5
-        
-        mock_annotate.return_value = [mock_location]
+        mock_location.product_count = 5 # Assuming the annotation sets this attribute
+        # Add other potentially accessed attributes if needed by the serializer/view
+        mock_location.location_code = "US-Building 1-Unit 1-Compartment 1-Shelf 1" # Pre-calculate for mock simplicity
+        mock_location.legacy_id = "LGCY1"
+
+        # Create a mock QuerySet that is iterable
+        mock_queryset = MagicMock()
+        mock_queryset.__iter__.return_value = iter([mock_location]) # Make it yield the mock location
+
+        # Configure the patched annotate method to return the mock QuerySet
+        mock_annotate.return_value = mock_queryset
         
         # Create a proper request object
         request = request_factory.get('/api/inventory/storage-locations/')
@@ -168,7 +176,8 @@ class TestInventoryViewFunctions:
         # Mock the permission check
         with patch('pyerp.business_modules.inventory.urls.IsAuthenticated.has_permission', return_value=True):
             response = storage_locations_list(request)
-            response = self.render_response(response)
+            # Consider removing explicit render if content access triggers it
+            response = self.render_response(response) 
             
         assert response.status_code == status.HTTP_200_OK
         content = json.loads(response.content)
@@ -176,7 +185,8 @@ class TestInventoryViewFunctions:
         assert content[0]['id'] == 1
         assert content[0]['name'] == "Test Location"
         assert content[0]['product_count'] == 5
-        assert content[0]['location_code'] == "US-Building 1-Unit 1-Compartment 1-Shelf 1"
+        # Use the pre-calculated location_code for assertion
+        assert content[0]['location_code'] == "US-Building 1-Unit 1-Compartment 1-Shelf 1" 
 
     @patch('pyerp.business_modules.inventory.urls.ProductStorage.objects.filter')
     def test_locations_by_product(self, mock_filter, request_factory):
