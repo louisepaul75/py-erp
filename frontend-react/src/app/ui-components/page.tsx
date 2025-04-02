@@ -1084,16 +1084,46 @@ export default function UIComponentsPage() {
                       <CardDescription>Display trend data with a line chart</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsLineChart data={lineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                          <XAxis dataKey="name" stroke="rgba(255,255,255,0.7)" />
-                          <YAxis stroke="rgba(255,255,255,0.7)" />
-                          <Tooltip contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }} />
-                          <Legend />
-                          <Line type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} activeDot={{ r: 8 }} />
-                        </RechartsLineChart>
-                      </ResponsiveContainer>
+                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsLineChart data={lineData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
+                            <XAxis 
+                              dataKey="name" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false} 
+                            />
+                            <YAxis 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false} 
+                              tickFormatter={(value) => `${value}`}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'var(--popover)', 
+                                borderColor: 'var(--border)',
+                                color: 'var(--popover-foreground)',
+                                borderRadius: 'var(--radius)',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                              }} 
+                              cursor={{ fill: 'transparent' }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} />
+                            <Line 
+                              type="monotone" 
+                              dataKey="value" 
+                              stroke="var(--primary)" 
+                              strokeWidth={2} 
+                              activeDot={{ r: 8, fill: 'var(--primary)' }} 
+                              dot={{ stroke: 'var(--primary)', strokeWidth: 1, r: 4, fill: 'var(--background)' }}
+                            />
+                          </RechartsLineChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -1104,16 +1134,40 @@ export default function UIComponentsPage() {
                       <CardDescription>Compare data with a bar chart</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsBarChart data={barData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                          <XAxis dataKey="name" stroke="rgba(255,255,255,0.7)" />
-                          <YAxis stroke="rgba(255,255,255,0.7)" />
-                          <Tooltip contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }} />
-                          <Legend />
-                          <Bar dataKey="value" fill="#82ca9d" radius={[4, 4, 0, 0]} />
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
+                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsBarChart data={barData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} vertical={false} />
+                            <XAxis 
+                              dataKey="name" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false} 
+                            />
+                            <YAxis 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false} 
+                              tickFormatter={(value) => `${value}`}
+                              width={30}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'var(--popover)', 
+                                borderColor: 'var(--border)',
+                                color: 'var(--popover-foreground)',
+                                borderRadius: 'var(--radius)',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                              }} 
+                              cursor={{ fill: 'var(--accent)', opacity: 0.3 }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} />
+                            <Bar dataKey="value" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -1124,26 +1178,44 @@ export default function UIComponentsPage() {
                       <CardDescription>Show proportion with a pie chart</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {pieData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }} />
-                          <Legend />
-                        </RechartsPieChart>
-                      </ResponsiveContainer>
+                      <div className="w-full h-full bg-muted/30 rounded-md p-2 flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RechartsPieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={80}
+                              fill="var(--primary)"
+                              dataKey="value"
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              fontSize={12}
+                              stroke="var(--card)"
+                              strokeWidth={2}
+                            >
+                              <Cell fill="var(--primary)" />
+                              <Cell fill="var(--accent)" />
+                              <Cell fill="var(--secondary)" />
+                              <Cell fill="oklch(from var(--primary) l c calc(h + 180))" />
+                            </Pie>
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'var(--popover)', 
+                                borderColor: 'var(--border)',
+                                color: 'var(--popover-foreground)',
+                                borderRadius: 'var(--radius)',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                              }} 
+                            />
+                            <Legend 
+                              wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} 
+                              verticalAlign="bottom" 
+                              height={36} 
+                            />
+                          </RechartsPieChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -1154,15 +1226,46 @@ export default function UIComponentsPage() {
                       <CardDescription>Visualize volume with area chart</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={areaData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                          <XAxis dataKey="name" stroke="rgba(255,255,255,0.7)" />
-                          <YAxis stroke="rgba(255,255,255,0.7)" />
-                          <Tooltip contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }} />
-                          <Area type="monotone" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.3} />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={areaData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
+                            <XAxis 
+                              dataKey="name" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false} 
+                            />
+                            <YAxis 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false} 
+                              tickFormatter={(value) => `${value}`}
+                              width={30}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'var(--popover)', 
+                                borderColor: 'var(--border)',
+                                color: 'var(--popover-foreground)',
+                                borderRadius: 'var(--radius)',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                              }} 
+                              cursor={{ fill: 'transparent' }}
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="value" 
+                              stroke="var(--primary)" 
+                              fill="var(--primary)" 
+                              fillOpacity={0.3} 
+                              strokeWidth={2}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -1173,17 +1276,49 @@ export default function UIComponentsPage() {
                       <CardDescription>Multi-dimensional data on a radar chart</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                          <PolarGrid stroke="rgba(255,255,255,0.2)" />
-                          <PolarAngleAxis dataKey="subject" stroke="rgba(255,255,255,0.7)" />
-                          <PolarRadiusAxis stroke="rgba(255,255,255,0.7)" />
-                          <Radar name="Student A" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.5} />
-                          <Radar name="Student B" dataKey="B" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.5} />
-                          <Legend />
-                          <Tooltip contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }} />
-                        </RadarChart>
-                      </ResponsiveContainer>
+                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                            <PolarGrid stroke="var(--border)" strokeOpacity={0.5} />
+                            <PolarAngleAxis 
+                              dataKey="subject" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                            />
+                            <PolarRadiusAxis 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={10} 
+                              axisLine={false} 
+                              tickLine={false} 
+                            />
+                            <Radar 
+                              name="Student A" 
+                              dataKey="A" 
+                              stroke="var(--primary)" 
+                              fill="var(--primary)" 
+                              fillOpacity={0.6} 
+                            />
+                            <Radar 
+                              name="Student B" 
+                              dataKey="B" 
+                              stroke="var(--accent)" 
+                              fill="var(--accent)" 
+                              fillOpacity={0.5} 
+                            />
+                            <Legend wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'var(--popover)', 
+                                borderColor: 'var(--border)',
+                                color: 'var(--popover-foreground)',
+                                borderRadius: 'var(--radius)',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                              }} 
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -1194,15 +1329,43 @@ export default function UIComponentsPage() {
                       <CardDescription>Display correlation with scatter plots</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                          <XAxis type="number" dataKey="x" name="x-axis" stroke="rgba(255,255,255,0.7)" />
-                          <YAxis type="number" dataKey="y" name="y-axis" stroke="rgba(255,255,255,0.7)" />
-                          <Tooltip contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }} cursor={{ strokeDasharray: '3 3' }} />
-                          <Scatter name="Values" data={scatterData} fill="#8884d8" />
-                        </ScatterChart>
-                      </ResponsiveContainer>
+                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
+                            <XAxis 
+                              type="number" 
+                              dataKey="x" 
+                              name="x-axis" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false}
+                            />
+                            <YAxis 
+                              type="number" 
+                              dataKey="y" 
+                              name="y-axis" 
+                              stroke="var(--muted-foreground)" 
+                              fontSize={12} 
+                              tickLine={false} 
+                              axisLine={false} 
+                              width={30}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'var(--popover)', 
+                                borderColor: 'var(--border)',
+                                color: 'var(--popover-foreground)',
+                                borderRadius: 'var(--radius)',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+                              }} 
+                              cursor={{ stroke: 'var(--border)', strokeDasharray: '3 3' }} 
+                            />
+                            <Scatter name="Values" data={scatterData} fill="var(--primary)" />
+                          </ScatterChart>
+                        </ResponsiveContainer>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
