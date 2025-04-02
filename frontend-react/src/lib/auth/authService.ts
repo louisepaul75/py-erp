@@ -1,7 +1,7 @@
 import ky, { KyResponse, HTTPError } from 'ky';
 import { jwtDecode } from 'jwt-decode';
 import { API_URL, AUTH_CONFIG } from '../config';
-import { User, LoginCredentials, JwtPayload } from './authTypes';
+import { User, LoginCredentials, JwtPayload, TokenResponse } from './authTypes';
 import { clientCookieStorage } from './clientCookies';
 
 // API-Instanz ohne Auth für Token-Endpunkte
@@ -167,15 +167,15 @@ const api = ky.extend({
               // Retry the request using the api instance. DO NOT return the promise.
               await api(request);
               // Let ky handle the successful retry transparently.
-              return; // Explicitly return undefined to signal the error is handled.
+              return error; // Return the original error to let ky handle the retry
             } else {
               console.log('[Hook:401] Refresh failed. Re-throwing original 401 error.'); // Log refresh fail
-              throw error; // Re-throw if refresh failed
+              return error; // Return the original error
             }
           } catch (refreshError) {
             console.error('[Hook:401] Exception during refresh attempt:', refreshError); // Log refresh exception
             console.log('[Hook:401] Re-throwing original 401 after refresh exception.');
-            throw error;
+            return error;
           }
         }
         
@@ -193,14 +193,14 @@ const api = ky.extend({
               // Retry the request using the api instance
               await api(request);
               // Do not return the response directly, let ky handle it
-              return; // Explicitly return undefined to signal error handled.
+              return error; // Return the original error to let ky handle the retry
             }
           } catch (csrfError) {
             console.error('[Hook:403] CSRF token refresh failed:', csrfError);
           }
           // If CSRF refresh didn't happen or failed, re-throw original 403
           console.log('[Hook:403] Re-throwing original 403 after processing.');
-          throw error;
+          return error;
         }
         
         // For other errors, try to parse the message and return the modified error
@@ -226,23 +226,36 @@ export const authService = {
   getCurrentUser: async (): Promise<User | null> => {
     console.log('[getCurrentUser] Starting function.');
     try {
-      // Directly attempt the fetch. Let the hook handle 401s.
+      // Get the current access token (needed for the initial request header)
+      // Let the beforeError hook handle cases where the initial token might be missing/invalid
+      const token = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+      // If no token exists upfront, we can return null early
+      if (!token) {
+         console.warn('[getCurrentUser] No access token found in storage.');
+         return null;
+      }
+      
+      // Attempt the fetch. The beforeError hook will handle 401/refresh/retry.
       console.log(`[getCurrentUser] Attempting api.get('auth/user/')...`);
-      const user = await api.get('auth/user/').json<User>();
+      const user = await api.get('auth/user/', {
+        // We still need to provide the initial token for the first attempt
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }).json<User>(); 
       console.log('[getCurrentUser] Fetched user successfully:', user);
       return user;
     } catch (error) {
-      // This catch block handles errors *after* the hook mechanism.
-      // If the hook successfully refreshed and retried, this shouldn't be reached.
-      // If the hook failed to refresh, or if it was a non-401 error, it lands here.
-      console.error('[getCurrentUser] Final catch block reached. Error:', error);
-      // We assume any error reaching here is unrecoverable for this specific call.
-      if (error instanceof HTTPError && error.response.status === 401) {
-         console.log('[getCurrentUser] Clearing tokens due to final 401 error (likely refresh failure).');
-      } else {
-         console.log(`[getCurrentUser] Clearing tokens due to non-401 final error: ${error?.message}`);
+      // Catch ANY error during the process (initial 401 not handled by hook, non-401, hook refresh fail, hook retry fail, JSON parse error)
+      console.error('[getCurrentUser] Error caught during user fetch process:', error); 
+      // Regardless of the error, if we end up here, authentication failed or user couldn't be fetched.
+      // Attempt to clear tokens just in case, but don't await it strictly if it fails
+      try { 
+        await clearAuthTokens(); 
+      } catch (clearError) {
+        console.error('[getCurrentUser] Failed to clear tokens during error handling:', clearError);
       }
-      await clearAuthTokens();
+      console.log('[getCurrentUser] Returning null due to error.');
       return null;
     }
   },
@@ -272,7 +285,8 @@ export const authService = {
       }>();
       
       // Store tokens
-      await setAuthTokens(tokenResponse);
+      await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, tokenResponse.access);
+      await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, tokenResponse.refresh);
       
       // Get user info with the new token
       const user = await authService.getCurrentUser();

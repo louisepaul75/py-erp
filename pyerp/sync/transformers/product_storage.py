@@ -413,7 +413,7 @@ class ProductStorageTransformer(BaseTransformer):
         For the new architecture, BoxStorageTransformer handles Lager_Schuetten data.
         This method returns an empty list to maintain compatibility with existing code.
         """
-        self.log.info(
+        self.log.warning(
             "transform_lager_schuetten is deprecated. Use BoxStorageTransformer instead."
         )
         return []

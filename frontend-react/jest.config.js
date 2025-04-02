@@ -16,12 +16,7 @@ const config = {
     '<rootDir>/src/__tests__/utils/fuzz-utils.ts'
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json',
-    }],
-    '^.+\\.(js|jsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json',
-    }]
+    '^.+\\.[tj]sx?$': 'babel-jest',
   },
   transformIgnorePatterns: [
     '/node_modules/(?!jest-fuzz|ky/)',
@@ -31,11 +26,6 @@ const config = {
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
   ],
-  globals: {
-    'ts-jest': {
-      isolatedModules: true
-    }
-  },
   coverageProvider: 'v8'
 };
 

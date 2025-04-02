@@ -80,6 +80,7 @@ EXPOSE 8050 6379 3000
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    # Ensure this path is correct for settings. Must include 'config' in the path!
     DJANGO_SETTINGS_MODULE=pyerp.config.settings.development \
     PYTHONPATH=/app
 

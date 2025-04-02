@@ -28,15 +28,15 @@ interface TagSelectorProps {
   tags: Tag[];
 }
 
-export function TagSelector({ control, name, tags }: TagSelectorProps) {
+export function TagSelector({ control, name, tags = [] }: TagSelectorProps) {
   const [tagsOpen, setTagsOpen] = useState(false);
   const [tagSearchTerm, setTagSearchTerm] = useState("");
 
   const { t } = useAppTranslation("mold");
 
   // Filter tags based on search term
-  const filteredTags = tags.filter((tag) =>
-    tag?.name?.toLowerCase().includes(tagSearchTerm?.toLowerCase())
+  const filteredTags = (tags || []).filter((tag) =>
+    tag?.name?.toLowerCase().includes(tagSearchTerm.toLowerCase())
   );
 
   return (

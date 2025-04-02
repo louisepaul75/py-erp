@@ -88,8 +88,15 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           page_size: pagination.pageSize,
         })) as ApiResponse;
 
-        // Log raw API response
+        // Log raw API response for debugging
         console.log("Raw API Response:", response);
+
+        if (!response?.results) {
+          setProducts([]);
+          setFilteredProducts([]);
+          setSelectedItem(null);
+          return;
+        }
 
         setProducts(response.results);
         setFilteredProducts(response.results);
@@ -119,6 +126,9 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
         console.log("Fetched products:", response);
       } catch (error) {
         console.error("Error fetching products:", error);
+        setProducts([]);
+        setFilteredProducts([]);
+        setSelectedItem(null);
       } finally {
         setIsLoading(false);
       }

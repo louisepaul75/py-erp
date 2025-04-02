@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { margin: 5px; padding: 10px; }
+        .result { margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>API Endpoint Test</h1>
+    
+    <div>
+        <h2>Health Endpoints</h2>
+        <button onclick="testEndpoint('/api/health')">Test /api/health</button>
+        <button onclick="testEndpoint('/api/health/')">Test /api/health/</button>
+        <div id="health-result" class="result"></div>
+    </div>
+    
+    <div>
+        <h2>Health Checks Endpoints</h2>
+        <button onclick="testEndpoint('/api/monitoring/health-checks')">Test /api/monitoring/health-checks</button>
+        <button onclick="testEndpoint('/api/monitoring/health-checks/')">Test /api/monitoring/health-checks/</button>
+        <div id="health-checks-result" class="result"></div>
+    </div>
+    
+    <div>
+        <h2>Git Branch Endpoints</h2>
+        <button onclick="testEndpoint('/api/git/branch')">Test /api/git/branch</button>
+        <button onclick="testEndpoint('/api/git/branch/')">Test /api/git/branch/</button>
+        <div id="git-branch-result" class="result"></div>
+    </div>
+
+    <script>
+        async function testEndpoint(url) {
+            const resultId = url.includes('health-checks') ? 'health-checks-result' : 
+                            url.includes('git/branch') ? 'git-branch-result' : 'health-result';
+            const resultDiv = document.getElementById(resultId);
+            
+            resultDiv.innerHTML = `Testing ${url}...`;
+            resultDiv.className = 'result';
+            
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const statusCode = response.status;
+                const contentType = response.headers.get('content-type') || '';
+                let responseText;
+                
+                try {
+                    // Only parse as JSON if the content type is json
+                    if (contentType.includes('application/json')) {
+                        try {
+                            const jsonData = await response.json();
+                            responseText = JSON.stringify(jsonData, null, 2);
+                        } catch (jsonError) {
+                            responseText = await response.text();
+                            responseText += '\n\nWARNING: Content-Type was application/json but parsing as JSON failed';
+                        }
+                    } else {
+                        responseText = await response.text();
+                        if (responseText.includes('<!DOCTYPE')) {
+                            responseText += '\n\nWARNING: Response appears to be HTML, not JSON';
+                        }
+                    }
+                } catch (e) {
+                    responseText = '[Cannot read response body: ' + e.message + ']';
+                }
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="success">✓ SUCCESS (${statusCode})</div>
+                        <div>Content-Type: ${contentType}</div>
+                        <pre>${responseText}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">✗ ERROR (${statusCode})</div>
+                        <div>Content-Type: ${contentType}</div>
+                        <pre>${responseText}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ EXCEPTION: ${error.message}</div>`;
+                resultDiv.className = 'result error';
+            }
+        }
+    </script>
+</body>
+</html> 

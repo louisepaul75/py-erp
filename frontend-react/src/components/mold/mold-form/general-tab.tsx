@@ -244,7 +244,7 @@ export function GeneralTab({
                         variant="outline"
                         className="w-full justify-between"
                       >
-                        <span>{field.value || "Zweck auswählen"}</span>
+                        <span>{field.value || t("technology_placeholder")}</span>
                         <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </DropdownMenuTrigger>

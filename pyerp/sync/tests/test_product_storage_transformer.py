@@ -502,19 +502,25 @@ def test_transform_selects_artikel_lagerorte(db_setup_product_storage):
         mock_transform_al_default.assert_called_once_with([record])
 
 @pytest.mark.unit
-def test_transform_selects_lager_schuetten_deprecated(caplog):
+def test_transform_selects_lager_schuetten_deprecated():
     """Test that transform handles the deprecated Lager_Schuetten source."""
     transformer = ProductStorageTransformer({'source': 'Lager_Schuetten'})
     record = {'ID': 'ls-select-1'}
-    caplog.set_level(logging.INFO)
-    result = transformer.transform([record])
+    
+    result = []
+    # Patch the log instance on the transformer directly
+    with patch.object(transformer, 'log') as mock_log:
+        result = transformer.transform([record])
+        
+        # Assert calls on the mocked logger object
+        mock_log.info.assert_any_call('Transforming data from Lager_Schuetten')
+        mock_log.warning.assert_any_call('transform_lager_schuetten is deprecated. Use BoxStorageTransformer instead.')
+
     assert len(result) == 0
-    assert "Transforming data from Lager_Schuetten" in caplog.text
-    assert "transform_lager_schuetten is deprecated. Use BoxStorageTransformer instead." in caplog.text
 
 @pytest.mark.unit
 @pytest.mark.django_db
-def test_transform_selects_combined_deprecated(db_setup_product_storage, caplog):
+def test_transform_selects_combined_deprecated(db_setup_product_storage):
     """Test that transform handles the deprecated combined source."""
     product_refOld = db_setup_product_storage['product_refOld']
     location_direct = db_setup_product_storage['location_direct']
@@ -525,11 +531,17 @@ def test_transform_selects_combined_deprecated(db_setup_product_storage, caplog)
         "UUID_Stamm_Lagerorte": location_direct.legacy_id,
         "Bestand": "1"
     }
-    caplog.set_level(logging.WARNING)
-    with patch.object(transformer, 'transform_artikel_lagerorte', return_value=[]) as mock_transform_al:
+    
+    # Patch the specific transform method and the log instance
+    with patch.object(transformer, 'transform_artikel_lagerorte', return_value=[]) as mock_transform_al, \
+         patch.object(transformer, 'log') as mock_log: 
+        
         transformer.transform([record])
         mock_transform_al.assert_called_once_with([record])
-        assert "Combined source is deprecated. Use separate transformers for each table." in caplog.text
+        
+        # Assert calls on the mocked logger object
+        mock_log.info.assert_any_call('Transforming data from combined')
+        mock_log.warning.assert_any_call('Combined source is deprecated. Use separate transformers for each table.')
 
 @pytest.mark.unit
 def test_transform_unknown_source():

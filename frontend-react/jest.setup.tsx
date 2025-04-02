@@ -58,6 +58,8 @@ jest.mock('next/navigation', () => ({
 jest.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage(props) {
+    // Require React inside the factory function
+    const React = require('react'); 
     return React.createElement('img', { ...props });
   },
 }));

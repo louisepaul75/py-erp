@@ -96,6 +96,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "last_login",
             "profile",
             "groups",
+            "password",
         ]
         read_only_fields = [
             "is_active",
@@ -104,6 +105,9 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
         ]
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
 
     def get_groups(self, obj):
         """Return the user's groups with minimal information."""
@@ -112,7 +116,15 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a User with associated UserProfile."""
         profile_data = validated_data.pop("profile", {})
-        user = User.objects.create_user(**validated_data)
+        password = validated_data.pop("password", None)
+        
+        # Create user with create_user method to ensure proper password hashing
+        user = User.objects.create_user(
+            username=validated_data.pop('username'),
+            email=validated_data.pop('email', ''),
+            password=password,
+            **validated_data
+        )
 
         # Check if profile already exists (created by signal) and update it
         # instead of creating a new one
@@ -130,6 +142,11 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Update the User and UserProfile together."""
         profile_data = validated_data.pop("profile", None)
+        
+        # Handle password update separately with proper hashing
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
 
         # Update User instance
         for attr, value in validated_data.items():
@@ -302,16 +319,21 @@ class PermissionSerializer(serializers.ModelSerializer):
 
 class PermissionCategorySerializer(serializers.ModelSerializer):
     """
-    Serializer for the PermissionCategory model.
+    Serializer for the PermissionCategory model with nested permissions.
     """
-
-    permissions = PermissionSerializer(
-        many=True, read_only=True, source="permissions.permission"
-    )
+    permissions = serializers.SerializerMethodField()
+    subcategories = serializers.SerializerMethodField()
 
     class Meta:
         model = PermissionCategory
-        fields = ["id", "name", "description", "icon", "order", "permissions"]
+        fields = ['id', 'name', 'description', 'icon', 'permissions', 'subcategories']
+
+    def get_permissions(self, obj):
+        permissions = Permission.objects.filter(permissioncategoryitem__category=obj)
+        return PermissionSerializer(permissions, many=True).data
+
+    def get_subcategories(self, obj):
+        return PermissionCategorySerializer(obj.subcategories.all(), many=True).data
 
 
 class PermissionCategoryItemSerializer(serializers.ModelSerializer):

@@ -10,6 +10,8 @@ from pyerp.core.views import (
     health_check,
 )
 
+app_name = 'core_api'
+
 # Create a router for core API endpoints
 router = routers.DefaultRouter()
 

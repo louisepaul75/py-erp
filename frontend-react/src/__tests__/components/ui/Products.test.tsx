@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import InventoryManagement from '@/components/ui/products';
 import { productApi } from '@/lib/products/api';
+import { LastVisitedProvider } from '@/context/LastVisitedContext';
 
 // Mock the product API
 jest.mock('@/lib/products/api', () => ({
@@ -59,7 +60,11 @@ describe('Products Component', () => {
   });
 
   it('renders the Products component correctly', async () => {
-    render(<InventoryManagement />);
+    render(
+      <LastVisitedProvider>
+        <InventoryManagement />
+      </LastVisitedProvider>
+    );
     
     // Wait for products to load
     await waitFor(() => {
@@ -70,7 +75,11 @@ describe('Products Component', () => {
   });
 
   it('handles search functionality', async () => {
-    render(<InventoryManagement />);
+    render(
+      <LastVisitedProvider>
+        <InventoryManagement />
+      </LastVisitedProvider>
+    );
     
     // Wait for products to load and use getAllByText to handle multiple instances
     await waitFor(() => {
@@ -88,7 +97,11 @@ describe('Products Component', () => {
   });
 
   it('renders product list correctly', async () => {
-    render(<InventoryManagement />);
+    render(
+      <LastVisitedProvider>
+        <InventoryManagement />
+      </LastVisitedProvider>
+    );
     
     // Wait for products to load and check for specific elements
     await waitFor(() => {
@@ -99,7 +112,11 @@ describe('Products Component', () => {
   });
 
   it('can select a product from the list', async () => {
-    render(<InventoryManagement />);
+    render(
+      <LastVisitedProvider>
+        <InventoryManagement />
+      </LastVisitedProvider>
+    );
     
     // Wait for products to load
     await waitFor(() => {
