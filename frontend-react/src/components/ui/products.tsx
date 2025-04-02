@@ -8,6 +8,7 @@ import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
 import { productApi } from "@/lib/products/api";
 import { Product, ApiResponse } from "../types/product";
+import { useLastVisited } from "@/context/LastVisitedContext";
 
 // Import from centralized component library
 import {
@@ -74,6 +75,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { addVisitedItem } = useLastVisited();
 
   // Update fetchProducts useEffect to handle both IDs
   useEffect(() => {
@@ -143,25 +145,42 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
     }
   }, [searchTerm, products]);
 
-  // Update product selection handling
+  // Update product selection handling AND URL push
   useEffect(() => {
     if (selectedItem) {
       const selected = filteredProducts.find(
         (product) => product.id === selectedItem
       );
-    
+
       if (selected) {
         setSelectedProduct(selected);
         const newPath = selected.variants_count > 0
           ? `/products/parent/${selected.id}`
           : `/products/variant/${selected.id}`;
-        
+
         if (pathname !== newPath) {
+          // Only push if the path is actually changing
           router.push(newPath);
         }
       }
     }
   }, [selectedItem, filteredProducts, pathname, router]);
+
+  // Add useEffect for tracking visits
+  useEffect(() => {
+    if (selectedProduct && selectedProduct.id && selectedProduct.name) {
+      const path = selectedProduct.variants_count > 0
+        ? `/products/parent/${selectedProduct.id}`
+        : `/products/variant/${selectedProduct.id}`;
+
+      addVisitedItem({
+        type: 'product', // Or determine parent/variant specifically if needed
+        id: String(selectedProduct.id),
+        name: selectedProduct.name,
+        path: path,
+      });
+    }
+  }, [selectedProduct, addVisitedItem]);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">

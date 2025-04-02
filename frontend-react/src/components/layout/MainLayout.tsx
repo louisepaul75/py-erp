@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input'
 import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
 import { SearchResultsDropdown } from "@/components/ui/search-results-dropdown"
 import { useState, useEffect } from 'react'
+import { useLastVisited } from '@/context/LastVisitedContext'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -66,27 +67,42 @@ const SidebarContents = () => {
   const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
   const [showResults, setShowResults] = useState(false)
   const [favorites, setFavorites] = useState<Array<{id: string; name: string; iconName: string; favorited: boolean}>>([])
+  const { lastVisitedItems } = useLastVisited()
   
   // Function to map icon string to component
-  const getIconComponent = (iconName: string) => {
+  const getIconComponent = (iconName: string | null | undefined) => {
     try {
-      switch(iconName) {
-        case 'Home': return Home;
-        case 'ShoppingCart': return ShoppingCart;
-        case 'Package': return Package;
-        case 'BarChart3': 
-        case 'BarChart2': return BarChart2;
-        case 'Settings': return Settings;
-        case 'Users': return Users;
-        case 'Truck': return Truck;
-        case 'Database': return Database;
-        default: 
-          console.warn(`Unknown icon name: ${iconName}, falling back to Package`);
+      switch(iconName?.toLowerCase()) {
+        case 'home': return Home;
+        case 'shoppingcart':
+        case 'order':
+        case 'sales_record':
+          return ShoppingCart;
+        case 'package':
+        case 'product':
+        case 'parent_product':
+        case 'variant_product':
+          return Package;
+        case 'barchart3':
+        case 'barchart2':
+        case 'report':
+          return BarChart2;
+        case 'settings': return Settings;
+        case 'users':
+        case 'customer':
+          return Users;
+        case 'truck':
+        case 'inventory':
+        case 'box_slot':
+        case 'storage_location':
+          return Truck;
+        case 'database': return Database;
+        default:
           return Package;
       }
     } catch (error) {
       console.error('Error getting icon component:', error);
-      return Package; // Fallback to Package icon
+      return Package;
     }
   };
   
@@ -143,15 +159,6 @@ const SidebarContents = () => {
     }
   }, [])
   
-  // Recent accessed items
-  const recentAccessed = [
-    { id: "KD-1234", name: "Müller GmbH", type: "Kunde" },
-    { id: "ORD-7345", name: "Auftrag #7345", type: "Auftrag" },
-    { id: "KD-1156", name: "Schmidt AG", type: "Kunde" },
-    { id: "ORD-7340", name: "Auftrag #7340", type: "Auftrag" },
-    { id: "KD-1089", name: "Weber KG", type: "Kunde" },
-  ]
-
   const handleInputFocus = () => {
     setShowResults(true)
   }
@@ -322,33 +329,27 @@ const SidebarContents = () => {
           <SidebarGroup>
             <SidebarGroupLabel>Zuletzt aufgerufen</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {recentAccessed.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild>
-                      <Link 
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          // Navigate based on the item type
-                          if (item.type === "Kunde") {
-                            router.push(`/customers/${item.id}`);
-                          } else if (item.type === "Auftrag") {
-                            router.push(`/orders/${item.id}`);
-                          }
-                        }}
-                      >
-                        {item.type === "Kunde" ? (
-                          <Users className="h-4 w-4" />
-                        ) : (
-                          <ShoppingCart className="h-4 w-4" />
-                        )}
-                        <span>{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
+              {lastVisitedItems && lastVisitedItems.length > 0 ? (
+                <SidebarMenu>
+                  {lastVisitedItems.map((item) => {
+                    const IconComponent = getIconComponent(item.type);
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton asChild>
+                          <Link href={item.path}>
+                            <IconComponent className="h-4 w-4" />
+                            <span>{item.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              ) : (
+                <div className="px-2 py-2 text-sm text-muted-foreground">
+                  Keine Einträge vorhanden. Besuchen Sie eine Seite.
+                </div>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
