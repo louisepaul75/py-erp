@@ -8,6 +8,10 @@
 export * from './common/Button';
 export * from './common/Card';
 export * from './common/Input';
+export * from './label';
+export * from './radio-group';
+export * from './textarea';
+export * from './select';
 
 // Data Display Components
 export * from './data/Table';

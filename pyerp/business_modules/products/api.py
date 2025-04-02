@@ -17,7 +17,7 @@ from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiResponse,
 )
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -523,10 +523,23 @@ class ProductListAPIView(APIView):
         },
         tags=["Products"],
     ),
+    create=extend_schema(
+        summary="Create a product",
+        description="Creates a new product (Parent or Variant based on payload).",
+        request=ParentProductSerializer,
+        responses={
+            201: OpenApiResponse(
+                response=ParentProductSerializer,
+                description="Product created successfully.",
+            ),
+            400: OpenApiResponse(description="Invalid data provided."),
+        },
+        tags=["Products"],
+    ),
 )
-class ProductDetailViewSet(viewsets.GenericViewSet):
+class ProductDetailViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for retrieving and updating product details.
+    ViewSet for retrieving, updating, creating, and deleting product details.
     """
     queryset = ParentProduct.objects.all()
     serializer_class = ParentProductSerializer
@@ -550,6 +563,10 @@ class ProductDetailViewSet(viewsets.GenericViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # create, retrieve, update, partial_update, destroy methods 
+    # are now inherited from ModelViewSet.
+    # We might need to override perform_create later for custom logic.
 
 
 @extend_schema(

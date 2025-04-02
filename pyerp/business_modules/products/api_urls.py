@@ -17,7 +17,7 @@ app_name = "products_api"
 # Create a router for documented API endpoints
 router = DefaultRouter()
 router.register(r'categories', ProductCategoryViewSet, basename='category')
-router.register(r'products', ProductDetailViewSet, basename='product')
+router.register(r'', ProductDetailViewSet, basename='product')
 
 urlpatterns = [
     # Include the router URLs

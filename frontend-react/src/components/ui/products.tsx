@@ -1,11 +1,11 @@
 // app/inventory-management/page.tsx (or wherever your component lives)
 "use client";
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Search } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
+import ProductCreateForm from "./ProductCreateForm";
 import { productApi } from "@/lib/products/api";
 import { Product, ApiResponse } from "../types/product";
 import { useLastVisited } from "@/context/LastVisitedContext";
@@ -21,50 +21,20 @@ import {
   Input,
 } from "@/components/ui";
 
-interface InventoryManagementProps {
+interface ProductsPageProps {
   initialVariantId?: string;
   initialParentId?: string;
 }
 
-export function InventoryManagement({ initialVariantId, initialParentId }: InventoryManagementProps) {
+export function ProductsPage({ initialVariantId, initialParentId }: ProductsPageProps) {
   const [selectedItem, setSelectedItem] = useState<number | string | null>(
     initialVariantId ? parseInt(initialVariantId) : 
     initialParentId ? parseInt(initialParentId) : ""
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [selectedProduct, setSelectedProduct] = useState<Product>({
-    id: 0,
-    name: "",
-    sku: "",
-    description: "",
-    is_active: false,
-    is_discontinued: false,
-    is_new: false,
-    release_date: null,
-    created_at: "",
-    updated_at: "",
-    weight: null,
-    length_mm: null,
-    width_mm: null,
-    height_mm: null,
-    name_en: "",
-    short_description: "",
-    short_description_en: "",
-    description_en: "",
-    keywords: "",
-    legacy_id: "",
-    legacy_base_sku: "",
-    is_hanging: false,
-    is_one_sided: false,
-    images: [],
-    primary_image: null,
-    category: null,
-    tags: [],
-    variants_count: 0,
-  });
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   const [pagination, setPagination] = React.useState<{
     pageIndex: number;
@@ -79,77 +49,81 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   const pathname = usePathname();
   const { addVisitedItem } = useLastVisited();
 
-  // Consolidated useEffect for fetching products based on pagination AND search term
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        console.log(
-          `Fetching products... Page: ${pagination.pageIndex + 1}, Size: ${pagination.pageSize}, Search: '${searchTerm}'`,
-        );
-        setIsLoading(true);
-        const response = (await productApi.getProducts({
-          page: pagination.pageIndex + 1,
-          page_size: pagination.pageSize,
-          search: searchTerm, // Always include the search term
-        })) as ApiResponse;
+  // State for creation form
+  const [isCreating, setIsCreating] = useState(false);
+  const [createType, setCreateType] = useState<'parent' | 'variant'>('parent');
 
-        console.log("API Response:", response);
+  // Memoized function to fetch products
+  const fetchProducts = useCallback(async () => {
+    try {
+      console.log(
+        `Fetching products... Page: ${pagination.pageIndex + 1}, Size: ${pagination.pageSize}, Search: '${searchTerm}'`,);
+      setIsLoading(true);
+      const response = (await productApi.getProducts({
+        page: pagination.pageIndex + 1,
+        page_size: pagination.pageSize,
+        search: searchTerm,
+      })) as ApiResponse;
 
-        if (response?.results) {
-          // Update filteredProducts directly. No need for separate 'products' state for this logic.
-          setFilteredProducts(response.results);
-          setTotalCount(response.count || 0);
+      console.log("API Response:", response);
 
-          // Handle initial product selection or selection preservation logic if needed
-          if (
-            (initialVariantId || initialParentId) &&
-            pagination.pageIndex === 0 &&
-            !searchTerm // Only apply initial selection on first load without search
-          ) {
-            const id = initialVariantId || initialParentId;
-            const initialProduct = response.results.find(
-              (product) => product.id === parseInt(id!),
-            );
-            if (initialProduct) {
-              setSelectedItem(initialProduct.id);
-              setSelectedProduct(initialProduct);
-            }
-          } else if (
-            response.results.length > 0 &&
-            !response.results.some((p) => p.id === selectedItem) // Check if current selection is still in the list
-          ) {
-            // If current selection is not in the new list, select the first item
+      if (response?.results) {
+        setFilteredProducts(response.results);
+        setTotalCount(response.count || 0);
+
+        // Determine if initial load/selection logic should apply
+        const isInitialLoad = pagination.pageIndex === 0 && !searchTerm && (initialVariantId || initialParentId);
+
+        if (isInitialLoad) {
+          const id = initialVariantId || initialParentId;
+          const initialProduct = response.results.find(
+            (product) => product.id === parseInt(id!),
+          );
+          if (initialProduct) {
+            setSelectedItem(initialProduct.id);
+            setSelectedProduct(initialProduct);
+          } else if (response.results.length > 0) {
+            // Fallback if initial ID not found but results exist
             setSelectedItem(response.results[0].id);
             setSelectedProduct(response.results[0]);
-          } else if (response.results.length === 0) {
-            // If no results, clear selection
-            setSelectedItem(null);
-            // Consider setting selectedProduct to a default empty state or null
           }
-        } else {
-          // Handle cases where response.results is null/undefined
-          setFilteredProducts([]);
-          setTotalCount(0);
+        } else if (response.results.length > 0 && !isCreating) {
+          // Non-initial load: check if current selection is valid
+          const currentSelectionExists = response.results.some(p => p.id === selectedItem);
+          if (!currentSelectionExists) {
+            // Select first item if current selection is gone
+            setSelectedItem(response.results[0].id);
+            setSelectedProduct(response.results[0]);
+          }
+          // If currentSelectionExists, selection remains unchanged by this block
+        } else if (response.results.length === 0 && !isCreating) {
+          // No results and not creating: clear selection
           setSelectedItem(null);
+          setSelectedProduct(null);
         }
-      } catch (error) {
-        console.error("Error fetching products:", error);
+        // If isCreating is true, selection is handled by creation flow, no changes here
+
+      } else {
         setFilteredProducts([]);
         setTotalCount(0);
         setSelectedItem(null);
-      } finally {
-        setIsLoading(false);
+        setSelectedProduct(null);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setFilteredProducts([]);
+      setTotalCount(0);
+      setSelectedItem(null);
+      setSelectedProduct(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pagination.pageIndex, pagination.pageSize, searchTerm, initialVariantId, initialParentId, selectedItem, isCreating]); // Added selectedItem and isCreating dependencies
+
+  // Initial fetch and refetch on dependencies change
+  useEffect(() => {
     fetchProducts();
-    // Depend on pagination and searchTerm
-  }, [
-    pagination.pageIndex,
-    pagination.pageSize,
-    searchTerm,
-    initialVariantId,
-    initialParentId,
-  ]);
+  }, [fetchProducts]); // Depend only on the memoized fetch function
 
   // Effect for updating content height based on window size
   useEffect(() => {
@@ -170,7 +144,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
 
   // Update product selection handling AND URL push
   useEffect(() => {
-    if (selectedItem) {
+    if (selectedItem && !isCreating) { // Only update URL/selection if not creating
       const selected = filteredProducts.find(
         (product) => product.id === selectedItem
       );
@@ -187,11 +161,11 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
         }
       }
     }
-  }, [selectedItem, filteredProducts, pathname, router]);
+  }, [selectedItem, filteredProducts, pathname, router, isCreating]); // Add isCreating dependency
 
   // Add useEffect for tracking visits
   useEffect(() => {
-    if (selectedProduct && selectedProduct.id && selectedProduct.name) {
+    if (selectedProduct && selectedProduct.id && selectedProduct.name && !isCreating) { // Only track if not creating
       const path = selectedProduct.variants_count > 0
         ? `/products/parent/${selectedProduct.id}`
         : `/products/variant/${selectedProduct.id}`;
@@ -203,22 +177,55 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
         path: path,
       });
     }
-  }, [selectedProduct, addVisitedItem]);
+  }, [selectedProduct, addVisitedItem, isCreating]); // Add isCreating dependency
+
+  // Handlers for creation form
+  const handleCreateNew = () => {
+    setIsCreating(true);
+    setSelectedItem(null); // Deselect any current item
+    setSelectedProduct(null);
+    // Optionally reset createType to parent, or let it persist
+    // setCreateType('parent');
+  };
+
+  const handleCancelCreate = () => {
+    setIsCreating(false);
+    // Optionally re-select the first item or previous item if needed
+  };
+
+  const handleProductCreated = (newProduct: Product) => {
+    setIsCreating(false);
+    // Refetch data to include the new product
+    fetchProducts(); // Call the memoized fetch function
+    // Select the newly created product
+    setSelectedItem(newProduct.id);
+    setSelectedProduct(newProduct);
+    // Optionally navigate to the new product's URL
+    const newPath = newProduct.variants_count > 0
+      ? `/products/parent/${newProduct.id}`
+      : `/products/variant/${newProduct.id}`;
+    router.push(newPath);
+  };
 
   return (
     <div className="container mx-auto py-4 px-4 md:px-6">
       <div className="max-w-full mx-auto">
         <Card>
           <CardContent className="p-4">
-            <div className="relative w-full md:w-80 mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
-              <Input
-                type="search"
-                placeholder="Suche nach Produkt..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9 w-full"
-              />
+            <div className="flex justify-between items-center mb-4">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Input
+                  type="search"
+                  placeholder="Suche nach Produkt..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-9 w-full"
+                />
+              </div>
+              <Button onClick={handleCreateNew} size="sm">
+                Create New Product
+              </Button>
             </div>
             <div className="flex flex-col md:flex-row overflow-hidden" style={{ height: contentHeight }}>
               <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r dark:border-slate-800 h-1/2 md:h-full mb-4 md:mb-0">
@@ -235,11 +242,26 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
                   isLoading={isLoading}
                 />
               </div>
-              <div className="w-full md:w-2/3 h-1/2 md:h-full overflow-auto">
-                <ProductDetail
-                  selectedItem={selectedItem}
-                  selectedProduct={selectedProduct}
-                />
+              <div className="w-full md:w-2/3 h-1/2 md:h-full overflow-auto pl-4">
+                {isCreating ? (
+                  <ProductCreateForm
+                    key={createType}
+                    createType={createType}
+                    setCreateType={setCreateType}
+                    onProductCreated={handleProductCreated}
+                    onCancel={handleCancelCreate}
+                    searchParentProducts={productApi.searchParentProducts}
+                    createProduct={productApi.createProduct}
+                  />
+                ) : selectedProduct ? (
+                  <ProductDetail
+                    selectedProduct={selectedProduct}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-500">
+                    Select a product to view details or create a new one.
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -250,6 +272,6 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
 }
 
 // Default export for the page
-export default function InventoryManagementPage() {
-  return <InventoryManagement />;
+export default function ProductsPageContainer() {
+  return <ProductsPage />;
 }

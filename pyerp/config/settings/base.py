@@ -97,6 +97,14 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Allow React frontend
+    "http://127.0.0.1:3000", # Also allow 127.0.0.1
+]
+# Allow credentials (like cookies) to be sent
+CORS_ALLOW_CREDENTIALS = True 
+
 ROOT_URLCONF = "pyerp.urls"
 
 TEMPLATES = [

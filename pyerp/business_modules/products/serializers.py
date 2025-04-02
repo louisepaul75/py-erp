@@ -49,6 +49,8 @@ class ParentProductSerializer(serializers.ModelSerializer):
             "legacy_base_sku",
             "legacy_id",
         ]
+        # Add sku to read_only_fields
+        read_only_fields = ["sku"]
     
     def to_representation(self, instance):
         """Override to debug legacy_base_sku field."""

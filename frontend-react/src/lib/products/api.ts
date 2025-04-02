@@ -155,9 +155,9 @@ export const productApi = {
 
     try {
       // Log that we're making the API call
-      console.log(`Making API request to api/products/list/ with params:`, defaultParams);
+      console.log(`Making API request to api/v1/products/ with params:`, defaultParams);
       
-      const response = await api.get("api/products/list/", { searchParams: defaultParams }).json<ApiResponse>();
+      const response = await api.get("api/v1/products/", { searchParams: defaultParams }).json<ApiResponse>();
       
       // Check for specific SKUs in the response
       if (response && response.results) {
@@ -180,7 +180,7 @@ export const productApi = {
 
   getProduct: async (id: string | number): Promise<Product> => {
     try {
-      return await api.get(`products/${id}/`).json();
+      return await api.get(`api/v1/products/${id}/`).json();
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
       throw error;
@@ -188,18 +188,46 @@ export const productApi = {
   },
   getProductBySlug: async (sku: string | number): Promise<Product> => {
     try {
-      return await api.get(`products/by-slug/${sku}/`).json();
+      return await api.get(`api/v1/products/by-slug/${sku}/`).json();
     } catch (error) {
       console.error(`Error fetching product ${sku}:`, error);
       throw error;
     }
   },
 
-  createProduct: async (productData: Omit<Product, "id">): Promise<Product> => {
+  searchParentProducts: async (searchTerm: string): Promise<Product[]> => {
     try {
-      return await api.post("products/", { json: productData }).json();
+      const params = {
+        type: "parent", // Assuming backend filters by type=parent
+        search: searchTerm,
+        fields: "id,name,sku", // Only fetch necessary fields
+        page_size: 10, // Limit results for dropdown
+      };
+      const response = await api.get("api/v1/products/", { searchParams: params }).json<ApiResponse>();
+      return response.results || []; // Return results or empty array
+    } catch (error) {
+      console.error("Error searching parent products:", error);
+      throw error;
+    }
+  },
+
+  createProduct: async (productData: Omit<Product, "id"> & { parent_id?: number | string }): Promise<Product> => {
+    try {
+      // Log the data being sent for debugging
+      console.log("Creating product with data:", productData);
+      // Ensure the endpoint is correct for creation (e.g., /api/products/)
+      // Adjust endpoint if necessary, e.g., if create/list are different
+      return await api.post("api/v1/products/", { json: productData }).json();
     } catch (error) {
       console.error("Error creating product:", error);
+      // Simplified error logging
+      if (error instanceof HTTPError) {
+        // Log the error object itself. 
+        // Ky's HTTPError often includes response details directly.
+        console.error("HTTPError details:", error); 
+        // If the body text is crucial and not visible in the logged error, 
+        // we might need to investigate ky's error handling further, but avoid re-reading.
+      }
       throw error;
     }
   },
@@ -209,7 +237,7 @@ export const productApi = {
     productData: Partial<Product>
   ): Promise<Product> => {
     try {
-      return await api.patch(`products/${id}/`, { json: productData }).json();
+      return await api.patch(`api/v1/products/${id}/`, { json: productData }).json();
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);
       throw error;
@@ -219,7 +247,7 @@ export const productApi = {
   deleteProduct: async (id: string): Promise<void> => {
     console.log("product to be deleted", id);
     try {
-      await api.delete(`products/${id}/`);
+      await api.delete(`api/v1/products/${id}/`);
     } catch (error) {
       console.error(`Error deleting product ${id}:`, error);
       throw error;
@@ -228,7 +256,7 @@ export const productApi = {
 
   getCategories: async () => {
     try {
-      return await api.get("products/categories/").json();
+      return await api.get("api/v1/products/categories/").json();
     } catch (error) {
       console.error("Error fetching categories:", error);
       throw error;
@@ -240,7 +268,7 @@ export const productApi = {
 export const variantApi = {
   getVariants: async (productId: string): Promise<Variant[]> => {
     try {
-      return await api.get(`products/${productId}/variants/`).json();
+      return await api.get(`api/v1/products/${productId}/variants/`).json();
     } catch (error) {
       console.error(`Error fetching variants for product ${productId}:`, error);
       throw error;
@@ -249,7 +277,7 @@ export const variantApi = {
 
   getVariant: async (variantId: string): Promise<Variant> => {
     try {
-      return await api.get(`products/variant/${variantId}/`).json();
+      return await api.get(`api/v1/products/variant/${variantId}/`).json();
     } catch (error) {
       console.error(`Error fetching variant ${variantId}:`, error);
       throw error;
@@ -262,7 +290,7 @@ export const variantApi = {
   ): Promise<Variant> => {
     try {
       return await api
-        .post(`products/${productId}/variants/`, { json: variantData })
+        .post(`api/v1/products/${productId}/variants/`, { json: variantData })
         .json();
     } catch (error) {
       console.error(`Error creating variant for product ${productId}:`, error);
@@ -277,7 +305,7 @@ export const variantApi = {
   ): Promise<Variant> => {
     try {
       return await api
-        .patch(`products/${productId}/variants/${variantId}/`, {
+        .patch(`api/v1/products/${productId}/variants/${variantId}/`, {
           json: variantData,
         })
         .json();
@@ -295,7 +323,7 @@ export const variantApi = {
     variantId: string
   ): Promise<void> => {
     try {
-      await api.delete(`products/${productId}/variants/${variantId}/`);
+      await api.delete(`api/v1/products/${productId}/variants/${variantId}/`);
     } catch (error) {
       console.error(
         `Error deleting variant ${variantId} for product ${productId}:`,
@@ -310,7 +338,7 @@ export const variantApi = {
     variantIds: string[]
   ): Promise<void> => {
     try {
-      await api.delete(`products/${productId}/variants/`, {
+      await api.delete(`api/v1/products/${productId}/variants/`, {
         json: { variantIds },
       });
     } catch (error) {
