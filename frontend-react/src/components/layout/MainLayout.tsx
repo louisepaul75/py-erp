@@ -46,7 +46,7 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="absolute top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
+      className="fixed top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
       style={{
         left: isCollapsed ? '0' : 'var(--sidebar-width)',
         marginLeft: isCollapsed ? '0' : '-1px' // Slight adjustment for border overlap
