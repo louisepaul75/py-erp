@@ -346,6 +346,7 @@ class ProductListAPIView(APIView):
             "description": product.description,
             "is_active": product.is_active,
             "is_new": product.is_new if hasattr(product, "is_new") else False,
+            "legacy_base_sku": getattr(product, "legacy_base_sku", None),
         }
         
         # Add primary image if available

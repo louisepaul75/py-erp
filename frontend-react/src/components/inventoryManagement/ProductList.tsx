@@ -168,7 +168,15 @@ export default function ProductList({
           columns={[
             { field: "sku", header: "SKU" },
             { field: "name", header: "Name" },
-            { field: "legacy_base_sku", header: "Legacy SKU" },
+            { 
+              field: "legacy_base_sku", 
+              header: "Legacy SKU",
+              render: (item) => {
+                // Custom renderer for legacy_base_sku field
+                const value = item.legacy_base_sku;
+                return value ? String(value) : "—";
+              }
+            },
             {
               field: "is_active",
               header: "Status",

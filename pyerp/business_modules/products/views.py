@@ -577,7 +577,17 @@ class ProductListAPIView(ProductAPIView):
         # Convert products to JSON-serializable format
         products_data = []
         for product in products:
+            # Add explicit debug logs for the legacy_base_sku field
+            raw_legacy_base_sku = getattr(product, 'legacy_base_sku', None)
+            print(f"DEBUG - Product {product.sku} raw legacy_base_sku: '{raw_legacy_base_sku}' (type: {type(raw_legacy_base_sku).__name__})")
+            
             product_data = self.get_product_data(product)
+            
+            # Debug the product_data after get_product_data is called
+            if 'legacy_base_sku' in product_data:
+                print(f"DEBUG - Product {product.sku} processed legacy_base_sku: '{product_data['legacy_base_sku']}' (type: {type(product_data['legacy_base_sku']).__name__})")
+            else:
+                print(f"DEBUG - Product {product.sku} legacy_base_sku is MISSING from product_data")
 
             # Use the annotated variants_count instead of making a separate query
             if hasattr(product, "variants_count"):
@@ -606,6 +616,11 @@ class ProductListAPIView(ProductAPIView):
 
             products_data.append(product_data)
 
+        # Add more debug logs for final serialized data
+        for product_data in products_data:
+            if 'sku' in product_data and 'legacy_base_sku' in product_data:
+                print(f"DEBUG - Final product {product_data['sku']} legacy_base_sku: '{product_data['legacy_base_sku']}' (type: {type(product_data['legacy_base_sku']).__name__})")
+            
         # Return JSON response with pagination info
         return Response(
             {

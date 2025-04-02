@@ -127,6 +127,7 @@ interface ProductListParams {
   category?: number;
   in_stock?: boolean;
   is_active?: boolean;
+  fields?: string;
   [key: string]: any;
 }
 
@@ -144,6 +145,7 @@ export const productApi = {
       page_size: 30,
       page: 1,
       is_parent: true,
+      fields: "id,name,sku,is_active,variants_count,legacy_base_sku",
       ...params, // Override defaults with any passed parameters
     };
 
@@ -151,7 +153,24 @@ export const productApi = {
     console.log("API request parameters:", defaultParams);
 
     try {
-      return await api.get("products/list/", { searchParams: defaultParams }).json();
+      // Log that we're making the API call
+      console.log(`Making API request to products/list/ with params:`, defaultParams);
+      
+      const response = await api.get("products/list/", { searchParams: defaultParams }).json();
+      
+      // Check for specific SKUs in the response
+      if (response && response.results) {
+        const testProduct = response.results.find((p: any) => p.sku === "415220");
+        if (testProduct) {
+          console.log("API response includes product 415220:", {
+            sku: testProduct.sku,
+            legacy_base_sku: testProduct.legacy_base_sku,
+            legacy_base_sku_type: typeof testProduct.legacy_base_sku
+          });
+        }
+      }
+      
+      return response;
     } catch (error) {
       console.error("Error fetching products:", error);
       throw error;

@@ -45,6 +45,22 @@ export function SkinnyTable<T extends { [key: string]: any }>({
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
   }
 
+  // Add debug logging for data processing
+  React.useEffect(() => {
+    // First, log the data we received
+    console.log("SkinnyTable received data:", data);
+    
+    // Check if there's any product with sku 415220
+    if (Array.isArray(data)) {
+      const testProduct = data.find(item => item.sku === "415220");
+      if (testProduct) {
+        console.log("SkinnyTable found product 415220:", testProduct);
+        console.log("legacy_base_sku value in SkinnyTable:", testProduct.legacy_base_sku);
+        console.log("Type of legacy_base_sku in SkinnyTable:", typeof testProduct.legacy_base_sku);
+      }
+    }
+  }, [data]);
+
   const sortedData = React.useMemo(() => {
     // Ensure data is an array before sorting
     const dataToSort = Array.isArray(data) ? data : []; 
@@ -57,6 +73,22 @@ export function SkinnyTable<T extends { [key: string]: any }>({
       return 0;
     });
   }, [data, sortField, sortOrder]);
+
+  // Process data to ensure all legacy_base_sku values are properly handled
+  React.useEffect(() => {
+    if (Array.isArray(data)) {
+      // Process each item to ensure legacy_base_sku is a string if present
+      data.forEach(item => {
+        if (item.legacy_base_sku !== undefined && item.legacy_base_sku !== null) {
+          // Convert to string if it's not already
+          if (typeof item.legacy_base_sku !== 'string') {
+            console.log(`Converting legacy_base_sku for ${item.sku} from ${typeof item.legacy_base_sku} to string`);
+            item.legacy_base_sku = String(item.legacy_base_sku);
+          }
+        }
+      });
+    }
+  }, [data]);
 
   return (
     <Table className={cn("h-full", className)}>
@@ -100,17 +132,41 @@ export function SkinnyTable<T extends { [key: string]: any }>({
                   : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-800 dark:text-slate-300"
               )}
             >
-              {columns.map((column) => (
-                <TableCell
-                  key={String(column.field)}
-                  className={selectedItem === item[columns[0].field] ? "font-medium" : ""}
-                >
-                  {column.render ? column.render(item) : 
-                    (column.field === "legacy_base_sku" && (!item[column.field] || item[column.field] === "") 
-                      ? "—" 
-                      : (item[column.field] || ""))}
-                </TableCell>
-              ))}
+              {columns.map((column) => {
+                // Debug for legacy_base_sku column
+                if (column.field === 'legacy_base_sku' && item.sku === '415220') {
+                  console.log(`Rendering legacy_base_sku for SKU 415220:`, {
+                    value: item[column.field],
+                    type: typeof item[column.field],
+                    isEmpty: !item[column.field] || item[column.field] === "",
+                    cellContent: column.render 
+                      ? column.render(item) 
+                      : (column.field === "legacy_base_sku" && (!item[column.field] || item[column.field] === "") 
+                        ? "—" 
+                        : (item[column.field] || ""))
+                  });
+                }
+                
+                // For legacy_base_sku column, check if value exists and is not empty string
+                const isLegacySku = column.field === "legacy_base_sku";
+                const cellValue = item[column.field];
+                const isEmpty = cellValue === null || cellValue === undefined || cellValue === "";
+
+                return (
+                  <TableCell
+                    key={String(column.field)}
+                    className={selectedItem === item[columns[0].field] ? "font-medium" : ""}
+                  >
+                    {column.render 
+                      ? column.render(item) 
+                      : (isLegacySku && isEmpty)
+                        ? "—" 
+                        : (cellValue !== undefined && cellValue !== null) 
+                          ? String(cellValue) 
+                          : ""}
+                  </TableCell>
+                );
+              })}
             </TableRow>
           ))
         ) : (

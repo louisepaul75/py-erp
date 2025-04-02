@@ -99,6 +99,15 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
           response.results.slice(0, 5).forEach(product => {
             console.log(`Product ID: ${product.id}, SKU: ${product.sku}, Legacy SKU: "${product.legacy_base_sku}"`);
           });
+          
+          // Specifically check for product with SKU 415220
+          const testProduct = response.results.find(p => p.sku === "415220");
+          if (testProduct) {
+            console.log("FOUND TEST PRODUCT 415220:");
+            console.log("Full product data:", testProduct);
+            console.log("legacy_base_sku value:", testProduct.legacy_base_sku);
+            console.log("Type of legacy_base_sku:", typeof testProduct.legacy_base_sku);
+          }
         }
 
         if (!response?.results) {
