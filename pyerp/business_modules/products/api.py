@@ -5,7 +5,7 @@ This module contains ViewSets and API classes that are documented
 using drf-spectacular to generate OpenAPI schema.
 """
 
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
@@ -23,6 +23,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.pagination import PageNumberPagination
+import logging
+from django.db import connection
 
 from pyerp.business_modules.products.models import ProductCategory, ParentProduct, VariantProduct
 from pyerp.business_modules.products.serializers import ProductCategorySerializer, ParentProductSerializer
@@ -336,6 +338,11 @@ class ProductListAPIView(APIView):
     API view for listing products with filtering and pagination.
     """
     permission_classes = [IsAuthenticated]
+    direct_search = False  # Default to normal search behavior
+    
+    def __init__(self, *args, **kwargs):
+        self.direct_search = kwargs.pop('direct_search', False)
+        super().__init__(*args, **kwargs)
     
     def get_product_data(self, product):
         """Helper method to format product data for API response."""
@@ -385,121 +392,177 @@ class ProductListAPIView(APIView):
     
     def get(self, request):
         """Handle GET request for product listing with filtering and pagination."""
-        # Start with the base queryset
-        products = ParentProduct.objects.all()
-        
-        # Annotate with variants count
-        products = products.annotate(variants_count=Count("variants"))
-        
-        # Check if variants should be included
-        include_variants = request.GET.get("include_variants", "").lower() in ("true", "1", "yes")
-        
-        # Optimize query with prefetch_related
-        if include_variants:
-            variant_qs = VariantProduct.objects.prefetch_related("images")
-            products = products.prefetch_related(Prefetch("variants", queryset=variant_qs))
-        else:
-            products = products.prefetch_related("variants__images")
-        
-        # Apply filters
-        category_id = request.GET.get("category")
-        if category_id:
+        try:
+            # Start with the base queryset
+            base_queryset = ParentProduct.objects.all()
+            
+            # Apply search filter (this is the most important part)
+            search_query = request.GET.get("q")
+            if search_query and search_query.strip():
+                search_query = search_query.strip()
+                print(f"Search query: '{search_query}'")  # Print to stdout for debugging
+                
+                # Use Q objects for OR conditions
+                from django.db.models import Q
+                
+                # For direct search mode, only look for exact matches on specific fields
+                if self.direct_search:
+                    print(f"Using direct search mode for query '{search_query}'")
+                    direct_matches = base_queryset.filter(
+                        Q(sku=search_query) | 
+                        Q(legacy_base_sku=search_query)
+                    ).distinct()
+                    
+                    direct_match_count = direct_matches.count()
+                    print(f"Direct matches found: {direct_match_count}")
+                    
+                    # If direct matches found, use only those results
+                    if direct_match_count > 0:
+                        products = direct_matches
+                        print(f"Direct search matched products: {[p.name for p in products[:3]]}")
+                    else:
+                        # For direct search with no exact match, try a more permissive approach
+                        products = base_queryset.filter(
+                            Q(sku__icontains=search_query) |
+                            Q(legacy_base_sku__icontains=search_query)
+                        ).distinct()
+                        print(f"Fallback search found {products.count()} products")
+                else:
+                    # Standard search behavior - prioritize direct matches but fall back to broader search
+                    # Direct lookups for exact matches first
+                    direct_match_products = base_queryset.filter(
+                        Q(sku=search_query) | 
+                        Q(legacy_base_sku=search_query)
+                    ).distinct()
+                    
+                    direct_match_count = direct_match_products.count()
+                    print(f"Direct match found {direct_match_count} products")
+                    
+                    # If direct matches found, use those results
+                    if direct_match_count > 0:
+                        products = direct_match_products
+                        print(f"Using direct matches: {[p.sku for p in products[:5]]}")
+                    else:
+                        # Otherwise fall back to the broader search
+                        products = base_queryset.filter(
+                            Q(name__icontains=search_query) |
+                            Q(sku__icontains=search_query) |
+                            Q(legacy_base_sku__icontains=search_query)
+                        ).distinct()
+                        print(f"Fallback search found {products.count()} products")
+                    
+                    # If we still get no results but we have a numeric query, try again with specific patterns
+                    if products.count() == 0 and search_query.isdigit():
+                        products = base_queryset.filter(
+                            Q(sku__contains=search_query) |
+                            Q(legacy_base_sku=search_query)  # Direct match for legacy_base_sku
+                        ).distinct()
+                        print(f"Numeric search found {products.count()} products")
+                        
+                    # Debug output
+                    if products.count() > 0:
+                        print(f"First 3 results: {[f'{p.name} (SKU: {p.sku}, Legacy: {p.legacy_base_sku})' for p in products[:3]]}")
+            else:
+                products = base_queryset
+            
+            # Apply other filters below...
+            category_id = request.GET.get("category")
+            if category_id:
+                try:
+                    category_id = int(category_id)
+                    products = products.filter(category_id=category_id)
+                except (ValueError, TypeError):
+                    return Response(
+                        {"error": "Invalid category ID format"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Apply stock filter
+            in_stock = request.GET.get("in_stock")
+            if in_stock and in_stock.lower() in ("true", "1", "yes"):
+                products = products.exclude(stock_quantity__isnull=True).filter(stock_quantity__gt=0)
+            
+            # Apply active status filter
+            is_active = request.GET.get("is_active")
+            if is_active is not None:
+                is_active_bool = is_active.lower() in ("true", "1", "yes")
+                products = products.filter(is_active=is_active_bool)
+            
+            # Handle pagination
             try:
-                category_id = int(category_id)
-                products = products.filter(category_id=category_id)
+                page = int(request.GET.get("page", 1))
+                page_size = int(request.GET.get("page_size", 12))
+                
+                if page < 1 or page_size < 1 or page_size > 100:
+                    return Response(
+                        {"error": "Invalid pagination parameters. Page must be ≥ 1 and page_size must be between 1 and 100."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             except (ValueError, TypeError):
                 return Response(
-                    {"error": "Invalid category ID format"},
+                    {"error": "Invalid pagination parameters. Page and page_size must be integers."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
-        # Apply search filter
-        search_query = request.GET.get("q")
-        if search_query:
-            products = products.filter(name__icontains=search_query)
-        
-        # Apply stock filter
-        in_stock = request.GET.get("in_stock")
-        if in_stock and in_stock.lower() in ("true", "1", "yes"):
-            products = products.exclude(stock_quantity__isnull=True).filter(stock_quantity__gt=0)
-        
-        # Apply active status filter
-        is_active = request.GET.get("is_active")
-        if is_active is not None:
-            is_active_bool = is_active.lower() in ("true", "1", "yes")
-            products = products.filter(is_active=is_active_bool)
-        
-        # Handle pagination
-        try:
-            page = int(request.GET.get("page", 1))
-            page_size = int(request.GET.get("page_size", 12))
             
-            if page < 1 or page_size < 1 or page_size > 100:
-                return Response(
-                    {"error": "Invalid pagination parameters. Page must be ≥ 1 and page_size must be between 1 and 100."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        except (ValueError, TypeError):
+            # Get total count and paginate
+            total_count = products.count()
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            
+            # Make sure we're not returning empty results if we have matching products
+            if total_count > 0 and start_index >= total_count:
+                page = 1
+                start_index = 0
+                end_index = page_size
+                
+            products = products[start_index:end_index]
+            
+            # Format the response data
+            products_data = []
+            for product in products:
+                product_data = self.get_product_data(product)
+                products_data.append(product_data)
+            
+            # Return the response with pagination info
+            return Response({
+                "count": total_count,
+                "results": products_data,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": max(1, (total_count + page_size - 1) // page_size),
+                "next": self._get_next_page_url(request, page, page_size, total_count),
+                "previous": self._get_prev_page_url(request, page),
+                "search_query": search_query or "",  # Include the search query in response for debugging
+            })
+        except Exception as e:
+            print(f"Error in ProductListAPIView.get: {str(e)}")
+            import traceback
+            traceback.print_exc()  # Print stack trace for better debugging
             return Response(
-                {"error": "Invalid pagination parameters. Page and page_size must be integers."},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
-        # Get total count and paginate
-        total_count = products.count()
-        start_index = (page - 1) * page_size
-        end_index = start_index + page_size
-        products = products[start_index:end_index]
-        
-        # Format the response data
-        products_data = []
-        for product in products:
-            product_data = self.get_product_data(product)
             
-            # Add variants count
-            if hasattr(product, "variants_count"):
-                product_data["variants_count"] = product.variants_count
+    def _get_next_page_url(self, request, current_page, page_size, total_count):
+        """Helper to generate the next page URL."""
+        total_pages = (total_count + page_size - 1) // page_size
+        if current_page >= total_pages:
+            return None
             
-            # Add variants if requested
-            if include_variants:
-                variants_data = []
-                for variant in product.variants.all():
-                    variant_data = {
-                        "id": variant.id,
-                        "sku": variant.sku,
-                        "name": variant.name,
-                        "variant_code": variant.variant_code,
-                        "is_active": variant.is_active,
-                        "parent": {
-                            "id": product.id,
-                            "name": product.name,
-                            "sku": product.sku,
-                        },
-                    }
-                    
-                    # Add primary image for variant if available
-                    if hasattr(variant, "images") and variant.images.exists():
-                        primary_image = variant.images.filter(is_primary=True).first() or variant.images.first()
-                        if primary_image:
-                            variant_data["primary_image"] = {
-                                "id": primary_image.id,
-                                "url": primary_image.image_url,
-                                "thumbnail_url": getattr(primary_image, "thumbnail_url", primary_image.image_url),
-                            }
-                    
-                    variants_data.append(variant_data)
-                product_data["variants"] = variants_data
-            
-            products_data.append(product_data)
+        params = request.GET.copy()
+        params['page'] = current_page + 1
+        base_url = request.build_absolute_uri(request.path)
+        return f"{base_url}?{params.urlencode()}"
         
-        # Return the response with pagination info
-        return Response({
-            "count": total_count,
-            "results": products_data,
-            "page": page,
-            "page_size": page_size,
-            "total_pages": (total_count + page_size - 1) // page_size,
-        })
+    def _get_prev_page_url(self, request, current_page):
+        """Helper to generate the previous page URL."""
+        if current_page <= 1:
+            return None
+            
+        params = request.GET.copy()
+        params['page'] = current_page - 1
+        base_url = request.build_absolute_uri(request.path)
+        return f"{base_url}?{params.urlencode()}"
 
 
 @extend_schema_view(

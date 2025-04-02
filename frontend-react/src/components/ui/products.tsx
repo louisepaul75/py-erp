@@ -1,6 +1,6 @@
 // app/inventory-management/page.tsx (or wherever your component lives)
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Search, PlusCircle } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import ProductList from "../inventoryManagement/ProductList";
@@ -31,6 +31,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     initialParentId ? parseInt(initialParentId) : ""
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -49,18 +50,50 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   const pathname = usePathname();
   const { addVisitedItem } = useLastVisited();
   const [shouldKeepSelection, setShouldKeepSelection] = useState(true);
+  
+  // Debounce search term to prevent too many API requests
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
+  // Reset to first page when search term changes
+  useEffect(() => {
+    // Only reset pagination if we're not on the first page already
+    if (pagination.pageIndex !== 0) {
+      setPagination(prev => ({
+        ...prev,
+        pageIndex: 0
+      }));
+    }
+  }, [debouncedSearchTerm]);
 
   // Memoized function to fetch products
   const fetchProducts = useCallback(async () => {
     try {
       console.log(
-        `Fetching products... Page: ${pagination.pageIndex + 1}, Size: ${pagination.pageSize}, Search: '${searchTerm}'`,);
+        `Fetching products... Page: ${pagination.pageIndex + 1}, Size: ${pagination.pageSize}, Search: '${debouncedSearchTerm}'`,);
       setIsLoading(true);
-      const response = (await productApi.getProducts({
-        page: pagination.pageIndex + 1,
-        page_size: pagination.pageSize,
-        q: searchTerm,
-      })) as ApiResponse;
+      
+      // Use direct search endpoint when a search term is provided
+      let response;
+      if (debouncedSearchTerm) {
+        console.log(`Using direct search for term: '${debouncedSearchTerm}'`);
+        response = await productApi.getProductsDirectSearch({
+          page: pagination.pageIndex + 1,
+          page_size: pagination.pageSize,
+          q: debouncedSearchTerm,
+        }) as ApiResponse;
+      } else {
+        // Use regular endpoint when no search term is provided
+        response = await productApi.getProducts({
+          page: pagination.pageIndex + 1,
+          page_size: pagination.pageSize,
+        }) as ApiResponse;
+      }
 
       console.log("API Response:", response);
       console.log(`Pagination data - Current page: ${response.page}, Total pages: ${Math.ceil(response.count / response.page_size)}, Total items: ${response.count}`);
@@ -71,7 +104,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 
         // Determine if initial load/selection logic should apply
         const isInitialLoad = 
-          (pagination.pageIndex === 0 && !searchTerm && (initialVariantId || initialParentId)) || 
+          (pagination.pageIndex === 0 && !debouncedSearchTerm && (initialVariantId || initialParentId)) || 
           shouldKeepSelection;
 
         if (isInitialLoad) {
@@ -121,17 +154,24 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageIndex, pagination.pageSize, searchTerm, initialVariantId, initialParentId, shouldKeepSelection]);
+  }, [pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, initialVariantId, initialParentId, shouldKeepSelection]);
 
-  // Initial fetch and refetch on dependencies change
+  // Initial fetch and refetch when dependencies change
   useEffect(() => {
-    console.log('Pagination values updated - triggering fetch:', {
+    console.log('Fetch dependencies updated - triggering fetch:', {
       pageIndex: pagination.pageIndex,
       pageSize: pagination.pageSize,
-      searchTerm
+      searchTerm: debouncedSearchTerm
     });
     fetchProducts();
-  }, [fetchProducts]);
+  }, [fetchProducts, debouncedSearchTerm]);
+
+  // Handle search input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    console.log(`Search input changed: '${value}'`);
+    setSearchTerm(value);
+  };
 
   // Effect for updating content height based on window size
   useEffect(() => {
@@ -231,11 +271,17 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
                   type="search"
-                  placeholder="Suche nach Produkt..."
+                  placeholder="Search by exact SKU or legacy-SKU..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                   className="pl-10 h-9 w-full"
+                  title="Searches for exact matches on SKU or legacy-base-SKU fields. For partial matches, use at least 3 characters."
                 />
+                {searchTerm.length > 0 && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    Using direct search for exact matches on SKU and legacy-SKU
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex flex-col md:flex-row overflow-hidden" style={{ height: contentHeight }}>

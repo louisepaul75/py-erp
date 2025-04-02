@@ -178,6 +178,40 @@ export const productApi = {
     }
   },
 
+  getProductsDirectSearch: async (params: ProductListParams = {}) => {
+    console.log("Using direct search endpoint for products");
+    if (params._include_variants !== undefined) {
+      params.include_variants = params._include_variants;
+      delete params._include_variants;
+    }
+
+    // Default query parameters
+    const defaultParams: ProductListParams = {
+      page_size: 30,
+      page: 1,
+      is_parent: true,
+      fields: "id,name,sku,is_active,variants_count,legacy_base_sku",
+      ...params, // Override defaults with any passed parameters
+    };
+
+    // Log the parameters being used for debugging
+    console.log("Direct search API request parameters:", defaultParams);
+
+    try {
+      // Log that we're making the API call
+      console.log(`Making API request to api/products/direct-search/ with params:`, defaultParams);
+      
+      const response = await api.get("api/products/direct-search/", { searchParams: defaultParams }).json<ApiResponse>();
+      
+      console.log(`Direct search found ${response.count} products matching search term '${params.q || ""}'`);
+      
+      return response;
+    } catch (error) {
+      console.error("Error with direct search for products:", error);
+      throw error;
+    }
+  },
+
   getProduct: async (id: string | number): Promise<Product> => {
     try {
       return await api.get(`api/v1/products/${id}/`).json();
@@ -259,6 +293,28 @@ export const productApi = {
       return await api.get("api/v1/products/categories/").json();
     } catch (error) {
       console.error("Error fetching categories:", error);
+      throw error;
+    }
+  },
+
+  searchProductsBySku: async (sku: string = "11205"): Promise<ApiResponse> => {
+    try {
+      console.log(`Searching for products with SKU: ${sku}`);
+      
+      const params: ProductListParams = {
+        page: 1,
+        page_size: 10,
+        q: sku,
+        fields: "id,name,sku,is_active,variants_count,legacy_base_sku",
+      };
+      
+      console.log(`Making search API request with params:`, params);
+      const response = await api.get("api/v1/products/", { searchParams: params }).json<ApiResponse>();
+      console.log(`Found ${response.count} products matching search term '${sku}'`);
+      
+      return response;
+    } catch (error) {
+      console.error(`Error searching for products with SKU ${sku}:`, error);
       throw error;
     }
   },
