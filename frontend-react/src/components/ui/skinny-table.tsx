@@ -105,7 +105,10 @@ export function SkinnyTable<T extends { [key: string]: any }>({
                   key={String(column.field)}
                   className={selectedItem === item[columns[0].field] ? "font-medium" : ""}
                 >
-                  {column.render ? column.render(item) : item[column.field] || "—"}
+                  {column.render ? column.render(item) : 
+                    (column.field === "legacy_base_sku" && (!item[column.field] || item[column.field] === "") 
+                      ? "—" 
+                      : (item[column.field] || ""))}
                 </TableCell>
               ))}
             </TableRow>

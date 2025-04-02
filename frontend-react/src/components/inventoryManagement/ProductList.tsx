@@ -43,6 +43,13 @@ export default function ProductList({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   console.log("filteredProducts in ProductList", filteredProducts);
+  // Add debug logging for legacy_base_sku values
+  console.log("Legacy SKU values:", filteredProducts?.map(product => ({
+    id: product.id,
+    sku: product.sku,
+    legacy_base_sku: product.legacy_base_sku
+  })));
+  
   const sortedFilteredProducts = useMemo(() => {
     // Ensure filteredProducts is an array before sorting
     const productsToSort = Array.isArray(filteredProducts) ? filteredProducts : [];

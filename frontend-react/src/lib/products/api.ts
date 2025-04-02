@@ -147,6 +147,9 @@ export const productApi = {
       ...params, // Override defaults with any passed parameters
     };
 
+    // Log the parameters being used for debugging
+    console.log("API request parameters:", defaultParams);
+
     try {
       return await api.get("products/list/", { searchParams: defaultParams }).json();
     } catch (error) {

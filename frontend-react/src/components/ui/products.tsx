@@ -90,6 +90,14 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
 
         // Log raw API response for debugging
         console.log("Raw API Response:", response);
+        
+        // Add detailed logging of legacy_base_sku values
+        if (response?.results && response.results.length > 0) {
+          console.log("First 5 products from API with legacy_base_sku:");
+          response.results.slice(0, 5).forEach(product => {
+            console.log(`Product ID: ${product.id}, SKU: ${product.sku}, Legacy SKU: "${product.legacy_base_sku}"`);
+          });
+        }
 
         if (!response?.results) {
           setProducts([]);
