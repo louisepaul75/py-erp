@@ -201,7 +201,7 @@ export default function MutterTab({
               </label>
               <div className="md:col-span-3 ml-3">
                 <Textarea
-                  value={selectedProduct?.description}
+                  value={selectedProduct?.description || ""}
                   onChange={(e) =>
                     handleInputChange("description", e.target.value)
                   }
