@@ -27,13 +27,14 @@ import {
   ChevronRight,
   X,
   Search,
+  Settings,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
 import { SearchResultsDropdown } from "@/components/ui/search-results-dropdown"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -60,6 +61,83 @@ const SidebarContents = () => {
   const router = useRouter()
   const { query, setQuery, results, isLoading, error, reset, getAllResults } = useGlobalSearch()
   const [showResults, setShowResults] = useState(false)
+  const [favorites, setFavorites] = useState<Array<{id: string; name: string; iconName: string; favorited: boolean}>>([])
+  
+  // Function to map icon string to component
+  const getIconComponent = (iconName: string) => {
+    try {
+      switch(iconName) {
+        case 'Home': return Home;
+        case 'ShoppingCart': return ShoppingCart;
+        case 'Package': return Package;
+        case 'BarChart3': 
+        case 'BarChart2': return BarChart2;
+        case 'Settings': return Settings;
+        case 'Users': return Users;
+        case 'Truck': return Truck;
+        case 'Database': return Database;
+        default: 
+          console.warn(`Unknown icon name: ${iconName}, falling back to Package`);
+          return Package;
+      }
+    } catch (error) {
+      console.error('Error getting icon component:', error);
+      return Package; // Fallback to Package icon
+    }
+  };
+  
+  // Load favorites when component mounts
+  useEffect(() => {
+    const loadFavorites = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const savedFavorites = localStorage.getItem('dashboard-favorites')
+          if (savedFavorites) {
+            try {
+              const favoritesData = JSON.parse(savedFavorites)
+              if (Array.isArray(favoritesData)) {
+                // Only keep the favorited items
+                const filteredFavorites = favoritesData.filter((item: any) => 
+                  item && typeof item === 'object' && item.favorited && item.id && item.name
+                )
+                setFavorites(filteredFavorites)
+              } else {
+                console.error('Favorites data is not an array:', favoritesData)
+              }
+            } catch (error) {
+              console.error('Failed to parse favorites data:', error)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading favorites:', error)
+      }
+    }
+    
+    // Load favorites initially
+    loadFavorites()
+    
+    // Setup event listener for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'dashboard-favorites') {
+        loadFavorites()
+      }
+    }
+    
+    // Setup event listener for custom event (when favorites change on the same page)
+    const handleFavoritesChanged = () => {
+      loadFavorites()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('favoritesChanged', handleFavoritesChanged)
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('favoritesChanged', handleFavoritesChanged)
+    }
+  }, [])
   
   // Recent accessed items
   const recentAccessed = [
@@ -106,6 +184,53 @@ const SidebarContents = () => {
     reset()
     setShowResults(false)
   }
+
+  const handleMenuItemClick = (id: string) => {
+    // Navigate based on the clicked menu item
+    switch(id) {
+      case "dashboard":
+        router.push("/dashboard");
+        break;
+      case "customers":
+        router.push("/customers");
+        break;
+      case "orders":
+        router.push("/orders");
+        break;
+      case "products":
+        router.push("/products");
+        break;
+      case "reports":
+        router.push("/reports");
+        break;
+      case "settings":
+        router.push("/settings");
+        break;
+      case "users":
+        router.push("/users");
+        break;
+      case "finance":
+        router.push("/finance");
+        break;
+      case "inventory":
+        router.push("/warehouse");
+        break;
+      case "picklist":
+        router.push("/picklist");
+        break;
+      case "support":
+        router.push("/support");
+        break;
+      case "documents":
+        router.push("/documents");
+        break;
+      // Add other menu navigation cases as needed
+      default:
+        // For other menu items that don't have routes yet
+        console.log(`Clicked on menu item: ${id}`);
+        break;
+    }
+  };
   
   return (
     <div className="relative">
@@ -152,10 +277,41 @@ const SidebarContents = () => {
           <SidebarGroup>
             <SidebarGroupLabel>Favoriten</SidebarGroupLabel>
             <SidebarGroupContent>
-              <div className="px-2 py-2 text-sm text-muted-foreground">
-                Keine Favoriten vorhanden.
-                Klicken Sie auf den Stern bei einem Menüpunkt, um ihn zu den Favoriten hinzuzufügen.
-              </div>
+              {favorites && favorites.length > 0 ? (
+                <SidebarMenu>
+                  {favorites.map((item) => {
+                    // Safety check to ensure item has required properties
+                    if (!item || !item.id || !item.name) {
+                      return null;
+                    }
+                    
+                    // Get icon component safely
+                    const IconComponent = item.iconName ? getIconComponent(item.iconName) : Package;
+                    
+                    return (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton asChild>
+                          <Link 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleMenuItemClick(item.id);
+                            }}
+                          >
+                            <IconComponent className="h-4 w-4" />
+                            <span>{item.name}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              ) : (
+                <div className="px-2 py-2 text-sm text-muted-foreground">
+                  Keine Favoriten vorhanden.
+                  Klicken Sie auf den Stern bei einem Menüpunkt, um ihn zu den Favoriten hinzuzufügen.
+                </div>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
 
@@ -166,7 +322,18 @@ const SidebarContents = () => {
                 {recentAccessed.map((item) => (
                   <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild>
-                      <Link href="#">
+                      <Link 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Navigate based on the item type
+                          if (item.type === "Kunde") {
+                            router.push(`/customers/${item.id}`);
+                          } else if (item.type === "Auftrag") {
+                            router.push(`/orders/${item.id}`);
+                          }
+                        }}
+                      >
                         {item.type === "Kunde" ? (
                           <Users className="h-4 w-4" />
                         ) : (
