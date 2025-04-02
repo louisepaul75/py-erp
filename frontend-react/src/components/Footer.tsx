@@ -94,14 +94,36 @@ export function Footer() {
   
   // Fetch health checks (for dev bar condition)
   useEffect(() => {
-    const fetchHealthChecksData = async () => {
+    const healthUrl = `${API_URL}/api/v1/health/`
+    const monitoringUrl = `${API_URL}/api/v1/monitoring/health-checks/`
+
+    const fetchBackendStatus = async () => {
       setIsLoadingChecks(true);
       try {
-        const response = await fetch(`${API_URL}/monitoring/health-checks/`, {
-          headers: {
-            'Accept': 'application/json'
+        let response: Response
+        try {
+          console.log("Fetching monitoring status from:", monitoringUrl)
+          response = await fetch(monitoringUrl, {
+            headers: {
+              Accept: "application/json",
+            }
+          });
+        } catch (error) {
+          console.warn("Monitoring endpoint failed, trying health endpoint...")
+          try {
+            console.log("Fetching health status from:", healthUrl)
+            response = await fetch(healthUrl, {
+              headers: {
+                Accept: "application/json",
+              }
+            });
+          } catch (error) {
+            console.error('Error fetching health checks:', error);
+            setHealthChecks(null);
+            return;
           }
-        });
+        }
+
         if (response.ok) {
           try {
             const contentType = response.headers.get('content-type');
@@ -128,9 +150,9 @@ export function Footer() {
       }
     };
     
-    fetchHealthChecksData();
+    fetchBackendStatus();
     
-    const interval = setInterval(fetchHealthChecksData, 60000);
+    const interval = setInterval(fetchBackendStatus, 60000);
     return () => clearInterval(interval);
   }, []);
 

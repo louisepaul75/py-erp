@@ -334,7 +334,10 @@ const Dashboard = () => {
       
       console.log("Saving layout to API with headers:", headers);
       
-      const response = await fetch(`${API_URL}/dashboard/summary/`, {
+      // Construct the correct API endpoint URL
+      const dashboardSummaryUrl = `${API_URL}/api/v1/dashboard/summary/`;
+      
+      const response = await fetch(dashboardSummaryUrl, {
         method: "PATCH",
         headers,
         credentials: "include", // Include cookies for session auth fallback
@@ -364,7 +367,7 @@ const Dashboard = () => {
                 "X-CSRFToken": freshToken
               };
               
-              const retryResponse = await fetch(`${API_URL}/dashboard/summary/`, {
+              const retryResponse = await fetch(dashboardSummaryUrl, {
                 method: "PATCH",
                 headers: retryHeaders,
                 credentials: "include",

@@ -70,7 +70,10 @@ export default function WarehouseLocationList() {
           return;
         }
         
-        const response = await fetch(`${API_URL}/inventory/storage-locations/`, {
+        // Construct the correct API endpoint URL including the /api/v1/ prefix
+        const inventoryEndpoint = `${API_URL}/api/v1/inventory/storage-locations/`;
+
+        const response = await fetch(inventoryEndpoint, {
           headers: {
             "Accept": "application/json",
             "Authorization": `Bearer ${token}`,
@@ -85,7 +88,7 @@ export default function WarehouseLocationList() {
             if (refreshSuccess) {
               // Retry the request with new token
               const newToken = await authService.getToken();
-              const retryResponse = await fetch(`${API_URL}/inventory/storage-locations/`, {
+              const retryResponse = await fetch(inventoryEndpoint, {
                 headers: {
                   "Accept": "application/json",
                   "Authorization": `Bearer ${newToken}`,

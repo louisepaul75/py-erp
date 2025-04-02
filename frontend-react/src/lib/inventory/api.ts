@@ -161,7 +161,7 @@ export const fetchBoxTypes = async (): Promise<BoxType[]> => {
 // Fetch boxes with pagination and configurable timeout
 export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Promise<PaginatedResponse<Box>> => {
   try {
-    const response = await api.get('/inventory/boxes/', {
+    const response = await api.get('/api/v1/inventory/boxes/', {
       params: {
         page,
         page_size: pageSize
