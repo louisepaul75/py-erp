@@ -77,8 +77,10 @@
     --ring: 35 100% 45%; /* Darker Orange focus ring */
 
     /* Header & Footer */
-    --header-background: 216 39% 21%; /* #253448 */
-    --footer-background: 216 39% 21%; /* #253448 */
+    --header-background: 222 47% 11%; /* gray-900 */
+    --header-foreground: 240 4.8% 95.9%; /* gray-100 */
+    --footer-background: 222 47% 11%; /* gray-900 */
+    --footer-foreground: 240 4.8% 95.9%; /* gray-100 */
 
     /* Sidebar - Applying similar theme, adjust if needed */
     --sidebar-background: 240 10% 6%; /* Dark sidebar */

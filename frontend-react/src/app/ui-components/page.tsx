@@ -229,6 +229,20 @@ export default function UIComponentsPage() {
                 </div>
               </CardContent>
             </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Destructive Action</CardTitle>
+                <CardDescription>Button for actions that cannot be easily undone</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="destructive">Delete Permanently</Button>
+                  <Button variant="destructive" icon={Trash}>Delete Item</Button>
+                  <Button variant="destructive" size="sm">Small Delete</Button>
+                  <Button variant="destructive" disabled>Disabled Delete</Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Inputs Section */}
@@ -1234,146 +1248,47 @@ export default function UIComponentsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Color Palette</CardTitle>
-                <CardDescription>Rich warm brown color scheme for the application</CardDescription>
+                <CardDescription>Primary color palette based on Amber and Gray, plus semantic colors</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Primary Colors</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-primary mr-4"></div>
-                        <div>
-                          <p className="font-medium">Primary</p>
-                          <p className="text-sm text-muted-foreground">Primary Color</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.primary}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-primary/80 mr-4"></div>
-                        <div>
-                          <p className="font-medium">Primary (80%)</p>
-                          <p className="text-sm text-muted-foreground">Primary Hover</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.primaryHover}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-primary/60 mr-4"></div>
-                        <div>
-                          <p className="font-medium">Primary (60%)</p>
-                          <p className="text-sm text-muted-foreground">Primary Active</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.primaryActive}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-ring mr-4"></div>
-                        <div>
-                          <p className="font-medium">Ring</p>
-                          <p className="text-sm text-muted-foreground">Focus Ring</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.ring}</p>
-                        </div>
-                      </div>
+                    <h3 className="text-lg font-medium mb-3">Primary Palette (Amber)</h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-11 gap-3">
+                      {Object.entries(themeColors)
+                        .filter(([key]) => key.startsWith('amber'))
+                        .map(([key, value]) => (
+                          <ColorSwatch key={key} name={key} color={value} />
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">Neutral Palette (Gray)</h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-11 gap-3">
+                      {Object.entries(themeColors)
+                        .filter(([key]) => key.startsWith('gray'))
+                        .map(([key, value]) => (
+                          <ColorSwatch key={key} name={key} color={value} />
+                      ))}
                     </div>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Background Colors</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-background mr-4 border border-border"></div>
-                        <div>
-                          <p className="font-medium">Background</p>
-                          <p className="text-sm text-muted-foreground">Page Background</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.background}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border"></div>
-                        <div>
-                          <p className="font-medium">Card</p>
-                          <p className="text-sm text-muted-foreground">Card Background</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.card}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-muted mr-4 border border-border"></div>
-                        <div>
-                          <p className="font-medium">Muted</p>
-                          <p className="text-sm text-muted-foreground">Muted Background</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.muted}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Text Colors</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border flex items-center justify-center">
-                          <span className="text-foreground">Aa</span>
-                        </div>
-                        <div>
-                          <p className="font-medium">Foreground</p>
-                          <p className="text-sm text-muted-foreground">Primary Text</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.foreground}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border flex items-center justify-center">
-                          <span className="text-primary">Aa</span>
-                        </div>
-                        <div>
-                          <p className="font-medium">Primary</p>
-                          <p className="text-sm text-muted-foreground">Accent Text</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.primary}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-card mr-4 border border-border flex items-center justify-center">
-                          <span className="text-muted-foreground">Aa</span>
-                        </div>
-                        <div>
-                          <p className="font-medium">Muted</p>
-                          <p className="text-sm text-muted-foreground">Muted Text</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.mutedForeground}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Status Colors</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <div className="w-16 h-16 rounded-md bg-transparent mr-4 border-2 border-border"></div>
-                        <div>
-                          <p className="font-medium">Border</p>
-                          <p className="text-sm text-muted-foreground">Border Color</p>
-                          <p className="text-xs text-muted-foreground">{themeColors.border}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <StatusBadge status="active" className="mr-4 py-2 px-4">Active</StatusBadge>
-                        <div>
-                          <p className="font-medium">Green Status</p>
-                          <p className="text-sm text-muted-foreground">Active state</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <StatusBadge status="pending" className="mr-4 py-2 px-4">Pending</StatusBadge>
-                        <div>
-                          <p className="font-medium">Yellow Status</p>
-                          <p className="text-sm text-muted-foreground">Pending state</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <StatusBadge status="inactive" className="mr-4 py-2 px-4">Inactive</StatusBadge>
-                        <div>
-                          <p className="font-medium">Gray Status</p>
-                          <p className="text-sm text-muted-foreground">Inactive state</p>
-                        </div>
-                      </div>
+                    <h3 className="text-lg font-medium mb-3">Status & Semantic Colors</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <ColorSwatch name="Success / Affirmative" color={themeColors.success} />
+                      <ColorSwatch name="Warning" color={themeColors.warning} />
+                      <ColorSwatch name="Error / Danger" color={themeColors.error} />
+                      <ColorSwatch name="Info" color={themeColors.info} />
+                      <ColorSwatch name="Primary" color={themeColors.primary} />
+                      <ColorSwatch name="Ring" color={themeColors.ring} />
+                      <ColorSwatch name="Background" color={themeColors.background} />
+                      <ColorSwatch name="Card Background" color={themeColors.card} />
+                      <ColorSwatch name="Muted Background" color={themeColors.muted} />
+                      <ColorSwatch name="Foreground" color={themeColors.foreground} />
+                      <ColorSwatch name="Muted Foreground" color={themeColors.mutedForeground} />
+                      <ColorSwatch name="Border" color={themeColors.border} />
                     </div>
                   </div>
                 </div>
@@ -1588,4 +1503,22 @@ export default function UIComponentsPage() {
       </div>
     </div>
   );
-} 
+}
+
+// Helper component for displaying color swatches
+interface ColorSwatchProps {
+  name: string;
+  color: string;
+}
+
+const ColorSwatch: React.FC<ColorSwatchProps> = ({ name, color }) => (
+  <div className="flex flex-col items-center space-y-1">
+    <div 
+      className="h-16 w-full rounded-md border border-border shadow-sm"
+      style={{ backgroundColor: color }}
+      title={`${name}: ${color}`}
+    />
+    <span className="text-xs text-muted-foreground capitalize">{name}</span>
+    <span className="text-xs font-mono text-muted-foreground/70">{color}</span>
+  </div>
+); 

@@ -45,7 +45,7 @@ function DropdownItem({
     return (
       <Link
         href={href}
-        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+        className="block px-4 py-2 text-sm text-foreground dark:text-[hsl(var(--header-foreground))] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
         role="menuitem"
       >
         {children}
@@ -57,7 +57,7 @@ function DropdownItem({
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-200",
+        "w-full text-left block px-4 py-2 text-sm text-foreground dark:text-[hsl(var(--header-foreground))]",
         "hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
       )}
       role="menuitem"
@@ -104,7 +104,7 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="bg-[hsl(var(--header-background))] shadow-md fixed w-full z-50">
+    <nav className="bg-[hsl(var(--header-background))] text-[hsl(var(--header-foreground))] shadow-md fixed w-full z-50">
       <div className="max-w-full mx-0 px-2 sm:px-3 lg:px-4">
         <div className="flex justify-between h-16">
           {/* Logo */}
@@ -141,9 +141,9 @@ export function Navbar() {
               {/*  Production dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:text-gray-900 dark:text-[hsl(var(--header-foreground))] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
                     <span>{t("navigation.production")}</span>
-                    <ChevronDown className="ml-1 h-4 w-4" />
+                    <ChevronDown className="ml-1 h-4 w-4 text-current" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -163,10 +163,10 @@ export function Navbar() {
               {/* Inventory Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
-                    <Package className="h-4 w-4 mr-2" />
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:text-gray-900 dark:text-[hsl(var(--header-foreground))] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                    <Package className="h-4 w-4 mr-2 text-current" />
                     <span>{t("navigation.inventory")}</span>
-                    <ChevronDown className="ml-1 h-4 w-4" />
+                    <ChevronDown className="ml-1 h-4 w-4 text-current" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -187,10 +187,10 @@ export function Navbar() {
               <div className="relative" id="test-dropdown">
                 <button
                   onClick={toggleTestDropdown}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:text-gray-900 dark:text-[hsl(var(--header-foreground))] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
                 >
                   <span>Test</span>
-                  <ChevronDown className="ml-1 h-4 w-4" />
+                  <ChevronDown className="ml-1 h-4 w-4 text-current" />
                 </button>
 
                 {testMenuOpen && (
@@ -227,11 +227,11 @@ export function Navbar() {
                   id="user-menu"
                 >
                   <span className="sr-only">Open user menu</span>
-                  <span className="mr-2 text-gray-700 dark:text-gray-200">
+                  <span className="mr-2 text-foreground dark:text-[hsl(var(--header-foreground))]">
                     {user?.username || "Guest"}
                   </span>
-                  <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
-                  <ChevronDown className="ml-1 h-4 w-4" />
+                  <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-foreground dark:text-[hsl(var(--header-foreground))]" />
+                  <ChevronDown className="ml-1 h-4 w-4 text-current" />
                 </button>
               </DropdownMenuTrigger>
 
@@ -257,7 +257,7 @@ export function Navbar() {
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
 
-                <div className="px-2 py-1.5 text-sm text-gray-700 dark:text-gray-200">
+                <div className="px-2 py-1.5 text-sm text-foreground dark:text-gray-200">
                   <LanguageSelector />
                 </div>
 
@@ -290,7 +290,7 @@ export function Navbar() {
                       type="button"
                       className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                      <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
+                      <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-foreground dark:text-[hsl(var(--header-foreground))]" />
                     </button>
                   </DropdownMenuTrigger>
 
@@ -316,7 +316,7 @@ export function Navbar() {
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
 
-                    <div className="px-2 py-1.5 text-sm text-gray-700 dark:text-gray-200">
+                    <div className="px-2 py-1.5 text-sm text-foreground dark:text-gray-200">
                       <LanguageSelector />
                     </div>
 
@@ -346,7 +346,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+      className="px-3 py-2 rounded-md text-sm font-medium text-foreground dark:text-[hsl(var(--header-foreground))] hover:bg-gray-100 dark:hover:bg-gray-700"
     >
       {label}
     </Link>
