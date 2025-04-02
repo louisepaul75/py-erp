@@ -393,7 +393,11 @@ const Dashboard = () => {
             {menuTiles.map((tile) => {
               const IconComponent = tile.icon
               return (
-                <Card key={tile.id} className="relative group">
+                <Card 
+                  key={tile.id} 
+                  className="relative group cursor-pointer" 
+                  onClick={() => handleMenuClick(tile.id)}
+                >
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                     <Button
                       variant="ghost"
@@ -456,6 +460,25 @@ const Dashboard = () => {
   const gridCols = { lg: 48, md: 40, sm: 24, xs: 12, xxs: 8 };
   const gridRowHeight = 30;
   const gridMargin = useMemo<[number, number]>(() => [8, 8], [])
+
+  const router = useRouter()
+
+  const handleMenuClick = (id: string) => {
+    // Navigate based on the clicked menu item
+    switch(id) {
+      case "picklist":
+        router.push("/picklist");
+        break;
+      case "inventory":
+        router.push("/warehouse");
+        break;
+      // Add other menu navigation cases as needed
+      default:
+        // For other menu items that don't have routes yet
+        console.log(`Clicked on menu item: ${id}`);
+        break;
+    }
+  };
 
   // Get current layout based on breakpoints
   const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
