@@ -31,13 +31,36 @@ import {
 } from "@/components/ui/alert-dialog";
 import useAppTranslation from "@/hooks/useTranslationWrapper";
 
-// Define the interface based on the schema
+// Define an extended interface that includes the creation props
+interface MutterTabProps extends ProductDetailProps {
+  isCreatingParent?: boolean;
+  onSave?: (data: Omit<Product, "id">) => Promise<void>;
+  onCancel?: () => void;
+}
 
 export default function MutterTab({
   selectedItem,
   selectedProduct,
-}: ProductDetailProps) {
-  // Initialize selectedProduct with static data
+  isCreatingParent = false,
+  onSave,
+  onCancel,
+}: MutterTabProps) {
+  // Initialize with selectedProduct data or defaults if creating a new one
+  const [productData, setProductData] = useState<Partial<Product>>(
+    selectedProduct || {
+      name: "",
+      description: "",
+      is_active: true,
+      // Add other default fields as needed
+    }
+  );
+  
+  // Update productData when selectedProduct changes
+  useEffect(() => {
+    if (selectedProduct) {
+      setProductData(selectedProduct);
+    }
+  }, [selectedProduct]);
 
   const { t } = useAppTranslation("mutterTab"); // Use the mutterTab namespace
 
@@ -48,12 +71,19 @@ export default function MutterTab({
     ["", "", "", ""],
   ]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handlers to update selectedProductData
+  // Handlers to update product data
   const handleInputChange = (
     field: keyof Product,
-    value: string | boolean
-  ) => {};
+    value: string | boolean | number | null
+  ) => {
+    setProductData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   // Handler to update categories
   const handleCategoryChange = (
@@ -75,11 +105,36 @@ export default function MutterTab({
     setCategories((prev) => [...prev, ["", "", "", ""]]);
   };
 
-  // Placeholder logic for save and delete
-  const handleSave = () => {
-    console.log("Save clicked:", selectedProduct);
-    // TODO: Implement API call to save selectedProduct
-    alert("Product saved! (Placeholder)");
+  // Handler for save button (edit existing or create new)
+  const handleSave = async () => {
+    // Validate required fields
+    if (!productData.name) {
+      setError("Name is required");
+      return;
+    }
+    
+    setIsSaving(true);
+    setError(null);
+    
+    try {
+      if (isCreatingParent && onSave) {
+        // Creating a new parent product
+        await onSave(productData as Omit<Product, "id">);
+      } else {
+        // Updating an existing product
+        if (selectedProduct?.id) {
+          await productApi.updateProduct(selectedProduct.id.toString(), productData);
+          alert("Product saved successfully!");
+        } else {
+          console.error("No product ID found to update.");
+        }
+      }
+    } catch (err: any) {
+      console.error("Error saving product:", err);
+      setError(`Failed to save product: ${err.message || "Unknown error"}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const confirmDeleteProduct = () => {
@@ -116,67 +171,96 @@ export default function MutterTab({
         <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
           <div className="flex flex-col flex-wrap md:flex-row md:items-center gap-4 md:gap-6 ">
             <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
-              AL
+              {isCreatingParent ? "NEW" : "AL"}
             </div>
             <div className="flex-1">
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                <h1 className="text-2xl font-bold">{selectedProduct?.name}</h1>
-                <StatusBadge status={selectedProduct?.is_active ? "active" : "inactive"}>
-                  {selectedProduct?.is_active ? t("active") : t("inactive")}
-                </StatusBadge>
+                <h1 className="text-2xl font-bold">
+                  {isCreatingParent 
+                    ? "Create New Parent Product" 
+                    : productData.name || "Product Details"}
+                </h1>
+                {!isCreatingParent && (
+                  <StatusBadge status={productData.is_active ? "active" : "inactive"}>
+                    {productData.is_active ? t("active") : t("inactive")}
+                  </StatusBadge>
+                )}
               </div>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
-                {t("articleNumber")}: {selectedItem || "N/A"}
-              </p>
+              {!isCreatingParent && (
+                <p className="text-slate-500 dark:text-slate-400 mt-1">
+                  {t("articleNumber")}: {selectedItem || "N/A"}
+                </p>
+              )}
             </div>
             <div className="flex flex-col sm:flex-row gap-2 md:justify-end ">
-              <AlertDialog
-                open={isDeleteDialogOpen}
-                onOpenChange={setIsDeleteDialogOpen}
-              >
-                <AlertDialogTrigger asChild>
-                  <Button
-                    onClick={confirmDeleteProduct}
-                    variant="outline"
-                    className="rounded-full"
-                  >
-                    <Minus className="h-4 w-4 mr-2" />
-                    {t("delete")}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      {t("confirmDeleteTitle")}
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("confirmDeleteDescription")}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel variant="destructive" className="rounded-full px-5 py-2">
-                      {t("cancel")}
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      variant="default"
-                      className="rounded-full px-5 py-2"
+              {!isCreatingParent && (
+                <AlertDialog
+                  open={isDeleteDialogOpen}
+                  onOpenChange={setIsDeleteDialogOpen}
+                >
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      onClick={confirmDeleteProduct}
+                      variant="outline"
+                      className="rounded-full"
                     >
-                      {t("ok")}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      <Minus className="h-4 w-4 mr-2" />
+                      {t("delete")}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {t("confirmDeleteTitle")}
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t("confirmDeleteDescription")}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel variant="destructive" className="rounded-full px-5 py-2">
+                        {t("cancel")}
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        variant="default"
+                        className="rounded-full px-5 py-2"
+                      >
+                        {t("ok")}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              
+              {isCreatingParent && onCancel && (
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={onCancel}
+                >
+                  {t("cancel")}
+                </Button>
+              )}
+              
               <Button
                 variant="default"
                 className="rounded-full"
                 onClick={handleSave}
+                disabled={isSaving}
               >
                 <Zap className="h-4 w-4 mr-2" />
-                {t("save")}
+                {isCreatingParent ? t("create") : t("save")}
               </Button>
             </div>
           </div>
+          
+          {/* Error message */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
         </div>
 
         {/* Bezeichnung & Beschreibung */}
@@ -189,7 +273,7 @@ export default function MutterTab({
               </label>
               <div className="md:col-span-3 ml-3">
                 <Input
-                  value={selectedProduct?.name}
+                  value={productData.name || ""}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
                 />
@@ -201,7 +285,7 @@ export default function MutterTab({
               </label>
               <div className="md:col-span-3 ml-3">
                 <Textarea
-                  value={selectedProduct?.description || ""}
+                  value={productData.description || ""}
                   onChange={(e) =>
                     handleInputChange("description", e.target.value)
                   }
@@ -229,8 +313,8 @@ export default function MutterTab({
                 {t("height")}
               </label>
               <Input
-                value={selectedProduct?.height_mm ?? ""}
-                onChange={(e) => handleInputChange("height_mm", e.target.value)}
+                value={productData.height_mm ?? ""}
+                onChange={(e) => handleInputChange("height_mm", e.target.value ? parseFloat(e.target.value) : null)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
             </div>
@@ -239,8 +323,8 @@ export default function MutterTab({
                 {t("length")}
               </label>
               <Input
-                value={selectedProduct?.length_mm ?? ""}
-                onChange={(e) => handleInputChange("length_mm", e.target.value)}
+                value={productData.length_mm ?? ""}
+                onChange={(e) => handleInputChange("length_mm", e.target.value ? parseFloat(e.target.value) : null)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
             </div>
@@ -249,8 +333,8 @@ export default function MutterTab({
                 {t("width")}
               </label>
               <Input
-                value={selectedProduct?.width_mm ?? ""}
-                onChange={(e) => handleInputChange("width_mm", e.target.value)}
+                value={productData.width_mm ?? ""}
+                onChange={(e) => handleInputChange("width_mm", e.target.value ? parseFloat(e.target.value) : null)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
             </div>
@@ -259,8 +343,8 @@ export default function MutterTab({
                 {t("weight")}
               </label>
               <Input
-                value={selectedProduct?.weight ?? ""}
-                onChange={(e) => handleInputChange("weight", e.target.value)}
+                value={productData.weight ?? ""}
+                onChange={(e) => handleInputChange("weight", e.target.value ? parseFloat(e.target.value) : null)}
                 className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
               />
             </div>
@@ -269,7 +353,7 @@ export default function MutterTab({
             <div className="flex items-center gap-2">
               <Checkbox
                 id="hangend"
-                checked={selectedProduct?.is_hanging ?? false}
+                checked={productData.is_hanging ?? false}
                 onCheckedChange={(checked) =>
                   handleInputChange("is_hanging", !!checked)
                 }
@@ -282,7 +366,7 @@ export default function MutterTab({
             <div className="flex items-center gap-2">
               <Checkbox
                 id="einseitig"
-                checked={selectedProduct?.is_one_sided ?? false}
+                checked={productData.is_one_sided ?? false}
                 onCheckedChange={(checked) =>
                   handleInputChange("is_one_sided", !!checked)
                 }
@@ -295,7 +379,7 @@ export default function MutterTab({
             <div className="flex items-center gap-2">
               <Checkbox
                 id="neuheit"
-                checked={selectedProduct?.is_new ?? false}
+                checked={productData.is_new ?? false}
                 onCheckedChange={(checked) => handleInputChange("is_new", !!checked)}
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />
@@ -310,7 +394,7 @@ export default function MutterTab({
                 Boxgröße
               </label>
               {/* <Input
-                value={selectedProduct.packaging_id}
+                value={productData.packaging_id || ""}
                 onChange={(e) =>
                   handleInputChange("packaging_id", e.target.value)
                 }

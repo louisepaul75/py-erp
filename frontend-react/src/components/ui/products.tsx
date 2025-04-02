@@ -34,6 +34,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isCreatingParent, setIsCreatingParent] = useState(false);
   
   const [pagination, setPagination] = React.useState<{
     pageIndex: number;
@@ -138,7 +139,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 
   // Update product selection handling AND URL push
   useEffect(() => {
-    if (selectedItem) {
+    if (selectedItem && !isCreatingParent) {
       const selected = filteredProducts.find(
         (product) => product.id === selectedItem
       );
@@ -155,11 +156,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
         }
       }
     }
-  }, [selectedItem, filteredProducts, pathname, router]);
+  }, [selectedItem, filteredProducts, pathname, router, isCreatingParent]);
 
   // Add useEffect for tracking visits
   useEffect(() => {
-    if (selectedProduct && selectedProduct.id && selectedProduct.name) {
+    if (selectedProduct && selectedProduct.id && selectedProduct.name && !isCreatingParent) {
       const path = selectedProduct.variants_count > 0
         ? `/products/parent/${selectedProduct.id}`
         : `/products/variant/${selectedProduct.id}`;
@@ -171,11 +172,33 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
         path: path,
       });
     }
-  }, [selectedProduct, addVisitedItem]);
+  }, [selectedProduct, addVisitedItem, isCreatingParent]);
 
   // Handler for creating new parent product
   const handleCreateNewParent = () => {
-    router.push('/products/parent/create');
+    // Instead of navigating, set the state to indicate we're creating a new parent
+    setIsCreatingParent(true);
+    setSelectedItem(null);
+    setSelectedProduct(null);
+  };
+
+  // Handler for when a new parent product is created
+  const handleParentProductCreated = (newProduct: Product) => {
+    setIsCreatingParent(false);
+    setSelectedItem(newProduct.id);
+    setSelectedProduct(newProduct);
+    // Refresh the products list
+    fetchProducts();
+  };
+
+  // Handler to cancel creating a new parent product
+  const handleCancelCreate = () => {
+    setIsCreatingParent(false);
+    // If there are products in the list, select the first one
+    if (filteredProducts.length > 0) {
+      setSelectedItem(filteredProducts[0].id);
+      setSelectedProduct(filteredProducts[0]);
+    }
   };
 
   return (
@@ -205,7 +228,10 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                     filteredProducts={filteredProducts}
                     totalItems={totalCount}
                     selectedItem={selectedItem}
-                    setSelectedItem={setSelectedItem}
+                    setSelectedItem={(item) => {
+                      setIsCreatingParent(false);
+                      setSelectedItem(item);
+                    }}
                     pagination={pagination}
                     setPagination={setPagination}
                     isLoading={isLoading}
@@ -222,10 +248,19 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                 </div>
               </div>
               <div className="w-full md:w-2/3 h-1/2 md:h-full overflow-auto pl-4">
-                {selectedProduct ? (
+                {isCreatingParent ? (
+                  <ProductDetail
+                    selectedItem={null}
+                    selectedProduct={null}
+                    isCreatingParent={true}
+                    onProductCreated={handleParentProductCreated}
+                    onCancel={handleCancelCreate}
+                  />
+                ) : selectedProduct ? (
                   <ProductDetail
                     selectedItem={selectedItem}
                     selectedProduct={selectedProduct}
+                    isCreatingParent={false}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full text-slate-500">

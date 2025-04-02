@@ -3,13 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Product } from "@/components/types/product";
 import { productApi } from "@/lib/products/api";
-import ParentProductForm from "@/components/products/parent-product-form";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui";
+import ProductDetail from "@/components/inventoryManagement/ProductDetail/ProductDetail";
 
 export default function CreateParentProductPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -36,21 +30,13 @@ export default function CreateParentProductPage() {
   
   return (
     <div className="container mx-auto py-4 px-4 md:px-6">
-      <div className="max-w-full mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New Parent Product</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4">
-            <ParentProductForm 
-              onSubmit={handleCreateProduct}
-              onCancel={handleCancel}
-              isLoading={isLoading}
-              error={error}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <ProductDetail 
+        selectedItem={null}
+        selectedProduct={null}
+        isCreatingParent={true}
+        onProductCreated={handleCreateProduct}
+        onCancel={handleCancel}
+      />
     </div>
   );
 } 

@@ -7,12 +7,14 @@ interface TabsNavigationProps {
   activeTab: string;
   setActiveTab: (value: string) => void;
   onAddVariant?: () => void;
+  isCreatingParent?: boolean;
 }
 
 export default function TabsNavigation({ 
   activeTab, 
   setActiveTab,
-  onAddVariant 
+  onAddVariant,
+  isCreatingParent = false 
 }: TabsNavigationProps) {
   console.log("TabsNavigation rendering with onAddVariant:", !!onAddVariant);
   
@@ -25,18 +27,19 @@ export default function TabsNavigation({
               value="mutter"
               className="rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-transparent data-[state=inactive]:text-slate-600 dark:data-[state=inactive]:text-slate-300 px-4 py-1 text-sm"
             >
-              Mutter
+              {isCreatingParent ? "New Parent Product" : "Mutter"}
             </TabsTrigger>
             <TabsTrigger
               value="varianten"
               className="rounded-full data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:bg-transparent data-[state=inactive]:text-slate-600 dark:data-[state=inactive]:text-slate-300 px-4 py-1 text-sm"
+              disabled={isCreatingParent}
             >
               Varianten
             </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-2">
-          {onAddVariant && (
+          {onAddVariant && !isCreatingParent && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -47,18 +50,22 @@ export default function TabsNavigation({
               New Variant
             </Button>
           )}
-          <Button variant="outline" size="sm" className="rounded-full">
-            <Eye className="h-4 w-4 mr-1" />
-            Vorschau
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full">
-            <FileText className="h-4 w-4 mr-1" />
-            Exportieren
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full">
-            <Settings className="h-4 w-4 mr-1" />
-            Einstellungen
-          </Button>
+          {!isCreatingParent && (
+            <>
+              <Button variant="outline" size="sm" className="rounded-full">
+                <Eye className="h-4 w-4 mr-1" />
+                Vorschau
+              </Button>
+              <Button variant="outline" size="sm" className="rounded-full">
+                <FileText className="h-4 w-4 mr-1" />
+                Exportieren
+              </Button>
+              <Button variant="outline" size="sm" className="rounded-full">
+                <Settings className="h-4 w-4 mr-1" />
+                Einstellungen
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
