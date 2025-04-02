@@ -1,5 +1,5 @@
 // components/ProductList.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,8 @@ import {
   Inbox,
   Tag,
   Bookmark,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // interface Product {
@@ -31,6 +33,7 @@ export default function ProductList({
   searchTerm,
   setSearchTerm,
   filteredProducts,
+  totalItems,
   selectedItem,
   setSelectedItem,
   pagination,
@@ -41,8 +44,27 @@ export default function ProductList({
   const pathname = usePathname();
   const [sortField, setSortField] = useState<keyof Product>("id");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [tableHeight, setTableHeight] = useState("calc(100vh - 250px)");
+
+  useEffect(() => {
+    // Handle responsive table height
+    const updateTableHeight = () => {
+      const windowHeight = window.innerHeight;
+      setTableHeight(`calc(${windowHeight}px - 250px)`);
+    };
+    
+    // Set initial height
+    updateTableHeight();
+    
+    // Add event listener for window resize
+    window.addEventListener("resize", updateTableHeight);
+    
+    // Clean up the event listener on component unmount
+    return () => window.removeEventListener("resize", updateTableHeight);
+  }, []);
 
   console.log("filteredProducts in ProductList", filteredProducts);
+  console.log("totalItems in ProductList", totalItems);
   // Add debug logging for legacy_base_sku values
   console.log("Legacy SKU values:", filteredProducts?.map(product => ({
     id: product.id,
@@ -62,6 +84,9 @@ export default function ProductList({
       return 0;
     });
   }, [filteredProducts, sortField, sortOrder]);
+
+  // Calculate total pages - use the totalItems prop from parent
+  const totalPages = Math.max(1, Math.ceil(totalItems / pagination.pageSize));
 
   const handleSort = (field: keyof Product) => {
     setSortField(field);
@@ -137,9 +162,9 @@ export default function ProductList({
       </div>
 
       {/* Product List */}
-      <div className="flex-1 overflow-auto ">
+      <div className="flex-1 overflow-auto" style={{ height: tableHeight }}>
         <SkinnyTable
-          data={filteredProducts}
+          data={sortedFilteredProducts}
           columns={[
             { field: "sku", header: "SKU" },
             { field: "name", header: "Name" },
@@ -166,31 +191,67 @@ export default function ProductList({
 
       {/* Pagination Controls */}
       <div className="flex flex-col w-full border-t border-slate-200 dark:border-slate-800">
-        <div className="flex justify-center items-center gap-2 my-2">
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            Rows per page:
-          </span>
-          <Select
-            value={pagination.pageSize.toString()}
-            onValueChange={(value) => {
-              const newPageSize = parseInt(value, 10);
-              setPagination({
-                pageIndex: 0, // Reset to first page
-                pageSize: newPageSize,
-              });
-            }}
-          >
-            <SelectTrigger className="w-[100px] h-8 text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-blue-500">
-              <SelectValue placeholder="Size" />
-            </SelectTrigger>
-            <SelectContent>
-              {[20, 30, 40].map((size) => (
-                <SelectItem key={size} value={size.toString()}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex justify-between items-center px-4 py-2">
+          {/* Rows per page dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              Rows per page:
+            </span>
+            <Select
+              value={pagination.pageSize.toString()}
+              onValueChange={(value) => {
+                const newPageSize = parseInt(value, 10);
+                setPagination({
+                  pageIndex: 0, // Reset to first page
+                  pageSize: newPageSize,
+                });
+              }}
+            >
+              <SelectTrigger className="w-[100px] h-8 text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-blue-500">
+                <SelectValue placeholder="Size" />
+              </SelectTrigger>
+              <SelectContent>
+                {[20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Page navigation */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              Page {pagination.pageIndex + 1} of {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setPagination({
+                  ...pagination,
+                  pageIndex: Math.max(0, pagination.pageIndex - 1)
+                })}
+                disabled={pagination.pageIndex === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setPagination({
+                  ...pagination,
+                  pageIndex: Math.min(totalPages - 1, pagination.pageIndex + 1)
+                })}
+                disabled={pagination.pageIndex >= totalPages - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

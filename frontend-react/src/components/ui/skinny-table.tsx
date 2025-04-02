@@ -59,7 +59,7 @@ export function SkinnyTable<T extends { [key: string]: any }>({
   }, [data, sortField, sortOrder]);
 
   return (
-    <Table className={className}>
+    <Table className={cn("h-full", className)}>
       <TableHeader>
         <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
           {columns.map((column) => (
@@ -79,11 +79,11 @@ export function SkinnyTable<T extends { [key: string]: any }>({
         </TableRow>
       </TableHeader>
 
-      <TableBody className="min-h-[500px]">
+      <TableBody className="relative h-full">
         {isLoading ? (
           <TableRow>
             <TableCell colSpan={columns.length} className="text-center py-8">
-              <div className="flex justify-center items-center gap-2 min-h-[500px]">
+              <div className="flex justify-center items-center gap-2 h-full">
                 <span className="text-slate-600 dark:text-slate-400">Loading...</span>
               </div>
             </TableCell>
@@ -116,7 +116,7 @@ export function SkinnyTable<T extends { [key: string]: any }>({
         ) : (
           <TableRow>
             <TableCell colSpan={columns.length} className="text-center py-8">
-              <div className="flex justify-center items-center gap-2 min-h-[500px]">
+              <div className="flex justify-center items-center gap-2 h-full">
                 <span className="text-slate-600 dark:text-slate-400">{noDataMessage}</span>
               </div>
             </TableCell>

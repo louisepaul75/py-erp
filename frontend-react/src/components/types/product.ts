@@ -44,6 +44,7 @@ export interface ProductListProps {
     searchTerm: string;
     setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
     filteredProducts: Product[];
+    totalItems: number;
     selectedItem: string | null | number;
     setSelectedItem: React.Dispatch<React.SetStateAction<string | number | null>>;
     pagination: {

@@ -34,6 +34,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product>({
     id: 0,
     name: "",
@@ -73,6 +74,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
     pageSize: 20,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [contentHeight, setContentHeight] = useState("calc(100vh - 15rem)");
   const router = useRouter();
   const pathname = usePathname();
   const { addVisitedItem } = useLastVisited();
@@ -108,6 +110,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
 
         setProducts(response.results);
         setFilteredProducts(response.results);
+        setTotalCount(response.count || 0);
         
         // Handle initial product selection
         if (initialVariantId || initialParentId) {
@@ -144,24 +147,67 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
     fetchProducts();
   }, [pagination.pageIndex, pagination.pageSize, initialVariantId, initialParentId]);
 
+  // Effect for updating content height based on window size
+  useEffect(() => {
+    const updateContentHeight = () => {
+      const windowHeight = window.innerHeight;
+      setContentHeight(`calc(${windowHeight}px - 15rem)`);
+    };
+    
+    // Set initial height
+    updateContentHeight();
+    
+    // Add event listener for window resize
+    window.addEventListener("resize", updateContentHeight);
+    
+    // Clean up the event listener on component unmount
+    return () => window.removeEventListener("resize", updateContentHeight);
+  }, []);
+
   useEffect(() => {
     // Log products state before filtering
     console.log("Products state before filtering:", products);
     console.log("Filtering products by search term");
     // Ensure products is an array before filtering
     if (Array.isArray(products)) {
-      setFilteredProducts(
-        products.filter(
-          (product) =>
-            product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            product.name.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
+      // If there's a search term, we need to refetch data from the server
+      if (searchTerm.trim() !== "") {
+        // This would be better with a debounce
+        const fetchFilteredProducts = async () => {
+          try {
+            setIsLoading(true);
+            const response = (await productApi.getProducts({
+              page: 1,
+              page_size: pagination.pageSize,
+              search: searchTerm,
+            })) as ApiResponse;
+            
+            if (response?.results) {
+              setFilteredProducts(response.results);
+              setTotalCount(response.count || 0);
+              // Reset to first page when searching
+              setPagination(prev => ({
+                ...prev,
+                pageIndex: 0
+              }));
+            }
+          } catch (error) {
+            console.error("Error fetching filtered products:", error);
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        
+        fetchFilteredProducts();
+      } else {
+        // Just use the products we already loaded if no search term
+        setFilteredProducts(products);
+      }
     } else {
       // If products isn't an array (e.g., initially undefined), set filteredProducts to empty
       setFilteredProducts([]); 
     }
-  }, [searchTerm, products]);
+  }, [searchTerm]);
 
   // Update product selection handling AND URL push
   useEffect(() => {
@@ -222,14 +268,15 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0 ">
-            <div className="flex overflow-hidden h-[calc(100vh-15rem)]">
-              <div className="w-1/3 border-r  dark:border-slate-800">
+          <CardContent className="p-0">
+            <div className="flex overflow-hidden" style={{ height: contentHeight }}>
+              <div className="w-1/3 border-r dark:border-slate-800 h-full">
                 <ProductList
                   showSidebar={true}
                   searchTerm={searchTerm}
                   setSearchTerm={setSearchTerm}
                   filteredProducts={filteredProducts}
+                  totalItems={totalCount}
                   selectedItem={selectedItem}
                   setSelectedItem={setSelectedItem}
                   pagination={pagination}
@@ -237,7 +284,7 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
                   isLoading={isLoading}
                 />
               </div>
-              <div className="w-2/3">
+              <div className="w-2/3 h-full overflow-auto">
                 <ProductDetail
                   selectedItem={selectedItem}
                   selectedProduct={selectedProduct}
