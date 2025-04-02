@@ -144,6 +144,33 @@ const scatterData = [
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
+// Define the semantic colors based on CSS variables in globals.css
+const semanticColors = [
+  { name: "Background", variable: "--background" },
+  { name: "Foreground", variable: "--foreground" },
+  { name: "Card", variable: "--card" },
+  { name: "Card Foreground", variable: "--card-foreground" },
+  { name: "Popover", variable: "--popover" },
+  { name: "Popover Foreground", variable: "--popover-foreground" },
+  { name: "Primary", variable: "--primary" },
+  { name: "Primary Foreground", variable: "--primary-foreground" },
+  { name: "Secondary", variable: "--secondary" },
+  { name: "Secondary Foreground", variable: "--secondary-foreground" },
+  { name: "Muted", variable: "--muted" },
+  { name: "Muted Foreground", variable: "--muted-foreground" },
+  { name: "Accent", variable: "--accent" },
+  { name: "Accent Foreground", variable: "--accent-foreground" },
+  { name: "Destructive", variable: "--destructive" },
+  { name: "Destructive Foreground", variable: "--destructive-foreground" },
+  { name: "Border", variable: "--border" },
+  { name: "Input", variable: "--input" },
+  { name: "Ring", variable: "--ring" },
+  // Add sidebar colors if needed for display
+  { name: "Sidebar Background", variable: "--sidebar-background" },
+  { name: "Sidebar Foreground", variable: "--sidebar-foreground" },
+  // ... other semantic colors from globals.css
+];
+
 export default function UIComponentsPage() {
   const [activeTab, setActiveTab] = useState('buttons');
 
@@ -1247,48 +1274,17 @@ export default function UIComponentsPage() {
           <TabsContent value="colors" className="space-y-8">
             <Card>
               <CardHeader>
-                <CardTitle>Color Palette</CardTitle>
-                <CardDescription>Primary color palette based on Amber and Gray, plus semantic colors</CardDescription>
+                <CardTitle>Theme Colors</CardTitle>
+                <CardDescription>Semantic colors defined via CSS variables for light and dark modes</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-3">Primary Palette (Amber)</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-11 gap-3">
-                      {Object.entries(themeColors)
-                        .filter(([key]) => key.startsWith('amber'))
-                        .map(([key, value]) => (
-                          <ColorSwatch key={key} name={key} color={value} />
+                    <h3 className="text-lg font-medium mb-3">Semantic Colors</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {semanticColors.map(({ name, variable }) => (
+                        <ColorSwatch key={variable} name={name} cssVarName={variable} />
                       ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Neutral Palette (Gray)</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-11 gap-3">
-                      {Object.entries(themeColors)
-                        .filter(([key]) => key.startsWith('gray'))
-                        .map(([key, value]) => (
-                          <ColorSwatch key={key} name={key} color={value} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Status & Semantic Colors</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <ColorSwatch name="Success / Affirmative" color={themeColors.success} />
-                      <ColorSwatch name="Warning" color={themeColors.warning} />
-                      <ColorSwatch name="Error / Danger" color={themeColors.error} />
-                      <ColorSwatch name="Info" color={themeColors.info} />
-                      <ColorSwatch name="Primary" color={themeColors.primary} />
-                      <ColorSwatch name="Ring" color={themeColors.ring} />
-                      <ColorSwatch name="Background" color={themeColors.background} />
-                      <ColorSwatch name="Card Background" color={themeColors.card} />
-                      <ColorSwatch name="Muted Background" color={themeColors.muted} />
-                      <ColorSwatch name="Foreground" color={themeColors.foreground} />
-                      <ColorSwatch name="Muted Foreground" color={themeColors.mutedForeground} />
-                      <ColorSwatch name="Border" color={themeColors.border} />
                     </div>
                   </div>
                 </div>
@@ -1505,20 +1501,20 @@ export default function UIComponentsPage() {
   );
 }
 
-// Helper component for displaying color swatches
+// Helper component for displaying color swatches using CSS variables
 interface ColorSwatchProps {
   name: string;
-  color: string;
+  cssVarName: string;
 }
 
-const ColorSwatch: React.FC<ColorSwatchProps> = ({ name, color }) => (
+const ColorSwatch: React.FC<ColorSwatchProps> = ({ name, cssVarName }) => (
   <div className="flex flex-col items-center space-y-1">
     <div 
       className="h-16 w-full rounded-md border border-border shadow-sm"
-      style={{ backgroundColor: color }}
-      title={`${name}: ${color}`}
+      style={{ backgroundColor: `var(${cssVarName})` }}
+      title={`${name}: var(${cssVarName})`}
     />
-    <span className="text-xs text-muted-foreground capitalize">{name}</span>
-    <span className="text-xs font-mono text-muted-foreground/70">{color}</span>
+    <span className="text-xs text-muted-foreground">{name}</span>
+    <span className="text-xs font-mono text-muted-foreground/70">{`var(${cssVarName})`}</span>
   </div>
 ); 

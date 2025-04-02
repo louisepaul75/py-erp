@@ -3,94 +3,96 @@
 @tailwind utilities;
 
 @layer base {
-  /* Default theme variables - Light Mode */
+  /* Default theme variables - Light Mode (using OKLCH) */
   html[data-theme="default-light"] {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5% 15%; /* Dark grey input background */
-    --ring: 35 100% 45%; /* Darker Orange focus ring */
+    --background: oklch(98% 0.01 240); /* Near white, slight blue cool */
+    --foreground: oklch(20% 0.01 240); /* Near black, slight blue cool */
+    --card: oklch(100% 0 0); /* Pure white */
+    --card-foreground: oklch(20% 0.01 240); /* Near black */
+    --popover: oklch(100% 0 0); /* Pure white */
+    --popover-foreground: oklch(20% 0.01 240); /* Near black */
+
+    --primary: oklch(55% 0.15 250); /* Medium Blue */
+    --primary-foreground: oklch(98% 0.01 250); /* Very Light Blue/White */
+
+    --secondary: oklch(94% 0.01 240); /* Very light grey */
+    --secondary-foreground: oklch(30% 0.01 240); /* Dark grey */
+
+    --muted: oklch(94% 0.01 240); /* Very light grey */
+    --muted-foreground: oklch(60% 0.02 240); /* Medium grey */
+
+    --accent: oklch(90% 0.03 240); /* Light grey */
+    --accent-foreground: oklch(25% 0.01 240); /* Dark grey */
+
+    --destructive: oklch(60% 0.2 20); /* Medium Red */
+    --destructive-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
+
+    --border: oklch(90% 0.02 240); /* Light grey */
+    --input: oklch(85% 0.02 240); /* Slightly darker light grey */
+    --ring: oklch(55% 0.15 250 / 0.6); /* Primary blue with some transparency */
+
     --radius: 0.5rem;
 
-    /* Header & Footer */
-    --header-background: 0 0% 100%; /* White for light mode */
-    --footer-background: 0 0% 96%; /* gray-100 for light mode */
-
-    /* Dev bar */
+    /* Specific component overrides if needed */
+    --header-background: oklch(100% 0 0);
+    --footer-background: oklch(96% 0.01 240);
     --dev-bar-height: 0px;
     --footer-height: 2.75rem;
-
-    /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: oklch(97% 0.01 240);
+    --sidebar-foreground: oklch(30% 0.01 240);
+    --sidebar-primary: oklch(55% 0.15 250); /* Match primary */
+    --sidebar-primary-foreground: oklch(98% 0.01 250); /* Match primary foreground */
+    --sidebar-accent: oklch(90% 0.03 240); /* Match accent */
+    --sidebar-accent-foreground: oklch(25% 0.01 240); /* Match accent foreground */
+    --sidebar-border: oklch(90% 0.02 240); /* Match border */
+    --sidebar-ring: oklch(55% 0.15 250 / 0.6); /* Match ring */
   }
 
-  /* Default theme variables - Dark Mode */
+  /* Default theme variables - Dark Mode (using OKLCH) */
   html[data-theme="default-dark"] {
-    /* Bloomberg-inspired dark theme: Black background, darker orange text */
-    --background: 240 10% 4%; /* Very dark blue-grey (near black) */
-    --foreground: 35 100% 55%; /* Darker Orange */
-    
-    --card: 240 8% 8%; /* Slightly lighter dark grey for cards */
-    --card-foreground: 35 100% 55%; /* Darker Orange */
-    
-    --popover: 240 8% 8%; /* Dark grey for popovers */
-    --popover-foreground: 35 100% 55%; /* Darker Orange */
-    
-    --primary: 35 100% 45%; /* Darker Primary orange for interactive elements */
-    --primary-foreground: 0 0% 10%; /* Dark contrast for primary elements */
-    
-    --secondary: 240 5% 15%; /* Dark grey secondary */
-    --secondary-foreground: 35 100% 55%; /* Darker Orange */
-    
-    --muted: 240 5% 10%; /* Darker grey muted */
-    --muted-foreground: 35 70% 50%; /* Darker, slightly more saturated muted orange */
-    
-    --accent: 35 40% 25%; /* Darker, slightly more saturated orange accent */
-    --accent-foreground: 35 100% 55%; /* Darker Orange */
-    
-    --destructive: 0 70% 50%; /* Adjusted destructive red */
-    --destructive-foreground: 0 0% 98%; /* Light contrast for destructive */
-    
-    --border: 35 60% 25%; /* Darker, slightly more saturated orange-tinted border */
-    --input: 240 5% 15%; /* Dark grey input background */
-    --ring: 35 100% 45%; /* Darker Orange focus ring */
+    --background: oklch(15% 0.01 250); /* Very dark blue-grey (near black) */
+    --foreground: oklch(90% 0.02 50); /* Light greyish-orange */
+    --card: oklch(20% 0.01 250); /* Dark grey */
+    --card-foreground: oklch(90% 0.02 50); /* Light greyish-orange */
+    --popover: oklch(18% 0.01 250); /* Dark grey */
+    --popover-foreground: oklch(90% 0.02 50); /* Light greyish-orange */
 
-    /* Header & Footer */
-    --header-background: 222 47% 11%; /* gray-900 */
-    --header-foreground: 240 4.8% 95.9%; /* gray-100 */
-    --footer-background: 222 47% 11%; /* gray-900 */
-    --footer-foreground: 240 4.8% 95.9%; /* gray-100 */
+    --primary: oklch(70% 0.18 50); /* Medium Orange */
+    --primary-foreground: oklch(15% 0.03 50); /* Very Dark Orange/Brown */
 
-    /* Sidebar - Applying similar theme, adjust if needed */
-    --sidebar-background: 240 10% 6%; /* Dark sidebar */
-    --sidebar-foreground: 35 100% 55%; /* Darker Orange text */
-    --sidebar-primary: 35 100% 45%; /* Darker Orange primary */
-    --sidebar-primary-foreground: 0 0% 10%; /* Dark contrast */
-    --sidebar-accent: 35 40% 25%; /* Darker Orange accent */
-    --sidebar-accent-foreground: 35 100% 55%; /* Darker Orange */
-    --sidebar-border: 35 60% 25%; /* Darker Orange border */
-    --sidebar-ring: 35 100% 45%; /* Darker Orange ring */
+    --secondary: oklch(30% 0.02 250); /* Medium-dark grey */
+    --secondary-foreground: oklch(85% 0.02 50); /* Light greyish-orange */
+
+    --muted: oklch(25% 0.01 250); /* Dark grey */
+    --muted-foreground: oklch(65% 0.03 50); /* Muted greyish-orange */
+
+    --accent: oklch(40% 0.05 50); /* Darker orange accent */
+    --accent-foreground: oklch(95% 0.02 50); /* Very light greyish-orange */
+
+    --destructive: oklch(60% 0.2 20); /* Medium Red (same as light) */
+    --destructive-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
+
+    --border: oklch(40% 0.03 50); /* Dark orange-tinted grey */
+    --input: oklch(25% 0.01 250); /* Dark grey */
+    --ring: oklch(70% 0.18 50 / 0.6); /* Primary orange with some transparency */
+
+    --radius: 0.5rem;
+
+    /* Specific component overrides if needed */
+    --header-background: oklch(12% 0.01 250);
+    --header-foreground: oklch(90% 0.02 50);
+    --footer-background: oklch(12% 0.01 250);
+    --footer-foreground: oklch(90% 0.02 50);
+    --dev-bar-height: 0px;
+    --footer-height: 2.75rem;
+    --sidebar-background: oklch(18% 0.01 250);
+    --sidebar-foreground: oklch(85% 0.02 50);
+    --sidebar-primary: oklch(70% 0.18 50); /* Match primary */
+    --sidebar-primary-foreground: oklch(15% 0.03 50); /* Match primary foreground */
+    --sidebar-accent: oklch(40% 0.05 50); /* Match accent */
+    --sidebar-accent-foreground: oklch(95% 0.02 50); /* Match accent foreground */
+    --sidebar-border: oklch(40% 0.03 50); /* Match border */
+    --sidebar-ring: oklch(70% 0.18 50 / 0.6); /* Match ring */
   }
 
   /* Matsu theme variables - Light Mode */
