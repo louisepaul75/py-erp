@@ -34,7 +34,7 @@ interface DetailsTabProps {
   onDetailChange: (field: keyof VariantDetails, value: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
-  onSaveDetails: () => void;
+  isEditing: boolean;
 }
 
 export default function DetailsTab({
@@ -42,10 +42,8 @@ export default function DetailsTab({
   onDetailChange,
   onAddTag,
   onRemoveTag,
-  onSaveDetails,
+  isEditing,
 }: DetailsTabProps) {
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-
   return (
     <div className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 ">
@@ -69,6 +67,7 @@ export default function DetailsTab({
                       size="icon"
                       className="h-4 w-4 ml-1"
                       onClick={() => onRemoveTag(tag)}
+                      disabled={!isEditing}
                     >
                       <Minus className="h-3 w-3" />
                     </Button>
@@ -80,6 +79,7 @@ export default function DetailsTab({
                 size="sm"
                 className="w-full rounded-lg"
                 onClick={onAddTag}
+                disabled={!isEditing}
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Tag hinzufügen
@@ -126,7 +126,7 @@ export default function DetailsTab({
             <CardTitle className="text-sm font-medium">Preise</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <Select defaultValue="de">
+            <Select defaultValue="de" disabled={!isEditing}>
               <SelectTrigger className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
                 <SelectValue placeholder="Select Tax..." />
               </SelectTrigger>
@@ -165,6 +165,7 @@ export default function DetailsTab({
             value={variantDetails.priceChanges}
             onChange={(e) => onDetailChange("priceChanges", e.target.value)}
             className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 h-24 resize-none bg-slate-50 dark:bg-slate-800"
+            disabled={!isEditing}
           />
         </CardContent>
       </Card>
@@ -186,6 +187,7 @@ export default function DetailsTab({
                   value={variantDetails.malgruppe}
                   onChange={(e) => onDetailChange("malgruppe", e.target.value)}
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -200,6 +202,7 @@ export default function DetailsTab({
                     onDetailChange("malkostenEur", e.target.value)
                   }
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
                 <Input
                   value={variantDetails.malkostenCzk}
@@ -207,6 +210,7 @@ export default function DetailsTab({
                     onDetailChange("malkostenCzk", e.target.value)
                   }
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -221,43 +225,13 @@ export default function DetailsTab({
                     onDetailChange("selbstkosten", e.target.value)
                   }
                   className="w-full md:w-1/3 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="mt-6 flex justify-end">
-        <AlertDialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <Button 
-              variant="default" 
-              size="sm" 
-              className="w-full"
-              type="button"
-              onClick={() => {
-                console.log("Saving variant details:", variantDetails);
-                onSaveDetails();
-              }}
-            >
-              <Zap className="h-3.5 w-3.5 mr-1" />
-              Speichern
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Details gespeichert</AlertDialogTitle>
-              <AlertDialogDescription>
-                Die Variantendetails wurden erfolgreich gespeichert.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Schließen</AlertDialogCancel>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
     </div>
   );
 }

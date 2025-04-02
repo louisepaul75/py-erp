@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Minus, Zap, Plus } from "lucide-react";
+import { Minus, Zap, Plus, Edit, X } from "lucide-react";
 import { productApi } from "@/lib/products/api";
 import { SelectedItem } from "@/components/types/product";
 import { Product, ProductDetailProps } from "@/components/types/product";
@@ -43,6 +43,7 @@ interface MutterTabProps extends ProductDetailProps {
   isCreatingParent?: boolean;
   onSave?: (data: Omit<Product, "id">) => Promise<void>;
   onCancel?: () => void;
+  canEdit?: boolean;
 }
 
 export default function MutterTab({
@@ -51,23 +52,38 @@ export default function MutterTab({
   isCreatingParent = false,
   onSave,
   onCancel,
+  canEdit = false,
 }: MutterTabProps) {
+  const [isEditing, setIsEditing] = useState(isCreatingParent);
+  const [initialProductData, setInitialProductData] = useState<Partial<Product> | null>(null);
+  const [initialCategories, setInitialCategories] = useState<string[][]>([]);
+
   // Initialize with selectedProduct data or defaults if creating a new one
-  const [productData, setProductData] = useState<Partial<Product>>(
-    selectedProduct || {
-      name: "",
-      description: "",
-      is_active: true,
-      // Add other default fields as needed
-    }
-  );
-  
-  // Update productData when selectedProduct changes
-  useEffect(() => {
+  const [productData, setProductData] = useState<Partial<Product>>(() => {
     if (selectedProduct) {
-      setProductData(selectedProduct);
+      return selectedProduct;
+    } else {
+      return {
+        name: "",
+        description: "",
+        is_active: true,
+        // Add other default fields as needed
+      };
     }
-  }, [selectedProduct]);
+  });
+  
+  // Update productData when selectedProduct changes AND not currently editing
+  useEffect(() => {
+    if (selectedProduct && !isEditing) {
+      setProductData(selectedProduct);
+      // Also potentially reset categories based on selectedProduct if they come from there
+      // For now, assuming categories are managed independently or reset elsewhere
+    }
+    // Set initial state when product loads (and not creating)
+    if (selectedProduct && !isCreatingParent) {
+       setInitialProductData(JSON.parse(JSON.stringify(selectedProduct))); // Deep copy
+    }
+  }, [selectedProduct, isEditing, isCreatingParent]);
 
   const { t } = useAppTranslation("mutterTab"); // Use the mutterTab namespace
 
@@ -80,6 +96,18 @@ export default function MutterTab({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Store initial categories when editing starts
+  useEffect(() => {
+    if (isEditing) {
+      // Store deep copy of current categories when editing starts
+       setInitialCategories(JSON.parse(JSON.stringify(categories)));
+      // Store deep copy of product data if not creating
+      if (!isCreatingParent && selectedProduct) {
+         setInitialProductData(JSON.parse(JSON.stringify(selectedProduct)));
+      }
+    }
+  }, [isEditing, selectedProduct, isCreatingParent]); // Rerun if selectedProduct changes while editing is false
 
   // Handlers to update product data
   const handleInputChange = (
@@ -132,6 +160,7 @@ export default function MutterTab({
         if (selectedProduct?.id) {
           await productApi.updateProduct(selectedProduct.id.toString(), productData);
           alert("Product saved successfully!");
+          setIsEditing(false); // Exit edit mode on successful save
         } else {
           console.error("No product ID found to update.");
         }
@@ -141,6 +170,24 @@ export default function MutterTab({
       setError(`Failed to save product: ${err.message || "Unknown error"}`);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    if (isCreatingParent && onCancel) {
+      onCancel(); // Use the specific cancel handler for creation flow
+    } else {
+      // Reset product data and categories to their initial state
+      if (initialProductData) {
+         setProductData(JSON.parse(JSON.stringify(initialProductData))); // Reset from deep copy
+      }
+       setCategories(JSON.parse(JSON.stringify(initialCategories))); // Reset from deep copy
+      setIsEditing(false);
+      setError(null); // Clear any validation errors
     }
   };
 
@@ -159,11 +206,8 @@ export default function MutterTab({
       console.log("Deleting product with ID:", selectedProduct.id);
       await productApi.deleteProduct(selectedProduct.id.toString()); // Call the API
       console.log("Product deleted successfully!");
-
-      // Optionally, you can add further logic here, such as:
-      // - Showing a success message
-      // - Redirecting the user
-      // - Refreshing the product list
+      setIsEditing(false); // Exit edit mode after deletion
+      // Maybe navigate away or refresh list? Needs UX decision.
       alert("Product deleted successfully!");
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -172,14 +216,14 @@ export default function MutterTab({
   };
 
   return (
-    <div className="p-4 lg:p-6">
+    <div>
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header Section using Card */}
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col flex-wrap md:flex-row md:items-center gap-4 md:gap-6">
               <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
-                {isCreatingParent ? "NEW" : "AL"}
+                {isCreatingParent ? "NEW" : productData?.sku?.substring(0, 2) || "AL"}
               </div>
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
@@ -206,65 +250,79 @@ export default function MutterTab({
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-2 md:justify-end ">
-                {!isCreatingParent && (
-                  <AlertDialog
-                    open={isDeleteDialogOpen}
-                    onOpenChange={setIsDeleteDialogOpen}
-                  >
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        onClick={confirmDeleteProduct}
-                        variant="outline"
-                        className="rounded-full"
-                      >
-                        <Minus className="h-4 w-4 mr-2" />
-                        {t("delete")}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {t("confirmDeleteTitle")}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t("confirmDeleteDescription")}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel variant="destructive" className="rounded-full px-5 py-2">
-                          {t("cancel")}
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDelete}
-                          variant="default"
-                          className="rounded-full px-5 py-2"
-                        >
-                          {t("ok")}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-                
-                {isCreatingParent && onCancel && (
+                {!isCreatingParent && !isEditing && canEdit && (
                   <Button
+                    onClick={handleEdit}
                     variant="outline"
                     className="rounded-full"
-                    onClick={onCancel}
                   >
-                    {t("cancel")}
+                    <Edit className="h-4 w-4 mr-2" />
+                    {t("edit")}
                   </Button>
                 )}
-                
-                <Button
-                  variant="default"
-                  className="rounded-full"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  {isCreatingParent ? t("create") : t("save")}
-                </Button>
+                {isEditing && (
+                  <>
+                    {!isCreatingParent && (
+                      <AlertDialog
+                        open={isDeleteDialogOpen}
+                        onOpenChange={setIsDeleteDialogOpen}
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            onClick={confirmDeleteProduct}
+                            variant="outline"
+                            className="rounded-full"
+                            disabled={isSaving}
+                          >
+                            <Minus className="h-4 w-4 mr-2" />
+                            {t("delete")}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {t("confirmDeleteTitle")}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t("confirmDeleteDescription")}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="rounded-full px-5 py-2">
+                              {t("cancel")}
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDelete}
+                              className="rounded-full px-5 py-2"
+                            >
+                              {t("ok")}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      {t("cancel")}
+                    </Button>
+
+                    <Button
+                      variant="default"
+                      className="rounded-full"
+                      onClick={handleSave}
+                      disabled={isSaving || !productData.name}
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      {isSaving ? t("saving") : (isCreatingParent ? t("create") : t("save"))}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
             
@@ -292,6 +350,7 @@ export default function MutterTab({
                   value={productData.name || ""}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -306,6 +365,7 @@ export default function MutterTab({
                     handleInputChange("description", e.target.value)
                   }
                   className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm min-h-[150px] resize-none bg-slate-50 dark:bg-slate-800"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -335,6 +395,7 @@ export default function MutterTab({
                   value={productData.height_mm ?? ""}
                   onChange={(e) => handleInputChange("height_mm", e.target.value ? parseFloat(e.target.value) : null)}
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
               <div className="space-y-2">
@@ -345,6 +406,7 @@ export default function MutterTab({
                   value={productData.length_mm ?? ""}
                   onChange={(e) => handleInputChange("length_mm", e.target.value ? parseFloat(e.target.value) : null)}
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
               <div className="space-y-2">
@@ -355,6 +417,7 @@ export default function MutterTab({
                   value={productData.width_mm ?? ""}
                   onChange={(e) => handleInputChange("width_mm", e.target.value ? parseFloat(e.target.value) : null)}
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
               <div className="space-y-2">
@@ -365,6 +428,7 @@ export default function MutterTab({
                   value={productData.weight ?? ""}
                   onChange={(e) => handleInputChange("weight", e.target.value ? parseFloat(e.target.value) : null)}
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -377,6 +441,7 @@ export default function MutterTab({
                     handleInputChange("is_hanging", !!checked)
                   }
                   className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                  disabled={!isEditing}
                 />
                 <label htmlFor="hangend" className="text-sm">
                   {t("hanging")}
@@ -390,6 +455,7 @@ export default function MutterTab({
                     handleInputChange("is_one_sided", !!checked)
                   }
                   className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                  disabled={!isEditing}
                 />
                 <label htmlFor="einseitig" className="text-sm">
                   {t("oneSided")}
@@ -401,6 +467,7 @@ export default function MutterTab({
                   checked={productData.is_new ?? false}
                   onCheckedChange={(checked) => handleInputChange("is_new", !!checked)}
                   className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                  disabled={!isEditing}
                 />
                 <label htmlFor="neuheit" className="text-sm">
                   {t("novelty")}
@@ -429,6 +496,7 @@ export default function MutterTab({
                   size="sm"
                   className="h-8 rounded-full"
                   onClick={handleAddCategory}
+                  disabled={!isEditing}
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   <span className="text-xs">{t("add")}</span>
@@ -437,7 +505,8 @@ export default function MutterTab({
                   variant="outline"
                   size="sm"
                   className="h-8 rounded-full "
-                  onClick={handleDelete} // Consider refining delete logic for categories
+                  onClick={handleDelete}
+                  disabled={!isEditing || categories.length <= 1}
                 >
                   <Minus className="h-3.5 w-3.5 mr-1 " />
                   <span className="text-xs">{t("remove")}</span>
@@ -471,6 +540,7 @@ export default function MutterTab({
                               )
                             }
                             className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                            disabled={!isEditing}
                           />
                         </TableCell>
                       ))}

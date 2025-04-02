@@ -97,7 +97,7 @@ export default function ProductDetail({
   }, [selectedProduct]);
 
   return (
-    <div className="h-full flex-1 overflow-auto z-20 bg-background">
+    <div className="z-20 bg-background p-4 lg:p-6">
       {/* Mutter/Varianten Tabs */}
       <TabsNavigation 
         activeTab={activeTab} 
@@ -106,7 +106,6 @@ export default function ProductDetail({
         isCreatingParent={isCreatingParent}
       />
 
-      {/* Tab Content */}
       {activeTab === "mutter" ? (
         <MutterTab
           selectedItem={selectedItem}
@@ -114,9 +113,13 @@ export default function ProductDetail({
           isCreatingParent={isCreatingParent}
           onSave={isCreatingParent ? handleCreateProduct : undefined}
           onCancel={isCreatingParent ? handleCancel : undefined}
+          canEdit={true}
         />
       ) : (
-        <VariantenTab selectedItem={selectedItem} />
+        <VariantenTab 
+          selectedItem={selectedItem} 
+          canEdit={true}
+        />
       )}
     </div>
   );
