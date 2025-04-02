@@ -1,11 +1,10 @@
 // app/inventory-management/page.tsx (or wherever your component lives)
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { Search } from "lucide-react";
+import { Search, PlusCircle } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
-import ProductCreateForm from "./ProductCreateForm";
 import { productApi } from "@/lib/products/api";
 import { Product, ApiResponse } from "../types/product";
 import { useLastVisited } from "@/context/LastVisitedContext";
@@ -49,10 +48,6 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
   const pathname = usePathname();
   const { addVisitedItem } = useLastVisited();
 
-  // State for creation form
-  const [isCreating, setIsCreating] = useState(false);
-  const [createType, setCreateType] = useState<'parent' | 'variant'>('parent');
-
   // Memoized function to fetch products
   const fetchProducts = useCallback(async () => {
     try {
@@ -87,7 +82,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
             setSelectedItem(response.results[0].id);
             setSelectedProduct(response.results[0]);
           }
-        } else if (response.results.length > 0 && !isCreating) {
+        } else if (response.results.length > 0) {
           // Non-initial load: check if current selection is valid
           const currentSelectionExists = response.results.some(p => p.id === selectedItem);
           if (!currentSelectionExists) {
@@ -96,12 +91,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
             setSelectedProduct(response.results[0]);
           }
           // If currentSelectionExists, selection remains unchanged by this block
-        } else if (response.results.length === 0 && !isCreating) {
-          // No results and not creating: clear selection
+        } else {
+          // No results: clear selection
           setSelectedItem(null);
           setSelectedProduct(null);
         }
-        // If isCreating is true, selection is handled by creation flow, no changes here
 
       } else {
         setFilteredProducts([]);
@@ -118,7 +112,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageIndex, pagination.pageSize, searchTerm, initialVariantId, initialParentId, selectedItem, isCreating]); // Added selectedItem and isCreating dependencies
+  }, [pagination.pageIndex, pagination.pageSize, searchTerm, initialVariantId, initialParentId, selectedItem]); // Added selectedItem dependency
 
   // Initial fetch and refetch on dependencies change
   useEffect(() => {
@@ -144,7 +138,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 
   // Update product selection handling AND URL push
   useEffect(() => {
-    if (selectedItem && !isCreating) { // Only update URL/selection if not creating
+    if (selectedItem) {
       const selected = filteredProducts.find(
         (product) => product.id === selectedItem
       );
@@ -161,11 +155,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
         }
       }
     }
-  }, [selectedItem, filteredProducts, pathname, router, isCreating]); // Add isCreating dependency
+  }, [selectedItem, filteredProducts, pathname, router]);
 
   // Add useEffect for tracking visits
   useEffect(() => {
-    if (selectedProduct && selectedProduct.id && selectedProduct.name && !isCreating) { // Only track if not creating
+    if (selectedProduct && selectedProduct.id && selectedProduct.name) {
       const path = selectedProduct.variants_count > 0
         ? `/products/parent/${selectedProduct.id}`
         : `/products/variant/${selectedProduct.id}`;
@@ -177,34 +171,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
         path: path,
       });
     }
-  }, [selectedProduct, addVisitedItem, isCreating]); // Add isCreating dependency
+  }, [selectedProduct, addVisitedItem]);
 
-  // Handlers for creation form
-  const handleCreateNew = () => {
-    setIsCreating(true);
-    setSelectedItem(null); // Deselect any current item
-    setSelectedProduct(null);
-    // Optionally reset createType to parent, or let it persist
-    // setCreateType('parent');
-  };
-
-  const handleCancelCreate = () => {
-    setIsCreating(false);
-    // Optionally re-select the first item or previous item if needed
-  };
-
-  const handleProductCreated = (newProduct: Product) => {
-    setIsCreating(false);
-    // Refetch data to include the new product
-    fetchProducts(); // Call the memoized fetch function
-    // Select the newly created product
-    setSelectedItem(newProduct.id);
-    setSelectedProduct(newProduct);
-    // Optionally navigate to the new product's URL
-    const newPath = newProduct.variants_count > 0
-      ? `/products/parent/${newProduct.id}`
-      : `/products/variant/${newProduct.id}`;
-    router.push(newPath);
+  // Handler for creating new parent product
+  const handleCreateNewParent = () => {
+    router.push('/products/parent/create');
   };
 
   return (
@@ -223,38 +194,37 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                   className="pl-10 h-9 w-full"
                 />
               </div>
-              <Button onClick={handleCreateNew} size="sm">
-                Create New Product
-              </Button>
             </div>
             <div className="flex flex-col md:flex-row overflow-hidden" style={{ height: contentHeight }}>
-              <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r dark:border-slate-800 h-1/2 md:h-full mb-4 md:mb-0">
-                <ProductList
-                  showSidebar={true}
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  filteredProducts={filteredProducts}
-                  totalItems={totalCount}
-                  selectedItem={selectedItem}
-                  setSelectedItem={setSelectedItem}
-                  pagination={pagination}
-                  setPagination={setPagination}
-                  isLoading={isLoading}
-                />
+              <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r dark:border-slate-800 mb-4 md:mb-0 flex flex-col">
+                <div className="flex-grow overflow-y-auto">
+                  <ProductList
+                    showSidebar={true}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    filteredProducts={filteredProducts}
+                    totalItems={totalCount}
+                    selectedItem={selectedItem}
+                    setSelectedItem={setSelectedItem}
+                    pagination={pagination}
+                    setPagination={setPagination}
+                    isLoading={isLoading}
+                  />
+                </div>
+                <div className="p-4 border-t dark:border-slate-800 flex-shrink-0">
+                  <Button
+                    onClick={handleCreateNewParent}
+                    className="w-full"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    New Parent Product
+                  </Button>
+                </div>
               </div>
               <div className="w-full md:w-2/3 h-1/2 md:h-full overflow-auto pl-4">
-                {isCreating ? (
-                  <ProductCreateForm
-                    key={createType}
-                    createType={createType}
-                    setCreateType={setCreateType}
-                    onProductCreated={handleProductCreated}
-                    onCancel={handleCancelCreate}
-                    searchParentProducts={productApi.searchParentProducts}
-                    createProduct={productApi.createProduct}
-                  />
-                ) : selectedProduct ? (
+                {selectedProduct ? (
                   <ProductDetail
+                    selectedItem={selectedItem}
                     selectedProduct={selectedProduct}
                   />
                 ) : (
@@ -272,6 +242,6 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 }
 
 // Default export for the page
-export default function ProductsPageContainer() {
-  return <ProductsPage />;
+export default function ProductsPageContainer({ initialVariantId, initialParentId }: ProductsPageProps = {}) {
+  return <ProductsPage initialVariantId={initialVariantId} initialParentId={initialParentId} />;
 }
