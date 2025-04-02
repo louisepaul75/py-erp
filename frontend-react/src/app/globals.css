@@ -111,7 +111,7 @@
       /* Light theme specifics */
       --background: oklch(0.91 0.048 83.6);
       --foreground: oklch(0.41 0.077 78.9);
-      --card: oklch(0.92 0.042 83.6);
+      --card: 84 18% 92%; /* HSL equivalent */
       --card-foreground: oklch(0.41 0.077 74.3);
       --popover: oklch(0.92 0.042 83.6);
       --popover-foreground: oklch(0.41 0.077 74.3);

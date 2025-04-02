@@ -97,7 +97,7 @@ export default function ProductDetail({
   }, [selectedProduct]);
 
   return (
-    <div className="h-full flex-1 overflow-auto z-20 bg-slate-50 dark:bg-slate-950">
+    <div className="h-full flex-1 overflow-auto z-20 bg-background">
       {/* Mutter/Varianten Tabs */}
       <TabsNavigation 
         activeTab={activeTab} 
