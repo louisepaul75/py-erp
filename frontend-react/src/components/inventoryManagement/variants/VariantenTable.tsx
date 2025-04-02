@@ -1,6 +1,7 @@
 // components/ProductDetail/VariantenTable.tsx
 import { useState } from "react";
 import { Button, Input } from "@/components/ui";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -109,16 +110,9 @@ export default function VariantenTable({
           <TableHeader>
             <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
               <TableHead className="w-12">
-                {/* <input
-                  type="checkbox"
-                  checked={variants.every((v) => v.selected)}
-                  onChange={() => variants.forEach((v) => onToggleSelect(v.id))}
-                  className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                /> */}
-                <input
-                  type="checkbox"
-                  checked={variants.length > 0 && variants.every((v) => v.selected)} // Ensure it only checks when there are rows
-                  onChange={handleSelectAll}
+                <Checkbox
+                  checked={variants.length > 0 && variants.every((v) => v.selected)}
+                  onCheckedChange={handleSelectAll}
                   className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                 />
               </TableHead>
@@ -154,10 +148,9 @@ export default function VariantenTable({
                   }
                 >
                   <TableCell>
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={variant.selected}
-                      onChange={() => onToggleSelect(variant.id)}
+                      onCheckedChange={() => onToggleSelect(variant.id)}
                       className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>
@@ -167,26 +160,23 @@ export default function VariantenTable({
                   <TableCell>{variant.bezeichnung}</TableCell>
                   <TableCell>{variant.auspraegung}</TableCell>
                   <TableCell className="text-center">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={variant.prod}
-                      onChange={() => onToggleCheckbox(variant.id, "prod")}
+                      onCheckedChange={() => onToggleCheckbox(variant.id, "prod")}
                       className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>
                   <TableCell className="text-center">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={variant.vertr}
-                      onChange={() => onToggleCheckbox(variant.id, "vertr")}
+                      onCheckedChange={() => onToggleCheckbox(variant.id, "vertr")}
                       className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>
                   <TableCell className="text-center">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={variant.vkArtikel}
-                      onChange={() => onToggleCheckbox(variant.id, "vkArtikel")}
+                      onCheckedChange={() => onToggleCheckbox(variant.id, "vkArtikel")}
                       className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 dark:text-blue-400 accent-blue-600"
                     />
                   </TableCell>

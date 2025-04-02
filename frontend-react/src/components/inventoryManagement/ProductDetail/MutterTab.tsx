@@ -3,6 +3,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { StatusBadge } from "@/components/ui";
 import {
   Table,
   TableBody,
@@ -118,9 +121,9 @@ export default function MutterTab({
             <div className="flex-1">
               <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <h1 className="text-2xl font-bold">{selectedProduct?.name}</h1>
-                <Badge className="w-fit bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50">
-                  {t("active")}
-                </Badge>
+                <StatusBadge status={selectedProduct?.is_active ? "active" : "inactive"}>
+                  {selectedProduct?.is_active ? t("active") : t("inactive")}
+                </StatusBadge>
               </div>
               <p className="text-slate-500 dark:text-slate-400 mt-1">
                 {t("articleNumber")}: {selectedItem || "N/A"}
@@ -151,12 +154,13 @@ export default function MutterTab({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-full bg-red-600 hover:bg-red-700 text-white px-5 py-2">
+                    <AlertDialogCancel variant="destructive" className="rounded-full px-5 py-2">
                       {t("cancel")}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDelete}
-                      className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-5 py-2"
+                      variant="default"
+                      className="rounded-full px-5 py-2"
                     >
                       {t("ok")}
                     </AlertDialogAction>
@@ -164,7 +168,8 @@ export default function MutterTab({
                 </AlertDialogContent>
               </AlertDialog>
               <Button
-                className="rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+                variant="default"
+                className="rounded-full"
                 onClick={handleSave}
               >
                 <Zap className="h-4 w-4 mr-2" />
@@ -195,7 +200,7 @@ export default function MutterTab({
                 {t("description")}
               </label>
               <div className="md:col-span-3 ml-3">
-                <textarea
+                <Textarea
                   value={selectedProduct?.description}
                   onChange={(e) =>
                     handleInputChange("description", e.target.value)
@@ -262,12 +267,11 @@ export default function MutterTab({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="hangend"
                 checked={selectedProduct?.is_hanging ?? false}
-                onChange={(e) =>
-                  handleInputChange("is_hanging", e.target.checked)
+                onCheckedChange={(checked) =>
+                  handleInputChange("is_hanging", !!checked)
                 }
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />
@@ -276,12 +280,11 @@ export default function MutterTab({
               </label>
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="einseitig"
                 checked={selectedProduct?.is_one_sided ?? false}
-                onChange={(e) =>
-                  handleInputChange("is_one_sided", e.target.checked)
+                onCheckedChange={(checked) =>
+                  handleInputChange("is_one_sided", !!checked)
                 }
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />
@@ -290,11 +293,10 @@ export default function MutterTab({
               </label>
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="neuheit"
                 checked={selectedProduct?.is_new ?? false}
-                onChange={(e) => handleInputChange("is_new", e.target.checked)}
+                onCheckedChange={(checked) => handleInputChange("is_new", !!checked)}
                 className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
               />
               <label htmlFor="neuheit" className="text-sm">

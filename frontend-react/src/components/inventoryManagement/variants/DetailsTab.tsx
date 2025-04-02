@@ -1,8 +1,11 @@
 // components/ProductDetail/DetailsTab.tsx
 import { useState } from "react";
 import { Button, Input } from "@/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui";
 import { Plus, Minus, Tag, Zap } from "lucide-react";
 import {
   AlertDialog,
@@ -92,13 +95,13 @@ export default function DetailsTab({
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Status</span>
-                <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <StatusBadge status="active">
                   Aktiv
-                </Badge>
+                </StatusBadge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Sichtbarkeit</span>
-                <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                <Badge variant="secondary">
                   Öffentlich
                 </Badge>
               </div>
@@ -119,9 +122,14 @@ export default function DetailsTab({
             <CardTitle className="text-sm font-medium">Preise</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <select className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
-              <option>DE - 19% Germany</option>
-            </select>
+            <Select defaultValue="de">
+              <SelectTrigger className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
+                <SelectValue placeholder="Select Tax..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="de">DE - 19% Germany</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Laden</span>
@@ -149,7 +157,7 @@ export default function DetailsTab({
           <CardTitle className="text-sm font-medium">Preisänderungen</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
-          <textarea
+          <Textarea
             value={variantDetails.priceChanges}
             onChange={(e) => onDetailChange("priceChanges", e.target.value)}
             className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 h-24 resize-none bg-slate-50 dark:bg-slate-800"
@@ -220,7 +228,7 @@ export default function DetailsTab({
         <AlertDialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
           <AlertDialogTrigger asChild>
             <Button 
-              variant="primary" 
+              variant="default" 
               size="sm" 
               className="w-full"
               type="button"

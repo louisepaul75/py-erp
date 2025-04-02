@@ -8,6 +8,7 @@ import { Product } from "@/components/types/product";
 import { ProductListProps } from "@/components/types/product";
 import { SkinnyTable } from "@/components/ui/skinny-table";
 import { StatusBadge } from "@/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search,
   X,
@@ -41,19 +42,6 @@ export default function ProductList({
   const [sortField, setSortField] = useState<keyof Product>("id");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50";
-      case "inactive":
-        return "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/50";
-      case "draft":
-        return "bg-slate-50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-      default:
-        return "bg-slate-50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-    }
-  };
-
   console.log("filteredProducts in ProductList", filteredProducts);
   const sortedFilteredProducts = useMemo(() => {
     // Ensure filteredProducts is an array before sorting
@@ -85,7 +73,7 @@ export default function ProductList({
   };
 
   return (
-    <div className="h-full w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+    <div className="h-full w-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
       {/* Search and Filters */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
         {/* <div className="relative md:hidden mb-4">
@@ -175,22 +163,27 @@ export default function ProductList({
           <span className="text-sm text-slate-600 dark:text-slate-400">
             Rows per page:
           </span>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => {
+          <Select
+            value={pagination.pageSize.toString()}
+            onValueChange={(value) => {
+              const newPageSize = parseInt(value, 10);
               setPagination({
                 pageIndex: 0, // Reset to first page
-                pageSize: Number(e.target.value),
+                pageSize: newPageSize,
               });
             }}
-            className="text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
           >
-            {[20, 30, 40].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[100px] h-8 text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-blue-500">
+              <SelectValue placeholder="Size" />
+            </SelectTrigger>
+            <SelectContent>
+              {[20, 30, 40].map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>
