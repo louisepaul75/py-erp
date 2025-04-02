@@ -40,18 +40,21 @@ export default function RootLayout({
         {/* Add empty CSRF token meta tag that can be populated by API responses */}
         <meta name="csrf-token" content="" />
       </head>
-      <body className="min-h-screen bg-gray-50 text-amber-950">
+      {/* Make body a flex container, column direction */}
+      <body className="min-h-screen bg-gray-50 text-amber-950 flex flex-col">
         {/* Add texture div (will be visually controlled by CSS) */}
         <div className="texture" />
         <ThemeProvider attribute="data-theme" defaultTheme="default-light">
           <Providers>
             <LastVisitedProvider>
+              {/* Remove the wrapper div */}
               <MainLayout>
                 {/* <Theme> */}
                 {children}
                 {/* </Theme> */}
               </MainLayout>
             </LastVisitedProvider>
+            {/* Footer rendered outside the growing div */}
             <Footer />
           </Providers>
         </ThemeProvider>

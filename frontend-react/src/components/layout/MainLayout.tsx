@@ -367,9 +367,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const isDashboard = pathname === '/dashboard'
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background flex flex-col flex-1">
       <Navbar />
-      <div className="flex pt-16">
+      <div className="flex flex-1">
         <SidebarProvider defaultOpen={isDashboard}>
           <MainLayoutContent>
             {children}
@@ -382,34 +382,24 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
 // New component that uses the sidebar context
 const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
-  const { state } = useSidebar()
-  const isCollapsed = state === "collapsed"
+  // We don't need isCollapsed directly for layout here anymore
+  // const { state } = useSidebar()
+  // const isCollapsed = state === "collapsed"
   
   return (
-    <div className="relative w-full">
-      {/* Layer 1: Background */}
-      {/* Already provided by the min-h-screen bg-background in the parent div */}
-      
-      {/* Layer 2: Header already at the top outside this container */}
-      
-      {/* Layer 3: Sidebar */}
+    // Remove relative
+    <div className="w-full flex">
+      {/* Layer 3: Sidebar (as a flex item) */}
       <SidebarContents />
       
-      {/* Sidebar toggle button - positioned on the edge of the sidebar */}
+      {/* Sidebar toggle button - positioned absolutely, might need adjustment later */}
       <AlwaysVisibleSidebarToggle />
       
-      {/* Layer 4: Main content */}
+      {/* Layer 4: Main content (as the expanding flex item) */}
       <main 
-        className="flex-1 p-6 relative min-h-[calc(100vh-4rem)]" 
-        style={{
-          position: 'absolute',
-          left: isCollapsed ? '0' : 'var(--sidebar-width)',
-          transform: 'none',
-          width: isCollapsed ? '100%' : 'calc(100% - var(--sidebar-width))',
-          maxWidth: '100%',
-          zIndex: 0,
-          transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out'
-        }}>
+        className="flex-1 pt-16 p-6 bg-background overflow-auto" 
+        style={{ /* Style prop is now empty */ }}
+      >
         <div className="mx-auto max-w-[1400px]">
           {children}
         </div>
