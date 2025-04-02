@@ -89,7 +89,7 @@ function determineMoldActivityStatus(articles: any[] | undefined): MoldActivityS
 /**
  * API URL for molds
  */
-const API_URL = `${BASE_URL}/production/molds/`
+const API_URL = '/api/production/molds/'
 
 /**
  * Custom hook for managing molds data
@@ -171,7 +171,7 @@ export function useMolds() {
       const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
       
       // Attempt to create via the API
-      const response = await axios.post(API_URL, mold, {
+      const response = await axios.post('/api/production/molds/', mold, {
         headers: token ? {
           'Authorization': `Bearer ${token}`
         } : {}
@@ -236,7 +236,7 @@ export function useMolds() {
       const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
       
       // Attempt to update via the API
-      const response = await axios.put(`${API_URL}${mold.id}/`, mold, {
+      const response = await axios.put(`/api/production/molds/${mold.id}/`, mold, {
         headers: token ? {
           'Authorization': `Bearer ${token}`
         } : {}
@@ -509,7 +509,7 @@ export function useMolds() {
       const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
       
       // Attempt to delete via the API
-      const response = await axios.delete(`${API_URL}${id}/`, {
+      const response = await axios.delete(`/api/production/molds/${id}/`, {
         headers: token ? {
           'Authorization': `Bearer ${token}`
         } : {}

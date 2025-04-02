@@ -9,7 +9,7 @@ import { AUTH_CONFIG } from "@/lib/config"
 /**
  * API URL for mold alloys
  */
-const API_URL = `${BASE_URL}/production/molds/alloys/`
+const API_URL = '/api/production/molds/alloys/'
 
 /**
  * Mock data for alloys, used as fallback
