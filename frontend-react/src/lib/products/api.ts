@@ -154,9 +154,9 @@ export const productApi = {
 
     try {
       // Log that we're making the API call
-      console.log(`Making API request to products/list/ with params:`, defaultParams);
+      console.log(`Making API request to api/products/list/ with params:`, defaultParams);
       
-      const response = await api.get("products/list/", { searchParams: defaultParams }).json();
+      const response = await api.get("api/products/list/", { searchParams: defaultParams }).json();
       
       // Check for specific SKUs in the response
       if (response && response.results) {
