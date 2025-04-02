@@ -45,10 +45,14 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="absolute top-1/2 -translate-y-1/2 -right-8 z-[60] h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
+      className="absolute top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
+      style={{
+        left: isCollapsed ? '0' : 'var(--sidebar-width)',
+        marginLeft: isCollapsed ? '0' : '-1px' // Slight adjustment for border overlap
+      }}
       onClick={toggleSidebar}
     >
-      <ChevronRight className={`h-5 w-5 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
+      <ChevronRight className={`h-5 w-5 transition-transform duration-300 ${isCollapsed ? 'rotate-0' : 'rotate-180'}`} />
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
@@ -233,7 +237,7 @@ const SidebarContents = () => {
   };
   
   return (
-    <div className="relative">
+    <div className="relative z-10">
       <Sidebar>
         <SidebarHeader className="z-[1]">
           <div className="flex items-center px-2 py-2 relative">
@@ -349,7 +353,6 @@ const SidebarContents = () => {
           </SidebarGroup>
         </SidebarContent>
       </Sidebar>
-      <AlwaysVisibleSidebarToggle />
     </div>
   )
 }
@@ -367,20 +370,47 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <Navbar />
       <div className="flex pt-16">
         <SidebarProvider defaultOpen={isDashboard}>
-          <SidebarContents />
-          <main className="flex-1 p-6 relative z-10" style={{ 
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'calc(100% - var(--sidebar-width))',
-            maxWidth: '1400px'
-          }}>
-            <div className="mx-auto">
-              {children}
-            </div>
-          </main>
+          <MainLayoutContent>
+            {children}
+          </MainLayoutContent>
         </SidebarProvider>
       </div>
+    </div>
+  )
+}
+
+// New component that uses the sidebar context
+const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
+  
+  return (
+    <div className="relative w-full">
+      {/* Layer 1: Background */}
+      {/* Already provided by the min-h-screen bg-background in the parent div */}
+      
+      {/* Layer 2: Header already at the top outside this container */}
+      
+      {/* Layer 3: Sidebar */}
+      <SidebarContents />
+      
+      {/* Sidebar toggle button - positioned on the edge of the sidebar */}
+      <AlwaysVisibleSidebarToggle />
+      
+      {/* Layer 4: Main content */}
+      <main className="flex-1 p-6 relative" style={{ 
+        position: 'absolute',
+        left: isCollapsed ? '0' : 'var(--sidebar-width)',
+        transform: 'none',
+        width: isCollapsed ? '100%' : 'calc(100% - var(--sidebar-width))',
+        maxWidth: '100%',
+        zIndex: 0,
+        transition: 'left 0.3s ease-in-out, width 0.3s ease-in-out'
+      }}>
+        <div className="mx-auto max-w-[1400px]">
+          {children}
+        </div>
+      </main>
     </div>
   )
 } 

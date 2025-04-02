@@ -181,7 +181,7 @@ const Sidebar = React.forwardRef<
       data-variant={variant}
       data-collapsible={collapsible}
       className={cn(
-        "fixed top-16 left-0 z-[1] flex h-[calc(100vh-4rem)] w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+        "fixed top-16 left-0 z-10 flex h-[calc(100vh-4rem)] w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
         "group peer",
         "data-[state=collapsed]:-translate-x-full",
         className
