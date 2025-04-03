@@ -21,6 +21,14 @@ interface LayoutEditorSidebarProps {
   onRemoveSelectedWidget: () => void;
 }
 
+// Widget type display mapping
+const widgetTypeNames: Record<string, string> = {
+  "menu-tiles": "Menü Kacheln",
+  "quick-links": "Schnellzugriff",
+  "news-pinboard": "Pinnwand",
+  "sales-analysis": "Verkaufsanalyse"
+};
+
 export function LayoutEditorSidebar({
   isVisible,
   availableWidgets,
@@ -48,51 +56,62 @@ export function LayoutEditorSidebar({
         <CardTitle className="text-lg">Layout Editor</CardTitle>
       </CardHeader>
       <Separator />
-      <CardContent className="pt-4 flex-1 flex flex-col gap-4 overflow-y-auto">
-        {/* Add Widget Section */}
-        <div>
-          <h4 className="mb-2 text-sm font-medium">Add Widget</h4>
-          <div className="flex flex-col gap-2">
-            <Select value={selectedWidgetType} onValueChange={setSelectedWidgetType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select widget type..." />
+      <CardContent className="flex-1 overflow-y-auto">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="widget-type" className="text-sm font-medium">
+              Widget Typ
+            </label>
+            <Select
+              value={selectedWidgetType}
+              onValueChange={setSelectedWidgetType}
+            >
+              <SelectTrigger id="widget-type">
+                <SelectValue placeholder="Widget auswählen" />
               </SelectTrigger>
               <SelectContent>
-                {availableWidgets.map((widgetName) => (
-                  <SelectItem key={widgetName} value={widgetName}>
-                    {widgetName} {/* You might want a more user-friendly display name */}
+                {availableWidgets.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {widgetTypeNames[type] || type}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button 
-              onClick={handleAddClick} 
+            <Button
+              className="w-full"
+              onClick={handleAddClick}
               disabled={!selectedWidgetType}
             >
-              <Plus className="mr-2 h-4 w-4" /> Add Widget
+              <Plus className="mr-2 h-4 w-4" />
+              Widget hinzufügen
             </Button>
           </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Ausgewähltes Widget</h3>
+            {selectedWidgetId ? (
+              <div className="space-y-2">
+                <div className="px-2 py-1 bg-muted rounded text-sm">
+                  {selectedWidgetId}
+                </div>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={onRemoveSelectedWidget}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Widget entfernen
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Klicke auf ein Widget im Layout, um es auszuwählen
+              </p>
+            )}
+          </div>
         </div>
-
-        <Separator />
-
-        {/* Modify Widget Section */}
-        <div>
-          <h4 className="mb-2 text-sm font-medium">Modify Widget</h4>
-          <Button
-            variant="destructive"
-            onClick={onRemoveSelectedWidget}
-            disabled={!selectedWidgetId}
-            className="w-full"
-          >
-            <Trash2 className="mr-2 h-4 w-4" /> Remove Selected
-          </Button>
-          {/* TODO: Add widget configuration options here later */}
-          {selectedWidgetId && (
-            <p className="mt-2 text-xs text-muted-foreground">Selected: {selectedWidgetId}</p> // Temporary display
-          )}
-        </div>
-
       </CardContent>
     </Card>
   ); 

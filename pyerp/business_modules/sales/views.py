@@ -69,6 +69,72 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
         items = record.line_items.all()
         serializer = SalesRecordItemSerializer(items, many=True)
         return Response(serializer.data)
+        
+    @action(detail=False, methods=["get"])
+    def monthly_analysis(self, request):
+        """
+        Get sales data for the current month aggregated by day.
+        Returns daily sales and cumulative sum for INVOICE records.
+        """
+        import datetime
+        from django.db.models import Sum
+        from django.db.models.functions import TruncDay
+        from collections import OrderedDict
+        
+        # Get current month
+        today = datetime.date.today()
+        start_date = today.replace(day=1)
+        if today.month == 12:
+            end_date = datetime.date(today.year + 1, 1, 1) - datetime.timedelta(days=1)
+        else:
+            end_date = datetime.date(today.year, today.month + 1, 1) - datetime.timedelta(days=1)
+        
+        # Get invoice records for current month
+        invoice_records = self.queryset.filter(
+            record_type="INVOICE",
+            record_date__gte=start_date,
+            record_date__lte=end_date
+        )
+        
+        # Aggregate by day
+        daily_sales = invoice_records.annotate(
+            day=TruncDay('record_date')
+        ).values('day').annotate(
+            total=Sum('total_amount')
+        ).order_by('day')
+        
+        # Generate all days in the month
+        all_days = OrderedDict()
+        current_date = start_date
+        while current_date <= end_date:
+            all_days[current_date.isoformat()] = {'day': current_date.isoformat(), 'total': 0}
+            current_date += datetime.timedelta(days=1)
+        
+        # Fill in actual data
+        for entry in daily_sales:
+            day_iso = entry['day'].isoformat()
+            if day_iso in all_days:
+                all_days[day_iso]['total'] = float(entry['total']) if entry['total'] else 0
+        
+        # Calculate cumulative sum
+        data = []
+        cumulative = 0
+        for day, values in all_days.items():
+            cumulative += values['total']
+            data.append({
+                'date': day,
+                'daily': values['total'],
+                'cumulative': cumulative
+            })
+        
+        return Response({
+            'current_month': {
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'name': today.strftime('%B %Y')
+            },
+            'data': data
+        })
 
 
 class SalesRecordItemViewSet(viewsets.ModelViewSet):

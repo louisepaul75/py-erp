@@ -44,6 +44,8 @@ import {
 } from "@/lib/dashboard-service"
 import { v4 as uuidv4 } from "uuid"
 import { toast } from "@/components/ui/use-toast"
+import dynamic from "next/dynamic"
+import { Spinner } from "@/components/ui/spinner"
 
 // Define types for menu tiles
 interface MenuTile {
@@ -90,7 +92,7 @@ interface Layouts {
 }
 
 // Define known widget types (replace with dynamic list from API/registry if possible)
-const KNOWN_WIDGET_TYPES = ["menu-tiles", "quick-links", "news-pinboard"];
+const KNOWN_WIDGET_TYPES = ["menu-tiles", "quick-links", "news-pinboard", "sales-analysis"];
 
 // Dashboard widget component
 const DashboardWidget = ({
@@ -714,87 +716,95 @@ const Dashboard = () => {
       return layoutItem.title
     }
     
-    // Default titles if not found in layout
-    switch (id) {
-      case "menu-tiles":
-        return "Menü"
-      case "quick-links":
-        return "Schnellzugriff"
-      case "news-pinboard":
-        return "Pinnwand"
-      default:
-        return null
+    // Default titles if not found in layout, using prefix matching
+    if (id.startsWith("menu-tiles")) {
+      return "Menü"
+    } else if (id.startsWith("quick-links")) {
+      return "Schnellzugriff"
+    } else if (id.startsWith("news-pinboard")) {
+      return "Pinnwand"
+    } else if (id.startsWith("sales-analysis")) {
+      return "Verkaufsanalyse"
+    } else {
+      return null
     }
   }
 
   // Function to render widget content based on id
   const renderWidgetContent = (id: string) => {
-    switch (id) {
-      case "menu-tiles":
-        return (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {menuTiles.map((tile) => {
-              const IconComponent = tile.icon
-              return (
-                <Card 
-                  key={tile.id} 
-                  className="relative group cursor-pointer" 
-                  onClick={() => handleMenuClick(tile.id)}
-                >
-                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleFavorite(tile.id)
-                      }}
-                    >
-                      <Star
-                        className={`h-4 w-4 ${tile.favorited ? "fill-yellow-400 text-yellow-400" : ""}`}
-                      />
-                    </Button>
-                    <div className="mb-2 mt-2 p-2 bg-primary/10 rounded-full">
-                      <IconComponent className="h-6 w-6 text-primary" />
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{tile.name}</span>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )
-      case "quick-links":
-        return (
-          <div className="space-y-3">
-            {quickLinks.map((link, index) => (
-              <Link key={index} href={link.url}>
-                <Button variant="ghost" className="w-full justify-start text-sm text-foreground hover:text-primary">
-                  {link.name}
-                </Button>
-              </Link>
-            ))}
-          </div>
-        )
-      case "news-pinboard":
-        return (
-          <div className="space-y-4 overflow-auto max-h-full">
-            {newsItems.map((item, index) => (
-              <Card key={index}>
-                <CardHeader className="p-3">
-                  <CardTitle className="text-sm font-medium text-primary">{item.title}</CardTitle>
-                  <p className="text-xs text-muted-foreground">{item.date}</p>
-                </CardHeader>
-                <CardContent className="p-3 pt-0">
-                  <p className="text-xs text-foreground">{item.content}</p>
+    // Check if the id starts with any of our known widget types
+    if (id.startsWith("menu-tiles")) {
+      return (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          {menuTiles.map((tile) => {
+            const IconComponent = tile.icon
+            return (
+              <Card 
+                key={tile.id} 
+                className="relative group cursor-pointer" 
+                onClick={() => handleMenuClick(tile.id)}
+              >
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleFavorite(tile.id)
+                    }}
+                  >
+                    <Star
+                      className={`h-4 w-4 ${tile.favorited ? "fill-yellow-400 text-yellow-400" : ""}`}
+                    />
+                  </Button>
+                  <div className="mb-2 mt-2 p-2 bg-primary/10 rounded-full">
+                    <IconComponent className="h-6 w-6 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{tile.name}</span>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )
-      default:
-        return <div>Unknown widget: {id}</div>
+            )
+          })}
+        </div>
+      )
+    } else if (id.startsWith("quick-links")) {
+      return (
+        <div className="space-y-3">
+          {quickLinks.map((link, index) => (
+            <Link key={index} href={link.url}>
+              <Button variant="ghost" className="w-full justify-start text-sm text-foreground hover:text-primary">
+                {link.name}
+              </Button>
+            </Link>
+          ))}
+        </div>
+      )
+    } else if (id.startsWith("news-pinboard")) {
+      return (
+        <div className="space-y-4 overflow-auto max-h-full">
+          {newsItems.map((item, index) => (
+            <Card key={index}>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm font-medium text-primary">{item.title}</CardTitle>
+                <p className="text-xs text-muted-foreground">{item.date}</p>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <p className="text-xs text-foreground">{item.content}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )
+    } else if (id.startsWith("sales-analysis")) {
+      // Import the widget component dynamically to avoid circular dependencies
+      const SalesAnalysisWidget = dynamic(() => import('@/components/widgets/sales-analysis-widget'), {
+        loading: () => <div className="h-full w-full flex items-center justify-center"><Spinner /></div>,
+        ssr: false
+      });
+      return <SalesAnalysisWidget />;
+    } else {
+      return <div>Unknown widget: {id}</div>
     }
   }
 
