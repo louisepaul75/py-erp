@@ -223,7 +223,7 @@ export function Navbar() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring items-center"
+                  className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring items-center bg-muted/20 border border-border px-3 py-1.5"
                   id="user-menu"
                 >
                   <span className="sr-only">Open user menu</span>
@@ -288,7 +288,7 @@ export function Navbar() {
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
+                      className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring bg-muted/20 border border-border p-1"
                     >
                       <User className="h-8 w-8 rounded-full p-1 bg-muted text-muted-foreground" />
                     </button>
