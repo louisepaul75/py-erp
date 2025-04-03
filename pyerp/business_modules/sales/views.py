@@ -421,21 +421,24 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
             cumulative_avg_5_years_value = None
 
             # Get pre-calculated cumulative values directly using month_num
-            cumulative_value = current_cumulative_data.get(month_num, 0)
+            cumulative_value = current_cumulative_data.get(month_num, 0) # Default to 0 if not found
             cumulative_prev_year_value = prev_year_cumulative_data.get(
-                month_num, 0
+                month_num, 0 # Default to 0 if not found for prev year
             )
             cumulative_avg_5_years_value = avg_5_years_cumulative_data.get(
-                month_num, 0
+                month_num, 0 # Default to 0 if not found for 5yr avg
             )
 
             # In annual view, 'daily' represents the total for the month
             # Only get monthly total if the month is not in the future
             monthly_total_value = None
             # Use <= comparison to include the current month fully
-            if current_month_start_date.replace(day=1) <= today.replace(day=1):
+            is_future_month = current_month_start_date.replace(day=1) > today.replace(day=1)
+            if not is_future_month:
                 monthly_total_value = current_monthly_totals.get(month_num, 0)
-            # Note: Cumulative values remain populated even for future months.
+            # Set cumulative value to None for future months
+            else:
+                 cumulative_value = None # Set to None for future months
 
             data.append({
                 'date': month_iso,  # Use start of month date for X-axis

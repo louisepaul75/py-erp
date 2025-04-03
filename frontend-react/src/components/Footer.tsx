@@ -286,7 +286,7 @@ export function Footer() {
       <footer className="bg-footer text-footer-foreground border-t border-border fixed bottom-0 w-full z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="text-sm">
-            &copy; {new Date().getFullYear()} pyERP System
+            &copy; {new Date().getFullYear()} pyERP
           </div>
           
           <Link 
