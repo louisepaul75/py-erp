@@ -28,9 +28,11 @@ import { instance as api } from "@/lib/api";
 
 interface SalesData {
   date: string;
-  daily: number;
-  cumulative: number;
-  year: number;
+  daily: number | null;
+  cumulative: number | null;
+  cumulative_prev_year?: number | null;
+  cumulative_avg_5_years?: number | null;
+  year?: number;
 }
 
 interface MonthInfo {
@@ -193,12 +195,33 @@ export function SalesAnalysisWidget() {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
+      const data = payload[0].payload as SalesData;
+      const currentYearLabel = data.year || selectedYear;
+      const prevYearLabel = currentYearLabel - 1;
+      const fiveYearAvgLabel = `${currentYearLabel-5}-${currentYearLabel-1}`;
+
       return (
-        <div className="bg-popover shadow-md rounded-md p-2 border border-border text-popover-foreground">
-          <p className="font-medium">{new Date(data.date).toLocaleDateString('de-DE')}</p>
-          <p>Tagesumsatz: {formatCurrency(data.daily)}</p>
-          <p>Kumuliert: {formatCurrency(data.cumulative)}</p>
+        <div className="bg-popover shadow-md rounded-md p-2 border border-border text-popover-foreground text-xs">
+          <p className="font-medium mb-1">{new Date(data.date).toLocaleDateString('de-DE')}</p>
+          {data.daily !== null && <p>Tagesumsatz: {formatCurrency(data.daily)}</p>}
+          {data.cumulative !== null && 
+            <p className="flex items-center">
+              <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: 'var(--primary)' }}></span>
+              Kumuliert ({currentYearLabel}): {formatCurrency(data.cumulative)}
+            </p>
+          }
+          {data.cumulative_prev_year !== null && data.cumulative_prev_year !== undefined && 
+            <p className="flex items-center">
+              <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: 'var(--muted-foreground)' }}></span>
+              Kumuliert ({prevYearLabel}): {formatCurrency(data.cumulative_prev_year)}
+            </p>
+          }
+          {data.cumulative_avg_5_years !== null && data.cumulative_avg_5_years !== undefined && 
+            <p className="flex items-center">
+               <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: 'var(--muted-foreground)' }}></span>
+              5J. Ø Kumuliert: {formatCurrency(data.cumulative_avg_5_years)}
+            </p>
+          }
         </div>
       );
     }
@@ -269,7 +292,7 @@ export function SalesAnalysisWidget() {
                 {mode === 'monthly' && (
                   <Select
                     value={selectedMonth.toString()}
-                    onValueChange={(value) => setSelectedMonth(parseInt(value))}
+                    onValueChange={(value: string) => setSelectedMonth(parseInt(value))}
                     disabled={isLoading}
                   >
                     <SelectTrigger className="h-7 px-2 text-xs w-[85px]">
@@ -287,7 +310,7 @@ export function SalesAnalysisWidget() {
                 
                 <Select
                   value={selectedYear.toString()}
-                  onValueChange={(value) => setSelectedYear(parseInt(value))}
+                  onValueChange={(value: string) => setSelectedYear(parseInt(value))}
                   disabled={isLoading}
                 >
                   <SelectTrigger className="h-7 px-2 text-xs w-[70px]">
@@ -337,7 +360,7 @@ export function SalesAnalysisWidget() {
             <div className="w-full h-[200px] flex items-center justify-center text-muted-foreground">
               <p>{error}</p>
             </div>
-          ) : data && data.data.length > 0 && data.data.some(item => item.daily > 0 || item.cumulative > 0) ? (
+          ) : data && data.data.length > 0 && data.data.some(item => (item.daily ?? 0) > 0 || (item.cumulative ?? 0) > 0) ? (
             <div className="w-full h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -367,11 +390,32 @@ export function SalesAnalysisWidget() {
                   <Line
                     type="monotone"
                     dataKey="cumulative"
-                    name="Kumulierter Umsatz"
+                    name={`Kumuliert (${selectedYear})`}
                     stroke="var(--primary)"
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 6, fill: 'var(--primary)' }}
+                    connectNulls={true}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cumulative_prev_year"
+                    name={`Kumuliert (${selectedYear - 1})`}
+                    stroke="var(--muted-foreground)"
+                    strokeWidth={1.5}
+                    dot={false}
+                    activeDot={{ r: 5, fill: 'var(--muted-foreground)' }}
+                    connectNulls={true}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cumulative_avg_5_years"
+                    name="5J. Ø Kumuliert"
+                    stroke="var(--muted-foreground)"
+                    strokeWidth={1.5}
+                    strokeDasharray="8 4"
+                    dot={false}
+                    activeDot={{ r: 5, fill: 'var(--muted-foreground)' }}
                     connectNulls={true}
                   />
                 </LineChart>
