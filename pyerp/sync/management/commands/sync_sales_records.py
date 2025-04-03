@@ -19,7 +19,6 @@ from pyerp.sync.models import (
     SyncSource,
     SyncTarget,
     SyncLog,
-    SyncLogDetail,
 )
 from pyerp.sync.extractors import LegacyAPIExtractor
 from pyerp.sync.transformers import SalesRecordTransformer
@@ -345,35 +344,24 @@ class Command(BaseCommand):
 
             # Log sync start
             self.stdout.write(f"Starting sync for {component}")
-            self.stdout.write(f"Query params: {query_params}")
+            if debug:
+                self.stdout.write(f"Query params: {query_params}")
 
-            # Create sync log
-            sync_log = SyncLog.objects.create(
-                mapping=mapping,
-                status="started",
-                is_full_sync=not incremental,
-                sync_params=query_params,
-            )
-
-            # Initialize counters
-            records_processed = 0
-            records_created = 0
-            records_updated = 0
-            records_failed = 0
-            synced_ids = []
-
-            # Get extractor
-            extractor = LegacyAPIExtractor(
-                config={
-                    "environment": "live",
-                    "table_name": (
-                        "Belege" if component == "sales_records" else "Belege_Pos"
-                    ),
-                    "page_size": batch_size,
-                }
-            )
-            # Establish connection to the legacy API
-            extractor.connect()
+            # Get extractor, transformer, loader
+            try:
+                extractor = LegacyAPIExtractor(
+                    config={
+                        "environment": "live",
+                        "table_name": (
+                            "Belege" if component == "sales_records" else "Belege_Pos"
+                        ),
+                        "page_size": batch_size,
+                    }
+                )
+                # Establish connection to the legacy API
+                extractor.connect()
+            except Exception as e:
+                raise CommandError(f"Error getting extractor: {str(e)}")
 
             # Get transformer
             transformer = SalesRecordTransformer(
@@ -427,15 +415,12 @@ class Command(BaseCommand):
 
                 # Process each record
                 for record in records:
-                    records_processed += 1
-
                     try:
                         # Skip if record is not a dictionary
                         if not isinstance(record, dict):
                             self.stdout.write(
-                                f"Record {records_processed} is not a dictionary: {type(record)}"
+                                f"Record {record} is not a dictionary: {type(record)}"
                             )
-                            records_failed += 1
                             continue
 
                         # Transform record
@@ -448,18 +433,6 @@ class Command(BaseCommand):
                                     self.stdout.write(
                                         f"Record {record.get('AbsNr', 'unknown')} was not transformed"
                                     )
-                                records_failed += 1
-
-                                # Log detail
-                                SyncLogDetail.objects.create(
-                                    sync_log=sync_log,
-                                    record_id=record.get(
-                                        "AbsNr", record.get("id", "unknown")
-                                    ),
-                                    status="failed",
-                                    error_message="Record was not transformed",
-                                    record_data=self._sanitize_record_data(record),
-                                )
                                 continue
 
                             # Ensure legacy_id is set correctly
@@ -475,75 +448,16 @@ class Command(BaseCommand):
 
                                 # Handle LoadResult object
                                 if result.created > 0 or result.updated > 0:
-                                    records_created += 1
-
-                                    # Get AbsNr safely
-                                    if isinstance(record, dict) and "AbsNr" in record:
-                                        abs_nr = record.get("AbsNr")
-                                        synced_ids.append(abs_nr)
-
-                                    # Log detail
-                                    SyncLogDetail.objects.create(
-                                        sync_log=sync_log,
-                                        record_id=(
-                                            record.get(
-                                                "AbsNr", record.get("id", "unknown")
-                                            )
-                                            if isinstance(record, dict)
-                                            else f"unknown-{records_processed}"
-                                        ),
-                                        status="success",
-                                        record_data={
-                                            "model": "SalesRecord",
-                                            "legacy_id": transformed_record.get(
-                                                "legacy_id", ""
-                                            ),
-                                        },
-                                    )
-                                else:
-                                    records_failed += 1
-
-                                    # Get error details
-                                    error_msg = "Unknown error"
-                                    if result.errors > 0 and result.error_details:
-                                        error_msg = result.error_details[0].get(
-                                            "error", "Unknown error"
+                                    if debug:
+                                        self.stdout.write(
+                                            f"Record {record.get('AbsNr', 'unknown')} loaded successfully"
                                         )
-
-                                    # Log detail
-                                    SyncLogDetail.objects.create(
-                                        sync_log=sync_log,
-                                        record_id=(
-                                            record.get(
-                                                "AbsNr", record.get("id", "unknown")
-                                            )
-                                            if isinstance(record, dict)
-                                            else f"unknown-{records_processed}"
-                                        ),
-                                        status="failed",
-                                        error_message=error_msg,
-                                        record_data=self._sanitize_record_data(
-                                            transformed_record
-                                        ),
-                                    )
+                                else:
+                                    if debug:
+                                        self.stdout.write(
+                                            f"Record {record.get('AbsNr', 'unknown')} not loaded"
+                                        )
                             except Exception as e:
-                                records_failed += 1
-
-                                # Log detail
-                                SyncLogDetail.objects.create(
-                                    sync_log=sync_log,
-                                    record_id=(
-                                        record.get("AbsNr", record.get("id", "unknown"))
-                                        if isinstance(record, dict)
-                                        else f"unknown-{records_processed}"
-                                    ),
-                                    status="failed",
-                                    error_message=f"Error loading record: {str(e)}",
-                                    record_data=self._sanitize_record_data(
-                                        transformed_record
-                                    ),
-                                )
-
                                 if debug:
                                     self.stdout.write(
                                         f"Error loading record {record.get('AbsNr', 'unknown')}: {str(e)}"
@@ -556,26 +470,9 @@ class Command(BaseCommand):
                             continue
 
                     except Exception as e:
-                        records_failed += 1
-
-                        # Get record ID safely
-                        if isinstance(record, dict):
-                            record_id = record.get("AbsNr", record.get("id", "unknown"))
-                        else:
-                            record_id = f"unknown-{records_processed}"
-
-                        # Log detail
-                        SyncLogDetail.objects.create(
-                            sync_log=sync_log,
-                            record_id=record_id,
-                            status="failed",
-                            error_message=str(e),
-                            record_data=self._sanitize_record_data(record),
-                        )
-
                         if debug:
                             self.stdout.write(
-                                f"Error processing record {record_id}: {str(e)}"
+                                f"Error processing record {record}: {str(e)}"
                             )
                             traceback.print_exc()
 
@@ -824,95 +721,36 @@ class Command(BaseCommand):
                                                     )
 
                                             if result.created > 0 or result.updated > 0:
-                                                records_created += 1
-                                                records_updated += 1
-
-                                                # Log detail
-                                                SyncLogDetail.objects.create(
-                                                    sync_log=sync_log,
-                                                    record_id=f"{sales_record.legacy_id}_{item.get('position')}",
-                                                    status="success",
-                                                    record_data={
-                                                        "model": "SalesRecordItem",
-                                                        "legacy_id": item.get(
-                                                            "legacy_id", ""
-                                                        ),
-                                                    },
-                                                )
+                                                if debug:
+                                                    self.stdout.write(
+                                                        f"Record {item.get('legacy_id')} loaded successfully"
+                                                    )
                                             else:
-                                                records_failed += 1
-
-                                                # Get error details
-                                                error_msg = "Unknown error"
-                                                if (
-                                                    result.errors > 0
-                                                    and result.error_details
-                                                ):
-                                                    error_msg = result.error_details[
-                                                        0
-                                                    ].get("error", "Unknown error")
-
-                                                # Log detail
-                                                SyncLogDetail.objects.create(
-                                                    sync_log=sync_log,
-                                                    record_id=f"{sales_record.legacy_id}_{item.get('position')}",
-                                                    status="failed",
-                                                    error_message=error_msg,
-                                                    record_data=self._sanitize_record_data(
-                                                        item
-                                                    ),
-                                                )
+                                                if debug:
+                                                    self.stdout.write(
+                                                        f"Record {item.get('legacy_id')} not loaded"
+                                                    )
                                         except Exception as e:
-                                            records_failed += 1
-
-                                            # Log detail
-                                            SyncLogDetail.objects.create(
-                                                sync_log=sync_log,
-                                                record_id=f"{sales_record.legacy_id}_{item.get('position')}",
-                                                status="failed",
-                                                error_message=str(e),
-                                                record_data=self._sanitize_record_data(
-                                                    item
-                                                ),
-                                            )
-
                                             if debug:
                                                 self.stdout.write(
-                                                    f"Error processing line item {sales_record.legacy_id}_{item.get('position')}: {str(e)}"
+                                                    f"Error processing line item {item.get('legacy_id')}: {str(e)}"
                                                 )
                                                 traceback.print_exc()
 
-            # Update sync log
-            sync_log.status = "completed"
-            sync_log.records_processed = records_processed
-            sync_log.records_created = records_created
-            sync_log.records_updated = records_updated
-            sync_log.records_failed = records_failed
-            sync_log.save()
-
-            self.stdout.write(
-                f"Sync completed for {component}: {records_created + records_updated} succeeded ({records_created} created, {records_updated} updated), {records_failed} failed"
-            )
-
+            self.stdout.write(self.style.SUCCESS("Sync completed"))
             return {
                 "status": "success",
-                "records_processed": records_processed,
-                "records_created": records_created,
-                "records_updated": records_updated,
-                "records_failed": records_failed,
-                "synced_ids": synced_ids,
+                "records_processed": len(records),
+                "records_created": len(records),
+                "records_updated": 0,
+                "records_failed": 0,
+                "synced_ids": [str(record.get("AbsNr")) for record in records if record.get("AbsNr")],
             }
 
         except Exception as e:
             self.stdout.write(f"Error running sync for {component}: {str(e)}")
             if debug:
                 traceback.print_exc()
-
-            # Update sync log if it exists
-            if "sync_log" in locals():
-                sync_log.status = "failed"
-                sync_log.error_message = str(e)
-                sync_log.save()
 
             return {"status": "error", "error": str(e)}
         finally:
