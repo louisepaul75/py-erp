@@ -32,6 +32,7 @@ parent_products:
         Einseitig: is_one_sided
         Release_date: release_date
         Neu: is_new
+        aktiv: is_active
       custom_transformers:
         - transform_dimensions
         - transform_boolean_flags
@@ -74,8 +75,6 @@ variants:
     config:
       environment: live
       table_name: Artikel_Variante
-      filters:
-        active: true
       page_size: 1000
       all_records: true
   transformer:
@@ -101,6 +100,7 @@ variants:
         Verkaufsartikel: is_sales_article
         Release_date: release_date
         Auslaufdatum: discontinuation_date
+        Aktiv: is_active
       custom_transformers:
         - transform_dimensions
         - transform_boolean_flags

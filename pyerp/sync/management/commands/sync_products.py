@@ -90,6 +90,11 @@ class Command(BaseCommand):
             help="Update records even if not modified",
         )
         parser.add_argument(
+            "--top",
+            type=int,
+            help="Only process the first N records",
+        )
+        parser.add_argument(
             "--debug",
             action="store_true",
             help="Enable debug output",
@@ -139,8 +144,17 @@ class Command(BaseCommand):
                 query_params["Nummer"] = options["sku"]
                 self.stdout.write(f"Filtering by SKU: {options['sku']}")
 
-            # Set batch size
-            batch_size = options["batch_size"]
+            # Set limit if top parameter specified
+            limit = options.get("top")
+            if limit:
+                query_params["$top"] = limit
+                self.stdout.write(f"Limiting to first {limit} records")
+                # Also set batch_size to match limit to prevent extra processing
+                batch_size = limit
+            else:
+                # Set batch size from options if no limit specified
+                batch_size = options["batch_size"]
+                
             self.stdout.write(f"Using batch size: {batch_size}")
 
             # Get fail_on_filter_error option

@@ -145,6 +145,32 @@ class ProductTransformer(BaseTransformer):
                     )
                     continue
 
+                # Apply custom transformers specified in config
+                custom_transformers = self.config.get("custom_transformers", [])
+                for transformer_name in custom_transformers:
+                    # Check if the transformer method exists
+                    if hasattr(self, transformer_name) and callable(getattr(self, transformer_name)):
+                        # Call the transformer method
+                        transformer_method = getattr(self, transformer_name)
+                        try:
+                            transformed = transformer_method(transformed, record)
+                            if transformed is None:
+                                logger.warning(
+                                    f"Transformer {transformer_name} returned None, skipping record"
+                                )
+                                break
+                        except Exception as e:
+                            logger.error(
+                                f"Error applying transformer {transformer_name}: {e}",
+                                exc_info=True
+                            )
+                    else:
+                        logger.warning(f"Transformer method {transformer_name} not found")
+
+                # Skip if any transformer returned None
+                if transformed is None:
+                    continue
+
                 # Try to establish parent relationship for variants
                 if "legacy_parent_id" in transformed:
                     transformed = self.transform_parent_relationship(
@@ -489,3 +515,50 @@ class ProductTransformer(BaseTransformer):
                 )
 
         return transformed_records
+
+    def transform_boolean_flags(self, transformed: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform boolean fields from various formats to Python boolean values.
+        
+        Args:
+            transformed: The transformed record
+            source: The source record
+            
+        Returns:
+            Updated transformed record with boolean fields properly converted
+        """
+        # Map source boolean fields to target boolean fields
+        boolean_field_mappings = {
+            "Aktiv": "is_active",
+            "aktiv": "is_active",  # Handle both case variants
+            "Verkaufsartikel": "is_verkaufsartikel",
+            "neu": "is_new",
+            "Haengend": "is_hanging",
+            "Einseitig": "is_one_sided",
+        }
+        
+        # Process each boolean field mapping
+        for source_field, target_field in boolean_field_mappings.items():
+            if source_field in source:
+                # Get the value from source record
+                value = source[source_field]
+                
+                # Convert to Python boolean
+                if isinstance(value, str):
+                    # Convert string representations to boolean
+                    transformed[target_field] = value.lower() in ("true", "1", "yes", "y", "t")
+                elif isinstance(value, (int, float)):
+                    # Convert numeric representations to boolean
+                    transformed[target_field] = bool(value)
+                else:
+                    # Handle boolean values directly
+                    transformed[target_field] = bool(value)
+                
+                logger.debug(
+                    "Converted boolean field %s -> %s: %s -> %s",
+                    source_field,
+                    target_field,
+                    value,
+                    transformed[target_field]
+                )
+        
+        return transformed

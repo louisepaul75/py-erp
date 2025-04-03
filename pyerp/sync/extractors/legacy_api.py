@@ -103,10 +103,6 @@ class LegacyAPIExtractor(BaseExtractor):
 
             all_records = self.config.get("all_records", False)
 
-            # Initialize variables for pagination
-            skip = 0
-            all_records_list = []
-
             # If we have a limit, only do one fetch
             limit_records = query_params and "$top" in query_params
 
@@ -116,13 +112,37 @@ class LegacyAPIExtractor(BaseExtractor):
                 filter_query = query_params["filter_query"]
                 logger.info(f"Using filter_query from query_params: {filter_query}")
 
+            # If we have a $top parameter, do only one fetch with exactly that number of records
+            if limit_records:
+                logger.info(f"Limiting to first {page_size} records due to $top parameter")
+                records_df = client.fetch_table(
+                    table_name=self.config["table_name"],
+                    filter_query=filter_query,
+                    top=page_size,
+                    skip=0,
+                    all_records=False,
+                )
+                
+                if records_df is None or records_df.empty:
+                    return []
+                    
+                # Convert DataFrame to list of dictionaries
+                try:
+                    records = records_df.to_dict(orient="records")
+                    logger.info(f"Extracted {len(records)} records with $top limit")
+                    return records
+                except Exception as e:
+                    logger.error(f"Error converting DataFrame to records: {e}")
+                    return []
+
+            # Regular pagination for cases without $top parameter
             while True:
                 # Fetch data using the filter query
                 df = client.fetch_table(
                     table_name=self.config["table_name"],
                     filter_query=filter_query,
                     top=page_size,
-                    skip=skip,
+                    skip=0,
                     all_records=all_records,
                 )
 
@@ -135,19 +155,18 @@ class LegacyAPIExtractor(BaseExtractor):
                     records = df.to_dict(orient="records")
 
                     # Ensure records are properly formatted as dictionaries
-                    valid_records = []
+                    all_records_list = []
                     for record in records:
                         if isinstance(record, dict):
-                            valid_records.append(record)
+                            all_records_list.append(record)
                         else:
                             logger.warning(
                                 f"Skipping non-dictionary record: {type(record)}"
                             )
-
-                    all_records_list.extend(valid_records)
                 except Exception as e:
                     logger.error(f"Error converting DataFrame to records: {e}")
                     # Try to extract raw data if possible
+                    all_records_list = []
                     if hasattr(df, "values") and hasattr(df, "columns"):
                         try:
                             columns = df.columns.tolist()
@@ -166,19 +185,9 @@ class LegacyAPIExtractor(BaseExtractor):
                     f"Fetched {len(records)} records (total: {len(all_records_list)})"
                 )
 
-                # If we're using a limit from query_params, break after first fetch
-                if limit_records:
-                    logger.info(
-                        f"Stopping after first fetch due to $top limit: {page_size}"
-                    )
-                    break
-
                 # If we got fewer records than page_size, we've reached the end
                 if len(records) < page_size:
                     break
-
-                # Increment skip for next page
-                skip += page_size
 
             record_count = len(all_records_list)
             logger.info(f"Extracted {record_count} total records from legacy API")
