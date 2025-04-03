@@ -125,11 +125,11 @@ export default function ContainerManagementTable({
       cell: (container: ContainerItem) => {
         let purposeClass = "";
         switch (container.purpose) {
-          case "Lager": purposeClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"; break;
-          case "Picken": purposeClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"; break;
-          case "Transport": purposeClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"; break;
-          case "Werkstatt": purposeClass = "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"; break;
-          default: purposeClass = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+          case "Lager": purposeClass = "text-primary"; break;
+          case "Picken": purposeClass = "text-success"; break;
+          case "Transport": purposeClass = "text-warning"; break;
+          case "Werkstatt": purposeClass = "text-info"; break;
+          default: purposeClass = "text-gray-800 dark:text-gray-200"; // Keep gray as is
         }
         return (
           <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${purposeClass}`}>
@@ -186,7 +186,7 @@ export default function ContainerManagementTable({
             onClick={(e) => handleEditClick(container, e)}
             title="Bearbeiten"
           >
-            <Edit className="h-4 w-4 text-blue-500" />
+            <Edit className="h-4 w-4 text-primary" />
             <span className="sr-only">Bearbeiten</span>
           </Button>
           <Button
@@ -196,7 +196,7 @@ export default function ContainerManagementTable({
             onClick={(e) => handleDeleteClick(container, e)}
             title="Löschen"
           >
-            <Trash2 className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-4 w-4 text-destructive" />
             <span className="sr-only">Löschen</span>
           </Button>
         </div>
@@ -245,7 +245,7 @@ export default function ContainerManagementTable({
                                 {container.location ? (
                                   <button
                                     onClick={(e) => navigateToLocation(container.location!, e)}
-                                    className="text-blue-600 hover:underline"
+                                    className="text-primary hover:underline"
                                   >
                                     {container.location}
                                   </button>

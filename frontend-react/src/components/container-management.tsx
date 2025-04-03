@@ -210,7 +210,7 @@ export default function ContainerManagement() {
           </Link>
           <Link
             href="/container-management"
-            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2  border-blue-500 text-blue-600`}
+            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2  border-primary text-primary`}
           >
             <Package2 className="h-4 w-4 mr-2" />
             Schütten-Verwaltung
@@ -252,7 +252,7 @@ export default function ContainerManagement() {
           {isLoading ? (
             <div className="flex justify-center items-center py-10">
               <div className="flex flex-col items-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4"></div>
                 <p className="text-gray-500">Schütten werden geladen...</p>
               </div>
             </div>

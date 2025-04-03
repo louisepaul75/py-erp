@@ -150,7 +150,7 @@ api.interceptors.response.use(
 // Fetch all box types
 export const fetchBoxTypes = async (): Promise<BoxType[]> => {
   try {
-    const response = await api.get('/inventory/box-types/');
+    const response = await api.get('/api/inventory/box-types/');
     return response.data;
   } catch (error) {
     console.error('Error fetching box types:', error);
