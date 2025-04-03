@@ -333,7 +333,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
           <CardContent className="p-4">
             <div className="flex justify-between items-center mb-4">
               <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   type="search"
                   placeholder="Search by exact SKU or legacy-SKU..."
@@ -343,14 +343,14 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                   title="Searches for exact matches on SKU or legacy-base-SKU fields. For partial matches, use at least 3 characters."
                 />
                 {searchTerm.length > 0 && (
-                  <div className="text-xs text-slate-500 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     Using direct search for exact matches on SKU and legacy-SKU
                   </div>
                 )}
               </div>
             </div>
             <div className="flex flex-col md:flex-row overflow-hidden" style={{ height: contentHeight }}>
-              <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r dark:border-slate-800 mb-4 md:mb-0 flex flex-col">
+              <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border mb-4 md:mb-0 flex flex-col">
                 <div className="flex-grow overflow-y-auto">
                   <ProductList
                     showSidebar={true}
@@ -370,7 +370,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                     isLoading={isListLoading}
                   />
                 </div>
-                <div className="p-4 border-t dark:border-slate-800 flex-shrink-0">
+                <div className="p-4 border-t border flex-shrink-0">
                   <Button
                     onClick={handleCreateNewParent}
                     className="w-full"
@@ -396,7 +396,7 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                     isCreatingParent={false}
                   />
                 ) : (
-                  <div className="flex items-center justify-center h-full text-slate-500">
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
                     {isDetailLoading ? (
                       "Loading product details..."
                     ) : (

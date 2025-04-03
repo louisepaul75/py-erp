@@ -5,15 +5,15 @@
 @layer base {
   /* Default theme variables - Light Mode (using OKLCH) */
   html[data-theme="default-light"] {
-    --background: oklch(98% 0.01 240); /* Near white, slight blue cool */
+    --background: oklch(98% 0.005 90); /* Near white, slight warm off-white */
     --foreground: oklch(20% 0.01 240); /* Near black, slight blue cool */
     --card: oklch(100% 0 0); /* Pure white */
     --card-foreground: oklch(20% 0.01 240); /* Near black */
     --popover: oklch(100% 0 0); /* Pure white */
     --popover-foreground: oklch(20% 0.01 240); /* Near black */
 
-    --primary: oklch(55% 0.15 250); /* Medium Blue */
-    --primary-foreground: oklch(98% 0.01 250); /* Very Light Blue/White */
+    --primary: oklch(35% 0.08 60); /* Dark Brown */
+    --primary-foreground: oklch(95% 0.02 60); /* Very Light Brown/Warm White */
 
     --secondary: oklch(94% 0.01 240); /* Very light grey */
     --secondary-foreground: oklch(30% 0.01 240); /* Dark grey */
@@ -37,23 +37,23 @@
 
     --border: oklch(90% 0.02 240); /* Light grey */
     --input: oklch(85% 0.02 240); /* Slightly darker light grey */
-    --ring: oklch(55% 0.15 250 / 0.6); /* Primary blue with some transparency */
+    --ring: oklch(35% 0.08 60 / 0.6); /* Primary brown with some transparency */
 
     --radius: 0.5rem;
 
     /* Specific component overrides if needed */
-    --header-background: oklch(100% 0 0);
-    --footer-background: oklch(96% 0.01 240);
+    --header-background: var(--secondary);
+    --footer-background: var(--secondary);
     --dev-bar-height: 0px;
     --footer-height: 2.75rem;
     --sidebar-background: oklch(97% 0.01 240);
     --sidebar-foreground: oklch(30% 0.01 240);
-    --sidebar-primary: oklch(55% 0.15 250); /* Match primary */
-    --sidebar-primary-foreground: oklch(98% 0.01 250); /* Match primary foreground */
+    --sidebar-primary: oklch(35% 0.08 60); /* Match primary */
+    --sidebar-primary-foreground: oklch(95% 0.02 60); /* Match primary foreground */
     --sidebar-accent: oklch(90% 0.03 240); /* Match accent */
     --sidebar-accent-foreground: oklch(25% 0.01 240); /* Match accent foreground */
     --sidebar-border: oklch(90% 0.02 240); /* Match border */
-    --sidebar-ring: oklch(55% 0.15 250 / 0.6); /* Match ring */
+    --sidebar-ring: oklch(35% 0.08 60 / 0.6); /* Match ring */
   }
 
   /* Default theme variables - Dark Mode (using OKLCH) */
@@ -95,9 +95,9 @@
     --radius: 0.5rem;
 
     /* Specific component overrides if needed */
-    --header-background: oklch(12% 0.01 250);
+    --header-background: var(--primary-foreground);
     --header-foreground: oklch(90% 0.02 50);
-    --footer-background: oklch(12% 0.01 250);
+    --footer-background: var(--primary-foreground);
     --footer-foreground: oklch(90% 0.02 50);
     --dev-bar-height: 0px;
     --footer-height: 2.75rem;
