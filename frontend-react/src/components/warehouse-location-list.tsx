@@ -3,13 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { ListChecks, ChevronLeft, ChevronRight, Warehouse, Package2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select } from "@/components/ui/select"
 import NewWarehouseLocationModal from "@/components/new-warehouse-location-modal"
 import MultipleWarehouseLocationsModal from "@/components/multiple-warehouse-locations-modal"
 import PrintDialog from "@/components/print-dialog"
@@ -307,18 +301,18 @@ export default function WarehouseLocationList() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Lagerort-Verwaltung</h1>
+        <h1 className="text-2xl font-bold text-primary">Lagerort-Verwaltung</h1>
         <div className="flex">
           <Link
             href="/"
-            className={`flex  mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-primary text-primary`}
+            className={`flex mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-primary text-primary`}
           >
             <Warehouse className="h-4 w-4 mr-2" />
             Lagerort-Verwaltung
           </Link>
           <Link
             href="/container-management"
-            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-transparent hover:border-muted hover:text-muted-foreground`}
+            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-transparent text-muted-foreground hover:border-muted`}
           >
             <Package2 className="h-4 w-4 mr-2" />
             Schütten-Verwaltung
@@ -327,17 +321,17 @@ export default function WarehouseLocationList() {
               variant="outline"
               size="sm"
               onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 text-muted-foreground"
             >
             <Settings className="h-4 w-4  mx-2" />
             Einstellungen
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMultipleNewLocationModalOpen(true)}>
+          <Button variant="outline" className="text-muted-foreground" onClick={() => setIsMultipleNewLocationModalOpen(true)}>
             Mehrere Lagerorte
           </Button>
-          <Button variant="outline" onClick={() => setIsNewLocationModalOpen(true)}>
+          <Button variant="outline" className="text-muted-foreground" onClick={() => setIsNewLocationModalOpen(true)}>
             Neuer Lagerort
           </Button>
           {highlightedLocationId && (
@@ -350,7 +344,7 @@ export default function WarehouseLocationList() {
       </div>
 
       {error && (
-        <div className="p-4 border border-status-error bg-status-error/10 text-status-error rounded-md">
+        <div className="p-4 border border-destructive/20 bg-destructive/10 text-destructive rounded-md">
           {error}
         </div>
       )}
@@ -413,19 +407,13 @@ export default function WarehouseLocationList() {
                 <Select
                   value={itemsPerPage === filteredLocations.length ? "all" : itemsPerPage.toString()}
                   onValueChange={handleItemsPerPageChange}
-                >
-                  <SelectTrigger className="w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                    <SelectItem value="500">500</SelectItem>
-                    <SelectItem value="1000">1000</SelectItem>
-                    <SelectItem value="all">Alle</SelectItem>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: "100", label: "100" },
+                    { value: "500", label: "500" },
+                    { value: "1000", label: "1000" },
+                    { value: "all", label: "Alle" },
+                  ]}
+                />
               </div>
 
               {totalPages > 1 && (
@@ -503,22 +491,13 @@ export default function WarehouseLocationList() {
         <div className="flex items-center gap-4 border-t pt-4">
           <div className="flex-1">
             <Select
-              value={selectedPrinter || "none"}
+              value={selectedPrinter}
               onValueChange={setSelectedPrinter}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Drucker auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {PRINTERS.map((printer) => (
-                  <SelectItem key={printer.value} value={printer.value} disabled={printer.value === "none"}>
-                    {printer.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Drucker auswählen"
+              options={PRINTERS}
+            />
           </div>
-          <Button variant="default" onClick={handlePrint} disabled={selectedLocations.length === 0 || !selectedPrinter || selectedPrinter === "none"}>
+          <Button variant="default" onClick={handlePrint} disabled={selectedLocations.length === 0 || !selectedPrinter}>
             Lagerorte drucken
           </Button>
         </div>

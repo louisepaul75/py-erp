@@ -72,7 +72,7 @@
     --secondary-foreground: oklch(85% 0.02 50); /* Light greyish-orange */
 
     --muted: oklch(25% 0.01 250); /* Dark grey */
-    --muted-foreground: oklch(65% 0.03 50); /* Muted greyish-orange */
+    --muted-foreground: oklch(85% 0.025 50); /* Lighter muted greyish-orange */
 
     --accent: oklch(40% 0.05 50); /* Darker orange accent */
     --accent-foreground: oklch(95% 0.02 50); /* Very light greyish-orange */
