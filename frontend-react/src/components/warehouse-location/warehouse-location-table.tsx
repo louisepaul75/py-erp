@@ -11,7 +11,8 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@/components/ui/table"
+  StatusBadge,
+} from "@/components/ui/data/Table"
 
 interface WarehouseLocationTableProps {
   filteredLocations: WarehouseLocation[]
@@ -30,11 +31,10 @@ export default function WarehouseLocationTable({
   handleDeleteClick,
   highlightedLocationId,
 }: WarehouseLocationTableProps) {
-  // Definiere die Spalten für die sortierbare Tabelle
   const columns = [
     {
       id: "checkbox",
-      header: (
+      header: () => (
         <Checkbox
           checked={selectedLocations.length === filteredLocations.length && filteredLocations.length > 0}
           onCheckedChange={(checked) => {
@@ -45,7 +45,6 @@ export default function WarehouseLocationTable({
             }
           }}
           aria-label="Alle auswählen"
-          className="translate-y-[2px]"
         />
       ),
       cell: (row: WarehouseLocation) => (
@@ -54,7 +53,6 @@ export default function WarehouseLocationTable({
           onCheckedChange={(checked) => handleSelectLocation(row.id, !!checked)}
           aria-label={`Lagerort ${row.laNumber} auswählen`}
           onClick={(e) => e.stopPropagation()}
-          className="translate-y-[2px]"
         />
       ),
       className: "w-[40px]",
@@ -74,15 +72,14 @@ export default function WarehouseLocationTable({
     {
       id: "status",
       header: "Status",
-      cell: (row: WarehouseLocation) => (
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            row.status === "free" ? "bg-status-success/10 text-status-success-foreground" : "bg-status-warning/10 text-status-warning-foreground"
-          }`}
-        >
-          {row.status === "free" ? "Frei" : "Belegt"}
-        </span>
-      ),
+      cell: (row: WarehouseLocation) => {
+        const status = row.status === "free" ? "active" : "pending";
+        return (
+          <StatusBadge status={status}>
+            {row.status === "free" ? "Frei" : "Belegt"}
+          </StatusBadge>
+        );
+      },
       sortable: true,
     },
     {
@@ -125,73 +122,71 @@ export default function WarehouseLocationTable({
       id: "actions",
       header: "Aktionen",
       cell: (row: WarehouseLocation) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleDeleteClick(row)
-          }}
-          disabled={row.containerCount > 0}
-          title={
-            row.containerCount > 0 ? "Lagerort enthält Schütten und kann nicht gelöscht werden" : "Lagerort löschen"
-          }
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-          <span className="sr-only">Löschen</span>
-        </Button>
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDeleteClick(row)
+            }}
+            disabled={row.containerCount > 0}
+            title={
+              row.containerCount > 0 ? "Lagerort enthält Schütten und kann nicht gelöscht werden" : "Lagerort löschen"
+            }
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+            <span className="sr-only">Löschen</span>
+          </Button>
+        </div>
       ),
       className: "text-right",
     },
   ]
 
   return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map((column) => (
-              <TableHead
-                key={column.id}
-                className={column.className}
-              >
-                {typeof column.header === 'function' ? column.header() : column.header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredLocations.length > 0 ? (
-            filteredLocations.map((location) => (
-              <TableRow
-                key={location.id}
-                data-state={selectedLocations.includes(location.id) ? "selected" : undefined}
-                className={`cursor-pointer ${
-                  highlightedLocationId === location.id ? "bg-accent" : ""
-                }`}
-                onClick={() => handleRowClick(location)}
-              >
-                {columns.map((column) => (
-                  <TableCell
-                    key={`${location.id}-${column.id}`}
-                    className={column.className}
-                  >
-                    {column.cell(location)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                Keine Lagerorte gefunden
-              </TableCell>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead
+              key={column.id}
+              className={column.className}
+            >
+              {typeof column.header === 'function' ? column.header() : column.header}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredLocations.length > 0 ? (
+          filteredLocations.map((location) => (
+            <TableRow
+              key={location.id}
+              data-state={selectedLocations.includes(location.id) ? "selected" : undefined}
+              className={`cursor-pointer ${highlightedLocationId === location.id ? "bg-accent" : ""}`}
+              onClick={() => handleRowClick(location)}
+            >
+              {columns.map((column) => (
+                <TableCell
+                  key={`${location.id}-${column.id}`}
+                  className={column.className}
+                >
+                  {column.cell(location)}
+                </TableCell>
+              ))}
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="h-24 text-center">
+              Keine Lagerorte gefunden
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   )
 }
 
