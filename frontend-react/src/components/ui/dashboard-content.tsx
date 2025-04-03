@@ -22,6 +22,7 @@ import {
   BarChart3,
   Settings,
   Users,
+  LayoutPanelLeft,
 } from "lucide-react"
 import { Responsive as ResponsiveGridLayout, Layout } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
@@ -30,6 +31,18 @@ import "react-resizable/css/styles.css"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
+import { DashboardSidebar, SavedLayout } from "./dashboard-sidebar"
+import { 
+  fetchDashboardConfig, 
+  saveGridLayout, 
+  saveNewLayout, 
+  updateLayout, 
+  deleteLayout, 
+  activateLayout,
+  GridLayouts 
+} from "@/lib/dashboard-service"
+import { v4 as uuidv4 } from "uuid"
+import { toast } from "@/components/ui/use-toast"
 
 // Define types for menu tiles
 interface MenuTile {
@@ -132,18 +145,7 @@ const Dashboard = () => {
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([])
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [layouts, setLayouts] = useState<Layouts>(() => {
-    // Try to load saved layout from localStorage
-    if (typeof window !== 'undefined') {
-      const savedLayout = localStorage.getItem('dashboard-layout')
-      if (savedLayout) {
-        try {
-          return JSON.parse(savedLayout)
-        } catch (e) {
-          console.error('Failed to parse saved layout:', e)
-        }
-      }
-    }
-    // Default layout if no saved layout exists
+    // Default layout just as a fallback - the real layout will be loaded from API
     return {
       lg: [
         {
@@ -228,6 +230,9 @@ const Dashboard = () => {
       ]
     }
   })
+  const [savedLayouts, setSavedLayouts] = useState<SavedLayout[]>([])
+  const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const [menuTiles, setMenuTiles] = useState<MenuTile[]>([
     { id: "customers", name: "Kunden", icon: Users, iconName: "Users", favorited: false },
@@ -285,47 +290,76 @@ const Dashboard = () => {
 
   // Effect to load data
   useEffect(() => {
-    // Simulate loading data
+    // Load data function
     const loadData = async () => {
       try {
-        // In a real app, you would fetch data from an API here
+        setIsLoading(true);
+        
+        // Load dashboard configuration from API
+        try {
+          const dashboardConfig = await fetchDashboardConfig();
+          
+          if (dashboardConfig.grid_layout && Object.keys(dashboardConfig.grid_layout).length > 0) {
+            setLayouts(dashboardConfig.grid_layout);
+          }
+          
+          if (dashboardConfig.saved_layouts && dashboardConfig.saved_layouts.length > 0) {
+            // Convert API format to the format needed by the sidebar
+            const formattedLayouts = dashboardConfig.saved_layouts.map(layout => ({
+              id: layout.id,
+              name: layout.name,
+              layouts: layout.grid_layout,
+              isActive: layout.id === dashboardConfig.active_layout_id
+            }));
+            setSavedLayouts(formattedLayouts);
+          }
+          
+          setActiveLayoutId(dashboardConfig.active_layout_id);
+        } catch (apiError) {
+          console.error("Failed to load dashboard configuration from API:", apiError);
+          // Continue with the current layout - no need to show error to user
+          // The dashboard will just use the default layout
+        }
+        
+        // Load sample data and favorites
         setTimeout(() => {
-          setRecentOrders(recentOrdersData)
-          setQuickLinks(quickLinksData)
-          setNewsItems(newsItemsData)
+          setRecentOrders(recentOrdersData);
+          setQuickLinks(quickLinksData);
+          setNewsItems(newsItemsData);
           
           // Load favorites from localStorage
           if (typeof window !== 'undefined') {
-            const savedFavorites = localStorage.getItem('dashboard-favorites')
+            const savedFavorites = localStorage.getItem('dashboard-favorites');
             if (savedFavorites) {
               try {
-                const favoritesData = JSON.parse(savedFavorites)
+                const favoritesData = JSON.parse(savedFavorites);
                 // Map the icon names back to components
                 const fullTiles = menuTiles.map(tile => {
                   // Find matching saved tile (if any)
-                  const savedTile = favoritesData.find((item: any) => item.id === tile.id)
+                  const savedTile = favoritesData.find((item: any) => item.id === tile.id);
                   return savedTile ? { 
                     ...tile, 
                     favorited: savedTile.favorited 
-                  } : tile
-                })
-                setMenuTiles(fullTiles)
+                  } : tile;
+                });
+                setMenuTiles(fullTiles);
               } catch (error) {
-                console.error('Failed to parse favorites data:', error)
+                console.error('Failed to parse favorites data:', error);
               }
             }
           }
           
-          setIsLoading(false)
-        }, 1000)
+          setIsLoading(false);
+        }, 1000);
       } catch (err) {
-        setError("Failed to load dashboard data")
-        setIsLoading(false)
+        console.error("Dashboard data loading error:", err);
+        setError("Failed to load dashboard data. Please try refreshing the page.");
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   // Update width on window resize
   useEffect(() => {
@@ -344,12 +378,158 @@ const Dashboard = () => {
   }
 
   // Function to save layout changes
-  const saveLayout = () => {
-    // Save the current layout to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dashboard-layout', JSON.stringify(layouts))
+  const saveLayout = async () => {
+    try {
+      // If we have an active layout, update it
+      if (activeLayoutId) {
+        const layoutToUpdate = savedLayouts.find(layout => layout.id === activeLayoutId)
+        if (layoutToUpdate) {
+          const result = await updateLayout(activeLayoutId, layoutToUpdate.name, layouts as GridLayouts)
+          setSavedLayouts(result.saved_layouts.map(layout => ({
+            id: layout.id,
+            name: layout.name,
+            layouts: layout.grid_layout,
+            isActive: layout.id === result.active_layout_id
+          })))
+          toast({
+            title: "Layout updated",
+            description: `"${layoutToUpdate.name}" has been updated`,
+            duration: 3000,
+          })
+        }
+      } else {
+        // Otherwise just save the current layout to the database
+        await saveGridLayout(layouts as GridLayouts)
+        toast({
+          title: "Layout saved",
+          description: "Dashboard layout has been saved",
+          duration: 3000,
+        })
+      }
+      setIsEditMode(false)
+    } catch (error) {
+      console.error("Error saving layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
     }
-    setIsEditMode(false)
+  }
+
+  // Function to save a new named layout
+  const handleSaveNewLayout = async (name: string) => {
+    try {
+      const result = await saveNewLayout(name, layouts as GridLayouts)
+      setSavedLayouts(result.saved_layouts.map(layout => ({
+        id: layout.id,
+        name: layout.name,
+        layouts: layout.grid_layout,
+        isActive: layout.id === result.active_layout_id
+      })))
+      setActiveLayoutId(result.active_layout_id)
+      toast({
+        title: "New layout saved",
+        description: `"${name}" has been created and activated`,
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error saving new layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save new layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  // Function to update an existing layout
+  const handleUpdateLayout = async (layout: SavedLayout) => {
+    try {
+      const result = await updateLayout(layout.id, layout.name, layout.layouts as GridLayouts)
+      setSavedLayouts(result.saved_layouts.map(layout => ({
+        id: layout.id,
+        name: layout.name,
+        layouts: layout.grid_layout,
+        isActive: layout.id === result.active_layout_id
+      })))
+      toast({
+        title: "Layout updated",
+        description: `"${layout.name}" has been updated`,
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error updating layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  // Function to delete a layout
+  const handleDeleteLayout = async (layoutId: string) => {
+    try {
+      const result = await deleteLayout(layoutId)
+      setSavedLayouts(result.saved_layouts.map(layout => ({
+        id: layout.id,
+        name: layout.name,
+        layouts: layout.grid_layout,
+        isActive: layout.id === result.active_layout_id
+      })))
+      setActiveLayoutId(result.active_layout_id)
+      
+      // If the active layout was deleted, update the layouts state
+      if (result.grid_layout && Object.keys(result.grid_layout).length > 0) {
+        setLayouts(result.grid_layout)
+      }
+      
+      toast({
+        title: "Layout deleted",
+        description: "The layout has been deleted",
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error deleting layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  // Function to select a layout
+  const handleLayoutSelect = async (layoutId: string) => {
+    try {
+      const result = await activateLayout(layoutId)
+      setSavedLayouts(result.saved_layouts.map(layout => ({
+        id: layout.id,
+        name: layout.name,
+        layouts: layout.grid_layout,
+        isActive: layout.id === result.active_layout_id
+      })))
+      setActiveLayoutId(result.active_layout_id)
+      setLayouts(result.grid_layout)
+      toast({
+        title: "Layout activated",
+        description: "The selected layout has been activated",
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error selecting layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to activate layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
   }
 
   // Function to remove a widget
@@ -362,10 +542,7 @@ const Dashboard = () => {
     })
     
     setLayouts(newLayouts)
-    // Save to localStorage after removing widget
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dashboard-layout', JSON.stringify(newLayouts))
-    }
+    // No need to save to localStorage - will be saved when user clicks Save
   }
 
   // Function to toggle favorite status for menu tiles
@@ -397,10 +574,9 @@ const Dashboard = () => {
   // Handle layout changes
   const handleLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
     setLayouts(allLayouts)
-    // Save to localStorage whenever layout changes
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dashboard-layout', JSON.stringify(allLayouts))
-    }
+    
+    // Auto-save is handled when user clicks "Save" explicitly now
+    // No need to save to API on every small change
   }
 
   // Function to get widget title based on id
@@ -561,25 +737,51 @@ const Dashboard = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
         <div className="flex items-center gap-2">
-          {isEditMode ? (
-            <>
-              <Button variant="outline" onClick={toggleEditMode}>
-                <X className="mr-2 h-4 w-4" />
-                Abbrechen
-              </Button>
-              <Button onClick={saveLayout}>
-                <Save className="mr-2 h-4 w-4" />
-                Speichern
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={toggleEditMode} className="border-primary text-primary hover:bg-primary/10">
-              <Edit className="mr-2 h-4 w-4" />
-              Layout bearbeiten
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={() => setIsSidebarOpen(true)}
+            className="border-primary text-primary hover:bg-primary/10"
+          >
+            <LayoutPanelLeft className="mr-2 h-4 w-4" />
+            Layouts
+          </Button>
         </div>
       </div>
+
+      <DashboardSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        isEditMode={isEditMode}
+        toggleEditMode={toggleEditMode}
+        saveLayout={saveLayout}
+        savedLayouts={savedLayouts}
+        activeLayoutId={activeLayoutId}
+        onLayoutSelect={handleLayoutSelect}
+        onSaveNewLayout={handleSaveNewLayout}
+        onUpdateLayout={handleUpdateLayout}
+        onDeleteLayout={handleDeleteLayout}
+      />
+
+      {error && (
+        <div className="mt-4 p-4 border border-red-400 bg-red-50 text-red-800 rounded-md">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm">{error}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-2 text-sm font-medium text-red-800 hover:text-red-600 underline"
+              >
+                Refresh page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center items-center min-h-[400px]">

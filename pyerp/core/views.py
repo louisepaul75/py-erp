@@ -20,6 +20,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.middleware.csrf import get_token
+import time
 
 # Set up logging using the centralized logging system
 from pyerp.utils.logging import get_logger
@@ -327,6 +328,11 @@ class DashboardSummaryView(APIView):
             # Get dashboard grid layout configuration
             grid_layout = user_pref.get_dashboard_grid_layout()
             
+            # Get saved layouts
+            saved_layouts = user_pref.get_saved_layouts()
+            
+            active_layout_id = user_pref.active_layout_id
+            
             logger.debug(f"Retrieved dashboard config for {request.user.username}: grid_layout keys={list(grid_layout.keys() if grid_layout else [])}")
 
             # Get dashboard data using the helper method
@@ -338,6 +344,8 @@ class DashboardSummaryView(APIView):
                 "low_stock_items": dashboard_data.get('low_stock_items', 0),
                 "dashboard_modules": dashboard_modules,
                 "grid_layout": grid_layout,
+                "saved_layouts": saved_layouts,
+                "active_layout_id": active_layout_id,
                 "statistics": dashboard_data.get('statistics', {}),
                 "recent_activity": dashboard_data.get('recent_activity', []),
                 "notifications": dashboard_data.get('notifications', [])
@@ -368,14 +376,69 @@ class DashboardSummaryView(APIView):
             modules = request.data.get('modules')
             grid_layout = request.data.get('grid_layout')
             
+            # New parameters for layout management
+            layout_action = request.data.get('layout_action')
+            layout_id = request.data.get('layout_id')
+            layout_name = request.data.get('layout_name')
+            
+            response_data = {
+                "message": "Dashboard configuration updated successfully",
+            }
+            
+            # Handle layout actions
+            if layout_action:
+                if layout_action == 'save':
+                    # Save a new layout or update an existing one
+                    if not layout_id:
+                        layout_id = f"layout_{int(time.time())}"
+                    
+                    if not layout_name:
+                        layout_name = f"Layout {layout_id}"
+                    
+                    if not grid_layout:
+                        grid_layout = user_pref.get_dashboard_grid_layout()
+                        
+                    saved_layouts = user_pref.save_layout(layout_id, layout_name, grid_layout)
+                    user_pref.set_active_layout(layout_id)
+                    
+                    response_data["saved_layouts"] = saved_layouts
+                    response_data["active_layout_id"] = layout_id
+                    response_data["message"] = f"Layout '{layout_name}' saved successfully"
+                    
+                    return Response(response_data)
+                    
+                elif layout_action == 'delete' and layout_id:
+                    # Delete a layout
+                    saved_layouts = user_pref.delete_layout(layout_id)
+                    
+                    response_data["saved_layouts"] = saved_layouts
+                    response_data["active_layout_id"] = user_pref.active_layout_id
+                    response_data["message"] = "Layout deleted successfully"
+                    
+                    return Response(response_data)
+                    
+                elif layout_action == 'activate' and layout_id:
+                    # Set a layout as active
+                    success = user_pref.set_active_layout(layout_id)
+                    
+                    if success:
+                        grid_layout = user_pref.get_dashboard_grid_layout()
+                        response_data["grid_layout"] = grid_layout
+                        response_data["active_layout_id"] = layout_id
+                        response_data["message"] = "Active layout updated successfully"
+                        
+                        return Response(response_data)
+                    else:
+                        return Response(
+                            {"error": "Layout not found"},
+                            status=status.HTTP_404_NOT_FOUND,
+                        )
+            
+            # Handle regular module/grid updates
             if modules is not None or grid_layout is not None:
                 # Save dashboard configuration
                 user_pref.save_dashboard_config(modules=modules, grid_layout=grid_layout)
                 logger.info(f"Updated dashboard config for {request.user.username}")
-                
-                response_data = {
-                    "message": "Dashboard configuration updated successfully",
-                }
                 
                 if modules is not None:
                     response_data["dashboard_modules"] = modules
