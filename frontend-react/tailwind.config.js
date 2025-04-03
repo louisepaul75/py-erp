@@ -49,6 +49,14 @@ module.exports = {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",
         },
+        footer: {
+          DEFAULT: "var(--footer-background)",
+          foreground: "var(--footer-foreground)",
+        },
+        header: {
+          DEFAULT: "var(--header-background)",
+          foreground: "var(--header-foreground)",
+        },
         status: {
           success: "var(--status-success)",
           "success-foreground": "var(--status-success-foreground)",

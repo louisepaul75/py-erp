@@ -169,8 +169,12 @@ const colorCategories = [
     ]
   },
   {
-    category: "Navigation Colors",
+    category: "Layout Colors",
     colors: [
+      { name: "Header Background", variable: "--header-background" },
+      { name: "Header Foreground", variable: "--header-foreground" },
+      { name: "Footer Background", variable: "--footer-background" },
+      { name: "Footer Foreground", variable: "--footer-foreground" },
       { name: "Sidebar Background", variable: "--sidebar-background" },
       { name: "Sidebar Foreground", variable: "--sidebar-foreground" },
     ]

@@ -283,15 +283,15 @@ export function Footer() {
   return (
     <>
       {/* Footer */}
-      <footer className="bg-[hsl(var(--footer-background))] text-[hsl(var(--footer-foreground))] border-t border-border fixed bottom-0 w-full z-10">
+      <footer className="bg-footer text-footer-foreground border-t border-border fixed bottom-0 w-full z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="text-sm text-foreground dark:text-[hsl(var(--footer-foreground))]">
+          <div className="text-sm">
             &copy; {new Date().getFullYear()} pyERP System
           </div>
           
           <Link 
             href="/health-status" 
-            className="flex items-center gap-2 text-sm text-foreground dark:text-[hsl(var(--footer-foreground))] hover:text-primary dark:hover:text-[hsl(var(--footer-foreground))] transition-colors"
+            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
           >
             <span>v{displayOverallHealth?.version || process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'}</span>
             {isLoading ? (

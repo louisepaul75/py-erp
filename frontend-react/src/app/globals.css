@@ -6,23 +6,23 @@
   /* Default theme variables - Light Mode (using OKLCH) */
   html[data-theme="default-light"] {
     --background: oklch(98% 0.005 90); /* Near white, slight warm off-white */
-    --foreground: oklch(20% 0.01 240); /* Near black, slight blue cool */
+    --foreground: oklch(20% 0.04 60); /* Dark brown, replacing the blue-cool tone */
     --card: oklch(100% 0 0); /* Pure white */
-    --card-foreground: oklch(20% 0.01 240); /* Near black */
+    --card-foreground: oklch(20% 0.04 60); /* Dark brown, replacing near black */
     --popover: oklch(100% 0 0); /* Pure white */
-    --popover-foreground: oklch(20% 0.01 240); /* Near black */
+    --popover-foreground: oklch(20% 0.04 60); /* Dark brown, replacing near black */
 
     --primary: oklch(35% 0.08 60); /* Dark Brown */
     --primary-foreground: oklch(95% 0.02 60); /* Very Light Brown/Warm White */
 
-    --secondary: oklch(94% 0.01 240); /* Very light grey */
-    --secondary-foreground: oklch(30% 0.01 240); /* Dark grey */
+    --secondary: oklch(94% 0.02 75); /* Very light brown/beige */
+    --secondary-foreground: oklch(30% 0.04 65); /* Dark brownish grey */
 
-    --muted: oklch(94% 0.01 240); /* Very light grey */
-    --muted-foreground: oklch(60% 0.02 240); /* Medium grey */
+    --muted: oklch(94% 0.01 70); /* Very light brownish grey */
+    --muted-foreground: oklch(60% 0.03 65); /* Medium brownish grey */
 
-    --accent: oklch(90% 0.03 240); /* Light grey */
-    --accent-foreground: oklch(25% 0.01 240); /* Dark grey */
+    --accent: oklch(90% 0.03 70); /* Light brown/beige */
+    --accent-foreground: oklch(25% 0.05 60); /* Dark brown */
 
     --destructive: oklch(60% 0.2 20); /* Medium Red */
     --destructive-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
@@ -35,24 +35,26 @@
     --status-error: oklch(60% 0.2 20); /* Medium Red (Same as destructive) */
     --status-error-foreground: oklch(98% 0.01 20); /* Very Light Red/White */
 
-    --border: oklch(90% 0.02 240); /* Light grey */
-    --input: oklch(85% 0.02 240); /* Slightly darker light grey */
+    --border: oklch(90% 0.02 70); /* Light brownish border */
+    --input: oklch(85% 0.03 70); /* Slightly darker light brown */
     --ring: oklch(35% 0.08 60 / 0.6); /* Primary brown with some transparency */
 
     --radius: 0.5rem;
 
     /* Specific component overrides if needed */
-    --header-background: var(--secondary);
-    --footer-background: var(--secondary);
+    --header-background: oklch(98% 0.005 80); /* Neutral off-white */
+    --header-foreground: oklch(20% 0.04 60); /* Dark brown (near black) */
+    --footer-background: oklch(98% 0.005 80); /* Neutral off-white */
+    --footer-foreground: oklch(20% 0.04 60); /* Dark brown (near black) */
     --dev-bar-height: 0px;
     --footer-height: 2.75rem;
-    --sidebar-background: oklch(97% 0.01 240);
-    --sidebar-foreground: oklch(30% 0.01 240);
+    --sidebar-background: oklch(96% 0.02 75); /* Very light brownish background */
+    --sidebar-foreground: oklch(30% 0.05 60); /* Dark brown text */
     --sidebar-primary: oklch(35% 0.08 60); /* Match primary */
     --sidebar-primary-foreground: oklch(95% 0.02 60); /* Match primary foreground */
-    --sidebar-accent: oklch(90% 0.03 240); /* Match accent */
-    --sidebar-accent-foreground: oklch(25% 0.01 240); /* Match accent foreground */
-    --sidebar-border: oklch(90% 0.02 240); /* Match border */
+    --sidebar-accent: oklch(90% 0.03 70); /* Match accent */
+    --sidebar-accent-foreground: oklch(25% 0.05 60); /* Match accent foreground */
+    --sidebar-border: oklch(90% 0.02 70); /* Match border */
     --sidebar-ring: oklch(35% 0.08 60 / 0.6); /* Match ring */
   }
 
@@ -95,10 +97,10 @@
     --radius: 0.5rem;
 
     /* Specific component overrides if needed */
-    --header-background: var(--primary-foreground);
-    --header-foreground: oklch(90% 0.02 50);
-    --footer-background: var(--primary-foreground);
-    --footer-foreground: oklch(90% 0.02 50);
+    --header-background: oklch(20% 0.01 250); /* Dark grey matching card bg */
+    --header-foreground: oklch(90% 0.02 50); /* Light matching foreground */
+    --footer-background: oklch(20% 0.01 250); /* Dark grey matching card bg */
+    --footer-foreground: oklch(90% 0.02 50); /* Light matching foreground */
     --dev-bar-height: 0px;
     --footer-height: 2.75rem;
     --sidebar-background: oklch(18% 0.01 250);

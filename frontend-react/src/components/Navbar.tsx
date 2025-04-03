@@ -45,7 +45,7 @@ function DropdownItem({
     return (
       <Link
         href={href}
-        className="block px-4 py-2 text-sm text-foreground dark:text-[hsl(var(--header-foreground))] hover:bg-accent hover:text-accent-foreground flex items-center"
+        className="block px-4 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground flex items-center"
         role="menuitem"
       >
         {children}
@@ -57,7 +57,7 @@ function DropdownItem({
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left block px-4 py-2 text-sm text-foreground dark:text-[hsl(var(--header-foreground))]",
+        "w-full text-left block px-4 py-2 text-sm text-popover-foreground",
         "hover:bg-accent hover:text-accent-foreground flex items-center"
       )}
       role="menuitem"
@@ -104,7 +104,7 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="bg-[hsl(var(--header-background))] text-[hsl(var(--header-foreground))] shadow-md fixed w-full z-50">
+    <nav className="bg-header text-header-foreground shadow-md fixed w-full z-50">
       <div className="max-w-full mx-0 px-2 sm:px-3 lg:px-4">
         <div className="flex justify-between h-16">
           {/* Logo */}
@@ -141,7 +141,7 @@ export function Navbar() {
               {/*  Production dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-foreground dark:text-[hsl(var(--header-foreground))] hover:bg-accent hover:text-accent-foreground flex items-center">
+                  <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
                     <span>{t("navigation.production")}</span>
                     <ChevronDown className="ml-1 h-4 w-4 text-current" />
                   </button>
@@ -163,7 +163,7 @@ export function Navbar() {
               {/* Inventory Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-foreground dark:text-[hsl(var(--header-foreground))] hover:bg-accent hover:text-accent-foreground flex items-center">
+                  <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
                     <Package className="h-4 w-4 mr-2 text-current" />
                     <span>{t("navigation.inventory")}</span>
                     <ChevronDown className="ml-1 h-4 w-4 text-current" />
@@ -187,7 +187,7 @@ export function Navbar() {
               <div className="relative" id="test-dropdown">
                 <button
                   onClick={toggleTestDropdown}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground dark:text-[hsl(var(--header-foreground))] hover:bg-accent hover:text-accent-foreground flex items-center"
+                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center"
                 >
                   <span>Test</span>
                   <ChevronDown className="ml-1 h-4 w-4 text-current" />
@@ -227,10 +227,10 @@ export function Navbar() {
                   id="user-menu"
                 >
                   <span className="sr-only">Open user menu</span>
-                  <span className="mr-2 text-foreground dark:text-[hsl(var(--header-foreground))]">
+                  <span className="mr-2">
                     {user?.username || "Guest"}
                   </span>
-                  <User className="h-8 w-8 rounded-full p-1 bg-muted text-muted-foreground dark:text-[hsl(var(--header-foreground))]" />
+                  <User className="h-8 w-8 rounded-full p-1 bg-muted text-muted-foreground" />
                   <ChevronDown className="ml-1 h-4 w-4 text-current" />
                 </button>
               </DropdownMenuTrigger>
@@ -290,7 +290,7 @@ export function Navbar() {
                       type="button"
                       className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring"
                     >
-                      <User className="h-8 w-8 rounded-full p-1 bg-muted text-muted-foreground dark:text-[hsl(var(--header-foreground))]" />
+                      <User className="h-8 w-8 rounded-full p-1 bg-muted text-muted-foreground" />
                     </button>
                   </DropdownMenuTrigger>
 
@@ -346,7 +346,7 @@ function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="px-3 py-2 rounded-md text-sm font-medium text-foreground dark:text-[hsl(var(--header-foreground))] hover:bg-accent hover:text-accent-foreground"
+      className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground"
     >
       {label}
     </Link>
