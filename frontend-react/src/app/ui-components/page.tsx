@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
+import React, { useState } from 'react'; // Import React
+import { useForm } from 'react-hook-form'; // Import useForm from react-hook-form
 import { 
   Search, 
   Filter, 
@@ -27,7 +26,7 @@ import {
   ShoppingCart,
   FileText,
   Bell,
-  Calendar,
+  Calendar as CalendarIcon, // Renamed to avoid conflict
   Mail,
   Phone,
   CreditCard,
@@ -35,10 +34,11 @@ import {
   Info,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Minus
 } from 'lucide-react';
 
-// Import our enhanced components
+// Import all components from the UI library index
 import {
   Button,
   Card,
@@ -48,11 +48,39 @@ import {
   CardContent,
   CardFooter,
   Input,
-  StatusBadge,
-  Badge
+  Label,
+  RadioGroup, RadioGroupItem,
+  Textarea,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage,
+  Checkbox,
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption,
+  Avatar, AvatarImage, AvatarFallback,
+  Badge,
+  Calendar, // This is the Calendar component
+  Separator,
+  Alert, AlertDescription, AlertTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  useToast, Toast, ToastProvider, ToastViewport, ToastTitle, ToastDescription, ToastClose, ToastAction, Toaster,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuGroup, DropdownMenuPortal, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
+  Popover, PopoverContent, PopoverTrigger,
+  Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+  Progress,
+  Skeleton,
+  Spinner, // Assuming this is the intended Spinner
+  LoadingSpinner, // Assuming this is the intended LoadingSpinner
+  Slider,
+  Switch,
+  Tabs, TabsContent, TabsList, TabsTrigger,
+  Toggle,
+  ToggleGroup, ToggleGroupItem,
+  ScrollArea, ScrollBar,
+  Container,
+  StatusBadge, // Exported from Table component
+  themeColors, // Exported from theme config
 } from '@/components/ui';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'; // Added import
-import { themeColors } from '@/lib/theme-config';
 
 // Import Recharts components
 import {
@@ -67,7 +95,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip, // Rename to avoid conflict
   Legend,
   ResponsiveContainer,
   RadarChart,
@@ -80,20 +108,10 @@ import {
   Cell
 } from 'recharts';
 
-import { SkinnyTable } from "@/components/ui/skinny-table";
+import { SkinnyTable } from "@/components/ui/skinny-table"; // Keep this if SkinnyTable is separate
 
-// Import table components
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCaption,
-} from '@/components/ui/table';
-
-// Sample data for charts
+// Sample data for charts (keep existing)
+// ... existing chart data ...
 const lineData = [
   { name: 'Jan', value: 400 },
   { name: 'Feb', value: 600 },
@@ -145,7 +163,8 @@ const scatterData = [
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-// Define the semantic colors based on CSS variables in globals.css
+// Define the semantic colors based on CSS variables in globals.css (keep existing)
+// ... existing colorCategories and semanticColors ...
 const colorCategories = [
   {
     category: "Text Colors",
@@ -210,193 +229,290 @@ const colorCategories = [
   }
 ];
 
-// Flat list for backward compatibility if needed elsewhere
 const semanticColors = colorCategories.flatMap(category => category.colors);
-
-// Define the status colors based on CSS variables
 const statusColors = colorCategories.find(c => c.category === "Status Colors")?.colors || [];
 
+
+// Define the tabs structure
+const componentTabs = [
+  { value: 'buttons', label: 'Buttons', components: ['Button'] },
+  { value: 'inputs', label: 'Form Controls', components: ['Input', 'Label', 'RadioGroup', 'Textarea', 'Select', 'Form', 'Checkbox', 'Switch', 'Slider', 'Toggle', 'ToggleGroup'] },
+  { value: 'dataDisplay', label: 'Data Display', components: ['Table', 'Avatar', 'Badge', 'Calendar', 'Separator', 'StatusBadge', 'SkinnyTable'] },
+  { value: 'feedback', label: 'Feedback', components: ['Alert', 'AlertDialog', 'Toast', 'Progress', 'Skeleton', 'Spinner', 'LoadingSpinner'] },
+  { value: 'overlays', label: 'Overlays', components: ['Dialog', 'DropdownMenu', 'Popover', 'Sheet', 'Tooltip'] },
+  { value: 'layout', label: 'Layout', components: ['Card', 'Tabs', 'ScrollArea', 'Container'] },
+  { value: 'charts', label: 'Charts', components: ['RechartsLineChart', 'RechartsBarChart', 'RechartsPieChart', 'AreaChart', 'RadarChart', 'ScatterChart'] },
+  { value: 'icons', label: 'Icons', components: ['Lucide Icons'] },
+  { value: 'colors', label: 'Colors', components: ['Semantic Colors', 'Status Colors'] },
+];
+
 export default function UIComponentsPage() {
-  const [activeTab, setActiveTab] = useState('buttons');
+  const [activeTab, setActiveTab] = useState(componentTabs[0].value);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const { toast } = useToast();
+  // Dummy form setup for Form component example
+  const form = useForm();
 
   return (
-    <div className="container mx-auto py-20 px-4 md:px-6">
-      <div className="max-w-5xl mx-auto">
+    // Use the Container component for consistent padding
+    <Container className="py-12"> 
+      <ToastProvider>
+        <div className="max-w-7xl mx-auto"> {/* Increased max-width for more space */}
         <h1 className="text-3xl font-bold mb-2 text-primary">UI Components / Style Guide</h1>
-        <p className="text-muted-foreground mb-8">A collection of UI components for the pyERP system</p>
+          <p className="text-muted-foreground mb-8">A comprehensive collection of UI components for the pyERP system</p>
 
-        <Tabs defaultValue="buttons" className="w-full" onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 mb-8">
-            <TabsTrigger value="buttons">Buttons</TabsTrigger>
-            <TabsTrigger value="inputs">Inputs</TabsTrigger>
-            <TabsTrigger value="cards">Cards</TabsTrigger>
-            <TabsTrigger value="tables">Tables</TabsTrigger>
-            <TabsTrigger value="charts">Charts</TabsTrigger>
-            <TabsTrigger value="filters">Filters</TabsTrigger>
-            <TabsTrigger value="icons">Icons</TabsTrigger>
-            <TabsTrigger value="colors">Colors</TabsTrigger>
-          </TabsList>
+          {/* Updated Tabs structure */}
+          <Tabs defaultValue={activeTab} className="w-full" onValueChange={setActiveTab}>
+            {/* Use ScrollArea for TabsList if too many tabs */}
+            <ScrollArea className="w-full whitespace-nowrap rounded-md mb-8"> {/* Removed border */}
+              <TabsList className="grid w-full grid-cols-9 p-1"> {/* Use grid for equal spacing */} 
+                {componentTabs.map(tab => (
+                  <TabsTrigger key={tab.value} value={tab.value} className="text-sm px-3 py-1.5"> {/* Adjusted padding */}
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList> {/* Fixed closing tag placement */}
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
 
           {/* Buttons Section */}
           <TabsContent value="buttons" className="space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>Buttons</CardTitle>
-                <CardDescription>Button styles for different actions and states</CardDescription>
+                  <CardDescription>Variations of the Button component</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Primary</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <Button>Default</Button>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">Variants</h3>
+                    <div className="flex flex-wrap gap-3">
+                      <Button>Primary (Default)</Button>
+                      <Button variant="secondary">Secondary</Button>
+                      <Button variant="outline">Outline</Button>
+                      <Button variant="ghost">Ghost</Button>
+                      <Button variant="link">Link</Button>
+                      <Button variant="destructive">Destructive</Button>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">Sizes</h3>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button size="lg">Large</Button>
+                      <Button size="default">Default</Button>
                       <Button size="sm">Small</Button>
+                      <Button size="icon" aria-label="Icon Button"><Settings className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">With Icons</h3>
+                    <div className="flex flex-wrap gap-3">
+                      <Button icon={Plus}>Add Item</Button>
+                      <Button variant="secondary" icon={Edit}>Edit Record</Button>
+                      <Button variant="destructive" icon={Trash}>Delete</Button>
+                      <Button icon={Save} iconPosition="right">Save Changes</Button>
+                    </div>
+                  </div>
+                  <Separator />
+                  <div>
+                    <h3 className="text-lg font-medium mb-3">States</h3>
+                    <div className="flex flex-wrap gap-3">
                       <Button disabled>Disabled</Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Secondary</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="secondary">Default</Button>
-                      <Button variant="secondary" size="sm">Small</Button>
-                      <Button variant="secondary" disabled>Disabled</Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Outline</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline">Default</Button>
-                      <Button variant="outline" size="sm">Small</Button>
-                      <Button variant="outline" disabled>Disabled</Button>
-                    </div>
-                  </div>
+                      <Button loading>Loading...</Button>
+                      <Button variant="secondary" loading>Processing...</Button>
                 </div>
-
-                <Separator className="my-6" />
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Icon Buttons</h3>
-                  <div className="flex flex-wrap gap-2">
-                    <Button icon={Plus}>Add</Button>
-                    <Button variant="secondary" icon={Edit}>Edit</Button>
-                    <Button variant="outline" icon={Trash}>Delete</Button>
-                    <Button icon={Save}>Save</Button>
-                    <Button variant="secondary" icon={Download}>Download</Button>
-                    <Button variant="outline" icon={Upload}>Upload</Button>
-                    <Button size="icon" icon={RefreshCw} aria-label="Refresh" />
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                <Separator className="my-6" />
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Loading State</h3>
-                  <div className="flex flex-wrap gap-2">
-                    <Button loading>Loading</Button>
-                    <Button variant="secondary" loading>Processing</Button>
-                    <Button variant="outline" loading>Saving</Button>
+            {/* Form Controls Section */}
+            <TabsContent value="inputs" className="space-y-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Input & Label</CardTitle>
+                  <CardDescription>Basic text input fields with labels</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="input-default">Default Input</Label>
+                    <Input id="input-default" placeholder="Enter text..." />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="input-icon-left">With Left Icon</Label>
+                    <Input id="input-icon-left" icon={Search} placeholder="Search..." />
                 </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Destructive Action</CardTitle>
-                <CardDescription>Button for actions that cannot be easily undone</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="destructive">Delete Permanently</Button>
-                  <Button variant="destructive" icon={Trash}>Delete Item</Button>
-                  <Button variant="destructive" size="sm">Small Delete</Button>
-                  <Button variant="destructive" disabled>Disabled Delete</Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="input-icon-right">With Right Icon</Label>
+                    <Input id="input-icon-right" icon={Mail} iconPosition="right" placeholder="Enter email..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="input-disabled">Disabled Input</Label>
+                    <Input id="input-disabled" placeholder="Cannot type" disabled />
+                  </div>
+                  {/* Input with error is handled by Form component */}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Checkbox</CardTitle>
+                  <CardDescription>Standard checkbox for boolean selections</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-6 items-center">
+                   <div className="flex items-center space-x-2">
+                      <Checkbox id="checkbox-basic" />
+                      <Label htmlFor="checkbox-basic">Accept terms</Label>
+                  </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="checkbox-disabled" disabled />
+                      <Label htmlFor="checkbox-disabled" className="text-muted-foreground">Disabled checkbox</Label>
+                    </div>
+                     <div className="flex items-center space-x-2">
+                      <Checkbox id="checkbox-checked-disabled" checked disabled />
+                      <Label htmlFor="checkbox-checked-disabled" className="text-muted-foreground">Checked & Disabled</Label>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Inputs Section */}
-          <TabsContent value="inputs" className="space-y-8">
             <Card>
               <CardHeader>
-                <CardTitle>Input Fields</CardTitle>
-                <CardDescription>Text inputs, selects, and form controls</CardDescription>
+                  <CardTitle>Radio Group</CardTitle>
+                  <CardDescription>Select one option from a set</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Text Inputs</h3>
-                    <Input 
-                      label="Default Input"
-                      placeholder="Enter text here..." 
-                    />
-                    <Input 
-                      label="Disabled Input"
-                      placeholder="Disabled input" 
-                      disabled 
-                    />
-                    <Input 
-                      label="With Icon"
-                      icon={Search} 
-                      placeholder="Search..." 
-                    />
-                    <Input 
-                      label="With Right Icon"
-                      icon={Search} 
-                      iconPosition="right"
-                      placeholder="Search..." 
-                    />
-                    <Input 
-                      label="With Error"
-                      placeholder="Enter email" 
-                      error="Please enter a valid email address"
-                    />
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Other Form Controls</h3>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Select</label>
-                      <select className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:border-ring focus:outline-none">
-                        <option value="option1">Option 1</option>
-                        <option value="option2">Option 2</option>
-                        <option value="option3">Option 3</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Textarea</label>
-                      <textarea 
-                        className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:border-ring focus:outline-none" 
-                        placeholder="Enter multiple lines of text..."
-                        rows={3}
-                      />
+                  <RadioGroup defaultValue="option-one">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="option-one" id="r1" />
+                      <Label htmlFor="r1">Option One</Label>
+                </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="option-two" id="r2" />
+                      <Label htmlFor="r2">Option Two</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id="checkbox" 
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-ring" 
-                      />
-                      <label htmlFor="checkbox" className="text-sm font-medium">Checkbox</label>
+                      <RadioGroupItem value="option-three" id="r3" disabled />
+                      <Label htmlFor="r3" className="text-muted-foreground">Option Three (Disabled)</Label>
                     </div>
+                  </RadioGroup>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                  <CardTitle>Select</CardTitle>
+                  <CardDescription>Dropdown selection component</CardDescription>
+              </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>Default Select</Label>
+                      <Select>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select a fruit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="apple">Apple</SelectItem>
+                          <SelectItem value="banana">Banana</SelectItem>
+                          <SelectItem value="blueberry">Blueberry</SelectItem>
+                          <SelectItem value="grapes">Grapes</SelectItem>
+                          <SelectItem value="pineapple">Pineapple</SelectItem>
+                        </SelectContent>
+                      </Select>
                   </div>
+                    <div className="space-y-2">
+                      <Label>Disabled Select</Label>
+                      <Select disabled>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Cannot Select" />
+                        </SelectTrigger>
+                      </Select>
+                    </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Textarea</CardTitle>
+                  <CardDescription>Multi-line text input</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                    <Label htmlFor="textarea-default">Default Textarea</Label>
+                    <Textarea id="textarea-default" placeholder="Type your message here." />
+                    </div>
+                    <div className="space-y-2">
+                    <Label htmlFor="textarea-disabled">Disabled Textarea</Label>
+                    <Textarea id="textarea-disabled" placeholder="Cannot type" disabled />
+                    </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Switch</CardTitle>
+                  <CardDescription>On/off toggle switch</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-6 items-center">
+                    <div className="flex items-center space-x-2">
+                        <Switch id="switch-basic" />
+                        <Label htmlFor="switch-basic">Basic Switch</Label>
+                    </div>
+                     <div className="flex items-center space-x-2">
+                        <Switch id="switch-disabled" disabled />
+                        <Label htmlFor="switch-disabled" className="text-muted-foreground">Disabled Switch</Label>
+                  </div>
+                    <div className="flex items-center space-x-2">
+                        <Switch id="switch-checked-disabled" checked disabled />
+                        <Label htmlFor="switch-checked-disabled" className="text-muted-foreground">Checked & Disabled</Label>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Added Toggle Group Example */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Slider</CardTitle>
+                  <CardDescription>Range selection slider</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div>
+                        <Label>Default Slider</Label>
+                        <Slider defaultValue={[50]} max={100} step={1} className="mt-2"/>
+                    </div>
+                    <div>
+                        <Label>Disabled Slider</Label>
+                        <Slider defaultValue={[25]} max={100} step={1} disabled className="mt-2"/>
+                    </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Toggle</CardTitle>
+                  <CardDescription>Single on/off button toggle</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-4">
+                    <Toggle aria-label="Toggle bold">
+                        <Bold className="h-4 w-4" /> {/* Ensure Bold is imported from lucide-react */}
+                    </Toggle>
+                     <Toggle aria-label="Toggle italic" disabled>
+                        <Italic className="h-4 w-4" /> {/* Ensure Italic is imported */}
+                    </Toggle>
+                    <Toggle size="sm" aria-label="Toggle underline">
+                        <Underline className="h-4 w-4" /> {/* Ensure Underline is imported */}
+                    </Toggle>
+                </CardContent>
+              </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Toggle Group</CardTitle>
-                <CardDescription>Grouped buttons for selecting a single option</CardDescription>
+                  <CardDescription>Grouped toggles for multiple selections or single exclusive selection</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Default Toggle Group</h3>
-                    <ToggleGroup type="single" defaultValue="center" aria-label="Text alignment">
+                <CardContent className="space-y-4">
+                   <div>
+                    <Label>Single Selection (like Radio)</Label>
+                    <ToggleGroup type="single" defaultValue="center" aria-label="Text alignment" className="mt-2">
                       <ToggleGroupItem value="left" aria-label="Left aligned">
                         Left
                       </ToggleGroupItem>
@@ -408,1366 +524,818 @@ export default function UIComponentsPage() {
                       </ToggleGroupItem>
                     </ToggleGroup>
                   </div>
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Disabled Toggle Group</h3>
-                    <ToggleGroup type="single" defaultValue="center" aria-label="Text alignment" disabled>
-                      <ToggleGroupItem value="left" aria-label="Left aligned">
-                        Left
+                   <div>
+                    <Label>Multiple Selection</Label>
+                    <ToggleGroup type="multiple" aria-label="Font styles" className="mt-2">
+                       <ToggleGroupItem value="bold" aria-label="Toggle bold">
+                            <Bold className="h-4 w-4" />
                       </ToggleGroupItem>
-                      <ToggleGroupItem value="center" aria-label="Center aligned">
-                        Center
+                        <ToggleGroupItem value="italic" aria-label="Toggle italic">
+                            <Italic className="h-4 w-4" />
                       </ToggleGroupItem>
-                      <ToggleGroupItem value="right" aria-label="Right aligned">
-                        Right
+                        <ToggleGroupItem value="underline" aria-label="Toggle underline">
+                            <Underline className="h-4 w-4" />
                       </ToggleGroupItem>
                     </ToggleGroup>
                   </div>
+                   <div>
+                    <Label>Disabled Group</Label>
+                    <ToggleGroup type="single" defaultValue="center" aria-label="Disabled alignment" disabled className="mt-2">
+                      <ToggleGroupItem value="left">Left</ToggleGroupItem>
+                      <ToggleGroupItem value="center">Center</ToggleGroupItem>
+                      <ToggleGroupItem value="right">Right</ToggleGroupItem>
+                    </ToggleGroup>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Cards Section */}
-          <TabsContent value="cards" className="space-y-8">
             <Card>
               <CardHeader>
-                <CardTitle>Cards</CardTitle>
-                <CardDescription>Card components for displaying content</CardDescription>
+                  <CardTitle>Form</CardTitle>
+                  <CardDescription>Component for building forms with validation (using react-hook-form)</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Basic Card</CardTitle>
-                      <CardDescription>A simple card with header and content</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">This is a basic card component that can be used to display content in a contained area.</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle icon={Settings}>Card with Icon</CardTitle>
-                      <CardDescription>Includes an icon in the title</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm">This card includes a footer section with action buttons.</p>
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                      <Button variant="outline" size="sm">Cancel</Button>
-                      <Button size="sm">Save</Button>
-                    </CardFooter>
-                  </Card>
-
-                  <Card>
-                    <CardHeader highlighted>
-                      <CardTitle>Featured Card</CardTitle>
-                      <CardDescription>With highlighted header</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <p className="text-sm">This card has a highlighted header to make it stand out.</p>
-                    </CardContent>
-                    <CardFooter highlighted>
-                      <p className="text-xs text-amber-400/70">Last updated: 2 days ago</p>
-                    </CardFooter>
-                  </Card>
-                </div>
+                  {/* Basic Form Example */}
+                  {/* You would typically define a schema (e.g., with Zod) and handle submission */}
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(() => console.log('Form submitted'))} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Username</FormLabel>
+                            <FormControl>
+                              <Input placeholder="johndoe" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              This is your public display name.
+                            </FormDescription>
+                            <FormMessage /> {/* Displays validation errors */}
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit">Submit</Button>
+                    </form>
+                  </Form>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tables Section */}
-          <TabsContent value="tables" className="space-y-8">
+             {/* Data Display Section */}
+            <TabsContent value="dataDisplay" className="space-y-8">
             <Card>
               <CardHeader>
-                <CardTitle>Basic Table</CardTitle>
-                <CardDescription>Simple table for displaying data</CardDescription>
+                  <CardTitle>Table</CardTitle>
+                  <CardDescription>Standard table for structured data</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
+                    <TableCaption>A list of recent invoices.</TableCaption>
                   <TableHeader>
                     <TableRow> 
-                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
+                        <TableHead className="w-[100px]">Invoice</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell>John Doe</TableCell>
-                      <TableCell>john@example.com</TableCell>
-                      <TableCell>Admin</TableCell>
-                      <TableCell>
-                        <StatusBadge status="active">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                      </TableCell>
+                        <TableCell className="font-medium">INV001</TableCell>
+                        <TableCell><StatusBadge status="success">Paid</StatusBadge></TableCell>
+                        <TableCell>Credit Card</TableCell>
+                        <TableCell className="text-right">$250.00</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell>Jane Smith</TableCell>
-                      <TableCell>jane@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="pending">Pending</StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                      </TableCell>
+                        <TableCell className="font-medium">INV002</TableCell>
+                        <TableCell><StatusBadge status="pending">Pending</StatusBadge></TableCell>
+                        <TableCell>PayPal</TableCell>
+                        <TableCell className="text-right">$150.00</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell>Robert Johnson</TableCell>
-                      <TableCell>robert@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="inactive">Inactive</StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                      </TableCell>
+                        <TableCell className="font-medium">INV003</TableCell>
+                        <TableCell><StatusBadge status="error">Failed</StatusBadge></TableCell>
+                        <TableCell>Bank Transfer</TableCell>
+                        <TableCell className="text-right">$350.00</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
 
+              {/* Add SkinnyTable example if it's used */}
+              {typeof SkinnyTable !== 'undefined' && (
             <Card>
               <CardHeader>
-                <CardTitle>Searchable Table</CardTitle>
-                <CardDescription>Table with search functionality</CardDescription>
+                    <CardTitle>Skinny Table</CardTitle>
+                    <CardDescription>A compact table variant (if available)</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-300" />
-                    <Input
-                      type="search"
-                      placeholder="Search users..."
-                      className="w-full pl-9"
-                    />
-                  </div>
-                  <Button variant="outline" size="sm">Search</Button>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>John Doe</TableCell>
-                      <TableCell>john@example.com</TableCell>
-                      <TableCell>Admin</TableCell>
-                      <TableCell>
-                        <StatusBadge status="active">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Jane Smith</TableCell>
-                      <TableCell>jane@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="pending">Pending</StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Robert Johnson</TableCell>
-                      <TableCell>robert@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="inactive">Inactive</StatusBadge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                    {/* Replace with actual SkinnyTable implementation if needed */}
+                    <p className="text-muted-foreground">Example for SkinnyTable goes here.</p>
+                    {/* <SkinnyTable data={...} columns={...} /> */}
+              </CardContent>
+            </Card>
+              )}
+
+            <Card>
+              <CardHeader>
+                  <CardTitle>Avatar</CardTitle>
+                  <CardDescription>Displays user avatars or placeholders</CardDescription>
+              </CardHeader>
+                <CardContent className="flex flex-wrap gap-4 items-center">
+                    <Avatar>
+                      <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+                      <AvatarFallback>CN</AvatarFallback>
+                    </Avatar>
+                    <Avatar>
+                      <AvatarFallback>JD</AvatarFallback> {/* Fallback when no image */}
+                    </Avatar>
+                    <Avatar className="h-16 w-16"> {/* Custom size */}
+                       <AvatarImage src="https://github.com/vercel.png" alt="@vercel" />
+                       <AvatarFallback>VC</AvatarFallback>
+                    </Avatar>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Filterable Table</CardTitle>
-                <CardDescription>Table with filtering options</CardDescription>
+                  <CardTitle>Badge</CardTitle>
+                  <CardDescription>Informational badges</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-300" />
-                    <Input
-                      type="search"
-                      placeholder="Search users..."
-                      className="w-full pl-9"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <Filter className="h-4 w-4" />
-                      <span>Filter</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <span>Status</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <span>Role</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px] font-medium cursor-pointer">
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Created</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Last Login</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableCell>
-                      <TableCell>John Doe</TableCell>
-                      <TableCell>john@example.com</TableCell>
-                      <TableCell>Admin</TableCell>
-                      <TableCell>
-                        <StatusBadge status="active">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-12</TableCell>
-                      <TableCell>2023-06-01</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                        </div>
-                      </TableCell>
-                      <TableCell>Jane Smith</TableCell>
-                      <TableCell>jane@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="pending">Pending</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-15</TableCell>
-                      <TableCell>2023-05-30</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableCell>
-                      <TableCell>Robert Johnson</TableCell>
-                      <TableCell>robert@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="inactive">Inactive</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-20</TableCell>
-                      <TableCell>2023-05-25</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    Showing <strong>1-3</strong> of <strong>10</strong> results
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" disabled>Previous</Button>
-                    <Button variant="outline" size="sm">Next</Button>
-                  </div>
-                </div>
+                <CardContent className="flex flex-wrap gap-3">
+                    <Badge>Default</Badge>
+                    <Badge variant="secondary">Secondary</Badge>
+                    <Badge variant="outline">Outline</Badge>
+                    <Badge variant="destructive">Destructive</Badge>
+                     {/* StatusBadge is also a type of badge */}
+                    <StatusBadge status="success">Success</StatusBadge>
+                    <StatusBadge status="warning">Warning</StatusBadge>
+                    <StatusBadge status="error">Error</StatusBadge>
+                    <StatusBadge status="pending">Pending</StatusBadge>
+                    <StatusBadge status="info">Info</StatusBadge>
+                    <StatusBadge status="inactive">Inactive</StatusBadge>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Compact Table</CardTitle>
-                <CardDescription>Smaller, more condensed table for space efficiency</CardDescription>
+                  <CardTitle>Calendar</CardTitle>
+                  <CardDescription>Date selection calendar</CardDescription>
               </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="h-8">
-                      <TableHead className="text-xs font-medium cursor-pointer">Name</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer">Email</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer">Role</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer">Status</TableHead>
-                      <TableHead className="text-xs font-medium cursor-pointer text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow className="h-8">
-                      <TableCell className="py-1 text-xs">John Doe</TableCell>
-                      <TableCell className="py-1 text-xs">john@example.com</TableCell>
-                      <TableCell className="py-1 text-xs">Admin</TableCell>
-                      <TableCell className="py-1 text-xs">
-                        <StatusBadge status="active" className="text-xs py-0 px-2">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell className="py-1 text-right">
-                        <Button variant="ghost" size="xs" icon={Edit} aria-label="Edit" />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-8">
-                      <TableCell className="py-1 text-xs">Jane Smith</TableCell>
-                      <TableCell className="py-1 text-xs">jane@example.com</TableCell>
-                      <TableCell className="py-1 text-xs">User</TableCell>
-                      <TableCell className="py-1 text-xs">
-                        <StatusBadge status="pending" className="text-xs py-0 px-2">Pending</StatusBadge>
-                      </TableCell>
-                      <TableCell className="py-1 text-right">
-                        <Button variant="ghost" size="xs" icon={Edit} aria-label="Edit" />
-                      </TableCell>
-                    </TableRow>
-                    <TableRow className="h-8">
-                      <TableCell className="py-1 text-xs">Robert Johnson</TableCell>
-                      <TableCell className="py-1 text-xs">robert@example.com</TableCell>
-                      <TableCell className="py-1 text-xs">User</TableCell>
-                      <TableCell className="py-1 text-xs">
-                        <StatusBadge status="inactive" className="text-xs py-0 px-2">Inactive</StatusBadge>
-                      </TableCell>
-                      <TableCell className="py-1 text-right">
-                        <Button variant="ghost" size="xs" icon={Edit} aria-label="Edit" />
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Skinny Sidebar Table</CardTitle>
-                <CardDescription>Compact table optimized for sidebar display with sorting and selection</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="w-full md:w-80 lg:w-96 border border-slate-200 dark:border-slate-800">
-                  <SkinnyTable
-                    data={[
-                      { id: 1, sku: "PRD001", name: "Product One", status: "active" },
-                      { id: 2, sku: "PRD002", name: "Product Two", status: "inactive" },
-                      { id: 3, sku: "PRD003", name: "Product Three", status: "active" },
-                    ]}
-                    columns={[
-                      { field: "sku", header: "SKU" },
-                      { field: "name", header: "Name" },
-                      {
-                        field: "status",
-                        header: "Status",
-                        render: (item) => (
-                          <StatusBadge
-                            status={item.status as "active" | "inactive"}
-                            className="text-xs"
-                          >
-                            {item.status === "active" ? "Active" : "Inactive"}
-                          </StatusBadge>
-                        ),
-                      },
-                    ]}
-                    selectedItem={2}
-                    onItemSelect={(item) => console.log("Selected item:", item)}
+                <CardContent className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    className="rounded-md border"
                   />
-                </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Selectable Table</CardTitle>
-                <CardDescription>Table with row selection capabilities</CardDescription>
+                  <CardTitle>Separator</CardTitle>
+                  <CardDescription>Visual separator line</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <span>Bulk Actions</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" icon={Trash}>Delete Selected</Button>
+                    <div>
+                        <p>Content above the separator.</p>
+                        <Separator className="my-4" />
+                        <p>Content below the separator.</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-300" />
-                      <Input
-                        type="search"
-                        placeholder="Search..."
-                        className="w-[200px] pl-9"
-                      />
-                    </div>
-                  </div>
+                     <div className="flex h-10 items-center space-x-4 text-sm mt-6">
+                        <div>Blog</div>
+                        <Separator orientation="vertical" />
+                        <div>Docs</div>
+                        <Separator orientation="vertical" />
+                        <div>Source</div>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px] font-medium cursor-pointer">
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">Name</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Email</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Role</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Status</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Created</TableHead>
-                      <TableHead className="font-medium cursor-pointer">Last Login</TableHead>
-                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableCell>
-                      <TableCell>John Doe</TableCell>
-                      <TableCell>john@example.com</TableCell>
-                      <TableCell>Admin</TableCell>
-                      <TableCell>
-                        <StatusBadge status="active">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-12</TableCell>
-                      <TableCell>2023-06-01</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                        </div>
-                      </TableCell>
-                      <TableCell>Jane Smith</TableCell>
-                      <TableCell>jane@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="pending">Pending</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-15</TableCell>
-                      <TableCell>2023-05-30</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableCell>
-                      <TableCell>Robert Johnson</TableCell>
-                      <TableCell>robert@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="inactive">Inactive</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-20</TableCell>
-                      <TableCell>2023-05-25</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    <strong>2</strong> items selected
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" disabled>Previous</Button>
-                    <Button variant="outline" size="sm">Next</Button>
-                  </div>
-                </div>
+              </CardContent>
+            </Card>
+            </TabsContent>
+
+            {/* Feedback Section */}
+            <TabsContent value="feedback" className="space-y-8">
+            <Card>
+              <CardHeader>
+                  <CardTitle>Alert</CardTitle>
+                  <CardDescription>Displays important messages</CardDescription>
+              </CardHeader>
+                <CardContent className="space-y-4">
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Heads up!</AlertTitle>
+                    <AlertDescription>
+                      You can add components to your app using the cli.
+                    </AlertDescription>
+                  </Alert>
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                      Your session has expired. Please log in again.
+                    </AlertDescription>
+                  </Alert>
+                  <Alert>
+                     <CheckCircle className="h-4 w-4" />
+                    <AlertTitle>Success</AlertTitle>
+                    <AlertDescription>
+                      Your changes have been saved successfully.
+                    </AlertDescription>
+                  </Alert>
+                   <Alert>
+                     <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Warning</AlertTitle>
+                    <AlertDescription>
+                      Please backup your data before proceeding.
+                    </AlertDescription>
+                  </Alert>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Data Grid</CardTitle>
-                <CardDescription>Advanced table with multiple features</CardDescription>
+                  <CardTitle>Alert Dialog</CardTitle>
+                  <CardDescription>Modal dialog for critical confirmations</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-300" />
-                      <Input
-                        type="search"
-                        placeholder="Search..."
-                        className="w-[200px] pl-9"
-                      />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">Delete Account</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your
+                          account and remove your data from our servers.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction>Continue</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardContent>
+              </Card>
+
+                  <Card>
+                    <CardHeader>
+                  <CardTitle>Toast</CardTitle>
+                  <CardDescription>Short, temporary messages</CardDescription>
+                    </CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      toast({
+                        title: "Scheduled: Catch up",
+                        description: "Friday, February 10, 2023 at 5:57 PM",
+                        action: (
+                          <ToastAction altText="Goto schedule to undo">Undo</ToastAction>
+                        ),
+                      })
+                    }}
+                  >
+                    Show Default Toast
+                  </Button>
+                   <Button
+                    variant="destructive"
+                    onClick={() => {
+                      toast({
+                        variant: "destructive",
+                        title: "Uh oh! Something went wrong.",
+                        description: "There was a problem with your request.",
+                        action: <ToastAction altText="Try again">Try again</ToastAction>,
+                      })
+                    }}
+                  >
+                    Show Destructive Toast
+                  </Button>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                  <CardTitle>Progress</CardTitle>
+                  <CardDescription>Indicates the progress of an operation</CardDescription>
+                    </CardHeader>
+                <CardContent className="pt-4">
+                   <Label>Loading...</Label>
+                   <Progress value={33} className="mt-2"/>
+                   <Label className="mt-4 block">Upload Complete</Label>
+                   <Progress value={100} className="mt-2" />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                  <CardTitle>Skeleton</CardTitle>
+                  <CardDescription>Placeholder for loading content</CardDescription>
+                    </CardHeader>
+                <CardContent className="space-y-4">
+                   <div className="flex items-center space-x-4">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[250px]" />
+                        <Skeleton className="h-4 w-[200px]" />
+                      </div>
                     </div>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <Filter className="h-4 w-4" />
-                      <span>Filters</span>
-                      <Badge className="ml-1 bg-amber-500">3</Badge>
-                    </Button>
-                    <Button variant="outline" size="sm" icon={RefreshCw}>Refresh</Button>
+                    <Skeleton className="h-32 w-full rounded-md" />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                  <CardTitle>Spinners</CardTitle>
+                  <CardDescription>Indicates loading or processing state</CardDescription>
+                    </CardHeader>
+                <CardContent className="flex flex-wrap gap-6 items-center">
+                   {typeof Spinner !== 'undefined' && (
+                     <div className="flex flex-col items-center gap-2">
+                        <Label>Spinner</Label>
+                        <Spinner />
+                      </div>
+                   )}
+                   {typeof LoadingSpinner !== 'undefined' && (
+                      <div className="flex flex-col items-center gap-2">
+                        <Label>LoadingSpinner</Label>
+                        <LoadingSpinner />
+                      </div>
+                   )}
+                   {/* Show loading state on button as well */}
+                   <Button loading>Button Loading</Button>
+                    </CardContent>
+                  </Card>
+
+            </TabsContent>
+
+            {/* Overlays Section */}
+            <TabsContent value="overlays" className="space-y-8">
+                  <Card>
+                    <CardHeader>
+                  <CardTitle>Dialog</CardTitle>
+                  <CardDescription>Modal window for focused tasks or information</CardDescription>
+                    </CardHeader>
+                <CardContent>
+                   <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline">Edit Profile</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Edit profile</DialogTitle>
+                          <DialogDescription>
+                            Make changes to your profile here. Click save when you're done.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="name" className="text-right">
+                              Name
+                            </Label>
+                            <Input id="name" value="Pedro Duarte" className="col-span-3" />
+                      </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="username" className="text-right">
+                              Username
+                            </Label>
+                            <Input id="username" value="@peduarte" className="col-span-3" />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <DialogClose asChild>
+                            <Button type="button" variant="secondary">Close</Button>
+                          </DialogClose>
+                          <Button type="submit">Save changes</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                  <CardTitle>Dropdown Menu</CardTitle>
+                  <CardDescription>Contextual menu triggered by a button</CardDescription>
+                    </CardHeader>
+                <CardContent>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline">Open Menu</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem>
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Profile</span>
+                          <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          <span>Billing</span>
+                          <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Settings</span>
+                          <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem disabled>
+                        <Mail className="mr-2 h-4 w-4" />
+                        <span>Email (Disabled)</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <LogOut className="mr-2 h-4 w-4" /> {/* Ensure LogOut imported */}
+                        <span>Log out</span>
+                        <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                    </CardContent>
+                  </Card>
+
+            <Card>
+              <CardHeader>
+                  <CardTitle>Popover</CardTitle>
+                  <CardDescription>Floating content panel triggered by an element</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline">Open popover</Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium leading-none">Dimensions</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Set the dimensions for the layer.
+                          </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" icon={Download}>Export</Button>
-                    <Button variant="outline" size="sm" icon={Settings}>Columns</Button>
-                    <Button size="sm" icon={Plus}>Add User</Button>
-                  </div>
-                </div>
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500">
-                    <span>Status: Active</span>
-                    <X className="h-3 w-3 cursor-pointer" />
-                  </div>
-                  <div className="flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500">
-                    <span>Role: Admin</span>
-                    <X className="h-3 w-3 cursor-pointer" />
-                  </div>
-                  <div className="flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-1 text-xs text-amber-500">
-                    <span>Created: Last 7 days</span>
-                    <X className="h-3 w-3 cursor-pointer" />
-                  </div>
-                  <Button variant="link" size="sm" className="h-auto p-0 text-xs">Clear all</Button>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40px] font-medium cursor-pointer">
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">
-                        <div className="flex items-center gap-1">
-                          <span>Name</span>
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">
-                        <div className="flex items-center gap-1">
-                          <span>Email</span>
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">
-                        <div className="flex items-center gap-1">
-                          <span>Role</span>
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">
-                        <div className="flex items-center gap-1">
-                          <span>Status</span>
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">
-                        <div className="flex items-center gap-1">
-                          <span>Created</span>
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer">
-                        <div className="flex items-center gap-1">
-                          <span>Last Login</span>
-                          <ArrowUpDown className="h-4 w-4" />
-                        </div>
-                      </TableHead>
-                      <TableHead className="font-medium cursor-pointer text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">John Doe</TableCell>
-                      <TableCell>john@example.com</TableCell>
-                      <TableCell>Admin</TableCell>
-                      <TableCell>
-                        <StatusBadge status="active">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-12</TableCell>
-                      <TableCell>2023-06-01</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">Jane Smith</TableCell>
-                      <TableCell>jane@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="pending">Pending</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-15</TableCell>
-                      <TableCell>2023-05-30</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">Robert Johnson</TableCell>
-                      <TableCell>robert@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="inactive">Inactive</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-20</TableCell>
-                      <TableCell>2023-05-25</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">Emily Davis</TableCell>
-                      <TableCell>emily@example.com</TableCell>
-                      <TableCell>Admin</TableCell>
-                      <TableCell>
-                        <StatusBadge status="active">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-22</TableCell>
-                      <TableCell>2023-06-02</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>
-                        <div className="flex h-4 w-4 items-center justify-center rounded border border-border">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">Michael Wilson</TableCell>
-                      <TableCell>michael@example.com</TableCell>
-                      <TableCell>User</TableCell>
-                      <TableCell>
-                        <StatusBadge status="active">Active</StatusBadge>
-                      </TableCell>
-                      <TableCell>2023-05-25</TableCell>
-                      <TableCell>2023-06-03</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" icon={Edit} aria-label="Edit" />
-                          <Button variant="ghost" size="sm" icon={Trash} aria-label="Delete" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span>Showing</span>
-                    <select className="rounded border border-gray-300 px-2 py-1 text-sm">
-                      <option>10</option>
-                      <option>20</option>
-                      <option>50</option>
-                      <option>100</option>
-                    </select>
-                    <span>of <strong>42</strong> items</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="outline" size="sm" disabled>Previous</Button>
-                    <Button variant="outline" size="sm" className="bg-amber-500 text-white hover:bg-amber-600">1</Button>
-                    <Button variant="outline" size="sm">2</Button>
-                    <Button variant="outline" size="sm">3</Button>
-                    <Button variant="outline" size="sm">4</Button>
-                    <Button variant="outline" size="sm">Next</Button>
-                  </div>
-                </div>
+                        <div className="grid gap-2">
+                          <div className="grid grid-cols-3 items-center gap-4">
+                            <Label htmlFor="width">Width</Label>
+                            <Input id="width" defaultValue="100%" className="col-span-2 h-8" />
+                    </div>
+                          {/* Add more inputs as needed */}
+                    </div>
+                    </div>
+                    </PopoverContent>
+                  </Popover>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sheet</CardTitle>
+                  <CardDescription>Side panel that slides in</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-3">
+                    <Sheet>
+                      <SheetTrigger asChild><Button variant="outline">Open Right Sheet</Button></SheetTrigger>
+                      <SheetContent> {/* Defaults to right side */}
+                        <SheetHeader>
+                          <SheetTitle>Edit profile</SheetTitle>
+                          <SheetDescription>
+                            Make changes to your profile here. Click save when you're done.
+                          </SheetDescription>
+                        </SheetHeader>
+                        {/* Add content here */}
+                         <SheetFooter>
+                            <SheetClose asChild>
+                                <Button type="submit">Save changes</Button>
+                            </SheetClose>
+                        </SheetFooter>
+                      </SheetContent>
+                    </Sheet>
+                     <Sheet>
+                      <SheetTrigger asChild><Button variant="outline">Open Left Sheet</Button></SheetTrigger>
+                      <SheetContent side="left">
+                        <SheetHeader>
+                          <SheetTitle>Navigation</SheetTitle>
+                        </SheetHeader>
+                        {/* Add navigation links here */}
+                      </SheetContent>
+                    </Sheet>
+                    {/* Add triggers for top/bottom if needed */}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                  <CardTitle>Tooltip</CardTitle>
+                  <CardDescription>Small informational pop-up on hover</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" aria-label="Add to library">
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Add to library</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Charts Section */}
-          <TabsContent value="charts" className="space-y-8">
+            {/* Layout Section */}
+            <TabsContent value="layout" className="space-y-8">
+              {/* Card example is already shown in other sections, but we can add a note */}
             <Card>
               <CardHeader>
-                <CardTitle>Charts</CardTitle>
-                <CardDescription>Chart components for data visualization with dark mode support</CardDescription>
+                  <CardTitle>Card</CardTitle>
+                  <CardDescription>Basic container for content sections (Examples shown throughout)</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Line Chart */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle icon={LineChart}>Line Chart</CardTitle>
-                      <CardDescription>Display trend data with a line chart</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsLineChart data={lineData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
-                            <XAxis 
-                              dataKey="name" 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false} 
-                            />
-                            <YAxis 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false} 
-                              tickFormatter={(value) => `${value}`}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'var(--popover)', 
-                                borderColor: 'var(--border)',
-                                color: 'var(--popover-foreground)',
-                                borderRadius: 'var(--radius)',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                              }} 
-                              cursor={{ fill: 'transparent' }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} />
-                            <Line 
-                              type="monotone" 
-                              dataKey="value" 
-                              stroke="var(--primary)" 
-                              strokeWidth={2} 
-                              activeDot={{ r: 8, fill: 'var(--primary)' }} 
-                              dot={{ stroke: 'var(--primary)', strokeWidth: 1, r: 4, fill: 'var(--background)' }}
-                            />
-                          </RechartsLineChart>
-                        </ResponsiveContainer>
+                   <p className="text-muted-foreground">See examples in Buttons, Inputs, etc.</p>
+                   <Card className="mt-4 w-fit"> {/* Nested card */}
+                       <CardHeader>
+                           <CardTitle>Nested Card</CardTitle>
+                       </CardHeader>
+                       <CardContent>Content inside nested card.</CardContent>
+                   </Card>
+                </CardContent>
+              </Card>
+
+               {/* Tabs example is the main structure of this page */}
+               <Card>
+                <CardHeader>
+                  <CardTitle>Tabs</CardTitle>
+                  <CardDescription>Used to organize content into sections (This page uses Tabs)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Tabs defaultValue="account" className="w-[400px]">
+                      <TabsList>
+                        <TabsTrigger value="account">Account</TabsTrigger>
+                        <TabsTrigger value="password">Password</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="account">Make changes to your account here.</TabsContent>
+                      <TabsContent value="password">Change your password here.</TabsContent>
+                    </Tabs>
+                </CardContent>
+              </Card>
+
+               <Card>
+                <CardHeader>
+                  <CardTitle>Scroll Area</CardTitle>
+                  <CardDescription>Provides scrollbars for content overflow</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ScrollArea className="h-32 w-48 rounded-md border p-4">
+                        Jokester began sneaking into the castle in the middle of the night
+                        and leaving jokes all over the place: on the king's throne, in
+                        his soup, even in the royal toilet. The king was furious, but
+                        he couldn't seem to stop Jokester.
+                    </ScrollArea>
+                     {/* Example with horizontal scroll */}
+                     <ScrollArea className="w-96 whitespace-nowrap rounded-md border mt-4">
+                      <div className="flex w-max space-x-4 p-4">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                          <figure key={i} className="shrink-0">
+                            <div className="overflow-hidden rounded-md">
+                              <div className="bg-muted h-32 w-32 flex items-center justify-center">Item {i}</div>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Bar Chart */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle icon={BarChart4}>Bar Chart</CardTitle>
-                      <CardDescription>Compare data with a bar chart</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsBarChart data={barData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} vertical={false} />
-                            <XAxis 
-                              dataKey="name" 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false} 
-                            />
-                            <YAxis 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false} 
-                              tickFormatter={(value) => `${value}`}
-                              width={30}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'var(--popover)', 
-                                borderColor: 'var(--border)',
-                                color: 'var(--popover-foreground)',
-                                borderRadius: 'var(--radius)',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                              }} 
-                              cursor={{ fill: 'var(--accent)', opacity: 0.3 }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} />
-                            <Bar dataKey="value" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-                          </RechartsBarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Pie Chart */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle icon={PieChart}>Pie Chart</CardTitle>
-                      <CardDescription>Show proportion with a pie chart</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <div className="w-full h-full bg-muted/30 rounded-md p-2 flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RechartsPieChart margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              outerRadius={80}
-                              fill="var(--primary)"
-                              dataKey="value"
-                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                              fontSize={12}
-                              stroke="var(--card)"
-                              strokeWidth={2}
-                            >
-                              <Cell fill="var(--primary)" />
-                              <Cell fill="var(--accent)" />
-                              <Cell fill="var(--secondary)" />
-                              <Cell fill="oklch(from var(--primary) l c calc(h + 180))" />
-                            </Pie>
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'var(--popover)', 
-                                borderColor: 'var(--border)',
-                                color: 'var(--popover-foreground)',
-                                borderRadius: 'var(--radius)',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                              }} 
-                            />
-                            <Legend 
-                              wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} 
-                              verticalAlign="bottom" 
-                              height={36} 
-                            />
-                          </RechartsPieChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Area Chart */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Area Chart</CardTitle>
-                      <CardDescription>Visualize volume with area chart</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={areaData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
-                            <XAxis 
-                              dataKey="name" 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false} 
-                            />
-                            <YAxis 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false} 
-                              tickFormatter={(value) => `${value}`}
-                              width={30}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'var(--popover)', 
-                                borderColor: 'var(--border)',
-                                color: 'var(--popover-foreground)',
-                                borderRadius: 'var(--radius)',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                              }} 
-                              cursor={{ fill: 'transparent' }}
-                            />
-                            <Area 
-                              type="monotone" 
-                              dataKey="value" 
-                              stroke="var(--primary)" 
-                              fill="var(--primary)" 
-                              fillOpacity={0.3} 
-                              strokeWidth={2}
-                            />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Radar Chart */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Radar Chart</CardTitle>
-                      <CardDescription>Multi-dimensional data on a radar chart</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                            <PolarGrid stroke="var(--border)" strokeOpacity={0.5} />
-                            <PolarAngleAxis 
-                              dataKey="subject" 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                            />
-                            <PolarRadiusAxis 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={10} 
-                              axisLine={false} 
-                              tickLine={false} 
-                            />
-                            <Radar 
-                              name="Student A" 
-                              dataKey="A" 
-                              stroke="var(--primary)" 
-                              fill="var(--primary)" 
-                              fillOpacity={0.6} 
-                            />
-                            <Radar 
-                              name="Student B" 
-                              dataKey="B" 
-                              stroke="var(--accent)" 
-                              fill="var(--accent)" 
-                              fillOpacity={0.5} 
-                            />
-                            <Legend wrapperStyle={{ fontSize: "12px", color: 'var(--muted-foreground)' }} />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'var(--popover)', 
-                                borderColor: 'var(--border)',
-                                color: 'var(--popover-foreground)',
-                                borderRadius: 'var(--radius)',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                              }} 
-                            />
-                          </RadarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Scatter Chart */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Scatter Chart</CardTitle>
-                      <CardDescription>Display correlation with scatter plots</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <div className="w-full h-full bg-muted/30 rounded-md p-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.5} />
-                            <XAxis 
-                              type="number" 
-                              dataKey="x" 
-                              name="x-axis" 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false}
-                            />
-                            <YAxis 
-                              type="number" 
-                              dataKey="y" 
-                              name="y-axis" 
-                              stroke="var(--muted-foreground)" 
-                              fontSize={12} 
-                              tickLine={false} 
-                              axisLine={false} 
-                              width={30}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'var(--popover)', 
-                                borderColor: 'var(--border)',
-                                color: 'var(--popover-foreground)',
-                                borderRadius: 'var(--radius)',
-                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                              }} 
-                              cursor={{ stroke: 'var(--border)', strokeDasharray: '3 3' }} 
-                            />
-                            <Scatter name="Values" data={scatterData} fill="var(--primary)" />
-                          </ScatterChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Filters Section */}
-          <TabsContent value="filters" className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Filters & Search</CardTitle>
-                <CardDescription>Components for filtering and searching data</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <Input 
-                      icon={Search}
-                      placeholder="Search..." 
-                      fullWidth
-                    />
-                    <Button icon={Search}>Search</Button>
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Status</label>
-                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
-                        <option value="">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="pending">Pending</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Category</label>
-                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
-                        <option value="">All Categories</option>
-                        <option value="category1">Category 1</option>
-                        <option value="category2">Category 2</option>
-                        <option value="category3">Category 3</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Date Range</label>
-                      <select className="w-full rounded-md border border-amber-800/35 bg-amber-950/25 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none">
-                        <option value="today">Today</option>
-                        <option value="yesterday">Yesterday</option>
-                        <option value="last7days">Last 7 Days</option>
-                        <option value="last30days">Last 30 Days</option>
-                        <option value="custom">Custom Range</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between mt-4">
-                    <Button variant="outline">Reset Filters</Button>
-                    <Button icon={Filter}>Apply Filters</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Colors Section */}
-          <TabsContent value="colors" className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Theme Colors</CardTitle>
-                <CardDescription>Color variables organized by functional categories</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-8">
-                  {colorCategories.map((category) => (
-                    <div key={category.category} className="space-y-4">
-                      <h3 className="text-lg font-medium">{category.category}</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">
-                        {category.colors.map((color) => (
-                          <ColorSwatch key={color.name} name={color.name} cssVarName={color.variable} />
+                            <figcaption className="pt-2 text-xs text-muted-foreground">
+                              Image {i}
+                            </figcaption>
+                          </figure>
                         ))}
                       </div>
-                      {category.category !== colorCategories[colorCategories.length - 1].category && (
-                        <Separator className="my-4" />
-                      )}
+                      <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Container</CardTitle>
+                  <CardDescription>Applies consistent horizontal padding (used for this page)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Container className="border border-dashed p-4">
+                    <p>This content is inside a Container component.</p>
+                  </Container>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Charts Section */}
+            <TabsContent value="charts" className="space-y-8">
+              {/* Existing Chart examples */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Charts (Recharts)</CardTitle>
+                  <CardDescription>Various chart types using the Recharts library</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Line Chart */}
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Line Chart</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsLineChart data={lineData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <RechartsTooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="value" stroke={themeColors.primary} activeDot={{ r: 8 }} />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                      </div>
+
+                  {/* Bar Chart */}
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Bar Chart</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsBarChart data={barData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <RechartsTooltip />
+                        <Legend />
+                        <Bar dataKey="value" fill="var(--secondary)" />
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                      </div>
+
+                  {/* Pie Chart */}
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Pie Chart</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsPieChart>
+                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} fill="var(--accent)" label>
+                            {pieData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                        <RechartsTooltip />
+                        <Legend />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Area Chart */}
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Area Chart</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <AreaChart data={areaData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <RechartsTooltip />
+                           <Legend />
+                          <Area type="monotone" dataKey="value" stroke={themeColors.primary} fill={themeColors.primary} fillOpacity={0.3} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Radar Chart */}
+                   <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Radar Chart</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                          <PolarGrid />
+                          <PolarAngleAxis dataKey="subject" />
+                          <PolarRadiusAxis />
+                          <Radar name="Mike" dataKey="A" stroke={themeColors.primary} fill={themeColors.primary} fillOpacity={0.6} />
+                          <Radar name="Lily" dataKey="B" stroke="var(--secondary)" fill="var(--secondary)" fillOpacity={0.6} />
+                           <Legend />
+                           <RechartsTooltip />
+                        </RadarChart>
+                    </ResponsiveContainer>
+                      </div>
+
+                  {/* Scatter Chart */}
+                        <div className="space-y-2">
+                    <h3 className="text-lg font-medium">Scatter Chart</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <ScatterChart>
+                          <CartesianGrid />
+                          <XAxis type="number" dataKey="x" name="stature" unit="cm" />
+                          <YAxis type="number" dataKey="y" name="weight" unit="kg" />
+                          <Scatter name="A school" data={scatterData} fill="var(--accent)" />
+                           <Legend />
+                           <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} />
+                        </ScatterChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Icons Section */}
+            <TabsContent value="icons" className="space-y-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Icons (Lucide React)</CardTitle>
+                  <CardDescription>Commonly used icons available via lucide-react</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-4">
+                  {/* Display a selection of icons */}
+                  {[
+                    Search, Filter, BarChart4, PieChart, LineChart, Plus, Trash, Edit, Save, Download, Upload, RefreshCw, Settings, ChevronDown, ChevronUp, ArrowUpDown, X, Check, User, Home, ShoppingCart, FileText, Bell, CalendarIcon, Mail, Phone, CreditCard, HelpCircle, Info, AlertTriangle, CheckCircle, XCircle, Minus
+                  ].map((Icon, index) => (
+                    <div key={index} className="flex flex-col items-center p-2 border rounded-md w-20 text-center">
+                      <Icon className="h-6 w-6 mb-1" />
+                      <span className="text-xs truncate w-full">{Icon.displayName || 'Icon'}</span>
                     </div>
                   ))}
+                  <p className="w-full text-sm text-muted-foreground mt-4">
+                    See the <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Lucide Icons website</a> for a full list. Import required icons directly from 'lucide-react'.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Colors Section */}
+            <TabsContent value="colors" className="space-y-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Color Palette</CardTitle>
+                  <CardDescription>Semantic colors defined via CSS variables</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {colorCategories.map((category) => (
+                     <div key={category.category} className="mb-6">
+                        <h3 className="text-lg font-medium mb-3">{category.category}</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {category.colors.map((color) => (
+                            <ColorSwatch key={color.variable} name={color.name} cssVarName={color.variable} />
+                        ))}
+                  </div>
+                        {category.category !== colorCategories[colorCategories.length - 1].category && <Separator className="mt-6" />}
                 </div>
+                  ))}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Icons Section */}
-          <TabsContent value="icons" className="space-y-8">
-            <Card>
-              <CardHeader>
-                <CardTitle>Icons</CardTitle>
-                <CardDescription>Lucide icons used throughout the application</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-8">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Common Icons</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <User className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">User</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Home className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Home</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Settings className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Settings</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Search className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Search</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <ShoppingCart className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">ShoppingCart</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <FileText className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">FileText</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Action Icons</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Plus className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Plus</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Edit className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Edit</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Trash className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Trash</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Save className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Save</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Download className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Download</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Upload className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Upload</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Notification Icons</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Bell className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Bell</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Mail className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Mail</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Calendar className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Calendar</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Phone className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">Phone</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <CreditCard className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">CreditCard</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <HelpCircle className="h-8 w-8 text-primary mb-2" />
-                        <span className="text-xs text-center">HelpCircle</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Status Icons</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Info className="h-8 w-8 text-blue-500 mb-2" />
-                        <span className="text-xs text-center">Info</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <AlertTriangle className="h-8 w-8 text-yellow-500 mb-2" />
-                        <span className="text-xs text-center">AlertTriangle</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <CheckCircle className="h-8 w-8 text-green-500 mb-2" />
-                        <span className="text-xs text-center">CheckCircle</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <XCircle className="h-8 w-8 text-red-500 mb-2" />
-                        <span className="text-xs text-center">XCircle</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <Check className="h-8 w-8 text-green-500 mb-2" />
-                        <span className="text-xs text-center">Check</span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 bg-muted rounded-md">
-                        <X className="h-8 w-8 text-red-500 mb-2" />
-                        <span className="text-xs text-center">X</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Usage Examples</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h4 className="text-md font-medium">In Buttons</h4>
-                        <div className="flex flex-wrap gap-2">
-                          <Button icon={Plus}>Add Item</Button>
-                          <Button variant="secondary" icon={Edit}>Edit</Button>
-                          <Button variant="outline" icon={Trash}>Delete</Button>
-                          <Button size="icon" icon={Settings} aria-label="Settings" />
-                        </div>
-                        <div className="bg-card p-4 rounded-md">
-                          <pre className="text-xs overflow-x-auto text-muted-foreground">
-{`<Button icon={Plus}>Add Item</Button>
-<Button variant="secondary" icon={Edit}>Edit</Button>
-<Button variant="outline" icon={Trash}>Delete</Button>
-<Button size="icon" icon={Settings} aria-label="Settings" />`}
-                          </pre>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <h4 className="text-md font-medium">In Inputs</h4>
-                        <div className="space-y-2">
-                          <Input icon={Search} placeholder="Search..." />
-                          <Input icon={Mail} placeholder="Email address..." />
-                          <Input icon={User} placeholder="Username..." />
-                        </div>
-                        <div className="bg-card p-4 rounded-md">
-                          <pre className="text-xs overflow-x-auto text-muted-foreground">
-{`<Input icon={Search} placeholder="Search..." />
-<Input icon={Mail} placeholder="Email address..." />
-<Input icon={User} placeholder="Username..." />`}
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-card p-6 rounded-md">
-                    <h3 className="text-lg font-medium mb-4">How to Use Icons</h3>
-                    <p className="text-sm mb-4">
-                      This project uses Lucide React for icons. Import the icons you need from the lucide-react package:
-                    </p>
-                    <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto mb-4">
-{`import { Search, User, Settings } from 'lucide-react';`}
-                    </pre>
-                    <p className="text-sm mb-4">
-                      You can use icons directly in your components:
-                    </p>
-                    <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto mb-4">
-{`<Search className="h-4 w-4 text-primary" />`}
-                    </pre>
-                    <p className="text-sm">
-                      Or use them with our enhanced components that have built-in icon support:
-                    </p>
-                    <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto">
-{`<Button icon={Plus}>Add Item</Button>
-<Input icon={Search} placeholder="Search..." />
-<CardTitle icon={Settings}>Card Title</CardTitle>`}
-                    </pre>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
-    </div>
+        <Toaster /> {/* Ensure Toaster is rendered */}
+      </ToastProvider>
+    </Container>
   );
 }
 
-// Helper component for displaying color swatches using CSS variables
+
+// Helper component to display color swatches
 interface ColorSwatchProps {
   name: string;
   cssVarName: string;
 }
 
-const ColorSwatch: React.FC<ColorSwatchProps> = ({ name, cssVarName }) => (
-  <div className="flex flex-col items-center space-y-1">
-    <div 
-      className="h-16 w-full rounded-md border border-border shadow-sm"
-      style={{ backgroundColor: `var(${cssVarName})` }}
-      title={`${name}: var(${cssVarName})`}
-    />
-    <span className="text-xs text-muted-foreground">{name}</span>
-    <span className="text-xs font-mono text-muted-foreground/70">{`var(${cssVarName})`}</span>
+const ColorSwatch: React.FC<ColorSwatchProps> = ({ name, cssVarName }) => {
+  // Attempt to get computed style - might not work perfectly server-side but good for client-side rendering
+  // For a robust solution, you might need to parse the actual CSS or use a theme context
+  const [bgColor, setBgColor] = useState('transparent');
+  const [textColor, setTextColor] = useState('inherit');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const computedColor = getComputedStyle(document.documentElement).getPropertyValue(cssVarName).trim();
+      setBgColor(computedColor);
+      // Simple contrast check (you might need a more sophisticated library for perfect contrast)
+      // This is a basic heuristic
+      const colorVal = computedColor.startsWith('#') ? computedColor.substring(1) : computedColor;
+      const r = parseInt(colorVal.substr(0, 2), 16);
+      const g = parseInt(colorVal.substr(2, 2), 16);
+      const b = parseInt(colorVal.substr(4, 2), 16);
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      setTextColor(luminance > 0.5 ? '#000' : '#FFF');
+    }
+  }, [cssVarName]);
+
+
+  return (
+    <div className="flex flex-col items-start">
+      <div
+        className="h-16 w-full rounded-md border flex items-center justify-center"
+        style={{ backgroundColor: bgColor }}
+        title={`CSS Variable: ${cssVarName}`}
+      >
+         <span style={{color: textColor}} className="text-xs font-mono mix-blend-difference p-1 rounded bg-black/10">{bgColor}</span>
+      </div>
+      <div className="mt-2 text-sm">{name}</div>
+      <div className="text-xs text-muted-foreground">{cssVarName}</div>
   </div>
 ); 
+};
+
+// Add lucide icons used in new examples if they weren't already imported
+import { Bold, Italic, Underline, LogOut } from 'lucide-react';

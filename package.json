@@ -9,6 +9,7 @@
   "devDependencies": {
     "@babel/preset-react": "^7.26.3",
     "@babel/preset-typescript": "^7.27.0",
+    "@types/react": "^19.1.0",
     "jest-fetch-mock": "^3.0.3"
   }
 }
