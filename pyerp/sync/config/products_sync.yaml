@@ -130,4 +130,27 @@ variants:
     timestamp_filter_format: "filter='{timestamp_field} gt \"{value}\"'"
     full_sync_fallback: true
   dependencies:
-    - "parent_products" 
+    - "parent_products"
+
+# Product images sync (triggered after variants)
+product_images:
+  name: "Product Images Sync"
+  description: "Synchronize product images from external CMS API after variant sync"
+  # This assumes a mechanism exists or will be added to the sync framework
+  # to trigger specific functions or management commands based on config.
+  trigger_type: "service_function" # Placeholder: Could be command, function call, etc.
+  # target_function: "pyerp.external_api.images_cms.tasks.run_full_image_sync" # Example target
+  config: # Configuration for the image sync process itself
+    page_size: 500 # Default from image sync docs
+    batch_size: 1000 # Default from image sync docs
+    # Add other relevant configs like timeout, retries etc., based on IMAGE_API settings
+  schedule:
+    frequency: daily
+    time: '03:00' # Run after products sync (assuming variants finish before this)
+  incremental:
+    # This needs to align with how the image sync logic handles incremental updates
+    # Potentially using ImageSyncLog timestamps or API filters if available
+    enabled: true
+    # timestamp_logic: based_on_last_sync_log # Placeholder
+  dependencies:
+    - "variants" # Ensures variants are synced first 

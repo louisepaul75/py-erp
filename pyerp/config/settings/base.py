@@ -74,7 +74,7 @@ LOCAL_APPS = [
     "pyerp.business_modules.production",
     "pyerp.monitoring",
     "pyerp.sync",
-    "pyerp.external_api",
+    "pyerp.external_api.apps.ExternalApiConfig",
     "admin_tools",  # Admin tools app for database table view
     "pyerp.business_modules.business",  # Business management (HR, finance, etc.)
 ]
