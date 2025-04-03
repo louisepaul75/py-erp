@@ -145,9 +145,9 @@ urlpatterns = [
     path("api/v1/products/", include("pyerp.business_modules.products.api_urls", namespace="products_api_v1")),
     # Add products UI URLs with namespace
     path("products/", include("pyerp.business_modules.products.urls", namespace="products")),
-    # Add sales API URLs (both versioned and non-versioned)
-    path("api/sales/", include("pyerp.business_modules.sales.urls")),
-    path("api/v1/sales/", include("pyerp.business_modules.sales.urls", namespace="sales_v1")),
+    # Add sales API URLs with namespace (both versioned and non-versioned)
+    path("api/sales/", include("pyerp.business_modules.sales.api_urls", namespace="sales_api")),
+    path("api/v1/sales/", include("pyerp.business_modules.sales.api_urls", namespace="sales_api_v1")),
     # Add production API URLs with namespace (both versioned and non-versioned)
     path("api/production/", include("pyerp.business_modules.production.urls", namespace="production_api")),
     path("api/v1/production/", include("pyerp.business_modules.production.urls", namespace="production_api_v1")),

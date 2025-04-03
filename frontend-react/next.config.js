@@ -93,6 +93,15 @@ const nextConfig = {
         source: '/api/v1/sales/records', // Without slash
         destination: 'http://localhost:8000/api/v1/sales/records/', // Force slash
       },
+      // Add specific rules for the monthly analysis endpoint
+      {
+        source: '/api/sales/records/monthly_analysis/',
+        destination: 'http://localhost:8000/api/v1/sales/records/monthly_analysis/',
+      },
+      {
+        source: '/api/sales/records/monthly_analysis',
+        destination: 'http://localhost:8000/api/v1/sales/records/monthly_analysis/',
+      },
       // Add a specific rule for OTHER /api/v1/ paths BEFORE the general catch-all
       {
         source: '/api/v1/:path*',
