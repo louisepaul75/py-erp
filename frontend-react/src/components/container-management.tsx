@@ -7,7 +7,7 @@ import { Printer, Plus, History, ChevronLeft, ChevronRight, Warehouse, Package2,
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { fetchContainers, generateSlotItems, generateInitialUnits } from "@/lib/inventory/service"
 import ActivityLogDialog from "./activity-log-dialog"
 import ContainerDetailDialog from "./container-detail-dialog"
@@ -199,18 +199,18 @@ export default function ContainerManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Schüttenverwaltung</h1>
+        <h1 className="text-2xl font-bold text-primary">Schüttenverwaltung</h1>
         <div className="flex items-center">
           <Link
             href="/warehouse"
-            className={`flex items-center mx-2 px-4 py-2 rounded-t-lg border-b-2 hover:border-gray-300 hover:text-gray-600`}
+            className={`flex items-center mx-2 px-4 py-2 rounded-t-lg border-b-2 border-transparent text-muted-foreground hover:border-muted`}
           >
             <Warehouse className="h-4 w-4 mr-2" />
             Lagerort-Verwaltung
           </Link>
           <Link
             href="/container-management"
-            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2  border-primary text-primary`}
+            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-primary text-primary`}
           >
             <Package2 className="h-4 w-4 mr-2" />
             Schütten-Verwaltung
@@ -219,18 +219,18 @@ export default function ContainerManagement() {
               variant="outline"
               size="sm"
               onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1 mx-2"
+              className="flex items-center gap-1 mx-2 text-muted-foreground"
             >
             <Settings className="h-4 w-4" />
             Einstellungen
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsActivityLogOpen(true)} className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsActivityLogOpen(true)} className="flex items-center gap-2 text-muted-foreground">
             <History className="h-4 w-4" />
             Aktivitätslog
           </Button>
-          <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-1">
+          <Button variant="outline" onClick={() => setIsCreateDialogOpen(true)} className="flex items-center gap-1 text-muted-foreground">
             <Plus className="h-4 w-4" />
             Schütte erstellen
           </Button>
@@ -282,13 +282,17 @@ export default function ContainerManagement() {
                 <Select
                   value={itemsPerPage === totalContainerCount ? "all" : itemsPerPage.toString()}
                   onValueChange={handleItemsPerPageChange}
-                  options={[
-                    { value: "20", label: "20" },
-                    { value: "50", label: "50" },
-                    { value: "100", label: "100" },
-                    { value: "all", label: `Alle (${totalContainerCount})` },
-                  ]}
-                />
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Einträge pro Seite" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="all">Alle ({totalContainerCount})</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {totalPages > 1 && (
@@ -399,9 +403,18 @@ export default function ContainerManagement() {
           <Select
             value={selectedPrinter}
             onValueChange={setSelectedPrinter}
-            placeholder="Drucker auswählen"
-            options={PRINTERS}
-          />
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Drucker auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRINTERS.map((printer) => (
+                <SelectItem key={printer.value} value={printer.value} disabled={printer.value === "none"}>
+                  {printer.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <Label htmlFor="multiplier" className="whitespace-nowrap">

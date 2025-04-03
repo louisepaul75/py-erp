@@ -3,7 +3,7 @@
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select1"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 interface ContainerManagementFiltersProps {
   searchTerm: string
@@ -70,9 +70,18 @@ export default function ContainerManagementFilters({
             <Select
               value={typeFilter}
               onValueChange={setTypeFilter}
-              placeholder="Typ auswählen"
-              options={CONTAINER_TYPES}
-            />
+            >
+              <SelectTrigger id="typeFilter">
+                <SelectValue placeholder="Typ auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTAINER_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value} disabled={type.value === "all" && typeFilter !== "all"}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="purposeFilter" className="text-sm">
@@ -81,9 +90,18 @@ export default function ContainerManagementFilters({
             <Select
               value={purposeFilter}
               onValueChange={setPurposeFilter}
-              placeholder="Zweck auswählen"
-              options={PURPOSES}
-            />
+            >
+              <SelectTrigger id="purposeFilter">
+                <SelectValue placeholder="Zweck auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {PURPOSES.map((purpose) => (
+                  <SelectItem key={purpose.value} value={purpose.value} disabled={purpose.value === "all" && purposeFilter !== "all"}>
+                    {purpose.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
