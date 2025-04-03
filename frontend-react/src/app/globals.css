@@ -68,7 +68,7 @@
     --popover-foreground: oklch(90% 0.02 50); /* Light greyish-orange */
 
     --primary: oklch(70% 0.18 50); /* Medium Orange */
-    --primary-foreground: oklch(15% 0.03 50); /* Very Dark Orange/Brown */
+    --primary-foreground: oklch(95% 0.015 60); /* Light off-white with slight warmth */
 
     --secondary: oklch(30% 0.02 250); /* Medium-dark grey */
     --secondary-foreground: oklch(85% 0.02 50); /* Light greyish-orange */
@@ -106,7 +106,7 @@
     --sidebar-background: oklch(18% 0.01 250);
     --sidebar-foreground: oklch(85% 0.02 50);
     --sidebar-primary: oklch(70% 0.18 50); /* Match primary */
-    --sidebar-primary-foreground: oklch(15% 0.03 50); /* Match primary foreground */
+    --sidebar-primary-foreground: oklch(95% 0.015 60); /* Match primary foreground */
     --sidebar-accent: oklch(40% 0.05 50); /* Match accent */
     --sidebar-accent-foreground: oklch(95% 0.02 50); /* Match accent foreground */
     --sidebar-border: oklch(40% 0.03 50); /* Match border */

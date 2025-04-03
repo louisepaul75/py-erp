@@ -112,7 +112,7 @@ const DashboardWidget = ({
         
         {title && (
           <div className={isEditMode ? "draggable-handle" : ""}>
-            <h2 className="text-xl font-bold tracking-tight mb-2 pr-8">{title}</h2>
+            <h2 className="text-xl font-bold tracking-tight mb-2 pr-8 text-primary">{title}</h2>
           </div>
         )}
         <div className="flex-1 overflow-auto">
@@ -457,7 +457,7 @@ const Dashboard = () => {
                     <div className="mb-2 mt-2 p-2 bg-primary/10 rounded-full">
                       <IconComponent className="h-6 w-6 text-primary" />
                     </div>
-                    <span className="text-sm font-medium">{tile.name}</span>
+                    <span className="text-sm font-medium text-foreground">{tile.name}</span>
                   </CardContent>
                 </Card>
               )
@@ -469,7 +469,7 @@ const Dashboard = () => {
           <div className="space-y-3">
             {quickLinks.map((link, index) => (
               <Link key={index} href={link.url}>
-                <Button variant="ghost" className="w-full justify-start text-sm">
+                <Button variant="ghost" className="w-full justify-start text-sm text-foreground hover:text-primary">
                   {link.name}
                 </Button>
               </Link>
@@ -482,11 +482,11 @@ const Dashboard = () => {
             {newsItems.map((item, index) => (
               <Card key={index}>
                 <CardHeader className="p-3">
-                  <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
+                  <CardTitle className="text-sm font-medium text-primary">{item.title}</CardTitle>
                   <p className="text-xs text-muted-foreground">{item.date}</p>
                 </CardHeader>
                 <CardContent className="p-3 pt-0">
-                  <p className="text-xs">{item.content}</p>
+                  <p className="text-xs text-foreground">{item.content}</p>
                 </CardContent>
               </Card>
             ))}
@@ -559,7 +559,7 @@ const Dashboard = () => {
   return (
     <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
         <div className="flex items-center gap-2">
           {isEditMode ? (
             <>
@@ -573,7 +573,7 @@ const Dashboard = () => {
               </Button>
             </>
           ) : (
-            <Button variant="outline" onClick={toggleEditMode}>
+            <Button variant="outline" onClick={toggleEditMode} className="border-primary text-primary hover:bg-primary/10">
               <Edit className="mr-2 h-4 w-4" />
               Layout bearbeiten
             </Button>
