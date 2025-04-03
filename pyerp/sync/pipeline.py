@@ -322,11 +322,21 @@ class PipelineFactory:
 
             # Extract the inner config values from source_config
             base_extractor_config = source_config.copy() if source_config else {}
-            merged_extractor_config = base_extractor_config.copy()  # Start with inner config values
+            
+            # Check if config field exists and extract it
+            if "config" in base_extractor_config:
+                inner_config = base_extractor_config.pop("config", {})
+                merged_extractor_config = inner_config.copy()  # Start with inner config values
+                # Add the rest of the source_config fields
+                merged_extractor_config.update(base_extractor_config)
+            else:
+                merged_extractor_config = base_extractor_config.copy()
 
             # Merge with mapping's extractor_config if present
             if mapping_config and "extractor_config" in mapping_config:
                 merged_extractor_config.update(mapping_config["extractor_config"])
+
+            logger.info(f"Extractor config after merging: {merged_extractor_config}")
 
             # Create the extractor using the merged config
             extractor = cls._create_component(

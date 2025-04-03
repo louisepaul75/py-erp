@@ -5,6 +5,7 @@ import yaml
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Dict, NamedTuple
+import os
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -249,32 +250,51 @@ class Command(BaseCommand):
         Returns:
             LoadResult containing sync statistics
         """
-        # Get mapping for parent products
-        mapping = SyncMapping.objects.get(
-            entity_type="parent_product",
-            active=True,
-            source__name="products_sync",
-            target__name="products.ParentProduct",
-        )
+        try:
+            # Get mapping for parent products
+            mapping = SyncMapping.objects.get(
+                entity_type="parent_product",
+                active=True,
+                source__name="products_sync",
+                target__name="products.ParentProduct",
+            )
+            
+            # Log mapping details for debugging
+            self.stdout.write(f"Found mapping: {mapping}")
+            self.stdout.write(f"Source config: {mapping.source.config}")
+            self.stdout.write(f"Target config: {mapping.target.config}")
+            self.stdout.write(f"Mapping config: {mapping.mapping_config}")
 
-        # Create pipeline using factory
-        pipeline = PipelineFactory.create_pipeline(mapping)
+            # Create pipeline using factory
+            pipeline = PipelineFactory.create_pipeline(mapping)
 
-        # Run pipeline
-        sync_log = pipeline.run(
-            incremental=not force_update,
-            batch_size=batch_size,
-            query_params=query_params,
-            fail_on_filter_error=fail_on_filter_error,
-        )
+            # Run pipeline
+            sync_log = pipeline.run(
+                incremental=not force_update,
+                batch_size=batch_size,
+                query_params=query_params,
+                fail_on_filter_error=fail_on_filter_error,
+            )
 
-        return LoadResult(
-            created=sync_log.records_succeeded,
-            updated=0,  # Not tracked separately in new system
-            skipped=sync_log.records_processed - sync_log.records_succeeded,
-            errors=sync_log.records_failed,
-            error_details=list(sync_log.details.filter(status="failed").values()),
-        )
+            return LoadResult(
+                created=sync_log.records_created,
+                updated=0,  # Not tracked separately in new system
+                skipped=sync_log.records_processed - sync_log.records_created,
+                errors=sync_log.records_failed,
+                error_details=[],  # SyncLog doesn't have a details attribute
+            )
+        except Exception as e:
+            self.stderr.write(f"Error in parent product sync: {e}")
+            # For debugging, print more details if it's a configuration error
+            if "Missing required configuration" in str(e):
+                self.stderr.write("Configuration error details:")
+                # Check environment variables
+                env_vars = [
+                    f"LEGACY_ERP_ENVIRONMENT: {os.environ.get('LEGACY_ERP_ENVIRONMENT', 'Not set')}",
+                    f"LEGACY_ERP_TABLE_NAME: {os.environ.get('LEGACY_ERP_TABLE_NAME', 'Not set')}"
+                ]
+                self.stderr.write("\n".join(env_vars))
+            raise
 
     def _sync_variants(
         self,
@@ -296,29 +316,48 @@ class Command(BaseCommand):
         Returns:
             LoadResult containing sync statistics
         """
-        # Get mapping for variant products
-        mapping = SyncMapping.objects.get(
-            entity_type="product_variant",
-            active=True,
-            source__name="products_sync_variants",
-            target__name="products.VariantProduct",
-        )
+        try:
+            # Get mapping for variant products
+            mapping = SyncMapping.objects.get(
+                entity_type="product_variant",
+                active=True,
+                source__name="products_sync_variants",
+                target__name="products.VariantProduct",
+            )
+            
+            # Log mapping details for debugging
+            self.stdout.write(f"Found mapping: {mapping}")
+            self.stdout.write(f"Source config: {mapping.source.config}")
+            self.stdout.write(f"Target config: {mapping.target.config}")
+            self.stdout.write(f"Mapping config: {mapping.mapping_config}")
 
-        # Create pipeline using factory
-        pipeline = PipelineFactory.create_pipeline(mapping)
+            # Create pipeline using factory
+            pipeline = PipelineFactory.create_pipeline(mapping)
 
-        # Run pipeline
-        sync_log = pipeline.run(
-            incremental=not force_update,
-            batch_size=batch_size,
-            query_params=query_params,
-            fail_on_filter_error=fail_on_filter_error,
-        )
+            # Run pipeline
+            sync_log = pipeline.run(
+                incremental=not force_update,
+                batch_size=batch_size,
+                query_params=query_params,
+                fail_on_filter_error=fail_on_filter_error,
+            )
 
-        return LoadResult(
-            created=sync_log.records_succeeded,
-            updated=0,  # Not tracked separately in new system
-            skipped=sync_log.records_processed - sync_log.records_succeeded,
-            errors=sync_log.records_failed,
-            error_details=list(sync_log.details.filter(status="failed").values()),
-        )
+            return LoadResult(
+                created=sync_log.records_created,
+                updated=0,  # Not tracked separately in new system
+                skipped=sync_log.records_processed - sync_log.records_created,
+                errors=sync_log.records_failed,
+                error_details=[],  # SyncLog doesn't have a details attribute
+            )
+        except Exception as e:
+            self.stderr.write(f"Error in variant product sync: {e}")
+            # For debugging, print more details if it's a configuration error
+            if "Missing required configuration" in str(e):
+                self.stderr.write("Configuration error details:")
+                # Check environment variables
+                env_vars = [
+                    f"LEGACY_ERP_ENVIRONMENT: {os.environ.get('LEGACY_ERP_ENVIRONMENT', 'Not set')}",
+                    f"LEGACY_ERP_TABLE_NAME: {os.environ.get('LEGACY_ERP_TABLE_NAME', 'Not set')}"
+                ]
+                self.stderr.write("\n".join(env_vars))
+            raise
