@@ -19,9 +19,13 @@ export default function RemoveContainerDialog({ isOpen, onClose, container, onCo
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
+        <Dialog.Content 
+          className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none"
+          aria-labelledby="remove-container-title"
+          aria-describedby="remove-container-description"
+        >
           <div className="flex items-center justify-between p-4 border-b">
-            <Dialog.Title className="text-xl font-semibold flex items-center gap-2">
+            <Dialog.Title id="remove-container-title" className="text-xl font-semibold flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-status-warning" />
               Schütte entfernen
             </Dialog.Title>
@@ -33,21 +37,25 @@ export default function RemoveContainerDialog({ isOpen, onClose, container, onCo
           </div>
 
           <div className="p-4 space-y-4">
-            {isMultipleContainers ? (
-              <p>
-                Sind Sie sicher, dass Sie <strong>{container.containerCode}</strong> aus diesem Lagerort entfernen
-                möchten?
-              </p>
-            ) : (
-              <p>
-                Sind Sie sicher, dass Sie die Schütte <strong>{container.containerCode}</strong> aus diesem Lagerort
-                entfernen möchten?
-              </p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              Die Schütte{isMultipleContainers ? "n werden" : " wird"} nicht gelöscht, sondern nur aus diesem Lagerort
-              entfernt. Sie können die Schütte{isMultipleContainers ? "n" : ""} später wieder einem Lagerort zuweisen.
-            </p>
+            <Dialog.Description id="remove-container-description" asChild>
+              <div>
+                {isMultipleContainers ? (
+                  <p>
+                    Sind Sie sicher, dass Sie <strong>{container.containerCode}</strong> aus diesem Lagerort entfernen
+                    möchten?
+                  </p>
+                ) : (
+                  <p>
+                    Sind Sie sicher, dass Sie die Schütte <strong>{container.containerCode}</strong> aus diesem Lagerort
+                    entfernen möchten?
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Die Schütte{isMultipleContainers ? "n werden" : " wird"} nicht gelöscht, sondern nur aus diesem Lagerort
+                  entfernt. Sie können die Schütte{isMultipleContainers ? "n" : ""} später wieder einem Lagerort zuweisen.
+                </p>
+              </div>
+            </Dialog.Description>
 
             <div className="pt-4 flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={onClose}>

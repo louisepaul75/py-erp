@@ -87,103 +87,115 @@ def boxes_list(request):
     try:
         page = int(request.GET.get("page", 1))
         page_size = int(request.GET.get("page_size", 10))
+        location_id = request.GET.get("location_id")
 
-        # Calculate pagination
+        # Start with the base queryset
+        queryset = Box.objects.select_related(
+            "box_type", "storage_location"
+        ).prefetch_related(
+            "slots__box_storage_items__product_storage__product"
+        )
+
+        # Apply location filter if provided
+        if location_id:
+            try:
+                location_id = int(location_id)
+                queryset = queryset.filter(storage_location_id=location_id)
+                logger.info(f"Filtering boxes for location_id: {location_id}")
+            except ValueError:
+                logger.warning(
+                    f"Invalid location_id provided: {location_id}. "
+                    f"Ignoring filter."
+                )
+                # Optionally, return a 400 error if location_id is invalid
+                # return Response({
+                #     "detail": "Invalid location_id format"
+                # }, status=400)
+
+        # Get total count *after* filtering
+        total_count = queryset.count()
+        logger.info(f"Total boxes count (after filter): {total_count}")
+
+        # Apply pagination *after* filtering
         offset = (page - 1) * page_size
         limit = page_size
+        boxes = queryset.all()[offset:offset + limit]
 
-        # Get total count using cached query
-        total_count = Box.objects.count()
-        logger.info(f"Total boxes count: {total_count}")
+        logger.info(
+            f"Fetched {len(boxes)} boxes for page {page} "
+            f"(location_id: {location_id or 'N/A'})")
 
-        try:
-            # Optimize query with joins and prefetching related data
-            boxes = (
-                Box.objects.select_related("box_type", "storage_location")
-                .prefetch_related(
-                    "slots__box_storage_items__product_storage__product"
-                )
-                .all()[offset:offset + limit]
-            )
-
-            logger.info("Base query constructed successfully")
-            logger.info(f"Fetched {len(boxes)} boxes for page {page}")
-
-            data = []
-            for box in boxes:
-                # Prepare location data
-                location_data = None
-                location_name = None
-                if box.storage_location:
-                    location_data = {
-                        "shelf": box.storage_location.unit,
-                        "compartment": box.storage_location.compartment,
-                        "floor": box.storage_location.shelf,
-                    }
-                    location_name = box.storage_location.name
-
-                # Prepare units data (products in the box)
-                units_data = []
-                for slot in box.slots.all():
-                    for box_storage in slot.box_storage_items.all():
-                        product_storage = box_storage.product_storage
-                        if product_storage and product_storage.product:
-                            product = product_storage.product
-                            units_data.append(
-                                {
-                                    "id": box_storage.id,
-                                    "articleNumber": (
-                                        product.refNo
-                                        if hasattr(product, "refNo")
-                                        else None
-                                    ),
-                                    "oldArticleNumber": (
-                                        product.refOld
-                                        if hasattr(product, "refOld")
-                                        else None
-                                    ),
-                                    "description": product.name,
-                                    "stock": box_storage.quantity,
-                                }
-                            )
-
-                box_data = {
-                    "id": box.id,
-                    "containerCode": box.code,
-                    "barcode": box.barcode,
-                    "box_type": {
-                        "id": box.box_type.id,
-                        "name": box.box_type.name,
-                    },
-                    "status": box.status,
-                    "purpose": box.purpose,
-                    "notes": box.notes,
-                    "available_slots": box.available_slots,
-                    "location": location_name,  # Add location name string
-                    "shelf": location_data["shelf"] if location_data else None,
-                    "compartment": (
-                        location_data["compartment"] if location_data else None
-                    ),
-                    "floor": location_data["floor"] if location_data else None,
-                    "units": units_data,
+        data = []
+        for box in boxes:
+            # Prepare location data
+            location_data = None
+            location_name = None
+            if box.storage_location:
+                location_data = {
+                    "shelf": box.storage_location.unit,
+                    "compartment": box.storage_location.compartment,
+                    "floor": box.storage_location.shelf,
                 }
-                data.append(box_data)
+                location_name = box.storage_location.name
 
-            logger.info(f"Successfully processed {len(data)} boxes")
+            # Prepare units data (products in the box)
+            units_data = []
+            for slot in box.slots.all():
+                for box_storage in slot.box_storage_items.all():
+                    product_storage = box_storage.product_storage
+                    if product_storage and product_storage.product:
+                        product = product_storage.product
+                        units_data.append(
+                            {
+                                "id": box_storage.id,
+                                "articleNumber": (
+                                    product.refNo
+                                    if hasattr(product, "refNo")
+                                    else None
+                                ),
+                                "oldArticleNumber": (
+                                    product.refOld
+                                    if hasattr(product, "refOld")
+                                    else None
+                                ),
+                                "description": product.name,
+                                "stock": box_storage.quantity,
+                            }
+                        )
 
-            return Response(
-                {
-                    "results": data,
-                    "total": total_count,
-                    "page": page,
-                    "page_size": page_size,
-                    "total_pages": (total_count + page_size - 1) // page_size,
-                }
-            )
+            box_data = {
+                "id": box.id,
+                "containerCode": box.code,
+                "barcode": box.barcode,
+                "box_type": {
+                    "id": box.box_type.id,
+                    "name": box.box_type.name,
+                },
+                "status": box.status,
+                "purpose": box.purpose,
+                "notes": box.notes,
+                "available_slots": box.available_slots,
+                "location": location_name,  # Add location name string
+                "shelf": location_data["shelf"] if location_data else None,
+                "compartment": (
+                    location_data["compartment"] if location_data else None
+                ),
+                "floor": location_data["floor"] if location_data else None,
+                "units": units_data,
+            }
+            data.append(box_data)
 
-        except Exception as e:
-            logger.error(f"Database query error: {str(e)}", exc_info=True)
-            return Response({"detail": "Failed to fetch boxes"}, status=500)
+        logger.info(f"Successfully processed {len(data)} boxes")
+
+        return Response(
+            {
+                "results": data,
+                "total": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": (total_count + page_size - 1) // page_size,
+            }
+        )
 
     except Exception as e:
         logger.error(
@@ -801,7 +813,9 @@ def remove_product_from_box(request):
 
         if not box_storage_id or not quantity:
             return Response(
-                {"detail": "Box storage ID and quantity are required"}, status=400
+                {
+                    "detail": "Box storage ID and quantity are required"
+                }, status=400
             )
 
         try:
@@ -833,8 +847,10 @@ def remove_product_from_box(request):
             return Response(
                 {
                     "status": "success",
-                    "message": f"Removed {quantity} units of product {product} "
-                    f"from box slot {box_slot}",
+                    "message": (
+                        f"Removed {quantity} units of product {product} "
+                        f"from box slot {box_slot}"
+                    ),
                     "data": {
                         "product": {
                             "id": product.id,
@@ -876,6 +892,84 @@ def remove_product_from_box(request):
         )
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def remove_box_from_location(request):
+    """
+    API endpoint to remove a box from its current storage location.
+    
+    Request body:
+        box_id: ID of the box to remove from its location
+        
+    Returns:
+        200: Box removed successfully
+        400: Invalid request parameters
+        404: Box not found
+        500: Server error
+    """
+    try:
+        box_id = request.data.get("box_id")
+
+        if not box_id:
+            return Response({
+                "detail": "Box ID is required"
+            }, status=400)
+
+        try:
+            box = Box.objects.get(id=box_id)
+        except Box.DoesNotExist as e:
+            error_response = {
+                "status": "error",
+                "message": "Box not found",
+                "code": "NOT_FOUND",
+                "details": str(e),
+            }
+            return Response(error_response, status=404)
+
+        # Store old location for response
+        old_location = None
+        if box.storage_location:
+            old_location = {
+                "id": box.storage_location.id,
+                "name": box.storage_location.name,
+            }
+
+        try:
+            # Set storage location to None
+            box.storage_location = None
+            box.save()
+            
+            success_response = {
+                "status": "success",
+                "message": "Box removed from location successfully",
+                "data": {
+                    "box_id": box.id,
+                    "previous_location": old_location,
+                    "removed_at": datetime.now().isoformat(),
+                    "removed_by": request.user.username,
+                },
+            }
+            return Response(success_response)
+            
+        except Exception as e:
+            error_response = {
+                "status": "error",
+                "message": "Failed to remove box from location",
+                "code": "REMOVE_FAILED",
+                "details": str(e),
+            }
+            return Response(error_response, status=500)
+            
+    except Exception as e:
+        error_response = {
+            "status": "error",
+            "message": "Internal server error",
+            "code": "SERVER_ERROR",
+            "details": str(e),
+        }
+        return Response(error_response, status=500)
+
+
 # URL patterns for the inventory app
 urlpatterns = [
     path("status/", placeholder_view, name="status"),
@@ -902,6 +996,11 @@ urlpatterns = [
         name="bin_locations_by_order",
     ),
     path("move-box/", move_box, name="move_box"),
+    path(
+        "remove-box-from-location/",
+        remove_box_from_location,
+        name="remove_box_from_location"
+    ),
     path(
         "add-product-to-box/",
         add_product_to_box,

@@ -175,6 +175,21 @@ export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Prom
   }
 };
 
+// Fetch boxes by location ID
+export const fetchBoxesByLocationId = async (locationId: number): Promise<Box[]> => {
+  try {
+    const response = await api.get('/api/inventory/boxes/', {
+      params: {
+        location_id: locationId
+      }
+    });
+    return response.data.results || [];
+  } catch (error) {
+    console.error('Error fetching boxes by location ID:', error);
+    throw error;
+  }
+};
+
 // Fetch all storage locations
 export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
   try {
@@ -193,6 +208,17 @@ export const fetchProductsByLocation = async (locationId: number): Promise<any[]
     return response.data;
   } catch (error) {
     console.error('Error fetching products by location:', error);
+    throw error;
+  }
+};
+
+// Fetch boxes (containers) by location ID
+export const fetchBoxesByLocation = async (locationId: number): Promise<any[]> => {
+  try {
+    const response = await api.get(`/api/inventory/storage-locations/${locationId}/products/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching boxes by location:', error);
     throw error;
   }
 };
@@ -268,6 +294,20 @@ export const removeProductFromBox = async (
     return response.data;
   } catch (error) {
     console.error('Error removing product from box:', error);
+    throw error;
+  }
+};
+
+// Remove a box from its current location
+export const removeBoxFromLocation = async (boxId: number): Promise<any> => {
+  try {
+    // This uses the move-box endpoint but sets target_location_id to null
+    const response = await api.post('/api/inventory/remove-box-from-location/', {
+      box_id: boxId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error removing box from location:', error);
     throw error;
   }
 }; 

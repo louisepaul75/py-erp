@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { WarehouseLocation, ContainerItem } from "@/types/warehouse-types"
 import { generateMockContainers } from "@/lib/warehouse-service"
-import { moveBox } from "@/lib/inventory/api"
+import { moveBox, fetchBoxesByLocation, removeBoxFromLocation, fetchBoxesByLocationId } from "@/lib/inventory/api"
 import ActivityLogDialog from "./activity-log-dialog"
 import ScannerInputDialog from "./scanner-input-dialog"
 import ContainerSelectionDialog from "./container-selection-dialog"
@@ -37,7 +37,8 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
   const [expandedContainers, setExpandedContainers] = useState<Record<string, boolean>>({})
   const [hasLocation, setHasLocation] = useState(false)
   const [selectedContainerIds, setSelectedContainerIds] = useState<string[]>([])
-  const [mockContainersLoaded, setMockContainersLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [initialExpandedState, setInitialExpandedState] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
@@ -68,26 +69,70 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
     setExpandedContainers(initialExpandedState)
   }, [initialExpandedState])
 
+  // Fetch real containers for the location
   useEffect(() => {
-    // Lade Mock-Daten für Container, wenn der Lagerort belegt ist
-    if (location?.status === "in-use" && location?.containerCount > 0 && !mockContainersLoaded) {
-      const mockContainers = generateMockContainers(location.containerCount).map((container) => ({
-        ...container,
-        // Add multiple articles (1-5 articles per container)
-        articles: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, () => ({
-          id: crypto.randomUUID(),
-          articleNumber: Math.floor(Math.random() * 900000) + 100000,
-          oldArticleNumber: `${13200 + Math.floor(Math.random() * 10)}-BE`,
-          description: ["Dampfer Herrschung", "neuer Raddampfer Diessen", "Teufel", "Mond mit Mütze", "Kuckucksuhr"][
-            Math.floor(Math.random() * 5)
-          ],
-          stock: Math.floor(Math.random() * 100) + 1,
-        })),
-      }))
-      setContainers(mockContainers)
-      setMockContainersLoaded(true)
-    }
-  }, [location, mockContainersLoaded])
+    if (!location || !isOpen) return;
+    
+    const fetchContainersData = async () => {
+      if (!location.id) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch real container data from the API
+        const locationId = parseInt(location.id, 10);
+        const data = await fetchBoxesByLocationId(locationId);
+        
+        // Map the API response to match our ContainerItem type
+        const realContainers: ContainerItem[] = data.map((box: any) => ({
+          id: box.id.toString(),
+          containerCode: box.containerCode || box.code,
+          type: box.box_type?.name || "Box",
+          description: box.notes || "",
+          status: box.status || "in-use",
+          purpose: box.purpose || "",
+          stock: 0,
+          slots: box.slots || [],
+          units: box.units || [],
+          // Map products from the box slots to articles
+          articles: (box.units || []).map((unit: any) => ({
+            id: unit.id.toString(),
+            articleNumber: unit.articleNumber || 0,
+            oldArticleNumber: unit.oldArticleNumber || "",
+            description: unit.description || "",
+            stock: unit.stock || 0,
+          })),
+        }));
+        
+        setContainers(realContainers);
+      } catch (err) {
+        console.error("Error fetching containers for location:", err);
+        setError(err instanceof Error ? err.message : String(err));
+        
+        // If in development, fall back to mock data for testing
+        if (process.env.NODE_ENV === 'development' && !containers.length) {
+          const mockContainers = generateMockContainers(location.containerCount).map((container) => ({
+            ...container,
+            articles: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, () => ({
+              id: crypto.randomUUID(),
+              articleNumber: Math.floor(Math.random() * 900000) + 100000,
+              oldArticleNumber: `${13200 + Math.floor(Math.random() * 10)}-BE`,
+              description: ["Dampfer Herrschung", "neuer Raddampfer Diessen", "Teufel", "Mond mit Mütze", "Kuckucksuhr"][
+                Math.floor(Math.random() * 5)
+              ],
+              stock: Math.floor(Math.random() * 100) + 1,
+            })),
+          }));
+          setContainers(mockContainers);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchContainersData();
+  }, [location, isOpen]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -147,9 +192,6 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
   }
 
   const handleContainerSelect = async (container: ContainerItem) => {
-    // Add the selected container to this location
-    // addContainerToLocation(container); // Move state update after successful API call
-
     // Close the container selection dialog
     setIsContainerSelectionOpen(false)
 
@@ -169,9 +211,49 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
       
       console.log("Move box successful:", responseData) // Log success data
 
-      // On successful API call, update the local state
-      addContainerToLocation(container)
       toast.success(`Schütte ${container.containerCode} erfolgreich zum Lagerort ${location.laNumber} hinzugefügt.`)
+      
+      // Reload containers from the API instead of updating local state
+      setIsLoading(true)
+      try {
+        const locationId = parseInt(location.id, 10)
+        const data = await fetchBoxesByLocationId(locationId)
+        
+        // Map the API response to match our ContainerItem type
+        const updatedContainers: ContainerItem[] = data.map((box: any) => ({
+          id: box.id.toString(),
+          containerCode: box.containerCode || box.code,
+          type: box.box_type?.name || "Box",
+          description: box.notes || "",
+          status: box.status || "in-use",
+          purpose: box.purpose || "",
+          stock: 0,
+          slots: box.slots || [],
+          units: box.units || [],
+          articles: (box.units || []).map((unit: any) => ({
+            id: unit.id.toString(),
+            articleNumber: unit.articleNumber || 0,
+            oldArticleNumber: unit.oldArticleNumber || "",
+            description: unit.description || "",
+            stock: unit.stock || 0,
+          })),
+        }))
+        
+        setContainers(updatedContainers)
+        
+        // Update the location status and container count
+        setEditedLocation((prev) => ({
+          ...prev,
+          status: "in-use",
+          containerCount: updatedContainers.length,
+        }))
+      } catch (fetchError) {
+        console.error("Error reloading containers:", fetchError)
+        // Fallback to adding just the container to local state if fetch fails
+        addContainerToLocation(container)
+      } finally {
+        setIsLoading(false)
+      }
     } catch (error) {
       console.error("Error assigning container to location:", error)
       toast.error(`Fehler beim Zuweisen der Schütte: ${error instanceof Error ? error.message : String(error)}`)
@@ -208,38 +290,75 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
     }
   }
 
-  const confirmRemoveContainer = () => {
-    if (selectedContainer) {
-      // Remove a single container
-      setContainers((prev) => prev.filter((c) => c.id !== selectedContainer.id))
-      setSelectedContainerIds((prev) => prev.filter((id) => id !== selectedContainer.id))
-
-      // Update the location status and container count
-      const newContainerCount = containers.length - 1
-      setEditedLocation((prev) => ({
-        ...prev,
-        status: newContainerCount === 0 ? "free" : "in-use",
-        containerCount: newContainerCount,
-      }))
-    } else if (selectedContainerIds.length > 0) {
-      // Remove multiple containers
-      setContainers((prev) => prev.filter((c) => !selectedContainerIds.includes(c.id)))
-
-      // Update the location status and container count
-      const newContainerCount = containers.length - selectedContainerIds.length
-      setEditedLocation((prev) => ({
-        ...prev,
-        status: newContainerCount === 0 ? "free" : "in-use",
-        containerCount: newContainerCount,
-      }))
-
-      // Clear selected container IDs
-      setSelectedContainerIds([])
-    }
-
+  const confirmRemoveContainer = async () => {
     // Close the dialog
     setIsRemoveContainerDialogOpen(false)
-    setSelectedContainer(null)
+    
+    if (!location?.id) {
+      toast.error("Lagerort-ID fehlt");
+      return;
+    }
+    
+    setIsLoading(true);
+
+    try {
+      if (selectedContainer) {
+        // Remove a single container
+        await removeBoxFromLocation(parseInt(selectedContainer.id, 10));
+        toast.success(`Schütte ${selectedContainer.containerCode} wurde erfolgreich entfernt.`);
+      } else if (selectedContainerIds.length > 0) {
+        // Remove multiple containers
+        // Note: Ideally we'd have a bulk removal API, but we'll just remove the first one for now
+        const promises = selectedContainerIds.map(id => 
+          removeBoxFromLocation(parseInt(id, 10))
+        );
+        
+        await Promise.all(promises);
+        toast.success(`${selectedContainerIds.length} Schütten wurden erfolgreich entfernt.`);
+      }
+      
+      // Clear selected container IDs
+      setSelectedContainerIds([]);
+      setSelectedContainer(null);
+      
+      // Reload containers
+      const locationId = parseInt(location.id, 10);
+      const data = await fetchBoxesByLocationId(locationId);
+      
+      // Map the API response to match our ContainerItem type
+      const updatedContainers: ContainerItem[] = data.map((box: any) => ({
+        id: box.id.toString(),
+        containerCode: box.containerCode || box.code,
+        type: box.box_type?.name || "Box",
+        description: box.notes || "",
+        status: box.status || "in-use",
+        purpose: box.purpose || "",
+        stock: 0,
+        slots: box.slots || [],
+        units: box.units || [],
+        articles: (box.units || []).map((unit: any) => ({
+          id: unit.id.toString(),
+          articleNumber: unit.articleNumber || 0,
+          oldArticleNumber: unit.oldArticleNumber || "",
+          description: unit.description || "",
+          stock: unit.stock || 0,
+        })),
+      }));
+      
+      setContainers(updatedContainers);
+      
+      // Update the location status and container count
+      setEditedLocation((prev) => ({
+        ...prev,
+        status: updatedContainers.length > 0 ? "in-use" : "free",
+        containerCount: updatedContainers.length,
+      }));
+    } catch (error) {
+      console.error("Error removing container(s):", error);
+      toast.error(`Fehler beim Entfernen: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const toggleContainerExpand = (containerCode: string) => {
@@ -414,7 +533,59 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border bg-background">
-                        {filteredContainers.length > 0 ? (
+                        {isLoading ? (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-8 text-center">
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                                <p className="text-muted-foreground text-sm">Schütten werden geladen...</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : error ? (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-4 text-center text-destructive">
+                              <p>{error}</p>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2"
+                                onClick={() => {
+                                  if (location?.id) {
+                                    fetchBoxesByLocationId(parseInt(location.id, 10))
+                                      .then(data => {
+                                        const realContainers = data.map((box: any) => ({
+                                          id: box.id.toString(),
+                                          containerCode: box.containerCode || box.code,
+                                          type: box.box_type?.name || "Box",
+                                          description: box.notes || "",
+                                          status: box.status || "in-use",
+                                          purpose: box.purpose || "",
+                                          stock: 0,
+                                          slots: box.slots || [],
+                                          units: box.units || [],
+                                          articles: (box.units || []).map((unit: any) => ({
+                                            id: unit.id.toString(),
+                                            articleNumber: unit.articleNumber || 0,
+                                            oldArticleNumber: unit.oldArticleNumber || "",
+                                            description: unit.description || "",
+                                            stock: unit.stock || 0,
+                                          })),
+                                        }));
+                                        setContainers(realContainers);
+                                        setError(null);
+                                      })
+                                      .catch(err => {
+                                        setError(err instanceof Error ? err.message : String(err));
+                                      });
+                                  }
+                                }}
+                              >
+                                Erneut versuchen
+                              </Button>
+                            </td>
+                          </tr>
+                        ) : filteredContainers.length > 0 ? (
                           filteredContainers.map((container) => (
                             <React.Fragment key={container.id}>
                               <tr
