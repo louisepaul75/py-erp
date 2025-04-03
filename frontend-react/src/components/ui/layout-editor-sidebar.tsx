@@ -1,14 +1,6 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Trash2 } from "lucide-react"
@@ -36,16 +28,6 @@ export function LayoutEditorSidebar({
   onAddWidget,
   onRemoveSelectedWidget,
 }: LayoutEditorSidebarProps) {
-  const [selectedWidgetType, setSelectedWidgetType] = useState<string | undefined>(undefined);
-
-  const handleAddClick = () => {
-    if (selectedWidgetType) {
-      onAddWidget(selectedWidgetType);
-      // Optionally reset dropdown after adding
-      // setSelectedWidgetType(undefined); 
-    }
-  };
-
   if (!isVisible) {
     return null; // Don't render anything if not visible
   }
@@ -56,35 +38,25 @@ export function LayoutEditorSidebar({
         <CardTitle className="text-lg">Layout Editor</CardTitle>
       </CardHeader>
       <Separator />
-      <CardContent className="flex-1 overflow-y-auto">
+      <CardContent className="flex-1 overflow-y-auto pt-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="widget-type" className="text-sm font-medium">
-              Widget Typ
+            <label className="text-sm font-medium">
+              Verfügbare Widgets
             </label>
-            <Select
-              value={selectedWidgetType}
-              onValueChange={setSelectedWidgetType}
-            >
-              <SelectTrigger id="widget-type">
-                <SelectValue placeholder="Widget auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableWidgets.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {widgetTypeNames[type] || type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              className="w-full"
-              onClick={handleAddClick}
-              disabled={!selectedWidgetType}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Widget hinzufügen
-            </Button>
+            <div className="grid gap-2">
+              {availableWidgets.map((type) => (
+                <Button
+                  key={type}
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => onAddWidget(type)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {widgetTypeNames[type] || type}
+                </Button>
+              ))}
+            </div>
           </div>
 
           <Separator />
