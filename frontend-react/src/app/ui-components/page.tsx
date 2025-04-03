@@ -51,6 +51,7 @@ import {
   StatusBadge,
   Badge
 } from '@/components/ui';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'; // Added import
 import { themeColors } from '@/lib/theme-config';
 
 // Import Recharts components
@@ -380,6 +381,46 @@ export default function UIComponentsPage() {
                       />
                       <label htmlFor="checkbox" className="text-sm font-medium">Checkbox</label>
                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Added Toggle Group Example */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Toggle Group</CardTitle>
+                <CardDescription>Grouped buttons for selecting a single option</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Default Toggle Group</h3>
+                    <ToggleGroup type="single" defaultValue="center" aria-label="Text alignment">
+                      <ToggleGroupItem value="left" aria-label="Left aligned">
+                        Left
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="center" aria-label="Center aligned">
+                        Center
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="right" aria-label="Right aligned">
+                        Right
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Disabled Toggle Group</h3>
+                    <ToggleGroup type="single" defaultValue="center" aria-label="Text alignment" disabled>
+                      <ToggleGroupItem value="left" aria-label="Left aligned">
+                        Left
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="center" aria-label="Center aligned">
+                        Center
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="right" aria-label="Right aligned">
+                        Right
+                      </ToggleGroupItem>
+                    </ToggleGroup>
                   </div>
                 </div>
               </CardContent>
