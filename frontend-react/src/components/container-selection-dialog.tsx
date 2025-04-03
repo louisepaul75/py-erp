@@ -87,12 +87,12 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
 
   return (
     <>
-      <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Root open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-2xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
             <div className="flex items-center justify-between p-4 border-b">
-              <Dialog.Title className="text-xl font-semibold">Schütte auswählen</Dialog.Title>
+              <Dialog.Title className="text-xl font-semibold text-foreground">Schütte auswählen</Dialog.Title>
               <Dialog.Close asChild>
                 <Button variant="ghost" size="icon" onClick={onClose}>
                   <X className="h-4 w-4" />
@@ -130,7 +130,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                             className="hover:bg-muted/50 cursor-pointer"
                             onClick={() => toggleContainerExpand(container.containerCode)}
                           >
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-4 py-3 text-sm text-foreground">
                               <div className="flex items-center">
                                 {expandedContainers[container.containerCode] ? (
                                   <ChevronDown className="h-4 w-4 mr-1" />
@@ -140,7 +140,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                                 {container.containerCode}
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-4 py-3 text-sm text-foreground">
                               {container.location ? (
                                 <div className="flex items-center text-primary">
                                   {container.shelf}/{container.compartment}/{container.floor}
@@ -154,6 +154,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                               <Button
                                 variant="outline"
                                 size="sm"
+                                className="text-foreground"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleSelectContainer(container)
@@ -189,10 +190,10 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                                       <tbody>
                                         {container.units.map((unit) => (
                                           <tr key={unit.id} className="border-t border-border">
-                                            <td className="px-2 py-1 text-xs">{unit.articleNumber}</td>
-                                            <td className="px-2 py-1 text-xs">{unit.oldArticleNumber}</td>
-                                            <td className="px-2 py-1 text-xs">{unit.description}</td>
-                                            <td className="px-2 py-1 text-xs">{unit.stock}</td>
+                                            <td className="px-2 py-1 text-xs text-foreground">{unit.articleNumber}</td>
+                                            <td className="px-2 py-1 text-xs text-foreground">{unit.oldArticleNumber}</td>
+                                            <td className="px-2 py-1 text-xs text-foreground">{unit.description}</td>
+                                            <td className="px-2 py-1 text-xs text-foreground">{unit.stock}</td>
                                           </tr>
                                         ))}
                                       </tbody>
@@ -215,7 +216,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
               </div>
 
               <div className="pt-4 flex justify-end space-x-2">
-                <Button variant="outline" onClick={onClose}>
+                <Button variant="outline" className="text-foreground" onClick={onClose}>
                   Abbrechen
                 </Button>
               </div>

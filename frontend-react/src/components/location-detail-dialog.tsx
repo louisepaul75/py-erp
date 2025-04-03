@@ -243,22 +243,22 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
 
   return (
     <>
-      <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Root open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
-              <Dialog.Title className="text-xl font-semibold">{location.laNumber}</Dialog.Title>
+              <Dialog.Title className="text-xl font-semibold text-foreground">{location.laNumber}</Dialog.Title>
               <div className="flex items-center gap-2">
                 {isEditing ? (
                   <>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    <Button variant="outline" className="text-foreground" onClick={() => setIsEditing(false)}>
                       Abbrechen
                     </Button>
                     <Button onClick={handleSave}>Speichern</Button>
                   </>
                 ) : (
-                  <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  <Button variant="outline" className="text-foreground" onClick={() => setIsEditing(true)}>
                     Bearbeiten
                   </Button>
                 )}
@@ -274,19 +274,19 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Lager</Label>
-                    <div className="p-2 border rounded-md bg-muted">{location.location}</div>
+                    <Label className="text-foreground">Lager</Label>
+                    <div className="p-2 border rounded-md bg-muted text-foreground">{location.location}</div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Land (LKZ)</Label>
-                      <div className="p-2 border rounded-md bg-muted">DE</div>
+                      <Label className="text-foreground">Land (LKZ)</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">DE</div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Ort/Gebäude</Label>
-                      <div className="p-2 border rounded-md bg-muted">{location.location}</div>
+                      <Label className="text-foreground">Ort/Gebäude</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.location}</div>
                     </div>
                   </div>
 
@@ -296,12 +296,12 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                         <Checkbox
                           id="forSale"
                           checked={editedLocation.forSale}
-                          onCheckedChange={(checked) => setEditedLocation({ ...editedLocation, forSale: !!checked })}
+                          onCheckedChange={(checked: boolean | 'indeterminate') => setEditedLocation({ ...editedLocation, forSale: !!checked })}
                         />
                       ) : (
                         <Checkbox id="forSale" checked={location.forSale} disabled />
                       )}
-                      <Label htmlFor="forSale">Lagerort für Abverkauf</Label>
+                      <Label htmlFor="forSale" className="text-foreground">Lagerort für Abverkauf</Label>
                     </div>
 
                     <div className="flex items-center space-x-2">
@@ -309,31 +309,31 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                         <Checkbox
                           id="specialStorage"
                           checked={editedLocation.specialStorage}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={(checked: boolean | 'indeterminate') =>
                             setEditedLocation({ ...editedLocation, specialStorage: !!checked })
                           }
                         />
                       ) : (
                         <Checkbox id="specialStorage" checked={location.specialStorage} disabled />
                       )}
-                      <Label htmlFor="specialStorage">Sonderlagerort Lagerort</Label>
+                      <Label htmlFor="specialStorage" className="text-foreground">Sonderlagerort Lagerort</Label>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label>Regal</Label>
-                      <div className="p-2 border rounded-md bg-muted">{location.shelf}</div>
+                      <Label className="text-foreground">Regal</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.shelf}</div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Fach</Label>
-                      <div className="p-2 border rounded-md bg-muted">{location.compartment}</div>
+                      <Label className="text-foreground">Fach</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.compartment}</div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Boden</Label>
-                      <div className="p-2 border rounded-md bg-muted">{location.floor}</div>
+                      <Label className="text-foreground">Boden</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.floor}</div>
                     </div>
                   </div>
                 </div>
@@ -341,11 +341,11 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-lg">Schütten/Artikel</h3>
+                      <h3 className="font-medium text-lg text-foreground">Schütten/Artikel</h3>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 text-foreground"
                         onClick={() => setIsActivityLogOpen(true)}
                       >
                         <History className="h-4 w-4" />
@@ -394,12 +394,12 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                 <td className="px-3 py-2">
                                   <Checkbox
                                     checked={selectedContainerIds.includes(container.id)}
-                                    onCheckedChange={(checked) => handleSelectContainer(container.id, !!checked)}
-                                    onClick={(e) => e.stopPropagation()}
+                                    onCheckedChange={(checked: boolean | 'indeterminate') => handleSelectContainer(container.id, !!checked)}
+                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
                                     aria-label={`Schütte ${container.containerCode} auswählen`}
                                   />
                                 </td>
-                                <td className="px-3 py-2 text-xs font-medium">
+                                <td className="px-3 py-2 text-xs font-medium text-foreground">
                                   <div className="flex items-center">
                                     {expandedContainers[container.containerCode] ? (
                                       <ChevronDown className="h-4 w-4 mr-1" />
@@ -449,10 +449,10 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                           <tbody>
                                             {container.articles.map((article) => (
                                               <tr key={article.id} className="border-t border-border">
-                                                <td className="px-2 py-1 text-xs">{article.articleNumber}</td>
-                                                <td className="px-2 py-1 text-xs">{article.oldArticleNumber}</td>
-                                                <td className="px-2 py-1 text-xs">{article.description}</td>
-                                                <td className="px-2 py-1 text-xs">{article.stock}</td>
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.articleNumber}</td>
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.oldArticleNumber}</td>
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.description}</td>
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.stock}</td>
                                               </tr>
                                             ))}
                                           </tbody>
@@ -478,15 +478,16 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
             </div>
             <div className="p-6 border-t">
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsContainerSelectionOpen(true)}>
+                <Button variant="outline" size="sm" className="text-foreground" onClick={() => setIsContainerSelectionOpen(true)}>
                   Schütte hier platzieren
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setIsScannerDialogOpen(true)}>
+                <Button variant="outline" size="sm" className="text-foreground" onClick={() => setIsScannerDialogOpen(true)}>
                   Schütte platzieren mit Scanner
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="text-foreground"
                   disabled={selectedContainerIds.length === 0}
                   onClick={handleRemoveContainer}
                 >

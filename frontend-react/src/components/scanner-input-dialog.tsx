@@ -55,12 +55,12 @@ export default function ScannerInputDialog({
   }
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog.Root open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
         <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
           <div className="flex items-center justify-between p-4 border-b">
-            <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
+            <Dialog.Title className="text-xl font-semibold text-foreground">{title}</Dialog.Title>
             <Dialog.Close asChild>
               <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="h-4 w-4" />
@@ -70,7 +70,7 @@ export default function ScannerInputDialog({
 
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="scannerCode">Scanner-Code</Label>
+              <Label htmlFor="scannerCode" className="text-foreground">Scanner-Code</Label>
               <div className="relative">
                 <Input
                   id="scannerCode"
@@ -90,7 +90,7 @@ export default function ScannerInputDialog({
             </div>
 
             <div className="pt-4 flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" className="text-foreground" onClick={onClose}>
                 Abbrechen
               </Button>
               <Button type="submit">Bestätigen</Button>
