@@ -5,9 +5,11 @@ import { X, Search, ExternalLink, ChevronRight, ChevronDown } from "lucide-react
 import * as Dialog from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { generateMockContainers } from "@/lib/warehouse-service"
 import type { ContainerItem } from "@/types/warehouse-types"
 import ConfirmationDialog from "./confirmation-dialog"
+import { useUser } from "@/lib/auth/authHooks"
+import { instance as api } from "@/lib/api"
+import React from "react"
 
 interface ContainerSelectionDialogProps {
   isOpen: boolean
@@ -23,19 +25,64 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false)
   const [existingLocation, setExistingLocation] = useState<string | null>(null)
   const [expandedContainers, setExpandedContainers] = useState<Record<string, boolean>>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const { data: user } = useUser()
 
   useEffect(() => {
-    // Lade Mock-Daten für verfügbare Container
-    const mockContainers = generateMockContainers(20, true)
-    setContainers(mockContainers)
+    if (!isOpen || !user) return
 
-    // Initialize all containers as collapsed
-    const initialExpandedState: Record<string, boolean> = {}
-    mockContainers.forEach((container) => {
-      initialExpandedState[container.containerCode] = false
-    })
-    setExpandedContainers(initialExpandedState)
-  }, [])
+    const fetchContainers = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const response = await api.get("api/inventory/boxes/")
+        if (!response.ok) {
+          throw new Error("Failed to fetch containers")
+        }
+        const data = await response.json()
+        
+        const fetchedContainers: ContainerItem[] = data.results.map((box: any) => ({
+          id: box.id.toString(),
+          containerCode: box.containerCode,
+          location: box.location ?? undefined,
+          shelf: box.shelf ? parseInt(box.shelf, 10) : undefined,
+          compartment: box.compartment ? parseInt(box.compartment, 10) : undefined,
+          floor: box.floor ? parseInt(box.floor, 10) : undefined,
+          units: box.units.map((unit: any) => ({
+            id: unit.id.toString(),
+            articleNumber: unit.articleNumber?.toString() ?? "",
+            oldArticleNumber: unit.oldArticleNumber?.toString() ?? "",
+            description: unit.description ?? "",
+            stock: unit.stock ?? 0,
+          })),
+          type: box.box_type?.name ?? "Unknown",
+          description: box.notes ?? "",
+          status: box.status ?? "Unknown",
+          purpose: box.purpose ?? "Unknown",
+          stock: box.units?.reduce((sum: number, unit: any) => sum + (unit.stock ?? 0), 0) ?? 0,
+          slots: [],
+          lastPrintDate: null,
+        }))
+
+        setContainers(fetchedContainers)
+
+        const initialExpandedState: Record<string, boolean> = {}
+        fetchedContainers.forEach((container) => {
+          initialExpandedState[container.containerCode] = false
+        })
+        setExpandedContainers(initialExpandedState)
+
+      } catch (err) {
+        console.error("Error fetching containers:", err)
+        setError(err instanceof Error ? err.message : "An unknown error occurred")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchContainers()
+  }, [isOpen, user])
 
   useEffect(() => {
     if (!searchTerm) {
@@ -58,13 +105,11 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
   }, [containers, searchTerm])
 
   const handleSelectContainer = (container: ContainerItem) => {
-    // Check if container already has a location
     if (container.location) {
       setSelectedContainer(container)
       setExistingLocation(`${container.shelf}/${container.compartment}/${container.floor}`)
       setIsConfirmationOpen(true)
     } else {
-      // If no existing location, proceed directly
       onSelect(container)
     }
   }
@@ -93,6 +138,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-2xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
             <div className="flex items-center justify-between p-4 border-b">
               <Dialog.Title className="text-xl font-semibold text-foreground">Schütte auswählen</Dialog.Title>
+              <Dialog.Description className="sr-only">Wählen Sie eine Schütte aus der Liste aus oder suchen Sie danach.</Dialog.Description>
               <Dialog.Close asChild>
                 <Button variant="ghost" size="icon" onClick={onClose}>
                   <X className="h-4 w-4" />
@@ -122,11 +168,22 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border bg-background">
-                    {filteredContainers.length > 0 ? (
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
+                          Lade Daten...
+                        </td>
+                      </tr>
+                    ) : error ? (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-6 text-center text-red-500">
+                          Fehler beim Laden: {error}
+                        </td>
+                      </tr>
+                    ) : filteredContainers.length > 0 ? (
                       filteredContainers.map((container) => (
-                        <>
+                        <React.Fragment key={container.id}>
                           <tr
-                            key={container.id}
                             className="hover:bg-muted/50 cursor-pointer"
                             onClick={() => toggleContainerExpand(container.containerCode)}
                           >
@@ -141,7 +198,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                               </div>
                             </td>
                             <td className="px-4 py-3 text-sm text-foreground">
-                              {container.location ? (
+                              {container.shelf !== undefined && container.compartment !== undefined && container.floor !== undefined ? (
                                 <div className="flex items-center text-primary">
                                   {container.shelf}/{container.compartment}/{container.floor}
                                   <ExternalLink className="h-3 w-3 ml-1" />
@@ -202,7 +259,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
                                 </td>
                               </tr>
                             )}
-                        </>
+                        </React.Fragment>
                       ))
                     ) : (
                       <tr>

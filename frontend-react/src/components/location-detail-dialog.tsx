@@ -9,10 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { WarehouseLocation, ContainerItem } from "@/types/warehouse-types"
 import { generateMockContainers } from "@/lib/warehouse-service"
+import { moveBox } from "@/lib/inventory/api"
 import ActivityLogDialog from "./activity-log-dialog"
 import ScannerInputDialog from "./scanner-input-dialog"
 import ContainerSelectionDialog from "./container-selection-dialog"
 import RemoveContainerDialog from "./remove-container-dialog"
+import React from "react"
+import { toast } from "sonner"
 
 interface LocationDetailDialogProps {
   isOpen: boolean
@@ -143,12 +146,37 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
     setIsScannerDialogOpen(false)
   }
 
-  const handleContainerSelect = (container: ContainerItem) => {
+  const handleContainerSelect = async (container: ContainerItem) => {
     // Add the selected container to this location
-    addContainerToLocation(container)
+    // addContainerToLocation(container); // Move state update after successful API call
 
     // Close the container selection dialog
     setIsContainerSelectionOpen(false)
+
+    // --- API Call to assign container to location ---
+    if (!location || !container) {
+      console.error("Missing location or container data for API call")
+      toast.error("Fehler: Fehlende Daten zum Zuweisen der Schütte.")
+      return
+    }
+
+    try {
+      // Use the imported moveBox function instead of fetch
+      const responseData = await moveBox(
+        parseInt(container.id, 10), 
+        parseInt(location.id, 10)
+      )
+      
+      console.log("Move box successful:", responseData) // Log success data
+
+      // On successful API call, update the local state
+      addContainerToLocation(container)
+      toast.success(`Schütte ${container.containerCode} erfolgreich zum Lagerort ${location.laNumber} hinzugefügt.`)
+    } catch (error) {
+      console.error("Error assigning container to location:", error)
+      toast.error(`Fehler beim Zuweisen der Schütte: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    // --- End API Call ---
   }
 
   const addContainerToLocation = (container: ContainerItem) => {
@@ -249,6 +277,9 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
               <Dialog.Title className="text-xl font-semibold text-foreground">{location.laNumber}</Dialog.Title>
+              <Dialog.Description className="sr-only">
+                Details und Aktionen für den Lagerort {location.laNumber}.
+              </Dialog.Description>
               <div className="flex items-center gap-2">
                 {isEditing ? (
                   <>
@@ -385,9 +416,8 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                       <tbody className="divide-y divide-border bg-background">
                         {filteredContainers.length > 0 ? (
                           filteredContainers.map((container) => (
-                            <>
+                            <React.Fragment key={container.id}>
                               <tr
-                                key={`header-${container.id}`}
                                 className="bg-muted/50 cursor-pointer"
                                 onClick={() => toggleContainerExpand(container.containerCode)}
                               >
@@ -461,7 +491,7 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                     </td>
                                   </tr>
                                 )}
-                            </>
+                            </React.Fragment>
                           ))
                         ) : (
                           <tr>

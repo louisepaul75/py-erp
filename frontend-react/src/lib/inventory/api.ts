@@ -178,7 +178,7 @@ export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Prom
 // Fetch all storage locations
 export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
   try {
-    const response = await api.get('/inventory/storage-locations/');
+    const response = await api.get('/api/inventory/storage-locations/');
     return response.data;
   } catch (error) {
     console.error('Error fetching storage locations:', error);
@@ -189,7 +189,7 @@ export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
 // Fetch products by location
 export const fetchProductsByLocation = async (locationId: number): Promise<any[]> => {
   try {
-    const response = await api.get(`/inventory/products-by-location/${locationId}/`);
+    const response = await api.get(`/api/inventory/products-by-location/${locationId}/`);
     return response.data;
   } catch (error) {
     console.error('Error fetching products by location:', error);
@@ -206,7 +206,7 @@ export const addProductToBox = async (
   expiryDate?: string
 ): Promise<any> => {
   try {
-    const response = await api.post('/inventory/add-product-to-box/', {
+    const response = await api.post('/api/inventory/add-product-to-box/', {
       product_id: productId,
       box_slot_id: boxSlotId,
       quantity,
@@ -223,7 +223,7 @@ export const addProductToBox = async (
 // Move a box to a different location
 export const moveBox = async (boxId: number, targetLocationId: number): Promise<any> => {
   try {
-    const response = await api.post('/inventory/move-box/', {
+    const response = await api.post('/api/inventory/move-box/', {
       box_id: boxId,
       target_location_id: targetLocationId
     });
@@ -241,7 +241,7 @@ export const moveProductBetweenBoxes = async (
   quantity: number
 ): Promise<any> => {
   try {
-    const response = await api.post('/inventory/move-product-between-boxes/', {
+    const response = await api.post('/api/inventory/move-product-between-boxes/', {
       source_box_storage_id: sourceBoxStorageId,
       target_box_slot_id: targetBoxSlotId,
       quantity
@@ -260,7 +260,7 @@ export const removeProductFromBox = async (
   reason?: string
 ): Promise<any> => {
   try {
-    const response = await api.post('/inventory/remove-product-from-box/', {
+    const response = await api.post('/api/inventory/remove-product-from-box/', {
       box_storage_id: boxStorageId,
       quantity,
       reason
