@@ -19,10 +19,10 @@ export default function RemoveContainerDialog({ isOpen, onClose, container, onCo
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
           <div className="flex items-center justify-between p-4 border-b">
             <Dialog.Title className="text-xl font-semibold flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-status-warning" />
               Schütte entfernen
             </Dialog.Title>
             <Dialog.Close asChild>
@@ -44,7 +44,7 @@ export default function RemoveContainerDialog({ isOpen, onClose, container, onCo
                 entfernen möchten?
               </p>
             )}
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Die Schütte{isMultipleContainers ? "n werden" : " wird"} nicht gelöscht, sondern nur aus diesem Lagerort
               entfernt. Sie können die Schütte{isMultipleContainers ? "n" : ""} später wieder einem Lagerort zuweisen.
             </p>

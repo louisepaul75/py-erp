@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback } from "react"
 import { ListChecks, ChevronLeft, ChevronRight, Warehouse, Package2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import NewWarehouseLocationModal from "@/components/new-warehouse-location-modal"
 import MultipleWarehouseLocationsModal from "@/components/multiple-warehouse-locations-modal"
 import PrintDialog from "@/components/print-dialog"
@@ -305,14 +311,14 @@ export default function WarehouseLocationList() {
         <div className="flex">
           <Link
             href="/"
-            className={`flex  mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-blue-500 text-blue-600`}
+            className={`flex  mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-primary text-primary`}
           >
             <Warehouse className="h-4 w-4 mr-2" />
             Lagerort-Verwaltung
           </Link>
           <Link
             href="/container-management"
-            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-transparent hover:border-gray-300 hover:text-gray-600`}
+            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-transparent hover:border-muted hover:text-muted-foreground`}
           >
             <Package2 className="h-4 w-4 mr-2" />
             Schütten-Verwaltung
@@ -344,7 +350,7 @@ export default function WarehouseLocationList() {
       </div>
 
       {error && (
-        <div className="p-4 border border-red-200 bg-red-50 text-red-800 rounded-md">
+        <div className="p-4 border border-status-error bg-status-error/10 text-status-error rounded-md">
           {error}
         </div>
       )}
@@ -374,7 +380,7 @@ export default function WarehouseLocationList() {
           {/* Loading indicator */}
           {isLoading ? (
             <div className="flex justify-center items-center p-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               <span className="ml-3">Lade Lagerorte...</span>
             </div>
           ) : (
@@ -403,17 +409,23 @@ export default function WarehouseLocationList() {
           {!isLoading && filteredLocations.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Einträge pro Seite:</span>
+                <span className="text-sm text-muted-foreground">Einträge pro Seite:</span>
                 <Select
                   value={itemsPerPage === filteredLocations.length ? "all" : itemsPerPage.toString()}
                   onValueChange={handleItemsPerPageChange}
-                  options={[
-                    { value: "100", label: "100" },
-                    { value: "500", label: "500" },
-                    { value: "1000", label: "1000" },
-                    { value: "all", label: "Alle" },
-                  ]}
-                />
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                    <SelectItem value="1000">1000</SelectItem>
+                    <SelectItem value="all">Alle</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {totalPages > 1 && (
@@ -477,7 +489,7 @@ export default function WarehouseLocationList() {
                 </div>
               )}
 
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-muted-foreground">
                 Zeige {(currentPage - 1) * itemsPerPage + 1} bis{" "}
                 {Math.min(currentPage * itemsPerPage, filteredLocations.length)} von {filteredLocations.length} Einträgen
               </div>
@@ -491,13 +503,22 @@ export default function WarehouseLocationList() {
         <div className="flex items-center gap-4 border-t pt-4">
           <div className="flex-1">
             <Select
-              value={selectedPrinter}
+              value={selectedPrinter || "none"}
               onValueChange={setSelectedPrinter}
-              placeholder="Drucker auswählen"
-              options={PRINTERS}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Drucker auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {PRINTERS.map((printer) => (
+                  <SelectItem key={printer.value} value={printer.value} disabled={printer.value === "none"}>
+                    {printer.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <Button variant="default" onClick={handlePrint} disabled={selectedLocations.length === 0 || !selectedPrinter}>
+          <Button variant="default" onClick={handlePrint} disabled={selectedLocations.length === 0 || !selectedPrinter || selectedPrinter === "none"}>
             Lagerorte drucken
           </Button>
         </div>

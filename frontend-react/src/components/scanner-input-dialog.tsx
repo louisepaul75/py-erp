@@ -58,7 +58,7 @@ export default function ScannerInputDialog({
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
           <div className="flex items-center justify-between p-4 border-b">
             <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
             <Dialog.Close asChild>
@@ -78,13 +78,13 @@ export default function ScannerInputDialog({
                   value={scannerCode}
                   onChange={(e) => setScannerCode(e.target.value)}
                   placeholder="SC123456"
-                  className={`pl-10 ${error ? "border-red-500" : ""}`}
+                  className={`pl-10 ${error ? "border-destructive" : ""}`}
                   autoFocus
                 />
-                <Barcode className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                <Barcode className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
               </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <p className="text-sm text-gray-500">
+              {error && <p className="text-destructive text-sm">{error}</p>}
+              <p className="text-sm text-muted-foreground">
                 Scannen Sie den Barcode der Schütte oder geben Sie den Code manuell ein.
               </p>
             </div>

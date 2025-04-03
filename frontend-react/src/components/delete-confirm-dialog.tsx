@@ -24,7 +24,7 @@ export default function DeleteConfirmDialog({ isOpen, onClose, onConfirm, locati
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
           <div className="flex items-center justify-between p-4 border-b">
             <Dialog.Title className="text-xl font-semibold">Lagerort löschen</Dialog.Title>
             <Dialog.Close asChild>
@@ -40,15 +40,15 @@ export default function DeleteConfirmDialog({ isOpen, onClose, onConfirm, locati
                 <p>
                   Sind Sie sicher, dass Sie den Lagerort <strong>{location.laNumber}</strong> löschen möchten?
                 </p>
-                <p className="text-sm text-gray-500">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                <p className="text-sm text-muted-foreground">Diese Aktion kann nicht rückgängig gemacht werden.</p>
               </>
             ) : (
               <>
-                <p className="text-red-500">
+                <p className="text-destructive">
                   Der Lagerort <strong>{location.laNumber}</strong> kann nicht gelöscht werden, da er noch{" "}
                   {location.containerCount} Schütten enthält.
                 </p>
-                <p className="text-sm text-gray-500">Bitte entfernen Sie zuerst alle Schütten aus diesem Lagerort.</p>
+                <p className="text-sm text-muted-foreground">Bitte entfernen Sie zuerst alle Schütten aus diesem Lagerort.</p>
               </>
             )}
 

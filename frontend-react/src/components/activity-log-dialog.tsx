@@ -5,7 +5,13 @@ import { X } from "lucide-react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { generateMockActivityLogs } from "@/lib/warehouse-service"
 
 interface ActivityLogEntry {
@@ -99,7 +105,7 @@ export default function ActivityLogDialog({ isOpen, onClose, locationId, locatio
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none overflow-hidden">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b">
             <Dialog.Title className="text-xl font-semibold">
               Aktivitätslog {locationType === "location" ? "Lagerort" : "Schütten/Artikel"}
@@ -127,58 +133,71 @@ export default function ActivityLogDialog({ isOpen, onClose, locationId, locatio
                 <Select
                   value={userFilter}
                   onValueChange={setUserFilter}
-                  placeholder="Benutzer"
-                  options={[
-                    { value: "all", label: "Alle Benutzer" },
-                    ...users.map((user) => ({ value: user, label: user })),
-                  ]}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Benutzer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Benutzer</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user} value={user}>{user}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
                 <Select
                   value={actionFilter}
                   onValueChange={setActionFilter}
-                  placeholder="Aktion"
-                  options={[
-                    { value: "all", label: "Alle Aktionen" },
-                    ...actions.map((action) => ({ value: action, label: action })),
-                  ]}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Aktion" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Aktionen</SelectItem>
+                    {actions.map((action) => (
+                      <SelectItem key={action} value={action}>{action}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
                 <Select
                   value={dateFilter}
                   onValueChange={setDateFilter}
-                  placeholder="Zeitraum"
-                  options={[
-                    { value: "all", label: "Alle Zeiträume" },
-                    { value: "today", label: "Heute" },
-                    { value: "yesterday", label: "Gestern" },
-                    { value: "week", label: "Letzte Woche" },
-                    { value: "month", label: "Letzter Monat" },
-                  ]}
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Zeitraum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Alle Zeiträume</SelectItem>
+                    <SelectItem value="today">Heute</SelectItem>
+                    <SelectItem value="yesterday">Gestern</SelectItem>
+                    <SelectItem value="week">Letzte Woche</SelectItem>
+                    <SelectItem value="month">Letzter Monat</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             {/* Tabelle */}
             <div className="border rounded-md overflow-hidden max-h-[500px] overflow-y-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-100 sticky top-0 z-10">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/50 sticky top-0 z-10">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Zeitpunkt</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Benutzer</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Aktion</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Vorher</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Nachher</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Zeitpunkt</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Benutzer</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Aktion</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Vorher</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Nachher</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="divide-y divide-border bg-background">
                   {filteredLogs.length > 0 ? (
                     filteredLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-gray-50">
+                      <tr key={log.id} className="hover:bg-muted/50">
                         <td className="px-4 py-3 text-sm">
                           {log.timestamp.toLocaleString("de-DE", {
                             day: "2-digit",
@@ -200,7 +219,7 @@ export default function ActivityLogDialog({ isOpen, onClose, locationId, locatio
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                      <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
                         Keine Aktivitäten gefunden
                       </td>
                     </tr>

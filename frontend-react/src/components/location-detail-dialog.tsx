@@ -246,7 +246,7 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
       <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none overflow-hidden">
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
               <Dialog.Title className="text-xl font-semibold">{location.laNumber}</Dialog.Title>
               <div className="flex items-center gap-2">
@@ -275,18 +275,18 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Lager</Label>
-                    <div className="p-2 border rounded-md bg-gray-50">{location.location}</div>
+                    <div className="p-2 border rounded-md bg-muted">{location.location}</div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Land (LKZ)</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">DE</div>
+                      <div className="p-2 border rounded-md bg-muted">DE</div>
                     </div>
 
                     <div className="space-y-2">
                       <Label>Ort/Gebäude</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.location}</div>
+                      <div className="p-2 border rounded-md bg-muted">{location.location}</div>
                     </div>
                   </div>
 
@@ -323,17 +323,17 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Regal</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.shelf}</div>
+                      <div className="p-2 border rounded-md bg-muted">{location.shelf}</div>
                     </div>
 
                     <div className="space-y-2">
                       <Label>Fach</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.compartment}</div>
+                      <div className="p-2 border rounded-md bg-muted">{location.compartment}</div>
                     </div>
 
                     <div className="space-y-2">
                       <Label>Boden</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.floor}</div>
+                      <div className="p-2 border rounded-md bg-muted">{location.floor}</div>
                     </div>
                   </div>
                 </div>
@@ -353,7 +353,7 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                       </Button>
                     </div>
                     <div className="relative w-64">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="text"
                         placeholder="Suche nach Artikel, Schütte..."
@@ -365,8 +365,8 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                   </div>
 
                   <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-100 sticky top-0 z-10">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead className="bg-muted/50 sticky top-0 z-10">
                         <tr>
                           <th className="w-10 px-3 py-2 text-left">
                             <Checkbox
@@ -378,17 +378,17 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                               aria-label="Alle Schütten auswählen"
                             />
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Schütten/Code</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Aktionen</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Schütten/Code</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Aktionen</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 bg-white">
+                      <tbody className="divide-y divide-border bg-background">
                         {filteredContainers.length > 0 ? (
                           filteredContainers.map((container) => (
                             <>
                               <tr
                                 key={`header-${container.id}`}
-                                className="bg-gray-50 cursor-pointer"
+                                className="bg-muted/50 cursor-pointer"
                                 onClick={() => toggleContainerExpand(container.containerCode)}
                               >
                                 <td className="px-3 py-2">
@@ -413,14 +413,13 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-red-500 hover:text-red-700"
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       setSelectedContainer(container)
                                       setIsRemoveContainerDialogOpen(true)
                                     }}
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-4 w-4 text-destructive" />
                                   </Button>
                                 </td>
                               </tr>
@@ -429,27 +428,27 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                 container.articles.length > 0 && (
                                   <tr key={`articles-${container.id}`}>
                                     <td colSpan={4} className="px-3 py-0">
-                                      <div className="bg-gray-50 p-2 rounded my-1 ml-6">
+                                      <div className="bg-muted/50 p-2 rounded my-1 ml-6">
                                         <table className="min-w-full">
                                           <thead>
                                             <tr>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Artikel-Nr.
                                               </th>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Alte Artikel-Nr.
                                               </th>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Bezeichnung
                                               </th>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Bestand
                                               </th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             {container.articles.map((article) => (
-                                              <tr key={article.id} className="border-t border-gray-200">
+                                              <tr key={article.id} className="border-t border-border">
                                                 <td className="px-2 py-1 text-xs">{article.articleNumber}</td>
                                                 <td className="px-2 py-1 text-xs">{article.oldArticleNumber}</td>
                                                 <td className="px-2 py-1 text-xs">{article.description}</td>
@@ -466,7 +465,7 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+                            <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground">
                               {searchTerm ? "Keine Ergebnisse gefunden" : "Keine Schütten vorhanden"}
                             </td>
                           </tr>

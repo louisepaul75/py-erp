@@ -77,7 +77,7 @@ export default function WarehouseLocationTable({
       cell: (row: WarehouseLocation) => (
         <span
           className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            row.status === "free" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+            row.status === "free" ? "bg-status-success/10 text-status-success-foreground" : "bg-status-warning/10 text-status-warning-foreground"
           }`}
         >
           {row.status === "free" ? "Frei" : "Belegt"}
@@ -138,7 +138,7 @@ export default function WarehouseLocationTable({
             row.containerCount > 0 ? "Lagerort enthält Schütten und kann nicht gelöscht werden" : "Lagerort löschen"
           }
         >
-          <Trash2 className="h-4 w-4 text-red-500" />
+          <Trash2 className="h-4 w-4 text-destructive" />
           <span className="sr-only">Löschen</span>
         </Button>
       ),
@@ -150,7 +150,7 @@ export default function WarehouseLocationTable({
     <div className="border rounded-md">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+          <TableRow>
             {columns.map((column) => (
               <TableHead
                 key={column.id}
@@ -167,8 +167,8 @@ export default function WarehouseLocationTable({
               <TableRow
                 key={location.id}
                 data-state={selectedLocations.includes(location.id) ? "selected" : undefined}
-                className={`hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer ${
-                  highlightedLocationId === location.id ? "bg-blue-100 dark:bg-blue-900/30" : ""
+                className={`cursor-pointer ${
+                  highlightedLocationId === location.id ? "bg-accent" : ""
                 }`}
                 onClick={() => handleRowClick(location)}
               >
