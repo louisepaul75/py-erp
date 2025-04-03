@@ -24,9 +24,6 @@ export interface SavedLayout {
 interface DashboardSidebarProps {
   isOpen: boolean
   onClose: () => void
-  isEditMode: boolean
-  toggleEditMode: () => void
-  saveLayout: () => void
   savedLayouts: SavedLayout[]
   activeLayoutId: string | null
   onLayoutSelect: (layoutId: string) => void
@@ -38,9 +35,6 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({
   isOpen,
   onClose,
-  isEditMode,
-  toggleEditMode,
-  saveLayout,
   savedLayouts,
   activeLayoutId,
   onLayoutSelect,
@@ -78,38 +72,9 @@ export function DashboardSidebar({
           </SheetDescription>
         </SheetHeader>
         
-        <div className="py-4">
-          {isEditMode ? (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Currently in edit mode. Rearrange widgets and then save your changes.
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={toggleEditMode} className="flex-1">
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button onClick={saveLayout} className="flex-1">
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button 
-              variant="outline" 
-              onClick={toggleEditMode} 
-              className="w-full border-primary text-primary hover:bg-primary/10"
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Layout
-            </Button>
-          )}
-        </div>
-        
         <div className="py-2">
           <h3 className="mb-2 text-sm font-medium">Saved Layouts</h3>
-          <ScrollArea className="h-[300px] rounded-md border p-2">
+          <ScrollArea className="h-[calc(100vh-200px)] rounded-md border p-2">
             <div className="space-y-2">
               {savedLayouts.map((layout) => (
                 <div

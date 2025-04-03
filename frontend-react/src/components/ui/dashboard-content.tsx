@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { DashboardSidebar, SavedLayout } from "./dashboard-sidebar"
+import { LayoutEditorSidebar } from "./layout-editor-sidebar"
 import { 
   fetchDashboardConfig, 
   saveGridLayout, 
@@ -87,6 +88,9 @@ interface Layouts {
   sm: CustomLayout[];
   [key: string]: CustomLayout[];
 }
+
+// Define known widget types (replace with dynamic list from API/registry if possible)
+const KNOWN_WIDGET_TYPES = ["menu-tiles", "quick-links", "news-pinboard"];
 
 // Dashboard widget component
 const DashboardWidget = ({
@@ -233,6 +237,7 @@ const Dashboard = () => {
   const [savedLayouts, setSavedLayouts] = useState<SavedLayout[]>([])
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null); // Add state for selected widget
 
   const [menuTiles, setMenuTiles] = useState<MenuTile[]>([
     { id: "customers", name: "Kunden", icon: Users, iconName: "Users", favorited: false },
@@ -374,7 +379,12 @@ const Dashboard = () => {
 
   // Function to toggle edit mode
   const toggleEditMode = () => {
-    setIsEditMode(!isEditMode)
+    const enteringEditMode = !isEditMode;
+    setIsEditMode(enteringEditMode);
+    // Clear selection when exiting edit mode
+    if (!enteringEditMode) {
+      setSelectedWidgetId(null);
+    }
   }
 
   // Function to save layout changes
@@ -594,18 +604,49 @@ const Dashboard = () => {
     }
   }
 
-  // Function to remove a widget
-  const handleRemoveWidget = (id: string) => {
+  // Function to remove a widget (now uses selectedWidgetId)
+  const handleRemoveSelectedWidget = () => {
+    if (!selectedWidgetId) return;
+    
     // Remove the widget from all layouts
     const newLayouts = { ...layouts }
-    
     Object.keys(newLayouts).forEach((breakpoint) => {
-      newLayouts[breakpoint] = newLayouts[breakpoint].filter((item) => item.i !== id)
+      newLayouts[breakpoint] = newLayouts[breakpoint].filter((item) => item.i !== selectedWidgetId)
     })
-    
     setLayouts(newLayouts)
-    // No need to save to localStorage - will be saved when user clicks Save
+    setSelectedWidgetId(null); // Clear selection after removal
+    toast({ title: "Widget Removed", description: `Widget ${selectedWidgetId} removed from layout.`, duration: 2000 })
   }
+
+  // Function to add a new widget (basic implementation)
+  const handleAddWidget = (widgetType: string) => {
+    const newWidgetId = `${widgetType}-${uuidv4().substring(0, 4)}`; // Simple unique ID
+    const newLayoutItem: CustomLayout = {
+      i: newWidgetId,
+      x: 0, // Position at top-left by default
+      y: 0,
+      w: 12, // Default width (adjust as needed)
+      h: 6,  // Default height (adjust as needed)
+      title: widgetType // Use type as title initially
+    };
+
+    const newLayouts = { ...layouts };
+    Object.keys(newLayouts).forEach((breakpoint) => {
+      // Add to the start of the layout array for this breakpoint
+      newLayouts[breakpoint] = [newLayoutItem, ...newLayouts[breakpoint]];
+    });
+
+    setLayouts(newLayouts);
+    toast({ title: "Widget Added", description: `Added ${widgetType}. You can now move and resize it.`, duration: 3000 });
+  };
+
+  // Function to handle widget selection in the grid (only in edit mode)
+  const handleWidgetSelect = (widgetId: string) => {
+    if (isEditMode) {
+      setSelectedWidgetId(widgetId);
+      console.log("Selected widget:", widgetId); // For debugging
+    }
+  };
 
   // Function to toggle favorite status for menu tiles
   const toggleFavorite = (id: string) => {
@@ -633,12 +674,34 @@ const Dashboard = () => {
     }
   }
 
-  // Handle layout changes
-  const handleLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
-    setLayouts(allLayouts)
+  // Handle layout changes (now compatible with stop handlers)
+  const handleLayoutChange = (
+    currentLayout: Layout[], 
+    // The second argument from onDragStop/onResizeStop differs from onLayoutChange,
+    // but we only care about the *current* complete layout state after the operation.
+    // So, we can use a trick: fetch the current layout state from the grid's internal state
+    // or simply update our main `layouts` state with the `currentLayout` provided here,
+    // assuming it represents the full state for the current breakpoint after the change.
+    // Let's try updating the main state directly based on the current breakpoint.
+    // Note: This might need refinement if `currentLayout` only contains the changed item.
+    _ignoredArgument?: any // Can be oldItem: Layout or allLayouts: Layouts depending on source
+    ) => {
+      
+    // Determine the current breakpoint
+    const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"; // Need to match RGL breakpoints
+
+    // Create a new layouts object to avoid direct state mutation
+    const newLayouts = { ...layouts };
+
+    // Update the layout for the current breakpoint
+    // We assume currentLayout IS the full layout for the current breakpoint
+    newLayouts[currentBreakpoint] = currentLayout;
+
+    setLayouts(newLayouts);
     
-    // Auto-save is handled when user clicks "Save" explicitly now
-    // No need to save to API on every small change
+    // Log for debugging
+    console.log(`Layout changed for breakpoint: ${currentBreakpoint}`);
+    // console.log(newLayouts);
   }
 
   // Function to get widget title based on id
@@ -792,97 +855,110 @@ const Dashboard = () => {
   // Get current layout based on breakpoints
   const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
   const currentLayouts = layouts
-  const layoutKeys = Array.from(new Set(Object.values(layouts).flatMap(layouts => layouts.map(layout => layout.i))))
+  const layoutKeys = useMemo(() => 
+      Array.from(new Set(Object.values(layouts).flat().map(layout => layout.i)))
+  , [layouts]);
 
   return (
-    <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsSidebarOpen(true)}
-            className="border-primary text-primary hover:bg-primary/10"
-          >
-            <LayoutPanelLeft className="mr-2 h-4 w-4" />
-            Layouts
-          </Button>
-        </div>
-      </div>
-
-      <DashboardSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        isEditMode={isEditMode}
-        toggleEditMode={toggleEditMode}
-        saveLayout={saveLayout}
-        savedLayouts={savedLayouts}
-        activeLayoutId={activeLayoutId}
-        onLayoutSelect={handleLayoutSelect}
-        onSaveNewLayout={handleSaveNewLayout}
-        onUpdateLayout={handleUpdateLayout}
-        onDeleteLayout={handleDeleteLayout}
-      />
-
-      {error && (
-        <div className="mt-4 p-4 border border-red-400 bg-red-50 text-red-800 rounded-md">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm">{error}</p>
-              <button 
-                onClick={() => window.location.reload()}
-                className="mt-2 text-sm font-medium text-red-800 hover:text-red-600 underline"
+    <>
+      <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
+        <div className="flex-grow flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsSidebarOpen(true)}
+                className="border-primary text-primary hover:bg-primary/10"
+                disabled={isEditMode}
               >
-                Refresh page
-              </button>
+                <LayoutPanelLeft className="mr-2 h-4 w-4" />
+                Layouts
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={toggleEditMode}
+                className={isEditMode ? "border-destructive text-destructive hover:bg-destructive/10" : "border-primary text-primary hover:bg-primary/10"}
+              >
+                {isEditMode ? (
+                  <>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel Edit
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Layout
+                  </>
+                )}
+              </Button>
+
+              {isEditMode && (
+                <Button
+                  onClick={saveLayout}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Layout
+                </Button>
+              )}
             </div>
           </div>
-        </div>
-      )}
 
-      {isLoading ? (
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        <div className="dashboard-grid-container w-full">
-          <ResponsiveGridLayout
-            className="layout"
-            layouts={layouts}
-            breakpoints={gridBreakpoints}
-            cols={gridCols}
-            rowHeight={gridRowHeight}
-            width={width}
-            margin={gridMargin}
-            onLayoutChange={handleLayoutChange}
-            isDraggable={isEditMode}
-            isResizable={isEditMode}
-            draggableHandle=".draggable-handle"
-            compactType="vertical"
-            useCSSTransforms={true}
-            preventCollision={false}
-          >
-            {layoutKeys.map((key) => (
-              <div key={key} className="relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border">
-                <DashboardWidget
-                  id={key}
-                  title={getWidgetTitle(key)}
-                  isEditMode={isEditMode}
-                  onRemove={isEditMode ? handleRemoveWidget : undefined}
+          <div className="flex-grow">
+            <ResponsiveGridLayout
+              className={`layout ${isEditMode ? 'editing' : ''}`}
+              layouts={layouts}
+              breakpoints={gridBreakpoints}
+              cols={gridCols}
+              rowHeight={gridRowHeight}
+              width={width}
+              margin={gridMargin}
+              onDragStop={handleLayoutChange}
+              onResizeStop={handleLayoutChange}
+              draggableHandle=".draggable-handle"
+            >
+              {layoutKeys.map((key) => (
+                <div 
+                  key={key} 
+                  onClickCapture={() => handleWidgetSelect(key)} 
+                  className={`relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border ${selectedWidgetId === key ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
                 >
-                  {renderWidgetContent(key)}
-                </DashboardWidget>
-              </div>
-            ))}
-          </ResponsiveGridLayout>
+                  <DashboardWidget
+                    id={key}
+                    title={getWidgetTitle(key)}
+                    isEditMode={isEditMode}
+                    onRemove={handleRemoveSelectedWidget}
+                  >
+                    {renderWidgetContent(key)}
+                  </DashboardWidget>
+                </div>
+              ))}
+            </ResponsiveGridLayout>
+          </div>
         </div>
-      )}
-    </div>
+        
+        <DashboardSidebar
+          isOpen={isSidebarOpen && !isEditMode}
+          onClose={() => setIsSidebarOpen(false)}
+          savedLayouts={savedLayouts}
+          activeLayoutId={activeLayoutId}
+          onLayoutSelect={handleLayoutSelect}
+          onSaveNewLayout={handleSaveNewLayout}
+          onUpdateLayout={handleUpdateLayout}
+          onDeleteLayout={handleDeleteLayout}
+        />
+      </div>
+
+      <LayoutEditorSidebar 
+        isVisible={isEditMode}
+        availableWidgets={KNOWN_WIDGET_TYPES}
+        selectedWidgetId={selectedWidgetId}
+        onAddWidget={handleAddWidget}
+        onRemoveSelectedWidget={handleRemoveSelectedWidget}
+      />
+    </>
   )
 }
 
