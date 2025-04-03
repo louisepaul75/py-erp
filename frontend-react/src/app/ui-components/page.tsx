@@ -145,41 +145,71 @@ const scatterData = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 // Define the semantic colors based on CSS variables in globals.css
-const semanticColors = [
-  { name: "Background", variable: "--background" },
-  { name: "Foreground", variable: "--foreground" },
-  { name: "Card", variable: "--card" },
-  { name: "Card Foreground", variable: "--card-foreground" },
-  { name: "Popover", variable: "--popover" },
-  { name: "Popover Foreground", variable: "--popover-foreground" },
-  { name: "Primary", variable: "--primary" },
-  { name: "Primary Foreground", variable: "--primary-foreground" },
-  { name: "Secondary", variable: "--secondary" },
-  { name: "Secondary Foreground", variable: "--secondary-foreground" },
-  { name: "Muted", variable: "--muted" },
-  { name: "Muted Foreground", variable: "--muted-foreground" },
-  { name: "Accent", variable: "--accent" },
-  { name: "Accent Foreground", variable: "--accent-foreground" },
-  { name: "Destructive", variable: "--destructive" },
-  { name: "Destructive Foreground", variable: "--destructive-foreground" },
-  { name: "Border", variable: "--border" },
-  { name: "Input", variable: "--input" },
-  { name: "Ring", variable: "--ring" },
-  // Add sidebar colors if needed for display
-  { name: "Sidebar Background", variable: "--sidebar-background" },
-  { name: "Sidebar Foreground", variable: "--sidebar-foreground" },
-  // ... other semantic colors from globals.css
+const colorCategories = [
+  {
+    category: "Text Colors",
+    colors: [
+      { name: "Foreground", variable: "--foreground" },
+      { name: "Muted Foreground", variable: "--muted-foreground" },
+      { name: "Primary Foreground", variable: "--primary-foreground" },
+      { name: "Secondary Foreground", variable: "--secondary-foreground" },
+      { name: "Accent Foreground", variable: "--accent-foreground" },
+      { name: "Destructive Foreground", variable: "--destructive-foreground" },
+      { name: "Card Foreground", variable: "--card-foreground" },
+      { name: "Popover Foreground", variable: "--popover-foreground" },
+    ]
+  },
+  {
+    category: "Background Colors",
+    colors: [
+      { name: "Background", variable: "--background" },
+      { name: "Card", variable: "--card" },
+      { name: "Popover", variable: "--popover" },
+      { name: "Muted", variable: "--muted" },
+    ]
+  },
+  {
+    category: "Navigation Colors",
+    colors: [
+      { name: "Sidebar Background", variable: "--sidebar-background" },
+      { name: "Sidebar Foreground", variable: "--sidebar-foreground" },
+    ]
+  },
+  {
+    category: "Brand Colors",
+    colors: [
+      { name: "Primary", variable: "--primary" },
+      { name: "Secondary", variable: "--secondary" },
+      { name: "Accent", variable: "--accent" },
+    ]
+  },
+  {
+    category: "UI Element Colors",
+    colors: [
+      { name: "Border", variable: "--border" },
+      { name: "Input", variable: "--input" },
+      { name: "Ring", variable: "--ring" },
+      { name: "Destructive", variable: "--destructive" },
+    ]
+  },
+  {
+    category: "Status Colors",
+    colors: [
+      { name: "Status Success", variable: "--status-success" },
+      { name: "Status Success Foreground", variable: "--status-success-foreground" },
+      { name: "Status Warning", variable: "--status-warning" },
+      { name: "Status Warning Foreground", variable: "--status-warning-foreground" },
+      { name: "Status Error", variable: "--status-error" },
+      { name: "Status Error Foreground", variable: "--status-error-foreground" },
+    ]
+  }
 ];
 
+// Flat list for backward compatibility if needed elsewhere
+const semanticColors = colorCategories.flatMap(category => category.colors);
+
 // Define the status colors based on CSS variables
-const statusColors = [
-  { name: "Status Success", variable: "--status-success" },
-  { name: "Status Success Foreground", variable: "--status-success-foreground" },
-  { name: "Status Warning", variable: "--status-warning" },
-  { name: "Status Warning Foreground", variable: "--status-warning-foreground" },
-  { name: "Status Error", variable: "--status-error" },
-  { name: "Status Error Foreground", variable: "--status-error-foreground" },
-];
+const statusColors = colorCategories.find(c => c.category === "Status Colors")?.colors || [];
 
 export default function UIComponentsPage() {
   const [activeTab, setActiveTab] = useState('buttons');
@@ -1448,27 +1478,23 @@ export default function UIComponentsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Theme Colors</CardTitle>
-                <CardDescription>Semantic colors defined via CSS variables for light and dark modes</CardDescription>
+                <CardDescription>Color variables organized by functional categories</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">Semantic Colors</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">
-                      {semanticColors.map((color) => (
-                        <ColorSwatch key={color.name} name={color.name} cssVarName={color.variable} />
-                      ))}
+                <div className="space-y-8">
+                  {colorCategories.map((category) => (
+                    <div key={category.category} className="space-y-4">
+                      <h3 className="text-lg font-medium">{category.category}</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">
+                        {category.colors.map((color) => (
+                          <ColorSwatch key={color.name} name={color.name} cssVarName={color.variable} />
+                        ))}
+                      </div>
+                      {category.category !== colorCategories[colorCategories.length - 1].category && (
+                        <Separator className="my-4" />
+                      )}
                     </div>
-                  </div>
-
-                  <Separator className="my-8" />
-
-                  <h3 className="text-lg font-medium mb-4">Status Colors</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6">
-                    {statusColors.map((color) => (
-                      <ColorSwatch key={color.name} name={color.name} cssVarName={color.variable} />
-                    ))}
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
