@@ -385,12 +385,22 @@ const Dashboard = () => {
         const layoutToUpdate = savedLayouts.find(layout => layout.id === activeLayoutId)
         if (layoutToUpdate) {
           const result = await updateLayout(activeLayoutId, layoutToUpdate.name, layouts as GridLayouts)
-          setSavedLayouts(result.saved_layouts.map(layout => ({
-            id: layout.id,
-            name: layout.name,
-            layouts: layout.grid_layout,
-            isActive: layout.id === result.active_layout_id
-          })))
+          // Preserve existing layouts if none are returned
+          setSavedLayouts(prevLayouts => {
+            const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+            return resultLayouts.length > 0 
+              ? resultLayouts.map(layout => ({
+                  id: layout.id,
+                  name: layout.name,
+                  layouts: layout.grid_layout,
+                  isActive: layout.id === result.active_layout_id
+                }))
+              : prevLayouts.map(layout => ({
+                  ...layout,
+                  layouts: layout.id === activeLayoutId ? layouts : layout.layouts,
+                  isActive: layout.id === activeLayoutId
+                }));
+          });
           toast({
             title: "Layout updated",
             description: `"${layoutToUpdate.name}" has been updated`,
@@ -422,13 +432,30 @@ const Dashboard = () => {
   const handleSaveNewLayout = async (name: string) => {
     try {
       const result = await saveNewLayout(name, layouts as GridLayouts)
-      setSavedLayouts(result.saved_layouts.map(layout => ({
-        id: layout.id,
-        name: layout.name,
-        layouts: layout.grid_layout,
-        isActive: layout.id === result.active_layout_id
-      })))
-      setActiveLayoutId(result.active_layout_id)
+      // Add safeguard to ensure saved_layouts is an array and preserve existing layouts
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        if (resultLayouts.length > 0) {
+          return resultLayouts.map(layout => ({
+            id: layout.id,
+            name: layout.name,
+            layouts: layout.grid_layout,
+            isActive: layout.id === result.active_layout_id
+          }));
+        } else {
+          // If no layouts returned, create a new one with generated ID and add to existing
+          const newLayoutId = result.active_layout_id || `layout-${Date.now()}`;
+          const newLayout = {
+            id: newLayoutId,
+            name: name,
+            layouts: layouts,
+            isActive: true
+          };
+          return [...prevLayouts.map(l => ({...l, isActive: false})), newLayout];
+        }
+      });
+      
+      setActiveLayoutId(result.active_layout_id || null)
       toast({
         title: "New layout saved",
         description: `"${name}" has been created and activated`,
@@ -449,12 +476,22 @@ const Dashboard = () => {
   const handleUpdateLayout = async (layout: SavedLayout) => {
     try {
       const result = await updateLayout(layout.id, layout.name, layout.layouts as GridLayouts)
-      setSavedLayouts(result.saved_layouts.map(layout => ({
-        id: layout.id,
-        name: layout.name,
-        layouts: layout.grid_layout,
-        isActive: layout.id === result.active_layout_id
-      })))
+      // Preserve existing layouts if none are returned
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        return resultLayouts.length > 0 
+          ? resultLayouts.map(layout => ({
+              id: layout.id,
+              name: layout.name,
+              layouts: layout.grid_layout,
+              isActive: layout.id === result.active_layout_id
+            }))
+          : prevLayouts.map(l => ({
+              ...l,
+              name: l.id === layout.id ? layout.name : l.name,
+              layouts: l.id === layout.id ? layout.layouts : l.layouts
+            }));
+      });
       toast({
         title: "Layout updated",
         description: `"${layout.name}" has been updated`,
@@ -475,13 +512,24 @@ const Dashboard = () => {
   const handleDeleteLayout = async (layoutId: string) => {
     try {
       const result = await deleteLayout(layoutId)
-      setSavedLayouts(result.saved_layouts.map(layout => ({
-        id: layout.id,
-        name: layout.name,
-        layouts: layout.grid_layout,
-        isActive: layout.id === result.active_layout_id
-      })))
-      setActiveLayoutId(result.active_layout_id)
+      // Preserve existing layouts if none are returned, but remove the deleted one
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        if (resultLayouts.length > 0) {
+          return resultLayouts.map(layout => ({
+            id: layout.id,
+            name: layout.name,
+            layouts: layout.grid_layout,
+            isActive: layout.id === result.active_layout_id
+          }));
+        } else {
+          // Filter out the deleted layout
+          return prevLayouts.filter(layout => layout.id !== layoutId);
+        }
+      });
+      
+      // Update active layout ID
+      setActiveLayoutId(result.active_layout_id || savedLayouts.find(l => l.id !== layoutId)?.id || null)
       
       // If the active layout was deleted, update the layouts state
       if (result.grid_layout && Object.keys(result.grid_layout).length > 0) {
@@ -508,14 +556,28 @@ const Dashboard = () => {
   const handleLayoutSelect = async (layoutId: string) => {
     try {
       const result = await activateLayout(layoutId)
-      setSavedLayouts(result.saved_layouts.map(layout => ({
-        id: layout.id,
-        name: layout.name,
-        layouts: layout.grid_layout,
-        isActive: layout.id === result.active_layout_id
-      })))
-      setActiveLayoutId(result.active_layout_id)
-      setLayouts(result.grid_layout)
+      // Preserve existing layouts if none are returned
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        return resultLayouts.length > 0 
+          ? resultLayouts.map(layout => ({
+              id: layout.id,
+              name: layout.name,
+              layouts: layout.grid_layout,
+              isActive: layout.id === result.active_layout_id
+            }))
+          : prevLayouts.map(layout => ({
+              ...layout,
+              isActive: layout.id === layoutId
+            }));
+      });
+      
+      setActiveLayoutId(result.active_layout_id || layoutId)
+      
+      if (result.grid_layout && Object.keys(result.grid_layout).length > 0) {
+        setLayouts(result.grid_layout)
+      }
+      
       toast({
         title: "Layout activated",
         description: "The selected layout has been activated",
