@@ -144,11 +144,20 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
         data = []
         cumulative = 0
         for day, values in all_days.items():
-            cumulative += values['total']
+            current_day_date = datetime.date.fromisoformat(day)
+            if current_day_date > today:
+                # Set future values to None
+                daily_value = None
+                cumulative_value = None
+            else:
+                daily_value = values['total']
+                cumulative += daily_value
+                cumulative_value = cumulative
+                
             data.append({
                 'date': day,
-                'daily': values['total'],
-                'cumulative': cumulative
+                'daily': daily_value, 
+                'cumulative': cumulative_value
             })
         
         # Get month name in German format
@@ -181,6 +190,97 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
                 'next_month': next_month,
                 'next_year': next_year,
                 'is_current': month == today.month and year == today.year
+            },
+            'data': data
+        })
+
+    @action(detail=False, methods=["get"])
+    def annual_analysis(self, request):
+        """
+        Get sales data for a specific year aggregated by month.
+        Returns monthly sales and cumulative sum for INVOICE records.
+        
+        Query Parameters:
+        - year: Integer representing the year. Defaults to current year.
+        """
+        import datetime
+        from django.db.models import Sum
+        from django.db.models.functions import TruncMonth
+        from collections import OrderedDict
+        
+        # Parse year from query parameters
+        today = datetime.date.today()
+        try:
+            year = int(request.query_params.get('year', today.year))
+            
+            # Set start and end dates for the year
+            start_date = datetime.date(year, 1, 1)
+            end_date = datetime.date(year, 12, 31)
+                
+        except ValueError:
+            return Response(
+                {"error": "Invalid year parameter"}, 
+                status=400
+            )
+        
+        # Get invoice records for requested year
+        invoice_records = self.queryset.filter(
+            record_type="INVOICE",
+            record_date__gte=start_date,
+            record_date__lte=end_date
+        )
+        
+        # Aggregate by month
+        monthly_sales = invoice_records.annotate(
+            month=TruncMonth('record_date')
+        ).values('month').annotate(
+            total=Sum('total_amount')
+        ).order_by('month')
+        
+        # Generate all months in the year
+        all_months = OrderedDict()
+        for month_num in range(1, 13):
+            month_start = datetime.date(year, month_num, 1)
+            all_months[month_start.isoformat()] = {'month': month_start.isoformat(), 'total': 0}
+        
+        # Fill in actual data
+        for entry in monthly_sales:
+            month_iso = entry['month'].isoformat()
+            if month_iso in all_months:
+                all_months[month_iso]['total'] = float(entry['total']) if entry['total'] else 0
+        
+        # Calculate cumulative sum
+        data = []
+        cumulative = 0
+        for month_date_str, values in all_months.items():
+            current_month_start_date = datetime.date.fromisoformat(month_date_str)
+            # Check if the entire month is in the future
+            if current_month_start_date > today:
+                daily_value = None
+                cumulative_value = None
+            else:
+                daily_value = values['total']
+                cumulative += daily_value
+                cumulative_value = cumulative
+            
+            data.append({
+                'date': month_date_str,  # Keep 'date' key for consistency with frontend
+                'daily': daily_value, # Rename 'monthly' to 'daily' for consistency
+                'cumulative': cumulative_value
+            })
+            
+        # Navigation info
+        prev_year = year - 1
+        next_year = year + 1
+            
+        return Response({
+            'selected_period': {
+                'year': year
+            },
+            'navigation': {
+                'prev_year': prev_year,
+                'next_year': next_year,
+                'is_current': year == today.year
             },
             'data': data
         })

@@ -372,6 +372,7 @@ export function SalesAnalysisWidget() {
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 6, fill: 'var(--primary)' }}
+                    connectNulls={true}
                   />
                 </LineChart>
               </ResponsiveContainer>
