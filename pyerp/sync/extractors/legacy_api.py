@@ -107,6 +107,28 @@ class LegacyAPIExtractor(BaseExtractor):
             top_limit = int(query_params["$top"])
             logger.info(f"Will limit results to top {top_limit} records")
         
+        # Handle parent record IDs filtering if provided
+        parent_filter = None
+        if query_params and "parent_record_ids" in query_params:
+            parent_ids = query_params["parent_record_ids"]
+            logger.info(f"Filtering by parent record IDs: {len(parent_ids)} IDs provided")
+            # Default parent field is AbsNr, but can be overridden
+            parent_field = query_params.get("parent_field", "AbsNr")
+            
+            # Build filter query for parent IDs
+            if len(parent_ids) == 1:
+                # Simple case - just one parent ID
+                parent_filter = [[parent_field, "=", parent_ids[0]]]
+            else:
+                # We need a complex filter for multiple parent IDs
+                # The OData filter syntax would be "(Field eq value1 or Field eq value2 or ...)"
+                # We'll build this as [[field, op, value], ...] format for the client
+                parent_filter = []
+                for parent_id in parent_ids:
+                    parent_filter.append([parent_field, "=", parent_id])
+            
+            logger.info(f"Created parent filter with {len(parent_filter)} conditions")
+        
         # Generate a cache key based on table name and query params
         cache_key = self._generate_cache_key(query_params)
         
@@ -163,6 +185,19 @@ class LegacyAPIExtractor(BaseExtractor):
                 # Get filter query if provided
                 if "filter_query" in query_params:
                     filter_query = query_params["filter_query"]
+                
+                # Apply parent filter if we have one 
+                if parent_filter:
+                    if filter_query:
+                        # If we already have a filter, combine with parent filter
+                        logger.info("Combining existing filter with parent record filter")
+                        # This assumes filter_query is a list of filter conditions
+                        if isinstance(filter_query, list):
+                            filter_query.extend(parent_filter)
+                        else:
+                            filter_query = parent_filter
+                    else:
+                        filter_query = parent_filter
                 
                 # Execute the fetch with modified parameters
                 records = client.fetch_table(

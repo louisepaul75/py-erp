@@ -7,6 +7,7 @@ This script is used to overcome the SyncLogDetail import issue.
 import os
 import sys
 import django
+import argparse
 from datetime import timedelta
 from pathlib import Path
 import logging
@@ -53,6 +54,13 @@ logger = get_logger(__name__)
 
 def main():
     """Run sales record sync with days=10 parameter."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run sales record sync')
+    parser.add_argument('--days', type=int, default=10, help='Number of days to look back')
+    parser.add_argument('--top', type=int, default=0, help='Limit to top N records')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    args = parser.parse_args()
+    
     # Check if DB_PASSWORD is set
     db_password = os.environ.get("DB_PASSWORD")
     if db_password:
@@ -60,10 +68,12 @@ def main():
     else:
         print("WARNING: Database password is NOT SET")
 
-    print("Starting sales record sync with days=10 parameter")
+    print(f"Starting sales record sync with days={args.days} parameter")
+    if args.top > 0:
+        print(f"Limiting to top {args.top} sales records")
     
-    # Calculate date 10 days ago
-    days_ago = 10
+    # Calculate date N days ago
+    days_ago = args.days
     modified_since = timezone.now() - timedelta(days=days_ago)
     date_str = modified_since.strftime("%Y-%m-%d")
     
@@ -73,6 +83,10 @@ def main():
             ["modified_date", ">", date_str]
         ]
     }
+    
+    # Add top limit if specified
+    if args.top > 0:
+        query_params["$top"] = args.top
     
     print(f"Filtering records modified since {date_str} ({days_ago} days ago)")
     logger.info(f"Using query params: {query_params}")
@@ -86,26 +100,72 @@ def main():
         # Process sales records first
         print(f"Processing sales records mapping: {sales_record_mapping}")
         sales_pipeline = PipelineFactory.create_pipeline(sales_record_mapping)
-        sales_result = sales_pipeline.run(
-            incremental=True,
-            batch_size=100,
-            query_params=query_params
-        )
+        
+        # For top N records, first fetch the records to get their IDs
+        if args.top > 0:
+            # Extract data only (no transform/load)
+            sales_records = sales_pipeline.fetch_data(query_params=query_params)
+            print(f"Fetched {len(sales_records)} sales records")
+            
+            # Extract the parent IDs from the sales records
+            parent_ids = [record.get('AbsNr') for record in sales_records if record.get('AbsNr')]
+            
+            # Get unique IDs to avoid duplicate filters
+            unique_parent_ids = list(set(parent_ids))
+            print(f"Extracted {len(unique_parent_ids)} unique parent IDs for filtering line items")
+            
+            # Now run the sales record pipeline with this data
+            sales_result = sales_pipeline.run_with_data(
+                data=sales_records,
+                incremental=True,
+                batch_size=100,
+                query_params=query_params
+            )
+            
+            # Create item filter format that works with OData
+            # Instead of multiple "AbsNr = X" conditions, use a single "AbsNr IN (list)" condition
+            # The filter is a list with a single entry that has the format:
+            # ["AbsNr", "in", [id1, id2, id3, ...]]
+            items_query_params = {
+                "filter_query": [
+                    ["modified_date", ">", date_str],
+                    ["AbsNr", "in", unique_parent_ids]
+                ]
+            }
+            
+            # Process sales record items with parent ID filtering
+            print(f"Processing sales record items mapping with parent ID filtering: "
+                  f"{sales_record_items_mapping}")
+            items_pipeline = PipelineFactory.create_pipeline(
+                sales_record_items_mapping
+            )
+            items_result = items_pipeline.run(
+                incremental=True,
+                batch_size=100,
+                query_params=items_query_params
+            )
+        else:
+            # Regular processing without top limit
+            sales_result = sales_pipeline.run(
+                incremental=True,
+                batch_size=100,
+                query_params=query_params
+            )
+            
+            # Then process sales record items
+            print(f"Processing sales record items mapping: "
+                  f"{sales_record_items_mapping}")
+            items_pipeline = PipelineFactory.create_pipeline(
+                sales_record_items_mapping
+            )
+            items_result = items_pipeline.run(
+                incremental=True,
+                batch_size=100,
+                query_params=query_params
+            )
+        
         print(f"Sales records sync result: {sales_result}")
-        
-        # Then process sales record items
-        print(f"Processing sales record items mapping: "
-              f"{sales_record_items_mapping}")
-        items_pipeline = PipelineFactory.create_pipeline(
-            sales_record_items_mapping
-        )
-        items_result = items_pipeline.run(
-            incremental=True,
-            batch_size=100,
-            query_params=query_params
-        )
         print(f"Sales record items sync result: {items_result}")
-        
         print("Sales record sync completed successfully")
         
     except SyncMapping.DoesNotExist as e:

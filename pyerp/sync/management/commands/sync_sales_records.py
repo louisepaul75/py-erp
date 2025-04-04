@@ -9,6 +9,7 @@ import time
 from django.core.management.base import BaseCommand, CommandError
 from django.core.management import call_command
 from django.utils import timezone
+from django.apps import apps
 
 from pyerp.utils.logging import get_logger
 
@@ -39,9 +40,9 @@ class Command(BaseCommand):
             help="Number of records to process in each batch",
         )
         parser.add_argument(
-            "--limit",
+            "--top",
             type=int,
-            help="Limit the number of records to sync",
+            help="Limit the number of records to sync by taking the top N most recent records",
         )
         parser.add_argument(
             "--filters",
@@ -94,8 +95,9 @@ class Command(BaseCommand):
             except json.JSONDecodeError:
                 raise CommandError("Invalid JSON format for --filters option")
 
-        if options["limit"]:
-            filters["$top"] = options["limit"]
+        if options["top"]:
+            filters["$top"] = options["top"]
+            self.stdout.write(f"Limiting sync to top {options['top']} records")
 
         if options["days"]:
             days = options["days"]
@@ -136,11 +138,36 @@ class Command(BaseCommand):
         # The item pipeline should handle skipping items for non-existent records.
         self.stdout.write(self.style.NOTICE("\n=== Running Sales Record Items Sync via run_sync ==="))
         try:
-            # Remove record-specific filters ($top, date) for items sync
+            # Get IDs of the sales records we just fetched if we used top limit
+            sales_record_ids = []
             item_filters = {}
+            
+            try:
+                if options["top"] or ('$top' in filters and filters['$top']):
+                    SalesRecord = apps.get_model('sales', 'SalesRecord')
+                    top_limit = options["top"] or filters.get('$top', 100)
+                    # Get the most recent sales records by record_date
+                    sales_record_ids = list(SalesRecord.objects.order_by('-record_date')[:int(top_limit)].values_list('legacy_id', flat=True))
+                    if sales_record_ids:
+                        self.stdout.write(f"Filtering line items to {len(sales_record_ids)} sales records")
+                        
+                        # Simple direct parameter approach - just pass the parent record IDs
+                        # as a simple parameter that the extractor can use
+                        item_filters["parent_record_ids"] = sales_record_ids
+                        self.stdout.write(f"Limited line items to parent records: {sales_record_ids[:5]}...")
+            except Exception as e:
+                self.stderr.write(f"Failed to filter by sales record IDs: {e}")
+                if self.debug:
+                    import traceback
+                    traceback.print_exc()
+            
             if options["filters"]:
                 try:
-                    item_filters.update(json.loads(options["filters"]))
+                    filter_data = json.loads(options["filters"])
+                    # Don't copy $top filter to items sync
+                    if "$top" in filter_data:
+                        filter_data.pop("$top")
+                    item_filters.update(filter_data)
                 except json.JSONDecodeError:
                     pass # Ignore filter errors here, handled above
 
