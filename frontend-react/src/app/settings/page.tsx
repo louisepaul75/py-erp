@@ -43,7 +43,6 @@ import { UserManagement } from "@/components/users/user-management"
 import { GroupManagement } from "@/components/users/group-management"
 import { PermissionManagement } from "@/components/users/permission-management"
 import { PasswordPolicyManagement } from "@/components/users/password-policy"
-import SyncWorkflows from "@/components/settings/sync/SyncWorkflows";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Form interface for user profile
@@ -704,44 +703,6 @@ function SettingsPageContent() {
         {isAdmin && (
           <TabsContent value="system" className="space-y-4">
             <IntegrationDashboard />
-            <SyncWorkflows />
-            {/* <Card>
-              <CardHeader>
-                <CardTitle>{t('api_connections')}</CardTitle>
-                <CardDescription>
-                  {t('manage_external_api_connections')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="legacy_erp">{t('legacy_erp_connection')}</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {t('legacy_erp_description')}
-                    </p>
-                  </div>
-                  <Switch
-                    id="legacy_erp"
-                    checked={connections.legacy_erp}
-                    onCheckedChange={() => toggleConnection('legacy_erp')}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="images_cms">{t('images_cms_connection')}</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {t('images_cms_description')}
-                    </p>
-                  </div>
-                  <Switch
-                    id="images_cms"
-                    checked={connections.images_cms}
-                    onCheckedChange={() => toggleConnection('images_cms')}
-                  />
-                </div>
-              </CardContent>
-            </Card> */}
           </TabsContent>
         )}
 
