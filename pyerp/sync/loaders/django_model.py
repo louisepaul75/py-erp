@@ -17,6 +17,15 @@ logger = logging.getLogger(__name__)
 class DjangoModelLoader(BaseLoader):
     """Loader for Django model data."""
 
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize the loader and cache the model class."""
+        super().__init__(config)
+        # Validate required fields early
+        self._validate_config()
+        # Load and cache the model class upon initialization
+        self._model_class: Optional[Type[Model]] = None
+        self._model_class = self._load_model_class()
+
     @staticmethod
     def _import_class(class_path: str) -> Type:
         """Import a class from its dotted path."""
@@ -35,8 +44,11 @@ class DjangoModelLoader(BaseLoader):
         """
         return ["app_name", "model_name", "unique_field"]
 
-    def _get_model_class(self) -> Type[Model]:
+    def _load_model_class(self) -> Type[Model]:
         """Get Django model class from configuration.
+
+        This method attempts to load the class and should only be called once
+        during initialization.
 
         Returns:
             Django model class
@@ -67,6 +79,14 @@ class DjangoModelLoader(BaseLoader):
                  raise ValueError(f"Failed to get model {app_name}.{model_name}: {e}") from e
 
         raise ValueError("Loader configuration must provide either 'model' path or 'app_name' and 'model_name'")
+
+    def _get_model_class(self) -> Type[Model]:
+        """Return the cached model class."""
+        if self._model_class is None:
+            # This should not happen if __init__ ran correctly
+            logger.error("Model class was not loaded during initialization!")
+            raise ValueError("Model class not loaded")
+        return self._model_class
 
     def prepare_record(
         self, record: Dict[str, Any]
