@@ -44,6 +44,7 @@ import { GroupManagement } from "@/components/users/group-management"
 import { PermissionManagement } from "@/components/users/permission-management"
 import { PasswordPolicyManagement } from "@/components/users/password-policy"
 import SyncWorkflows from "@/components/settings/sync/SyncWorkflows";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 // Form interface for user profile
 interface ProfileForm {
@@ -72,14 +73,20 @@ interface ErrorState extends Partial<ProfileForm>, Partial<PasswordForm> {
 }
 
 export default function SettingsPage() {
+  return (
+    <ProtectedRoute>
+      <SettingsPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function SettingsPageContent() {
   const { t } = useAppTranslation("settings");
   const { user } = useIsAuthenticated();
   const updateProfile = useUpdateProfile();
 
-  // Manually set isAdmin to true for demonstration
-  // This will show admin options for testing
-  // const isAdmin = user?.isAdmin || false;
-  const isAdmin = true;
+  // Get admin status from user object using is_staff or is_superuser
+  const isAdmin = user ? (user.is_staff || user.is_superuser) : false;
 
   console.log("User data:", user);
   console.log("Is admin:", isAdmin);
