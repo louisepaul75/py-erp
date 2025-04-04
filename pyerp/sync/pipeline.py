@@ -277,6 +277,154 @@ class SyncPipeline:
         # Use the utility function which handles recursion and types
         return json_serialize(data)
 
+    def fetch_data(self, query_params=None, fail_on_filter_error=False):
+        """Fetch data from source without processing it.
+        
+        This method allows for data to be fetched once and reused across multiple pipelines.
+        
+        Args:
+            query_params: Query parameters for filtering data
+            fail_on_filter_error: Whether to fail if filter doesn't work
+            
+        Returns:
+            List of records fetched from the source
+        """
+        logger.info("Fetching data in extract-only mode...")
+        
+        # Initialize the extractor
+        try:
+            # Make sure the extractor is properly initialized
+            if hasattr(self.extractor, 'initialize') and callable(self.extractor.initialize):
+                self.extractor.initialize()
+            
+            # Use a context manager to ensure proper connection handling
+            with self.extractor:
+                # Extract data from source without transforming or loading
+                records = self.extractor.extract(
+                    query_params=query_params,
+                    fail_on_filter_error=fail_on_filter_error
+                )
+                logger.info(f"Fetched {len(records)} records")
+                return records
+        except Exception as e:
+            logger.error(f"Error fetching data: {e}")
+            raise
+        
+    def run_with_data(self, data=None, incremental=True, batch_size=100, query_params=None):
+        """Run the pipeline with pre-fetched data.
+        
+        This method uses provided data instead of extracting it from source.
+        
+        Args:
+            data: Pre-fetched data to use
+            incremental: Whether to run in incremental mode
+            batch_size: Size of batches to process
+            query_params: Original query parameters used for extraction
+            
+        Returns:
+            SyncLog: The sync log for this run
+        """
+        if not data:
+            raise ValueError("No data provided for run_with_data method")
+        
+        # Apply top limit if specified in query_params
+        if query_params and "$top" in query_params and isinstance(data, list):
+            top_limit = int(query_params["$top"])
+            if len(data) > top_limit:
+                logger.info(f"Limiting pre-fetched data to top {top_limit} records (from {len(data)} total)")
+                data = data[:top_limit]
+        
+        logger.info(f"Running pipeline with {len(data)} pre-fetched records")
+        
+        # Create sync log
+        sync_log = self.create_sync_log(incremental=incremental)
+        
+        # Process in batches
+        total_count = len(data)
+        processed_count = 0
+        created_count = 0
+        updated_count = 0
+        failed_count = 0
+        
+        # Process records in batches
+        for start_idx in range(0, total_count, batch_size):
+            end_idx = min(start_idx + batch_size, total_count)
+            batch = data[start_idx:end_idx]
+            batch_size_actual = len(batch)
+            
+            logger.info(f"Processing batch {start_idx//batch_size + 1}: {start_idx} to {end_idx-1}")
+            
+            try:
+                # Process this batch
+                created, updated, failed = self._process_batch(batch)
+                
+                # Update counters
+                processed_count += batch_size_actual
+                created_count += created
+                updated_count += updated
+                failed_count += failed
+                
+            except Exception as e:
+                logger.error(f"Error processing batch: {e}")
+                failed_count += batch_size_actual
+                processed_count += batch_size_actual
+        
+        # Update sync log
+        sync_log.records_processed = processed_count
+        sync_log.records_created = created_count
+        sync_log.records_updated = updated_count
+        sync_log.records_failed = failed_count
+        sync_log.status = "completed"
+        sync_log.completed_at = timezone.now()
+        sync_log.save()
+        
+        return sync_log
+
+    def create_sync_log(self, incremental=True):
+        """Create a new sync log entry.
+        
+        Args:
+            incremental: Whether this is an incremental sync
+            
+        Returns:
+            SyncLog: The newly created sync log entry
+        """
+        # Get the next available ID using MAX(id) + 1
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM audit_synclog")
+            next_id = cursor.fetchone()[0]
+
+        # Create sync log entry with explicit ID
+        start_time = timezone.now()
+        sync_log = SyncLog.objects.create(
+            id=next_id,
+            entity_type=self.mapping.entity_type,
+            status="started",
+            started_at=start_time,
+            records_processed=0,
+            records_created=0,
+            records_updated=0,
+            records_failed=0,
+            error_message=""
+        )
+        
+        # Update the sync state
+        self.sync_state.update_sync_started()
+        
+        # Log the event
+        log_data_sync_event(
+            source=self.mapping.source.name,
+            destination=self.mapping.target.name,
+            record_count=0,
+            status="started",
+            details={
+                "entity_type": self.mapping.entity_type,
+                "incremental": incremental,
+            },
+        )
+        
+        return sync_log
+
 
 class PipelineFactory:
     """Factory for creating sync pipelines from configurations."""

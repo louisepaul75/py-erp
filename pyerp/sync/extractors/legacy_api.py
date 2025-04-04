@@ -3,6 +3,8 @@
 import os
 from datetime import datetime
 from typing import Any, Dict, List
+import hashlib
+import json
 
 from pyerp.external_api.legacy_erp import LegacyERPClient
 from pyerp.utils.logging import get_logger, log_data_sync_event
@@ -13,9 +15,23 @@ from .base import BaseExtractor
 
 logger = get_logger(__name__)
 
+# Add a response cache to the LegacyAPIExtractor class
+_response_cache = {}
+
 
 class LegacyAPIExtractor(BaseExtractor):
     """Extractor for legacy API data."""
+
+    # Class level cache to store API responses between instances
+    _response_cache = {}
+
+    def __init__(self, config):
+        """Initialize with configuration.
+
+        Args:
+            config: Configuration dictionary
+        """
+        super().__init__(config)
 
     def get_required_config_fields(self) -> List[str]:
         """Get required configuration fields.
@@ -72,132 +88,122 @@ class LegacyAPIExtractor(BaseExtractor):
         except ConnectionError as e:
             raise ConnectionError(f"Failed to connect to legacy API: {e}")
 
-    def extract(
-        self, query_params: Dict[str, Any] = None, fail_on_filter_error: bool = False
-    ) -> List[Dict[str, Any]]:
-        """Extract data from the legacy API.
+    def extract(self, query_params=None, fail_on_filter_error=False):
+        """Extract data from the API.
 
         Args:
-            query_params: Query parameters for filtering data
-            fail_on_filter_error: Whether to raise an error if filter
-                construction fails
+            query_params: Additional query parameters
+            fail_on_filter_error: Whether to fail if filter doesn't work
 
         Returns:
-            List of dictionaries containing the extracted data
-
-        Raises:
-            ExtractError: If data extraction fails or if filter construction
-                fails and fail_on_filter_error is True
+            List of records from the API
         """
-        try:
-            # Get client from connection manager
-            client = self.connection
-
-            # Get page size from config or use default
-            page_size = self.config.get("page_size", 1000)
-
-            # Override page_size with $top from query_params if present
-            if query_params and "$top" in query_params:
-                page_size = int(query_params["$top"])
-                logger.info(f"Using limit from query_params: {page_size}")
-
-            all_records = self.config.get("all_records", False)
-
-            # If we have a limit, only do one fetch
-            limit_records = query_params and "$top" in query_params
-
-            # Extract filter_query if present in query_params
-            filter_query = None
-            if query_params and "filter_query" in query_params:
-                filter_query = query_params["filter_query"]
-                logger.info(f"Using filter_query from query_params: {filter_query}")
-
-            # If we have a $top parameter, do only one fetch with exactly that number of records
-            if limit_records:
-                logger.info(f"Limiting to first {page_size} records due to $top parameter")
-                records_df = client.fetch_table(
-                    table_name=self.config["table_name"],
-                    filter_query=filter_query,
-                    top=page_size,
-                    skip=0,
-                    all_records=False,
-                )
-                
-                if records_df is None or records_df.empty:
-                    return []
-                    
+        # Initialize client if needed
+        client = self.connection
+        
+        # Check if we need to limit results
+        top_limit = None
+        if query_params and "$top" in query_params:
+            top_limit = int(query_params["$top"])
+            logger.info(f"Will limit results to top {top_limit} records")
+        
+        # Generate a cache key based on table name and query params
+        cache_key = self._generate_cache_key(query_params)
+        
+        # Check if we have cached data for this query
+        if cache_key in self.__class__._response_cache:
+            data = self.__class__._response_cache[cache_key]
+            logger.info(f"Using cached data for {self.config['table_name']} (cache key: {cache_key[:50]}...)")
+            
+            # Ensure we return a list of records
+            if hasattr(data, 'to_dict') and callable(data.to_dict):
                 # Convert DataFrame to list of dictionaries
                 try:
-                    records = records_df.to_dict(orient="records")
-                    logger.info(f"Extracted {len(records)} records with $top limit")
-                    return records
+                    result = data.to_dict(orient="records")
                 except Exception as e:
                     logger.error(f"Error converting DataFrame to records: {e}")
-                    return []
-
-            # Regular pagination for cases without $top parameter
-            while True:
-                # Fetch data using the filter query
-                df = client.fetch_table(
-                    table_name=self.config["table_name"],
-                    filter_query=filter_query,
-                    top=page_size,
-                    skip=0,
+                    # Try another way
+                    try:
+                        result = data.to_dict('records')
+                    except:
+                        # Last resort - manual conversion
+                        result = []
+                        for i in range(len(data)):
+                            result.append(dict(data.iloc[i]))
+            else:
+                # Already a list
+                result = data
+            
+            # Apply top limit if specified
+            if top_limit and isinstance(result, list):
+                logger.info(f"Limiting cached results to top {top_limit} records (from {len(result)} total)")
+                return result[:int(top_limit)]
+            
+            return result
+        
+        # Execute query and fetch data
+        try:
+            # Only extract if we don't have cached data
+            table_name = self.config["table_name"]
+            logger.info(f"Extracting data from {table_name} (cache miss)")
+            
+            # Handle query params - convert to format expected by client
+            if query_params:
+                # Handle $top parameter for limiting results
+                top = None
+                all_records = self.config.get("all_records", True)
+                filter_query = None
+                
+                if "$top" in query_params:
+                    top = query_params["$top"]
+                    logger.info(f"Using top limit: {top} - disabling pagination")
+                    # Disable pagination in the client when top is specified
+                    all_records = False
+                
+                # Get filter query if provided
+                if "filter_query" in query_params:
+                    filter_query = query_params["filter_query"]
+                
+                # Execute the fetch with modified parameters
+                records = client.fetch_table(
+                    table_name=table_name,
                     all_records=all_records,
+                    filter_query=filter_query,
+                    top=top
                 )
-
-                if df is None or df.empty:
-                    break
-
-                # Convert DataFrame to list of dictionaries and append
-                # Handle case where DataFrame might have column issues
+            else:
+                # No query params, simple fetch
+                records = client.fetch_table(
+                    table_name=table_name,
+                    all_records=self.config.get("all_records", True),
+                )
+            
+            # Ensure we have a list of dictionaries before caching
+            if hasattr(records, 'to_dict') and callable(records.to_dict):
                 try:
-                    records = df.to_dict(orient="records")
-
-                    # Ensure records are properly formatted as dictionaries
-                    all_records_list = []
-                    for record in records:
-                        if isinstance(record, dict):
-                            all_records_list.append(record)
-                        else:
-                            logger.warning(
-                                f"Skipping non-dictionary record: {type(record)}"
-                            )
+                    result = records.to_dict(orient="records")
+                    logger.info(f"Converted DataFrame to {len(result)} dictionary records")
+                    
+                    # Store in cache for future use
+                    self.__class__._response_cache[cache_key] = result
+                    logger.info(f"Cached {len(result)} records for {table_name}")
+                    return result
                 except Exception as e:
-                    logger.error(f"Error converting DataFrame to records: {e}")
-                    # Try to extract raw data if possible
-                    all_records_list = []
-                    if hasattr(df, "values") and hasattr(df, "columns"):
-                        try:
-                            columns = df.columns.tolist()
-                            for row in df.values:
-                                record = {
-                                    columns[i]: row[i] for i in range(len(columns))
-                                }
-                                all_records_list.append(record)
-                        except Exception as conversion_error:
-                            logger.error(
-                                f"Failed to manually convert DataFrame: {conversion_error}"
-                            )
-
-                # Log progress
-                logger.info(
-                    f"Fetched {len(records)} records (total: {len(all_records_list)})"
-                )
-
-                # If we got fewer records than page_size, we've reached the end
-                if len(records) < page_size:
-                    break
-
-            record_count = len(all_records_list)
-            logger.info(f"Extracted {record_count} total records from legacy API")
-
-            return all_records_list
-
-        except (ConnectionError, ValueError) as e:
-            error_msg = f"Error extracting data from legacy API: {e}"
-            logger.error(error_msg)
-            raise ExtractError(error_msg)
+                    logger.error(f"Error converting DataFrame: {e}")
+                    # Store the original format in the cache
+                    self.__class__._response_cache[cache_key] = records
+                    logger.warning("Stored original DataFrame format in cache")
+                    return records
+            
+            # Store in cache for future use
+            self.__class__._response_cache[cache_key] = records
+            logger.info(f"Fetched {len(records)} records (total: {len(records)})")
+            return records
+        except Exception as e:
+            logger.error(f"Error extracting data from {self.config['table_name']}: {e}")
+            if fail_on_filter_error:
+                raise
+            return []
 
     def _build_date_filter_query(self, query_params: Dict[str, Any]) -> str:
         """Build OData filter query for date filtering."""
@@ -273,3 +279,97 @@ class LegacyAPIExtractor(BaseExtractor):
         except Exception as e:
             logger.warning(f"Error formatting date: {str(e)}")
             return date_str  # Return original if parsing fails
+
+    def _generate_cache_key(self, query_params=None):
+        """Generate a cache key based on table name and query params.
+        
+        Args:
+            query_params: Query parameters for filtering
+            
+        Returns:
+            A string cache key
+        """
+        # Create a sorted, deterministic representation of query_params
+        if query_params:
+            # Convert query_params to a sorted, deterministic string representation
+            try:
+                # Sort the keys to ensure consistent ordering
+                sorted_params = sorted(query_params.items())
+                params_str = json.dumps(sorted_params)
+            except (TypeError, ValueError):
+                # If we can't serialize the params, use their string representation
+                params_str = str(sorted([(k, str(v)) for k, v in query_params.items()]))
+        else:
+            params_str = "none"
+        
+        # Create a unique cache key based on table name and parameters
+        table_name = self.config.get('table_name', '')
+        return f"{table_name}_{params_str}"
+
+    @classmethod
+    def clear_cache(cls):
+        """Clear the response cache."""
+        cls._response_cache.clear()
+        logger.info("Cleared LegacyAPIExtractor response cache")
+
+    @classmethod
+    def get_cached_data(cls, table_name, query_params=None):
+        """Retrieve data from cache if available.
+        
+        Args:
+            table_name: Table name to retrieve data for
+            query_params: Query parameters used for the cache key
+            
+        Returns:
+            Cached data if available, None otherwise
+        """
+        # Extract top limit if present
+        top_limit = None
+        if query_params and "$top" in query_params:
+            top_limit = query_params["$top"]
+            logger.info(f"Will limit cached results to top {top_limit} records")
+        
+        # Create a cache key without needing a full instance
+        if query_params:
+            try:
+                # Sort the keys to ensure consistent ordering
+                sorted_params = sorted(query_params.items())
+                params_str = json.dumps(sorted_params)
+            except (TypeError, ValueError):
+                # If we can't serialize the params, use their string representation
+                params_str = str(sorted([(k, str(v)) for k, v in query_params.items()]))
+        else:
+            params_str = "none"
+        
+        # Create a unique cache key based on table name and parameters
+        cache_key = f"{table_name}_{params_str}"
+        
+        # Return cached data if available
+        if cache_key in cls._response_cache:
+            data = cls._response_cache[cache_key]
+            logger.info(f"Using cached data for {table_name} (cache key: {cache_key[:50]}...)")
+            
+            # Convert to list of dictionaries if needed
+            if hasattr(data, 'to_dict') and callable(data.to_dict):
+                try:
+                    result = data.to_dict(orient="records")
+                except Exception as e:
+                    logger.error(f"Error converting DataFrame: {e}")
+                    try:
+                        result = data.to_dict('records')
+                    except:
+                        # Manual conversion
+                        result = []
+                        for i in range(len(data)):
+                            result.append(dict(data.iloc[i]))
+            else:
+                result = data
+            
+            # Apply top limit if specified
+            if top_limit and isinstance(result, list):
+                logger.info(f"Limiting cached results to top {top_limit} records (from {len(result)} total)")
+                return result[:int(top_limit)]
+            
+            return result
+        
+        return None
