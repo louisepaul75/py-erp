@@ -123,99 +123,103 @@ export function Navbar() {
           {/* Mobile menu */}
           <div className="flex items-center lg:hidden">
             <MobileMenu
-              items={[
+              items={user ? [
                 ...navigationItems,
                 { href: "/warehouse", label: t("navigation.inventory") },
                 { href: "/picklist", label: "Picklist" },
+              ] : [
+                { href: "/dashboard", label: t("navigation.home") }
               ]}
             />
           </div>
 
           {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex items-center justify-center flex-1">
-            <div className="flex space-x-4">
-              {navigationItems.map((item) => (
-                <NavLink key={item.href} href={item.href} label={item.label} />
-              ))}
+          {user && (
+            <div className="hidden lg:flex items-center justify-center flex-1">
+              <div className="flex space-x-4">
+                {navigationItems.map((item) => (
+                  <NavLink key={item.href} href={item.href} label={item.label} />
+                ))}
 
-              {/*  Production dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
-                    <span>{t("navigation.production")}</span>
+                {/*  Production dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <span>{t("navigation.production")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/production" className="flex items-center">
+                        {t("navigation.production")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/mold-management" className="flex items-center">
+                        {t("navigation.mold_management")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Inventory Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <Package className="h-4 w-4 mr-2 text-current" />
+                      <span>{t("navigation.inventory")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/warehouse" className="flex items-center">
+                        Warehouse Management
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/picklist" className="flex items-center">
+                        Picklist
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Test dropdown */}
+                <div className="relative" id="test-dropdown">
+                  <button
+                    onClick={toggleTestDropdown}
+                    className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center"
+                  >
+                    <span>Test</span>
                     <ChevronDown className="ml-1 h-4 w-4 text-current" />
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <ShadcnDropdownMenuItem asChild>
-                    <Link href="/production" className="flex items-center">
-                      {t("navigation.production")}
-                    </Link>
-                  </ShadcnDropdownMenuItem>
-                  <ShadcnDropdownMenuItem asChild>
-                    <Link href="/mold-management" className="flex items-center">
-                      {t("navigation.mold_management")}
-                    </Link>
-                  </ShadcnDropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
 
-              {/* Inventory Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
-                    <Package className="h-4 w-4 mr-2 text-current" />
-                    <span>{t("navigation.inventory")}</span>
-                    <ChevronDown className="ml-1 h-4 w-4 text-current" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <ShadcnDropdownMenuItem asChild>
-                    <Link href="/warehouse" className="flex items-center">
-                      Warehouse Management
-                    </Link>
-                  </ShadcnDropdownMenuItem>
-                  <ShadcnDropdownMenuItem asChild>
-                    <Link href="/picklist" className="flex items-center">
-                      Picklist
-                    </Link>
-                  </ShadcnDropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Test dropdown */}
-              <div className="relative" id="test-dropdown">
-                <button
-                  onClick={toggleTestDropdown}
-                  className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center"
-                >
-                  <span>Test</span>
-                  <ChevronDown className="ml-1 h-4 w-4 text-current" />
-                </button>
-
-                {testMenuOpen && (
-                  <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-popover text-popover-foreground ring-1 ring-border ring-opacity-5 focus:outline-none z-50">
-                    <div
-                      className="py-1"
-                      role="menu"
-                      aria-orientation="vertical"
-                    >
-                      <DropdownItem href="/ui-components">
-                        <Palette className="mr-3 h-5 w-5" />
-                        UI Components / Style Guide
-                      </DropdownItem>
-                      <DropdownItem href="/test/feature1">
-                        Feature 1
-                      </DropdownItem>
-                      <DropdownItem href="/test/feature2">
-                        Feature 2
-                      </DropdownItem>
+                  {testMenuOpen && (
+                    <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-popover text-popover-foreground ring-1 ring-border ring-opacity-5 focus:outline-none z-50">
+                      <div
+                        className="py-1"
+                        role="menu"
+                        aria-orientation="vertical"
+                      >
+                        <DropdownItem href="/ui-components">
+                          <Palette className="mr-3 h-5 w-5" />
+                          UI Components / Style Guide
+                        </DropdownItem>
+                        <DropdownItem href="/test/feature1">
+                          Feature 1
+                        </DropdownItem>
+                        <DropdownItem href="/test/feature2">
+                          Feature 2
+                        </DropdownItem>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* User Menu - Desktop - Refactored with Shadcn DropdownMenu */}
           <div className="hidden lg:flex items-center pr-2">
