@@ -40,7 +40,17 @@ class ProductTransformer(BaseTransformer):
             try:
                 # Log the complete source record for debugging
                 logger.debug("Processing source record: %s", record)
-
+                
+                # Check for aktiv/Aktiv field and log its presence (both case variants)
+                if 'aktiv' in record:
+                    logger.debug("Found 'aktiv' field in source record: %s (type: %s)", 
+                                record['aktiv'], type(record['aktiv']).__name__)
+                elif 'Aktiv' in record:
+                    logger.debug("Found 'Aktiv' field in source record: %s (type: %s)", 
+                                record['Aktiv'], type(record['Aktiv']).__name__)
+                else:
+                    logger.debug("Neither 'aktiv' nor 'Aktiv' field found in source record")
+                    
                 # Apply field mappings from config
                 transformed = {}
                 for src_field, tgt_field in self.field_mappings.items():
@@ -59,6 +69,51 @@ class ProductTransformer(BaseTransformer):
                         logger.debug(
                             "Mapped field %s -> %s: %s", src_field, tgt_field, value
                         )
+                
+                # Ensure that both aktiv and Aktiv fields are correctly mapped to is_active
+                if 'is_active' not in transformed:
+                    # Try lowercase aktiv first
+                    if 'aktiv' in record:
+                        value = record['aktiv']
+                        # Convert to Python boolean
+                        if isinstance(value, str):
+                            # Convert string representations to boolean
+                            transformed['is_active'] = value.lower() in ("true", "1", "yes", "y", "t")
+                        elif isinstance(value, (int, float)):
+                            # Convert numeric representations to boolean
+                            transformed['is_active'] = bool(value)
+                        else:
+                            # Handle boolean values directly
+                            transformed['is_active'] = bool(value)
+                        
+                        logger.debug(
+                            "Directly mapped aktiv -> is_active: %s -> %s",
+                            value,
+                            transformed['is_active']
+                        )
+                    # Then try uppercase Aktiv
+                    elif 'Aktiv' in record:
+                        value = record['Aktiv']
+                        # Convert to Python boolean
+                        if isinstance(value, str):
+                            # Convert string representations to boolean
+                            transformed['is_active'] = value.lower() in ("true", "1", "yes", "y", "t")
+                        elif isinstance(value, (int, float)):
+                            # Convert numeric representations to boolean
+                            transformed['is_active'] = bool(value)
+                        else:
+                            # Handle boolean values directly
+                            transformed['is_active'] = bool(value)
+                        
+                        logger.debug(
+                            "Directly mapped Aktiv -> is_active: %s -> %s",
+                            value,
+                            transformed['is_active']
+                        )
+                    else:
+                        # If neither aktiv nor Aktiv is found, set default to True
+                        transformed['is_active'] = True
+                        logger.debug("No aktiv/Aktiv field found, using default is_active=True")
 
                 # Ensure required text fields have default values
                 required_text_fields = [
@@ -536,6 +591,8 @@ class ProductTransformer(BaseTransformer):
             "Einseitig": "is_one_sided",
         }
         
+        logger.debug("Starting transform_boolean_flags for record with SKU: %s", transformed.get("sku", "unknown"))
+        
         # Process each boolean field mapping
         for source_field, target_field in boolean_field_mappings.items():
             if source_field in source:
@@ -545,20 +602,34 @@ class ProductTransformer(BaseTransformer):
                 # Convert to Python boolean
                 if isinstance(value, str):
                     # Convert string representations to boolean
-                    transformed[target_field] = value.lower() in ("true", "1", "yes", "y", "t")
+                    bool_value = value.lower() in ("true", "1", "yes", "y", "t")
                 elif isinstance(value, (int, float)):
                     # Convert numeric representations to boolean
-                    transformed[target_field] = bool(value)
+                    bool_value = bool(value)
                 else:
                     # Handle boolean values directly
-                    transformed[target_field] = bool(value)
+                    bool_value = bool(value)
+                
+                # Set the value in the transformed record
+                transformed[target_field] = bool_value
                 
                 logger.debug(
-                    "Converted boolean field %s -> %s: %s -> %s",
+                    "Converted boolean field %s -> %s: %s -> %s (Source type: %s)",
                     source_field,
                     target_field,
                     value,
-                    transformed[target_field]
+                    bool_value,
+                    type(value).__name__
                 )
+        
+        # Set a default value for is_active if not already set
+        if "is_active" not in transformed:
+            transformed["is_active"] = True
+            logger.debug("Set default is_active=True for record with SKU: %s", transformed.get("sku", "unknown"))
+            
+        # Ensure the critical fields are definitely in the transformed record
+        logger.debug("After transform_boolean_flags - SKU: %s, is_active: %s", 
+                    transformed.get("sku", "unknown"), 
+                    transformed.get("is_active", "not set"))
         
         return transformed
