@@ -80,6 +80,8 @@ export const fetchBoxTypes = async (): Promise<BoxType[]> => {
 // Fetch boxes with pagination using ky
 export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Promise<PaginatedResponse<Box>> => {
   try {
+    console.log(`[DEBUG] Starting fetchBoxes API call: page=${page}, pageSize=${pageSize}`);
+    
     // Use ky instance (now named 'api') with searchParams and timeout
     const response = await api.get('api/v1/inventory/boxes/', {
       searchParams: { // Use searchParams for query parameters with ky
@@ -87,11 +89,46 @@ export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Prom
         page_size: pageSize
       },
       timeout
-    }).json<PaginatedResponse<Box>>();
-    return response;
+    });
+    
+    // Log the raw response before parsing JSON
+    console.log('[DEBUG] API Response Status:', response.status);
+    console.log('[DEBUG] API Response Headers:', Object.fromEntries(response.headers.entries()));
+    
+    // Clone the response to avoid consuming it twice
+    const responseClone = response.clone();
+    
+    // Get the response text for debugging
+    const responseText = await responseClone.text();
+    console.log('[DEBUG] API Response Text:', responseText);
+    
+    // Try to parse as JSON
+    let jsonData;
+    try {
+      jsonData = JSON.parse(responseText);
+      console.log('[DEBUG] Parsed JSON Response:', jsonData);
+    } catch (parseError) {
+      console.error('[DEBUG] Error parsing JSON:', parseError);
+    }
+    
+    // Get the actual data using ky's json method
+    const data = await response.json<PaginatedResponse<Box>>();
+    console.log('[DEBUG] API Final Response Data:', data);
+    console.log('[DEBUG] Results Count:', data.results ? data.results.length : 0);
+    
+    return data;
   } catch (error) {
-    console.error('Error fetching boxes:', error);
-    throw error; // Consider handling potential failed refresh more explicitly if needed
+    console.error('[DEBUG] Error fetching boxes:', error);
+    if (error.response) {
+      console.error('[DEBUG] Error response status:', error.response.status);
+      try {
+        const errorText = await error.response.text();
+        console.error('[DEBUG] Error response text:', errorText);
+      } catch (textError) {
+        console.error('[DEBUG] Could not read error response text');
+      }
+    }
+    throw error;
   }
 };
 

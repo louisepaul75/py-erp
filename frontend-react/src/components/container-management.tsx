@@ -87,6 +87,9 @@ export default function ContainerManagement() {
       
       setContainers(apiContainers.map(renumberUnits));
       
+      // Log container codes to verify data
+      console.log('Container Codes:', apiContainers.map(c => c.containerCode));
+      
       setTotalContainerCount(totalCount);
       
     } catch (err) {
