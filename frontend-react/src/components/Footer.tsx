@@ -94,14 +94,36 @@ export function Footer() {
   
   // Fetch health checks (for dev bar condition)
   useEffect(() => {
-    const fetchHealthChecksData = async () => {
+    const healthUrl = `${API_URL}/api/v1/health/`
+    const monitoringUrl = `${API_URL}/api/v1/monitoring/health-checks/`
+
+    const fetchBackendStatus = async () => {
       setIsLoadingChecks(true);
       try {
-        const response = await fetch(`${API_URL}/monitoring/health-checks/`, {
-          headers: {
-            'Accept': 'application/json'
+        let response: Response
+        try {
+          console.log("Fetching monitoring status from:", monitoringUrl)
+          response = await fetch(monitoringUrl, {
+            headers: {
+              Accept: "application/json",
+            }
+          });
+        } catch (error) {
+          console.warn("Monitoring endpoint failed, trying health endpoint...")
+          try {
+            console.log("Fetching health status from:", healthUrl)
+            response = await fetch(healthUrl, {
+              headers: {
+                Accept: "application/json",
+              }
+            });
+          } catch (error) {
+            console.error('Error fetching health checks:', error);
+            setHealthChecks(null);
+            return;
           }
-        });
+        }
+
         if (response.ok) {
           try {
             const contentType = response.headers.get('content-type');
@@ -128,9 +150,9 @@ export function Footer() {
       }
     };
     
-    fetchHealthChecksData();
+    fetchBackendStatus();
     
-    const interval = setInterval(fetchHealthChecksData, 60000);
+    const interval = setInterval(fetchBackendStatus, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -194,11 +216,12 @@ export function Footer() {
   // Fetch git branch info
   useEffect(() => {
     const fetchGitBranch = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const response = await fetch(`${API_URL}/git/branch/`, { 
+        const response = await fetch(`${API_URL}/api/git/branch/`, { 
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'
@@ -260,30 +283,30 @@ export function Footer() {
   return (
     <>
       {/* Footer */}
-      <footer className="bg-[hsl(var(--footer-background))] border-t border-gray-200 dark:border-gray-700 fixed bottom-0 w-full z-10">
+      <footer className="bg-footer text-footer-foreground border-t border-border fixed bottom-0 w-full z-10">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} pyERP System
+          <div className="text-sm">
+            &copy; {new Date().getFullYear()} pyERP
           </div>
           
           <Link 
             href="/health-status" 
-            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="flex items-center gap-2 text-sm hover:text-primary transition-colors"
           >
             <span>v{displayOverallHealth?.version || process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'}</span>
             {isLoading ? (
               <div 
                 data-testid="loading-spinner"
-                className="h-3 w-3 rounded-full bg-gray-300 animate-pulse"
+                className="h-3 w-3 rounded-full bg-muted animate-pulse"
               />
             ) : (
               <div 
                 data-testid="api-status-indicator"
                 className={cn(
                   "h-3 w-3 rounded-full",
-                  overallStatus === 'healthy' ? "bg-green-500" :
-                  overallStatus === 'warning' ? "bg-yellow-500" :
-                  "bg-red-500"
+                  overallStatus === 'healthy' ? "bg-status-success" :
+                  overallStatus === 'warning' ? "bg-status-warning" :
+                  "bg-status-error"
                 )}
               />
             )}
@@ -298,7 +321,7 @@ export function Footer() {
         }}>
           <button
             onClick={() => setIsDevBarExpanded(!isDevBarExpanded)}
-            className="w-full bg-orange-500 text-white py-1 px-4 flex items-center justify-between"
+            className="w-full bg-status-warning text-status-error-foreground py-1 px-4 flex items-center justify-between"
           >
             <span className="font-medium">
               DEV MODE {gitBranch?.branch ? `(${gitBranch.branch})` : '(local)'}
@@ -311,27 +334,27 @@ export function Footer() {
           </button>
           
           {isDevBarExpanded && (
-            <div className="bg-orange-100 p-4 border-t border-orange-300 dev-bar-content absolute bottom-full w-full">
-              <h3 className="font-semibold text-orange-800 mb-2">{t('health.debugInfo')}</h3>
+            <div className="bg-muted p-4 border-t border-status-warning dev-bar-content absolute bottom-full w-full">
+              <h3 className="font-semibold text-foreground mb-2">{t('health.debugInfo')}</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-600">{t('health.environment')}:</div>
-                <div>{displayOverallHealth?.environment || 'unknown'}</div>
+                <div className="text-muted-foreground">{t('health.environment')}:</div>
+                <div className="text-foreground">{displayOverallHealth?.environment || 'unknown'}</div>
                 
-                <div className="text-gray-600">{t('health.version')}:</div>
-                <div>{displayOverallHealth?.version || 'unknown'}</div>
+                <div className="text-muted-foreground">{t('health.version')}:</div>
+                <div className="text-foreground">{displayOverallHealth?.version || 'unknown'}</div>
                 
-                <div className="text-gray-600">{t('health.databaseStatus')}:</div>
+                <div className="text-muted-foreground">{t('health.databaseStatus')}:</div>
                 <div className={cn(
-                  displayOverallHealth?.database?.status === 'connected' ? 'text-green-600' : 'text-red-600'
+                  displayOverallHealth?.database?.status === 'connected' ? 'text-primary' : 'text-destructive'
                 )}>
                   {displayOverallHealth?.database?.status === 'connected' ? 'Connected' : 'Disconnected'}
                 </div>
                 
-                <div className="text-gray-600">{t('health.gitBranch')}:</div>
-                <div>{gitBranch?.branch || gitBranch?.error || 'local'}</div>
+                <div className="text-muted-foreground">{t('health.gitBranch')}:</div>
+                <div className="text-foreground">{gitBranch?.branch || gitBranch?.error || 'local'}</div>
                 
-                <div className="text-gray-600">{t('health.apiAvailable')}:</div>
-                <div className={apiAvailable ? 'text-green-600' : 'text-red-600'}>
+                <div className="text-muted-foreground">{t('health.apiAvailable')}:</div>
+                <div className={apiAvailable ? 'text-primary' : 'text-destructive'}>
                   {apiAvailable ? t('common.yes') : t('common.no')}
                 </div>
               </div>

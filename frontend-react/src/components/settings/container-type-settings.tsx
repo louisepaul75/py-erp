@@ -77,7 +77,7 @@ export default function ContainerTypeSettings() {
             }}
             title="Bearbeiten"
           >
-            <Edit className="h-4 w-4 text-blue-500" />
+            <Edit className="h-4 w-4 text-primary" />
             <span className="sr-only">Bearbeiten</span>
           </Button>
           <Button
@@ -90,7 +90,7 @@ export default function ContainerTypeSettings() {
             }}
             title="Löschen"
           >
-            <Trash2 className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-4 w-4 text-destructive" />
             <span className="sr-only">Löschen</span>
           </Button>
         </div>
@@ -127,9 +127,9 @@ export default function ContainerTypeSettings() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
+              <TableRow className="bg-muted/50 hover:bg-muted">
                 {columns.map((column) => (
-                  <TableHead key={column.id} className={`${column.className ?? ""} font-medium text-slate-700 dark:text-slate-300`}>
+                  <TableHead key={column.id} className={`${column.className ?? ""} font-medium text-muted-foreground`}>
                     {column.header}
                   </TableHead>
                 ))}
@@ -140,7 +140,7 @@ export default function ContainerTypeSettings() {
                 containerTypes.map((row: ContainerType) => (
                   <TableRow
                     key={row.id}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer"
+                    className="hover:bg-muted/50 cursor-pointer"
                     onClick={() => handleEdit(row)}
                   >
                     {columns.map((column) => (

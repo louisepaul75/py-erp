@@ -2,28 +2,39 @@
 URL patterns for the products API.
 """
 
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
 from pyerp.business_modules.products.api import (
     ProductCategoryViewSet,
-    ProductDetailViewSet,
     ProductListAPIView,
+    ProductDetailViewSet,
     VariantDetailAPIView,
 )
 
 app_name = "products_api"
 
-# Create a router for documented API endpoints
-router = DefaultRouter()
-router.register(r'categories', ProductCategoryViewSet, basename='category')
-router.register(r'products', ProductDetailViewSet, basename='product')
-
 urlpatterns = [
-    # Include the router URLs
-    path('', include(router.urls)),
+    # Category endpoints
+    path("categories/", ProductCategoryViewSet.as_view({"get": "list", "post": "create"}), name="categories_list"),
+    path("categories/<int:pk>/", ProductCategoryViewSet.as_view({
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+    }), name="category_detail"),
+    path("categories/<int:pk>/children/", ProductCategoryViewSet.as_view({"get": "children"}), name="category_children"),
+    path("categories/tree/", ProductCategoryViewSet.as_view({"get": "tree"}), name="category_tree"),
     
-    # Add custom API views that don't follow REST ViewSet patterns
-    path("list/", ProductListAPIView.as_view(), name="product_list"),
+    # Product endpoints
+    path("", ProductListAPIView.as_view(), name="product_list"),
+    path("direct-search/", ProductListAPIView.as_view(direct_search=True), name="product_direct_search"),
+    path("<int:pk>/", ProductDetailViewSet.as_view({
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+    }), name="product_detail"),
+    
+    # Variant endpoints
     path("variant/<int:pk>/", VariantDetailAPIView.as_view(), name="variant_detail"),
 ]

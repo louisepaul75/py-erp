@@ -40,8 +40,8 @@ class SalesRecordItemSerializer(serializers.ModelSerializer):
 
 
 class SalesRecordSerializer(serializers.ModelSerializer):
-    line_items = SalesRecordItemSerializer(many=True, read_only=True)
-    customer_name = serializers.CharField(source="customer.name", read_only=True)
+    # line_items = SalesRecordItemSerializer(many=True, read_only=True) # Temporarily commented out for debugging
+    # customer_name = serializers.CharField(source="customer.name", read_only=True) # Temporarily commented out for debugging
 
     class Meta:
         model = SalesRecord
@@ -52,7 +52,7 @@ class SalesRecordSerializer(serializers.ModelSerializer):
             "record_date",
             "record_type",
             "customer",
-            "customer_name",
+            # "customer_name", # Temporarily commented out
             "subtotal",
             "tax_amount",
             "shipping_cost",
@@ -68,7 +68,7 @@ class SalesRecordSerializer(serializers.ModelSerializer):
             "shipping_method",
             "shipping_address",
             "billing_address",
-            "line_items",
+            # "line_items", # Temporarily commented out
         ]
 
 

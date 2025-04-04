@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # run_all_sync.sh - Script to run data synchronization commands
-# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--debug]
+# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--debug]
 
 # Set default values
 DEBUG=0
 CUSTOMERS_ONLY=0
 PRODUCTS_ONLY=0
+EMPLOYEES_ONLY=0
 FORCE_UPDATE=0
 
 # Process command line arguments
@@ -23,6 +24,10 @@ do
         ;;
         --products-only)
         PRODUCTS_ONLY=1
+        shift
+        ;;
+        --employees-only)
+        EMPLOYEES_ONLY=1
         shift
         ;;
         --force-update)
@@ -80,6 +85,22 @@ run_customer_sync() {
     return $?
 }
 
+# Function to run employee sync with environment variables
+run_employee_sync() {
+    echo "========================================"
+    echo "Running employees sync with fixed environment"
+    echo "========================================"
+    
+    # Set environment variables required by the extractor
+    # These will be picked up by our custom _validate_config method
+    export LEGACY_ERP_ENVIRONMENT="live"
+    export LEGACY_ERP_TABLE_NAME="Personal"
+    
+    # Run the command directly with the entity type flag
+    run_sync "python manage.py run_sync --entity-type employee $DEBUG_FLAG $FORCE_FLAG"
+    return $?
+}
+
 # Determine which sync processes to run
 if [ $CUSTOMERS_ONLY -eq 1 ]; then
     echo "Running customers sync only"
@@ -88,6 +109,10 @@ if [ $CUSTOMERS_ONLY -eq 1 ]; then
 elif [ $PRODUCTS_ONLY -eq 1 ]; then
     echo "Running products sync only"
     run_sync "python manage.py sync_products $DEBUG_FLAG $FORCE_FLAG"
+    exit $?
+elif [ $EMPLOYEES_ONLY -eq 1 ]; then
+    echo "Running employees sync only"
+    run_employee_sync
     exit $?
 else
     echo "Running all sync processes"
@@ -104,8 +129,12 @@ else
     run_sync "python manage.py sync_inventory $DEBUG_FLAG $FORCE_FLAG"
     INVENTORY_EXIT=$?
     
+    # Run employee sync
+    run_employee_sync
+    EMPLOYEE_EXIT=$?
+    
     # Report overall status
-    if [ $CUSTOMER_EXIT -ne 0 ] || [ $PRODUCT_EXIT -ne 0 ] || [ $INVENTORY_EXIT -ne 0 ]; then
+    if [ $CUSTOMER_EXIT -ne 0 ] || [ $PRODUCT_EXIT -ne 0 ] || [ $INVENTORY_EXIT -ne 0 ] || [ $EMPLOYEE_EXIT -ne 0 ]; then
         echo "One or more sync processes failed"
         exit 1
     else

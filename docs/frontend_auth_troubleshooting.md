@@ -27,7 +27,7 @@ This document provides guidance for troubleshooting common authentication issues
 
 **Symptoms:**
 - Network requests to token endpoints return 404 Not Found
-- Error in console: "POST http://localhost:8050/api/api/token/ 404 (Not Found)"
+- Error in console: "POST http://localhost:8000/api/api/token/ 404 (Not Found)"
 - Authentication fails even with correct credentials
 
 **Possible Causes:**
@@ -48,7 +48,7 @@ If your Vite proxy is configured to forward `/api` requests to the backend:
 // In vite.config.ts
 proxy: {
   '/api': {
-    target: 'http://localhost:8050',
+    target: 'http://localhost:8000',
     changeOrigin: true
   }
 }
@@ -64,7 +64,7 @@ const tokenResponse = await api.post<TokenResponse>('/token/', credentials);
 **Symptoms:**
 - Network requests to token endpoints return 500 Internal Server Error
 - Django logs show JWT-related errors
-- Error in console: "POST http://localhost:8050/api/token/ 500 (Internal Server Error)"
+- Error in console: "POST http://localhost:8000/api/token/ 500 (Internal Server Error)"
 
 **Possible Causes:**
 - JWT signing key not properly configured in Django settings

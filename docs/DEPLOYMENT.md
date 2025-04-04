@@ -83,7 +83,7 @@ The Docker-based development environment provides a consistent setup with hot-re
    ```
 
 4. Access the application:
-   - Web application: http://localhost:8050
+   - Web application: http://localhost:8000
    - Redis: localhost:6379
 
 ### Windows Development
@@ -141,7 +141,7 @@ The local development setup runs services directly on Windows without Docker.
 
 6. Start development server:
    ```bash
-   python manage.py runserver 8050
+   python manage.py runserver 8000
    ```
 
 7. In a new terminal, start Celery worker:
@@ -155,7 +155,7 @@ The local development setup runs services directly on Windows without Docker.
    ```
 
 9. Access the application:
-   - Web application: http://localhost:8050
+   - Web application: http://localhost:8000
    - Database: localhost:5432
    - Redis: localhost:6379
 

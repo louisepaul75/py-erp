@@ -112,7 +112,7 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
 COPY docker/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Expose ports for web services
-EXPOSE 80 443 8050
+EXPOSE 80 443 8000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

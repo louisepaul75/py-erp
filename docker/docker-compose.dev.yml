@@ -11,7 +11,7 @@ services:
       dockerfile: docker/Dockerfile.dev
     container_name: pyerp-dev
     ports:
-      - "8050:8050"
+      - "8000:8000"
       - "3000:3000"
       - "80:80"
       - "6379:6379"
@@ -27,7 +27,7 @@ services:
       - KIBANA_PORT=5601
       - REDIS_HOST=localhost
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8050/api/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s
       timeout: 10s
       retries: 3

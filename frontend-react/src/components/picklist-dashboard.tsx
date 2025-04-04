@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import React, { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { PicklistFilters } from "@/components/picklist-filters"
 import { PicklistSearch } from "@/components/picklist-search"
@@ -17,6 +17,10 @@ import {
   type ColumnDef,
   type VisibilityState,
   useReactTable,
+  type Column,
+  type Table as ReactTable,
+  type Header,
+  type Row,
 } from "@tanstack/react-table"
 import { DndProvider, useDrag, useDrop } from "react-dnd"
 import { HTML5Backend } from "react-dnd-html5-backend"
@@ -43,6 +47,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { OrderDetailView } from "@/components/order-detail-view"
@@ -51,47 +56,55 @@ import { PickingProcess } from "@/components/picking-process"
 import { MultiPickingProcess } from "@/components/multi-picking-process"
 
 // Reorder columns functionality
-const DraggableColumnHeader = ({ header, table }) => {
+const DraggableColumnHeader = ({ header, table }: { header: Header<Order, unknown>; table: ReactTable<Order> }) => {
+  const { id } = header.column // Destructure id here
+  const { getState, setColumnOrder } = table // Destructure methods
+
   const [, drag] = useDrag({
     type: "COLUMN",
-    item: { id: header.id },
+    item: { id },
   })
 
   const [, drop] = useDrop({
     accept: "COLUMN",
     drop: (item: { id: string }) => {
-      const currentColumnOrder = table.getState().columnOrder
+      const currentColumnOrder = getState().columnOrder
       const fromIndex = currentColumnOrder.indexOf(item.id)
-      const toIndex = currentColumnOrder.indexOf(header.id)
+      const toIndex = currentColumnOrder.indexOf(id) // Use destructured id
 
       if (fromIndex !== toIndex) {
         const newColumnOrder = [...currentColumnOrder]
         newColumnOrder.splice(fromIndex, 1)
         newColumnOrder.splice(toIndex, 0, item.id)
-        table.setColumnOrder(newColumnOrder)
+        setColumnOrder(newColumnOrder)
       }
     },
   })
 
+  // Use React.RefCallback for ref handling
+  const ref = React.useRef<HTMLDivElement>(null)
+  drag(drop(ref))
+
   return (
-    <div ref={(node) => drag(drop(node))} className="flex items-center cursor-move">
+    <div ref={ref} className="flex items-center cursor-move">
       {flexRender(header.column.columnDef.header, header.getContext())}
     </div>
   )
 }
 
-// Status badge component with color matching
+// Status badge component with semantic colors
 const StatusBadge = ({ status }: { status: PickingStatus }) => {
   const statusConfig = {
-    notStarted: { label: "Nicht begonnen", color: "text-gray-600 bg-gray-100" },
-    inProgress: { label: "In Bearbeitung", color: "text-yellow-600 bg-yellow-100" },
-    completed: { label: "Abgeschlossen", color: "text-green-600 bg-green-100" },
-    problem: { label: "Problem", color: "text-red-600 bg-red-100" },
+    notStarted: { label: "Nicht begonnen", color: "bg-muted text-muted-foreground" },
+    inProgress: { label: "In Bearbeitung", color: "bg-warning/10 text-warning-foreground" }, // Assuming warning colors exist
+    completed: { label: "Abgeschlossen", color: "bg-success/10 text-success-foreground" }, // Assuming success colors exist
+    problem: { label: "Problem", color: "bg-destructive/10 text-destructive-foreground" },
   }
 
   const config = statusConfig[status]
 
-  return <Badge className={cn("font-medium", config.color)}>{config.label}</Badge>
+  // Apply base Badge variant styling and override with specific colors
+  return <Badge variant="secondary" className={cn("font-medium", config.color)}>{config.label}</Badge>
 }
 
 export default function PicklistDashboard() {
@@ -125,7 +138,7 @@ export default function PicklistDashboard() {
   const [isMultiPickingMode, setIsMultiPickingMode] = useState(false)
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([])
   const [isMultiPickingStarted, setIsMultiPickingStarted] = useState(false)
-  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<string | null>("past")
+  const [selectedDeliveryDate, setSelectedDeliveryDate] = useState<string | "all">("all")
 
   const {
     data: allOrders = [],
@@ -292,15 +305,17 @@ export default function PicklistDashboard() {
 
   // Extrahiere alle einzigartigen Liefertermine aus den ausgewählten Aufträgen
   const selectedOrders = useMemo(() => {
-    return allOrders.filter((order) => selectedOrderIds.includes(order.id)) // Use allOrders
+    return allOrders.filter((order) => selectedOrderIds.includes(order.id))
   }, [allOrders, selectedOrderIds])
 
   const uniqueDeliveryDates = useMemo(() => {
     const dates = selectedOrders.map((order) => {
       const date = new Date(order.deliveryDate)
-      return format(date, "yyyy-MM-dd")
+      // Ensure consistent date formatting if needed by MultiPickingProcess
+      return format(date, "yyyy-MM-dd", { locale: de })
     })
-    return Array.from(new Set(dates))
+    // Add 'all' option if the component requires it
+    return ["all", ...Array.from(new Set(dates))]
   }, [selectedOrders])
 
   // Filtere die ausgewählten Aufträge nach dem ausgewählten Lieferdatum
@@ -334,24 +349,24 @@ export default function PicklistDashboard() {
         ? [
             {
               id: "select",
-              header: ({ table }) => (
+              header: ({ table }: { table: ReactTable<Order> }) => (
                 <Checkbox
                   checked={
                     table.getRowModel().rows.length > 0 &&
                     table
                       .getRowModel()
                       .rows.every(
-                        (row) => selectedOrderIds.includes(row.original.id) || !isOrderSelectable(row.original),
+                        (row: Row<Order>) => selectedOrderIds.includes(row.original.id) || !isOrderSelectable(row.original),
                       )
                   }
                   onCheckedChange={(value) => {
                     if (value) {
-                      // Nur auswählbare Aufträge hinzufügen
                       const selectableOrderIds = table
                         .getRowModel()
-                        .rows.filter((row) => isOrderSelectable(row.original))
-                        .map((row) => row.original.id)
-                      setSelectedOrderIds((prev) => [...new Set([...prev, ...selectableOrderIds])])
+                        .rows.filter((row: Row<Order>) => isOrderSelectable(row.original))
+                        .map((row: Row<Order>) => row.original.id)
+                      // Use Array.from to fix downlevelIteration error
+                      setSelectedOrderIds((prev) => Array.from(new Set([...prev, ...selectableOrderIds])))
                     } else {
                       setSelectedOrderIds([])
                     }
@@ -359,14 +374,14 @@ export default function PicklistDashboard() {
                   aria-label="Select all"
                 />
               ),
-              cell: ({ row }) => {
+              cell: ({ row }: { row: Row<Order> }) => {
                 const isSelectable = isOrderSelectable(row.original)
 
                 return (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center">
+                        <div className="flex items-center justify-center">
                           <Checkbox
                             checked={selectedOrderIds.includes(row.original.id)}
                             onCheckedChange={(value) => {
@@ -384,7 +399,7 @@ export default function PicklistDashboard() {
                             className={!isSelectable && !selectedOrderIds.includes(row.original.id) ? "opacity-50" : ""}
                           />
                           {!isSelectable && !selectedOrderIds.includes(row.original.id) && (
-                            <AlertCircle className="h-4 w-4 text-amber-500 ml-1" />
+                            <AlertCircle className="h-4 w-4 text-warning ml-1" />
                           )}
                         </div>
                       </TooltipTrigger>
@@ -452,21 +467,15 @@ export default function PicklistDashboard() {
           const { itemsPicked, totalItems, pickingStatus } = row.original
           const percentage = Math.round((itemsPicked / totalItems) * 100)
 
-          // Determine color based on status
-          const colorMap = {
-            notStarted: "text-gray-600",
-            inProgress: "text-yellow-600",
-            completed: "text-green-600",
-            problem: "text-red-600",
+          // Determine semantic colors based on status
+          const colorConfig = {
+            notStarted: { text: "text-muted-foreground", bg: "bg-muted", indicator: "bg-muted-foreground" },
+            inProgress: { text: "text-warning-foreground", bg: "bg-warning/10", indicator: "bg-warning" }, // Assuming warning colors exist
+            completed: { text: "text-success-foreground", bg: "bg-success/10", indicator: "bg-success" }, // Assuming success colors exist
+            problem: { text: "text-destructive-foreground", bg: "bg-destructive/10", indicator: "bg-destructive" },
           }
 
-          const textColor = colorMap[pickingStatus]
-          const bgColor = {
-            notStarted: "bg-gray-100",
-            inProgress: "bg-yellow-100",
-            completed: "bg-green-100",
-            problem: "bg-red-100",
-          }[pickingStatus]
+          const { text: textColor, bg: bgColor, indicator: indicatorColor } = colorConfig[pickingStatus]
 
           return (
             <div className="w-full max-w-[150px]">
@@ -478,15 +487,7 @@ export default function PicklistDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <Progress value={percentage} className={cn("h-2 flex-1", bgColor)} />
-                <div
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    pickingStatus === "completed" && "bg-green-500",
-                    pickingStatus === "inProgress" && "bg-yellow-500",
-                    pickingStatus === "notStarted" && "bg-gray-500",
-                    pickingStatus === "problem" && "bg-red-500",
-                  )}
-                />
+                <div className={cn("w-2 h-2 rounded-full", indicatorColor)} />
               </div>
             </div>
           )
@@ -607,239 +608,341 @@ export default function PicklistDashboard() {
   const DndBackend = useIsMobile() ? TouchBackend : HTML5Backend
 
   if (error) {
-    return <div className="text-red-500">Fehler beim Laden der Daten: {error.message}</div>
+    // Use destructive colors for error message
+    return <div className="p-4 border border-destructive/20 bg-destructive/10 text-destructive rounded-md">Fehler beim Laden der Daten: {error.message}</div>
   }
 
   if (isLoading) {
-    // Optional: Return a skeleton or loading indicator here if preferred over the Suspense boundary
-    return <div>Daten werden geladen...</div>
+    // Consistent loading indicator (optional, can use Suspense boundary)
+    return (
+        <div className="flex justify-center items-center p-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <span className="ml-3">Lade Pickliste...</span>
+        </div>
+      )
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <PicklistFilters
-          filterType={filterType}
-          setFilterType={setFilterType}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-        />
-        <PicklistSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-      </div>
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-muted-foreground">
-          {filteredOrders.length} Aufträge gefunden
-          {filteredOrders.length > displayedOrders.length && ` (${displayedOrders.length} angezeigt)`}
+    // Use Card component for overall structure
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            {/* Title and Description */}
+            <div>
+                <CardTitle className="text-2xl font-bold text-primary">Lager Pickliste</CardTitle>
+                <CardDescription>Verwalten und bearbeiten Sie Picking-Aufträge.</CardDescription>
+            </div>
+            {/* Action Buttons (Example - Adapt if needed) */}
+            <div className="flex gap-2 items-start">
+              {/* Add relevant top-level actions here if needed, similar to Warehouse page */}
+            </div>
         </div>
-        <PageSizeSelector pageSize={pageSize} setPageSize={setPageSize} totalItems={filteredOrders.length} />
-      </div>
+         {/* Filters and Search */}
+        <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <PicklistFilters
+            filterType={filterType}
+            setFilterType={setFilterType}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            />
+            <PicklistSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        </div>
+      </CardHeader>
 
-      {/* Multi-Picking Controls - Moved slightly up to be above the table */}
-      <div className="mb-4 flex justify-between items-center">
-        <Button
-          variant={isMultiPickingMode ? "default" : "outline"}
-          onClick={toggleMultiPickingMode}
-          className="flex items-center gap-2"
-        >
-          <CheckSquare className="h-4 w-4" />
-          {isMultiPickingMode ? "Mehrfach-Picking beenden" : "Mehrfach-Picking"}
-        </Button>
+      <CardContent className="space-y-6">
+        {/* Info and Pagination Controls */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            {filteredOrders.length} Aufträge gefunden
+            {filteredOrders.length > displayedOrders.length && ` (${displayedOrders.length} angezeigt)`}
+          </div>
+          <PageSizeSelector pageSize={pageSize} setPageSize={setPageSize} totalItems={filteredOrders.length} />
+        </div>
 
-        {isMultiPickingMode && (
-          <Button onClick={startMultiPicking} disabled={selectedOrderIds.length === 0} className="ml-2">
-            Ausgewählte Aufträge picken ({selectedOrderIds.length})
+        {/* Multi-Picking Controls */}
+        <div className="flex justify-between items-center">
+          <Button
+            variant={isMultiPickingMode ? "default" : "outline"}
+            onClick={toggleMultiPickingMode}
+            className="flex items-center gap-2"
+          >
+            <CheckSquare className="h-4 w-4" />
+            {isMultiPickingMode ? "Mehrfach-Picking beenden" : "Mehrfach-Picking"}
           </Button>
+
+          {isMultiPickingMode && (
+            <Button onClick={startMultiPicking} disabled={selectedOrderIds.length === 0} className="ml-2">
+              Ausgewählte Aufträge picken ({selectedOrderIds.length})
+            </Button>
+          )}
+        </div>
+
+        {isMultiPickingMode && selectedCustomerNumber && (
+          // Use muted/info colors for hint box
+          <div className="mb-4 p-3 bg-muted border border-border rounded-md">
+            <p className="text-muted-foreground">
+              <strong>Hinweis:</strong> Es können nur Aufträge mit der Kundennummer{" "}
+              <strong>{selectedCustomerNumber}</strong> ausgewählt werden.
+            </p>
+          </div>
         )}
-      </div>
 
-      {isMultiPickingMode && selectedCustomerNumber && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <p className="text-blue-700">
-            <strong>Hinweis:</strong> Es können nur Aufträge mit der Kundennummer{" "}
-            <strong>{selectedCustomerNumber}</strong> ausgewählt werden.
-          </p>
-        </div>
-      )}
+        {/* Table Rendering */}
+        <DndProvider backend={DndBackend}>
+          {/* Remove explicit bg-white, rely on Card styling */}
+          <div className="rounded-md border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} className="whitespace-nowrap">
+                          {header.isPlaceholder ? null : <DraggableColumnHeader header={header} table={table} />}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => {
+                      const isSelectable = isOrderSelectable(row.original)
+                      return (
+                        <TableRow
+                          key={row.id}
+                          data-state={row.getIsSelected() && "selected"}
+                          className={cn(
+                            "cursor-pointer hover:bg-muted/50",
+                            isMultiPickingMode && !isSelectable && !selectedOrderIds.includes(row.original.id)
+                              ? "opacity-50"
+                              : "",
+                          )}
+                          onClick={() => handleRowClick(row.original)}
+                        >
+                          {row.getVisibleCells().map((cell) => {
+                              // Special handling for checkbox cell content
+                              if (cell.column.id === 'select') {
+                                const isSelectable = isOrderSelectable(row.original)
+                                return (
+                                <TableCell key={cell.id}>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center justify-center"> {/* Center checkbox */}
+                                          <Checkbox
+                                            checked={selectedOrderIds.includes(row.original.id)}
+                                            onCheckedChange={(value) => {
+                                              if (isSelectable) {
+                                                toggleOrderSelection(row.original.id)
+                                              }
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            disabled={!isSelectable && !selectedOrderIds.includes(row.original.id)}
+                                            aria-label="Select row"
+                                            className={!isSelectable && !selectedOrderIds.includes(row.original.id) ? "opacity-50" : ""}
+                                          />
+                                          {!isSelectable && !selectedOrderIds.includes(row.original.id) && (
+                                            // Use warning color for the alert icon
+                                            <AlertCircle className="h-4 w-4 text-warning ml-1" />
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      {!isSelectable && !selectedOrderIds.includes(row.original.id) && (
+                                        <TooltipContent>
+                                          <p>Nur Aufträge mit der Kundennummer {selectedCustomerNumber} können ausgewählt werden</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  </TableCell>
+                                )
+                              }
+                             // Special handling for progress cell
+                             if (cell.column.id === 'pickingProgress') {
+                                const { itemsPicked, totalItems, pickingStatus } = row.original
+                                const percentage = totalItems > 0 ? Math.round((itemsPicked / totalItems) * 100) : 0;
 
-      {/* Replace PicklistTable with direct rendering logic */}
-      {/* <PicklistTable orders={displayedOrders} isLoading={isLoading} totalOrders={filteredOrders.length} /> */}
+                                // Determine semantic colors based on status
+                                const colorConfig = {
+                                    notStarted: { text: "text-muted-foreground", bg: "bg-muted", indicator: "bg-muted-foreground" },
+                                    inProgress: { text: "text-warning-foreground", bg: "bg-warning/10", indicator: "bg-warning" }, // Assuming warning colors exist
+                                    completed: { text: "text-success-foreground", bg: "bg-success/10", indicator: "bg-success" }, // Assuming success colors exist
+                                    problem: { text: "text-destructive-foreground", bg: "bg-destructive/10", indicator: "bg-destructive" },
+                                };
 
-      {/* --- Start Table Rendering (Copied/Adapted from PicklistTable) --- */}
-      <DndProvider backend={DndBackend}>
-        <div className="rounded-md border bg-white overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="whitespace-nowrap">
-                        {header.isPlaceholder ? null : <DraggableColumnHeader header={header} table={table} />}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => {
-                    const isSelectable = isOrderSelectable(row.original)
-                    return (
-                      <TableRow
-                        key={row.id}
-                        data-state={row.getIsSelected() && "selected"}
-                        className={cn(
-                          "cursor-pointer hover:bg-muted/50",
-                          isMultiPickingMode && !isSelectable && !selectedOrderIds.includes(row.original.id)
-                            ? "opacity-50"
-                            : "",
-                        )}
-                        onClick={() => handleRowClick(row.original)}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    )
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      Keine Ergebnisse gefunden.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </DndProvider>
-      {/* --- End Table Rendering --- */}
+                                const { text: textColor, bg: bgColor, indicator: indicatorColor } = colorConfig[pickingStatus];
 
-      {/* --- Popups and Modals (Mostly unchanged, ensure props are correct) --- */}
-      {/* Picking-Methode Auswahl für Mehrfach-Picking */}
-      {showPickingMethodSelector && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Picking-Methode auswählen</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowPickingMethodSelector(false)}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Schließen</span>
-              </Button>
+                                return (
+                                  <TableCell key={cell.id}>
+                                    <div className="w-full max-w-[150px]">
+                                      <div className="flex justify-between mb-1 text-xs">
+                                        <span className={textColor}>
+                                          {itemsPicked} / {totalItems} Items
+                                        </span>
+                                        <span className={textColor}>{percentage}%</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                         {/* Apply semantic background to Progress - remove indicatorClassName */}
+                                        <Progress value={percentage} className={cn("h-2 flex-1", bgColor)} />
+                                        {/* Use semantic color for the indicator dot */}
+                                        <div className={cn("w-2 h-2 rounded-full", indicatorColor)} />
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                );
+                            }
+                            // Default rendering for other cells
+                            return (
+                                <TableCell key={cell.id}>
+                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                            );
+                        })}
+                        </TableRow>
+                      )
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="h-24 text-center">
+                        Keine Ergebnisse gefunden.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
+          </div>
+        </DndProvider>
 
-            <div className="space-y-6">
-              <p className="text-center">Bitte wählen Sie die Picking-Methode für die ausgewählten Aufträge:</p>
+        {/* --- Popups and Modals (Ensure consistency within these components if needed) --- */}
+        {/* Picking-Methode Auswahl für Mehrfach-Picking */}
+        {showPickingMethodSelector && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Picking-Methode auswählen</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPickingMethodSelector(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Schließen</span>
+                </Button>
+              </div>
 
-              <RadioGroup
-                value={pickingMethod}
-                onValueChange={(value) => setPickingMethod(value as PickingMethod)}
-                className="flex flex-col space-y-4"
-              >
-                <div className="flex items-center space-x-2 border rounded-md p-4">
-                  <RadioGroupItem value="manual" id="manual-multi" />
-                  <Label htmlFor="manual-multi" className="flex-1 cursor-pointer">
-                    Manuelles Picking
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 border rounded-md p-4">
-                  <RadioGroupItem value="scale" id="scale-multi" />
-                  <Label htmlFor="scale-multi" className="flex-1 cursor-pointer">
-                    Picking mit Waage
-                  </Label>
-                </div>
-              </RadioGroup>
+              <div className="space-y-6">
+                <p className="text-center">Bitte wählen Sie die Picking-Methode für die ausgewählten Aufträge:</p>
 
-              <Button onClick={() => handlePickingMethodSelect(pickingMethod)} className="w-full">
-                Weiter
-              </Button>
+                <RadioGroup
+                  value={pickingMethod}
+                  onValueChange={(value) => setPickingMethod(value as PickingMethod)}
+                  className="flex flex-col space-y-4"
+                >
+                  <div className="flex items-center space-x-2 border rounded-md p-4">
+                    <RadioGroupItem value="manual" id="manual-multi" />
+                    <Label htmlFor="manual-multi" className="flex-1 cursor-pointer">
+                      Manuelles Picking
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 border rounded-md p-4">
+                    <RadioGroupItem value="scale" id="scale-multi" />
+                    <Label htmlFor="scale-multi" className="flex-1 cursor-pointer">
+                      Picking mit Waage
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                <Button onClick={() => handlePickingMethodSelect(pickingMethod)} className="w-full">
+                  Weiter
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {selectedOrder && (
-        <OrderDetailView
-          order={selectedOrder}
-          onClose={handleCloseDetail}
-          onStartPicking={(orderId, method) => handleStartPicking(orderId, method)}
-        />
-      )}
-
-      {showScanPopup &&
-        (isMultiPickingMode ? (
-          <ScanPopup
-            title="Schütte für Mehrfach-Picking scannen"
-            onClose={() => setShowScanPopup(false)}
-            onSubmit={handleScanSubmit}
-            onSkip={handleSkipScan}
-            skipButtonText="Keine Schütte"
-            placeholder="Schüttencode scannen..."
-            orderNumber={`${selectedOrderIds.length} Aufträge ausgewählt`}
-            customerInfo={selectedCustomerNumber ? `Kundennummer: ${selectedCustomerNumber}` : ""}
-            pickingMethod={pickingMethod}
-            onTare={handleTare}
+        {selectedOrder && (
+          <OrderDetailView
+            order={selectedOrder}
+            onClose={handleCloseDetail}
+            onStartPicking={(orderId, method) => handleStartPicking(orderId, method)}
           />
-        ) : (
-          currentOrderId && (
+        )}
+
+        {showScanPopup &&
+          (isMultiPickingMode ? (
             <ScanPopup
-              title="Schütte scannen"
+              title="Schütte für Mehrfach-Picking scannen"
               onClose={() => setShowScanPopup(false)}
               onSubmit={handleScanSubmit}
               onSkip={handleSkipScan}
               skipButtonText="Keine Schütte"
               placeholder="Schüttencode scannen..."
-              orderNumber={currentOrderId}
-              customerInfo={`${selectedCustomerNumber} ${selectedOrder?.customerName}`}
+              orderNumber={`${selectedOrderIds.length} Aufträge ausgewählt`}
+              customerInfo={selectedCustomerNumber ? `Kundennummer: ${selectedCustomerNumber}` : ""}
               pickingMethod={pickingMethod}
               onTare={handleTare}
             />
-          )
-        ))}
+          ) : (
+            currentOrderId && (
+              <ScanPopup
+                title="Schütte scannen"
+                onClose={() => setShowScanPopup(false)}
+                onSubmit={handleScanSubmit}
+                onSkip={handleSkipScan}
+                skipButtonText="Keine Schütte"
+                placeholder="Schüttencode scannen..."
+                orderNumber={currentOrderId}
+                customerInfo={`${selectedCustomerNumber} ${selectedOrder?.customerName}`}
+                pickingMethod={pickingMethod}
+                onTare={handleTare}
+              />
+            )
+          ))}
 
-      {showPickingProcess &&
-        (isMultiPickingStarted ? (
-          <MultiPickingProcess
-            onClose={() => {
-              setShowPickingProcess(false)
-              setIsMultiPickingStarted(false)
-            }}
-            onComplete={() => {
-              setShowPickingProcess(false)
-              setIsMultiPickingStarted(false)
-              setIsMultiPickingMode(false)
-              setSelectedOrderIds([])
-            }}
-            onInterrupt={() => {
-              setShowPickingProcess(false)
-              setIsMultiPickingStarted(false)
-            }}
-            orders={filteredSelectedOrders} // Pass filtered selected orders
-            pickingMethod={pickingMethod}
-            scannedBin={scannedBin}
-          />
-        ) : (
-          currentOrderId && (
-            <PickingProcess
-              onClose={handlePickingInterrupt}
-              onComplete={handlePickingComplete}
-              order={selectedOrder}
+        {showPickingProcess &&
+          (isMultiPickingStarted ? (
+            <MultiPickingProcess
+              onClose={() => {
+                setShowPickingProcess(false)
+                setIsMultiPickingStarted(false)
+              }}
+              onComplete={() => {
+                setShowPickingProcess(false)
+                setIsMultiPickingStarted(false)
+                setIsMultiPickingMode(false)
+                setSelectedOrderIds([])
+                // Reset delivery date filter after completion
+                setSelectedDeliveryDate("all")
+              }}
+              onInterrupt={() => {
+                setShowPickingProcess(false)
+                setIsMultiPickingStarted(false)
+              }}
+              orders={selectedOrders} // Pass all selected orders
+              filteredOrders={filteredSelectedOrders} // Pass orders filtered by date
               pickingMethod={pickingMethod}
-              scannedBin={scannedBin}
+              // Pass missing props
+              uniqueDeliveryDates={uniqueDeliveryDates}
+              selectedDeliveryDate={selectedDeliveryDate}
+              onDeliveryDateChange={setSelectedDeliveryDate}
             />
-          )
-        ))}
-      {/* --- End Popups and Modals --- */}
-    </div>
+          ) : (
+            // Ensure selectedOrder is not null before rendering
+            currentOrderId && selectedOrder && (
+              <PickingProcess
+                onClose={handlePickingInterrupt}
+                onComplete={handlePickingComplete}
+                // Revert to passing the full selectedOrder object
+                order={selectedOrder}
+                pickingMethod={pickingMethod}
+              />
+            )
+          ))}
+      </CardContent>
+    </Card>
   )
 }
 

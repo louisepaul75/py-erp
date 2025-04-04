@@ -9,10 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { WarehouseLocation, ContainerItem } from "@/types/warehouse-types"
 import { generateMockContainers } from "@/lib/warehouse-service"
+import { moveBox, fetchBoxesByLocation, removeBoxFromLocation, fetchBoxesByLocationId } from "@/lib/inventory/api"
 import ActivityLogDialog from "./activity-log-dialog"
 import ScannerInputDialog from "./scanner-input-dialog"
 import ContainerSelectionDialog from "./container-selection-dialog"
 import RemoveContainerDialog from "./remove-container-dialog"
+import React from "react"
+import { toast } from "sonner"
 
 interface LocationDetailDialogProps {
   isOpen: boolean
@@ -34,7 +37,8 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
   const [expandedContainers, setExpandedContainers] = useState<Record<string, boolean>>({})
   const [hasLocation, setHasLocation] = useState(false)
   const [selectedContainerIds, setSelectedContainerIds] = useState<string[]>([])
-  const [mockContainersLoaded, setMockContainersLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [initialExpandedState, setInitialExpandedState] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
@@ -65,26 +69,70 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
     setExpandedContainers(initialExpandedState)
   }, [initialExpandedState])
 
+  // Fetch real containers for the location
   useEffect(() => {
-    // Lade Mock-Daten für Container, wenn der Lagerort belegt ist
-    if (location?.status === "in-use" && location?.containerCount > 0 && !mockContainersLoaded) {
-      const mockContainers = generateMockContainers(location.containerCount).map((container) => ({
-        ...container,
-        // Add multiple articles (1-5 articles per container)
-        articles: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, () => ({
-          id: crypto.randomUUID(),
-          articleNumber: Math.floor(Math.random() * 900000) + 100000,
-          oldArticleNumber: `${13200 + Math.floor(Math.random() * 10)}-BE`,
-          description: ["Dampfer Herrschung", "neuer Raddampfer Diessen", "Teufel", "Mond mit Mütze", "Kuckucksuhr"][
-            Math.floor(Math.random() * 5)
-          ],
-          stock: Math.floor(Math.random() * 100) + 1,
-        })),
-      }))
-      setContainers(mockContainers)
-      setMockContainersLoaded(true)
-    }
-  }, [location, mockContainersLoaded])
+    if (!location || !isOpen) return;
+    
+    const fetchContainersData = async () => {
+      if (!location.id) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch real container data from the API
+        const locationId = parseInt(location.id, 10);
+        const data = await fetchBoxesByLocationId(locationId);
+        
+        // Map the API response to match our ContainerItem type
+        const realContainers: ContainerItem[] = data.map((box: any) => ({
+          id: box.id.toString(),
+          containerCode: box.containerCode || box.code,
+          type: box.box_type?.name || "Box",
+          description: box.notes || "",
+          status: box.status || "in-use",
+          purpose: box.purpose || "",
+          stock: 0,
+          slots: box.slots || [],
+          units: box.units || [],
+          // Map products from the box slots to articles
+          articles: (box.units || []).map((unit: any) => ({
+            id: unit.id.toString(),
+            articleNumber: unit.articleNumber || 0,
+            oldArticleNumber: unit.oldArticleNumber || "",
+            description: unit.description || "",
+            stock: unit.stock || 0,
+          })),
+        }));
+        
+        setContainers(realContainers);
+      } catch (err) {
+        console.error("Error fetching containers for location:", err);
+        setError(err instanceof Error ? err.message : String(err));
+        
+        // If in development, fall back to mock data for testing
+        if (process.env.NODE_ENV === 'development' && !containers.length) {
+          const mockContainers = generateMockContainers(location.containerCount).map((container) => ({
+            ...container,
+            articles: Array.from({ length: Math.floor(Math.random() * 5) + 1 }, () => ({
+              id: crypto.randomUUID(),
+              articleNumber: Math.floor(Math.random() * 900000) + 100000,
+              oldArticleNumber: `${13200 + Math.floor(Math.random() * 10)}-BE`,
+              description: ["Dampfer Herrschung", "neuer Raddampfer Diessen", "Teufel", "Mond mit Mütze", "Kuckucksuhr"][
+                Math.floor(Math.random() * 5)
+              ],
+              stock: Math.floor(Math.random() * 100) + 1,
+            })),
+          }));
+          setContainers(mockContainers);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchContainersData();
+  }, [location, isOpen]);
 
   useEffect(() => {
     if (!searchTerm.trim()) {
@@ -143,12 +191,74 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
     setIsScannerDialogOpen(false)
   }
 
-  const handleContainerSelect = (container: ContainerItem) => {
-    // Add the selected container to this location
-    addContainerToLocation(container)
-
+  const handleContainerSelect = async (container: ContainerItem) => {
     // Close the container selection dialog
     setIsContainerSelectionOpen(false)
+
+    // --- API Call to assign container to location ---
+    if (!location || !container) {
+      console.error("Missing location or container data for API call")
+      toast.error("Fehler: Fehlende Daten zum Zuweisen der Schütte.")
+      return
+    }
+
+    try {
+      // Use the imported moveBox function instead of fetch
+      const responseData = await moveBox(
+        parseInt(container.id, 10), 
+        parseInt(location.id, 10)
+      )
+      
+      console.log("Move box successful:", responseData) // Log success data
+
+      toast.success(`Schütte ${container.containerCode} erfolgreich zum Lagerort ${location.laNumber} hinzugefügt.`)
+      
+      // Reload containers from the API instead of updating local state
+      setIsLoading(true)
+      try {
+        const locationId = parseInt(location.id, 10)
+        const data = await fetchBoxesByLocationId(locationId)
+        
+        // Map the API response to match our ContainerItem type
+        const updatedContainers: ContainerItem[] = data.map((box: any) => ({
+          id: box.id.toString(),
+          containerCode: box.containerCode || box.code,
+          type: box.box_type?.name || "Box",
+          description: box.notes || "",
+          status: box.status || "in-use",
+          purpose: box.purpose || "",
+          stock: 0,
+          slots: box.slots || [],
+          units: box.units || [],
+          articles: (box.units || []).map((unit: any) => ({
+            id: unit.id.toString(),
+            articleNumber: unit.articleNumber || 0,
+            oldArticleNumber: unit.oldArticleNumber || "",
+            description: unit.description || "",
+            stock: unit.stock || 0,
+          })),
+        }))
+        
+        setContainers(updatedContainers)
+        
+        // Update the location status and container count
+        setEditedLocation((prev) => ({
+          ...prev,
+          status: "in-use",
+          containerCount: updatedContainers.length,
+        }))
+      } catch (fetchError) {
+        console.error("Error reloading containers:", fetchError)
+        // Fallback to adding just the container to local state if fetch fails
+        addContainerToLocation(container)
+      } finally {
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error("Error assigning container to location:", error)
+      toast.error(`Fehler beim Zuweisen der Schütte: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    // --- End API Call ---
   }
 
   const addContainerToLocation = (container: ContainerItem) => {
@@ -180,38 +290,75 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
     }
   }
 
-  const confirmRemoveContainer = () => {
-    if (selectedContainer) {
-      // Remove a single container
-      setContainers((prev) => prev.filter((c) => c.id !== selectedContainer.id))
-      setSelectedContainerIds((prev) => prev.filter((id) => id !== selectedContainer.id))
-
-      // Update the location status and container count
-      const newContainerCount = containers.length - 1
-      setEditedLocation((prev) => ({
-        ...prev,
-        status: newContainerCount === 0 ? "free" : "in-use",
-        containerCount: newContainerCount,
-      }))
-    } else if (selectedContainerIds.length > 0) {
-      // Remove multiple containers
-      setContainers((prev) => prev.filter((c) => !selectedContainerIds.includes(c.id)))
-
-      // Update the location status and container count
-      const newContainerCount = containers.length - selectedContainerIds.length
-      setEditedLocation((prev) => ({
-        ...prev,
-        status: newContainerCount === 0 ? "free" : "in-use",
-        containerCount: newContainerCount,
-      }))
-
-      // Clear selected container IDs
-      setSelectedContainerIds([])
-    }
-
+  const confirmRemoveContainer = async () => {
     // Close the dialog
     setIsRemoveContainerDialogOpen(false)
-    setSelectedContainer(null)
+    
+    if (!location?.id) {
+      toast.error("Lagerort-ID fehlt");
+      return;
+    }
+    
+    setIsLoading(true);
+
+    try {
+      if (selectedContainer) {
+        // Remove a single container
+        await removeBoxFromLocation(parseInt(selectedContainer.id, 10));
+        toast.success(`Schütte ${selectedContainer.containerCode} wurde erfolgreich entfernt.`);
+      } else if (selectedContainerIds.length > 0) {
+        // Remove multiple containers
+        // Note: Ideally we'd have a bulk removal API, but we'll just remove the first one for now
+        const promises = selectedContainerIds.map(id => 
+          removeBoxFromLocation(parseInt(id, 10))
+        );
+        
+        await Promise.all(promises);
+        toast.success(`${selectedContainerIds.length} Schütten wurden erfolgreich entfernt.`);
+      }
+      
+      // Clear selected container IDs
+      setSelectedContainerIds([]);
+      setSelectedContainer(null);
+      
+      // Reload containers
+      const locationId = parseInt(location.id, 10);
+      const data = await fetchBoxesByLocationId(locationId);
+      
+      // Map the API response to match our ContainerItem type
+      const updatedContainers: ContainerItem[] = data.map((box: any) => ({
+        id: box.id.toString(),
+        containerCode: box.containerCode || box.code,
+        type: box.box_type?.name || "Box",
+        description: box.notes || "",
+        status: box.status || "in-use",
+        purpose: box.purpose || "",
+        stock: 0,
+        slots: box.slots || [],
+        units: box.units || [],
+        articles: (box.units || []).map((unit: any) => ({
+          id: unit.id.toString(),
+          articleNumber: unit.articleNumber || 0,
+          oldArticleNumber: unit.oldArticleNumber || "",
+          description: unit.description || "",
+          stock: unit.stock || 0,
+        })),
+      }));
+      
+      setContainers(updatedContainers);
+      
+      // Update the location status and container count
+      setEditedLocation((prev) => ({
+        ...prev,
+        status: updatedContainers.length > 0 ? "in-use" : "free",
+        containerCount: updatedContainers.length,
+      }));
+    } catch (error) {
+      console.error("Error removing container(s):", error);
+      toast.error(`Fehler beim Entfernen: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const toggleContainerExpand = (containerCode: string) => {
@@ -243,22 +390,25 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
 
   return (
     <>
-      <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Root open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none overflow-hidden">
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
-              <Dialog.Title className="text-xl font-semibold">{location.laNumber}</Dialog.Title>
+              <Dialog.Title className="text-xl font-semibold text-foreground">{location.laNumber}</Dialog.Title>
+              <Dialog.Description className="sr-only">
+                Details und Aktionen für den Lagerort {location.laNumber}.
+              </Dialog.Description>
               <div className="flex items-center gap-2">
                 {isEditing ? (
                   <>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    <Button variant="outline" className="text-foreground" onClick={() => setIsEditing(false)}>
                       Abbrechen
                     </Button>
                     <Button onClick={handleSave}>Speichern</Button>
                   </>
                 ) : (
-                  <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  <Button variant="outline" className="text-foreground" onClick={() => setIsEditing(true)}>
                     Bearbeiten
                   </Button>
                 )}
@@ -274,19 +424,19 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Lager</Label>
-                    <div className="p-2 border rounded-md bg-gray-50">{location.location}</div>
+                    <Label className="text-foreground">Lager</Label>
+                    <div className="p-2 border rounded-md bg-muted text-foreground">{location.location}</div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Land (LKZ)</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">DE</div>
+                      <Label className="text-foreground">Land (LKZ)</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">DE</div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Ort/Gebäude</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.location}</div>
+                      <Label className="text-foreground">Ort/Gebäude</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.location}</div>
                     </div>
                   </div>
 
@@ -296,12 +446,12 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                         <Checkbox
                           id="forSale"
                           checked={editedLocation.forSale}
-                          onCheckedChange={(checked) => setEditedLocation({ ...editedLocation, forSale: !!checked })}
+                          onCheckedChange={(checked: boolean | 'indeterminate') => setEditedLocation({ ...editedLocation, forSale: !!checked })}
                         />
                       ) : (
                         <Checkbox id="forSale" checked={location.forSale} disabled />
                       )}
-                      <Label htmlFor="forSale">Lagerort für Abverkauf</Label>
+                      <Label htmlFor="forSale" className="text-foreground">Lagerort für Abverkauf</Label>
                     </div>
 
                     <div className="flex items-center space-x-2">
@@ -309,31 +459,31 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                         <Checkbox
                           id="specialStorage"
                           checked={editedLocation.specialStorage}
-                          onCheckedChange={(checked) =>
+                          onCheckedChange={(checked: boolean | 'indeterminate') =>
                             setEditedLocation({ ...editedLocation, specialStorage: !!checked })
                           }
                         />
                       ) : (
                         <Checkbox id="specialStorage" checked={location.specialStorage} disabled />
                       )}
-                      <Label htmlFor="specialStorage">Sonderlagerort Lagerort</Label>
+                      <Label htmlFor="specialStorage" className="text-foreground">Sonderlagerort Lagerort</Label>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label>Regal</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.shelf}</div>
+                      <Label className="text-foreground">Regal</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.shelf}</div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Fach</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.compartment}</div>
+                      <Label className="text-foreground">Fach</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.compartment}</div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Boden</Label>
-                      <div className="p-2 border rounded-md bg-gray-50">{location.floor}</div>
+                      <Label className="text-foreground">Boden</Label>
+                      <div className="p-2 border rounded-md bg-muted text-foreground">{location.floor}</div>
                     </div>
                   </div>
                 </div>
@@ -341,11 +491,11 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-lg">Schütten/Artikel</h3>
+                      <h3 className="font-medium text-lg text-foreground">Schütten/Artikel</h3>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="flex items-center gap-1"
+                        className="flex items-center gap-1 text-foreground"
                         onClick={() => setIsActivityLogOpen(true)}
                       >
                         <History className="h-4 w-4" />
@@ -353,7 +503,7 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                       </Button>
                     </div>
                     <div className="relative w-64">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="text"
                         placeholder="Suche nach Artikel, Schütte..."
@@ -365,8 +515,8 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                   </div>
 
                   <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-100 sticky top-0 z-10">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead className="bg-muted/50 sticky top-0 z-10">
                         <tr>
                           <th className="w-10 px-3 py-2 text-left">
                             <Checkbox
@@ -378,28 +528,79 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                               aria-label="Alle Schütten auswählen"
                             />
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Schütten/Code</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Aktionen</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Schütten/Code</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Aktionen</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 bg-white">
-                        {filteredContainers.length > 0 ? (
+                      <tbody className="divide-y divide-border bg-background">
+                        {isLoading ? (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-8 text-center">
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                                <p className="text-muted-foreground text-sm">Schütten werden geladen...</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : error ? (
+                          <tr>
+                            <td colSpan={3} className="px-3 py-4 text-center text-destructive">
+                              <p>{error}</p>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2"
+                                onClick={() => {
+                                  if (location?.id) {
+                                    fetchBoxesByLocationId(parseInt(location.id, 10))
+                                      .then(data => {
+                                        const realContainers = data.map((box: any) => ({
+                                          id: box.id.toString(),
+                                          containerCode: box.containerCode || box.code,
+                                          type: box.box_type?.name || "Box",
+                                          description: box.notes || "",
+                                          status: box.status || "in-use",
+                                          purpose: box.purpose || "",
+                                          stock: 0,
+                                          slots: box.slots || [],
+                                          units: box.units || [],
+                                          articles: (box.units || []).map((unit: any) => ({
+                                            id: unit.id.toString(),
+                                            articleNumber: unit.articleNumber || 0,
+                                            oldArticleNumber: unit.oldArticleNumber || "",
+                                            description: unit.description || "",
+                                            stock: unit.stock || 0,
+                                          })),
+                                        }));
+                                        setContainers(realContainers);
+                                        setError(null);
+                                      })
+                                      .catch(err => {
+                                        setError(err instanceof Error ? err.message : String(err));
+                                      });
+                                  }
+                                }}
+                              >
+                                Erneut versuchen
+                              </Button>
+                            </td>
+                          </tr>
+                        ) : filteredContainers.length > 0 ? (
                           filteredContainers.map((container) => (
-                            <>
+                            <React.Fragment key={container.id}>
                               <tr
-                                key={`header-${container.id}`}
-                                className="bg-gray-50 cursor-pointer"
+                                className="bg-muted/50 cursor-pointer"
                                 onClick={() => toggleContainerExpand(container.containerCode)}
                               >
                                 <td className="px-3 py-2">
                                   <Checkbox
                                     checked={selectedContainerIds.includes(container.id)}
-                                    onCheckedChange={(checked) => handleSelectContainer(container.id, !!checked)}
-                                    onClick={(e) => e.stopPropagation()}
+                                    onCheckedChange={(checked: boolean | 'indeterminate') => handleSelectContainer(container.id, !!checked)}
+                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
                                     aria-label={`Schütte ${container.containerCode} auswählen`}
                                   />
                                 </td>
-                                <td className="px-3 py-2 text-xs font-medium">
+                                <td className="px-3 py-2 text-xs font-medium text-foreground">
                                   <div className="flex items-center">
                                     {expandedContainers[container.containerCode] ? (
                                       <ChevronDown className="h-4 w-4 mr-1" />
@@ -413,14 +614,13 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-red-500 hover:text-red-700"
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       setSelectedContainer(container)
                                       setIsRemoveContainerDialogOpen(true)
                                     }}
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-4 w-4 text-destructive" />
                                   </Button>
                                 </td>
                               </tr>
@@ -429,31 +629,31 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                 container.articles.length > 0 && (
                                   <tr key={`articles-${container.id}`}>
                                     <td colSpan={4} className="px-3 py-0">
-                                      <div className="bg-gray-50 p-2 rounded my-1 ml-6">
+                                      <div className="bg-muted/50 p-2 rounded my-1 ml-6">
                                         <table className="min-w-full">
                                           <thead>
                                             <tr>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Artikel-Nr.
                                               </th>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Alte Artikel-Nr.
                                               </th>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Bezeichnung
                                               </th>
-                                              <th className="px-2 py-1 text-left text-xs font-medium text-gray-500">
+                                              <th className="px-2 py-1 text-left text-xs font-medium text-muted-foreground">
                                                 Bestand
                                               </th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             {container.articles.map((article) => (
-                                              <tr key={article.id} className="border-t border-gray-200">
-                                                <td className="px-2 py-1 text-xs">{article.articleNumber}</td>
-                                                <td className="px-2 py-1 text-xs">{article.oldArticleNumber}</td>
-                                                <td className="px-2 py-1 text-xs">{article.description}</td>
-                                                <td className="px-2 py-1 text-xs">{article.stock}</td>
+                                              <tr key={article.id} className="border-t border-border">
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.articleNumber}</td>
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.oldArticleNumber}</td>
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.description}</td>
+                                                <td className="px-2 py-1 text-xs text-foreground">{article.stock}</td>
                                               </tr>
                                             ))}
                                           </tbody>
@@ -462,11 +662,11 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
                                     </td>
                                   </tr>
                                 )}
-                            </>
+                            </React.Fragment>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+                            <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground">
                               {searchTerm ? "Keine Ergebnisse gefunden" : "Keine Schütten vorhanden"}
                             </td>
                           </tr>
@@ -479,15 +679,16 @@ export default function LocationDetailDialog({ isOpen, onClose, location }: Loca
             </div>
             <div className="p-6 border-t">
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsContainerSelectionOpen(true)}>
+                <Button variant="outline" size="sm" className="text-foreground" onClick={() => setIsContainerSelectionOpen(true)}>
                   Schütte hier platzieren
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setIsScannerDialogOpen(true)}>
+                <Button variant="outline" size="sm" className="text-foreground" onClick={() => setIsScannerDialogOpen(true)}>
                   Schütte platzieren mit Scanner
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="text-foreground"
                   disabled={selectedContainerIds.length === 0}
                   onClick={handleRemoveContainer}
                 >

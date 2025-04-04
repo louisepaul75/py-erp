@@ -24,13 +24,13 @@ export default function WarehouseLocationMobile({
     <div className="md:hidden space-y-4 mt-4">
       {filteredLocations.length > 0 ? (
         filteredLocations.slice(0, 20).map((location) => (
-          <div key={location.id} className="border rounded-md p-4 bg-white" onClick={() => handleRowClick(location)}>
+          <div key={location.id} className="border rounded-md p-4 bg-card" onClick={() => handleRowClick(location)}>
             <div className="flex items-center justify-between mb-2">
               <div className="font-medium">{location.laNumber}</div>
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    location.status === "free" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                    location.status === "free" ? "bg-status-success/10 text-status-success-foreground" : "bg-status-warning/10 text-status-warning-foreground"
                   }`}
                 >
                   {location.status === "free" ? "Frei" : "Belegt"}
@@ -44,21 +44,21 @@ export default function WarehouseLocationMobile({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-gray-500">Ort/Gebäude:</div>
+              <div className="text-muted-foreground">Ort/Gebäude:</div>
               <div>{location.location}</div>
 
-              <div className="text-gray-500">Abverkauf:</div>
+              <div className="text-muted-foreground">Abverkauf:</div>
               <div>{location.forSale ? "✅" : "❌"}</div>
 
-              <div className="text-gray-500">Sonderlager:</div>
+              <div className="text-muted-foreground">Sonderlager:</div>
               <div>{location.specialStorage ? "✅" : "❌"}</div>
 
-              <div className="text-gray-500">Regal/Fach/Boden:</div>
+              <div className="text-muted-foreground">Regal/Fach/Boden:</div>
               <div>
                 {location.shelf}/{location.compartment}/{location.floor}
               </div>
 
-              <div className="text-gray-500">Anzahl Schütten:</div>
+              <div className="text-muted-foreground">Anzahl Schütten:</div>
               <div>{location.containerCount}</div>
             </div>
             <div className="mt-3 flex justify-end">
@@ -71,16 +71,16 @@ export default function WarehouseLocationMobile({
                 }}
                 disabled={location.containerCount > 0}
               >
-                <Trash2 className="h-4 w-4 text-red-500" />
+                <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
           </div>
         ))
       ) : (
-        <div className="text-center py-6 text-gray-500">Keine Lagerorte gefunden</div>
+        <div className="text-center py-6 text-muted-foreground">Keine Lagerorte gefunden</div>
       )}
       {filteredLocations.length > 20 && (
-        <div className="text-center py-3 text-gray-500 bg-gray-50 rounded-md">
+        <div className="text-center py-3 text-muted-foreground bg-muted rounded-md">
           Weitere Einträge auf der nächsten Seite.
         </div>
       )}

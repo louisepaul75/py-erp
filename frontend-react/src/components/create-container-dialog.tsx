@@ -8,8 +8,24 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import type { ContainerItem } from "@/types/warehouse-types"
+
+const CONTAINER_TYPES = [
+  { value: "OD", label: "OD" },
+  { value: "KC", label: "KC" },
+  { value: "PT", label: "PT" },
+  { value: "JK", label: "JK" },
+  { value: "AR", label: "AR" },
+  { value: "HF", label: "HF" },
+]
+
+const PURPOSES = [
+  { value: "Lager", label: "Lager" },
+  { value: "Transport", label: "Transport" },
+  { value: "Picken", label: "Picken" },
+  { value: "Werkstatt", label: "Werkstatt" },
+]
 
 interface CreateContainerDialogProps {
   isOpen: boolean
@@ -59,7 +75,6 @@ export default function CreateContainerDialog({
     const slots = Number.parseInt(slotCount)
     const containers: ContainerItem[] = []
 
-    // Erstelle die angegebene Anzahl von Schütten
     for (let i = 0; i < qty; i++) {
       containers.push({
         id: crypto.randomUUID(),
@@ -71,11 +86,10 @@ export default function CreateContainerDialog({
         stock: 0,
         slots: [],
         units: [],
-        customSlotCount: slots, // Add the custom slot count
+        customSlotCount: slots,
       })
     }
 
-    // Speichere alle erstellten Schütten
     containers.forEach((container) => {
       onSave(container)
     })
@@ -104,18 +118,19 @@ export default function CreateContainerDialog({
                 <Select
                   value={type}
                   onValueChange={setType}
-                  placeholder="Typ auswählen"
-                  options={[
-                    { value: "OD", label: "OD" },
-                    { value: "KC", label: "KC" },
-                    { value: "PT", label: "PT" },
-                    { value: "JK", label: "JK" },
-                    { value: "AR", label: "AR" },
-                    { value: "HF", label: "HF" },
-                  ]}
-                  error={errors.type}
-                />
-                {errors.type && <p className="text-red-500 text-sm">{errors.type}</p>}
+                >
+                  <SelectTrigger id="type" className={errors.type ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Typ auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTAINER_TYPES.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.type && <p className="text-destructive text-sm">{errors.type}</p>}
               </div>
 
               <div className="space-y-2">
@@ -123,16 +138,19 @@ export default function CreateContainerDialog({
                 <Select
                   value={purpose}
                   onValueChange={setPurpose}
-                  placeholder="Zweck auswählen"
-                  options={[
-                    { value: "Lager", label: "Lager" },
-                    { value: "Transport", label: "Transport" },
-                    { value: "Picken", label: "Picken" },
-                    { value: "Werkstatt", label: "Werkstatt" },
-                  ]}
-                  error={errors.purpose}
-                />
-                {errors.purpose && <p className="text-red-500 text-sm">{errors.purpose}</p>}
+                >
+                  <SelectTrigger id="purpose" className={errors.purpose ? "border-red-500" : ""}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PURPOSES.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.purpose && <p className="text-destructive text-sm">{errors.purpose}</p>}
               </div>
             </div>
 
@@ -144,9 +162,9 @@ export default function CreateContainerDialog({
                 min="1"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                className={errors.quantity ? "border-red-500" : ""}
+                className={errors.quantity ? "border-destructive" : ""}
               />
-              {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity}</p>}
+              {errors.quantity && <p className="text-destructive text-sm">{errors.quantity}</p>}
             </div>
 
             <div className="space-y-2">
@@ -158,9 +176,9 @@ export default function CreateContainerDialog({
                 max="30"
                 value={slotCount}
                 onChange={(e) => setSlotCount(e.target.value)}
-                className={errors.slotCount ? "border-red-500" : ""}
+                className={errors.slotCount ? "border-destructive" : ""}
               />
-              {errors.slotCount && <p className="text-red-500 text-sm">{errors.slotCount}</p>}
+              {errors.slotCount && <p className="text-destructive text-sm">{errors.slotCount}</p>}
             </div>
 
             <div className="pt-4 flex justify-end space-x-2">

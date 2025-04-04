@@ -70,7 +70,10 @@ export default function WarehouseLocationList() {
           return;
         }
         
-        const response = await fetch(`${API_URL}/inventory/storage-locations/`, {
+        // Construct the correct API endpoint URL including the /api/v1/ prefix
+        const inventoryEndpoint = `${API_URL}/api/v1/inventory/storage-locations/`;
+
+        const response = await fetch(inventoryEndpoint, {
           headers: {
             "Accept": "application/json",
             "Authorization": `Bearer ${token}`,
@@ -85,7 +88,7 @@ export default function WarehouseLocationList() {
             if (refreshSuccess) {
               // Retry the request with new token
               const newToken = await authService.getToken();
-              const retryResponse = await fetch(`${API_URL}/inventory/storage-locations/`, {
+              const retryResponse = await fetch(inventoryEndpoint, {
                 headers: {
                   "Accept": "application/json",
                   "Authorization": `Bearer ${newToken}`,
@@ -298,18 +301,18 @@ export default function WarehouseLocationList() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Lagerort-Verwaltung</h1>
+        <h1 className="text-2xl font-bold text-primary">Lagerort-Verwaltung</h1>
         <div className="flex">
           <Link
             href="/"
-            className={`flex  mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-blue-500 text-blue-600`}
+            className={`flex mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-primary text-primary`}
           >
             <Warehouse className="h-4 w-4 mr-2" />
             Lagerort-Verwaltung
           </Link>
           <Link
             href="/container-management"
-            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-transparent hover:border-gray-300 hover:text-gray-600`}
+            className={`flex items-center px-4 py-2 rounded-t-lg border-b-2 border-transparent text-muted-foreground hover:border-muted`}
           >
             <Package2 className="h-4 w-4 mr-2" />
             Schütten-Verwaltung
@@ -318,17 +321,17 @@ export default function WarehouseLocationList() {
               variant="outline"
               size="sm"
               onClick={() => setIsSettingsOpen(true)}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1 text-muted-foreground"
             >
             <Settings className="h-4 w-4  mx-2" />
             Einstellungen
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsMultipleNewLocationModalOpen(true)}>
+          <Button variant="outline" className="text-muted-foreground" onClick={() => setIsMultipleNewLocationModalOpen(true)}>
             Mehrere Lagerorte
           </Button>
-          <Button variant="outline" onClick={() => setIsNewLocationModalOpen(true)}>
+          <Button variant="outline" className="text-muted-foreground" onClick={() => setIsNewLocationModalOpen(true)}>
             Neuer Lagerort
           </Button>
           {highlightedLocationId && (
@@ -341,7 +344,7 @@ export default function WarehouseLocationList() {
       </div>
 
       {error && (
-        <div className="p-4 border border-red-200 bg-red-50 text-red-800 rounded-md">
+        <div className="p-4 border border-destructive/20 bg-destructive/10 text-destructive rounded-md">
           {error}
         </div>
       )}
@@ -371,7 +374,7 @@ export default function WarehouseLocationList() {
           {/* Loading indicator */}
           {isLoading ? (
             <div className="flex justify-center items-center p-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
               <span className="ml-3">Lade Lagerorte...</span>
             </div>
           ) : (
@@ -400,7 +403,7 @@ export default function WarehouseLocationList() {
           {!isLoading && filteredLocations.length > 0 && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Einträge pro Seite:</span>
+                <span className="text-sm text-muted-foreground">Einträge pro Seite:</span>
                 <Select
                   value={itemsPerPage === filteredLocations.length ? "all" : itemsPerPage.toString()}
                   onValueChange={handleItemsPerPageChange}
@@ -474,7 +477,7 @@ export default function WarehouseLocationList() {
                 </div>
               )}
 
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-muted-foreground">
                 Zeige {(currentPage - 1) * itemsPerPage + 1} bis{" "}
                 {Math.min(currentPage * itemsPerPage, filteredLocations.length)} von {filteredLocations.length} Einträgen
               </div>

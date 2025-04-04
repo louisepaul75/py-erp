@@ -121,10 +121,10 @@ export default function ScaleSettings() {
       <div className="border rounded-md overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Waage / Ort</TableHead>
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">IP-Adresse</TableHead>
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Toleranz %</TableHead>
+            <TableRow className="bg-muted/50 hover:bg-muted">
+              <TableHead className="font-medium text-muted-foreground">Waage / Ort</TableHead>
+              <TableHead className="font-medium text-muted-foreground">IP-Adresse</TableHead>
+              <TableHead className="font-medium text-muted-foreground">Toleranz %</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -133,7 +133,7 @@ export default function ScaleSettings() {
                 <TableRow
                   key={scale.id}
                   data-state={selectedScaleId === scale.id ? "selected" : undefined}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer"
+                  className="hover:bg-muted/50 cursor-pointer"
                   onClick={() => handleSelectScale(scale)}
                 >
                   <TableCell className="text-sm">{scale.name}</TableCell>
@@ -153,7 +153,7 @@ export default function ScaleSettings() {
       </div>
 
       {(isAddingNew || selectedScaleId) && (
-        <div className="border rounded-md p-4 space-y-4 bg-slate-50 dark:bg-slate-800/50">
+        <div className="border rounded-md p-4 space-y-4 bg-muted/50">
           <h3 className="font-medium">{isAddingNew ? "Neue Waage hinzufügen" : "Waage bearbeiten"}</h3>
 
           <div className="space-y-2">
@@ -163,7 +163,7 @@ export default function ScaleSettings() {
               value={newScaleName}
               onChange={(e) => setNewScaleName(e.target.value)}
               placeholder="z.B. 1.Waage im Lager"
-              className={error && !newScaleName ? "border-red-500" : ""}
+              className={error && !newScaleName ? "border-destructive" : ""}
             />
           </div>
 
@@ -174,7 +174,7 @@ export default function ScaleSettings() {
               value={newScaleIp}
               onChange={(e) => setNewScaleIp(e.target.value)}
               placeholder="z.B. 192.168.1.100"
-              className={error && !newScaleIp ? "border-red-500" : ""}
+              className={error && !newScaleIp ? "border-destructive" : ""}
             />
           </div>
 
@@ -188,11 +188,11 @@ export default function ScaleSettings() {
               step="0.01"
               value={newScaleTolerance}
               onChange={(e) => setNewScaleTolerance(e.target.value)}
-              className={error && !newScaleTolerance ? "border-red-500" : ""}
+              className={error && !newScaleTolerance ? "border-destructive" : ""}
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleCancel}>

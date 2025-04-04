@@ -23,17 +23,17 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
           </div>
         </Dialog.Description>
         <Dialog.Content 
-          className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none overflow-hidden"
+          className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none overflow-hidden"
           aria-describedby="settings-dialog-description"
         >
           <div className="flex items-center justify-between p-4 border-b">
-            <Dialog.Title className="text-xl font-semibold flex items-center gap-2 text-black">
+            <Dialog.Title className="text-xl font-semibold flex items-center gap-2 text-popover-foreground">
               <Settings className="h-5 w-5" />
               Einstellungen
             </Dialog.Title>
             <Dialog.Close asChild>
               <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="h-4 w-4 text-black" />
+                <X className="h-4 w-4 text-popover-foreground" />
               </Button>
             </Dialog.Close>
           </div>

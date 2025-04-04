@@ -280,7 +280,7 @@ export default function InventoryManagement() {
           </header>
 
           {/* Main Content Area */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex">
             {/* Product List Sidebar */}
             {showSidebar && (
               <div className="w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
@@ -386,8 +386,8 @@ export default function InventoryManagement() {
             )}
 
             {/* Product Detail */}
-            <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950">
-              {/* Mutter/Varianten Tabs */}
+            <div className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col">
+              {/* Mutter/Varianten Tabs (Sticky Header for Detail Area) */}
               <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-6">
                 <div className="flex items-center h-14">
                   <Button
@@ -421,597 +421,599 @@ export default function InventoryManagement() {
                 </div>
               </div>
 
-              {/* Tab Content */}
-              {activeTab === "mutter" ? (
-                <div className="p-4 lg:p-6">
-                  <div className="max-w-5xl mx-auto space-y-8">
-                    {/* Header with Product Info */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                      <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-                        <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
-                          AL
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                            <h1 className="text-2xl font-bold">"Adler"-Lock</h1>
-                            <Badge className="w-fit bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50">
-                              Aktiv
-                            </Badge>
+              {/* Tab Content - Wrapped in a new scrollable div */}
+              <div className="flex-1 overflow-auto">
+                {activeTab === "mutter" ? (
+                  <div className="p-4 lg:p-6">
+                    <div className="max-w-5xl mx-auto space-y-8">
+                      {/* Header with Product Info */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                          <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xl">
+                            AL
                           </div>
-                          <p className="text-slate-500 dark:text-slate-400 mt-1">Artikelnummer: 218300</p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2 md:justify-end">
-                          <Button variant="outline" className="rounded-full">
-                            <Minus className="h-4 w-4 mr-2" />
-                            Löschen
-                          </Button>
-                          <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white">
-                            <Zap className="h-4 w-4 mr-2" />
-                            Speichern
-                          </Button>
+                          <div className="flex-1">
+                            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                              <h1 className="text-2xl font-bold">"Adler"-Lock</h1>
+                              <Badge className="w-fit bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50">
+                                Aktiv
+                              </Badge>
+                            </div>
+                            <p className="text-slate-500 dark:text-slate-400 mt-1">Artikelnummer: 218300</p>
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2 md:justify-end">
+                            <Button variant="outline" className="rounded-full">
+                              <Minus className="h-4 w-4 mr-2" />
+                              Löschen
+                            </Button>
+                            <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white">
+                              <Zap className="h-4 w-4 mr-2" />
+                              Speichern
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Bezeichnung & Beschreibung */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                      <h2 className="text-lg font-semibold mb-4">Produktdetails</h2>
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                          <label className="text-sm font-medium text-slate-500 dark:text-slate-400 md:pt-2.5">
-                            Bezeichnung
-                          </label>
-                          <div className="md:col-span-3">
+                      {/* Bezeichnung & Beschreibung */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                        <h2 className="text-lg font-semibold mb-4">Produktdetails</h2>
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                            <label className="text-sm font-medium text-slate-500 dark:text-slate-400 md:pt-2.5">
+                              Bezeichnung
+                            </label>
+                            <div className="md:col-span-3">
+                              <Input
+                                defaultValue="&quot;Adler&quot;-Lock"
+                                className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                            <label className="text-sm font-medium text-slate-500 dark:text-slate-400 md:pt-2.5">
+                              Beschreibung
+                            </label>
+                            <div className="md:col-span-3">
+                              <textarea
+                                className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm min-h-[150px] resize-none bg-slate-50 dark:bg-slate-800"
+                                defaultValue="Erleben Sie die Eleganz und den Charme vergangener Zeiten mit dieser exquisiten Zinnfigur, inspiriert von den Anfängen der Eisenbahngeschichte. Perfekt für Sammler und Liebhaber von Nostalgie, zeigt diese Figur einen klassischen Lokführer, gekleidet in traditioneller Montur, der stolz seine Maschine lenkt. Ideal für jede Vitrine oder als geschmackvolles Geschenk. Eine Hommage an die Ingenieurskunst und das kulturelle Erbe."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Maße */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-lg font-semibold">Maße & Eigenschaften</h2>
+                          <Badge
+                            variant="outline"
+                            className="text-xs font-normal px-2 py-0.5 h-5 border-slate-200 dark:border-slate-700"
+                          >
+                            Einheit: mm
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Breite</label>
                             <Input
-                              defaultValue="&quot;Adler&quot;-Lock"
-                              className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                              defaultValue="7"
+                              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Höhe</label>
+                            <Input
+                              defaultValue="7"
+                              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Tiefe</label>
+                            <Input
+                              defaultValue="0,7"
+                              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Gewicht (g)</label>
+                            <Input
+                              defaultValue="30"
+                              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                          <label className="text-sm font-medium text-slate-500 dark:text-slate-400 md:pt-2.5">
-                            Beschreibung
-                          </label>
-                          <div className="md:col-span-3">
-                            <textarea
-                              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-sm min-h-[150px] resize-none bg-slate-50 dark:bg-slate-800"
-                              defaultValue="Erleben Sie die Eleganz und den Charme vergangener Zeiten mit dieser exquisiten Zinnfigur, inspiriert von den Anfängen der Eisenbahngeschichte. Perfekt für Sammler und Liebhaber von Nostalgie, zeigt diese Figur einen klassischen Lokführer, gekleidet in traditioneller Montur, der stolz seine Maschine lenkt. Ideal für jede Vitrine oder als geschmackvolles Geschenk. Eine Hommage an die Ingenieurskunst und das kulturelle Erbe."
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="hangend"
+                              className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                            />
+                            <label htmlFor="hangend" className="text-sm">
+                              Hängend
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="einseitig"
+                              className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                            />
+                            <label htmlFor="einseitig" className="text-sm">
+                              Einseitig
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="neuheit"
+                              className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                            />
+                            <label htmlFor="neuheit" className="text-sm">
+                              Neuheit
+                            </label>
+                          </div>
+                        </div>
+                        <div className="mt-6">
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-slate-500 dark:text-slate-400 w-24">
+                              Boxgröße
+                            </label>
+                            <Input
+                              defaultValue="B5"
+                              className="w-32 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
                             />
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Maße */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold">Maße & Eigenschaften</h2>
-                        <Badge
-                          variant="outline"
-                          className="text-xs font-normal px-2 py-0.5 h-5 border-slate-200 dark:border-slate-700"
-                        >
-                          Einheit: mm
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Breite</label>
-                          <Input
-                            defaultValue="7"
-                            className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                          />
+                      {/* Kategorien */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-lg font-semibold">Kategorien</h2>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="h-8 rounded-full">
+                              <Plus className="h-3.5 w-3.5 mr-1" />
+                              <span className="text-xs">Hinzufügen</span>
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-8 rounded-full">
+                              <Minus className="h-3.5 w-3.5 mr-1" />
+                              <span className="text-xs">Entfernen</span>
+                            </Button>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Höhe</label>
-                          <Input
-                            defaultValue="7"
-                            className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                          />
+                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                <TableHead className="font-medium">Home</TableHead>
+                                <TableHead className="font-medium">Sortiment</TableHead>
+                                <TableHead className="font-medium">Tradition</TableHead>
+                                <TableHead className="font-medium">Maschinerie</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell>Home</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>All Products</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Tiefe</label>
-                          <Input
-                            defaultValue="0,7"
-                            className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-slate-500 dark:text-slate-400">Gewicht (g)</label>
-                          <Input
-                            defaultValue="30"
-                            className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="hangend"
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                          />
-                          <label htmlFor="hangend" className="text-sm">
-                            Hängend
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="einseitig"
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                          />
-                          <label htmlFor="einseitig" className="text-sm">
-                            Einseitig
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id="neuheit"
-                            className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                          />
-                          <label htmlFor="neuheit" className="text-sm">
-                            Neuheit
-                          </label>
-                        </div>
-                      </div>
-                      <div className="mt-6">
-                        <div className="flex items-center gap-2">
-                          <label className="text-sm font-medium text-slate-500 dark:text-slate-400 w-24">
-                            Boxgröße
-                          </label>
-                          <Input
-                            defaultValue="B5"
-                            className="w-32 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Kategorien */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold">Kategorien</h2>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="h-8 rounded-full">
-                            <Plus className="h-3.5 w-3.5 mr-1" />
-                            <span className="text-xs">Hinzufügen</span>
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-8 rounded-full">
-                            <Minus className="h-3.5 w-3.5 mr-1" />
-                            <span className="text-xs">Entfernen</span>
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                              <TableHead className="font-medium">Home</TableHead>
-                              <TableHead className="font-medium">Sortiment</TableHead>
-                              <TableHead className="font-medium">Tradition</TableHead>
-                              <TableHead className="font-medium">Maschinerie</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell>Home</TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                              <TableCell>All Products</TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
                       </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4 lg:p-6">
-                  <div className="max-w-5xl mx-auto space-y-8">
-                    {/* Varianten Header */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                          <h2 className="text-lg font-semibold">Varianten</h2>
-                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            Verwalten Sie verschiedene Ausführungen dieses Produkts
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="h-9 rounded-full">
-                            <Plus className="h-4 w-4 mr-1" />
-                            <span>Hinzufügen</span>
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-9 rounded-full">
-                            <Minus className="h-4 w-4 mr-1" />
-                            <span>Entfernen</span>
-                          </Button>
+                ) : (
+                  <div className="p-4 lg:p-6">
+                    <div className="max-w-5xl mx-auto space-y-8">
+                      {/* Varianten Header */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div>
+                            <h2 className="text-lg font-semibold">Varianten</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                              Verwalten Sie verschiedene Ausführungen dieses Produkts
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="h-9 rounded-full">
+                              <Plus className="h-4 w-4 mr-1" />
+                              <span>Hinzufügen</span>
+                            </Button>
+                            <Button variant="outline" size="sm" className="h-9 rounded-full">
+                              <Minus className="h-4 w-4 mr-1" />
+                              <span>Entfernen</span>
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Varianten Table */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                              <TableHead className="font-medium">Nummer</TableHead>
-                              <TableHead className="font-medium">Bezeichnung</TableHead>
-                              <TableHead className="font-medium">Ausprägung</TableHead>
-                              <TableHead className="w-12 text-center font-medium">Prod.</TableHead>
-                              <TableHead className="w-12 text-center font-medium">Vertr.</TableHead>
-                              <TableHead className="w-12 text-center font-medium">VK Artikel</TableHead>
-                              <TableHead className="font-medium">Releas</TableHead>
-                              <TableHead className="w-10"></TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell className="font-medium">501506</TableCell>
-                              <TableCell>"Adler"-Lock</TableCell>
-                              <TableCell>Blank</TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    checked
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell>11.02.2023</TableCell>
-                              <TableCell>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                            <TableRow className="bg-blue-50/50 dark:bg-blue-900/10">
-                              <TableCell className="font-medium">100870</TableCell>
-                              <TableCell>"Adler"-Lock</TableCell>
-                              <TableCell>Bemalt</TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    checked
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    checked
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    checked
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell>01.01.2023</TableCell>
-                              <TableCell>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                            <TableRow>
-                              <TableCell className="font-medium">904743</TableCell>
-                              <TableCell>"Adler"-Lock OX</TableCell>
-                              <TableCell></TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
-                                    readOnly
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell>01.01.1999</TableCell>
-                              <TableCell>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-
-                    {/* Varianten Tabs */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                      <Tabs
-                        defaultValue="details"
-                        value={variantenActiveTab}
-                        onValueChange={setVariantenActiveTab}
-                        className="w-full"
-                      >
-                        <div className="border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
-                          <TabsList className="bg-slate-50 dark:bg-slate-800/50 h-auto p-2 rounded-none flex-nowrap">
-                            <TabsTrigger
-                              value="details"
-                              className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
-                            >
-                              Details
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="teile"
-                              className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
-                            >
-                              Teile
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="bilder"
-                              className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
-                            >
-                              Bilder
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="gewogen"
-                              className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
-                            >
-                              Gewogen
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="lagerorte"
-                              className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
-                            >
-                              Lagerorte
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="umsatze"
-                              className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
-                            >
-                              Umsätze
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="bewegungen"
-                              className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
-                            >
-                              Bewegungen
-                            </TabsTrigger>
-                          </TabsList>
-                        </div>
-
-                        <TabsContent value="details" className="p-0 m-0">
-                          <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                              <Card className="border border-slate-200 dark:border-slate-700 shadow-sm">
-                                <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                  <CardTitle className="text-sm font-medium">Tags</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0">
-                                  <div className="p-4">
-                                    <div className="flex flex-wrap gap-2 mb-4">
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                      >
-                                        <Tag className="h-3 w-3 mr-1" />
-                                        Zinnfigur
-                                      </Badge>
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                      >
-                                        <Tag className="h-3 w-3 mr-1" />
-                                        Eisenbahn
-                                      </Badge>
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                      >
-                                        <Tag className="h-3 w-3 mr-1" />
-                                        Sammler
-                                      </Badge>
-                                    </div>
-                                    <Button variant="outline" size="sm" className="w-full rounded-lg">
-                                      <Plus className="h-3.5 w-3.5 mr-1" />
-                                      Tag hinzufügen
-                                    </Button>
+                      {/* Varianten Table */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                <TableHead className="font-medium">Nummer</TableHead>
+                                <TableHead className="font-medium">Bezeichnung</TableHead>
+                                <TableHead className="font-medium">Ausprägung</TableHead>
+                                <TableHead className="w-12 text-center font-medium">Prod.</TableHead>
+                                <TableHead className="w-12 text-center font-medium">Vertr.</TableHead>
+                                <TableHead className="w-12 text-center font-medium">VK Artikel</TableHead>
+                                <TableHead className="font-medium">Releas</TableHead>
+                                <TableHead className="w-10"></TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell className="font-medium">501506</TableCell>
+                                <TableCell>"Adler"-Lock</TableCell>
+                                <TableCell>Blank</TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      readOnly
+                                    />
                                   </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      checked
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell>11.02.2023</TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              <TableRow className="bg-blue-50/50 dark:bg-blue-900/10">
+                                <TableCell className="font-medium">100870</TableCell>
+                                <TableCell>"Adler"-Lock</TableCell>
+                                <TableCell>Bemalt</TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      checked
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      checked
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      checked
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell>01.01.2023</TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell className="font-medium">904743</TableCell>
+                                <TableCell>"Adler"-Lock OX</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 rounded border-slate-300 dark:border-slate-600"
+                                      readOnly
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell>01.01.1999</TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </div>
+
+                      {/* Varianten Tabs */}
+                      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <Tabs
+                          defaultValue="details"
+                          value={variantenActiveTab}
+                          onValueChange={setVariantenActiveTab}
+                          className="w-full"
+                        >
+                          <div className="border-b border-slate-200 dark:border-slate-800 overflow-x-auto">
+                            <TabsList className="bg-slate-50 dark:bg-slate-800/50 h-auto p-2 rounded-none flex-nowrap">
+                              <TabsTrigger
+                                value="details"
+                                className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
+                              >
+                                Details
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="teile"
+                                className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
+                              >
+                                Teile
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="bilder"
+                                className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
+                              >
+                                Bilder
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="gewogen"
+                                className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
+                              >
+                                Gewogen
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="lagerorte"
+                                className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
+                              >
+                                Lagerorte
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="umsatze"
+                                className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
+                              >
+                                Umsätze
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="bewegungen"
+                                className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 rounded-lg data-[state=active]:shadow-sm whitespace-nowrap"
+                              >
+                                Bewegungen
+                              </TabsTrigger>
+                            </TabsList>
+                          </div>
+
+                          <TabsContent value="details" className="p-0 m-0">
+                            <div className="p-6">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                <Card className="border border-slate-200 dark:border-slate-700 shadow-sm">
+                                  <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                    <CardTitle className="text-sm font-medium">Tags</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="p-0">
+                                    <div className="p-4">
+                                      <div className="flex flex-wrap gap-2 mb-4">
+                                        <Badge
+                                          variant="secondary"
+                                          className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                                        >
+                                          <Tag className="h-3 w-3 mr-1" />
+                                          Zinnfigur
+                                        </Badge>
+                                        <Badge
+                                          variant="secondary"
+                                          className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                                        >
+                                          <Tag className="h-3 w-3 mr-1" />
+                                          Eisenbahn
+                                        </Badge>
+                                        <Badge
+                                          variant="secondary"
+                                          className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                                        >
+                                          <Tag className="h-3 w-3 mr-1" />
+                                          Sammler
+                                        </Badge>
+                                      </div>
+                                      <Button variant="outline" size="sm" className="w-full rounded-lg">
+                                        <Plus className="h-3.5 w-3.5 mr-1" />
+                                        Tag hinzufügen
+                                      </Button>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                <Card className="border border-slate-200 dark:border-slate-700 shadow-sm">
+                                  <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                    <CardTitle className="text-sm font-medium">Publish</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="p-4">
+                                    <div className="space-y-3">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Status</span>
+                                        <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                          Aktiv
+                                        </Badge>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Sichtbarkeit</span>
+                                        <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                          Öffentlich
+                                        </Badge>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Erstellt am</span>
+                                        <span className="text-sm">01.01.2023</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Aktualisiert am</span>
+                                        <span className="text-sm">22.10.2024</span>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                <Card className="border border-slate-200 dark:border-slate-700 shadow-sm">
+                                  <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                    <CardTitle className="text-sm font-medium">Preise</CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="p-4">
+                                    <select className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
+                                      <option>DE - 19% Germany</option>
+                                    </select>
+                                    <div className="space-y-3">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Laden</span>
+                                        <span className="text-sm font-medium">37,40 €</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Handel</span>
+                                        <span className="text-sm font-medium">17,30 €</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Empf.</span>
+                                        <span className="text-sm font-medium">29,50 €</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-sm">Einkauf</span>
+                                        <span className="text-sm font-medium">9,63 €</span>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+
+                              <Card className="border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
+                                <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                                  <CardTitle className="text-sm font-medium">Preisänderungen</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4">
+                                  <textarea className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 h-24 resize-none bg-slate-50 dark:bg-slate-800"></textarea>
                                 </CardContent>
                               </Card>
 
                               <Card className="border border-slate-200 dark:border-slate-700 shadow-sm">
                                 <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                  <CardTitle className="text-sm font-medium">Publish</CardTitle>
+                                  <CardTitle className="text-sm font-medium">Zusätzliche Informationen</CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-4">
-                                  <div className="space-y-3">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Status</span>
-                                      <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                        Aktiv
-                                      </Badge>
+                                  <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                      <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                        Malgruppe
+                                      </label>
+                                      <div className="md:col-span-3">
+                                        <Input className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg" />
+                                      </div>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Sichtbarkeit</span>
-                                      <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                        Öffentlich
-                                      </Badge>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                      <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                        Malkosten
+                                      </label>
+                                      <div className="md:col-span-3 flex gap-3">
+                                        <Input
+                                          defaultValue="0,00€"
+                                          className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                                        />
+                                        <Input
+                                          defaultValue="0 CZK"
+                                          className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                                        />
+                                      </div>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Erstellt am</span>
-                                      <span className="text-sm">01.01.2023</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Aktualisiert am</span>
-                                      <span className="text-sm">22.10.2024</span>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-
-                              <Card className="border border-slate-200 dark:border-slate-700 shadow-sm">
-                                <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                  <CardTitle className="text-sm font-medium">Preise</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-4">
-                                  <select className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
-                                    <option>DE - 19% Germany</option>
-                                  </select>
-                                  <div className="space-y-3">
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Laden</span>
-                                      <span className="text-sm font-medium">37,40 €</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Handel</span>
-                                      <span className="text-sm font-medium">17,30 €</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Empf.</span>
-                                      <span className="text-sm font-medium">29,50 €</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-sm">Einkauf</span>
-                                      <span className="text-sm font-medium">9,63 €</span>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                      <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                                        Selbstkosten
+                                      </label>
+                                      <div className="md:col-span-3">
+                                        <Input className="w-full md:w-1/3 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg" />
+                                      </div>
                                     </div>
                                   </div>
                                 </CardContent>
                               </Card>
                             </div>
-
-                            <Card className="border border-slate-200 dark:border-slate-700 shadow-sm mb-6">
-                              <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                <CardTitle className="text-sm font-medium">Preisänderungen</CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-4">
-                                <textarea className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 h-24 resize-none bg-slate-50 dark:bg-slate-800"></textarea>
-                              </CardContent>
-                            </Card>
-
-                            <Card className="border border-slate-200 dark:border-slate-700 shadow-sm">
-                              <CardHeader className="p-4 pb-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                                <CardTitle className="text-sm font-medium">Zusätzliche Informationen</CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-4">
-                                <div className="space-y-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                    <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                      Malgruppe
-                                    </label>
-                                    <div className="md:col-span-3">
-                                      <Input className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg" />
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                    <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                      Malkosten
-                                    </label>
-                                    <div className="md:col-span-3 flex gap-3">
-                                      <Input
-                                        defaultValue="0,00€"
-                                        className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                                      />
-                                      <Input
-                                        defaultValue="0 CZK"
-                                        className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                    <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                                      Selbstkosten
-                                    </label>
-                                    <div className="md:col-span-3">
-                                      <Input className="w-full md:w-1/3 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg" />
-                                    </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        </TabsContent>
-                        <TabsContent value="teile" className="p-0 m-0">
-                          <TeileTab />
-                        </TabsContent>
-                        <TabsContent value="bilder" className="p-0 m-0">
-                          <BilderTab />
-                        </TabsContent>
-                        <TabsContent value="gewogen" className="p-0 m-0">
-                          <GewogenTab />
-                        </TabsContent>
-                        <TabsContent value="lagerorte" className="p-0 m-0">
-                          <LagerorteTab />
-                        </TabsContent>
-                        <TabsContent value="umsatze" className="p-0 m-0">
-                          <UmsatzeTab />
-                        </TabsContent>
-                        <TabsContent value="bewegungen" className="p-0 m-0">
-                          <BewegungenTab />
-                        </TabsContent>
-                      </Tabs>
+                          </TabsContent>
+                          <TabsContent value="teile" className="p-0 m-0">
+                            <TeileTab />
+                          </TabsContent>
+                          <TabsContent value="bilder" className="p-0 m-0">
+                            <BilderTab />
+                          </TabsContent>
+                          <TabsContent value="gewogen" className="p-0 m-0">
+                            <GewogenTab />
+                          </TabsContent>
+                          <TabsContent value="lagerorte" className="p-0 m-0">
+                            <LagerorteTab />
+                          </TabsContent>
+                          <TabsContent value="umsatze" className="p-0 m-0">
+                            <UmsatzeTab />
+                          </TabsContent>
+                          <TabsContent value="bewegungen" className="p-0 m-0">
+                            <BewegungenTab />
+                          </TabsContent>
+                        </Tabs>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>

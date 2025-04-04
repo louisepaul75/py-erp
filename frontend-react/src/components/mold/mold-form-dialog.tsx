@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTechnologies } from "@/hooks/mold/use-technologies";
+import { useMoldSizes } from "@/hooks/mold/use-mold-sizes";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,16 @@ import {
   ArticleFormDialog,
   type ArticleFormValues,
 } from "./mold-form/article-form-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import useAppTranslation from "@/hooks/useTranslationWrapper";
 
 /**
@@ -61,6 +73,7 @@ export default function MoldFormDialog({
 }: MoldFormDialogProps) {
   // State for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useAppTranslation("mold");
 
   // State for active tab
   const [activeTab, setActiveTab] = useState("general");
@@ -76,7 +89,21 @@ export default function MoldFormDialog({
 
   // State für den aktuellen Mold mit aktualisierten Daten
   const [currentMold, setCurrentMold] = useState<Mold | null>(null);
-  const { t } = useAppTranslation("mold");
+
+  // State für neue Technologie
+  const [showTechnologyDialog, setShowTechnologyDialog] = useState(false);
+  const [newTechnologyName, setNewTechnologyName] = useState("");
+
+  // State für neue Mold Size
+  const [showMoldSizeDialog, setShowMoldSizeDialog] = useState(false);
+  const [newMoldSize, setNewMoldSize] = useState({
+    name: "",
+    description: "",
+  });
+
+  // Hole die Technologie- und MoldSize-Funktionen
+  const { createTechnology, deleteTechnology } = useTechnologies();
+  const { createMoldSize, deleteMoldSize } = useMoldSizes();
 
   // Initialize form with react-hook-form and zod validation
   const form = useForm<MoldFormValues>({
@@ -332,6 +359,76 @@ export default function MoldFormDialog({
     }
   };
 
+  // Funktion zum Hinzufügen einer neuen Technologie
+  const handleAddTechnology = () => {
+    setShowTechnologyDialog(true);
+  };
+
+  // Funktion zum Speichern einer neuen Technologie
+  const handleSaveTechnology = async () => {
+    if (newTechnologyName.trim() === "") return;
+
+    try {
+      await createTechnology({ name: newTechnologyName });
+      setNewTechnologyName("");
+      setShowTechnologyDialog(false);
+      // Aktualisiere die Technologien
+      //queryClient.invalidateQueries({ queryKey: ["technologies"] })
+    } catch (error) {
+      console.error("Failed to create technology:", error);
+    }
+  };
+
+  // Funktion zum Löschen einer Technologie
+  const handleDeleteTechnology = async (name: string) => {
+    try {
+      // Finde die Technologie anhand des Namens
+      const tech = technologies.find((t) => t.name === name);
+      if (tech) {
+        await deleteTechnology(tech.id);
+        // Aktualisiere die Technologien
+        //queryClient.invalidateQueries({ queryKey: ["technologies"] })
+      }
+    } catch (error) {
+      console.error("Failed to delete technology:", error);
+    }
+  };
+
+  // Funktion zum Hinzufügen einer neuen Mold Size
+  const handleAddMoldSize = () => {
+    setShowMoldSizeDialog(true);
+  };
+
+  // Funktion zum Speichern einer neuen Mold Size
+  const handleSaveMoldSize = async () => {
+    if (newMoldSize.name.trim() === "") return;
+
+    try {
+      await createMoldSize(newMoldSize);
+      setNewMoldSize({ name: "", description: "" });
+      setShowMoldSizeDialog(false);
+      // Aktualisiere die Mold Sizes
+      //queryClient.invalidateQueries({ queryKey: ["moldSizes"] })
+    } catch (error) {
+      console.error("Failed to create mold size:", error);
+    }
+  };
+
+  // Funktion zum Löschen einer Mold Size
+  const handleDeleteMoldSize = async (name: string) => {
+    try {
+      // Finde die Mold Size anhand des Namens
+      const size = moldSizes.find((s) => s.name === name);
+      if (size) {
+        await deleteMoldSize(size.id);
+        // Aktualisiere die Mold Sizes
+        //queryClient.invalidateQueries({ queryKey: ["moldSizes"] })
+      }
+    } catch (error) {
+      console.error("Failed to delete mold size:", error);
+    }
+  };
+
   // If the dialog is not open, don't render anything
   if (!open) return null;
 
@@ -361,7 +458,7 @@ export default function MoldFormDialog({
               type="button"
             >
               <X className="h-4 w-4" />
-              <span className="sr-only">{t("close_button")}</span>
+              <span className="sr-only">Close</span>
             </Button>
           </div>
 
@@ -375,10 +472,10 @@ export default function MoldFormDialog({
               >
                 <TabsList className="w-full max-w-md mb-6">
                   <TabsTrigger value="general" className="flex-1">
-                    {t("tab_general_information")}
+                  {t("tab_general_information")}
                   </TabsTrigger>
                   <TabsTrigger value="articles" className="flex-1">
-                    {t("tab_articles")}
+                  {t("tab_articles")}
                   </TabsTrigger>
                 </TabsList>
 
@@ -394,6 +491,10 @@ export default function MoldFormDialog({
                     onSubmit={handleSubmit}
                     onScanBarcode={() => setShowBarcodeDialog(true)}
                     onOpenLocationDialog={() => setShowLocationDialog(true)}
+                    onAddTechnology={handleAddTechnology}
+                    onDeleteTechnology={handleDeleteTechnology}
+                    onAddMoldSize={handleAddMoldSize}
+                    onDeleteMoldSize={handleDeleteMoldSize}
                   />
                 </TabsContent>
 
@@ -418,7 +519,7 @@ export default function MoldFormDialog({
               disabled={isSubmitting}
               type="button"
             >
-              {t("cancel_button")}
+              Cancel
             </Button>
             <Button type="submit" form="mold-form" disabled={isSubmitting}>
               {isSubmitting
@@ -455,6 +556,77 @@ export default function MoldFormDialog({
         onOpenChange={setShowArticleDialog}
         onSubmit={handleArticleSubmit}
       />
+
+      {/* Dialog zum Hinzufügen einer neuen Technologie */}
+      <Dialog
+        open={showTechnologyDialog}
+        onOpenChange={setShowTechnologyDialog}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("new_purpose")}</DialogTitle>
+            <DialogDescription>
+              {t("enter_name")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center space-x-2 py-4">
+            <Input
+              placeholder="Name des Zwecks"
+              value={newTechnologyName}
+              onChange={(e) => setNewTechnologyName(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowTechnologyDialog(false)}
+            >
+              {t("cancel_button")}
+            </Button>
+            <Button onClick={handleSaveTechnology}>Hinzufügen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog zum Hinzufügen einer neuen Mold Size */}
+      <Dialog open={showMoldSizeDialog} onOpenChange={setShowMoldSizeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("add_size")}</DialogTitle>
+            <DialogDescription>
+              {t("enter_optional_name")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col space-y-4 py-4">
+            <Input
+              placeholder="Name der Größe"
+              value={newMoldSize.name}
+              onChange={(e) =>
+                setNewMoldSize({ ...newMoldSize, name: e.target.value })
+              }
+              className="flex-1"
+            />
+            <Textarea
+              placeholder={t("new_mold_size_description_placeholder")}
+              value={newMoldSize.description}
+              onChange={(e) =>
+                setNewMoldSize({ ...newMoldSize, description: e.target.value })
+              }
+              className="flex-1 min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowMoldSizeDialog(false)}
+            >
+              {t("cancel_button")}
+            </Button>
+            <Button onClick={handleSaveMoldSize}>{t("add_button")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

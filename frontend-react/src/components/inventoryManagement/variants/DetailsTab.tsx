@@ -1,8 +1,11 @@
 // components/ProductDetail/DetailsTab.tsx
 import { useState } from "react";
 import { Button, Input } from "@/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui";
 import { Plus, Minus, Tag, Zap } from "lucide-react";
 import {
   AlertDialog,
@@ -15,6 +18,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import React from "react";
+import { cn } from "@/lib/utils";
 
 interface VariantDetails {
   tags: string[];
@@ -30,7 +34,7 @@ interface DetailsTabProps {
   onDetailChange: (field: keyof VariantDetails, value: string) => void;
   onAddTag: () => void;
   onRemoveTag: (tag: string) => void;
-  onSaveDetails: () => void;
+  isEditing: boolean;
 }
 
 export default function DetailsTab({
@@ -38,10 +42,8 @@ export default function DetailsTab({
   onDetailChange,
   onAddTag,
   onRemoveTag,
-  onSaveDetails,
+  isEditing,
 }: DetailsTabProps) {
-  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
-
   return (
     <div className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 ">
@@ -65,6 +67,7 @@ export default function DetailsTab({
                       size="icon"
                       className="h-4 w-4 ml-1"
                       onClick={() => onRemoveTag(tag)}
+                      disabled={!isEditing}
                     >
                       <Minus className="h-3 w-3" />
                     </Button>
@@ -76,6 +79,7 @@ export default function DetailsTab({
                 size="sm"
                 className="w-full rounded-lg"
                 onClick={onAddTag}
+                disabled={!isEditing}
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Tag hinzufügen
@@ -92,13 +96,16 @@ export default function DetailsTab({
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Status</span>
-                <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <Badge
+                  variant={"default"}
+                  className={cn("text-xs", "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-900/50")}
+                >
                   Aktiv
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Sichtbarkeit</span>
-                <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                <Badge variant="secondary">
                   Öffentlich
                 </Badge>
               </div>
@@ -119,9 +126,14 @@ export default function DetailsTab({
             <CardTitle className="text-sm font-medium">Preise</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <select className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
-              <option>DE - 19% Germany</option>
-            </select>
+            <Select defaultValue="de" disabled={!isEditing}>
+              <SelectTrigger className="w-full p-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 mb-3">
+                <SelectValue placeholder="Select Tax..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="de">DE - 19% Germany</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Laden</span>
@@ -149,10 +161,11 @@ export default function DetailsTab({
           <CardTitle className="text-sm font-medium">Preisänderungen</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
-          <textarea
+          <Textarea
             value={variantDetails.priceChanges}
             onChange={(e) => onDetailChange("priceChanges", e.target.value)}
             className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-3 h-24 resize-none bg-slate-50 dark:bg-slate-800"
+            disabled={!isEditing}
           />
         </CardContent>
       </Card>
@@ -174,6 +187,7 @@ export default function DetailsTab({
                   value={variantDetails.malgruppe}
                   onChange={(e) => onDetailChange("malgruppe", e.target.value)}
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -188,6 +202,7 @@ export default function DetailsTab({
                     onDetailChange("malkostenEur", e.target.value)
                   }
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
                 <Input
                   value={variantDetails.malkostenCzk}
@@ -195,6 +210,7 @@ export default function DetailsTab({
                     onDetailChange("malkostenCzk", e.target.value)
                   }
                   className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -209,43 +225,13 @@ export default function DetailsTab({
                     onDetailChange("selbstkosten", e.target.value)
                   }
                   className="w-full md:w-1/3 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                  disabled={!isEditing}
                 />
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="mt-6 flex justify-end">
-        <AlertDialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <Button 
-              variant="primary" 
-              size="sm" 
-              className="w-full"
-              type="button"
-              onClick={() => {
-                console.log("Saving variant details:", variantDetails);
-                onSaveDetails();
-              }}
-            >
-              <Zap className="h-3.5 w-3.5 mr-1" />
-              Speichern
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Details gespeichert</AlertDialogTitle>
-              <AlertDialogDescription>
-                Die Variantendetails wurden erfolgreich gespeichert.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Schließen</AlertDialogCancel>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
     </div>
   );
 }

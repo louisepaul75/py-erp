@@ -79,33 +79,33 @@ export const componentStyles = {
 
   // Input styles
   input: {
-    default: 'flex h-10 w-auto rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-    withIcon: 'flex h-10 w-auto rounded-md border border-gray-200 bg-white pl-8 pr-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-    error: 'border-red-500 focus-visible:ring-red-500',
+    default: 'flex h-10 w-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+    withIcon: 'flex h-10 w-auto rounded-md border border-input bg-background pl-8 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+    error: 'border-destructive focus-visible:ring-destructive',
     label: 'text-sm font-medium block',
     container: 'space-y-2',
-    errorText: 'text-xs text-red-500 mt-1'
+    errorText: 'text-xs text-destructive mt-1'
   },
 
   // Table styles
   table: {
     container: 'w-full border-collapse',
-    header: 'bg-gray-50 border-b border-gray-200 dark:bg-gray-800/50 dark:border-gray-700',
-    headerCell: 'h-12 px-4 text-left align-middle font-medium text-gray-500 [&:has([role=checkbox])]:pr-0 dark:text-gray-100',
-    headerText: 'text-gray-700 font-medium dark:text-gray-100',
-    row: 'border-b border-gray-200 transition-colors hover:bg-gray-50/50 dark:border-gray-700 dark:hover:bg-gray-800/50',
+    header: 'bg-muted border-b border-border',
+    headerCell: 'h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
+    headerText: 'font-medium text-foreground',
+    row: 'border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
     cell: 'p-4 align-middle [&:has([role=checkbox])]:pr-0',
-    footer: 'bg-gray-50 border-t border-gray-200 dark:bg-gray-800/50 dark:border-gray-700',
-    border: 'border-gray-200 dark:border-gray-700'
+    footer: 'bg-muted border-t border-border',
+    border: 'border-border'
   },
 
   // Status badge styles
   statusBadge: {
     base: 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-    active: 'bg-green-100 text-green-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-    inactive: 'bg-gray-100 text-gray-800',
-    error: 'bg-red-100 text-red-800'
+    active: 'bg-success text-success-foreground',
+    pending: 'bg-warning text-warning-foreground',
+    inactive: 'bg-muted text-muted-foreground',
+    error: 'bg-destructive text-destructive-foreground'
   },
 
   // Filter styles

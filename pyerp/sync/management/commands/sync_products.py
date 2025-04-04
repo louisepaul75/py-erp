@@ -4,9 +4,12 @@ import logging
 import yaml
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict, NamedTuple
+from typing import Any, Dict, NamedTuple, List, Optional
+import os
+import json
 
-from django.core.management.base import BaseCommand
+from django.core.management import call_command
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from pyerp.sync.models import SyncMapping
@@ -89,6 +92,11 @@ class Command(BaseCommand):
             help="Update records even if not modified",
         )
         parser.add_argument(
+            "--top",
+            type=int,
+            help="Only process the first N records",
+        )
+        parser.add_argument(
             "--debug",
             action="store_true",
             help="Enable debug output",
@@ -99,6 +107,11 @@ class Command(BaseCommand):
             dest="fail_on_filter_error",
             default=True,
             help="Don't fail if date filter doesn't work (default: fail)",
+        )
+        parser.add_argument(
+            "--clear-cache",
+            action="store_true",
+            help="Clear extractor cache before running",
         )
 
     def handle(self, *args, **options):
@@ -111,214 +124,73 @@ class Command(BaseCommand):
         start_time = timezone.now()
 
         try:
-            # Load configuration
-            config_path = (
-                Path(__file__).resolve().parent.parent.parent
-                / "config"
-                / "products_sync.yaml"
-            )
-            self.stdout.write(f"Loading config from: {config_path}")
+            # Convert query_params to JSON string for filters argument
+            filters_json = json.dumps(options) if options else None
 
-            with open(config_path) as f:
-                config = yaml.safe_load(f)
-
-            # Set up query parameters
-            query_params = {}
-
-            # Filter by days if specified
-            if options["days"]:
-                days_ago = timezone.now() - timedelta(days=options["days"])
-                query_params["modified_date"] = {"gt": days_ago.strftime("%Y-%m-%d")}
-                days = options["days"]
-                msg = f"Filtering records modified in the last {days} days"
-                self.stdout.write(msg)
-
-            # Filter by SKU if specified
-            if options["sku"]:
-                query_params["Nummer"] = options["sku"]
-                self.stdout.write(f"Filtering by SKU: {options['sku']}")
-
-            # Set batch size
-            batch_size = options["batch_size"]
-            self.stdout.write(f"Using batch size: {batch_size}")
-
-            # Get fail_on_filter_error option
-            fail_on_filter_error = options["fail_on_filter_error"]
-            if not fail_on_filter_error:
-                self.stdout.write(
-                    self.style.WARNING(
-                        "Filter errors will be ignored (non-default behavior)"
-                    )
-                )
-            else:
-                self.stdout.write("Will fail if filter doesn't work (default behavior)")
+            parent_sync_successful = True
+            variant_sync_successful = True
 
             # Sync parent products if not skipped
             if not options["skip_parents"]:
                 self.stdout.write(
-                    self.style.NOTICE("\n=== Starting Parent Product Sync ===")
+                    self.style.NOTICE("\n=== Running Parent Product Sync via run_sync ===")
                 )
-                parent_result = self._sync_parents(
-                    config,
-                    batch_size,
-                    query_params,
-                    options["force_update"],
-                    fail_on_filter_error,
-                )
-
-                # Print parent sync results
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"\nParent product sync completed:"
-                        f"\n- Created: {parent_result.created}"
-                        f"\n- Updated: {parent_result.updated}"
-                        f"\n- Skipped: {parent_result.skipped}"
-                        f"\n- Errors: {parent_result.errors}"
+                try:
+                    call_command(
+                        "run_sync",
+                        entity_type="parent_product",
+                        source="products_sync",
+                        target="products.ParentProduct",
+                        full=options["force_update"],
+                        batch_size=options["batch_size"],
+                        filters=filters_json,
+                        debug=options["debug"],
+                        fail_on_filter_error=options["fail_on_filter_error"],
+                        clear_cache=options["clear_cache"],
                     )
-                )
-
-                if parent_result.error_details:
-                    self.stdout.write(
-                        self.style.WARNING("\nParent product sync errors:")
-                    )
-                    for error in parent_result.error_details:
-                        # Check if error_message exists, otherwise use a default message
-                        error_msg = error.get("error_message", "Unknown error")
-                        self.stdout.write(f"- {error_msg}")
+                    self.stdout.write(self.style.SUCCESS("Parent product sync finished."))
+                except Exception as e:
+                    parent_sync_successful = False
+                    self.stderr.write(self.style.ERROR(f"Parent product sync failed via run_sync: {e}"))
 
             # Sync variants if not skipped
             if not options["skip_variants"]:
-                header = "\n=== Starting Variant Product Sync ==="
-                self.stdout.write(self.style.NOTICE(header))
-                variant_result = self._sync_variants(
-                    config,
-                    batch_size,
-                    query_params,
-                    options["force_update"],
-                    fail_on_filter_error,
-                )
-
-                # Print variant sync results
                 self.stdout.write(
-                    self.style.SUCCESS(
-                        f"\nVariant product sync completed:"
-                        f"\n- Created: {variant_result.created}"
-                        f"\n- Updated: {variant_result.updated}"
-                        f"\n- Skipped: {variant_result.skipped}"
-                        f"\n- Errors: {variant_result.errors}"
-                    )
+                    self.style.NOTICE("\n=== Running Variant Product Sync via run_sync ===")
                 )
-
-                if variant_result.error_details:
-                    self.stdout.write(
-                        self.style.WARNING("\nVariant product sync errors:")
+                try:
+                    call_command(
+                        "run_sync",
+                        entity_type="product_variant",
+                        source="products_sync_variants",
+                        target="products.VariantProduct",
+                        full=options["force_update"],
+                        batch_size=options["batch_size"],
+                        filters=filters_json,
+                        debug=options["debug"],
+                        fail_on_filter_error=options["fail_on_filter_error"],
+                        clear_cache=False if not options["skip_parents"] and options["clear_cache"] else options["clear_cache"],
                     )
-                    for error in variant_result.error_details:
-                        # Check if error_message exists, otherwise use a default message
-                        error_msg = error.get("error_message", "Unknown error")
-                        self.stdout.write(f"- {error_msg}")
+                    self.stdout.write(self.style.SUCCESS("Variant product sync finished."))
+                except Exception as e:
+                    variant_sync_successful = False
+                    self.stderr.write(self.style.ERROR(f"Variant product sync failed via run_sync: {e}"))
 
             # Print total duration
             end_time = timezone.now()
             duration = (end_time - start_time).total_seconds()
             self.stdout.write(
-                self.style.SUCCESS(f"\nTotal sync duration: {duration:.2f} seconds")
+                self.style.SUCCESS(
+                    f"\nProduct sync command finished in: {duration:.2f} seconds"
+                )
             )
 
+            # Report overall status based on individual runs
+            if parent_sync_successful and variant_sync_successful:
+                self.stdout.write(self.style.SUCCESS("All product sync steps completed successfully."))
+            else:
+                raise CommandError("One or more product sync steps failed.")
+
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"\nSync failed: {e}"))
+            self.stderr.write(self.style.ERROR(f"\nProduct sync command failed: {e}"))
             raise
-
-    def _sync_parents(
-        self,
-        config: Dict[str, Any],
-        batch_size: int,
-        query_params: Dict[str, Any],
-        force_update: bool,
-        fail_on_filter_error: bool = False,
-    ) -> LoadResult:
-        """Run parent product sync pipeline.
-
-        Args:
-            config: Configuration dictionary
-            batch_size: Number of records per batch
-            query_params: Query parameters for filtering
-            force_update: Whether to update unmodified records
-            fail_on_filter_error: Whether to fail if filter doesn't work
-
-        Returns:
-            LoadResult containing sync statistics
-        """
-        # Get mapping for parent products
-        mapping = SyncMapping.objects.get(
-            entity_type="parent_product",
-            active=True,
-            source__name="products_sync",
-            target__name="products.ParentProduct",
-        )
-
-        # Create pipeline using factory
-        pipeline = PipelineFactory.create_pipeline(mapping)
-
-        # Run pipeline
-        sync_log = pipeline.run(
-            incremental=not force_update,
-            batch_size=batch_size,
-            query_params=query_params,
-            fail_on_filter_error=fail_on_filter_error,
-        )
-
-        return LoadResult(
-            created=sync_log.records_succeeded,
-            updated=0,  # Not tracked separately in new system
-            skipped=sync_log.records_processed - sync_log.records_succeeded,
-            errors=sync_log.records_failed,
-            error_details=list(sync_log.details.filter(status="failed").values()),
-        )
-
-    def _sync_variants(
-        self,
-        config: Dict[str, Any],
-        batch_size: int,
-        query_params: Dict[str, Any],
-        force_update: bool,
-        fail_on_filter_error: bool = False,
-    ) -> LoadResult:
-        """Run variant product sync pipeline.
-
-        Args:
-            config: Configuration dictionary
-            batch_size: Number of records per batch
-            query_params: Query parameters for filtering
-            force_update: Whether to update unmodified records
-            fail_on_filter_error: Whether to fail if filter doesn't work
-
-        Returns:
-            LoadResult containing sync statistics
-        """
-        # Get mapping for variant products
-        mapping = SyncMapping.objects.get(
-            entity_type="product_variant",
-            active=True,
-            source__name="products_sync_variants",
-            target__name="products.VariantProduct",
-        )
-
-        # Create pipeline using factory
-        pipeline = PipelineFactory.create_pipeline(mapping)
-
-        # Run pipeline
-        sync_log = pipeline.run(
-            incremental=not force_update,
-            batch_size=batch_size,
-            query_params=query_params,
-            fail_on_filter_error=fail_on_filter_error,
-        )
-
-        return LoadResult(
-            created=sync_log.records_succeeded,
-            updated=0,  # Not tracked separately in new system
-            skipped=sync_log.records_processed - sync_log.records_succeeded,
-            errors=sync_log.records_failed,
-            error_details=list(sync_log.details.filter(status="failed").values()),
-        )

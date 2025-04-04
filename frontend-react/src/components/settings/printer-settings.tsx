@@ -105,9 +105,9 @@ export default function PrinterSettings() {
       <div className="border rounded-md overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">Drucker Name / Ort</TableHead>
-              <TableHead className="font-medium text-slate-700 dark:text-slate-300">IP-Adresse</TableHead>
+            <TableRow className="bg-muted/50 hover:bg-muted">
+              <TableHead className="font-medium text-muted-foreground">Drucker Name / Ort</TableHead>
+              <TableHead className="font-medium text-muted-foreground">IP-Adresse</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -116,7 +116,7 @@ export default function PrinterSettings() {
                 <TableRow
                   key={printer.id}
                   data-state={selectedPrinterId === printer.id ? "selected" : undefined}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer"
+                  className="hover:bg-muted/50 cursor-pointer"
                   onClick={() => handleSelectPrinter(printer)}
                 >
                   <TableCell className="text-sm">{printer.name}</TableCell>
@@ -135,7 +135,7 @@ export default function PrinterSettings() {
       </div>
 
       {(isAddingNew || selectedPrinterId) && (
-        <div className="border rounded-md p-4 space-y-4 bg-slate-50 dark:bg-slate-800/50">
+        <div className="border rounded-md p-4 space-y-4 bg-muted/50">
           <h3 className="font-medium">{isAddingNew ? "Neuen Drucker hinzufügen" : "Drucker bearbeiten"}</h3>
 
           <div className="space-y-2">
@@ -145,7 +145,7 @@ export default function PrinterSettings() {
               value={newPrinterName}
               onChange={(e) => setNewPrinterName(e.target.value)}
               placeholder="z.B. Lager01-Diessen"
-              className={error && !newPrinterName ? "border-red-500" : ""}
+              className={error && !newPrinterName ? "border-destructive" : ""}
             />
           </div>
 
@@ -156,11 +156,11 @@ export default function PrinterSettings() {
               value={newPrinterIp}
               onChange={(e) => setNewPrinterIp(e.target.value)}
               placeholder="z.B. 192.168.1.100"
-              className={error && !newPrinterIp ? "border-red-500" : ""}
+              className={error && !newPrinterIp ? "border-destructive" : ""}
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleCancel}>

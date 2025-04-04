@@ -9,7 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { generateLANumber } from "@/lib/warehouse-service"
 // Update the import to use the types file
 import type { WarehouseLocation } from "@/types/warehouse-types"
@@ -80,7 +86,7 @@ export default function NewWarehouseLocationModal({
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-md translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none">
           <div className="flex items-center justify-between p-4 border-b">
             <Dialog.Title className="text-xl font-semibold">Neuen Lagerort anlegen</Dialog.Title>
             <Dialog.Close asChild>
@@ -96,11 +102,19 @@ export default function NewWarehouseLocationModal({
               <Select
                 value={location}
                 onValueChange={setLocation}
-                placeholder="Ort/Gebäude auswählen"
-                options={LOCATIONS}
-                error={errors.location}
-              />
-              {errors.location && <p className="text-red-500 text-sm">{errors.location}</p>}
+              >
+                <SelectTrigger className={errors.location ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Ort/Gebäude auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOCATIONS.map((loc) => (
+                    <SelectItem key={loc.value} value={loc.value}>
+                      {loc.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.location && <p className="text-destructive text-sm">{errors.location}</p>}
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -112,9 +126,9 @@ export default function NewWarehouseLocationModal({
                   min="1"
                   value={shelf}
                   onChange={(e) => setShelf(e.target.value)}
-                  className={errors.shelf ? "border-red-500" : ""}
+                  className={errors.shelf ? "border-destructive" : ""}
                 />
-                {errors.shelf && <p className="text-red-500 text-sm">{errors.shelf}</p>}
+                {errors.shelf && <p className="text-destructive text-sm">{errors.shelf}</p>}
               </div>
 
               <div className="space-y-2">
@@ -125,9 +139,9 @@ export default function NewWarehouseLocationModal({
                   min="1"
                   value={compartment}
                   onChange={(e) => setCompartment(e.target.value)}
-                  className={errors.compartment ? "border-red-500" : ""}
+                  className={errors.compartment ? "border-destructive" : ""}
                 />
-                {errors.compartment && <p className="text-red-500 text-sm">{errors.compartment}</p>}
+                {errors.compartment && <p className="text-destructive text-sm">{errors.compartment}</p>}
               </div>
 
               <div className="space-y-2">
@@ -138,9 +152,9 @@ export default function NewWarehouseLocationModal({
                   min="1"
                   value={floor}
                   onChange={(e) => setFloor(e.target.value)}
-                  className={errors.floor ? "border-red-500" : ""}
+                  className={errors.floor ? "border-destructive" : ""}
                 />
-                {errors.floor && <p className="text-red-500 text-sm">{errors.floor}</p>}
+                {errors.floor && <p className="text-destructive text-sm">{errors.floor}</p>}
               </div>
             </div>
 

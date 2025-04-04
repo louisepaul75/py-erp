@@ -138,7 +138,7 @@ export default function ContainerTypeDialog({ isOpen, onClose, containerType, is
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-3xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-white p-0 shadow-lg focus:outline-none overflow-y-auto">
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 max-h-[85vh] w-[90vw] max-w-3xl translate-x-[-50%] translate-y-[-50%] rounded-lg bg-popover p-0 shadow-lg focus:outline-none overflow-y-auto">
           <div className="flex items-center justify-between p-4 border-b">
             <Dialog.Title className="text-xl font-semibold">
               {isCreating ? "Neuen Schüttentyp erstellen" : "Schüttentyp bearbeiten"}
@@ -159,9 +159,9 @@ export default function ContainerTypeDialog({ isOpen, onClose, containerType, is
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className={errors.name ? "border-red-500" : ""}
+                  className={errors.name ? "border-destructive" : ""}
                 />
-                {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+                {errors.name && <p className="text-destructive text-sm">{errors.name}</p>}
               </div>
 
               <div className="space-y-2">
@@ -171,9 +171,9 @@ export default function ContainerTypeDialog({ isOpen, onClose, containerType, is
                   name="manufacturer"
                   value={formData.manufacturer}
                   onChange={handleChange}
-                  className={errors.manufacturer ? "border-red-500" : ""}
+                  className={errors.manufacturer ? "border-destructive" : ""}
                 />
-                {errors.manufacturer && <p className="text-red-500 text-sm">{errors.manufacturer}</p>}
+                {errors.manufacturer && <p className="text-destructive text-sm">{errors.manufacturer}</p>}
               </div>
 
               <div className="space-y-2">
@@ -183,9 +183,9 @@ export default function ContainerTypeDialog({ isOpen, onClose, containerType, is
                   name="articleNumber"
                   value={formData.articleNumber}
                   onChange={handleChange}
-                  className={errors.articleNumber ? "border-red-500" : ""}
+                  className={errors.articleNumber ? "border-destructive" : ""}
                 />
-                {errors.articleNumber && <p className="text-red-500 text-sm">{errors.articleNumber}</p>}
+                {errors.articleNumber && <p className="text-destructive text-sm">{errors.articleNumber}</p>}
               </div>
 
               <div className="space-y-2">

@@ -22,6 +22,7 @@ import {
   BarChart3,
   Settings,
   Users,
+  LayoutPanelLeft,
 } from "lucide-react"
 import { Responsive as ResponsiveGridLayout, Layout } from "react-grid-layout"
 import "react-grid-layout/css/styles.css"
@@ -30,6 +31,21 @@ import "react-resizable/css/styles.css"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
+import { DashboardSidebar, SavedLayout } from "./dashboard-sidebar"
+import { LayoutEditorSidebar } from "./layout-editor-sidebar"
+import { 
+  fetchDashboardConfig, 
+  saveGridLayout, 
+  saveNewLayout, 
+  updateLayout, 
+  deleteLayout, 
+  activateLayout,
+  GridLayouts 
+} from "@/lib/dashboard-service"
+import { v4 as uuidv4 } from "uuid"
+import { toast } from "@/components/ui/use-toast"
+import dynamic from "next/dynamic"
+import { Spinner } from "@/components/ui/spinner"
 
 // Define types for menu tiles
 interface MenuTile {
@@ -75,6 +91,9 @@ interface Layouts {
   [key: string]: CustomLayout[];
 }
 
+// Define known widget types (replace with dynamic list from API/registry if possible)
+const KNOWN_WIDGET_TYPES = ["menu-tiles", "quick-links", "news-pinboard", "sales-analysis"];
+
 // Dashboard widget component
 const DashboardWidget = ({
   id,
@@ -112,7 +131,7 @@ const DashboardWidget = ({
         
         {title && (
           <div className={isEditMode ? "draggable-handle" : ""}>
-            <h2 className="text-xl font-bold tracking-tight mb-2 pr-8">{title}</h2>
+            <h2 className="text-xl font-bold tracking-tight mb-2 pr-8 text-primary">{title}</h2>
           </div>
         )}
         <div className="flex-1 overflow-auto">
@@ -132,18 +151,7 @@ const Dashboard = () => {
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>([])
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [layouts, setLayouts] = useState<Layouts>(() => {
-    // Try to load saved layout from localStorage
-    if (typeof window !== 'undefined') {
-      const savedLayout = localStorage.getItem('dashboard-layout')
-      if (savedLayout) {
-        try {
-          return JSON.parse(savedLayout)
-        } catch (e) {
-          console.error('Failed to parse saved layout:', e)
-        }
-      }
-    }
-    // Default layout if no saved layout exists
+    // Default layout just as a fallback - the real layout will be loaded from API
     return {
       lg: [
         {
@@ -228,6 +236,10 @@ const Dashboard = () => {
       ]
     }
   })
+  const [savedLayouts, setSavedLayouts] = useState<SavedLayout[]>([])
+  const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null); // Add state for selected widget
 
   const [menuTiles, setMenuTiles] = useState<MenuTile[]>([
     { id: "customers", name: "Kunden", icon: Users, iconName: "Users", favorited: false },
@@ -285,47 +297,76 @@ const Dashboard = () => {
 
   // Effect to load data
   useEffect(() => {
-    // Simulate loading data
+    // Load data function
     const loadData = async () => {
       try {
-        // In a real app, you would fetch data from an API here
+        setIsLoading(true);
+        
+        // Load dashboard configuration from API
+        try {
+          const dashboardConfig = await fetchDashboardConfig();
+          
+          if (dashboardConfig.grid_layout && Object.keys(dashboardConfig.grid_layout).length > 0) {
+            setLayouts(dashboardConfig.grid_layout);
+          }
+          
+          if (dashboardConfig.saved_layouts && dashboardConfig.saved_layouts.length > 0) {
+            // Convert API format to the format needed by the sidebar
+            const formattedLayouts = dashboardConfig.saved_layouts.map(layout => ({
+              id: layout.id,
+              name: layout.name,
+              layouts: layout.grid_layout,
+              isActive: layout.id === dashboardConfig.active_layout_id
+            }));
+            setSavedLayouts(formattedLayouts);
+          }
+          
+          setActiveLayoutId(dashboardConfig.active_layout_id);
+        } catch (apiError) {
+          console.error("Failed to load dashboard configuration from API:", apiError);
+          // Continue with the current layout - no need to show error to user
+          // The dashboard will just use the default layout
+        }
+        
+        // Load sample data and favorites
         setTimeout(() => {
-          setRecentOrders(recentOrdersData)
-          setQuickLinks(quickLinksData)
-          setNewsItems(newsItemsData)
+          setRecentOrders(recentOrdersData);
+          setQuickLinks(quickLinksData);
+          setNewsItems(newsItemsData);
           
           // Load favorites from localStorage
           if (typeof window !== 'undefined') {
-            const savedFavorites = localStorage.getItem('dashboard-favorites')
+            const savedFavorites = localStorage.getItem('dashboard-favorites');
             if (savedFavorites) {
               try {
-                const favoritesData = JSON.parse(savedFavorites)
+                const favoritesData = JSON.parse(savedFavorites);
                 // Map the icon names back to components
                 const fullTiles = menuTiles.map(tile => {
                   // Find matching saved tile (if any)
-                  const savedTile = favoritesData.find((item: any) => item.id === tile.id)
+                  const savedTile = favoritesData.find((item: any) => item.id === tile.id);
                   return savedTile ? { 
                     ...tile, 
                     favorited: savedTile.favorited 
-                  } : tile
-                })
-                setMenuTiles(fullTiles)
+                  } : tile;
+                });
+                setMenuTiles(fullTiles);
               } catch (error) {
-                console.error('Failed to parse favorites data:', error)
+                console.error('Failed to parse favorites data:', error);
               }
             }
           }
           
-          setIsLoading(false)
-        }, 1000)
+          setIsLoading(false);
+        }, 1000);
       } catch (err) {
-        setError("Failed to load dashboard data")
-        setIsLoading(false)
+        console.error("Dashboard data loading error:", err);
+        setError("Failed to load dashboard data. Please try refreshing the page.");
+        setIsLoading(false);
       }
-    }
+    };
 
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   // Update width on window resize
   useEffect(() => {
@@ -340,33 +381,274 @@ const Dashboard = () => {
 
   // Function to toggle edit mode
   const toggleEditMode = () => {
-    setIsEditMode(!isEditMode)
+    const enteringEditMode = !isEditMode;
+    setIsEditMode(enteringEditMode);
+    // Clear selection when exiting edit mode
+    if (!enteringEditMode) {
+      setSelectedWidgetId(null);
+    }
   }
 
   // Function to save layout changes
-  const saveLayout = () => {
-    // Save the current layout to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dashboard-layout', JSON.stringify(layouts))
+  const saveLayout = async () => {
+    try {
+      // If we have an active layout, update it
+      if (activeLayoutId) {
+        const layoutToUpdate = savedLayouts.find(layout => layout.id === activeLayoutId)
+        if (layoutToUpdate) {
+          const result = await updateLayout(activeLayoutId, layoutToUpdate.name, layouts as GridLayouts)
+          // Preserve existing layouts if none are returned
+          setSavedLayouts(prevLayouts => {
+            const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+            return resultLayouts.length > 0 
+              ? resultLayouts.map(layout => ({
+                  id: layout.id,
+                  name: layout.name,
+                  layouts: layout.grid_layout,
+                  isActive: layout.id === result.active_layout_id
+                }))
+              : prevLayouts.map(layout => ({
+                  ...layout,
+                  layouts: layout.id === activeLayoutId ? layouts : layout.layouts,
+                  isActive: layout.id === activeLayoutId
+                }));
+          });
+          toast({
+            title: "Layout updated",
+            description: `"${layoutToUpdate.name}" has been updated`,
+            duration: 3000,
+          })
+        }
+      } else {
+        // Otherwise just save the current layout to the database
+        await saveGridLayout(layouts as GridLayouts)
+        toast({
+          title: "Layout saved",
+          description: "Dashboard layout has been saved",
+          duration: 3000,
+        })
+      }
+      setIsEditMode(false)
+    } catch (error) {
+      console.error("Error saving layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
     }
-    setIsEditMode(false)
   }
 
-  // Function to remove a widget
-  const handleRemoveWidget = (id: string) => {
-    // Remove the widget from all layouts
-    const newLayouts = { ...layouts }
-    
-    Object.keys(newLayouts).forEach((breakpoint) => {
-      newLayouts[breakpoint] = newLayouts[breakpoint].filter((item) => item.i !== id)
-    })
-    
-    setLayouts(newLayouts)
-    // Save to localStorage after removing widget
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dashboard-layout', JSON.stringify(newLayouts))
+  // Function to save a new named layout
+  const handleSaveNewLayout = async (name: string) => {
+    try {
+      const result = await saveNewLayout(name, layouts as GridLayouts)
+      // Add safeguard to ensure saved_layouts is an array and preserve existing layouts
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        if (resultLayouts.length > 0) {
+          return resultLayouts.map(layout => ({
+            id: layout.id,
+            name: layout.name,
+            layouts: layout.grid_layout,
+            isActive: layout.id === result.active_layout_id
+          }));
+        } else {
+          // If no layouts returned, create a new one with generated ID and add to existing
+          const newLayoutId = result.active_layout_id || `layout-${Date.now()}`;
+          const newLayout = {
+            id: newLayoutId,
+            name: name,
+            layouts: layouts,
+            isActive: true
+          };
+          return [...prevLayouts.map(l => ({...l, isActive: false})), newLayout];
+        }
+      });
+      
+      setActiveLayoutId(result.active_layout_id || null)
+      toast({
+        title: "New layout saved",
+        description: `"${name}" has been created and activated`,
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error saving new layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save new layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
     }
   }
+
+  // Function to update an existing layout
+  const handleUpdateLayout = async (layout: SavedLayout) => {
+    try {
+      const result = await updateLayout(layout.id, layout.name, layout.layouts as GridLayouts)
+      // Preserve existing layouts if none are returned
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        return resultLayouts.length > 0 
+          ? resultLayouts.map(layout => ({
+              id: layout.id,
+              name: layout.name,
+              layouts: layout.grid_layout,
+              isActive: layout.id === result.active_layout_id
+            }))
+          : prevLayouts.map(l => ({
+              ...l,
+              name: l.id === layout.id ? layout.name : l.name,
+              layouts: l.id === layout.id ? layout.layouts : l.layouts
+            }));
+      });
+      toast({
+        title: "Layout updated",
+        description: `"${layout.name}" has been updated`,
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error updating layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  // Function to delete a layout
+  const handleDeleteLayout = async (layoutId: string) => {
+    try {
+      const result = await deleteLayout(layoutId)
+      // Preserve existing layouts if none are returned, but remove the deleted one
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        if (resultLayouts.length > 0) {
+          return resultLayouts.map(layout => ({
+            id: layout.id,
+            name: layout.name,
+            layouts: layout.grid_layout,
+            isActive: layout.id === result.active_layout_id
+          }));
+        } else {
+          // Filter out the deleted layout
+          return prevLayouts.filter(layout => layout.id !== layoutId);
+        }
+      });
+      
+      // Update active layout ID
+      setActiveLayoutId(result.active_layout_id || savedLayouts.find(l => l.id !== layoutId)?.id || null)
+      
+      // If the active layout was deleted, update the layouts state
+      if (result.grid_layout && Object.keys(result.grid_layout).length > 0) {
+        setLayouts(result.grid_layout)
+      }
+      
+      toast({
+        title: "Layout deleted",
+        description: "The layout has been deleted",
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error deleting layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  // Function to select a layout
+  const handleLayoutSelect = async (layoutId: string) => {
+    try {
+      const result = await activateLayout(layoutId)
+      // Preserve existing layouts if none are returned
+      setSavedLayouts(prevLayouts => {
+        const resultLayouts = Array.isArray(result.saved_layouts) ? result.saved_layouts : [];
+        return resultLayouts.length > 0 
+          ? resultLayouts.map(layout => ({
+              id: layout.id,
+              name: layout.name,
+              layouts: layout.grid_layout,
+              isActive: layout.id === result.active_layout_id
+            }))
+          : prevLayouts.map(layout => ({
+              ...layout,
+              isActive: layout.id === layoutId
+            }));
+      });
+      
+      setActiveLayoutId(result.active_layout_id || layoutId)
+      
+      if (result.grid_layout && Object.keys(result.grid_layout).length > 0) {
+        setLayouts(result.grid_layout)
+      }
+      
+      toast({
+        title: "Layout activated",
+        description: "The selected layout has been activated",
+        duration: 3000,
+      })
+    } catch (error) {
+      console.error("Error selecting layout:", error)
+      toast({
+        title: "Error",
+        description: "Failed to activate layout. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  // Function to remove a widget (now uses selectedWidgetId)
+  const handleRemoveSelectedWidget = () => {
+    if (!selectedWidgetId) return;
+    
+    // Remove the widget from all layouts
+    const newLayouts = { ...layouts }
+    Object.keys(newLayouts).forEach((breakpoint) => {
+      newLayouts[breakpoint] = newLayouts[breakpoint].filter((item) => item.i !== selectedWidgetId)
+    })
+    setLayouts(newLayouts)
+    setSelectedWidgetId(null); // Clear selection after removal
+    toast({ title: "Widget Removed", description: `Widget ${selectedWidgetId} removed from layout.`, duration: 2000 })
+  }
+
+  // Function to add a new widget (basic implementation)
+  const handleAddWidget = (widgetType: string) => {
+    const newWidgetId = `${widgetType}-${uuidv4().substring(0, 4)}`; // Simple unique ID
+    const newLayoutItem: CustomLayout = {
+      i: newWidgetId,
+      x: 0, // Position at top-left by default
+      y: 0,
+      w: 12, // Default width (adjust as needed)
+      h: 6,  // Default height (adjust as needed)
+      title: widgetType // Use type as title initially
+    };
+
+    const newLayouts = { ...layouts };
+    Object.keys(newLayouts).forEach((breakpoint) => {
+      // Add to the start of the layout array for this breakpoint
+      newLayouts[breakpoint] = [newLayoutItem, ...newLayouts[breakpoint]];
+    });
+
+    setLayouts(newLayouts);
+    toast({ title: "Widget Added", description: `Added ${widgetType}. You can now move and resize it.`, duration: 3000 });
+  };
+
+  // Function to handle widget selection in the grid (only in edit mode)
+  const handleWidgetSelect = (widgetId: string) => {
+    if (isEditMode) {
+      setSelectedWidgetId(widgetId);
+      console.log("Selected widget:", widgetId); // For debugging
+    }
+  };
 
   // Function to toggle favorite status for menu tiles
   const toggleFavorite = (id: string) => {
@@ -394,13 +676,34 @@ const Dashboard = () => {
     }
   }
 
-  // Handle layout changes
-  const handleLayoutChange = (currentLayout: Layout[], allLayouts: Layouts) => {
-    setLayouts(allLayouts)
-    // Save to localStorage whenever layout changes
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dashboard-layout', JSON.stringify(allLayouts))
-    }
+  // Handle layout changes (now compatible with stop handlers)
+  const handleLayoutChange = (
+    currentLayout: Layout[], 
+    // The second argument from onDragStop/onResizeStop differs from onLayoutChange,
+    // but we only care about the *current* complete layout state after the operation.
+    // So, we can use a trick: fetch the current layout state from the grid's internal state
+    // or simply update our main `layouts` state with the `currentLayout` provided here,
+    // assuming it represents the full state for the current breakpoint after the change.
+    // Let's try updating the main state directly based on the current breakpoint.
+    // Note: This might need refinement if `currentLayout` only contains the changed item.
+    _ignoredArgument?: any // Can be oldItem: Layout or allLayouts: Layouts depending on source
+    ) => {
+      
+    // Determine the current breakpoint
+    const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"; // Need to match RGL breakpoints
+
+    // Create a new layouts object to avoid direct state mutation
+    const newLayouts = { ...layouts };
+
+    // Update the layout for the current breakpoint
+    // We assume currentLayout IS the full layout for the current breakpoint
+    newLayouts[currentBreakpoint] = currentLayout;
+
+    setLayouts(newLayouts);
+    
+    // Log for debugging
+    console.log(`Layout changed for breakpoint: ${currentBreakpoint}`);
+    // console.log(newLayouts);
   }
 
   // Function to get widget title based on id
@@ -413,87 +716,95 @@ const Dashboard = () => {
       return layoutItem.title
     }
     
-    // Default titles if not found in layout
-    switch (id) {
-      case "menu-tiles":
-        return "Menü"
-      case "quick-links":
-        return "Schnellzugriff"
-      case "news-pinboard":
-        return "Pinnwand"
-      default:
-        return null
+    // Default titles if not found in layout, using prefix matching
+    if (id.startsWith("menu-tiles")) {
+      return "Menü"
+    } else if (id.startsWith("quick-links")) {
+      return "Schnellzugriff"
+    } else if (id.startsWith("news-pinboard")) {
+      return "Pinnwand"
+    } else if (id.startsWith("sales-analysis")) {
+      return "Verkaufsanalyse"
+    } else {
+      return null
     }
   }
 
   // Function to render widget content based on id
   const renderWidgetContent = (id: string) => {
-    switch (id) {
-      case "menu-tiles":
-        return (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {menuTiles.map((tile) => {
-              const IconComponent = tile.icon
-              return (
-                <Card 
-                  key={tile.id} 
-                  className="relative group cursor-pointer" 
-                  onClick={() => handleMenuClick(tile.id)}
-                >
-                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleFavorite(tile.id)
-                      }}
-                    >
-                      <Star
-                        className={`h-4 w-4 ${tile.favorited ? "fill-yellow-400 text-yellow-400" : ""}`}
-                      />
-                    </Button>
-                    <div className="mb-2 mt-2 p-2 bg-primary/10 rounded-full">
-                      <IconComponent className="h-6 w-6 text-primary" />
-                    </div>
-                    <span className="text-sm font-medium">{tile.name}</span>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )
-      case "quick-links":
-        return (
-          <div className="space-y-3">
-            {quickLinks.map((link, index) => (
-              <Link key={index} href={link.url}>
-                <Button variant="ghost" className="w-full justify-start text-sm">
-                  {link.name}
-                </Button>
-              </Link>
-            ))}
-          </div>
-        )
-      case "news-pinboard":
-        return (
-          <div className="space-y-4 overflow-auto max-h-full">
-            {newsItems.map((item, index) => (
-              <Card key={index}>
-                <CardHeader className="p-3">
-                  <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
-                  <p className="text-xs text-muted-foreground">{item.date}</p>
-                </CardHeader>
-                <CardContent className="p-3 pt-0">
-                  <p className="text-xs">{item.content}</p>
+    // Check if the id starts with any of our known widget types
+    if (id.startsWith("menu-tiles")) {
+      return (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          {menuTiles.map((tile) => {
+            const IconComponent = tile.icon
+            return (
+              <Card 
+                key={tile.id} 
+                className="relative group cursor-pointer" 
+                onClick={() => handleMenuClick(tile.id)}
+              >
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleFavorite(tile.id)
+                    }}
+                  >
+                    <Star
+                      className={`h-4 w-4 ${tile.favorited ? "fill-yellow-400 text-yellow-400" : ""}`}
+                    />
+                  </Button>
+                  <div className="mb-2 mt-2 p-2 bg-primary/10 rounded-full">
+                    <IconComponent className="h-6 w-6 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">{tile.name}</span>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )
-      default:
-        return <div>Unknown widget: {id}</div>
+            )
+          })}
+        </div>
+      )
+    } else if (id.startsWith("quick-links")) {
+      return (
+        <div className="space-y-3">
+          {quickLinks.map((link, index) => (
+            <Link key={index} href={link.url}>
+              <Button variant="ghost" className="w-full justify-start text-sm text-foreground hover:text-primary">
+                {link.name}
+              </Button>
+            </Link>
+          ))}
+        </div>
+      )
+    } else if (id.startsWith("news-pinboard")) {
+      return (
+        <div className="space-y-4 overflow-auto max-h-full">
+          {newsItems.map((item, index) => (
+            <Card key={index}>
+              <CardHeader className="p-3">
+                <CardTitle className="text-sm font-medium text-primary">{item.title}</CardTitle>
+                <p className="text-xs text-muted-foreground">{item.date}</p>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <p className="text-xs text-foreground">{item.content}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )
+    } else if (id.startsWith("sales-analysis")) {
+      // Import the widget component dynamically to avoid circular dependencies
+      const SalesAnalysisWidget = dynamic(() => import('@/components/widgets/sales-analysis-widget'), {
+        loading: () => <div className="h-full w-full flex items-center justify-center"><Spinner /></div>,
+        ssr: false
+      });
+      return <SalesAnalysisWidget />;
+    } else {
+      return <div>Unknown widget: {id}</div>
     }
   }
 
@@ -554,71 +865,110 @@ const Dashboard = () => {
   // Get current layout based on breakpoints
   const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
   const currentLayouts = layouts
-  const layoutKeys = Array.from(new Set(Object.values(layouts).flatMap(layouts => layouts.map(layout => layout.i))))
+  const layoutKeys = useMemo(() => 
+      Array.from(new Set(Object.values(layouts).flat().map(layout => layout.i)))
+  , [layouts]);
 
   return (
-    <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          {isEditMode ? (
-            <>
-              <Button variant="outline" onClick={toggleEditMode}>
-                <X className="mr-2 h-4 w-4" />
-                Abbrechen
+    <>
+      <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
+        <div className="flex-grow flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsSidebarOpen(true)}
+                className="border-primary text-primary hover:bg-primary/10"
+                disabled={isEditMode}
+              >
+                <LayoutPanelLeft className="mr-2 h-4 w-4" />
+                Layouts
               </Button>
-              <Button onClick={saveLayout}>
-                <Save className="mr-2 h-4 w-4" />
-                Speichern
+
+              <Button
+                variant="outline"
+                onClick={toggleEditMode}
+                className={isEditMode ? "border-destructive text-destructive hover:bg-destructive/10" : "border-primary text-primary hover:bg-primary/10"}
+              >
+                {isEditMode ? (
+                  <>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel Edit
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Layout
+                  </>
+                )}
               </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={toggleEditMode}>
-              <Edit className="mr-2 h-4 w-4" />
-              Layout bearbeiten
-            </Button>
-          )}
+
+              {isEditMode && (
+                <Button
+                  onClick={saveLayout}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Layout
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-grow">
+            <ResponsiveGridLayout
+              className={`layout ${isEditMode ? 'editing' : ''}`}
+              layouts={layouts}
+              breakpoints={gridBreakpoints}
+              cols={gridCols}
+              rowHeight={gridRowHeight}
+              width={width}
+              margin={gridMargin}
+              onDragStop={handleLayoutChange}
+              onResizeStop={handleLayoutChange}
+              draggableHandle=".draggable-handle"
+            >
+              {layoutKeys.map((key) => (
+                <div 
+                  key={key} 
+                  onClickCapture={() => handleWidgetSelect(key)} 
+                  className={`relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border ${selectedWidgetId === key ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
+                >
+                  <DashboardWidget
+                    id={key}
+                    title={getWidgetTitle(key)}
+                    isEditMode={isEditMode}
+                    onRemove={handleRemoveSelectedWidget}
+                  >
+                    {renderWidgetContent(key)}
+                  </DashboardWidget>
+                </div>
+              ))}
+            </ResponsiveGridLayout>
+          </div>
         </div>
+        
+        <DashboardSidebar
+          isOpen={isSidebarOpen && !isEditMode}
+          onClose={() => setIsSidebarOpen(false)}
+          savedLayouts={savedLayouts}
+          activeLayoutId={activeLayoutId}
+          onLayoutSelect={handleLayoutSelect}
+          onSaveNewLayout={handleSaveNewLayout}
+          onUpdateLayout={handleUpdateLayout}
+          onDeleteLayout={handleDeleteLayout}
+        />
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : (
-        <div className="dashboard-grid-container w-full">
-          <ResponsiveGridLayout
-            className="layout"
-            layouts={layouts}
-            breakpoints={gridBreakpoints}
-            cols={gridCols}
-            rowHeight={gridRowHeight}
-            width={width}
-            margin={gridMargin}
-            onLayoutChange={handleLayoutChange}
-            isDraggable={isEditMode}
-            isResizable={isEditMode}
-            draggableHandle=".draggable-handle"
-            compactType="vertical"
-            useCSSTransforms={true}
-            preventCollision={false}
-          >
-            {layoutKeys.map((key) => (
-              <div key={key} className="relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border">
-                <DashboardWidget
-                  id={key}
-                  title={getWidgetTitle(key)}
-                  isEditMode={isEditMode}
-                  onRemove={isEditMode ? handleRemoveWidget : undefined}
-                >
-                  {renderWidgetContent(key)}
-                </DashboardWidget>
-              </div>
-            ))}
-          </ResponsiveGridLayout>
-        </div>
-      )}
-    </div>
+      <LayoutEditorSidebar 
+        isVisible={isEditMode}
+        availableWidgets={KNOWN_WIDGET_TYPES}
+        selectedWidgetId={selectedWidgetId}
+        onAddWidget={handleAddWidget}
+        onRemoveSelectedWidget={handleRemoveSelectedWidget}
+      />
+    </>
   )
 }
 

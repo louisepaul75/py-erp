@@ -74,7 +74,7 @@ LOCAL_APPS = [
     "pyerp.business_modules.production",
     "pyerp.monitoring",
     "pyerp.sync",
-    "pyerp.external_api",
+    "pyerp.external_api.apps.ExternalApiConfig",
     "admin_tools",  # Admin tools app for database table view
     "pyerp.business_modules.business",  # Business management (HR, finance, etc.)
 ]
@@ -96,6 +96,14 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Allow React frontend
+    "http://127.0.0.1:3000", # Also allow 127.0.0.1
+]
+# Allow credentials (like cookies) to be sent
+CORS_ALLOW_CREDENTIALS = True 
 
 ROOT_URLCONF = "pyerp.urls"
 

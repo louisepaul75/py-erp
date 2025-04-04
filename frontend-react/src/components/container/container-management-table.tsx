@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-
 import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
@@ -14,7 +13,8 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@/components/ui/table"
+  StatusBadge,
+} from "@/components/ui/data/Table"
 
 interface ContainerManagementTableProps { 
   filteredContainers: ContainerItem[]
@@ -37,10 +37,8 @@ export default function ContainerManagementTable({
   lastPrintDate,
   onLocationClick,
 }: ContainerManagementTableProps) {
-  // State to track which containers are expanded
   const [expandedContainers, setExpandedContainers] = useState<string[]>([])
 
-  // Toggle expanded state for a container
   const handleToggleExpand = (containerId: string) => {
     setExpandedContainers(prev => 
       prev.includes(containerId) 
@@ -49,27 +47,20 @@ export default function ContainerManagementTable({
     )
   }
 
-  // Function to navigate to warehouse location
   const navigateToLocation = (locationString: string, e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent row click
-
-    // Parse the location string (e.g., "11-3-1")
+    e.stopPropagation() 
     const [shelf, compartment, floor] = locationString.split("-").map(Number)
-
-    // Call the callback if provided
     if (onLocationClick) {
       onLocationClick(shelf, compartment, floor)
     } else {
-      // Fallback to window.location if callback not provided
       window.location.href = `/?shelf=${shelf}&compartment=${compartment}&floor=${floor}`
     }
   }
 
-  // Define columns for the main table
   const columns = [
     {
       id: "checkbox",
-      header: (
+      header: () => (
         <Checkbox
           checked={selectedContainers.length === filteredContainers.length && filteredContainers.length > 0}
           onCheckedChange={(checked) => handleSelectAll(!!checked)}
@@ -81,7 +72,7 @@ export default function ContainerManagementTable({
           checked={selectedContainers.includes(container.id)}
           onCheckedChange={(checked) => handleSelectContainer(container.id, !!checked)}
           aria-label={`Schütte ${container.containerCode} auswählen`}
-          onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
+          onClick={(e) => e.stopPropagation()}
         />
       ),
       className: "w-[40px]"
@@ -96,6 +87,7 @@ export default function ContainerManagementTable({
             size="sm"
             className="mr-2 p-0 h-6 w-6"
             onClick={(e) => { e.stopPropagation(); handleToggleExpand(container.id); }}
+            aria-label={expandedContainers.includes(container.id) ? "Details ausblenden" : "Details anzeigen"}
           >
             {expandedContainers.includes(container.id) ? (
               <ChevronDown className="h-4 w-4" />
@@ -114,27 +106,27 @@ export default function ContainerManagementTable({
       id: "type",
       header: "Typ",
       cell: (container: ContainerItem) => (
-        <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+        <span className="text-xs font-medium text-muted-foreground">
           {container.type || 'AR'}
-        </div>
+        </span>
       )
     },
     {
       id: "purpose",
       header: "Zweck",
       cell: (container: ContainerItem) => {
-        let purposeClass = "";
+        let status: 'info' | 'active' | 'pending' | 'inactive' | 'default' = 'default';
         switch (container.purpose) {
-          case "Lager": purposeClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"; break;
-          case "Picken": purposeClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"; break;
-          case "Transport": purposeClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"; break;
-          case "Werkstatt": purposeClass = "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"; break;
-          default: purposeClass = "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+          case "Lager": status = "info"; break;
+          case "Picken": status = "active"; break;
+          case "Transport": status = "pending"; break;
+          case "Werkstatt": status = "inactive"; break;
+          default: status = "default";
         }
         return (
-          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${purposeClass}`}>
+          <StatusBadge status={status}>
             {container.purpose || 'Lager'}
-          </div>
+          </StatusBadge>
         );
       }
     },
@@ -152,7 +144,7 @@ export default function ContainerManagementTable({
       id: "createdDate",
       header: "angelegt",
       cell: (container: ContainerItem) => {
-        const createdDate = container.createdAt ? new Date(container.createdAt) : new Date(); // Fallback for demo
+        const createdDate = container.createdAt ? new Date(container.createdAt) : new Date();
         return createdDate.toLocaleDateString("de-DE");
       }
     },
@@ -160,7 +152,7 @@ export default function ContainerManagementTable({
       id: "createdTime",
       header: "AZ",
       cell: (container: ContainerItem) => {
-        const createdDate = container.createdAt ? new Date(container.createdAt) : new Date(); // Fallback for demo
+        const createdDate = container.createdAt ? new Date(container.createdAt) : new Date();
         return createdDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
       }
     },
@@ -178,7 +170,7 @@ export default function ContainerManagementTable({
       id: "actions",
       header: "Aktionen",
       cell: (container: ContainerItem) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 justify-end">
           <Button
             variant="ghost"
             size="icon"
@@ -186,7 +178,7 @@ export default function ContainerManagementTable({
             onClick={(e) => handleEditClick(container, e)}
             title="Bearbeiten"
           >
-            <Edit className="h-4 w-4 text-blue-500" />
+            <Edit className="h-4 w-4 text-primary" />
             <span className="sr-only">Bearbeiten</span>
           </Button>
           <Button
@@ -196,7 +188,7 @@ export default function ContainerManagementTable({
             onClick={(e) => handleDeleteClick(container, e)}
             title="Löschen"
           >
-            <Trash2 className="h-4 w-4 text-red-500" />
+            <Trash2 className="h-4 w-4 text-destructive" />
             <span className="sr-only">Löschen</span>
           </Button>
         </div>
@@ -206,135 +198,130 @@ export default function ContainerManagementTable({
   ];
 
   return (
-    <div className="border rounded-md">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/50">
-            {columns.map((column) => (
-              <TableHead key={column.id} className={column.className}>
-                {typeof column.header === 'function' ? column.header() : column.header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredContainers.length > 0 ? (
-            filteredContainers.map((container) => (
-              <React.Fragment key={container.id}>
-                <TableRow
-                  data-state={selectedContainers.includes(container.id) ? "selected" : undefined}
-                  className={`hover:bg-slate-50 dark:hover:bg-slate-800/70 cursor-pointer ${expandedContainers.includes(container.id) ? "bg-slate-50 dark:bg-slate-800/70" : ""}`}
-                >
-                  {columns.map((column) => (
-                    <TableCell key={`${container.id}-${column.id}`} className={column.className}>
-                      {column.cell(container)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-                {expandedContainers.includes(container.id) && (
-                  <TableRow className="bg-slate-50 dark:bg-slate-800/70">
-                    <TableCell colSpan={columns.length} className="p-0">
-                      <div className="p-4">
-                        <h4 className="font-medium mb-2 text-sm">Details für {container.containerCode}</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-xs">
-                          <div>
-                            <p className="font-semibold text-muted-foreground">Lagerdaten</p>
-                            <div className="mt-1">
-                              <p>
-                                <span className="font-medium">Lagerort:</span>{" "}
-                                {container.location ? (
-                                  <button
-                                    onClick={(e) => navigateToLocation(container.location!, e)}
-                                    className="text-blue-600 hover:underline"
-                                  >
-                                    {container.location}
-                                  </button>
-                                ) : (
-                                  "Kein Lagerort"
-                                )}
-                              </p>
-                              <p>
-                                <span className="font-medium">Status:</span> {container.status || 'Verfügbar'}
-                              </p>
-                              <p>
-                                <span className="font-medium">Zweck:</span> {container.purpose || 'Lager'}
-                              </p>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-muted-foreground">Beschreibung</p>
-                            <p className="mt-1">
-                              {container.description || "-"}
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead key={column.id} className={column.className}>
+              {typeof column.header === 'function' ? column.header() : column.header}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredContainers.length > 0 ? (
+          filteredContainers.map((container) => (
+            <React.Fragment key={container.id}>
+              <TableRow
+                data-state={selectedContainers.includes(container.id) ? "selected" : undefined}
+                className="cursor-pointer"
+              >
+                {columns.map((column) => (
+                  <TableCell key={`${container.id}-${column.id}`} className={column.className}>
+                    {column.cell(container)}
+                  </TableCell>
+                ))}
+              </TableRow>
+              {expandedContainers.includes(container.id) && (
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableCell colSpan={columns.length} className="p-0">
+                    <div className="p-4">
+                      <h4 className="font-medium mb-2 text-sm">Details für {container.containerCode}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-xs">
+                        <div>
+                          <p className="font-semibold text-muted-foreground">Lagerdaten</p>
+                          <div className="mt-1 space-y-1">
+                            <p>
+                              <span className="font-medium">Lagerort:</span>{" "}
+                              {container.location ? (
+                                <button
+                                  onClick={(e) => navigateToLocation(container.location!, e)}
+                                  className="text-primary hover:underline"
+                                >
+                                  {container.location}
+                                </button>
+                              ) : (
+                                "Kein Lagerort"
+                              )}
                             </p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-muted-foreground">Inhalt</p>
-                            <p className="mt-1">
-                              {container.units && container.units.some(
-                                (unit) => unit.articleNumber || unit.description
-                              )
-                                ? `${container.units.filter(
-                                    (unit) => unit.articleNumber || unit.description
-                                  ).length} Artikel`
-                                : "-"}
+                            <p>
+                              <span className="font-medium">Status:</span> {container.status || 'Verfügbar'}
+                            </p>
+                            <p>
+                              <span className="font-medium">Zweck:</span> {container.purpose || 'Lager'}
                             </p>
                           </div>
                         </div>
-
-                        <h4 className="font-medium mb-2 text-sm">Einheiten</h4>
-                        <div className="border rounded-md overflow-hidden">
-                          <Table size="sm">
-                            <TableHeader className="bg-slate-100 dark:bg-slate-700">
-                              <TableRow>
-                                <TableHead className="h-8 px-3 text-xs">Einheit Nr.</TableHead>
-                                <TableHead className="h-8 px-3 text-xs">Artikelnummer</TableHead>
-                                <TableHead className="h-8 px-3 text-xs">Alte Artikelnummer</TableHead>
-                                <TableHead className="h-8 px-3 text-xs">Beschreibung</TableHead>
-                                <TableHead className="h-8 px-3 text-xs">Bestand</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {container.units?.map((unit) => (
-                                <TableRow key={unit.id}>
-                                  <TableCell className="px-3 py-1.5 text-xs">{unit.unitNumber}</TableCell>
-                                  <TableCell className="px-3 py-1.5 text-xs">
-                                    {unit.articleNumber || "-"}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-1.5 text-xs">
-                                    {unit.oldArticleNumber || "-"}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-1.5 text-xs">
-                                    {unit.description || "-"}
-                                  </TableCell>
-                                  <TableCell className="px-3 py-1.5 text-xs">{unit.stock || 0}</TableCell>
-                                </TableRow>
-                              ))}
-                              {(!container.units || container.units.length === 0) && (
-                                <TableRow>
-                                  <TableCell colSpan={5} className="h-16 text-center text-xs text-muted-foreground">
-                                    Keine Einheiten vorhanden
-                                  </TableCell>
-                                </TableRow>
-                              )}
-                            </TableBody>
-                          </Table>
+                        <div>
+                          <p className="font-semibold text-muted-foreground">Beschreibung</p>
+                          <p className="mt-1">
+                            {container.description || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-muted-foreground">Inhalt</p>
+                          <p className="mt-1">
+                            {container.units && container.units.some(
+                              (unit) => unit.articleNumber || unit.description
+                            )
+                              ? `${container.units.filter(
+                                  (unit) => unit.articleNumber || unit.description
+                                ).length} Artikel`
+                              : "-"}
+                          </p>
                         </div>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </React.Fragment>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                Keine Schütten gefunden.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </div>
+
+                      <h4 className="font-medium mb-2 text-sm">Einheiten</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="h-8 px-3 text-xs">Einheit Nr.</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Artikelnummer</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Alte Artikelnummer</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Beschreibung</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Bestand</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {container.units?.length > 0 ? container.units.map((unit) => (
+                            <TableRow key={unit.id}>
+                              <TableCell className="px-3 py-1.5 text-xs">{unit.unitNumber}</TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">
+                                {unit.articleNumber || "-"}
+                              </TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">
+                                {unit.oldArticleNumber || "-"}
+                              </TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">
+                                {unit.description || "-"}
+                              </TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">{unit.stock || 0}</TableCell>
+                            </TableRow>
+                          )) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="h-16 text-center text-xs text-muted-foreground">
+                                Keine Einheiten vorhanden
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </React.Fragment>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="h-24 text-center">
+              Keine Schütten gefunden.
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 }
 

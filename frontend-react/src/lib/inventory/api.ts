@@ -150,7 +150,7 @@ api.interceptors.response.use(
 // Fetch all box types
 export const fetchBoxTypes = async (): Promise<BoxType[]> => {
   try {
-    const response = await api.get('/inventory/box-types/');
+    const response = await api.get('/api/inventory/box-types/');
     return response.data;
   } catch (error) {
     console.error('Error fetching box types:', error);
@@ -161,7 +161,7 @@ export const fetchBoxTypes = async (): Promise<BoxType[]> => {
 // Fetch boxes with pagination and configurable timeout
 export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Promise<PaginatedResponse<Box>> => {
   try {
-    const response = await api.get('/inventory/boxes/', {
+    const response = await api.get('/api/v1/inventory/boxes/', {
       params: {
         page,
         page_size: pageSize
@@ -175,10 +175,25 @@ export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Prom
   }
 };
 
+// Fetch boxes by location ID
+export const fetchBoxesByLocationId = async (locationId: number): Promise<Box[]> => {
+  try {
+    const response = await api.get('/api/inventory/boxes/', {
+      params: {
+        location_id: locationId
+      }
+    });
+    return response.data.results || [];
+  } catch (error) {
+    console.error('Error fetching boxes by location ID:', error);
+    throw error;
+  }
+};
+
 // Fetch all storage locations
 export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
   try {
-    const response = await api.get('/inventory/storage-locations/');
+    const response = await api.get('/api/inventory/storage-locations/');
     return response.data;
   } catch (error) {
     console.error('Error fetching storage locations:', error);
@@ -189,10 +204,21 @@ export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
 // Fetch products by location
 export const fetchProductsByLocation = async (locationId: number): Promise<any[]> => {
   try {
-    const response = await api.get(`/inventory/products-by-location/${locationId}/`);
+    const response = await api.get(`/api/inventory/products-by-location/${locationId}/`);
     return response.data;
   } catch (error) {
     console.error('Error fetching products by location:', error);
+    throw error;
+  }
+};
+
+// Fetch boxes (containers) by location ID
+export const fetchBoxesByLocation = async (locationId: number): Promise<any[]> => {
+  try {
+    const response = await api.get(`/api/inventory/storage-locations/${locationId}/products/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching boxes by location:', error);
     throw error;
   }
 };
@@ -206,7 +232,7 @@ export const addProductToBox = async (
   expiryDate?: string
 ): Promise<any> => {
   try {
-    const response = await api.post('/inventory/add-product-to-box/', {
+    const response = await api.post('/api/inventory/add-product-to-box/', {
       product_id: productId,
       box_slot_id: boxSlotId,
       quantity,
@@ -223,7 +249,7 @@ export const addProductToBox = async (
 // Move a box to a different location
 export const moveBox = async (boxId: number, targetLocationId: number): Promise<any> => {
   try {
-    const response = await api.post('/inventory/move-box/', {
+    const response = await api.post('/api/inventory/move-box/', {
       box_id: boxId,
       target_location_id: targetLocationId
     });
@@ -241,7 +267,7 @@ export const moveProductBetweenBoxes = async (
   quantity: number
 ): Promise<any> => {
   try {
-    const response = await api.post('/inventory/move-product-between-boxes/', {
+    const response = await api.post('/api/inventory/move-product-between-boxes/', {
       source_box_storage_id: sourceBoxStorageId,
       target_box_slot_id: targetBoxSlotId,
       quantity
@@ -260,7 +286,7 @@ export const removeProductFromBox = async (
   reason?: string
 ): Promise<any> => {
   try {
-    const response = await api.post('/inventory/remove-product-from-box/', {
+    const response = await api.post('/api/inventory/remove-product-from-box/', {
       box_storage_id: boxStorageId,
       quantity,
       reason
@@ -268,6 +294,20 @@ export const removeProductFromBox = async (
     return response.data;
   } catch (error) {
     console.error('Error removing product from box:', error);
+    throw error;
+  }
+};
+
+// Remove a box from its current location
+export const removeBoxFromLocation = async (boxId: number): Promise<any> => {
+  try {
+    // This uses the move-box endpoint but sets target_location_id to null
+    const response = await api.post('/api/inventory/remove-box-from-location/', {
+      box_id: boxId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error removing box from location:', error);
     throw error;
   }
 }; 

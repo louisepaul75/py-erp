@@ -36,14 +36,15 @@ export interface ApiResponse {
 }
 
 export interface SelectedItem {
-    selectedItem: number | string | null; // Can be an integer, string, or null
-  }
+  selectedItem: number | string | null;
+}
 
 export interface ProductListProps {
     showSidebar: boolean;
     searchTerm: string;
     setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
     filteredProducts: Product[];
+    totalItems: number;
     selectedItem: string | null | number;
     setSelectedItem: React.Dispatch<React.SetStateAction<string | number | null>>;
     pagination: {
@@ -61,5 +62,8 @@ export interface ProductListProps {
 
   export interface ProductDetailProps {
     selectedItem: number | string | null; // number | string | null
-    selectedProduct: Product | undefined; // Product type
+    selectedProduct: Product | null; // Product type
+    isCreatingParent?: boolean;
+    onProductCreated?: (newProduct: Product) => void;
+    onCancel?: () => void;
   }

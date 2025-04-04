@@ -43,7 +43,7 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
     return (
       <h3
         ref={ref}
-        className={cn('font-semibold leading-none tracking-tight text-primary flex items-center', className)}
+        className={cn('font-semibold leading-none tracking-tight text-foreground flex items-center', className)}
         {...props}
       >
         {Icon && (

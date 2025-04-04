@@ -45,7 +45,8 @@ export default function HealthStatusPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const response = await fetch(`${API_URL}/health/`, {
+      const healthUrl = `${API_URL}/api/v1/health/`;
+      const response = await fetch(healthUrl, {
         signal: controller.signal
       });
       
@@ -68,9 +69,10 @@ export default function HealthStatusPage() {
   const fetchHealthChecks = async () => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const response = await fetch(`${API_URL}/monitoring/health-checks/`, {
+      const monitoringUrl = `${API_URL}/api/v1/monitoring/health-checks/`;
+      const response = await fetch(monitoringUrl, {
         signal: controller.signal
       });
       
@@ -240,7 +242,7 @@ export default function HealthStatusPage() {
             Unable to connect to some backend API endpoints. The information shown may be incomplete or unavailable.
             {process.env.NODE_ENV === 'development' && (
               <span className="block mt-1 text-sm">
-                Make sure your Django backend is running on port 8050 and accessible.
+                Make sure your Django backend is running on port 8000 and accessible.
               </span>
             )}
           </p>

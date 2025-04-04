@@ -319,18 +319,10 @@ if __name__ == "__main__":
     client = LegacyERPClient(environment="live")
 
     form_artikel = client.fetch_table(
-        table_name="Form_Artikel",
+        table_name="Artikel_Variante",
         top=10  # Just get a sample of 10 employees
     )
     print(form_artikel.tail())
 
-    formen = client.fetch_table(
-        table_name="Formen",
-        top=10  # Just get a sample of 10 employees
-    )
-    print(formen.tail())
-    
-    merged = form_artikel.merge(formen, on="FormNr", how="left")
-    print(merged.tail())
-    
+
     

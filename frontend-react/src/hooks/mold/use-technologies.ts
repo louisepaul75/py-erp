@@ -3,25 +3,28 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { Technology } from "@/types/mold/technology"
 import { useMolds } from "@/hooks/mold/use-molds" // Import useMolds here
-import axios from "axios"
-import { API_URL as BASE_URL } from "@/lib/config"
-import { clientCookieStorage } from "@/lib/auth/clientCookies"
-import { AUTH_CONFIG } from "@/lib/config"
 
 /**
- * API URL for mold technologies
+ * Mock API functions for technologies
+ * In a real application, these would be replaced with actual API calls
  */
-const API_URL = `${BASE_URL}/production/molds/technologies/`
-
-/**
- * Mock data for technologies, used as fallback
- */
-const mockTechnologies = [
-  "Die Casting",
-  "Injection Molding",
-  "Sand Casting",
-  "Precision Casting",
-  "Low Pressure Casting",
+const mockTechnologies: Technology[] = [
+  {
+    id: "1",
+    name: "Die Casting",
+  },
+  {
+    id: "2",
+    name: "Injection Molding",
+  },
+  {
+    id: "3",
+    name: "Sand Casting",
+  },
+  {
+    id: "4",
+    name: "Investment Casting",
+  },
 ]
 
 /**
@@ -134,59 +137,7 @@ export function useTechnologies() {
    */
   const query = useQuery({
     queryKey: ["technologies"],
-    queryFn: async () => {
-      try {
-        // Get token from clientCookieStorage
-        const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-        
-        // Attempt to fetch from the real API
-        const response = await axios.get(API_URL, {
-          headers: token ? {
-            'Authorization': `Bearer ${token}`
-          } : {}
-        })
-        
-        // If successful, use the API data
-        if (response.status === 200) {
-          console.log("Successfully fetched technologies from API", response.data)
-          
-          // Check the structure of the API response
-          if (Array.isArray(response.data)) {
-            return response.data;
-          } else if (response.data && typeof response.data === 'object') {
-            // Check if response.data has a results, data, or items property that is an array
-            if (Array.isArray(response.data.results)) {
-              return response.data.results;
-            } else if (Array.isArray(response.data.data)) {
-              return response.data.data;
-            } else if (Array.isArray(response.data.items)) {
-              return response.data.items;
-            } else if (Array.isArray(response.data.technologies)) {
-              return response.data.technologies;
-            } else {
-              // If no recognized array structure, log and fall back to mock data
-              console.warn("API response doesn't contain an array of technologies:", response.data);
-            }
-          }
-        }
-        
-        // If not successful or unrecognized structure, fall back to mock data
-        console.warn("Failed to fetch technologies from API, using mock data")
-        return mockTechnologies
-      } catch (error) {
-        console.error("Error fetching technologies:", error)
-        if (error.response) {
-          console.error("Error response data:", error.response.data)
-          console.error("Error response status:", error.response.status)
-          console.error("Error response headers:", error.response.headers)
-        } else if (error.request) {
-          console.error("Error request:", error.request)
-        } else {
-          console.error("Error message:", error.message)
-        }
-        return mockTechnologies
-      }
-    },
+    queryFn: fetchTechnologies,
   })
 
   /**

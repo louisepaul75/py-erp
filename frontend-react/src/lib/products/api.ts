@@ -5,7 +5,7 @@ import ky, {
   type NormalizedOptions,
 } from "ky";
 import { API_URL, AUTH_CONFIG } from "../config";
-import { Product } from "@/components/types/product";
+import { Product, ApiResponse } from "@/components/types/product";
 import { getServerCookie } from "../auth/serverCookies";
 
 // Cookie storage utility for client-side operations
@@ -68,13 +68,6 @@ const api = ky.create({
           if (accessToken && !request.url.includes("token/")) {
             request.headers.set("Authorization", `Bearer ${accessToken}`);
           }
-
-          console.log("Making request:", {
-            method: request.method,
-            url: request.url,
-            headers: Object.fromEntries(request.headers.entries()),
-            token: accessToken ? "Present" : "Not present",
-          });
         }
       },
     ],
@@ -117,6 +110,7 @@ interface Variant {
   releas: string;
   price: number;
   selected?: boolean;
+  [key: string]: any;
 }
 
 interface ProductListParams {
@@ -127,13 +121,13 @@ interface ProductListParams {
   category?: number;
   in_stock?: boolean;
   is_active?: boolean;
+  fields?: string;
   [key: string]: any;
 }
 
 // Product API methods
 export const productApi = {
-  getProducts: async (params: ProductListParams = {}) => {
-    console.log("Fetching products in getProducts");
+  getProducts: async (params: ProductListParams = {}, signal?: AbortSignal) => {
     if (params._include_variants !== undefined) {
       params.include_variants = params._include_variants;
       delete params._include_variants;
@@ -144,20 +138,52 @@ export const productApi = {
       page_size: 30,
       page: 1,
       is_parent: true,
+      fields: "id,name,sku,is_active,variants_count,legacy_base_sku",
       ...params, // Override defaults with any passed parameters
     };
 
     try {
-      return await api.get("products/list/", { searchParams: defaultParams }).json();
+      const response = await api.get("api/v1/products/", { 
+        searchParams: defaultParams,
+        signal 
+      }).json<ApiResponse>();
+      return response;
     } catch (error) {
       console.error("Error fetching products:", error);
       throw error;
     }
   },
 
-  getProduct: async (id: string | number): Promise<Product> => {
+  getProductsDirectSearch: async (params: ProductListParams = {}, signal?: AbortSignal) => {
+    if (params._include_variants !== undefined) {
+      params.include_variants = params._include_variants;
+      delete params._include_variants;
+    }
+
+    // Default query parameters
+    const defaultParams: ProductListParams = {
+      page_size: 30,
+      page: 1,
+      is_parent: true,
+      fields: "id,name,sku,is_active,variants_count,legacy_base_sku",
+      ...params, // Override defaults with any passed parameters
+    };
+
     try {
-      return await api.get(`products/${id}/`).json();
+      const response = await api.get("api/products/direct-search/", { 
+        searchParams: defaultParams,
+        signal 
+      }).json<ApiResponse>();
+      return response;
+    } catch (error) {
+      console.error("Error with direct search for products:", error);
+      throw error;
+    }
+  },
+
+  getProduct: async (id: string | number, signal?: AbortSignal): Promise<Product> => {
+    try {
+      return await api.get(`api/v1/products/${id}/`, { signal }).json();
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
       throw error;
@@ -165,18 +191,37 @@ export const productApi = {
   },
   getProductBySlug: async (sku: string | number): Promise<Product> => {
     try {
-      return await api.get(`products/by-slug/${sku}/`).json();
+      return await api.get(`api/v1/products/by-slug/${sku}/`).json();
     } catch (error) {
       console.error(`Error fetching product ${sku}:`, error);
       throw error;
     }
   },
 
-  createProduct: async (productData: Omit<Product, "id">): Promise<Product> => {
+  searchParentProducts: async (searchTerm: string): Promise<Product[]> => {
     try {
-      return await api.post("products/", { json: productData }).json();
+      const params = {
+        type: "parent", // Assuming backend filters by type=parent
+        search: searchTerm,
+        fields: "id,name,sku", // Only fetch necessary fields
+        page_size: 10, // Limit results for dropdown
+      };
+      const response = await api.get("api/v1/products/", { searchParams: params }).json<ApiResponse>();
+      return response.results || []; // Return results or empty array
+    } catch (error) {
+      console.error("Error searching parent products:", error);
+      throw error;
+    }
+  },
+
+  createProduct: async (productData: Omit<Product, "id"> & { parent_id?: number | string }): Promise<Product> => {
+    try {
+      return await api.post("api/v1/products/", { json: productData }).json();
     } catch (error) {
       console.error("Error creating product:", error);
+      if (error instanceof HTTPError) {
+        console.error("HTTPError details:", error);
+      }
       throw error;
     }
   },
@@ -186,7 +231,7 @@ export const productApi = {
     productData: Partial<Product>
   ): Promise<Product> => {
     try {
-      return await api.patch(`products/${id}/`, { json: productData }).json();
+      return await api.patch(`api/v1/products/${id}/`, { json: productData }).json();
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);
       throw error;
@@ -194,9 +239,8 @@ export const productApi = {
   },
 
   deleteProduct: async (id: string): Promise<void> => {
-    console.log("product to be deleted", id);
     try {
-      await api.delete(`products/${id}/`);
+      await api.delete(`api/v1/products/${id}/`);
     } catch (error) {
       console.error(`Error deleting product ${id}:`, error);
       throw error;
@@ -205,7 +249,7 @@ export const productApi = {
 
   getCategories: async () => {
     try {
-      return await api.get("products/categories/").json();
+      return await api.get("api/v1/products/categories/").json();
     } catch (error) {
       console.error("Error fetching categories:", error);
       throw error;
@@ -217,7 +261,7 @@ export const productApi = {
 export const variantApi = {
   getVariants: async (productId: string): Promise<Variant[]> => {
     try {
-      return await api.get(`products/${productId}/variants/`).json();
+      return await api.get(`api/v1/products/${productId}/variants/`).json();
     } catch (error) {
       console.error(`Error fetching variants for product ${productId}:`, error);
       throw error;
@@ -226,7 +270,7 @@ export const variantApi = {
 
   getVariant: async (variantId: string): Promise<Variant> => {
     try {
-      return await api.get(`products/variant/${variantId}/`).json();
+      return await api.get(`api/v1/products/variant/${variantId}/`).json();
     } catch (error) {
       console.error(`Error fetching variant ${variantId}:`, error);
       throw error;
@@ -239,7 +283,7 @@ export const variantApi = {
   ): Promise<Variant> => {
     try {
       return await api
-        .post(`products/${productId}/variants/`, { json: variantData })
+        .post(`api/v1/products/${productId}/variants/`, { json: variantData })
         .json();
     } catch (error) {
       console.error(`Error creating variant for product ${productId}:`, error);
@@ -254,7 +298,7 @@ export const variantApi = {
   ): Promise<Variant> => {
     try {
       return await api
-        .patch(`products/${productId}/variants/${variantId}/`, {
+        .patch(`api/v1/products/${productId}/variants/${variantId}/`, {
           json: variantData,
         })
         .json();
@@ -272,7 +316,7 @@ export const variantApi = {
     variantId: string
   ): Promise<void> => {
     try {
-      await api.delete(`products/${productId}/variants/${variantId}/`);
+      await api.delete(`api/v1/products/${productId}/variants/${variantId}/`);
     } catch (error) {
       console.error(
         `Error deleting variant ${variantId} for product ${productId}:`,
@@ -287,7 +331,7 @@ export const variantApi = {
     variantIds: string[]
   ): Promise<void> => {
     try {
-      await api.delete(`products/${productId}/variants/`, {
+      await api.delete(`api/v1/products/${productId}/variants/`, {
         json: { variantIds },
       });
     } catch (error) {
