@@ -10,6 +10,15 @@ class SyncWorkflow(models.Model):
     slug = models.SlugField(max_length=110, unique=True, blank=True, verbose_name=_("Slug"))
     description = models.TextField(blank=True, null=True, verbose_name=_("Description"))
     
+    # Link to the external connection name defined in external_connections.json
+    external_connection_name = models.CharField(
+        max_length=50,
+        blank=True, # Allow blank for now, maybe make required later
+        db_index=True,
+        verbose_name=_("External Connection Name"),
+        help_text=_("The key from external_connections.json this workflow belongs to (e.g., 'legacy_erp').")
+    )
+    
     # Base command template. Parameters like {debug} or {force_update} can be added dynamically.
     command_template = models.CharField(max_length=500, verbose_name=_("Command Template"), default='')
     
@@ -33,7 +42,7 @@ class SyncWorkflow(models.Model):
     class Meta:
         verbose_name = _("Sync Workflow")
         verbose_name_plural = _("Sync Workflows")
-        ordering = ['name']
+        ordering = ['external_connection_name', 'name'] # Order by connection then name
 
 
 class SyncJob(models.Model):

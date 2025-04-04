@@ -1,13 +1,52 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status, generics
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAdminUser
+from pyerp.external_api import connection_manager
 
 from .models import SyncWorkflow, SyncJob
 from .serializers import (SyncWorkflowSerializer, SyncJobSerializer, 
                         TriggerSyncJobSerializer)
 from .tasks import run_sync_workflow_task
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def get_system_integration_data(request):
+    """
+    Get combined data for external connections and their associated sync workflows.
+    """
+    try:
+        connections = connection_manager.get_connections()
+        workflows = SyncWorkflow.objects.all()
+        workflow_serializer = SyncWorkflowSerializer(workflows, many=True)
+        
+        # Group workflows by connection name
+        grouped_data = {}
+        for name, enabled in connections.items():
+            grouped_data[name] = {
+                'enabled': enabled,
+                'workflows': []
+            }
+
+        for workflow_data in workflow_serializer.data:
+            connection_name = workflow_data.get('external_connection_name')
+            if connection_name and connection_name in grouped_data:
+                grouped_data[connection_name]['workflows'].append(workflow_data)
+            # Optional: Handle workflows without a connection name or with an unknown name
+            # else:
+            #    # Add to a default 'unassigned' group or log a warning
+            #    pass 
+
+        return Response(grouped_data)
+
+    except Exception as e:
+        # Consider adding more specific exception handling and logging
+        return Response(
+            {"error": f"Failed to retrieve system integration data: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 class SyncWorkflowViewSet(viewsets.ReadOnlyModelViewSet):
     """

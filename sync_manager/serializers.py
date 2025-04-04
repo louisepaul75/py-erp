@@ -11,6 +11,7 @@ class SyncWorkflowSerializer(serializers.ModelSerializer):
         model = SyncWorkflow
         fields = [
             'id', 'name', 'slug', 'description',
+            'external_connection_name',
             'command_template',
             'parameters',
             'environment_variables',
