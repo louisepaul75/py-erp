@@ -43,6 +43,8 @@ import { UserManagement } from "@/components/users/user-management"
 import { GroupManagement } from "@/components/users/group-management"
 import { PermissionManagement } from "@/components/users/permission-management"
 import { PasswordPolicyManagement } from "@/components/users/password-policy"
+import SyncWorkflows from "@/components/settings/sync/SyncWorkflows";
+
 // Form interface for user profile
 interface ProfileForm {
   username: string;
@@ -695,6 +697,7 @@ export default function SettingsPage() {
         {isAdmin && (
           <TabsContent value="system" className="space-y-4">
             <IntegrationDashboard />
+            <SyncWorkflows />
             {/* <Card>
               <CardHeader>
                 <CardTitle>{t('api_connections')}</CardTitle>

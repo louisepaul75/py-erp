@@ -10,10 +10,17 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+import environ  # Add this import
 import dj_database_url  # noqa: F401
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Initialize django-environ
+env = environ.Env()
+
+# Attempt to read .env file, if it exists
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Add the project root to Python path to ensure imports work
 if str(BASE_DIR) not in sys.path:
@@ -77,6 +84,7 @@ LOCAL_APPS = [
     "pyerp.external_api.apps.ExternalApiConfig",
     "admin_tools",  # Admin tools app for database table view
     "pyerp.business_modules.business",  # Business management (HR, finance, etc.)
+    "sync_manager",  # App for managing sync workflows
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

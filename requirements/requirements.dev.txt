@@ -134,11 +134,12 @@ django-celery-beat==2.7.0
 django-celery-results==2.5.1
     # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
 django-cors-headers==4.7.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.dev.in
 django-debug-toolbar==5.1.0
     # via -r requirements/requirements.dev.in
 django-extensions==3.2.3
     # via -r requirements/requirements.dev.in
+django-environ
 django-filter==25.1
     # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
 django-guardian==2.4.0

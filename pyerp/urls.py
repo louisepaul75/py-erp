@@ -29,6 +29,9 @@ from rest_framework.permissions import AllowAny
 from pyerp.core.views import ReactAppView, UserProfileView
 from pyerp.external_api.search.views import GlobalSearchViewSet
 
+# Import sync_manager URLs
+from sync_manager import urls as sync_manager_urls
+
 # Flag to track API doc availability
 has_spectacular = False
 
@@ -162,6 +165,10 @@ urlpatterns = [
     # Admin tools API (both versioned and non-versioned)
     path("api/admin/", include("admin_tools.urls")),
     path("api/v1/admin/", include("admin_tools.urls", namespace="admin_tools_v1")),
+    
+    # Sync Manager API (both versioned and non-versioned)
+    path("api/sync/", include(sync_manager_urls, namespace="sync_manager")),
+    path("api/v1/sync/", include(sync_manager_urls, namespace="sync_manager_v1")),
     
     # Serve Next.js built files - adjusted for Docker environment
     # These paths need to match the structure in the Docker container
