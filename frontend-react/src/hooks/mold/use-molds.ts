@@ -8,7 +8,7 @@ import { ArticleStatus } from "@/types/mold/article"
 import { mockArticles } from "@/hooks/mold/use-articles"
 import { useActivityLog } from "@/hooks/mold/use-activity-log"
 import { ActivityType, EntityType } from "@/types/mold/activity-log"
-import axios from "axios"
+import { instance } from "@/lib/api"
 import { API_URL as BASE_URL } from "@/lib/config"
 import { clientCookieStorage } from "@/lib/auth/clientCookies"
 import { AUTH_CONFIG } from "@/lib/config"
@@ -103,35 +103,26 @@ export function useMolds() {
    */
   const fetchMolds = async (): Promise<Mold[]> => {
     try {
-      // Get token from clientCookieStorage
-      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-      
-      // Attempt to fetch from the real API
-      const response = await axios.get(API_URL, {
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
-      })
+      // Attempt to fetch from the real API using the shared ky instance
+      const response = await instance.get(API_URL).json()
       
       // If successful, use the API data
-      if (response.status === 200) {
-        console.log("Successfully fetched molds from API", response.data)
-        
-        // Check the structure of the API response
-        if (Array.isArray(response.data)) {
+      console.log("Successfully fetched molds from API", response)
+      
+      // Check the structure of the API response
+      if (Array.isArray(response)) {
+        return response;
+      } else if (response && typeof response === 'object') {
+        // Check if response has a results, data, or items property that is an array
+        if (Array.isArray(response.results)) {
+          return response.results;
+        } else if (Array.isArray(response.data)) {
           return response.data;
-        } else if (response.data && typeof response.data === 'object') {
-          // Check if response.data has a results, data, or items property that is an array
-          if (Array.isArray(response.data.results)) {
-            return response.data.results;
-          } else if (Array.isArray(response.data.data)) {
-            return response.data.data;
-          } else if (Array.isArray(response.data.items)) {
-            return response.data.items;
-          } else {
-            // If no recognized array structure, log and fall back to mock data
-            console.warn("API response doesn't contain an array of molds:", response.data);
-          }
+        } else if (Array.isArray(response.items)) {
+          return response.items;
+        } else {
+          // If no recognized array structure, log and fall back to mock data
+          console.warn("API response doesn't contain an array of molds:", response);
         }
       }
       
@@ -167,34 +158,25 @@ export function useMolds() {
    */
   const createMoldFn = async (mold: Omit<Mold, "id" | "createdDate">): Promise<Mold> => {
     try {
-      // Get token from clientCookieStorage
-      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-      
-      // Attempt to create via the API
-      const response = await axios.post('/api/production/molds/', mold, {
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
-      })
+      // Attempt to create via the API using the shared ky instance
+      const response = await instance.post('/api/production/molds/', {
+        json: mold
+      }).json()
       
       // If successful, return the created mold
-      if (response.status === 201) {
-        console.log("Successfully created mold via API", response.data)
-        
-        // Log the activity
-        await createActivityLog({
-          activityType: ActivityType.CREATE,
-          entityType: EntityType.MOLD,
-          entityId: response.data.id,
-          entityName: response.data.moldNumber,
-          details: `Created new mold ${response.data.moldNumber}`,
-        })
-        
-        return response.data
-      }
+      console.log("Successfully created mold via API", response)
       
-      // Fall back to mock implementation
-      console.warn("Failed to create mold via API, using mock implementation")
+      // Log the activity
+      await createActivityLog({
+        activityType: ActivityType.CREATE,
+        entityType: EntityType.MOLD,
+        entityId: response.id,
+        entityName: response.moldNumber,
+        details: `Created new mold ${response.moldNumber}`,
+      })
+      
+      return response
+      
     } catch (error) {
       console.error("Error creating mold:", error)
       // Fall back to mock implementation
@@ -232,34 +214,25 @@ export function useMolds() {
    */
   const updateMoldFn = async (mold: Mold): Promise<Mold> => {
     try {
-      // Get token from clientCookieStorage
-      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-      
-      // Attempt to update via the API
-      const response = await axios.put(`/api/production/molds/${mold.id}/`, mold, {
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
-      })
+      // Attempt to update via the API using the shared ky instance
+      const response = await instance.put(`/api/production/molds/${mold.id}/`, {
+        json: mold
+      }).json()
       
       // If successful, return the updated mold
-      if (response.status === 200) {
-        console.log("Successfully updated mold via API", response.data)
-        
-        // Log the activity
-        await createActivityLog({
-          activityType: ActivityType.UPDATE,
-          entityType: EntityType.MOLD,
-          entityId: response.data.id,
-          entityName: response.data.moldNumber,
-          details: `Updated mold ${response.data.moldNumber}`,
-        })
-        
-        return response.data
-      }
+      console.log("Successfully updated mold via API", response)
       
-      // Fall back to mock implementation
-      console.warn("Failed to update mold via API, using mock implementation")
+      // Log the activity
+      await createActivityLog({
+        activityType: ActivityType.UPDATE,
+        entityType: EntityType.MOLD,
+        entityId: response.id,
+        entityName: response.moldNumber,
+        details: `Updated mold ${response.moldNumber}`,
+      })
+      
+      return response
+      
     } catch (error) {
       console.error("Error updating mold:", error)
       // Fall back to mock implementation
@@ -425,9 +398,6 @@ export function useMolds() {
    */
   const duplicateMoldFn = async (mold: Mold | Omit<Mold, "id" | "createdDate">): Promise<Mold> => {
     try {
-      // Get token from clientCookieStorage
-      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-      
       // For duplicating, we'll just do a POST to create a new mold
       // but we'll modify the data to indicate it's a duplicate
       const moldData = {
@@ -440,30 +410,25 @@ export function useMolds() {
       delete (moldData as any).id
       delete (moldData as any).createdDate
       
-      const response = await axios.post(API_URL, moldData, {
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
-      })
+      // Attempt to create via the API using the shared ky instance
+      const response = await instance.post(API_URL, {
+        json: moldData
+      }).json()
       
       // If successful, return the duplicated mold
-      if (response.status === 201) {
-        console.log("Successfully duplicated mold via API", response.data)
-        
-        // Log the activity
-        await createActivityLog({
-          activityType: ActivityType.CREATE,
-          entityType: EntityType.MOLD,
-          entityId: response.data.id,
-          entityName: response.data.moldNumber,
-          details: `Duplicated mold ${(mold as Mold).moldNumber} to create ${response.data.moldNumber}`,
-        })
-        
-        return response.data
-      }
+      console.log("Successfully duplicated mold via API", response)
       
-      // Fall back to mock implementation
-      console.warn("Failed to duplicate mold via API, using mock implementation")
+      // Log the activity
+      await createActivityLog({
+        activityType: ActivityType.CREATE,
+        entityType: EntityType.MOLD,
+        entityId: response.id,
+        entityName: response.moldNumber,
+        details: `Duplicated mold ${(mold as Mold).moldNumber} to create ${response.moldNumber}`,
+      })
+      
+      return response
+      
     } catch (error) {
       console.error("Error duplicating mold:", error)
       // Fall back to mock implementation
@@ -505,41 +470,30 @@ export function useMolds() {
    */
   const deleteMoldFn = async (id: string): Promise<void> => {
     try {
-      // Get token from clientCookieStorage
-      const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-      
-      // Attempt to delete via the API
-      const response = await axios.delete(`/api/production/molds/${id}/`, {
-        headers: token ? {
-          'Authorization': `Bearer ${token}`
-        } : {}
-      })
+      // Attempt to delete via the API using the shared ky instance
+      const response = await instance.delete(`/api/production/molds/${id}/`)
       
       // If successful, log the activity
-      if (response.status === 204) {
-        console.log("Successfully deleted mold via API")
-        
-        // Since we don't have the mold data anymore after deletion,
-        // we'll need to find it in our cache
-        const cachedMolds = queryClient.getQueryData<Mold[]>(["molds"])
-        const deletedMold = cachedMolds?.find(m => m.id === id)
-        
-        if (deletedMold) {
-          // Log the activity
-          await createActivityLog({
-            activityType: ActivityType.DELETE,
-            entityType: EntityType.MOLD,
-            entityId: id,
-            entityName: deletedMold.moldNumber,
-            details: `Deleted mold ${deletedMold.moldNumber}`,
-          })
-        }
-        
-        return
+      console.log("Successfully deleted mold via API")
+      
+      // Since we don't have the mold data anymore after deletion,
+      // we'll need to find it in our cache
+      const cachedMolds = queryClient.getQueryData<Mold[]>(["molds"])
+      const deletedMold = cachedMolds?.find(m => m.id === id)
+      
+      if (deletedMold) {
+        // Log the activity
+        await createActivityLog({
+          activityType: ActivityType.DELETE,
+          entityType: EntityType.MOLD,
+          entityId: id,
+          entityName: deletedMold.moldNumber,
+          details: `Deleted mold ${deletedMold.moldNumber}`,
+        })
       }
       
-      // Fall back to mock implementation
-      console.warn("Failed to delete mold via API, using mock implementation")
+      return
+      
     } catch (error) {
       console.error("Error deleting mold:", error)
       // Fall back to mock implementation

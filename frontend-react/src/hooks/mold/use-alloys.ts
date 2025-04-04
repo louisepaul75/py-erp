@@ -1,10 +1,8 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
+import { instance } from "@/lib/api"
 import { API_URL as BASE_URL } from "@/lib/config"
-import { clientCookieStorage } from "@/lib/auth/clientCookies"
-import { AUTH_CONFIG } from "@/lib/config"
 
 /**
  * API URL for mold alloys
@@ -31,37 +29,28 @@ export function useAlloys() {
     queryKey: ["alloys"],
     queryFn: async () => {
       try {
-        // Get token from clientCookieStorage
-        const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-        
-        // Attempt to fetch from the real API
-        const response = await axios.get(API_URL, {
-          headers: token ? {
-            'Authorization': `Bearer ${token}`
-          } : {}
-        })
+        // Attempt to fetch from the real API using the shared ky instance
+        const response = await instance.get(API_URL).json()
         
         // If successful, use the API data
-        if (response.status === 200) {
-          console.log("Successfully fetched alloys from API", response.data)
-          
-          // Check the structure of the API response
-          if (Array.isArray(response.data)) {
+        console.log("Successfully fetched alloys from API", response)
+        
+        // Check the structure of the API response
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response && typeof response === 'object') {
+          // Check if response has a results, data, or items property that is an array
+          if (Array.isArray(response.results)) {
+            return response.results;
+          } else if (Array.isArray(response.data)) {
             return response.data;
-          } else if (response.data && typeof response.data === 'object') {
-            // Check if response.data has a results, data, or items property that is an array
-            if (Array.isArray(response.data.results)) {
-              return response.data.results;
-            } else if (Array.isArray(response.data.data)) {
-              return response.data.data;
-            } else if (Array.isArray(response.data.items)) {
-              return response.data.items;
-            } else if (Array.isArray(response.data.alloys)) {
-              return response.data.alloys;
-            } else {
-              // If no recognized array structure, log and fall back to mock data
-              console.warn("API response doesn't contain an array of alloys:", response.data);
-            }
+          } else if (Array.isArray(response.items)) {
+            return response.items;
+          } else if (Array.isArray(response.alloys)) {
+            return response.alloys;
+          } else {
+            // If no recognized array structure, log and fall back to mock data
+            console.warn("API response doesn't contain an array of alloys:", response);
           }
         }
         
@@ -71,13 +60,8 @@ export function useAlloys() {
       } catch (error) {
         console.error("Error fetching alloys:", error)
         if (error.response) {
-          console.error("Error response data:", error.response.data)
+          console.error("Error response data:", await error.response.text())
           console.error("Error response status:", error.response.status)
-          console.error("Error response headers:", error.response.headers)
-        } else if (error.request) {
-          console.error("Error request:", error.request)
-        } else {
-          console.error("Error message:", error.message)
         }
         return mockAlloys
       }

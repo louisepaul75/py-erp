@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios'; // Assuming axios is installed and configured
+import { instance as api } from '@/lib/api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,12 +30,10 @@ const SyncWorkflows: React.FC = () => {
     const fetchWorkflows = async () => {
       try {
         setLoading(true);
-        // Adjust API_BASE_URL based on your setup (e.g., from environment variables)
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        // Use the new interface for the expected response type
-        const response = await axios.get<PaginatedWorkflowsResponse>(`${API_BASE_URL}/api/v1/sync/workflows/`);
+        // Use the shared ky instance with the API endpoint
+        const response = await api.get('api/v1/sync/workflows/').json<PaginatedWorkflowsResponse>();
         // Access the 'results' array from the response data
-        setWorkflows(response.data.results);
+        setWorkflows(response.results);
         setError(null);
       } catch (err) {
         console.error("Error fetching sync workflows:", err);

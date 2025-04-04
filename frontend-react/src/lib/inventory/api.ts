@@ -1,13 +1,5 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
-import { API_URL } from '../config';
-import { authService } from '../auth/authService';
-
-// Extend AxiosRequestConfig to include retryCount
-declare module 'axios' {
-  export interface InternalAxiosRequestConfig {
-    retryCount?: number;
-  }
-}
+import { instance as api } from '@/lib/api'; // Import shared ky instance
+import type { Options, KyResponse } from 'ky'; // Import ky types if needed
 
 // Types based on the backend models
 export interface BoxType {
@@ -73,157 +65,91 @@ export interface PaginatedResponse<T> {
   total_pages: number;
 }
 
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: API_URL,
-  timeout: 30000,
-  withCredentials: true // Include cookies in requests
-});
-
-// Add request interceptor to handle auth
-api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig) => {
-    try {
-      // Get the token
-      const token = await authService.getToken();
-      
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        // If no token and not a login request, redirect to login
-        if (!config.url?.includes('token')) {
-          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-          throw new Error('No authentication token available');
-        }
-      }
-      
-      return config;
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor to handle token refresh
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // If the error is 401 and we haven't tried to refresh the token yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        // Try to refresh the token
-        const refreshSuccess = await authService.refreshToken();
-        
-        if (refreshSuccess) {
-          // Get the new token
-          const token = await authService.getToken();
-          
-          if (token) {
-            // Update the authorization header
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            // Retry the original request
-            return api(originalRequest);
-          }
-        }
-        
-        // If refresh failed, redirect to login
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-        return Promise.reject(error);
-      } catch (refreshError) {
-        // If refresh fails, redirect to login
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-        return Promise.reject(refreshError);
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-// Fetch all box types
+// Fetch all box types using ky
 export const fetchBoxTypes = async (): Promise<BoxType[]> => {
   try {
-    const response = await api.get('/api/inventory/box-types/');
-    return response.data;
+    // Use ky instance (now named 'api')
+    const response = await api.get('api/v1/inventory/box-types/').json<BoxType[]>();
+    return response;
   } catch (error) {
     console.error('Error fetching box types:', error);
     throw error;
   }
 };
 
-// Fetch boxes with pagination and configurable timeout
+// Fetch boxes with pagination using ky
 export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Promise<PaginatedResponse<Box>> => {
   try {
-    const response = await api.get('/api/v1/inventory/boxes/', {
-      params: {
+    // Use ky instance (now named 'api') with searchParams and timeout
+    const response = await api.get('api/v1/inventory/boxes/', {
+      searchParams: { // Use searchParams for query parameters with ky
         page,
         page_size: pageSize
       },
       timeout
-    });
-    return response.data;
+    }).json<PaginatedResponse<Box>>();
+    return response;
   } catch (error) {
     console.error('Error fetching boxes:', error);
-    throw error;
+    throw error; // Consider handling potential failed refresh more explicitly if needed
   }
 };
 
-// Fetch boxes by location ID
+// Fetch boxes by location ID using ky
 export const fetchBoxesByLocationId = async (locationId: number): Promise<Box[]> => {
   try {
-    const response = await api.get('/api/inventory/boxes/', {
-      params: {
+    // Use ky instance (now named 'api') with searchParams
+    const response = await api.get('api/v1/inventory/boxes/', {
+      searchParams: {
         location_id: locationId
       }
-    });
-    return response.data.results || [];
+    }).json<PaginatedResponse<Box>>(); // Assuming the endpoint still returns a paginated response structure
+    return response.results || []; // Extract results
   } catch (error) {
     console.error('Error fetching boxes by location ID:', error);
     throw error;
   }
 };
 
-// Fetch all storage locations
+// Fetch all storage locations using ky
 export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
   try {
-    const response = await api.get('/api/inventory/storage-locations/');
-    return response.data;
+    // Use ky instance (now named 'api')
+    const response = await api.get('api/v1/inventory/storage-locations/').json<StorageLocation[]>();
+    return response;
   } catch (error) {
     console.error('Error fetching storage locations:', error);
     throw error;
   }
 };
 
-// Fetch products by location
+// Fetch products by location using ky
 export const fetchProductsByLocation = async (locationId: number): Promise<any[]> => {
   try {
-    const response = await api.get(`/api/inventory/products-by-location/${locationId}/`);
-    return response.data;
+    // Use ky instance (now named 'api')
+    // Ensure the URL structure is correct for ky (no trailing slash needed usually unless required by backend)
+    const response = await api.get(`api/v1/inventory/storage-locations/${locationId}/products/`).json<any[]>();
+    return response;
   } catch (error) {
     console.error('Error fetching products by location:', error);
     throw error;
   }
 };
 
-// Fetch boxes (containers) by location ID
+// Fetch boxes (containers) by location ID using ky (redundant? same as fetchProductsByLocation URL)
+// Consider renaming or removing if it fetches the same data as fetchProductsByLocation
 export const fetchBoxesByLocation = async (locationId: number): Promise<any[]> => {
   try {
-    const response = await api.get(`/api/inventory/storage-locations/${locationId}/products/`);
-    return response.data;
+    // Use ky instance (now named 'api')
+    const response = await api.get(`api/v1/inventory/storage-locations/${locationId}/products/`).json<any[]>();
+    return response;
   } catch (error) {
     console.error('Error fetching boxes by location:', error);
     throw error;
   }
 };
 
-// Add a product to a box
+// Add a product to a box using ky
 export const addProductToBox = async (
   productId: number,
   boxSlotId: number,
@@ -232,80 +158,94 @@ export const addProductToBox = async (
   expiryDate?: string
 ): Promise<any> => {
   try {
-    const response = await api.post('/api/inventory/add-product-to-box/', {
-      product_id: productId,
-      box_slot_id: boxSlotId,
-      quantity,
-      batch_number: batchNumber,
-      expiry_date: expiryDate
-    });
-    return response.data;
+    // Use ky instance (now named 'api') with json payload
+    const response = await api.post('api/v1/inventory/add-product-to-box/', {
+      json: { // Use json for request body with ky
+        product_id: productId,
+        box_slot_id: boxSlotId,
+        quantity,
+        batch_number: batchNumber,
+        expiry_date: expiryDate
+      }
+    }).json<any>();
+    return response;
   } catch (error) {
     console.error('Error adding product to box:', error);
     throw error;
   }
 };
 
-// Move a box to a different location
+// Move a box to a different location using ky
 export const moveBox = async (boxId: number, targetLocationId: number): Promise<any> => {
   try {
-    const response = await api.post('/api/inventory/move-box/', {
-      box_id: boxId,
-      target_location_id: targetLocationId
-    });
-    return response.data;
+    // Use ky instance (now named 'api') with json payload
+    const response = await api.post('api/v1/inventory/move-box/', {
+      json: {
+        box_id: boxId,
+        target_location_id: targetLocationId
+      }
+    }).json<any>();
+    return response;
   } catch (error) {
     console.error('Error moving box:', error);
     throw error;
   }
 };
 
-// Move products between box slots
+// Move products between box slots using ky
 export const moveProductBetweenBoxes = async (
   sourceBoxStorageId: number,
   targetBoxSlotId: number,
   quantity: number
 ): Promise<any> => {
   try {
-    const response = await api.post('/api/inventory/move-product-between-boxes/', {
-      source_box_storage_id: sourceBoxStorageId,
-      target_box_slot_id: targetBoxSlotId,
-      quantity
-    });
-    return response.data;
+    // Use ky instance (now named 'api') with json payload
+    const response = await api.post('api/v1/inventory/move-product-between-boxes/', {
+      json: {
+        source_box_storage_id: sourceBoxStorageId,
+        target_box_slot_id: targetBoxSlotId,
+        quantity
+      }
+    }).json<any>();
+    return response;
   } catch (error) {
     console.error('Error moving product between boxes:', error);
     throw error;
   }
 };
 
-// Remove a product from a box
+// Remove a product from a box using ky
 export const removeProductFromBox = async (
   boxStorageId: number,
   quantity: number,
   reason?: string
 ): Promise<any> => {
   try {
-    const response = await api.post('/api/inventory/remove-product-from-box/', {
-      box_storage_id: boxStorageId,
-      quantity,
-      reason
-    });
-    return response.data;
+    // Use ky instance (now named 'api') with json payload
+    const response = await api.post('api/v1/inventory/remove-product-from-box/', {
+      json: {
+        box_storage_id: boxStorageId,
+        quantity,
+        reason
+      }
+    }).json<any>();
+    return response;
   } catch (error) {
     console.error('Error removing product from box:', error);
     throw error;
   }
 };
 
-// Remove a box from its current location
+// Remove a box from its current location using ky
 export const removeBoxFromLocation = async (boxId: number): Promise<any> => {
   try {
-    // This uses the move-box endpoint but sets target_location_id to null
-    const response = await api.post('/api/inventory/remove-box-from-location/', {
-      box_id: boxId
-    });
-    return response.data;
+    // Use ky instance (now named 'api') with json payload
+    const response = await api.post('api/v1/inventory/remove-box-from-location/', {
+      json: {
+        box_id: boxId
+      }
+    }).json<any>();
+    return response;
   } catch (error) {
     console.error('Error removing box from location:', error);
     throw error;

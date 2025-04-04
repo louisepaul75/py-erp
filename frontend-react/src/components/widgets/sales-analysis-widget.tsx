@@ -15,7 +15,6 @@ import { Eye, EyeOff, ChevronLeft, ChevronRight, CalendarIcon } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import axios from 'axios';
 import {
   Select,
   SelectContent,

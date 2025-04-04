@@ -1,15 +1,13 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import axios from "axios"
+import { instance } from "@/lib/api"
 import { API_URL as BASE_URL } from "@/lib/config"
-import { clientCookieStorage } from "@/lib/auth/clientCookies"
-import { AUTH_CONFIG } from "@/lib/config"
 
 /**
  * API URL for mold tags
  */
-const API_URL = `${BASE_URL}/production/molds/tags/`
+const API_URL = `/production/molds/tags/`
 
 /**
  * Mock data for tags, used as fallback
@@ -32,37 +30,28 @@ export function useTags() {
     queryKey: ["tags"],
     queryFn: async () => {
       try {
-        // Get token from clientCookieStorage
-        const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-        
-        // Attempt to fetch from the real API
-        const response = await axios.get(API_URL, {
-          headers: token ? {
-            'Authorization': `Bearer ${token}`
-          } : {}
-        })
+        // Attempt to fetch from the real API using the shared ky instance
+        const response = await instance.get(API_URL).json()
         
         // If successful, use the API data
-        if (response.status === 200) {
-          console.log("Successfully fetched tags from API", response.data)
-          
-          // Check the structure of the API response
-          if (Array.isArray(response.data)) {
+        console.log("Successfully fetched tags from API", response)
+        
+        // Check the structure of the API response
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response && typeof response === 'object') {
+          // Check if response has a results, data, or items property that is an array
+          if (Array.isArray(response.results)) {
+            return response.results;
+          } else if (Array.isArray(response.data)) {
             return response.data;
-          } else if (response.data && typeof response.data === 'object') {
-            // Check if response.data has a results, data, or items property that is an array
-            if (Array.isArray(response.data.results)) {
-              return response.data.results;
-            } else if (Array.isArray(response.data.data)) {
-              return response.data.data;
-            } else if (Array.isArray(response.data.items)) {
-              return response.data.items;
-            } else if (Array.isArray(response.data.tags)) {
-              return response.data.tags;
-            } else {
-              // If no recognized array structure, log and fall back to mock data
-              console.warn("API response doesn't contain an array of tags:", response.data);
-            }
+          } else if (Array.isArray(response.items)) {
+            return response.items;
+          } else if (Array.isArray(response.tags)) {
+            return response.tags;
+          } else {
+            // If no recognized array structure, log and fall back to mock data
+            console.warn("API response doesn't contain an array of tags:", response);
           }
         }
         
