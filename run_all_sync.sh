@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # run_all_sync.sh - Script to run data synchronization commands
-# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--debug]
+# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--debug] [--top N]
 
 # Set default values
 DEBUG=0
@@ -9,6 +9,7 @@ CUSTOMERS_ONLY=0
 PRODUCTS_ONLY=0
 EMPLOYEES_ONLY=0
 FORCE_UPDATE=0
+TOP_VALUE=0
 
 # Process command line arguments
 for arg in "$@"
@@ -34,6 +35,14 @@ do
         FORCE_UPDATE=1
         shift
         ;;
+        --top=*)
+        TOP_VALUE="${arg#*=}"
+        shift
+        ;;
+        --top)
+        TOP_VALUE="$2"
+        shift 2
+        ;;
         *)
         # Unknown option
         shift
@@ -53,6 +62,13 @@ FORCE_FLAG=""
 if [ $FORCE_UPDATE -eq 1 ]; then
     FORCE_FLAG="--force-update"
     echo "Force update enabled"
+fi
+
+# Set up top limit flag
+TOP_FLAG=""
+if [ $TOP_VALUE -gt 0 ]; then
+    TOP_FLAG="--filters '{\"\\$top\": $TOP_VALUE}'"
+    echo "Top limit set to $TOP_VALUE"
 fi
 
 # Function to run a sync command with proper output formatting
@@ -81,7 +97,7 @@ run_customer_sync() {
     export LEGACY_ERP_TABLE_NAME="Kunden"
     
     # Run the command directly with the entity type flag
-    run_sync "python manage.py run_sync --entity-type customer $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py run_sync --entity-type customer $DEBUG_FLAG $FORCE_FLAG $TOP_FLAG"
     return $?
 }
 
@@ -97,7 +113,7 @@ run_employee_sync() {
     export LEGACY_ERP_TABLE_NAME="Personal"
     
     # Run the command directly with the entity type flag
-    run_sync "python manage.py run_sync --entity-type employee $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py run_sync --entity-type employee $DEBUG_FLAG $FORCE_FLAG $TOP_FLAG"
     return $?
 }
 
@@ -108,7 +124,7 @@ if [ $CUSTOMERS_ONLY -eq 1 ]; then
     exit $?
 elif [ $PRODUCTS_ONLY -eq 1 ]; then
     echo "Running products sync only"
-    run_sync "python manage.py sync_products $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py sync_products $DEBUG_FLAG $FORCE_FLAG $TOP_FLAG"
     exit $?
 elif [ $EMPLOYEES_ONLY -eq 1 ]; then
     echo "Running employees sync only"
@@ -122,11 +138,11 @@ else
     CUSTOMER_EXIT=$?
     
     # Run product sync
-    run_sync "python manage.py sync_products $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py sync_products $DEBUG_FLAG $FORCE_FLAG $TOP_FLAG"
     PRODUCT_EXIT=$?
     
     # Run inventory sync
-    run_sync "python manage.py sync_inventory $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py sync_inventory $DEBUG_FLAG $FORCE_FLAG $TOP_FLAG"
     INVENTORY_EXIT=$?
     
     # Run employee sync

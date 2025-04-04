@@ -44,7 +44,7 @@ customers:
       app_name: sales
       model_name: Customer
       unique_field: customer_number
-      update_strategy: update
+      update_strategy: update_or_create
   schedule:
     frequency: daily
     time: '02:00'
