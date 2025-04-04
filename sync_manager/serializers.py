@@ -11,8 +11,9 @@ class SyncWorkflowSerializer(serializers.ModelSerializer):
         model = SyncWorkflow
         fields = [
             'id', 'name', 'slug', 'description',
-            'command_name', 'entity_type',
-            'default_parameters', 'parameter_schema', # Include schema for future use
+            'command_template',
+            'parameters',
+            'environment_variables',
             'last_job_status', 'last_run_time'
         ]
         read_only_fields = ['last_job_status', 'last_run_time']

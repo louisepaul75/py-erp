@@ -13,6 +13,14 @@ interface Workflow {
   // Add other fields as needed, e.g., last run status/time
 }
 
+// Define interface for the paginated API response
+interface PaginatedWorkflowsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Workflow[];
+}
+
 const SyncWorkflows: React.FC = () => {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -24,8 +32,10 @@ const SyncWorkflows: React.FC = () => {
         setLoading(true);
         // Adjust API_BASE_URL based on your setup (e.g., from environment variables)
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await axios.get<Workflow[]>(`${API_BASE_URL}/api/v1/sync/workflows/`);
-        setWorkflows(response.data);
+        // Use the new interface for the expected response type
+        const response = await axios.get<PaginatedWorkflowsResponse>(`${API_BASE_URL}/api/v1/sync/workflows/`);
+        // Access the 'results' array from the response data
+        setWorkflows(response.data.results);
         setError(null);
       } catch (err) {
         console.error("Error fetching sync workflows:", err);
