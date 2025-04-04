@@ -6,70 +6,59 @@ import type {
   WorkflowLogRow,
   TriggerWorkflowPayload,
 } from "@/types/settings/api";
+import { API_URL } from "@/lib/config";
+import { authService } from "@/lib/auth/authService";
 
-// --- Base API Configuration ---
-// TODO: Replace with your actual API base URL if different
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api";
+// --- Helper Function --- 
 
-// Helper function for API requests (replace with your project's actual API client if available)
-async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const defaultOptions: RequestInit = {
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      // TODO: Add authentication headers (e.g., Authorization: `Bearer ${token}`)
-      // TODO: Add CSRF token header if using Django sessions/CSRF protection
-    },
+function mapSyncJobToLogRow(job: SyncJob): WorkflowLogRow {
+  const levelMap: Record<SyncJobStatus, WorkflowLogRow["level"]> = {
+    PENDING: "info",
+    STARTED: "info",
+    SUCCESS: "success",
+    FAILURE: "error",
+    RETRY: "warning",
   };
 
-  const mergedOptions: RequestInit = {
-    ...defaultOptions,
-    ...options,
-    headers: {
-      ...defaultOptions.headers,
-      ...options.headers,
-    },
-  };
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${url}`, mergedOptions);
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { message: response.statusText };
-      }
-      console.error("API Error:", response.status, errorData);
-      throw new Error(
-        errorData?.detail ||
-          errorData?.error ||
-          errorData?.message ||
-          `HTTP error ${response.status}`,
-      );
-    }
-
-    // Handle responses with no content (e.g., 204)
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return (await response.json()) as T;
-  } catch (error) {
-    console.error("Fetch failed:", error);
-    // Re-throw the error so components can handle it (e.g., show error messages)
-    throw error;
+  const timestamp = job.completed_at || job.started_at || job.created_at;
+  const level = levelMap[job.status] || "info";
+  let message = `Job for '${job.workflow_name}' ${job.status.toLowerCase()}`; 
+  if (job.status === "FAILURE") {
+      message += job.log_output ? `: ${job.log_output.split('\n')[0]}` : '';
   }
+
+  return {
+    id: job.id,
+    timestamp: timestamp || new Date().toISOString(), // Fallback timestamp
+    level: level,
+    message: message,
+    details: job.log_output || undefined,
+  };
 }
 
-// --- API Functions ---
+// --- API Functions (Using Standard Pattern) ---
 
 /**
  * Fetches the combined system integration data (connections and their workflows).
  */
 export async function fetchSystemIntegrationData(): Promise<SystemIntegrationData> {
-  return apiFetch<SystemIntegrationData>("/sync/system-integrations/");
+  const token = await authService.getToken();
+  const endpoint = `${API_URL}/sync/system-integrations/`;
+
+  const response = await fetch(endpoint, {
+    headers: {
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
+
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(
+      `Failed to fetch system integrations: ${response.status} ${response.statusText}`,
+    );
+  }
+  return (await response.json()) as SystemIntegrationData;
 }
 
 /**
@@ -80,13 +69,26 @@ export async function updateConnectionStatus(
   connectionName: string,
   enabled: boolean,
 ): Promise<SystemIntegrationData> {
-  return apiFetch<SystemIntegrationData>(
-    `/external-api/connections/${connectionName}/`,
-    {
-      method: "POST",
-      body: JSON.stringify({ enabled }),
+  const token = await authService.getToken();
+  const endpoint = `${API_URL}/external-api/connections/${connectionName}/`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
-  );
+    body: JSON.stringify({ enabled }),
+  });
+
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(
+      `Failed to update connection status: ${response.status} ${response.statusText}`,
+    );
+  }
+  return (await response.json()) as SystemIntegrationData;
 }
 
 /**
@@ -96,11 +98,23 @@ export async function updateConnectionStatus(
 export async function fetchWorkflowLogs(
   workflowSlug: string,
 ): Promise<WorkflowLogRow[]> {
-  const jobs = await apiFetch<SyncJob[]>(
-    `/sync/workflows/${workflowSlug}/recent-jobs/`,
-  );
+  const token = await authService.getToken();
+  const endpoint = `${API_URL}/sync/workflows/${workflowSlug}/recent-jobs/`;
 
-  // Map SyncJob[] to WorkflowLogRow[]
+  const response = await fetch(endpoint, {
+    headers: {
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  });
+
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(
+      `Failed to fetch workflow logs: ${response.status} ${response.statusText}`,
+    );
+  }
+  const jobs = (await response.json()) as SyncJob[];
   return jobs.map(mapSyncJobToLogRow);
 }
 
@@ -111,41 +125,24 @@ export async function triggerWorkflowRun(
   workflowSlug: string,
   payload: TriggerWorkflowPayload,
 ): Promise<SyncJob> {
-  return apiFetch<SyncJob>(`/sync/workflows/${workflowSlug}/trigger/`, {
+  const token = await authService.getToken();
+  const endpoint = `${API_URL}/sync/workflows/${workflowSlug}/trigger/`;
+
+  const response = await fetch(endpoint, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
     body: JSON.stringify(payload),
   });
-}
 
-// --- Helper Functions ---
-
-/**
- * Maps a SyncJob object from the backend to a simplified WorkflowLogRow for display.
- */
-function mapSyncJobToLogRow(job: SyncJob): WorkflowLogRow {
-  const levelMap: Record<SyncJobStatus, WorkflowLogRow["level"]> = {
-    PENDING: "info",
-    STARTED: "info",
-    SUCCESS: "success",
-    FAILURE: "error",
-    RETRY: "warning",
-  };
-
-  let message = `Job ${job.status.toLowerCase()}`;
-  if (job.status === "SUCCESS") {
-    message = "Workflow run completed successfully";
-  } else if (job.status === "FAILURE") {
-    message = "Workflow run failed";
-    // Optionally parse log_output for a more specific error message
-    // Example: const errorLine = job.log_output.split('\n').find(line => line.toLowerCase().includes('error'));
-    // if (errorLine) message = errorLine;
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(
+      `Failed to trigger workflow run: ${response.status} ${response.statusText}`,
+    );
   }
-
-  return {
-    id: job.task_id || job.id,
-    timestamp: job.completed_at || job.created_at, // Prefer completed time
-    level: levelMap[job.status] || "info",
-    message: message,
-    details: job.log_output,
-  };
+  return (await response.json()) as SyncJob;
 }
