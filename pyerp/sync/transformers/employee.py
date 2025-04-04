@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 import re
 import math
+import decimal
 from decimal import Decimal, ROUND_DOWN
 
 from .base import BaseTransformer, ValidationError
@@ -219,12 +220,26 @@ class EmployeeTransformer(BaseTransformer):
         for field, decimal_places in numeric_fields.items():
             if field in transformed and transformed[field] is not None:
                 try:
+                    # First, verify that the value can be converted to a string and then to Decimal
+                    if transformed[field] == "" or transformed[field] is None:
+                        transformed[field] = 0.0
+                        continue
+                        
+                    # Try to convert the value to a Decimal
+                    try:
+                        decimal_value = Decimal(str(transformed[field]))
+                    except (ValueError, TypeError, decimal.InvalidOperation):
+                        logger.warning("Could not convert %s (value: %s) to Decimal, defaulting to 0.0", 
+                                      field, transformed[field])
+                        transformed[field] = 0.0
+                        continue
+                        
+                    # Now quantize to the correct number of decimal places
                     if field == "monthly_salary":
-                        # Use Decimal for exact control over decimal places
-                        transformed[field] = float(Decimal(str(transformed[field])).quantize(Decimal('0.01'), rounding=ROUND_DOWN))
+                        transformed[field] = float(decimal_value.quantize(Decimal('0.01'), rounding=ROUND_DOWN))
                     else:
-                        transformed[field] = float(Decimal(str(transformed[field])).quantize(Decimal('0.' + '0' * (decimal_places - 1) + '1')))
-                except (ValueError, TypeError) as e:
+                        transformed[field] = float(decimal_value.quantize(Decimal('0.' + '0' * (decimal_places - 1) + '1')))
+                except Exception as e:
                     logger.warning("Error processing numeric field %s: %s", field, e)
                     transformed[field] = 0.0
         

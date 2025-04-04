@@ -86,12 +86,30 @@ class Command(BaseCommand):
 
         # Process each mapping
         for mapping in mappings:
-            self.stdout.write(f"\nProcessing mapping: {mapping}")
+            self.stdout.write(
+                f"\nProcessing mapping: {mapping} (ID: {mapping.id}, "
+                f"Source: {mapping.source.name}, Target: {mapping.target.name})"
+            )
 
             try:
-                # Create and run pipeline
-                pipeline = PipelineFactory.create_pipeline(mapping)
+                # Create pipeline first, handle potential creation errors
+                try:
+                    pipeline = PipelineFactory.create_pipeline(mapping)
+                    self.stdout.write(f"Pipeline created successfully for mapping ID {mapping.id}")
+                except Exception as creation_error:
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f"Failed to create pipeline for mapping ID {mapping.id} "
+                            f"({mapping.entity_type} from {mapping.source.name} to {mapping.target.name}): "
+                            f"{str(creation_error)}"
+                        )
+                    )
+                    if options["debug"]:
+                        import traceback
+                        traceback.print_exc()
+                    continue # Skip to the next mapping if pipeline creation fails
 
+                # Now run the successfully created pipeline
                 start_time = timezone.now()
                 self.stdout.write(f"Starting sync at {start_time}...")
 
@@ -117,9 +135,9 @@ class Command(BaseCommand):
                             f"Sync completed with some errors in {duration:.2f} seconds"
                         )
                     )
-                else:
+                else: # failed or other status
                     self.stdout.write(
-                        self.style.ERROR(f"Sync failed in {duration:.2f} seconds")
+                        self.style.ERROR(f"Sync finished with status '{sync_log.status}' in {duration:.2f} seconds")
                     )
 
                 self.stdout.write("\nStatistics:")
@@ -130,15 +148,18 @@ class Command(BaseCommand):
 
                 if sync_log.error_message:
                     self.stdout.write(
-                        self.style.ERROR(f"\nError: {sync_log.error_message}")
+                        self.style.ERROR(f"\nError details logged: {sync_log.error_message}")
                     )
 
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Sync failed: {str(e)}"))
+                # This catches errors during pipeline.run() or other unexpected issues
+                self.stdout.write(
+                    self.style.ERROR(f"Sync execution failed unexpectedly for mapping ID {mapping.id}: {str(e)}")
+                )
                 if options["debug"]:
                     import traceback
-
                     traceback.print_exc()
+                # Optionally create a failed SyncLog entry here if needed for tracking
 
     def _list_mappings(self, source_name=None, target_name=None, entity_type=None):
         """List available mappings."""
