@@ -99,7 +99,7 @@ export async function fetchWorkflowLogs(
   workflowSlug: string,
 ): Promise<WorkflowLogRow[]> {
   const token = await authService.getToken();
-  const endpoint = `${API_URL}/sync/workflows/${workflowSlug}/recent-jobs/`;
+  const endpoint = `${API_URL}/api/sync/workflows/${workflowSlug}/recent-jobs/`;
 
   const response = await fetch(endpoint, {
     headers: {
@@ -126,7 +126,7 @@ export async function triggerWorkflowRun(
   payload: TriggerWorkflowPayload,
 ): Promise<SyncJob> {
   const token = await authService.getToken();
-  const endpoint = `${API_URL}/sync/workflows/${workflowSlug}/trigger/`;
+  const endpoint = `${API_URL}/api/sync/workflows/${workflowSlug}/trigger/`;
 
   const response = await fetch(endpoint, {
     method: "POST",
