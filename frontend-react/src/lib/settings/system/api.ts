@@ -20,16 +20,18 @@ function mapSyncJobToLogRow(job: SyncJob): WorkflowLogRow {
     RETRY: "warning",
   };
 
-  const timestamp = job.completed_at || job.started_at || job.created_at;
+  const timestampStr = job.completed_at || job.started_at || job.created_at;
+  const timestamp = timestampStr ? new Date(timestampStr).toLocaleString() : new Date().toLocaleString(); // Format timestamp
   const level = levelMap[job.status] || "info";
-  let message = `Job for '${job.workflow_name}' ${job.status.toLowerCase()}`; 
+  // Add Job ID to the message
+  let message = `Job #${job.id} for '${job.workflow_name}' ${job.status.toLowerCase()}`; 
   if (job.status === "FAILURE") {
       message += job.log_output ? `: ${job.log_output.split('\n')[0]}` : '';
   }
 
   return {
     id: job.id,
-    timestamp: timestamp || new Date().toISOString(), // Fallback timestamp
+    timestamp: timestamp, // Use formatted timestamp
     level: level,
     message: message,
     details: job.log_output || undefined,
