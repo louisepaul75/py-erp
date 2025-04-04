@@ -51,6 +51,7 @@ export function IntegrationGroup({
   const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null); // Track running workflow slug
   const [workflowParameters, setWorkflowParameters] = useState<Record<string, Record<string, boolean>>>({});
   const [selectedWorkflowForLogs, setSelectedWorkflowForLogs] = useState<SyncWorkflow | null>(null);
+  const [isLogsDrawerOpen, setIsLogsDrawerOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useAppTranslation("settings_system"); // Initialize translation
 
@@ -134,6 +135,7 @@ export function IntegrationGroup({
   // Handle opening the logs drawer
   const handleShowLogs = (workflow: SyncWorkflow) => {
     setSelectedWorkflowForLogs(workflow);
+    setIsLogsDrawerOpen(true);
   };
 
   // Helper to format last run time
@@ -293,12 +295,8 @@ export function IntegrationGroup({
       {/* Logs Drawer */} 
       <LogsDrawer 
         workflow={selectedWorkflowForLogs}
-        isOpen={!!selectedWorkflowForLogs}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setSelectedWorkflowForLogs(null);
-          }
-        }}
+        isOpen={isLogsDrawerOpen}
+        onClose={() => setIsLogsDrawerOpen(false)}
       />
     </Card>
   );

@@ -21,6 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
 
 import type { SyncWorkflow, WorkflowLogRow } from "@/types/settings/api";
 import { fetchWorkflowLogs } from "@/lib/settings/system/api";
@@ -207,7 +208,16 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
                      <span className="font-mono text-xs text-muted-foreground">
                        {log.timestamp}
                      </span>
-                     <Badge variant={getBadgeVariant(log.level)} className="capitalize">
+                     <Badge 
+                       variant={getBadgeVariant(log.level)}
+                       className={cn(
+                         "capitalize",
+                         {
+                           "bg-[var(--status-success)] text-white border-transparent": log.level === 'success',
+                           "bg-[var(--status-error)] text-white border-transparent": log.level === 'error',
+                         }
+                       )}
+                     >
                        {log.level}
                      </Badge>
                    </div>
