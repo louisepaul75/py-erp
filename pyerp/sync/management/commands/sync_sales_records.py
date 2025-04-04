@@ -10,11 +10,12 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.management import call_command
 from django.utils import timezone
 from django.apps import apps
+from django.db.utils import OperationalError
 
 from pyerp.utils.logging import get_logger
 
-
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -103,15 +104,23 @@ class Command(BaseCommand):
             days = options["days"]
             modified_since = timezone.now() - timedelta(days=days)
             date_str = modified_since.strftime("%Y-%m-%d")
-            # Assuming the pipeline understands this filter structure
-            filters["modified_date"] = {"gt": date_str}
-            self.stdout.write(f"Filtering records modified since {date_str} ({days} days ago)")
-        elif not options["full"] and not filters.get("modified_date") and not filters.get("Datum"): # Default incremental filter
-            # Add default date filter for incremental sync (last 5 years) if not specified
+            filters["Datum"] = {"gt": date_str}
+            self.stdout.write(
+                f"Filtering records with Datum > {date_str} ({days} days ago)"
+            )
+        elif (
+            not options["full"]
+            and not filters.get("modified_date")
+            and not filters.get("Datum")
+        ):  # Default incremental filter
+            # Add default date filter for incremental sync (last 5 years)
             five_years_ago = timezone.now() - timedelta(days=5 * 365)
             date_str = five_years_ago.strftime("%Y-%m-%d")
-            filters["Datum"] = {"gt": date_str} # Use 'Datum' based on previous logic
-            self.stdout.write(f"Adding default incremental filter: records from {date_str} (last 5 years)")
+            filters["Datum"] = {"gt": date_str}  # Use 'Datum' based on previous logic
+            self.stdout.write(
+                f"Adding default incremental filter: Datum > {date_str} "
+                "(last 5 years)"
+            )
         run_sync_options["filters"] = json.dumps(filters) if filters else None
 
         records_sync_successful = True
@@ -142,6 +151,12 @@ class Command(BaseCommand):
             sales_record_ids = []
             item_filters = {}
             
+            # --- Add Date Filter to item_filters if present in main filters --- 
+            if filters and "Datum" in filters:
+                item_filters["Datum"] = filters["Datum"]
+                logger.info(f"Applying Datum filter to items sync: {filters['Datum']}")
+            # --- End Date Filter Addition --- 
+
             try:
                 if options["top"] or ('$top' in filters and filters['$top']):
                     SalesRecord = apps.get_model('sales', 'SalesRecord')
@@ -167,6 +182,9 @@ class Command(BaseCommand):
                     # Don't copy $top filter to items sync
                     if "$top" in filter_data:
                         filter_data.pop("$top")
+                    # Don't overwrite existing Datum filter if already added
+                    if "Datum" in filter_data and "Datum" in item_filters:
+                        filter_data.pop("Datum")
                     item_filters.update(filter_data)
                 except json.JSONDecodeError:
                     pass # Ignore filter errors here, handled above
