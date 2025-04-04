@@ -16,7 +16,15 @@ export * from './form';
 export * from './checkbox';
 
 // Data Display Components
-export * from './data/Table';
+export { 
+  Table as EnhancedTable,
+  TableHeader as EnhancedTableHeader,
+  TableBody as EnhancedTableBody,
+  TableRow as EnhancedTableRow,
+  TableHead as EnhancedTableHead,
+  TableCell as EnhancedTableCell,
+  StatusBadge 
+} from './data/Table';
 export * from './avatar';
 export * from './badge';
 export * from './calendar';
@@ -24,7 +32,6 @@ export * from './separator';
 export * from './table';
 
 // Feedback Components
-export { StatusBadge } from './data/Table';
 export { Badge } from './badge';
 export * from './alert';
 export * from './alert-dialog';
