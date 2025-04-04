@@ -10,11 +10,11 @@ from .models import SyncJob, SyncWorkflow
 
 # Helper function to build the command arguments
 def build_command_args(workflow: SyncWorkflow, parameters: dict) -> list[str]:
-    args = [workflow.command_name]
+    args = [workflow.command_template]
     
     # Add entity_type if specified
-    if workflow.entity_type:
-        args.extend(['--entity-type', workflow.entity_type])
+    # if workflow.entity_type: # Commented out as entity_type was removed from model
+    #     args.extend(['--entity-type', workflow.entity_type])
         
     # Add boolean flags based on parameters
     if parameters.get('debug'):

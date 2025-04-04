@@ -28,6 +28,14 @@ class SyncWorkflow(models.Model):
     # Store environment variables required for this workflow
     environment_variables = models.JSONField(default=dict, blank=True, verbose_name=_("Environment Variables"))
 
+    # Store default parameters for triggering the workflow
+    default_parameters = models.JSONField(
+        default=dict, 
+        blank=True, 
+        verbose_name=_("Default Parameters"),
+        help_text=_("Default parameters to use when triggering this workflow.")
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
