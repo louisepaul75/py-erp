@@ -32,22 +32,88 @@ interface LogsDrawerProps {
   onClose: () => void;
 }
 
-function parseLogMetrics(details?: string): Record<string, number | string> | null {
+interface LogMetrics {
+  processed: number | string;
+  created: number | string;
+  updated: number | string;
+  failed: number | string;
+  startTime: string | null;
+  duration: string | null;
+}
+
+// Helper to parse metrics from plain text log details
+function parseLogMetrics(details?: string): LogMetrics | null {
   if (!details) return null;
-  try {
-    const data = JSON.parse(details);
-    if (data && typeof data === 'object' && data.status === 'success') {
-      return {
-        Processed: data.records_processed ?? 'N/A',
-        Succeeded: data.records_succeeded ?? 'N/A',
-        Failed: data.records_failed ?? 'N/A',
-      };
-    }
-  } catch (error) {
-    // Log parsing error if needed, but don't crash
-    // console.error("Failed to parse log details:", error);
+
+  const metrics: LogMetrics = {
+    processed: 'N/A',
+    created: 'N/A',
+    updated: 'N/A',
+    failed: 'N/A',
+    startTime: null,
+    duration: null,
+  };
+  let foundAny = false;
+
+  // Regex for start time
+  const startTimeMatch = details.match(/Starting sync at (.*?)\.\.\./);
+  if (startTimeMatch && startTimeMatch[1]) {
+    metrics.startTime = startTimeMatch[1].trim();
+    foundAny = true;
   }
-  return null;
+
+  // Regex for duration
+  const durationMatch = details.match(/Sync completed successfully in ([\d.]+) seconds/);
+  if (durationMatch && durationMatch[1]) {
+    metrics.duration = `${durationMatch[1]} seconds`;
+    foundAny = true;
+  }
+
+  // Regex for statistics (check line by line after "Statistics:")
+  const statsHeaderIndex = details.indexOf('Statistics:');
+  if (statsHeaderIndex !== -1) {
+      const statsBlock = details.substring(statsHeaderIndex);
+      // Example: Processed: 113
+      const processedMatch = statsBlock.match(/Processed:\s*(\d+)/);
+      if (processedMatch && processedMatch[1]) {
+          metrics.processed = parseInt(processedMatch[1], 10);
+          foundAny = true;
+      }
+      // Example: Created: 0
+      const createdMatch = statsBlock.match(/Created:\s*(\d+)/);
+      if (createdMatch && createdMatch[1]) {
+          metrics.created = parseInt(createdMatch[1], 10);
+          foundAny = true;
+      }
+      // Example: Updated: 101
+      const updatedMatch = statsBlock.match(/Updated:\s*(\d+)/);
+      if (updatedMatch && updatedMatch[1]) {
+          metrics.updated = parseInt(updatedMatch[1], 10);
+          foundAny = true;
+      }
+      // Example: Failed: 12
+      const failedMatch = statsBlock.match(/Failed:\s*(\d+)/);
+      if (failedMatch && failedMatch[1]) {
+          metrics.failed = parseInt(failedMatch[1], 10);
+          foundAny = true;
+      }
+  }
+
+  // Return metrics only if something was found
+  return foundAny ? metrics : null;
+}
+
+// Helper to format ISO-like date string from logs
+function formatLogDateTime(dateString: string | null): string {
+  if (!dateString) return 'N/A';
+  try {
+    // Attempt to parse potentially non-standard format
+    // Replace space before timezone offset if present
+    const parsableDateString = dateString.replace(/ (\+\d{2}:\d{2})$/, '$1');
+    return new Date(parsableDateString).toLocaleString();
+  } catch {
+    return dateString; // Fallback to original string if parsing fails
+  }
 }
 
 export const LogsDrawer: React.FC<LogsDrawerProps> = ({
@@ -134,7 +200,7 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
               <p className="text-sm text-muted-foreground">{t("no_logs_found")}</p>
             )}
             {!loading && !error && logs.map((log) => {
-              const metrics = log.level === 'success' ? parseLogMetrics(log.details) : null;
+              const metrics = parseLogMetrics(log.details);
               return (
                 <div key={log.id} className="p-3 border rounded-md text-sm">
                    <div className="flex justify-between items-start mb-1">
@@ -147,10 +213,21 @@ export const LogsDrawer: React.FC<LogsDrawerProps> = ({
                    </div>
                    <p className="mb-2">{log.message}</p>
                    {metrics && (
-                     <div className="text-xs text-muted-foreground space-x-2 mb-2">
-                       {Object.entries(metrics).map(([key, value]) => (
-                         <span key={key}>{key}: <strong>{value}</strong></span>
-                       ))}
+                     <div className="text-xs text-muted-foreground space-y-1 mb-2">
+                       <div>
+                         <strong>Statistics:</strong>
+                         <span className="ml-2">Processed: <strong>{metrics.processed}</strong></span>
+                         <span className="ml-2">Created: <strong>{metrics.created}</strong></span>
+                         <span className="ml-2">Updated: <strong>{metrics.updated}</strong></span>
+                         <span className="ml-2">Failed: <strong>{metrics.failed}</strong></span>
+                       </div>
+                       {(metrics.startTime || metrics.duration) && (
+                         <div>
+                           <strong>Time:</strong>
+                           {metrics.startTime && <span className="ml-2">Start: <strong>{formatLogDateTime(metrics.startTime)}</strong></span>}
+                           {metrics.duration && <span className="ml-2">Duration: <strong>{metrics.duration}</strong></span>}
+                         </div>
+                       )}
                      </div>
                    )}
                    {log.details && (
