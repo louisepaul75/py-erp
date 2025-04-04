@@ -43,7 +43,7 @@ function mapSyncJobToLogRow(job: SyncJob): WorkflowLogRow {
  */
 export async function fetchSystemIntegrationData(): Promise<SystemIntegrationData> {
   const token = await authService.getToken();
-  const endpoint = `${API_URL}/sync/system-integrations/`;
+  const endpoint = `${API_URL}/api/sync/system-integrations/`;
 
   const response = await fetch(endpoint, {
     headers: {
