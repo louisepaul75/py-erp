@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import shlex # Import shlex for safe command splitting
 from datetime import timezone
 
 from celery import shared_task
@@ -10,10 +11,18 @@ from .models import SyncJob, SyncWorkflow
 
 # Helper function to build the command arguments
 def build_command_args(workflow: SyncWorkflow, parameters: dict) -> list[str]:
-    args = [workflow.command_template]
+    # Split the template safely using shlex
+    try:
+        base_args = shlex.split(workflow.command_template)
+    except ValueError:
+        # Handle potential splitting errors, e.g., unbalanced quotes
+        print(f"Error splitting command template: {workflow.command_template}")
+        base_args = [] # Or raise an error / return default?
     
-    # Add entity_type if specified
-    # if workflow.entity_type: # Commented out as entity_type was removed from model
+    args = base_args
+    
+    # Commented out entity_type logic as it was removed from model
+    # if workflow.entity_type:
     #     args.extend(['--entity-type', workflow.entity_type])
         
     # Add boolean flags based on parameters
@@ -50,13 +59,15 @@ def run_sync_workflow_task(self, sync_job_id: int):
     output_log = ""
 
     try:
-        command_args = build_command_args(workflow, job.parameters)
+        full_command = build_command_args(workflow, job.parameters)
         
-        # Construct the full command with python manage.py
-        # Ensure it uses the same python executable as the celery worker
-        manage_py_path = './manage.py' # Assuming celery runs from project root
-        full_command = [sys.executable, manage_py_path] + command_args
+        # Removed construction with python manage.py - command_template should contain it
+        # manage_py_path = './manage.py' 
+        # full_command = [sys.executable, manage_py_path] + command_args
         
+        if not full_command: # Check if command splitting failed
+            raise ValueError("Could not build command from template.")
+
         job.log_output += f"Executing command: {' '.join(full_command)}\n\n"
         job.save()
 
