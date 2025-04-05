@@ -24,125 +24,6 @@ def run_sync_command(command_args):
         # --- Temporarily disable output parsing --- 
         # --- as it relied on captured output   ---
         print(f"  SUCCESS: {' '.join(command_args)}")
-        # summary = {
-        #     "extracted": 0,
-        #     "processed": 0,
-        #     "transformed": 0,
-        #     "created": 0,
-        #     "updated": 0,
-        #     "skipped": 0,
-        #     "failed": 0,
-        # }
-        # patterns = {
-        #     "parent_processed": (
-        #         r"Processing finished:.*?Processed=(\d+).*?Created=(\d+)"
-        #         r".*?Updated=(\d+).*?Failed=(\d+)"
-        #     ),
-        #     "run_sync_processed": r"Processed: (\d+)",
-        #     "run_sync_created":   r"Created: (\d+)",
-        #     "run_sync_updated":   r"Updated: (\d+)",
-        #     "run_sync_failed":    r"Failed: (\d+)",
-        #     "extracted": r"Extracted (\d+).*(?:parent|child)? records",
-        #     "transformed": r"Transformed (\d+).*(?:parent|child)? records",
-        #     "load": (
-        #         r"(?:load|sync) finished:.*?(\d+) created.*?(\d+) updated"
-        #         r".*?(\d+) skipped.*?(\d+) errors"
-        #     ),
-        # }
-
-        # # Check if result.stdout is available (it won't be if not captured)
-        # if hasattr(result, 'stdout') and result.stdout:
-        #     for line in result.stdout.splitlines():
-        #         matched = False
-        #         # Check for parent processed (sync_products style)
-        #         match_parent = re.search(
-        #             patterns["parent_processed"], line, re.IGNORECASE
-        #         )
-        #         if match_parent:
-        #             summary["processed"] += int(match_parent.group(1))
-        #             summary["created"] += int(match_parent.group(2))
-        #             summary["updated"] += int(match_parent.group(3))
-        #             summary["failed"] += int(match_parent.group(4))
-        #             matched = True
-        #             continue
-
-        #         # Check for run_sync statistics block lines
-        #         match_rsp = re.search(
-        #             patterns["run_sync_processed"], line.strip(),
-        #             re.IGNORECASE
-        #         )
-        #         if match_rsp:
-        #             summary["processed"] += int(match_rsp.group(1))
-        #             matched = True
-        #         match_rsc = re.search(
-        #             patterns["run_sync_created"], line.strip(), re.IGNORECASE
-        #         )
-        #         if match_rsc:
-        #             summary["created"] += int(match_rsc.group(1))
-        #             matched = True
-        #         match_rsu = re.search(
-        #             patterns["run_sync_updated"], line.strip(), re.IGNORECASE
-        #         )
-        #         if match_rsu:
-        #             summary["updated"] += int(match_rsu.group(1))
-        #             matched = True
-        #         match_rsf = re.search(
-        #             patterns["run_sync_failed"], line.strip(), re.IGNORECASE
-        #         )
-        #         if match_rsf:
-        #             summary["failed"] += int(match_rsf.group(1))
-        #             matched = True
-        #         if matched: continue
-
-        #         # Check for extraction
-        #         match_extract = re.search(
-        #             patterns["extracted"], line, re.IGNORECASE
-        #         )
-        #         if match_extract:
-        #             summary["extracted"] += int(match_extract.group(1))
-        #             summary["processed"] += int(match_extract.group(1))
-        #             continue
-
-        #         # Check for transformation
-        #         match_transform = re.search(
-        #             patterns["transformed"], line, re.IGNORECASE
-        #         )
-        #         if match_transform:
-        #             summary["transformed"] += int(match_transform.group(1))
-        #             continue
-
-        #         # Check for load results
-        #         match_load = re.search(patterns["load"], line, re.IGNORECASE)
-        #         if match_load:
-        #             summary["created"] += int(match_load.group(1))
-        #             summary["updated"] += int(match_load.group(2))
-        #             summary["skipped"] += int(match_load.group(3))
-        #             summary["failed"] += int(match_load.group(4))
-        #             continue
-
-        #     # Print summary if any counts were found
-        #     if any(summary.values()):
-        #         if summary["extracted"] > 0 or summary["transformed"] > 0:
-        #             source_summary = (
-        #                 f"Extracted={summary['extracted']}, "
-        #                 f"Transformed={summary['transformed']}"
-        #             )
-        #         else:
-        #             source_summary = f"Processed={summary['processed']}"
-
-        #         load_summary = (
-        #             f"Created={summary['created']}, "
-        #             f"Updated={summary['updated']}, "
-        #             f"Skipped={summary['skipped']}, "
-        #             f"Failed={summary['failed']}"
-        #         )
-
-        #         summary_str = f"    Summary: {source_summary}, {load_summary}"
-        #         print(summary_str)
-        # else:
-        #      print(
-        #          "    Summary: Output not captured, cannot parse summary."
-        #      )
         # --- End Temporarily disable output parsing ---
 
         return True
@@ -200,7 +81,6 @@ if __name__ == "__main__":
             text=True,
             encoding='utf-8'
         )
-        # Removed unnecessary f-string, added space before comment
         print("  SUCCESS: Legacy ERP Filter Tests")  # Optional summary print
         # Optional: print test output summary if needed from result.stdout
         filter_test_success = True
@@ -250,6 +130,12 @@ if __name__ == "__main__":
     sales_sync_args = ['sync_sales_records', '--top=1', '--debug']
     sync_results[' '.join(sales_sync_args)] = run_sync_command(
         sales_sync_args
+    )
+
+    # --- Production Sync (Added) ---
+    production_sync_args = ['sync_production', '--top=1', '--debug']
+    sync_results[' '.join(production_sync_args)] = run_sync_command(
+        production_sync_args
     )
 
     # --- Summary ---
