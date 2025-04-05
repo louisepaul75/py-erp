@@ -664,7 +664,7 @@ class BaseAPIClient:
                                 # Format value appropriately (e.g., quote strings)
                                 if isinstance(value, str):
                                     # Escape single quotes within the string value
-                                    safe_value = value # REMOVED manual escaping
+                                    safe_value = value  # REMOVED manual escaping
                                     # Quote the string value using double quotes
                                     formatted_value = f'"{safe_value}"'
                                 elif hasattr(value, "strftime"):
@@ -672,10 +672,13 @@ class BaseAPIClient:
                                 else:
                                     formatted_value = value
 
-                                # Construct the filter part
+                                # Construct the filter part string
                                 if isinstance(value, str) and operator == '=':
+                                    # REVERTED: Special handling for string equality - wrap filter part in single quotes
+                                    # This syntax was observed to work in manual tests for Familie_
                                     filter_part_str = f"'{field} {operator} {formatted_value}'"
                                 else:
+                                    # REVERTED: Standard condition format
                                     filter_part_str = f"{field} {operator} {formatted_value}"
                                 filter_parts.append(filter_part_str)
                             except Exception as e:
@@ -697,6 +700,8 @@ class BaseAPIClient:
                                     )
 
                             # Use 'or' if all filters target the same field, 'and' otherwise
+                            # KNOWN ISSUE: Using 'or' here can cause issues with the $top parameter
+                            # The API might return more records than specified by $top.
                             joiner = " and " if is_multi_field else " or "
                             params["$filter"] = joiner.join(filter_parts)
                         else:

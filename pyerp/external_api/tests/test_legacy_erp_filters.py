@@ -158,13 +158,16 @@ class LegacyERPFilterTests(unittest.TestCase):
     @unittest.expectedFailure
     def test_05_filter_in_list(self):
         """
-        Test filtering where a field value is in a list (simulated with OR).
-        EXPECTED TO FAIL: API returns extra incorrect records when using OR + $top.
-        Fetches more items than requested if filter matches fewer than top.
+        Test filtering where a field value is in a list.
+        Trying potential 'in' operator syntax.
+        EXPECTED TO FAIL if 'in' is not supported or API has issues.
+
+        confirmed working url:
+        http://192.168.73.28:8080/rest/Artikel_Variante?$filter='Nummer = 803721' or 'Nummer = 731671'
         """
         # Assumption: Need known values for the ID_FIELD.
         # Fetch a couple of records first to get valid IDs.
-        print("\nFetching sample IDs for 'IN LIST' test (EXPECTED FAILURE)..." )
+        print("\nFetching sample IDs for 'IN LIST' test (using 'in' syntax)...")
         sample_df = self.client.fetch_table(table_name=TEST_TABLE, top=2)
         if len(sample_df) < 2:
             self.skipTest(
@@ -182,30 +185,37 @@ class LegacyERPFilterTests(unittest.TestCase):
         print(f"Using IDs: {id1}, {id2}")
 
         expected_ids_list = [id1, id2]
+        # --- MODIFICATION: Try hypothetical 'in' syntax ---
         filter_q = [
-            [ID_FIELD, "=", id1],
-            [ID_FIELD, "=", id2]
+             [ID_FIELD, 'in', expected_ids_list]
         ]
-        # Since filters are on the same field, base.py joins them with 'OR'
-        # Request using the default top=5.
+        # --- END MODIFICATION ---
+
+        # Use the helper method again, as we are testing filter syntax
+        # not the direct call parameters.
         df = self._run_fetch_test(
-            "Filter IN List (OR) - Default Top",  # Renamed test back
+            "Filter IN List ('in' syntax)",
             filter_query=filter_q
-            # Use default top from _run_fetch_test
+            # Uses default top=5 from _run_fetch_test
         )
+
         # We expect exactly the IDs requested if the API behaves correctly.
         # The assertion needs to check if the returned IDs *equal* the set
-        # expected.
         if not df.empty:
             returned_ids = set(df[ID_FIELD])
             self.assertSetEqual(
                 returned_ids,
                 set(expected_ids_list),
-                f"Expected IDs {set(expected_ids_list)} but got {returned_ids}"
+                f"Expected IDs {set(expected_ids_list)} but got {returned_ids} "
+                f"using 'in' syntax"
             )
         else:
             # If df is empty, the assertion fails unless expected list is also empty
-            self.assertListEqual([], expected_ids_list, "Expected IDs but got empty result")
+            self.assertListEqual(
+                [],
+                expected_ids_list,
+                "Expected IDs but got empty result using 'in' syntax"
+            )
 
     def test_06_filter_combined_and(self):
         """Test combining filters on different fields (implicit AND)."""
