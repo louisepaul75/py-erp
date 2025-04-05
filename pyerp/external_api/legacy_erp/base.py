@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 import time
+import urllib.parse
 
 import pandas as pd
 import requests
@@ -87,7 +88,7 @@ class BaseAPIClient:
         # Always prefix with REST endpoint
         endpoint = f"{API_REST_ENDPOINT}/{endpoint.lstrip('/')}"
 
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        base_request_url = f"{self.base_url}/{endpoint.lstrip('/')}"
 
         # Log the session cookie being used (safely showing only part of it)
         if self.session_id:
@@ -102,24 +103,47 @@ class BaseAPIClient:
 
         # Extract params for logging and request
         params = kwargs.get("params")
+        encoded_filter_part = None
 
-        # Log the intended URL and parameters
-        logger.info(f"Request URL: {url}")
-        if params:
-            logger.info(f"Request Params: {params}")
+        # --- MODIFIED: Manually URL-encode and append $filter ---
+        if params and "$filter" in params:
+            filter_value = params.pop("$filter") # Remove from params dict
+            if isinstance(filter_value, str):
+                # safe='' ensures even special chars like = / etc. are encoded
+                encoded_filter_part = f"$filter={urllib.parse.quote(filter_value, safe='')}"
+                logger.info(f"Manually URL-encoded filter part: {encoded_filter_part}")
+            else:
+                logger.warning("Filter value is not a string, skipping manual encoding/appending.")
+                # Put it back if not encoded? Or maybe error? For now, just log.
+        # --- End Modification ---
+
+        # Construct final URL
+        final_url = base_request_url
+        # Append manually encoded filter if present
+        if encoded_filter_part:
+            # Check if base_request_url already has query params
+            query_separator = "&" if "?" in final_url else "?"
+            final_url += query_separator + encoded_filter_part
+            logger.info(f"URL with manually appended filter: {final_url}")
+
+        # Log the intended URL and parameters that will be automatically handled by requests
+        logger.info(f"Request URL (base): {base_request_url}")
+        logger.info(f"Request URL (final): {final_url}")
+        if params: # Log remaining params
+            logger.info(f"Request Params (handled by requests): {params}")
         else:
-            logger.info("Request Params: None")
+            logger.info("Request Params (handled by requests): None")
 
         start_time = time.time()
 
         try:
-            # Use the base URL and pass params directly to requests library
+            # Use the final URL, pass remaining params directly to requests library
             response = self.session.request(
                 method=method,
-                url=url,  # Use base URL, requests adds params
-                # No need to pop params from kwargs if it's passed directly
-                **kwargs  # This includes params={'...'} if present
-                # timeout is handled directly by requests if present in kwargs
+                url=final_url, # Use the URL with manually appended filter
+                params=params, # Pass the params dict (now without $filter)
+                timeout=kwargs.get("timeout", self.timeout) # Ensure timeout is passed
+                # Removed **kwargs spread to avoid duplicate params/timeout etc.
             )
 
             duration_ms = int((time.time() - start_time) * 1000)
@@ -133,7 +157,7 @@ class BaseAPIClient:
                 extra_context={
                     "method": method,
                     "environment": self.environment,
-                    "url": url,  # Log base URL
+                    "url": final_url,  # Log final URL
                     # Log the actual params dict passed
                     "params": params if params else {},
                 },
@@ -145,7 +169,7 @@ class BaseAPIClient:
                     name=f"legacy_erp_{method}_{endpoint}",
                     duration_ms=duration_ms,
                     # MODIFIED: Line length
-                    extra_context={"url": url, "params": params if params else {}},
+                    extra_context={"url": final_url, "params": params if params else {}},
                 )
 
             return response
@@ -156,7 +180,7 @@ class BaseAPIClient:
                 error_msg,
                 extra={
                     "method": method,
-                    "url": url,
+                    "url": final_url,
                     "error": str(e),
                 },
             )
@@ -668,9 +692,11 @@ class BaseAPIClient:
                                 # MODIFIED: Reverted to quoting strings
                                 if isinstance(value, str):
                                     # Escape single quotes within the string value
-                                    safe_value = value.replace("'", "''")
-                                    # Quote the string value
-                                    formatted_value = f"'{safe_value}'"
+                                    # safe_value = value.replace("'", "''") # Original escaping for single quotes
+                                    # Ensure no double quotes interfere, though API might not need this
+                                    safe_value = value # REMOVED manual escaping
+                                    # Quote the string value using double quotes
+                                    formatted_value = f'"{safe_value}"' # RE-ADD double quotes around value
                                 elif hasattr(value, "strftime"):
                                     # Format dates as YYYY-MM-DD
                                     # MODIFIED: Line length
@@ -680,8 +706,14 @@ class BaseAPIClient:
                                     formatted_value = value
 
                                 # Construct the filter part
-                                # MODIFIED: Line length
-                                filter_parts.append(f"{field} {operator} {formatted_value}")
+                                # MODIFIED: Revert to adding single quotes and USE SINGLE spaces for string equality
+                                if isinstance(value, str) and operator == '=':
+                                    # Format exactly as 'field = "value"' (single spaces)
+                                    filter_part_str = f"'{field} {operator} {formatted_value}'"
+                                else:
+                                    # Other operators/types use single spaces and no outer quotes
+                                    filter_part_str = f"{field} {operator} {formatted_value}"
+                                filter_parts.append(filter_part_str)
                             except Exception as e:
                                 # MODIFIED: Line length
                                 error_msg = f"Error processing filter item {filter_item}: {str(e)}"

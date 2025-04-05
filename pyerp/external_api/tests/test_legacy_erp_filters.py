@@ -88,7 +88,7 @@ class LegacyERPFilterTests(unittest.TestCase):
     def test_01_fetch_basic(self):
         """Test fetching records without any specific filter."""
         self._run_fetch_test(
-            "Basic Fetch (No Filter)", filter_query=None, top=2
+            "Basic Fetch (No Filter)", filter_query=None
         )
 
     def test_02_filter_equals(self):
@@ -188,14 +188,14 @@ class LegacyERPFilterTests(unittest.TestCase):
             [ID_FIELD, "=", id2]
         ]
         # Since filters are on the same field, base.py joins them with 'OR'
-        # Request exactly the number of items expected.
+        # Request using the default top=5.
         df = self._run_fetch_test(
-            "Filter IN List (OR) - Exact Count",
-            filter_query=filter_q,
-            top=len(expected_ids_list)  # Changed from 10 to 2
+            "Filter IN List (OR) - Default Top", # Renamed test slightly
+            filter_query=filter_q
+            # top=len(expected_ids_list) # Removed explicit top
         )
-        # We now expect exactly the requested IDs if the API behaves correctly
-        # when top == number of OR clauses.
+        # We now expect *at most* the requested IDs if the API behaves correctly.
+        # The assertion needs to check if the returned IDs are a SUBSET of expected.
         if not df.empty:
             returned_ids = set(df[ID_FIELD])
             self.assertSetEqual(
@@ -224,7 +224,9 @@ class LegacyERPFilterTests(unittest.TestCase):
     def test_07_filter_by_familie(self):
         """
         Test filtering by the 'Familie_' field, expecting only matching records.
-        This test is EXPECTED TO FAIL based on current API behavior.
+        
+        Working Url: http://192.168.73.28:8080/rest/Artikel_Variante?$filter=%27Familie_%20=%20%227464FEB39C516942B01E62F44B1ED454%22%27
+
         """
         familie_field = 'Familie_' # Field used to link variants to parents
 
@@ -245,11 +247,11 @@ class LegacyERPFilterTests(unittest.TestCase):
         print(f"Using {familie_field} from sample record: {target_familie_id}")
         filter_q = [[familie_field, "=", target_familie_id]]
         
-        # Fetch up to 10 records using the filter (API currently returns 100 regardless)
+        # Fetch using the default top=5 (API currently returns 100 regardless)
         df = self._run_fetch_test(
             f"Filter Equals ({familie_field})", 
-            filter_query=filter_q,
-            top=10 # Request a small number, API might ignore filter and return more 
+            filter_query=filter_q
+            # top=10 # Removed explicit top
         )
 
         # Assertion: Check if *all* returned records actually match the filter
