@@ -5,7 +5,10 @@ import re # Import regex module
 
 def run_sync_command(command_args):
     """Runs a Django management command using subprocess, returns True/False."""
-    manage_py_path = os.path.join(os.path.dirname(__file__), 'manage.py')
+    # Correctly locate manage.py at the project root, assuming this script 
+    # is two levels down (pyerp/sync/scripts) from the root.
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    manage_py_path = os.path.join(project_root, 'manage.py')
     command = [sys.executable, manage_py_path] + command_args
     command_str = ' '.join(command)
     print(f"Running: {' '.join(command_args)}...") # Simplified command name
@@ -129,6 +132,42 @@ if __name__ == "__main__":
     print("-" * 20)
     
     sync_results = {}
+
+    # --- Run Legacy ERP Filter Tests ---
+    print("Running Legacy ERP Filter Tests...")
+    filter_test_script_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), 
+        '..', '..', 'external_api', 'tests', 'test_legacy_erp_filters.py'
+    ))
+    filter_test_command = [sys.executable, '-m', 'unittest', filter_test_script_path]
+    filter_test_success = False
+    try:
+        # Run with check=True to raise exception on failure
+        # Capture output to avoid cluttering the main script's output too much, 
+        # but print it on failure.
+        result = subprocess.run(
+            filter_test_command, 
+            check=True, 
+            capture_output=True, 
+            text=True, 
+            encoding='utf-8'
+        )
+        print(f"  SUCCESS: Legacy ERP Filter Tests")
+        # Optional: print test output summary if needed from result.stdout
+        filter_test_success = True
+    except FileNotFoundError:
+        print(f"  FAILED: Test script not found at {filter_test_script_path}")
+    except subprocess.CalledProcessError as e:
+        print(f"  FAILED: Legacy ERP Filter Tests (Exit Code: {e.returncode})")
+        print("  --- Test Output (stdout) ---")
+        print(e.stdout)
+        print("  --- Test Output (stderr) ---")
+        print(e.stderr)
+    except Exception as e:
+        print(f"  FAILED: An unexpected error occurred during filter tests: {e}")
+    
+    sync_results['Legacy ERP Filter Tests'] = filter_test_success
+    print("-" * 20)
 
     # --- Product Sync ---
     product_sync_args = ['sync_products', '--top=1', '--debug']

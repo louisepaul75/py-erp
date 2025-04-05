@@ -247,9 +247,13 @@ class SyncPipeline:
 
         for record in batch: # Iterate through each record in the batch
             try:
-                # Transform single record
-                transformed_record = self.transformer.transform(record) # Pass single record
-                if transformed_record: # Check if transformation was successful
+                # Transform single record by wrapping it in a list
+                # as the transformer expects List[Dict[str, Any]]
+                transformed_list = self.transformer.transform([record]) # Pass list with single record
+
+                # Transformer returns a list; expect 0 or 1 item for a single input record
+                if transformed_list: # Check if the list is not empty
+                    transformed_record = transformed_list[0] # Get the first (and only) item
                     all_transformed_records.append(transformed_record)
                 else:
                     # Log or handle transformation failure for this record

@@ -638,9 +638,21 @@ class BaseAPIClient:
                                     )
                                     continue
                                 field, operator, value = filter_item
-                                if hasattr(value, "strftime"):
-                                    value = value.strftime("%Y-%m-%d")
-                                filter_parts.append(f"'{field} {operator} {value}'")
+                                # Format value appropriately (e.g., quote strings, format dates)
+                                # OData usually requires strings to be quoted
+                                if isinstance(value, str):
+                                    # Escape single quotes within the string value itself
+                                    safe_value = value.replace("'", "''") 
+                                    formatted_value = f"'{safe_value}'" # Quote the string value
+                                elif hasattr(value, "strftime"):
+                                    # Format dates as YYYY-MM-DD
+                                    formatted_value = value.strftime("%Y-%m-%d")
+                                else:
+                                    # Assume numeric or boolean, pass as is
+                                    formatted_value = value
+
+                                # Construct the filter part *without* wrapping the whole expression in quotes
+                                filter_parts.append(f"{field} {operator} {formatted_value}")
                             except Exception as e:
                                 error_msg = f"Error processing filter item {filter_item}: {str(e)}"
                                 logger.error(error_msg)
