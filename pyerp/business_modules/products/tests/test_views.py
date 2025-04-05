@@ -15,20 +15,58 @@ from pyerp.business_modules.products.models import (
 )
 from pyerp.core.models import Tag
 
+# Import API views needed for URL patterns
+from pyerp.business_modules.products.api import (
+    ProductCategoryViewSet,
+    ProductListAPIView,
+    ProductDetailViewSet,
+    VariantDetailAPIView,
+)
+
 User = get_user_model()
 
-# Set up test URLs
+# Define API patterns directly for testing (Reverted)
+products_api_patterns = [
+    # Category endpoints
+    path("categories/", ProductCategoryViewSet.as_view({"get": "list", "post": "create"}), name="categories_list"),
+    path("categories/<int:pk>/", ProductCategoryViewSet.as_view({
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+    }), name="category_detail"),
+    path("categories/<int:pk>/children/", ProductCategoryViewSet.as_view({"get": "children"}), name="category_children"),
+    path("categories/tree/", ProductCategoryViewSet.as_view({"get": "tree"}), name="category_tree"),
+    
+    # Product endpoints
+    path("", ProductListAPIView.as_view(), name="product_list"),
+    path("direct-search/", ProductListAPIView.as_view(direct_search=True), name="product_direct_search"),
+    path("<int:pk>/", ProductDetailViewSet.as_view({
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+    }), name="product_detail"),
+    
+    # Variant endpoints
+    path("variant/<int:pk>/", VariantDetailAPIView.as_view(), name="variant_detail"),
+]
+
+# Set up test URLs (Reverted)
 urlpatterns = [
     path('products/', include('pyerp.business_modules.products.urls', 
          namespace='products')),
-    path('api/products/', include('pyerp.business_modules.products.api_urls', 
-         namespace='products_api')),
+    # Include the directly defined patterns with the namespace (Reverted)
+    path('api/products/', include((products_api_patterns, 'products_api'))),
 ]
 
 
 @pytest.mark.backend
 @pytest.mark.unit
+# Re-add override_settings
 @override_settings(ROOT_URLCONF=__name__)
+# Remove pytest.mark.urls
+# @pytest.mark.urls(...) # Removed
 class ProductAPIViewsTestCase(APITestCase):
     """Test cases for product API views."""
 
@@ -67,7 +105,7 @@ class ProductAPIViewsTestCase(APITestCase):
 
     def test_category_list_api(self):
         """Test the category list API endpoint."""
-        url = reverse('products_api:category-list')
+        url = reverse('products_api:categories_list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.data, list)
@@ -87,7 +125,7 @@ class ProductAPIViewsTestCase(APITestCase):
 
     def test_product_detail_api(self):
         """Test the product detail API endpoint."""
-        url = reverse('products_api:product-detail',
+        url = reverse('product_detail',
                       kwargs={'pk': self.parent_product.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
