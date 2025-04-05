@@ -29,226 +29,234 @@ class ProductTransformer(BaseTransformer):
 
     _pending_variants = []  # Store variants with missing parents
 
-    def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Transform product data from legacy format."""
-        transformed_records = []
+    def transform(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Transform a single product record from legacy format."""
+        # transformed_records = [] # Removed list
 
         # Log transformer configuration
         logger.debug("Transformer config: field_mappings=%s", self.field_mappings)
 
-        for record in source_data:
-            try:
-                # Log the complete source record for debugging
-                logger.debug("Processing source record: %s", record)
-                
-                # Check for aktiv/Aktiv field and log its presence (both case variants)
-                if 'aktiv' in record:
-                    logger.debug("Found 'aktiv' field in source record: %s (type: %s)", 
-                                record['aktiv'], type(record['aktiv']).__name__)
-                elif 'Aktiv' in record:
-                    logger.debug("Found 'Aktiv' field in source record: %s (type: %s)", 
-                                record['Aktiv'], type(record['Aktiv']).__name__)
-                else:
-                    logger.debug("Neither 'aktiv' nor 'Aktiv' field found in source record")
-                    
-                # Apply field mappings from config
-                transformed = {}
-                for src_field, tgt_field in self.field_mappings.items():
-                    if src_field in record:
-                        value = record[src_field]
-                        # Ensure description fields are never None
-                        desc_fields = [
-                            "description",
-                            "description_en",
-                            "short_description",
-                            "short_description_en",
-                        ]
-                        if tgt_field in desc_fields:
-                            value = value if value is not None else ""
-                        transformed[tgt_field] = value
-                        logger.debug(
-                            "Mapped field %s -> %s: %s", src_field, tgt_field, value
-                        )
-                
-                # Ensure that both aktiv and Aktiv fields are correctly mapped to is_active
-                if 'is_active' not in transformed:
-                    # Try lowercase aktiv first
-                    if 'aktiv' in record:
-                        value = record['aktiv']
-                        # Convert to Python boolean
-                        if isinstance(value, str):
-                            # Convert string representations to boolean
-                            transformed['is_active'] = value.lower() in ("true", "1", "yes", "y", "t")
-                        elif isinstance(value, (int, float)):
-                            # Convert numeric representations to boolean
-                            transformed['is_active'] = bool(value)
-                        else:
-                            # Handle boolean values directly
-                            transformed['is_active'] = bool(value)
-                        
-                        logger.debug(
-                            "Directly mapped aktiv -> is_active: %s -> %s",
-                            value,
-                            transformed['is_active']
-                        )
-                    # Then try uppercase Aktiv
-                    elif 'Aktiv' in record:
-                        value = record['Aktiv']
-                        # Convert to Python boolean
-                        if isinstance(value, str):
-                            # Convert string representations to boolean
-                            transformed['is_active'] = value.lower() in ("true", "1", "yes", "y", "t")
-                        elif isinstance(value, (int, float)):
-                            # Convert numeric representations to boolean
-                            transformed['is_active'] = bool(value)
-                        else:
-                            # Handle boolean values directly
-                            transformed['is_active'] = bool(value)
-                        
-                        logger.debug(
-                            "Directly mapped Aktiv -> is_active: %s -> %s",
-                            value,
-                            transformed['is_active']
-                        )
-                    else:
-                        # If neither aktiv nor Aktiv is found, set default to True
-                        transformed['is_active'] = True
-                        logger.debug("No aktiv/Aktiv field found, using default is_active=True")
+        # Remove outer loop: for record in source_data:
+        try:
+            # Log the complete source record for debugging
+            logger.debug("Processing source record: %s", record)
 
-                # Ensure required text fields have default values
-                required_text_fields = [
-                    "description",
-                    "description_en",
-                    "short_description",
-                    "short_description_en",
-                    "keywords",
-                    "dimensions",
-                ]
-                for field in required_text_fields:
-                    if field not in transformed:
-                        transformed[field] = ""
-                        logger.debug("Set default empty string for %s", field)
+            # Check for aktiv/Aktiv field and log its presence (both case variants)
+            if 'aktiv' in record:
+                logger.debug("Found 'aktiv' field in source record: %s (type: %s)",
+                             record['aktiv'], type(record['aktiv']).__name__)
+            elif 'Aktiv' in record:
+                logger.debug("Found 'Aktiv' field in source record: %s (type: %s)",
+                             record['Aktiv'], type(record['Aktiv']).__name__)
+            else:
+                logger.debug("Neither 'aktiv' nor 'Aktiv' field found in source record")
 
-                # Handle SKU and variant information
-                if "Nummer" in record:
-                    transformed["sku"] = str(record["Nummer"]).strip()
-
-                # Get legacy_base_sku from fk_ArtNr if available
-                if "fk_ArtNr" in record and record["fk_ArtNr"]:
-                    legacy_base_sku = str(record["fk_ArtNr"]).strip()
-                    transformed["legacy_base_sku"] = legacy_base_sku
-                    logger.debug("Using fk_ArtNr for legacy_base_sku: %s", legacy_base_sku)
-                # Otherwise try alteNummer
-                elif "alteNummer" in record and record["alteNummer"]:
-                    alte_nr = str(record["alteNummer"]).strip()
-                    sku_parts = self._parse_sku(alte_nr)
-                    transformed["legacy_base_sku"] = sku_parts["base_sku"]
+            # Apply field mappings from config
+            transformed = {}
+            for src_field, tgt_field in self.field_mappings.items():
+                if src_field in record:
+                    value = record[src_field]
+                    # Ensure description fields are never None
+                    desc_fields = [
+                        "description",
+                        "description_en",
+                        "short_description",
+                        "short_description_en",
+                    ]
+                    if tgt_field in desc_fields:
+                        value = value if value is not None else ""
+                    transformed[tgt_field] = value
                     logger.debug(
-                        "Using alteNummer for legacy_base_sku: %s", sku_parts["base_sku"]
+                        "Mapped field %s -> %s: %s", src_field, tgt_field, value
                     )
 
-                # Get variant_code from ArtikelArt if available
-                if "ArtikelArt" in record and record["ArtikelArt"]:
-                    var_code = str(record["ArtikelArt"]).strip()
-                    transformed["variant_code"] = var_code
-                    logger.debug("Using ArtikelArt for variant_code: %s", var_code)
-                # If no ArtikelArt, try alteNummer
-                elif "alteNummer" in record and record["alteNummer"]:
-                    alte_nr = str(record["alteNummer"]).strip()
-                    sku_parts = self._parse_sku(alte_nr)
-                    if sku_parts["variant_code"]:
-                        var_code = sku_parts["variant_code"]
-                        transformed["variant_code"] = var_code
-                        logger.debug("Using alteNummer for variant_code: %s", var_code)
-
-                # Set legacy_id from __KEY if available
-                if "__KEY" in record:
-                    transformed["legacy_id"] = str(record["__KEY"])
-
-                # Handle refOld field
-                if "refOld" in record:
-                    transformed["refOld"] = str(record["refOld"])
-                    logger.debug("Set refOld from source: %s", transformed["refOld"])
-
-                # Handle Familie_ field for variants
-                if "Familie_" in record:
-                    parent_id = str(record["Familie_"])
-                    transformed["legacy_parent_id"] = parent_id
-                    logger.debug("Set legacy_parent_id from Familie_: %s", parent_id)
-
-                # Ensure required fields for parent products
-                if not transformed.get("name") and "Bezeichnung" in record:
-                    transformed["name"] = record["Bezeichnung"]
-
-                # Handle release date
-                if "Release_date" in record:
-                    transformed["release_date"] = self._parse_legacy_date(
-                        record["Release_date"]
-                    )
-
-                # Log transformed record for debugging
-                logger.debug("After field mappings: %s", transformed)
-
-                # Skip records with missing required fields
-                if not transformed.get("sku") or not transformed.get("name"):
-                    logger.warning(
-                        "Skipping record with missing required fields",
-                        extra={
-                            "sku": transformed.get("sku"),
-                            "name": transformed.get("name"),
-                        },
-                    )
-                    continue
-
-                # Apply custom transformers specified in config
-                custom_transformers = self.config.get("custom_transformers", [])
-                for transformer_name in custom_transformers:
-                    # Check if the transformer method exists
-                    if hasattr(self, transformer_name) and callable(getattr(self, transformer_name)):
-                        # Call the transformer method
-                        transformer_method = getattr(self, transformer_name)
-                        try:
-                            transformed = transformer_method(transformed, record)
-                            if transformed is None:
-                                logger.warning(
-                                    f"Transformer {transformer_name} returned None, skipping record"
-                                )
-                                break
-                        except Exception as e:
-                            logger.error(
-                                f"Error applying transformer {transformer_name}: {e}",
-                                exc_info=True
-                            )
+            # Ensure that both aktiv and Aktiv fields are correctly mapped to is_active
+            if 'is_active' not in transformed:
+                # Try lowercase aktiv first
+                if 'aktiv' in record:
+                    value = record['aktiv']
+                    # Convert to Python boolean
+                    if isinstance(value, str):
+                        # Convert string representations to boolean
+                        transformed['is_active'] = value.lower() in ("true", "1", "yes", "y", "t")
+                    elif isinstance(value, (int, float)):
+                        # Convert numeric representations to boolean
+                        transformed['is_active'] = bool(value)
                     else:
-                        logger.warning(f"Transformer method {transformer_name} not found")
+                        # Handle boolean values directly
+                        transformed['is_active'] = bool(value)
 
-                # Skip if any transformer returned None
-                if transformed is None:
-                    continue
-
-                # Try to establish parent relationship for variants
-                if "legacy_parent_id" in transformed:
-                    transformed = self.transform_parent_relationship(
-                        transformed, record
+                    logger.debug(
+                        "Directly mapped aktiv -> is_active: %s -> %s",
+                        value,
+                        transformed['is_active']
                     )
-                    if transformed is None:
-                        continue
+                # Then try uppercase Aktiv
+                elif 'Aktiv' in record:
+                    value = record['Aktiv']
+                    # Convert to Python boolean
+                    if isinstance(value, str):
+                        # Convert string representations to boolean
+                        transformed['is_active'] = value.lower() in ("true", "1", "yes", "y", "t")
+                    elif isinstance(value, (int, float)):
+                        # Convert numeric representations to boolean
+                        transformed['is_active'] = bool(value)
+                    else:
+                        # Handle boolean values directly
+                        transformed['is_active'] = bool(value)
 
-                # Add the transformed record
-                transformed_records.append(transformed)
-                logger.debug("Successfully transformed record: %s", transformed)
+                    logger.debug(
+                        "Directly mapped Aktiv -> is_active: %s -> %s",
+                        value,
+                        transformed['is_active']
+                    )
+                else:
+                    # If neither aktiv nor Aktiv is found, set default to True
+                    transformed['is_active'] = True
+                    logger.debug("No aktiv/Aktiv field found, using default is_active=True")
 
-            except Exception as e:
-                logger.error(
-                    "Error transforming record: %s",
-                    str(e),
-                    exc_info=True,
-                    extra={"record": record},
+            # Ensure required text fields have default values
+            required_text_fields = [
+                "description",
+                "description_en",
+                "short_description",
+                "short_description_en",
+                "keywords",
+                "dimensions",
+            ]
+            for field in required_text_fields:
+                if field not in transformed:
+                    transformed[field] = ""
+                    logger.debug("Set default empty string for %s", field)
+
+            # Handle SKU and variant information
+            if "Nummer" in record:
+                transformed["sku"] = str(record["Nummer"]).strip()
+
+            # Get legacy_base_sku from fk_ArtNr if available
+            if "fk_ArtNr" in record and record["fk_ArtNr"]:
+                legacy_base_sku = str(record["fk_ArtNr"]).strip()
+                transformed["legacy_base_sku"] = legacy_base_sku
+                logger.debug("Using fk_ArtNr for legacy_base_sku: %s", legacy_base_sku)
+            # Otherwise try alteNummer
+            elif "alteNummer" in record and record["alteNummer"]:
+                alte_nr = str(record["alteNummer"]).strip()
+                sku_parts = self._parse_sku(alte_nr)
+                transformed["legacy_base_sku"] = sku_parts["base_sku"]
+                logger.debug(
+                    "Using alteNummer for legacy_base_sku: %s", sku_parts["base_sku"]
                 )
-                continue
 
-        logger.info("Transformed %d records successfully", len(transformed_records))
-        return transformed_records
+            # Get variant_code from ArtikelArt if available
+            if "ArtikelArt" in record and record["ArtikelArt"]:
+                var_code = str(record["ArtikelArt"]).strip()
+                transformed["variant_code"] = var_code
+                logger.debug("Using ArtikelArt for variant_code: %s", var_code)
+            # If no ArtikelArt, try alteNummer
+            elif "alteNummer" in record and record["alteNummer"]:
+                alte_nr = str(record["alteNummer"]).strip()
+                sku_parts = self._parse_sku(alte_nr)
+                if sku_parts["variant_code"]:
+                    var_code = sku_parts["variant_code"]
+                    transformed["variant_code"] = var_code
+                    logger.debug("Using alteNummer for variant_code: %s", var_code)
+
+            # Set legacy_id from __KEY if available
+            if "__KEY" in record:
+                transformed["legacy_id"] = str(record["__KEY"])
+
+            # Handle refOld field
+            if "refOld" in record:
+                transformed["refOld"] = str(record["refOld"])
+                logger.debug("Set refOld from source: %s", transformed["refOld"])
+
+            # Handle Familie_ field for variants
+            if "Familie_" in record:
+                parent_id = str(record["Familie_"])
+                transformed["legacy_parent_id"] = parent_id
+                logger.debug("Set legacy_parent_id from Familie_: %s", parent_id)
+
+            # Ensure required fields for parent products
+            if not transformed.get("name") and "Bezeichnung" in record:
+                transformed["name"] = record["Bezeichnung"]
+
+            # Handle release date
+            if "Release_date" in record:
+                transformed["release_date"] = self._parse_legacy_date(
+                    record["Release_date"]
+                )
+
+            # Log transformed record for debugging
+            logger.debug("After field mappings: %s", transformed)
+
+            # Skip records with missing required fields
+            if not transformed.get("sku") or not transformed.get("name"):
+                # Fix 3: Adjust the logging extra dict to avoid 'name' conflict
+                logger.warning(
+                    "Skipping record with missing required fields (SKU: %s, Name: %s)",
+                    transformed.get("sku", "<Missing>"),
+                    transformed.get("name", "<Missing>"),
+                    # extra={
+                    #     "sku": transformed.get("sku"),
+                    #     "record_name": transformed.get("name"), # Renamed 'name' key
+                    # },
+                )
+                return None # Return None if skipping
+
+            # Apply custom transformers specified in config
+            custom_transformers = self.config.get("custom_transformers", [])
+            for transformer_name in custom_transformers:
+                # Check if the transformer method exists
+                if hasattr(self, transformer_name) and callable(getattr(self, transformer_name)):
+                    # Call the transformer method
+                    transformer_method = getattr(self, transformer_name)
+                    try:
+                        transformed = transformer_method(transformed, record)
+                        if transformed is None:
+                            logger.warning(
+                                f"Transformer {transformer_name} returned None, skipping record"
+                            )
+                            # Skip if any transformer returned None
+                            return None # Return None if skipping
+                    except Exception as e:
+                        logger.error(
+                            f"Error applying transformer {transformer_name}: {e}",
+                            exc_info=True
+                        )
+                else:
+                    logger.warning(f"Transformer method {transformer_name} not found")
+
+            # # Skip if any transformer returned None # Handled above
+            # if transformed is None:
+            #     continue
+
+            # Try to establish parent relationship for variants
+            if "legacy_parent_id" in transformed:
+                transformed = self.transform_parent_relationship(
+                    transformed, record
+                )
+                if transformed is None:
+                     # If parent linking fails and returns None, skip the record
+                    return None
+
+            # Add the transformed record # Removed list append
+            # transformed_records.append(transformed)
+            logger.debug("Successfully transformed record: %s", transformed)
+            # Fix 2: Return the single transformed record dictionary
+            return transformed
+
+        except Exception as e:
+            logger.error(
+                "Error transforming record: %s",
+                str(e),
+                exc_info=True,
+                extra={"record": record},
+            )
+            # Return None on error
+            return None
+
+        # logger.info("Transformed %d records successfully", len(transformed_records)) # Removed
+        # return transformed_records # Removed
 
     def _parse_sku(self, sku: str) -> Dict[str, str]:
         """Parse SKU into components.
@@ -357,32 +365,52 @@ class ProductTransformer(BaseTransformer):
 
         return errors
 
-    def _parse_legacy_date(self, date_str: str) -> Optional[datetime]:
-        """Parse a legacy date string into a datetime object.
+    def _parse_legacy_date(self, date_input: Any) -> Optional[datetime]:
+        """Parse a legacy date string or existing datetime object.
 
         Args:
-            date_str: Date string in legacy format (e.g. '1!1!1991')
+            date_input: Date string in legacy format (e.g. '1!1!1991')
+                          or a datetime object/Timestamp.
 
         Returns:
             Parsed datetime object or None if parsing fails
         """
-        if not date_str or date_str == "0!0!0":
+        if not date_input:
             return None
 
-        try:
-            # Split the date string into components
-            day, month, year = date_str.split("!")
-            # Convert to integers
-            day = int(day)
-            month = int(month)
-            year = int(year)
-            # Create datetime object
-            return datetime(year, month, day)
-        except (ValueError, TypeError, AttributeError) as e:
-            logger.warning(
-                f"Error parsing legacy date: {e}", extra={"date_str": date_str}
-            )
-            return None
+        # Handle if it's already a datetime object (or pandas Timestamp)
+        if isinstance(date_input, datetime):
+             # Optional: Convert to timezone-naive if necessary
+             # if date_input.tzinfo:
+             #     return date_input.astimezone(None)
+             return date_input # Already a datetime object
+
+        # Handle string format like '1!1!1991'
+        if isinstance(date_input, str):
+            if date_input == "0!0!0":
+                return None
+            try:
+                # Split the date string into components
+                day, month, year = date_input.split("!")
+                # Convert to integers
+                day = int(day)
+                month = int(month)
+                year = int(year)
+                # Create datetime object
+                # Ensure year is reasonable (e.g., avoid year 0)
+                if year < 1900 or year > 2100: # Adjust range as needed
+                     logger.warning(f"Invalid year '{year}' parsed from legacy date: {date_input}")
+                     return None
+                return datetime(year, month, day)
+            except (ValueError, TypeError, AttributeError) as e:
+                logger.warning(
+                    f"Error parsing legacy date string: {e}", extra={"date_str": date_input}
+                )
+                return None
+
+        # Handle other unexpected types
+        logger.warning(f"Unexpected type for legacy date parsing: {type(date_input).__name__}", extra={"date_input": date_input})
+        return None
 
     def transform_parent_relationship(
         self, transformed: Dict[str, Any], source: Dict[str, Any]

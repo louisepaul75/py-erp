@@ -3,7 +3,7 @@ import json
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from pyerp.utils.logging import get_logger
 
@@ -48,12 +48,18 @@ class BaseSyncCommand(BaseCommand):
         parser.add_argument(
             "--days",
             type=int,
-            help="Sync records modified/created in the last N days (uses timestamp field).",
+            help=(
+                "Sync records modified/created in the last N days "
+                "(uses timestamp field)."
+            ),
         )
         parser.add_argument(
             "--filters",
             type=str,
-            help='JSON string with additional extractor-specific filters (e.g., {"field": "value"}).',
+            help=(
+                'JSON string with additional extractor-specific filters '
+                '(e.g., {"field": "value"}).'
+            ),
         )
         parser.add_argument(
             "--debug",
@@ -65,7 +71,10 @@ class BaseSyncCommand(BaseCommand):
             action="store_false", # Default is True (fail)
             dest="fail_on_filter_error",
             default=True,
-            help="Don't fail if date filter query causes an error in the extractor (default: fail).",
+            help=(
+                "Don't fail if date filter query causes an error in the extractor "
+                "(default: fail)."
+            ),
         )
         parser.add_argument(
             "--clear-cache",
@@ -99,14 +108,19 @@ class BaseSyncCommand(BaseCommand):
                 custom_filters_parsed = json.loads(raw_custom_filters)
                 if not isinstance(custom_filters_parsed, dict):
                     logger.warning(
-                        f"Ignoring --filters argument: Expected JSON dictionary, got: {raw_custom_filters}"
+                        "Ignoring --filters argument: Expected JSON dictionary, "
+                        f"got: {raw_custom_filters}"
                     )
                     custom_filters_parsed = {} # Reset if not a dict
                 else:
-                    logger.info(f"Parsed custom filters from --filters: {custom_filters_parsed}")
+                    logger.info(
+                        f"Parsed custom filters from --filters: {custom_filters_parsed}"
+                    )
                     query_params.update(custom_filters_parsed)
             except json.JSONDecodeError as e:
-                logger.error(f"Invalid JSON for --filters: {e}. Ignoring this argument.")
+                logger.error(
+                    f"Invalid JSON for --filters: {e}. Ignoring this argument."
+                )
                 # Optionally raise CommandError if strict parsing is needed
                 # raise CommandError(f"Invalid JSON format for --filters option: {e}")
 
@@ -188,7 +202,85 @@ class BaseSyncCommand(BaseCommand):
             mapping = self.get_mapping(entity_type) # Fetch mapping if needed
             query_params = self.build_query_params(options, mapping)
 
-        filters_json = json.dumps(query_params) if query_params else None
+        # --- Prepare filters for run_sync ---
+        filters_for_command = {}
+        filter_query_list = []
+
+        # Extract standard/known params and build the filter_query list
+        if query_params:
+            for key, value in query_params.items():
+                if key == "$top":
+                    # Pass $top directly if extractor handles it
+                    filters_for_command["$top"] = value
+                elif key == "modified_since":
+                    # Assuming extractor handles 'modified_since' directly or
+                    # via date logic
+                    filters_for_command[key] = value
+                # Handle parent record filtering specifically if needed by extractor
+                elif key == "parent_record_ids":
+                    filters_for_command[key] = value
+                    # Ensure parent_field is also included if present in original query_params
+                    if "parent_field" in query_params:
+                        filters_for_command["parent_field"] = query_params["parent_field"]
+                    # These keys are handled directly by the extractor, skip adding to filter_query
+                    continue # Skip to next item after handling parent filters
+                elif key == "parent_field":
+                    # If parent_field is encountered but parent_record_ids wasn't, include it.
+                    # If parent_record_ids was present, this elif is skipped by the continue above.
+                    if "parent_record_ids" not in filters_for_command:
+                        filters_for_command[key] = value
+                    # In either case, don't let it fall through to filter_query list
+                    continue # Skip to next item
+
+                # --- Handle other keys as filter_query items --- 
+                # Basic handling for __in, exact match, etc.
+                field_name = key
+                operator = "=" # Default operator
+
+                if key.endswith("__in") and isinstance(value, list):
+                    field_name = key[:-4]
+                    # OData doesn't directly support 'IN'. We create multiple
+                    # 'OR' conditions.
+                    # [[field, '=', val1], [field, '=', val2], ...]
+                    # connected by OR implicitly
+                    # This structure is expected by LegacyAPIExtractor's
+                    # parent_filter logic
+                    # Let's reuse that structure for __in filters.
+
+                    # *** Special case: Map legacy_id__in to __KEY for filtering ***
+                    if field_name == "legacy_id":
+                        logger.debug(
+                            "Mapping filter field 'legacy_id' to '__KEY' for API query."
+                        )
+                        field_name = "__KEY"
+
+                    if value:  # Only add if list is not empty
+                        filter_query_list.extend(
+                            [[field_name, "=", item] for item in value]
+                        )
+                        # Skip adding single filter below for __in
+                        continue # Skip to next item after handling __in
+                elif isinstance(
+                    value, (str, int, float, bool)
+                ):  # Basic exact match
+                    # *** Special case: Map legacy_id exact match to __KEY ***
+                    if field_name == "legacy_id":
+                        logger.debug(
+                            "Mapping filter field 'legacy_id' to '__KEY' for API query."
+                        )
+                        field_name = "__KEY"
+                    # Assume exact match if no operator specified
+                    filter_query_list.append([field_name, operator, value])
+                # TODO: Add more sophisticated filter mapping
+                #       (e.g., __gt, __lt, __contains) if needed
+
+        # Add the constructed filter_query list to the command filters
+        if filter_query_list:
+            # Use the key expected by LegacyAPIExtractor
+            filters_for_command["filter_query"] = filter_query_list
+
+        filters_json = json.dumps(filters_for_command) if filters_for_command else None
+        # --- End filter preparation ---
 
         # Prepare options for call_command, only passing what run_sync expects
         run_sync_options = {

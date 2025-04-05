@@ -9,13 +9,16 @@ from pyerp.external_api import connection_manager
 # --- Test Configuration ---
 # Replace with actual field names from Artikel_Variante if different
 TEST_TABLE = "Artikel_Variante"
-# DATE_FIELD = "__TIMESTAMP"  # Confirmed from sample, but caused API 500 errors
-DATE_FIELD = "created_date" # Trying this field instead, based on sample data
-ID_FIELD = "Nummer"      # Updated from sample (was ArtikelNr)
-STATUS_FIELD = "Aktiv"     # Updated from sample (was Status), seems boolean
-# NUMERIC_FIELD = "Menge"     # No obvious numeric field in sample, commenting out
+# DATE_FIELD = "__TIMESTAMP"  # Confirmed from sample, API 500 errors
+# Trying this field instead, based on sample data:
+DATE_FIELD = "created_date"
+ID_FIELD = "Nummer"  # Updated from sample (was ArtikelNr)
+STATUS_FIELD = "Aktiv"  # Updated from sample (was Status), seems boolean
+# NUMERIC_FIELD = "Menge"  # No obvious numeric field in sample
+
 
 # --- Helper Functions ---
+
 def is_legacy_erp_enabled():
     """Check if the legacy ERP connection is configured and enabled."""
     try:
@@ -24,14 +27,18 @@ def is_legacy_erp_enabled():
         # Handle cases where connection manager might not be fully set up
         return False
 
+
 # --- Test Class ---
+
 @unittest.skipUnless(
     is_legacy_erp_enabled(), "Legacy ERP connection not enabled"
 )
 class LegacyERPFilterTests(unittest.TestCase):
     """
     Test filtering capabilities of the LegacyERPClient against the
-    Artikel_Variante table. Tests run sequentially based on their definition order.
+    Artikel_Variante table.
+
+    Tests run sequentially based on their definition order.
     """
 
     @classmethod
@@ -39,7 +46,8 @@ class LegacyERPFilterTests(unittest.TestCase):
         """Set up the LegacyERPClient once for all tests in this class."""
         print("\nSetting up LegacyERPClient for filter tests...")
         try:
-            cls.client = LegacyERPClient(environment="live")  # Use appropriate env
+            # Use appropriate environment
+            cls.client = LegacyERPClient(environment="live")
             # Ensure connection is possible (might perform login)
             if not cls.client.ensure_session():
                 raise ConnectionError(
@@ -136,11 +144,12 @@ class LegacyERPFilterTests(unittest.TestCase):
     def test_06_filter_combined_and(self):
         """Test combining filters on different fields (implicit AND)."""
         # Combine a date filter and a status filter
-        a_year_ago = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+        a_year_ago = (datetime.now() - timedelta(days=365))
+        a_year_ago_str = a_year_ago.strftime("%Y-%m-%d")
         # Use the boolean status value found in the sample
         assumed_status = True  # Updated value type
         filter_q = [
-            [DATE_FIELD, ">", a_year_ago],
+            [DATE_FIELD, ">", a_year_ago_str],
             [STATUS_FIELD, "=", assumed_status]  # Updated value type
         ]
         # Since filters are on different fields, base.py joins them with 'AND'
@@ -157,4 +166,4 @@ class LegacyERPFilterTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()
