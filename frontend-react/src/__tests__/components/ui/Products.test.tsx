@@ -25,9 +25,6 @@ jest.mock('@/context/LastVisitedContext', () => ({
   LastVisitedProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-// Mock next/navigation - Keep this global mock as well
-jest.mock('next/navigation', () => require('next-router-mock'));
-
 const mockProducts = [
   {
     id: 1,

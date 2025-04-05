@@ -5,14 +5,12 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { useIsAuthenticated } from '@/lib/auth/authHooks';
 import { useRouter } from 'next/navigation';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 // Mock the auth hooks
 jest.mock('@/lib/auth/authHooks', () => ({
   useIsAuthenticated: jest.fn(),
 }));
-
-// Mock next/navigation - Keep this global mock as well
-jest.mock('next/navigation', () => require('next-router-mock'));
 
 // Mock the LoadingSpinner component
 jest.mock('@/components/ui/LoadingSpinner', () => ({
