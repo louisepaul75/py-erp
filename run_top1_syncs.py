@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+import re # Import regex module
 
 def run_sync_command(command_args):
     """Runs a Django management command using subprocess, returns True/False."""
@@ -14,6 +15,100 @@ def run_sync_command(command_args):
         # For now, just a simple success message
         print(f"  SUCCESS: {' '.join(command_args)}")
         # Optional: print result.stdout[-500:] # Print last 500 chars of output
+
+        # --- Parse stdout for summary --- 
+        summary = {
+            "extracted": 0, # Records initially fetched
+            "processed": 0, # Records attempted (some commands use this)
+            "transformed": 0,
+            "created": 0,
+            "updated": 0,
+            "skipped": 0,
+            "failed": 0, # Records that failed processing/loading
+        }
+        # Patterns to find summary lines from various commands
+        patterns = {
+            # sync_products/sync_employees parent step
+            "parent_processed": r"Processing finished:.*?Processed=(\d+).*?Created=(\d+).*?Updated=(\d+).*?Failed=(\d+)",
+            # run_sync (used by variants/children in older commands)
+            "run_sync_processed": r"Processed: (\d+)",
+            "run_sync_created":   r"Created: (\d+)",
+            "run_sync_updated":   r"Updated: (\d+)",
+            "run_sync_failed":    r"Failed: (\d+)",
+            # sync_sales_records / sync_customers style output
+            "extracted": r"Extracted (\d+).*(?:parent|child)? records",
+            "transformed": r"Transformed (\d+).*(?:parent|child)? records",
+            "load": r"(?:load|sync) finished:.*?(\d+) created.*?(\d+) updated.*?(\d+) skipped.*?(\d+) errors", # Catches sync_sales_records
+        }
+
+        for line in result.stdout.splitlines():
+            matched = False
+            # Check for parent processed (sync_products style)
+            match_parent = re.search(patterns["parent_processed"], line, re.IGNORECASE)
+            if match_parent:
+                summary["processed"] += int(match_parent.group(1))
+                summary["created"] += int(match_parent.group(2))
+                summary["updated"] += int(match_parent.group(3))
+                summary["failed"] += int(match_parent.group(4))
+                matched = True
+                continue
+
+            # Check for run_sync statistics block lines
+            match_rsp = re.search(patterns["run_sync_processed"], line.strip(), re.IGNORECASE)
+            if match_rsp:
+                summary["processed"] += int(match_rsp.group(1))
+                matched = True
+            match_rsc = re.search(patterns["run_sync_created"], line.strip(), re.IGNORECASE)
+            if match_rsc:
+                summary["created"] += int(match_rsc.group(1))
+                matched = True
+            match_rsu = re.search(patterns["run_sync_updated"], line.strip(), re.IGNORECASE)
+            if match_rsu:
+                summary["updated"] += int(match_rsu.group(1))
+                matched = True
+            match_rsf = re.search(patterns["run_sync_failed"], line.strip(), re.IGNORECASE)
+            if match_rsf:
+                summary["failed"] += int(match_rsf.group(1))
+                matched = True
+            if matched: continue # If any run_sync line matched, move on
+
+            # Check for extraction
+            match_extract = re.search(patterns["extracted"], line, re.IGNORECASE)
+            if match_extract:
+                summary["extracted"] += int(match_extract.group(1))
+                summary["processed"] += int(match_extract.group(1)) # Assume extracted means processed initially
+                continue # Move to next line
+            
+            # Check for transformation
+            match_transform = re.search(patterns["transformed"], line, re.IGNORECASE)
+            if match_transform:
+                summary["transformed"] += int(match_transform.group(1))
+                continue # Move to next line
+
+            # Check for load results
+            match_load = re.search(patterns["load"], line, re.IGNORECASE)
+            if match_load:
+                summary["created"] += int(match_load.group(1))
+                summary["updated"] += int(match_load.group(2))
+                summary["skipped"] += int(match_load.group(3))
+                summary["failed"] += int(match_load.group(4))
+                continue # Move to next line
+        
+        # Print summary if any counts were found
+        if any(summary.values()): # Only print if we found something
+            # Decide whether to show Extracted/Transformed or just Processed based on which has values
+            if summary["extracted"] > 0 or summary["transformed"] > 0:
+                source_summary = f"Extracted={summary['extracted']}, Transformed={summary['transformed']}"
+            else:
+                source_summary = f"Processed={summary['processed']}"
+
+            load_summary = f"Created={summary['created']}, Updated={summary['updated']}, " \
+                           f"Skipped={summary['skipped']}, Failed={summary['failed']}"
+
+            summary_str = f"    Summary: {source_summary}, {load_summary}"
+            print(summary_str)
+        # --- End Summary Parsing ---
+
         return True
     except subprocess.CalledProcessError as e:
         print(f"  FAILED: {' '.join(command_args)} (Exit Code: {e.returncode})")
@@ -36,7 +131,7 @@ if __name__ == "__main__":
     sync_results = {}
 
     # --- Product Sync ---
-    product_sync_args = ['sync_products', '--top=1']
+    product_sync_args = ['sync_products', '--top=1', '--debug']
     sync_results[' '.join(product_sync_args)] = run_sync_command(product_sync_args)
     
     # --- Future Syncs ---
@@ -46,15 +141,15 @@ if __name__ == "__main__":
     # sync_results[' '.join(sales_sync_args)] = run_sync_command(sales_sync_args)
     
     # --- Employee Sync (Added) ---
-    employee_sync_args = ['sync_employees', '--top=1']
+    employee_sync_args = ['sync_employees', '--top=1', '--debug']
     sync_results[' '.join(employee_sync_args)] = run_sync_command(employee_sync_args)
 
     # --- Customer Sync (Added) ---
-    customer_sync_args = ['sync_customers', '--top=1']
+    customer_sync_args = ['sync_customers', '--top=1', '--debug']
     sync_results[' '.join(customer_sync_args)] = run_sync_command(customer_sync_args)
 
     # --- Sales Records Sync (Added) ---
-    sales_sync_args = ['sync_sales_records', '--top=1']
+    sales_sync_args = ['sync_sales_records', '--top=1', '--debug']
     sync_results[' '.join(sales_sync_args)] = run_sync_command(sales_sync_args)
 
     # --- Summary --- 
