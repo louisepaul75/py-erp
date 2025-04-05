@@ -40,7 +40,8 @@ class Command(BaseSyncCommand):
             # 3. Run the sync using the base command's runner
             # run_sync_via_command handles printing success/failure details
             success = self.run_sync_via_command(
-                mapping=mapping, 
+                entity_type=self.entity_type,
+                options=options,
                 query_params=query_params
             ) 
 

@@ -212,10 +212,14 @@ class BaseSyncCommand(BaseCommand):
                 if key == "$top":
                     # Pass $top directly if extractor handles it
                     filters_for_command["$top"] = value
+                    # *** DO NOT add $top to filter_query list ***
+                    continue # Skip to next item
                 elif key == "modified_since":
                     # Assuming extractor handles 'modified_since' directly or
                     # via date logic
                     filters_for_command[key] = value
+                    # *** DO NOT add modified_since to filter_query list ***
+                    continue # Skip to next item
                 # Handle parent record filtering specifically if needed by extractor
                 elif key == "parent_record_ids":
                     filters_for_command[key] = value
@@ -273,6 +277,8 @@ class BaseSyncCommand(BaseCommand):
                     filter_query_list.append([field_name, operator, value])
                 # TODO: Add more sophisticated filter mapping
                 #       (e.g., __gt, __lt, __contains) if needed
+                else:
+                    logger.warning(f"Skipping query_param key '{key}' with non-basic value type: {type(value)}")
 
         # Add the constructed filter_query list to the command filters
         if filter_query_list:

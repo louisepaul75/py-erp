@@ -100,58 +100,27 @@ class BaseAPIClient:
         else:
             logger.info("No session cookie available")
 
-        # Construct and log the full URL with parameters for better debugging
-        if "params" in kwargs and kwargs["params"]:
-            from urllib.parse import urlencode
+        # Extract params for logging and request
+        params = kwargs.get("params")
 
-            # Create a copy of params to avoid modifying the original
-            params_for_logging = kwargs["params"].copy()
-
-            # Handle the $filter parameter specially to avoid double encoding
-            # This ensures the filter is properly formatted in the URL
-            query_params = []
-            for key, value in params_for_logging.items():
-                if key == "$filter":
-                    # Add the filter parameter directly without additional encoding
-                    query_params.append(f"{key}={value}")
-                else:
-                    # Use urlencode for other parameters
-                    encoded_param = urlencode({key: value}, doseq=True)
-                    param_value = encoded_param.split("=", 1)[1]
-                    query_params.append(f"{key}={param_value}")
-
-            # Join all parameters with &
-            query_string = "&".join(query_params)
-            full_url = f"{url}?{query_string}"
-            logger.info(f"Full URL: {full_url}")
-
-            # Remove params from kwargs since we're using the manually
-            # constructed URL
-            params = kwargs.pop("params", None)
+        # Log the intended URL and parameters
+        logger.info(f"Request URL: {url}")
+        if params:
+            logger.info(f"Request Params: {params}")
         else:
-            full_url = url
-            params = None
+            logger.info("Request Params: None")
 
         start_time = time.time()
 
         try:
-            print(method, url, kwargs)
-
-            # Extract timeout from kwargs as it's not valid for Request constructor
-            timeout = None
-            if "timeout" in kwargs:
-                timeout = kwargs.pop("timeout", self.timeout)
-            else:
-                timeout = self.timeout
-
-            # Use the manually constructed URL directly instead of relying on
-            # prepare_request to handle the parameters, which would apply automatic
-            # encoding
+            # Use the base URL and pass params directly to requests library
             response = self.session.request(
-                method=method, url=full_url, **kwargs, timeout=timeout
+                method=method,
+                url=url, # Use base URL, requests adds params
+                # No need to pop params from kwargs if it's passed directly
+                **kwargs # This includes params={'...'} if present
+                # timeout is handled directly by requests if present in kwargs
             )
-
-            print("Exact full URL:", full_url)
 
             duration_ms = int((time.time() - start_time) * 1000)
 
@@ -164,8 +133,8 @@ class BaseAPIClient:
                 extra_context={
                     "method": method,
                     "environment": self.environment,
-                    "url": url,
-                    "params": params if params else {},
+                    "url": url, # Log base URL
+                    "params": params if params else {}, # Log the actual params dict passed
                 },
             )
 
@@ -176,7 +145,6 @@ class BaseAPIClient:
                     duration_ms=duration_ms,
                     extra_context={"url": url, "params": params if params else {}},
                 )
-            print(response)
 
             return response
 
