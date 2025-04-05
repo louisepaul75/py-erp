@@ -77,7 +77,7 @@ class SyncPipeline:
         self.sync_log = SyncLog.objects.create(
             id=next_id,
             entity_type=self.mapping.entity_type,
-            status="started",
+            status=SyncStatus.STARTED,
             started_at=start_time,
             records_processed=0,
             records_created=0,
@@ -99,7 +99,7 @@ class SyncPipeline:
             source=self.mapping.source.name,
             destination=self.mapping.target.name,
             record_count=0,
-            status="started",
+            status=SyncStatus.STARTED,
             details={
                 "entity_type": self.mapping.entity_type,
                 "incremental": incremental,
@@ -118,7 +118,7 @@ class SyncPipeline:
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=0,
-                status="started",
+                status=SyncStatus.STARTED,
                 details={
                     "entity_type": self.mapping.entity_type,
                     "incremental": incremental,
@@ -137,7 +137,7 @@ class SyncPipeline:
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=len(source_data),
-                status="extracted",
+                status=SyncStatus.EXTRACTED,
                 details={
                     "entity_type": self.mapping.entity_type,
                     "incremental": incremental,
@@ -183,7 +183,7 @@ class SyncPipeline:
             self.sync_state.update_sync_completed(success=success)
 
             # Update final sync log status and completion time
-            self.sync_log.status = "completed" if success else "completed_with_errors"
+            self.sync_log.status = SyncStatus.COMPLETED if success else SyncStatus.COMPLETED_WITH_ERRORS
             self.sync_log.completed_at = timezone.now()
             self.sync_log.save()
 
@@ -191,7 +191,7 @@ class SyncPipeline:
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=total_processed,
-                status="completed",
+                status=SyncStatus.COMPLETED,
                 details={
                     "entity_type": self.mapping.entity_type,
                     "created_count": total_created,
@@ -212,7 +212,7 @@ class SyncPipeline:
             
             # Update error in sync log
             if self.sync_log:
-                self.sync_log.status = "failed"
+                self.sync_log.status = SyncStatus.FAILED
                 self.sync_log.error_message = error_msg
                 self.sync_log.completed_at = timezone.now()
                 self.sync_log.save()
@@ -222,7 +222,7 @@ class SyncPipeline:
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=0,
-                status="failed",
+                status=SyncStatus.FAILED,
                 details={
                     "entity_type": self.mapping.entity_type,
                     "error": error_msg,
@@ -408,7 +408,7 @@ class SyncPipeline:
         sync_log.records_created = created_count
         sync_log.records_updated = updated_count
         sync_log.records_failed = failed_count
-        sync_log.status = "completed"
+        sync_log.status = SyncStatus.COMPLETED
         sync_log.completed_at = timezone.now()
         sync_log.save()
         
@@ -433,7 +433,7 @@ class SyncPipeline:
         sync_log = SyncLog.objects.create(
             id=next_id,
             entity_type=self.mapping.entity_type,
-            status="started",
+            status=SyncStatus.STARTED,
             started_at=start_time,
             records_processed=0,
             records_created=0,
@@ -450,7 +450,7 @@ class SyncPipeline:
             source=self.mapping.source.name,
             destination=self.mapping.target.name,
             record_count=0,
-            status="started",
+            status=SyncStatus.STARTED,
             details={
                 "entity_type": self.mapping.entity_type,
                 "incremental": incremental,
