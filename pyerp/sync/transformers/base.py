@@ -1,5 +1,5 @@
 """Base classes for data transformation between systems."""
-
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
@@ -209,6 +209,87 @@ class BaseTransformer(ABC):
 
         return to_update, to_create
 
+    async def prefilter_record_async(self, record: Dict[str, Any], existing_keys: Set[Any],
+                                     normalized_existing_keys: Set[str], key_field: Optional[str]) -> Tuple[
+        Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+        """Prefilter a single record asynchronously.
+
+        Args:
+            record: A single source record.
+            existing_keys: Set of existing keys in the target system.
+            normalized_existing_keys: Set of normalized existing keys.
+            key_field: Field name to use as the key.
+
+        Returns:
+            Tuple (record_to_update, record_to_create), one will be None.
+        """
+        if not key_field or key_field not in record:
+            return None, None  # Skip records without the key field
+
+        key_value = record[key_field]
+        normalized_key = str(key_value).strip().lower() if key_value is not None else None
+
+        if key_value in existing_keys or normalized_key in normalized_existing_keys:
+            return record, None  # Existing record → Update
+        else:
+            return None, record  # New record → Create
+
+    async def prefilter_batch_async(self, batch: List[Dict[str, Any]], existing_keys: Set[Any],
+                                    normalized_existing_keys: Set[str], key_field: Optional[str]) -> Tuple[
+        List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Prefilter a batch of records asynchronously.
+
+        Args:
+            batch: List of source records.
+            existing_keys: Set of existing keys in the target system.
+            normalized_existing_keys: Set of normalized existing keys.
+            key_field: Field name to use as the key.
+
+        Returns:
+            Tuple of (records_to_update, records_to_create).
+        """
+        results = await asyncio.gather(
+            *(self.prefilter_record_async(record, existing_keys, normalized_existing_keys, key_field) for record in
+              batch))
+
+        records_to_update = [record for record, _ in results if record is not None]
+        records_to_create = [record for _, record in results if record is not None]
+
+        return records_to_update, records_to_create
+
+    async def prefilter_records_async(self, source_data: List[Dict[str, Any]], existing_keys: Optional[Set[Any]] = None,
+                                      key_field: Optional[str] = None, batch_size: int = 100) -> Tuple[
+        List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Prefilter records asynchronously in batches.
+
+        Args:
+            source_data: List of source records to filter.
+            existing_keys: Set of existing keys in the target system.
+            key_field: Field name to use as the key.
+            batch_size: Number of records per batch.
+
+        Returns:
+            Tuple of (records_to_update, records_to_create).
+        """
+        if existing_keys is None:
+            existing_keys = set()
+
+        if not key_field or not source_data:
+            return source_data, []
+
+        # Create normalized existing keys for comparison
+        normalized_existing_keys = {str(k).strip().lower() if k is not None else None for k in existing_keys}
+
+        batches = [source_data[i:i + batch_size] for i in range(0, len(source_data), batch_size)]
+        results = await asyncio.gather(
+            *(self.prefilter_batch_async(batch, existing_keys, normalized_existing_keys, key_field) for batch in
+              batches))
+
+        records_to_update = [record for batch in results for record in batch[0]]
+        records_to_create = [record for batch in results for record in batch[1]]
+
+        return records_to_update, records_to_create
+
     @abstractmethod
     def transform(self, source_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Transform source data to target format.
@@ -234,6 +315,48 @@ class BaseTransformer(ABC):
 
         return transformed_records
 
+    async def transform_record_async(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform a single source record asynchronously.
+
+        Args:
+            record: A single source record to transform.
+
+        Returns:
+            Transformed record.
+        """
+        # Apply field mappings
+        transformed = self.apply_field_mappings(record)
+
+        # Apply custom transformations
+        transformed = self.apply_custom_transformers(transformed, record)
+
+        return transformed
+
+    async def transform_batch_async(self, batch: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Transform a batch of source data asynchronously.
+
+        Args:
+            batch: List of source records to transform.
+
+        Returns:
+            List of transformed records.
+        """
+        return await asyncio.gather(*(self.transform_record_async(record) for record in batch))
+
+    async def transform_async(self, source_data: List[Dict[str, Any]], batch_size: int = 100) -> List[Dict[str, Any]]:
+        """Transform source data to target format asynchronously in batches.
+
+        Args:
+            source_data: List of source records to transform.
+            batch_size: Number of records per batch.
+
+        Returns:
+            List of transformed records.
+        """
+        batches = [source_data[i:i + batch_size] for i in range(0, len(source_data), batch_size)]
+        results = await asyncio.gather(*(self.transform_batch_async(batch) for batch in batches))
+        return [record for batch in results for record in batch]
+
     def validate(self, transformed_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Validate transformed data.
 
@@ -250,3 +373,27 @@ class BaseTransformer(ABC):
                 valid_records.append(record)
         
         return valid_records
+
+    async def validate_record_async(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate a single transformed record asynchronously.
+
+        Args:
+            record: A single transformed record to validate.
+
+        Returns:
+            The record if valid, otherwise None.
+        """
+        errors = self.validate_record(record)
+        return record if not errors else None
+
+    async def validate_batch_async(self, batch: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Validate a batch of transformed data asynchronously.
+
+        Args:
+            batch: List of transformed records to validate.
+
+        Returns:
+            List of valid records.
+        """
+        results = await asyncio.gather(*(self.validate_record_async(record) for record in batch))
+        return [record for record in results if record is not None]

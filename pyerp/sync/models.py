@@ -59,14 +59,14 @@ class SyncState(models.Model):
     def update_sync_started(self):
         """Mark a sync operation as started."""
         self.last_sync_time = timezone.now()
-        self.save()
+        self.save(update_fields=['last_sync_time'])
 
     def update_sync_completed(self, success=True):
         """Mark a sync operation as completed."""
         if success:
             self.last_successful_sync_time = self.last_sync_time
             self.last_successful_id = self.last_sync_id
-        self.save()
+            self.save(update_fields=['last_successful_sync_time', 'last_successful_id'])
 
 
 class SyncLog(models.Model):
