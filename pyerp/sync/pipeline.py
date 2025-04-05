@@ -245,32 +245,37 @@ class SyncPipeline:
         failure_count = 0
         all_transformed_records = [] # Collect successfully transformed records
 
+        logger.debug("==> [_process_batch] Starting processing for batch of size %s", len(batch))
+
         for record in batch: # Iterate through each record in the batch
+            # Use a consistent way to get ID for logging
+            record_id_str = str(record.get("__KEY", record.get("Nummer", "unknown_id")))
+            logger.debug("==> [_process_batch] Transforming record ID: %s", record_id_str)
             try:
-                # Transform single record by wrapping it in a list
-                # as the transformer expects List[Dict[str, Any]]
-                transformed_list = self.transformer.transform([record]) # Pass list with single record
+                # Transform single record - correctly calling with dict
+                transformed_record = self.transformer.transform(record)
 
                 # Transformer returns a list; expect 0 or 1 item for a single input record
-                if transformed_list: # Check if the list is not empty
-                    transformed_record = transformed_list[0] # Get the first (and only) item
+                if transformed_record: # Check if the list is not empty
+                    logger.debug("<== [_process_batch] Successfully transformed record ID: %s", record_id_str)
                     all_transformed_records.append(transformed_record)
                 else:
                     # Log or handle transformation failure for this record
-                    # Extract a meaningful ID if possible
-                    record_id = record.get("legacy_id", record.get("id", record.get("AbsNr", "unknown ID")))
-                    logger.warning(f"Record transformation failed: {record_id}")
+                    logger.warning("<== [_process_batch] Transformation returned None for record ID: %s", record_id_str)
                     failure_count += 1
             except Exception as transform_error:
                 # Log transformation error for this specific record
-                record_id = record.get("legacy_id", record.get("id", record.get("AbsNr", "unknown ID")))
-                logger.error(f"Error transforming record {record_id}: {transform_error}")
+                logger.error("<== [_process_batch] Error transforming record ID: %s - Error: %s", record_id_str, transform_error, exc_info=True)
                 failure_count += 1
+
+        logger.debug("<== [_process_batch] Finished transforming batch. Transformed %s / Failed %s.", len(all_transformed_records), failure_count)
 
         # Load all successfully transformed records from the batch at once
         if all_transformed_records:
+            logger.debug("==> [_process_batch] Loading %s transformed records...", len(all_transformed_records))
             try:
                 load_result = self.loader.load(all_transformed_records) # Load collected records
+                logger.debug("<== [_process_batch] Completed loading. Created: %s, Updated: %s, Errors: %s", load_result.created, load_result.updated, load_result.errors)
                 created_count = load_result.created
                 updated_count = load_result.updated
                 # Add any load errors to the failure count
@@ -280,12 +285,15 @@ class SyncPipeline:
                 #     logger.warning(f"Loading errors encountered: {load_result.error_details}")
             except Exception as load_error:
                 # Log batch loading failure
-                logger.error(f"Failed to load transformed batch: {load_error}")
+                logger.error("<== [_process_batch] Error loading batch: %s", load_error, exc_info=True)
                 # If loading fails for the whole batch, mark all transformed records as failed
                 failure_count += len(all_transformed_records)
                 created_count = 0 # Reset counts as load failed
                 updated_count = 0
+        else:
+             logger.debug("[_process_batch] No records transformed successfully, skipping load step.")
 
+        logger.debug("<== [_process_batch] Finished processing batch. Result: (Created: %s, Updated: %s, Failed: %s)", created_count, updated_count, failure_count)
         return created_count, updated_count, failure_count
 
     def _clean_for_json(self, data):
@@ -323,10 +331,12 @@ class SyncPipeline:
             # Use a context manager to ensure proper connection handling
             with self.extractor:
                 # Extract data from source without transforming or loading
+                logger.debug("==> [fetch_data] Calling self.extractor.extract() with params: %s", query_params)
                 records = self.extractor.extract(
                     query_params=query_params,
                     fail_on_filter_error=fail_on_filter_error
                 )
+                logger.debug("<== [fetch_data] Returned from self.extractor.extract(). Found %s records.", len(records))
                 logger.info(f"Fetched {len(records)} records")
                 return records
         except Exception as e:

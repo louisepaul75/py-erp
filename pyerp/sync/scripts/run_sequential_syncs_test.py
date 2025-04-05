@@ -13,112 +13,113 @@ def run_sync_command(command_args):
     command_str = ' '.join(command)
     print(f"Running: {' '.join(command_args)}...") # Simplified command name
     try:
-        result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-        # Print limited success output, maybe last few lines or a summary if available
-        # For now, just a simple success message
+        # Remove capture_output=True and text=True to avoid buffer deadlocks
+        # Let the subprocess output stream directly
+        result = subprocess.run(command, check=True, encoding='utf-8') 
+        # --- Temporarily disable output parsing as it relied on captured output ---
         print(f"  SUCCESS: {' '.join(command_args)}")
-        # Optional: print result.stdout[-500:] # Print last 500 chars of output
+        # summary = {
+        #     "extracted": 0, 
+        #     "processed": 0, 
+        #     "transformed": 0,
+        #     "created": 0,
+        #     "updated": 0,
+        #     "skipped": 0,
+        #     "failed": 0, 
+        # }
+        # patterns = {
+        #     "parent_processed": r"Processing finished:.*?Processed=(\d+).*?Created=(\d+).*?Updated=(\d+).*?Failed=(\d+)",
+        #     "run_sync_processed": r"Processed: (\d+)",
+        #     "run_sync_created":   r"Created: (\d+)",
+        #     "run_sync_updated":   r"Updated: (\d+)",
+        #     "run_sync_failed":    r"Failed: (\d+)",
+        #     "extracted": r"Extracted (\d+).*(?:parent|child)? records",
+        #     "transformed": r"Transformed (\d+).*(?:parent|child)? records",
+        #     "load": r"(?:load|sync) finished:.*?(\d+) created.*?(\d+) updated.*?(\d+) skipped.*?(\d+) errors", 
+        # }
 
-        # --- Parse stdout for summary --- 
-        summary = {
-            "extracted": 0, # Records initially fetched
-            "processed": 0, # Records attempted (some commands use this)
-            "transformed": 0,
-            "created": 0,
-            "updated": 0,
-            "skipped": 0,
-            "failed": 0, # Records that failed processing/loading
-        }
-        # Patterns to find summary lines from various commands
-        patterns = {
-            # sync_products/sync_employees parent step
-            "parent_processed": r"Processing finished:.*?Processed=(\d+).*?Created=(\d+).*?Updated=(\d+).*?Failed=(\d+)",
-            # run_sync (used by variants/children in older commands)
-            "run_sync_processed": r"Processed: (\d+)",
-            "run_sync_created":   r"Created: (\d+)",
-            "run_sync_updated":   r"Updated: (\d+)",
-            "run_sync_failed":    r"Failed: (\d+)",
-            # sync_sales_records / sync_customers style output
-            "extracted": r"Extracted (\d+).*(?:parent|child)? records",
-            "transformed": r"Transformed (\d+).*(?:parent|child)? records",
-            "load": r"(?:load|sync) finished:.*?(\d+) created.*?(\d+) updated.*?(\d+) skipped.*?(\d+) errors", # Catches sync_sales_records
-        }
+        # # Check if result.stdout is available (it won't be if not captured)
+        # if hasattr(result, 'stdout') and result.stdout:
+        #     for line in result.stdout.splitlines():
+        #         matched = False
+        #         # Check for parent processed (sync_products style)
+        #         match_parent = re.search(patterns["parent_processed"], line, re.IGNORECASE)
+        #         if match_parent:
+        #             summary["processed"] += int(match_parent.group(1))
+        #             summary["created"] += int(match_parent.group(2))
+        #             summary["updated"] += int(match_parent.group(3))
+        #             summary["failed"] += int(match_parent.group(4))
+        #             matched = True
+        #             continue
 
-        for line in result.stdout.splitlines():
-            matched = False
-            # Check for parent processed (sync_products style)
-            match_parent = re.search(patterns["parent_processed"], line, re.IGNORECASE)
-            if match_parent:
-                summary["processed"] += int(match_parent.group(1))
-                summary["created"] += int(match_parent.group(2))
-                summary["updated"] += int(match_parent.group(3))
-                summary["failed"] += int(match_parent.group(4))
-                matched = True
-                continue
+        #         # Check for run_sync statistics block lines
+        #         match_rsp = re.search(patterns["run_sync_processed"], line.strip(), re.IGNORECASE)
+        #         if match_rsp:
+        #             summary["processed"] += int(match_rsp.group(1))
+        #             matched = True
+        #         match_rsc = re.search(patterns["run_sync_created"], line.strip(), re.IGNORECASE)
+        #         if match_rsc:
+        #             summary["created"] += int(match_rsc.group(1))
+        #             matched = True
+        #         match_rsu = re.search(patterns["run_sync_updated"], line.strip(), re.IGNORECASE)
+        #         if match_rsu:
+        #             summary["updated"] += int(match_rsu.group(1))
+        #             matched = True
+        #         match_rsf = re.search(patterns["run_sync_failed"], line.strip(), re.IGNORECASE)
+        #         if match_rsf:
+        #             summary["failed"] += int(match_rsf.group(1))
+        #             matched = True
+        #         if matched: continue 
 
-            # Check for run_sync statistics block lines
-            match_rsp = re.search(patterns["run_sync_processed"], line.strip(), re.IGNORECASE)
-            if match_rsp:
-                summary["processed"] += int(match_rsp.group(1))
-                matched = True
-            match_rsc = re.search(patterns["run_sync_created"], line.strip(), re.IGNORECASE)
-            if match_rsc:
-                summary["created"] += int(match_rsc.group(1))
-                matched = True
-            match_rsu = re.search(patterns["run_sync_updated"], line.strip(), re.IGNORECASE)
-            if match_rsu:
-                summary["updated"] += int(match_rsu.group(1))
-                matched = True
-            match_rsf = re.search(patterns["run_sync_failed"], line.strip(), re.IGNORECASE)
-            if match_rsf:
-                summary["failed"] += int(match_rsf.group(1))
-                matched = True
-            if matched: continue # If any run_sync line matched, move on
-
-            # Check for extraction
-            match_extract = re.search(patterns["extracted"], line, re.IGNORECASE)
-            if match_extract:
-                summary["extracted"] += int(match_extract.group(1))
-                summary["processed"] += int(match_extract.group(1)) # Assume extracted means processed initially
-                continue # Move to next line
+        #         # Check for extraction
+        #         match_extract = re.search(patterns["extracted"], line, re.IGNORECASE)
+        #         if match_extract:
+        #             summary["extracted"] += int(match_extract.group(1))
+        #             summary["processed"] += int(match_extract.group(1)) 
+        #             continue 
             
-            # Check for transformation
-            match_transform = re.search(patterns["transformed"], line, re.IGNORECASE)
-            if match_transform:
-                summary["transformed"] += int(match_transform.group(1))
-                continue # Move to next line
+        #         # Check for transformation
+        #         match_transform = re.search(patterns["transformed"], line, re.IGNORECASE)
+        #         if match_transform:
+        #             summary["transformed"] += int(match_transform.group(1))
+        #             continue 
 
-            # Check for load results
-            match_load = re.search(patterns["load"], line, re.IGNORECASE)
-            if match_load:
-                summary["created"] += int(match_load.group(1))
-                summary["updated"] += int(match_load.group(2))
-                summary["skipped"] += int(match_load.group(3))
-                summary["failed"] += int(match_load.group(4))
-                continue # Move to next line
+        #         # Check for load results
+        #         match_load = re.search(patterns["load"], line, re.IGNORECASE)
+        #         if match_load:
+        #             summary["created"] += int(match_load.group(1))
+        #             summary["updated"] += int(match_load.group(2))
+        #             summary["skipped"] += int(match_load.group(3))
+        #             summary["failed"] += int(match_load.group(4))
+        #             continue 
         
-        # Print summary if any counts were found
-        if any(summary.values()): # Only print if we found something
-            # Decide whether to show Extracted/Transformed or just Processed based on which has values
-            if summary["extracted"] > 0 or summary["transformed"] > 0:
-                source_summary = f"Extracted={summary['extracted']}, Transformed={summary['transformed']}"
-            else:
-                source_summary = f"Processed={summary['processed']}"
+        #     # Print summary if any counts were found
+        #     if any(summary.values()): 
+        #         if summary["extracted"] > 0 or summary["transformed"] > 0:
+        #             source_summary = f"Extracted={summary['extracted']}, Transformed={summary['transformed']}"
+        #         else:
+        #             source_summary = f"Processed={summary['processed']}"
 
-            load_summary = f"Created={summary['created']}, Updated={summary['updated']}, " \
-                           f"Skipped={summary['skipped']}, Failed={summary['failed']}"
+        #         load_summary = f"Created={summary['created']}, Updated={summary['updated']}, " \
+        #                        f"Skipped={summary['skipped']}, Failed={summary['failed']}"
 
-            summary_str = f"    Summary: {source_summary}, {load_summary}"
-            print(summary_str)
-        # --- End Summary Parsing ---
+        #         summary_str = f"    Summary: {source_summary}, {load_summary}"
+        #         print(summary_str)
+        # else:
+        #      print("    Summary: Output not captured, cannot parse summary.")
+        # --- End Temporarily disable output parsing ---
 
         return True
     except subprocess.CalledProcessError as e:
+        # If output wasn't captured, e.stdout and e.stderr will be None
         print(f"  FAILED: {' '.join(command_args)} (Exit Code: {e.returncode})")
-        print("  --- STDOUT --- ")
-        print(e.stdout)
-        print("  --- STDERR --- ")
-        print(e.stderr)
+        if e.stdout:
+            print("  --- STDOUT --- ")
+            print(e.stdout)
+        if e.stderr:
+            print("  --- STDERR --- ")
+            print(e.stderr)
+        # Since output streams directly, it should appear in the terminal anyway
         return False
     except FileNotFoundError:
         print(f"  FAILED: Could not find manage.py at {manage_py_path} or python at {sys.executable}")

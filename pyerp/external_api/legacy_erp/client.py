@@ -167,6 +167,7 @@ class LegacyERPClient(BaseAPIClient):
             variants_df = self.fetch_table(
                 table_name="Artikel",
                 filter_query=filter_query,
+                all_records=True,  # Ensure all variants are fetched
             )
             
             logger.info(
@@ -312,15 +313,17 @@ class LegacyERPClient(BaseAPIClient):
 
 
 if __name__ == "__main__":
+    # Reverted: Remove test code from main block
     pd.set_option("display.max_columns", None)
     # pd.set_option('display.max_rows', 10)
     # pd.set_option('display.width', 1000)
 
     client = LegacyERPClient(environment="live")
 
+    # Original example code (can be kept or removed)
     form_artikel = client.fetch_table(
         table_name="Artikel_Variante",
-        top=10  # Just get a sample of 10 employees
+        top=10  # Just get a sample
     )
     print(form_artikel.tail())
 

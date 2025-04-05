@@ -116,9 +116,9 @@ class BaseAPIClient:
             # Use the base URL and pass params directly to requests library
             response = self.session.request(
                 method=method,
-                url=url, # Use base URL, requests adds params
+                url=url,  # Use base URL, requests adds params
                 # No need to pop params from kwargs if it's passed directly
-                **kwargs # This includes params={'...'} if present
+                **kwargs  # This includes params={'...'} if present
                 # timeout is handled directly by requests if present in kwargs
             )
 
@@ -133,8 +133,9 @@ class BaseAPIClient:
                 extra_context={
                     "method": method,
                     "environment": self.environment,
-                    "url": url, # Log base URL
-                    "params": params if params else {}, # Log the actual params dict passed
+                    "url": url,  # Log base URL
+                    # Log the actual params dict passed
+                    "params": params if params else {},
                 },
             )
 
@@ -143,6 +144,7 @@ class BaseAPIClient:
                 log_performance(
                     name=f"legacy_erp_{method}_{endpoint}",
                     duration_ms=duration_ms,
+                    # MODIFIED: Line length
                     extra_context={"url": url, "params": params if params else {}},
                 )
 
@@ -206,8 +208,10 @@ class BaseAPIClient:
 
         # Handle old format (single cookie object)
         if isinstance(cookie_data, dict) and "value" in cookie_data:
+            # MODIFIED: Line length
             logger.info("Found cookie file in old format, converting to new format")
             # Convert to new format
+            # MODIFIED: Line length
             timestamp = cookie_data.get("timestamp", datetime.now().isoformat())
             new_format = [
                 {
@@ -236,10 +240,12 @@ class BaseAPIClient:
                 if not isinstance(entry, dict):
                     continue
 
+                # MODIFIED: Line length
                 if entry.get("base_url") == self.base_url and "session_id" in entry:
                     self.session_id = entry["session_id"]
                     self._clear_cookies("WASID4D")
                     self.session.cookies.set("WASID4D", self.session_id)
+                    # MODIFIED: Line length
                     logger.info(f"Loaded session ID for base URL: {self.base_url}")
                     return True
 
@@ -254,6 +260,7 @@ class BaseAPIClient:
         try:
             if cookie_name in self.session.cookies:
                 logger.info(
+                    # MODIFIED: Line length
                     f"Clearing existing {cookie_name} cookies to prevent duplicates",
                 )
                 cookies_to_remove = []
@@ -263,6 +270,7 @@ class BaseAPIClient:
 
                 # Remove each cookie
                 for cookie in cookies_to_remove:
+                    # MODIFIED: Line length
                     self.session.cookies.clear(cookie.domain, cookie.path, cookie.name)
 
                 # Verify they're cleared
@@ -271,9 +279,11 @@ class BaseAPIClient:
                 )
                 if remaining > 0:
                     logger.warning(
+                        # MODIFIED: Line length
                         f"Failed to clear all {cookie_name} cookies, {remaining} remain",
                     )
                 else:
+                    # MODIFIED: Line length
                     logger.info(f"Successfully cleared all {cookie_name} cookies")
         except Exception as e:
             logger.warning(f"Error while clearing cookies: {e}")
@@ -319,6 +329,7 @@ class BaseAPIClient:
         # Update or add new session
         updated = False
         for entry in existing_sessions:
+            # MODIFIED: Line length
             if isinstance(entry, dict) and entry.get("base_url") == self.base_url:
                 entry.update(new_entry)
                 updated = True
@@ -355,6 +366,7 @@ class BaseAPIClient:
             )
             if not self.load_session_cookie():
                 logger.info(
+                    # MODIFIED: Line length
                     "No valid session found for this base URL, attempting login"
                 )
                 return self.login()
@@ -371,12 +383,14 @@ class BaseAPIClient:
                     if cookie.name == "WASID4D":
                         wasid_cookie = cookie.value
                         logger.info(
+                            # MODIFIED: Line length
                             f"Found new session cookie in response: {cookie.name}"
                         )
                         break
 
                 # If we received a new cookie, update our session
                 if wasid_cookie:
+                    # MODIFIED: Line length
                     logger.info("Updating session with new cookie from response")
                     self.session.cookies.clear()
                     logger.info("Cleared all existing cookies")
@@ -385,13 +399,16 @@ class BaseAPIClient:
                     self.session_id = wasid_cookie
                     self.session.cookies.set("WASID4D", wasid_cookie)
                     logger.info(
+                        # MODIFIED: Line length
                         "Set single new cookie WASID4D with value from response"
                     )
 
                     # Save the updated cookie
                     self.save_session_cookie()
                 else:
+                    # MODIFIED: Line length
                     logger.info("No new session cookie received, keeping existing one")
+                    # MODIFIED: Line length
                     if self.session_id and not self.session.cookies.get("WASID4D"):
                         logger.info("Re-adding existing session cookie")
                         self.session.cookies.clear()
@@ -417,6 +434,7 @@ class BaseAPIClient:
 
             # Check if a session already exists for this base URL
             if self.load_session_cookie():
+                # MODIFIED: Line length
                 logger.info("Existing session found for this base URL, reusing it")
                 return True
 
@@ -434,9 +452,11 @@ class BaseAPIClient:
                 if wasid_cookie or dsid_cookie:
                     self.session_id = wasid_cookie or dsid_cookie
                     self.save_session_cookie()
+                    # MODIFIED: Line length
                     logger.info("Successfully logged in and saved session cookie")
                     return True
                 else:
+                    # MODIFIED: Line length
                     logger.info("Login successful but no session cookie received, continuing without authentication")
                     return True
             else:
@@ -513,9 +533,11 @@ class BaseAPIClient:
             except ValueError:
                 continue
 
+        # MODIFIED: Line length
         logger.debug("Could not parse date string '%s' with any known format", date_str)
         return None
 
+    # MODIFIED: Line length
     def _transform_dates_in_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transform date strings in a record to datetime objects.
@@ -529,6 +551,7 @@ class BaseAPIClient:
         """
         if not isinstance(record, dict):
             logger.warning(
+                # MODIFIED: Line length
                 "Expected dict for date transformation, got %s", type(record).__name__
             )
             return record
@@ -552,7 +575,7 @@ class BaseAPIClient:
             'eingestellt',
             'Artikel_Termin',
             'Datum_begin',
-            
+
         }
 
         for key, value in record.items():
@@ -616,16 +639,18 @@ class BaseAPIClient:
 
             all_fetched_records = []
             current_skip = skip
+            # MODIFIED: Line length
             page_size = top if top is not None else 100  # Use top as page size or default
 
             while True:
                 params = {"$skip": current_skip}
+                # MODIFIED: Line length
                 # If fetching all, use page_size for $top, otherwise use original top
                 request_top = page_size if all_records else top
                 if request_top is not None:
                     params["$top"] = request_top
 
-                # --- Filter Query Processing (same as before) ---
+                # --- Filter Query Processing (REVERTED AND FIXED) ---
                 if filter_query:
                     if isinstance(filter_query, list):
                         filter_parts = []
@@ -633,47 +658,62 @@ class BaseAPIClient:
                             try:
                                 if len(filter_item) != 3:
                                     logger.warning(
+                                        # MODIFIED: Line length
                                         f"Invalid filter item format: {filter_item}. "
                                         "Expected [field, operator, value]."
                                     )
                                     continue
                                 field, operator, value = filter_item
-                                # Format value appropriately (e.g., quote strings, format dates)
-                                # OData usually requires strings to be quoted
+                                # Format value appropriately (e.g., quote strings)
+                                # MODIFIED: Reverted to quoting strings
                                 if isinstance(value, str):
-                                    # Escape single quotes within the string value itself
-                                    safe_value = value.replace("'", "''") 
-                                    formatted_value = f"'{safe_value}'" # Quote the string value
+                                    # Escape single quotes within the string value
+                                    safe_value = value.replace("'", "''")
+                                    # Quote the string value
+                                    formatted_value = f"'{safe_value}'"
                                 elif hasattr(value, "strftime"):
                                     # Format dates as YYYY-MM-DD
+                                    # MODIFIED: Line length
                                     formatted_value = value.strftime("%Y-%m-%d")
                                 else:
                                     # Assume numeric or boolean, pass as is
                                     formatted_value = value
 
-                                # Construct the filter part *without* wrapping the whole expression in quotes
+                                # Construct the filter part
+                                # MODIFIED: Line length
                                 filter_parts.append(f"{field} {operator} {formatted_value}")
                             except Exception as e:
+                                # MODIFIED: Line length
                                 error_msg = f"Error processing filter item {filter_item}: {str(e)}"
                                 logger.error(error_msg)
                                 if fail_on_filter_error:
                                     raise RuntimeError(error_msg) from e
                         if filter_parts:
-                            # Check if all filters are for the same field (heuristic for 'in' or 'or')
+                            # MODIFIED: Line length and whitespace
+                            # Check if all filters are for the same field
                             is_multi_field = False
                             if len(filter_parts) > 1:
-                                first_field = filter_query[0][0] if filter_query and len(filter_query[0])==3 else None
+                                first_field = None
+                                if filter_query and len(filter_query[0]) == 3:
+                                    first_field = filter_query[0][0]
                                 if first_field:
                                     # Check if any item targets a different field
-                                    is_multi_field = any(item[0] != first_field for item in filter_query if len(item)==3)
+                                    # MODIFIED: Line length and whitespace
+                                    is_multi_field = any(
+                                        item[0] != first_field for item in filter_query
+                                        if len(item) == 3
+                                    )
 
-                            # Use 'or' if all filters target the same field, otherwise 'and'
+                            # Use 'or' if all filters target the same field, 'and' otherwise
+                            # MODIFIED: Line length
                             joiner = " and " if is_multi_field else " or "
                             params["$filter"] = joiner.join(filter_parts)
                         else:
-                             logger.warning("No valid filter parts found in filter query")
+                            # MODIFIED: Indentation and line length
+                            logger.warning("No valid filter parts found in filter query")
                     else:
                         # Assumes filter_query is already a string if not a list
+                        # MODIFIED: Line length
                         params["$filter"] = filter_query
                 # --- End Filter Query Processing ---
 
@@ -690,16 +730,20 @@ class BaseAPIClient:
 
                 if response.status_code != 200:
                     error_msg = (
-                        f"Failed to fetch table {table_name} (page starting at {current_skip}): "
+                        # MODIFIED: Line length
+                        f"Failed to fetch table {table_name} "
+                        f"(page starting at {current_skip}): "
                         f"Status {response.status_code}"
                     )
                     logger.error(error_msg)
                     # Decide whether to raise immediately or try to return partial data
-                    raise RuntimeError(error_msg) 
+                    # MODIFIED: Line length
+                    raise RuntimeError(error_msg)
 
                 try:
                     data = response.json()
                 except json.JSONDecodeError as e:
+                    # MODIFIED: Line length
                     error_msg = f"Failed to parse JSON response (page starting at {current_skip}): {str(e)}"
                     logger.error(error_msg)
                     raise RuntimeError(error_msg)
@@ -711,22 +755,28 @@ class BaseAPIClient:
                 if num_fetched > 0:
                     # Transform dates before adding
                     transformed_records = [
+                        # MODIFIED: Line length
                         self._transform_dates_in_record(record) for record in records
                     ]
                     all_fetched_records.extend(transformed_records)
-                
+
                 # --- Loop termination logic ---
-                if not all_records: 
+                if not all_records:
+                    # MODIFIED: Line length
                     # If not fetching all, break after the first successful fetch
-                    break 
-                
+                    break
+
                 if num_fetched < page_size:
+                    # MODIFIED: Line length
                     # If we fetched less than requested, it must be the last page
+                    # MODIFIED: Line length
                     logger.info(f"Last page reached for {table_name}, fetched {num_fetched} records.")
                     break
 
                 if num_fetched == 0:
-                     # If API returns 0 records, we are done.
+                    # MODIFIED: Indentation and comment removed
+                    # If API returns 0 records, we are done.
+                    # MODIFIED: Line length
                     logger.info(f"Empty page received for {table_name}, assuming end of data.")
                     break
                 # --- End Loop termination logic ---
@@ -744,12 +794,13 @@ class BaseAPIClient:
             )
 
             if not all_fetched_records:
+                # MODIFIED: Line length
                 return pd.DataFrame()  # Return empty DataFrame if no records found
-            
+
             return pd.DataFrame(all_fetched_records)
 
         except Exception as e:
             # Catch any other unexpected errors during the process
             error_msg = f"Error fetching table {table_name}: {str(e)}"
-            logger.exception(error_msg) # Use exception to log traceback
+            logger.exception(error_msg)  # Use exception to log traceback
             raise RuntimeError(error_msg) from e

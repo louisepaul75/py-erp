@@ -35,9 +35,24 @@ class ProductTransformer(BaseTransformer):
 
         # Log transformer configuration
         logger.debug("Transformer config: field_mappings=%s", self.field_mappings)
+        # Log the field mappings being used
+        logger.debug("Using field mappings: %s", self.field_mappings)
 
         # Remove outer loop: for record in source_data:
         try:
+            # --- Start: Handle list input --- 
+            if isinstance(record, list):
+                if len(record) == 1 and isinstance(record[0], dict):
+                    record = record[0] # Use the first dictionary if it's a single-element list
+                    logger.debug("Input was a single-element list, extracted the dictionary.")
+                else:
+                    logger.error("Input record is a list but not a single dictionary. Skipping.", extra={"record_input": record})
+                    return None
+            elif not isinstance(record, dict):
+                logger.error(f"Input record is not a dictionary or a single-element list of dict. Type: {type(record).__name__}. Skipping.", extra={"record_input": record})
+                return None
+            # --- End: Handle list input ---
+            
             # Log the complete source record for debugging
             logger.debug("Processing source record: %s", record)
 
@@ -189,19 +204,30 @@ class ProductTransformer(BaseTransformer):
             # Log transformed record for debugging
             logger.debug("After field mappings: %s", transformed)
 
-            # Skip records with missing required fields
-            if not transformed.get("sku") or not transformed.get("name"):
-                # Fix 3: Adjust the logging extra dict to avoid 'name' conflict
+            # --- Start Enhanced Logging for Missing Fields ---
+            missing_reason = []
+            if not transformed.get("sku"):
+                missing_reason.append(f"SKU missing (Source Nummer: {record.get('Nummer', '<Not Found>')})")
+            if not transformed.get("name"):
+                missing_reason.append(f"Name missing (Source Bezeichnung: {record.get('Bezeichnung', '<Not Found>')})")
+            
+            if missing_reason:
                 logger.warning(
-                    "Skipping record with missing required fields (SKU: %s, Name: %s)",
-                    transformed.get("sku", "<Missing>"),
-                    transformed.get("name", "<Missing>"),
-                    # extra={
-                    #     "sku": transformed.get("sku"),
-                    #     "record_name": transformed.get("name"), # Renamed 'name' key
-                    # },
+                    "Skipping record due to missing required fields: %s",
+                    "; ".join(missing_reason),
+                    extra={"record": record} # Include full record context
                 )
                 return None # Return None if skipping
+            # --- End Enhanced Logging ---
+
+            # Skip records with missing required fields - Original check commented out
+            # if not transformed.get("sku") or not transformed.get("name"):
+            #     logger.warning(
+            #         "Skipping record with missing required fields (SKU: %s, Name: %s)",
+            #         transformed.get("sku", "<Missing>"),
+            #         transformed.get("name", "<Missing>"),
+            #     )
+            #     return None # Return None if skipping
 
             # Apply custom transformers specified in config
             custom_transformers = self.config.get("custom_transformers", [])
@@ -427,10 +453,15 @@ class ProductTransformer(BaseTransformer):
         from pyerp.business_modules.products.models import ParentProduct
 
         if "legacy_parent_id" in transformed:
+            legacy_parent_id_to_find = transformed["legacy_parent_id"]
+            logger.debug(
+                f"Attempting to link variant {transformed.get('sku', 'N/A')} "
+                f"using legacy_parent_id: {legacy_parent_id_to_find}"
+            )
             try:
                 # Try to find parent by legacy_id
                 parent = ParentProduct.objects.get(
-                    legacy_id=transformed["legacy_parent_id"]
+                    legacy_id=legacy_parent_id_to_find # Use the variable here
                 )
                 transformed["parent"] = parent
                 
@@ -447,16 +478,20 @@ class ProductTransformer(BaseTransformer):
                     )
                 
                 logger.info(
-                    "Found parent product for variant. "
+                    "Found parent product for variant by legacy_id. "
                     f"Variant SKU: {transformed.get('sku')}, "
-                    f"Variant legacy_id: {transformed.get('legacy_id')}, "
                     f"Parent SKU: {parent.sku}, "
                     f"Parent legacy_id: {parent.legacy_id}"
                 )
             except ParentProduct.DoesNotExist:
+                logger.debug(f"Parent not found by legacy_id: {legacy_parent_id_to_find}")
                 # Try to find parent by legacy_base_sku if available
                 legacy_base_sku = transformed.get("legacy_base_sku")
                 if legacy_base_sku:
+                    logger.debug(
+                        f"Attempting to link variant {transformed.get('sku', 'N/A')} "
+                        f"using legacy_base_sku: {legacy_base_sku}"
+                    )
                     try:
                         parent = ParentProduct.objects.get(legacy_base_sku=legacy_base_sku)
                         transformed["parent"] = parent
@@ -468,11 +503,11 @@ class ProductTransformer(BaseTransformer):
                         )
                     except ParentProduct.DoesNotExist:
                         logger.warning(
-                            "Parent product not found by legacy_id or legacy_base_sku. "
+                            "Parent product not found by legacy_id OR legacy_base_sku. Storing for retry. "
                             f"Variant SKU: {transformed.get('sku')}, "
                             f"Legacy ID: {transformed.get('legacy_id')}, "
-                            f"Parent ID: {transformed['legacy_parent_id']}, "
-                            f"Legacy Base SKU: {legacy_base_sku}"
+                            f"Searched Parent Legacy ID: {legacy_parent_id_to_find}, "
+                            f"Searched Legacy Base SKU: {legacy_base_sku}"
                         )
                         # Store for retry
                         if not hasattr(self, "_pending_variants"):
@@ -483,10 +518,10 @@ class ProductTransformer(BaseTransformer):
                         return None
                 else:
                     logger.warning(
-                        "Parent product not found and no legacy_base_sku available. "
+                        "Parent product not found by legacy_id and NO legacy_base_sku available. Storing for retry. "
                         f"Variant SKU: {transformed.get('sku')}, "
                         f"Legacy ID: {transformed.get('legacy_id')}, "
-                        f"Parent ID: {transformed['legacy_parent_id']}"
+                        f"Searched Parent Legacy ID: {legacy_parent_id_to_find}"
                     )
                     # Store for retry
                     if not hasattr(self, "_pending_variants"):
@@ -528,48 +563,64 @@ class ProductTransformer(BaseTransformer):
 
             remaining_variants = []
             for variant in self._pending_variants:
+                variant_transformed = variant["transformed"]
+                variant_source = variant["source"]
+                variant_sku = variant_transformed.get('sku', 'N/A')
+                parent_legacy_id = variant_transformed.get("legacy_parent_id")
+                legacy_base_sku = variant_transformed.get("legacy_base_sku")
+
+                logger.debug(
+                    f"Retrying variant {variant_sku}: "
+                    f"Parent Legacy ID={parent_legacy_id}, Legacy Base SKU={legacy_base_sku}"
+                )
+
                 try:
                     # Try by legacy_id first
                     parent = ParentProduct.objects.get(
-                        legacy_id=variant["transformed"]["legacy_parent_id"]
+                        legacy_id=parent_legacy_id
                     )
-                    variant["transformed"]["parent"] = parent
+                    variant_transformed["parent"] = parent
                     
                     # Update parent product's legacy_base_sku with the variant's legacy_base_sku if available
-                    legacy_base_sku = variant["transformed"].get("legacy_base_sku")
-                    if legacy_base_sku and (not parent.legacy_base_sku or parent.legacy_base_sku != legacy_base_sku):
-                        parent.legacy_base_sku = legacy_base_sku
+                    current_legacy_base_sku = variant_transformed.get("legacy_base_sku") # Renamed variable
+                    if current_legacy_base_sku and (not parent.legacy_base_sku or parent.legacy_base_sku != current_legacy_base_sku):
+                        parent.legacy_base_sku = current_legacy_base_sku # Use renamed variable
                         parent.save()
                         logger.info(
                             "Updated parent product legacy_base_sku during retry. "
                             f"Parent ID: {parent.id}, "
                             f"Parent SKU: {parent.sku}, "
-                            f"New legacy_base_sku: {legacy_base_sku}"
+                            f"New legacy_base_sku: {current_legacy_base_sku}"
                         )
                     
-                    transformed_records.append(variant["transformed"])
+                    transformed_records.append(variant_transformed) # Use correct variable
                     logger.info(
-                        "Successfully linked variant "
-                        f"{variant['transformed'].get('sku')} "
-                        f"to parent {parent.sku} by legacy_id"
+                        "Successfully linked variant during retry "
+                        f"{variant_sku} to parent {parent.sku} by legacy_id"
                     )
                 except ParentProduct.DoesNotExist:
+                    logger.debug(f"Retry: Parent not found by legacy_id: {parent_legacy_id} for variant {variant_sku}")
                     # Try by legacy_base_sku if available
-                    legacy_base_sku = variant["transformed"].get("legacy_base_sku")
-                    if legacy_base_sku:
+                    current_legacy_base_sku = variant_transformed.get("legacy_base_sku") # Use correct variable
+                    if current_legacy_base_sku:
+                        logger.debug(f"Retry: Attempting lookup by legacy_base_sku: {current_legacy_base_sku} for variant {variant_sku}")
                         try:
-                            parent = ParentProduct.objects.get(legacy_base_sku=legacy_base_sku)
-                            variant["transformed"]["parent"] = parent
-                            transformed_records.append(variant["transformed"])
+                            parent = ParentProduct.objects.get(legacy_base_sku=current_legacy_base_sku) # Use correct variable
+                            variant_transformed["parent"] = parent
+                            transformed_records.append(variant_transformed)
                             logger.info(
-                                "Successfully linked variant "
-                                f"{variant['transformed'].get('sku')} "
-                                f"to parent {parent.sku} by legacy_base_sku"
+                                "Successfully linked variant during retry "
+                                f"{variant_sku} to parent {parent.sku} by legacy_base_sku"
                             )
                         except ParentProduct.DoesNotExist:
+                            logger.warning(f"Retry Failed: Parent not found by legacy_base_sku: {current_legacy_base_sku} for variant {variant_sku}")
                             remaining_variants.append(variant)
                     else:
-                        remaining_variants.append(variant)
+                         logger.warning(f"Retry Failed: No legacy_base_sku available for variant {variant_sku}")
+                         remaining_variants.append(variant)
+                except Exception as e: # Catch other potential errors during retry
+                    logger.error(f"Error during retry for variant {variant_sku}: {e}", exc_info=True)
+                    remaining_variants.append(variant) # Keep variant for logging if error occurs
 
             self._pending_variants = remaining_variants
             if remaining_variants:
@@ -590,10 +641,10 @@ class ProductTransformer(BaseTransformer):
             for variant in self._pending_variants:
                 transformed = variant["transformed"]
                 logger.error(
-                    "Unlinked variant: "
+                    "Unlinked variant details: "
                     f"SKU={transformed.get('sku')}, "
                     f"Legacy ID={transformed.get('legacy_id')}, "
-                    f"Parent ID={transformed.get('legacy_parent_id')}, "
+                    f"Parent Legacy ID={transformed.get('legacy_parent_id')}, "
                     f"Legacy Base SKU={transformed.get('legacy_base_sku')}"
                 )
 

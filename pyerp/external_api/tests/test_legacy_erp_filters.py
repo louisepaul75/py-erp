@@ -221,6 +221,54 @@ class LegacyERPFilterTests(unittest.TestCase):
         # Since filters are on different fields, base.py joins them with 'AND'
         self._run_fetch_test("Filter Combined (AND)", filter_query=filter_q)
 
+    def test_07_filter_by_familie(self):
+        """
+        Test filtering by the 'Familie_' field, expecting only matching records.
+        This test is EXPECTED TO FAIL based on current API behavior.
+        """
+        familie_field = 'Familie_' # Field used to link variants to parents
+
+        # Fetch one record to get a valid Familie_ ID
+        print(f"\nFetching sample record for {familie_field} filter test...")
+        sample_df = self.client.fetch_table(table_name=TEST_TABLE, top=1)
+        if sample_df.empty or pd.isna(sample_df.iloc[0][familie_field]):
+            self.skipTest(
+                f"Need at least one record with a valid {familie_field} "
+                f"for this test."
+            )
+
+        target_familie_id = sample_df.iloc[0][familie_field]
+        # Convert numpy types to standard python types if necessary
+        if hasattr(target_familie_id, 'item'):
+            target_familie_id = target_familie_id.item()
+        
+        print(f"Using {familie_field} from sample record: {target_familie_id}")
+        filter_q = [[familie_field, "=", target_familie_id]]
+        
+        # Fetch up to 10 records using the filter (API currently returns 100 regardless)
+        df = self._run_fetch_test(
+            f"Filter Equals ({familie_field})", 
+            filter_query=filter_q,
+            top=10 # Request a small number, API might ignore filter and return more 
+        )
+
+        # Assertion: Check if *all* returned records actually match the filter
+        if not df.empty:
+            mismatched_records = df[df[familie_field] != target_familie_id]
+            if not mismatched_records.empty:
+                print(f"\nERROR: Found {len(mismatched_records)} records that DID NOT match the filter!")
+                print("Sample mismatched record(s):")
+                print(mismatched_records.head())
+                # Fail the test explicitly
+                self.fail(
+                    f"API returned records where {familie_field} did not match "
+                    f"the requested value '{target_familie_id}'"
+                )
+            else:
+                 print(f"SUCCESS: All {len(df)} returned records matched the {familie_field} filter.")
+        else:
+            print("Warning: No records returned for the filter, assertion skipped.")
+
     # def test_07_filter_numeric_greater_than(self):
     #     """Test filtering on a numeric field."""
     #     # Assuming NUMERIC_FIELD exists and has values > 0

@@ -158,10 +158,12 @@ class Command(BaseSyncCommand):
                         logger.info(f"Using extractor {type(temp_pipeline.extractor).__name__} for parent ID fetching.")
 
                         # Use extractor's fetch_data method
+                        logger.debug("==> [Parent Fetch] Starting fetch_data for targeted parents...")
                         fetched_parent_data = temp_pipeline.fetch_data(
                             query_params=initial_parent_query_params,
                             fail_on_filter_error=options["fail_on_filter_error"]
                         )
+                        logger.debug("<== [Parent Fetch] Completed fetch_data. Found %s records.", len(fetched_parent_data) if fetched_parent_data else 0)
 
                         if fetched_parent_data:
                             self.stdout.write(self.style.SUCCESS(f"Fetched {len(fetched_parent_data)} targeted parent record(s)."))
@@ -186,8 +188,10 @@ class Command(BaseSyncCommand):
                                 # Re-use pipeline's batch processing logic if possible,
                                 # otherwise implement similar logic here.
                                 # Assuming _process_batch exists and works similarly:
+                                logger.debug("==> [Parent Process] Starting _process_batch for %s fetched parents...", len(fetched_parent_data))
                                 created_count, updated_count, failure_count = \
                                     temp_pipeline._process_batch(fetched_parent_data)
+                                logger.debug("<== [Parent Process] Completed _process_batch.")
 
                                 total_processed = len(fetched_parent_data)
                                 total_failed = failure_count
@@ -277,11 +281,43 @@ class Command(BaseSyncCommand):
                         variant_options["sku"] = None
                         # We keep --debug, --batch-size etc.
 
-                    variant_sync_successful = self.run_sync_via_command(
-                        entity_type="product_variant",
-                        options=variant_options,
-                        query_params=variant_query_params
-                    )
+                        # --- Start Iterative Variant Sync ---
+                        self.stdout.write(self.style.NOTICE(f"Iteratively syncing variants for {len(parent_legacy_ids_to_sync)} parent(s)..."))
+                        all_variants_successful = True
+                        for parent_id in parent_legacy_ids_to_sync:
+                            self.stdout.write(f"- Syncing variants for parent legacy ID: {parent_id}")
+                            iter_variant_query_params = {
+                                "parent_record_ids": [parent_id],
+                                "parent_field": "Familie_" 
+                            }
+                            # Make a copy of options to avoid modification across iterations
+                            iter_variant_options = variant_options.copy()
+                            
+                            # Run sync for this single parent's variants
+                            logger.debug("==> [Variant Sync Loop] Calling run_sync_via_command for parent ID: %s", parent_id)
+                            success = self.run_sync_via_command(
+                                entity_type="product_variant",
+                                options=iter_variant_options,
+                                query_params=iter_variant_query_params
+                            )
+                            logger.debug("<== [Variant Sync Loop] Completed run_sync_via_command for parent ID: %s. Success: %s", parent_id, success)
+                            
+                            if not success:
+                                self.stderr.write(self.style.ERROR(f"  Failed syncing variants for parent {parent_id}."))
+                                all_variants_successful = False
+                                # Optionally break or continue based on desired behavior
+                                # break 
+                        variant_sync_successful = all_variants_successful
+                        # --- End Iterative Variant Sync ---
+                    else:
+                        # --- Original Non-Iterative Sync (for non-targeted or fallback) ---
+                        self.stdout.write("Running non-iterative variant sync.")
+                        variant_sync_successful = self.run_sync_via_command(
+                            entity_type="product_variant",
+                            options=variant_options,
+                            query_params=variant_query_params
+                        )
+                        # --- End Original Non-Iterative Sync ---
 
                 # Update overall status
                 if not variant_sync_successful:
