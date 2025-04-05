@@ -127,7 +127,7 @@ describe('Footer Component', () => {
 
     // Now check the status indicator class
     const statusIndicator = screen.getByTestId('api-status-indicator');
-    expect(statusIndicator).toHaveClass('bg-green-500');
+    expect(statusIndicator).toHaveClass('bg-status-success');
 
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
@@ -165,7 +165,7 @@ describe('Footer Component', () => {
 
     // Now check the status indicator class
     const statusIndicator = screen.getByTestId('api-status-indicator');
-    expect(statusIndicator).toHaveClass('bg-yellow-500');
+    expect(statusIndicator).toHaveClass('bg-status-warning');
 
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
@@ -204,7 +204,7 @@ describe('Footer Component', () => {
 
     // Now check the status indicator class
     const statusIndicator = screen.getByTestId('api-status-indicator');
-    expect(statusIndicator).toHaveClass('bg-red-500');
+    expect(statusIndicator).toHaveClass('bg-status-error');
 
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
@@ -234,7 +234,7 @@ describe('Footer Component', () => {
 
     // Check for the RED status indicator (fallback)
     const statusIndicator = await screen.findByTestId('api-status-indicator'); // Use findBy here too, as state update is async
-    expect(statusIndicator).toHaveClass('bg-red-500');
+    expect(statusIndicator).toHaveClass('bg-status-error');
 
     // Check for the fallback version 
     const versionText = await screen.findByText('v0.0.0'); // Use findBy here
@@ -272,7 +272,7 @@ describe('Footer Component', () => {
 
     // Check for the RED status indicator (fallback)
     const statusIndicator = await screen.findByTestId('api-status-indicator'); // Use findBy
-    expect(statusIndicator).toHaveClass('bg-red-500');
+    expect(statusIndicator).toHaveClass('bg-status-error');
 
     // Check for the fallback version
     const versionText = await screen.findByText('v0.0.0'); // Use findBy

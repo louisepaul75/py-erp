@@ -1,6 +1,17 @@
+import 'whatwg-fetch';
 import '@testing-library/jest-dom';
 import * as React from 'react';
 import fetchMock from 'jest-fetch-mock';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+// Load environment variables from .env file at the project root
+// <rootDir> in Jest config points to frontend-react, so ../ points to the workspace root
+// dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
+// ^^^ Moved to dotenv.setup.js and executed via setupFiles in jest.config.js
+
+// Explicitly set API_URL for tests if it's defined after dotenv load
+process.env.API_URL = process.env.API_URL || 'http://localhost:8000'; // Provide a default if not set
 
 // Enable fetch mocks globally
 fetchMock.enableMocks();
@@ -65,20 +76,33 @@ jest.mock('next/image', () => ({
 }));
 
 // Mock i18next
-const mockI18n = {
-  use: function() { return this; },
-  init: () => Promise.resolve(),
+// Configure i18n instance before mocking it
+i18n
+  .use(initReactI18next)
+  .init({
+    fallbackLng: 'en',
+    debug: false,
+    interpolation: {
+      escapeValue: false,
+    },
+    resources: {
+      en: { translation: {} },
+      de: { translation: {} },
+    },
+  });
+
+const mockI18nInstance = {
+  ...i18n,
+  changeLanguage: jest.fn((lng: string) => Promise.resolve()),
   t: (key: string) => key,
-  language: 'en',
-  changeLanguage: jest.fn(),
 };
 
-jest.mock('i18next', () => mockI18n);
+jest.mock('i18next', () => mockI18nInstance);
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
-    i18n: mockI18n,
+    i18n: mockI18nInstance,
   }),
   initReactI18next: {
     type: '3rdParty',

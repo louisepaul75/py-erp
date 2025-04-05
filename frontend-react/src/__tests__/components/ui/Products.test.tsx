@@ -4,7 +4,8 @@ import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import InventoryManagement from '@/components/ui/products';
 import { productApi } from '@/lib/products/api';
-import { LastVisitedProvider } from '@/context/LastVisitedContext';
+import { LastVisitedProvider, useLastVisited } from '@/context/LastVisitedContext';
+import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
 
 // Mock the product API
 jest.mock('@/lib/products/api', () => ({
@@ -12,6 +13,14 @@ jest.mock('@/lib/products/api', () => ({
     getProducts: jest.fn()
   }
 }));
+
+// Mock the LastVisited context
+jest.mock('@/context/LastVisitedContext', () => ({
+  useLastVisited: jest.fn(),
+}));
+
+// Mock next/navigation - Keep this global mock as well
+jest.mock('next/navigation', () => require('next-router-mock'));
 
 const mockProducts = [
   {
@@ -48,11 +57,24 @@ const mockProducts = [
 ];
 
 describe('Products Component', () => {
+  const mockGetProducts = productApi.getProducts as jest.Mock;
+  const mockUseLastVisited = useLastVisited as jest.Mock;
+  const mockAddLastVisited = jest.fn();
+
   beforeEach(() => {
-    (productApi.getProducts as jest.Mock).mockResolvedValue({
-      results: mockProducts,
-      total: mockProducts.length
+    // Reset mocks before each test
+    mockGetProducts.mockReset();
+    mockUseLastVisited.mockReset();
+    mockAddLastVisited.mockClear();
+    
+    // Provide default mock implementation for useLastVisited
+    mockUseLastVisited.mockReturnValue({
+      addLastVisited: mockAddLastVisited,
+      lastVisitedItems: [],
     });
+    
+    // Default successful API response
+    mockGetProducts.mockResolvedValue({ products: mockProducts, total: mockProducts.length, skip: 0, limit: 30 });
   });
 
   afterEach(() => {
@@ -61,9 +83,9 @@ describe('Products Component', () => {
 
   it('renders the Products component correctly', async () => {
     render(
-      <LastVisitedProvider>
+      <MemoryRouterProvider>
         <InventoryManagement />
-      </LastVisitedProvider>
+      </MemoryRouterProvider>
     );
     
     // Wait for products to load
@@ -76,9 +98,9 @@ describe('Products Component', () => {
 
   it('handles search functionality', async () => {
     render(
-      <LastVisitedProvider>
+      <MemoryRouterProvider>
         <InventoryManagement />
-      </LastVisitedProvider>
+      </MemoryRouterProvider>
     );
     
     // Wait for products to load and use getAllByText to handle multiple instances
@@ -98,9 +120,9 @@ describe('Products Component', () => {
 
   it('renders product list correctly', async () => {
     render(
-      <LastVisitedProvider>
+      <MemoryRouterProvider>
         <InventoryManagement />
-      </LastVisitedProvider>
+      </MemoryRouterProvider>
     );
     
     // Wait for products to load and check for specific elements
@@ -113,9 +135,9 @@ describe('Products Component', () => {
 
   it('can select a product from the list', async () => {
     render(
-      <LastVisitedProvider>
+      <MemoryRouterProvider>
         <InventoryManagement />
-      </LastVisitedProvider>
+      </MemoryRouterProvider>
     );
     
     // Wait for products to load
@@ -130,5 +152,14 @@ describe('Products Component', () => {
 
     // Check if product details are displayed
     expect(screen.getByText('SKU001')).toBeInTheDocument();
+
+    // Check if addLastVisited was called with the correct product
+    await waitFor(() => {
+      expect(mockAddLastVisited).toHaveBeenCalledWith(mockProducts[0]);
+    });
+
+    // Optional: Check if navigation occurred if selection triggers navigation
+    // You'll need to inspect the mocked router state from next-router-mock
+    // e.g., expect(require('next/router').pathname).toBe('/products/1');
   });
 }); 
