@@ -91,18 +91,22 @@ i18n
     },
   });
 
-const mockI18nInstance = {
-  ...i18n,
+// Use jest.doMock which is not hoisted
+jest.doMock('i18next', () => ({
+  // Define only the necessary mock functions inline
   changeLanguage: jest.fn((lng: string) => Promise.resolve()),
   t: (key: string) => key,
-};
+}));
 
-jest.mock('i18next', () => mockI18nInstance);
-
-jest.mock('react-i18next', () => ({
+// Use jest.doMock which is not hoisted
+jest.doMock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
-    i18n: mockI18nInstance,
+    // Define the nested i18n mock object inline without spreading
+    i18n: {
+      changeLanguage: jest.fn((lng: string) => Promise.resolve()),
+      t: (key: string) => key,
+    },
   }),
   initReactI18next: {
     type: '3rdParty',
