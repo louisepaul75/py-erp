@@ -243,25 +243,44 @@ class SyncPipeline:
         created_count = 0
         updated_count = 0
         failure_count = 0
+        all_transformed_records = [] # Collect successfully transformed records
 
-        try:
-            # Transform batch
-            transformed_records = self.transformer.transform(batch)
+        for record in batch: # Iterate through each record in the batch
+            try:
+                # Transform single record
+                transformed_record = self.transformer.transform(record) # Pass single record
+                if transformed_record: # Check if transformation was successful
+                    all_transformed_records.append(transformed_record)
+                else:
+                    # Log or handle transformation failure for this record
+                    # Extract a meaningful ID if possible
+                    record_id = record.get("legacy_id", record.get("id", record.get("AbsNr", "unknown ID")))
+                    logger.warning(f"Record transformation failed: {record_id}")
+                    failure_count += 1
+            except Exception as transform_error:
+                # Log transformation error for this specific record
+                record_id = record.get("legacy_id", record.get("id", record.get("AbsNr", "unknown ID")))
+                logger.error(f"Error transforming record {record_id}: {transform_error}")
+                failure_count += 1
 
-            # Load transformed records
-            load_result = self.loader.load(transformed_records)
-            
-            # Process load results - LoadResult is an object, not a dictionary
-            # Count the successes and failures
-            created_count = load_result.created
-            updated_count = load_result.updated
-            failure_count = load_result.errors
-
-        except Exception as e:
-            # Log batch transformation failure
-            error_msg = str(e)
-            logger.error("Failed to transform batch: {}".format(error_msg))
-            failure_count = len(batch)
+        # Load all successfully transformed records from the batch at once
+        if all_transformed_records:
+            try:
+                load_result = self.loader.load(all_transformed_records) # Load collected records
+                created_count = load_result.created
+                updated_count = load_result.updated
+                # Add any load errors to the failure count
+                failure_count += load_result.errors
+                # Log details if available and needed (optional)
+                # if load_result.errors > 0 and hasattr(load_result, 'error_details'):
+                #     logger.warning(f"Loading errors encountered: {load_result.error_details}")
+            except Exception as load_error:
+                # Log batch loading failure
+                logger.error(f"Failed to load transformed batch: {load_error}")
+                # If loading fails for the whole batch, mark all transformed records as failed
+                failure_count += len(all_transformed_records)
+                created_count = 0 # Reset counts as load failed
+                updated_count = 0
 
         return created_count, updated_count, failure_count
 

@@ -58,14 +58,17 @@ class BaseAPIClient:
         if environment not in API_ENVIRONMENTS:
             available_envs = list(API_ENVIRONMENTS.keys())
             error_msg = (
-                f"Invalid environment: '{environment}'. " f"Available: {available_envs}"
+                f"Invalid environment: '{environment}'. "
+                f"Available: {available_envs}"
             )
             logger.error(error_msg)
             raise ValueError(error_msg)
 
         env_config = API_ENVIRONMENTS[environment]
         if "base_url" not in env_config:
-            error_msg = f"Missing URL configuration for environment '{environment}'"
+            error_msg = (
+                f"Missing URL configuration for environment '{environment}'"
+            )
             logger.error(error_msg)
             raise ValueError(error_msg)
 
