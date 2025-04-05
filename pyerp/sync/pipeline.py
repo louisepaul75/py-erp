@@ -149,7 +149,14 @@ class SyncPipeline:
             self.sync_log.records_created = 0
             self.sync_log.records_updated = 0
             self.sync_log.records_failed = 0
-            self.sync_log.save(update_fields=['records_processed', 'records_created', 'records_updated', 'records_failed'])
+            self.sync_log.save(
+                update_fields=[
+                    'records_processed',
+                    'records_created',
+                    'records_updated',
+                    'records_failed'
+                ]
+            )
 
             # Process data in batches
             total_processed = 0
@@ -176,7 +183,14 @@ class SyncPipeline:
                 self.sync_log.records_created = total_created
                 self.sync_log.records_updated = total_updated
                 self.sync_log.records_failed = total_failed
-                self.sync_log.save()
+                self.sync_log.save(
+                    update_fields=[
+                        'records_processed',
+                        'records_created',
+                        'records_updated',
+                        'records_failed',
+                    ]
+                )
 
             # Update sync state on successful completion
             success = total_failed == 0
@@ -185,7 +199,7 @@ class SyncPipeline:
             # Update final sync log status and completion time
             self.sync_log.status = SyncStatus.COMPLETED if success else SyncStatus.COMPLETED_WITH_ERRORS
             self.sync_log.completed_at = timezone.now()
-            self.sync_log.save()
+            self.sync_log.save(update_fields=['status', 'completed_at'])
 
             log_data_sync_event(
                 source=self.mapping.source.name,
@@ -215,7 +229,7 @@ class SyncPipeline:
                 self.sync_log.status = SyncStatus.FAILED
                 self.sync_log.error_message = error_msg
                 self.sync_log.completed_at = timezone.now()
-                self.sync_log.save()
+                self.sync_log.save(update_fields=['status', 'error_message', 'completed_at'])
             
             # Log the event
             log_data_sync_event(
