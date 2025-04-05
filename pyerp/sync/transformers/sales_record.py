@@ -2,13 +2,14 @@
 
 import re
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
-from typing import Dict, Any, List, Optional
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Dict, Any, List, Optional, Union
 
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
 from .base import BaseTransformer
 from pyerp.business_modules.products.models import VariantProduct
+from pyerp.business_modules.sales.models import SalesRecord
 
 
 logger = get_logger(__name__)
@@ -25,32 +26,57 @@ class SalesRecordTransformer(BaseTransformer):
         """
         super().__init__(config)
 
-    def transform(self, data: Any) -> Dict[str, Any]:
+    def transform(self, data: Any) -> List[Dict[str, Any]]:
         """
         Transform data from legacy format to Django model format.
+        Detects if data represents parent records or child line items and routes accordingly.
 
         Args:
-            data: Raw data from the legacy system (single record or list)
+            data: Raw data from the legacy system (list of dicts or single dict)
 
         Returns:
-            Transformed data ready for loading into Django models
+            List of transformed data ready for loading into Django models
         """
-        # Handle string inputs
-        if isinstance(data, str):
-            logger.warning(
-                f"Received string data instead of dictionary: {data[:100]}..."
-            )
-            return {}
+        if not data:
+            logger.warning("Received empty data for transformation.")
+            return []
 
-        # Handle dictionary inputs
-        if isinstance(data, dict):
-            return self._transform_single_record(data)
+        # Determine if data is a list or single dict
+        is_list = isinstance(data, list)
+        first_record = data[0] if is_list else data
 
-        # Handle any other unexpected input
-        logger.warning(f"Received unexpected data type: {type(data)}")
-        return {}
+        if not isinstance(first_record, dict):
+            logger.warning(f"Received non-dictionary data: {type(first_record)}")
+            return []
 
-    def _transform_single_record(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        # Detect if it's child item data (presence of 'PosNr')
+        is_child_item_data = "PosNr" in first_record
+
+        transformed_records = []
+
+        if is_child_item_data:
+            # Data contains child line items
+            logger.debug("Detected child item data, calling transform_line_items.")
+            items_to_transform = data if is_list else [data]
+            # Note: transform_line_items expects a list
+            transformed_records = self.transform_line_items(items_to_transform)
+        else:
+            # Data contains parent sales records
+            logger.debug("Detected parent record data, calling _transform_single_record.")
+            records_to_transform = data if is_list else [data]
+            for record in records_to_transform:
+                if isinstance(record, dict):
+                    transformed = self._transform_single_record(record)
+                    if transformed:
+                        transformed_records.append(transformed)
+                else:
+                    logger.warning(
+                        f"Skipping non-dictionary item in parent record list: {type(record)}"
+                    )
+
+        return transformed_records
+
+    def _transform_single_record(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Transform a single sales record from legacy format to Django model format.
 
@@ -58,7 +84,7 @@ class SalesRecordTransformer(BaseTransformer):
             data: Raw data for a single record from the legacy system
 
         Returns:
-            Transformed data ready for loading into Django models
+            Transformed data ready for loading into Django models or None if error
         """
         try:
             # Basic validation
@@ -74,7 +100,7 @@ class SalesRecordTransformer(BaseTransformer):
                         "entity_type": "sales_record",
                     },
                 )
-                return {}
+                return None
 
             if "AbsNr" not in data:
                 logger.warning("Missing AbsNr in sales record data")
@@ -89,7 +115,12 @@ class SalesRecordTransformer(BaseTransformer):
                         "data_keys": list(data.keys()),
                     },
                 )
-                return {}
+                return None
+
+            # Ensure it's not accidentally processing child data here
+            if "PosNr" in data:
+                 logger.error(f"_transform_single_record called with child item data: {data.get('AbsNr')}_{data.get('PosNr')}")
+                 return None
 
             # Get or create customer
             customer = self._get_or_create_customer(data)
@@ -109,7 +140,7 @@ class SalesRecordTransformer(BaseTransformer):
                         "customer_id": data.get("KundenNr"),
                     },
                 )
-                return {}
+                return None
 
             # Get or create payment terms
             payment_terms = self._extract_payment_terms(data)
@@ -117,7 +148,7 @@ class SalesRecordTransformer(BaseTransformer):
                 logger.warning(
                     f"Could not create payment terms for record {data.get('AbsNr')}"
                 )
-                return {}
+                return None
 
             # Get or create payment method
             payment_method = self._extract_payment_method(data)
@@ -125,7 +156,7 @@ class SalesRecordTransformer(BaseTransformer):
                 logger.warning(
                     f"Could not create payment method for record {data.get('AbsNr')}"
                 )
-                return {}
+                return None
 
             # Get or create shipping method
             shipping_method = self._extract_shipping_method(data)
@@ -133,7 +164,7 @@ class SalesRecordTransformer(BaseTransformer):
                 logger.warning(
                     f"Could not create shipping method for record {data.get('AbsNr')}"
                 )
-                return {}
+                return None
 
             # Get or create shipping address
             shipping_address = self._extract_shipping_address(data)
@@ -157,7 +188,7 @@ class SalesRecordTransformer(BaseTransformer):
                 logger.warning(
                     f"Could not parse record date for record {data.get('AbsNr')}"
                 )
-                return {}
+                return None
 
             # Calculate due date
             due_date = self._calculate_due_date(data)
@@ -172,7 +203,7 @@ class SalesRecordTransformer(BaseTransformer):
                     logger.warning(
                         f"Could not calculate due date for record {data.get('AbsNr')}"
                     )
-                    return {}
+                    return None
 
             # Transform the record
             transformed = {
@@ -248,105 +279,152 @@ class SalesRecordTransformer(BaseTransformer):
                 },
             )
 
-            return {}
+            return None
 
     def transform_line_items(
-        self, data: List[Dict[str, Any]], parent_id: int
+        self, data: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Transform line items for a sales record."""
-        transformed_items = []
-        successful_items = 0
-        failed_items = 0
-
+        grouped_items = {}
         for item in data:
-            try:
-                # Get product code from ArtNr
-                product_code = item.get("ArtNr", "")
+            parent_legacy_id = item.get("AbsNr")
+            if not parent_legacy_id:
+                logger.warning(f"Skipping item with missing parent legacy ID (AbsNr): {item.get('PosNr')}")
+                continue
+            if parent_legacy_id not in grouped_items:
+                grouped_items[parent_legacy_id] = []
+            grouped_items[parent_legacy_id].append(item)
 
-                # Try to find product by legacy_sku
-                product = None
-                if product_code:
-                    try:
-                        # First try exact match on legacy_sku
-                        product = VariantProduct.objects.get(legacy_sku=product_code)
-                        logger.info(
-                            f"Found product by legacy_sku: {product.id} ({product.name}) for {product_code}"
-                        )
-                    except VariantProduct.DoesNotExist:
-                        # Try by SKU as fallback
+        transformed_items_final = []
+        total_successful = 0
+        total_failed = 0
+
+        for parent_legacy_id, items_for_parent in grouped_items.items():
+            transformed_items_group = []
+            successful_items_group = 0
+            failed_items_group = 0
+
+            logger.info(f"Processing {len(items_for_parent)} items for parent {parent_legacy_id}")
+
+            # Get the parent sales record first
+            try:
+                parent_record = SalesRecord.objects.get(legacy_id=parent_legacy_id)
+                logger.info(f"Found parent sales record {parent_record.id} for legacy_id {parent_legacy_id}")
+            except SalesRecord.DoesNotExist:
+                logger.error(f"Parent sales record not found for legacy_id {parent_legacy_id}")
+                continue
+
+            for item in items_for_parent:
+                try:
+                    # Get product code from ArtNr
+                    product_code = item.get("ArtNr", "")
+
+                    # Try to find product by legacy_sku
+                    product = None
+                    if product_code:
                         try:
-                            product = VariantProduct.objects.get(sku=product_code)
+                            # First try exact match on legacy_sku
+                            product = VariantProduct.objects.get(legacy_sku=product_code)
                             logger.info(
-                                f"Found product by SKU: {product.id} ({product.name}) for {product_code}"
+                                f"Found product by legacy_sku: {product.id} ({product.name}) for {product_code}"
                             )
                         except VariantProduct.DoesNotExist:
-                            logger.warning(
-                                f"No product found for legacy_sku or SKU {product_code}"
+                            # Try by SKU as fallback
+                            try:
+                                product = VariantProduct.objects.get(sku=product_code)
+                                logger.info(
+                                    f"Found product by SKU: {product.id} ({product.name}) for {product_code}"
+                                )
+                            except VariantProduct.DoesNotExist:
+                                logger.warning(
+                                    f"No product found for legacy_sku or SKU {product_code} (item {item.get('AbsNr')}_{item.get('PosNr')})"
+                                )
+                            except VariantProduct.MultipleObjectsReturned:
+                                 product = (
+                                    VariantProduct.objects.filter(sku=product_code)
+                                    .order_by("-modified_date")
+                                    .first()
+                                )
+                                 logger.warning(
+                                    f"Multiple products found for SKU {product_code}, using most recent: {product.id if product else 'None'}"
+                                 )
+                        except VariantProduct.MultipleObjectsReturned:
+                            # If multiple found by legacy_sku, get the most recently updated one
+                            product = (
+                                VariantProduct.objects.filter(legacy_sku=product_code)
+                                .order_by("-modified_date")
+                                .first()
                             )
-                    except VariantProduct.MultipleObjectsReturned:
-                        # If multiple found, get the most recently updated one
-                        product = (
-                            VariantProduct.objects.filter(legacy_sku=product_code)
-                            .order_by("-modified_date")
-                            .first()
+                            logger.warning(
+                                f"Multiple products found for legacy_sku {product_code}, using most recent: {product.id}"
+                            )
+
+                    # Calculate line item values
+                    calculated_subtotal = self._calculate_line_subtotal(item)
+                    tax_rate = self._extract_line_item_tax_rate(item)
+                    tax_amount = self._calculate_line_item_tax(item)
+                    line_total = calculated_subtotal + tax_amount
+
+                    # Define the quantization pattern for rounding to 2 decimal places
+                    TWO_PLACES = Decimal('0.01')
+
+                    # Round tax_amount and line_total
+                    rounded_tax_amount = tax_amount.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+                    rounded_line_total = line_total.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+
+                    # Construct the legacy ID for the item
+                    item_legacy_id = f"{parent_legacy_id}_{item.get('PosNr')}"
+
+                    # Create transformed item dictionary
+                    transformed_item = {
+                        "legacy_id": item_legacy_id,
+                        "parent_legacy_id": parent_legacy_id,
+                        "sales_record": parent_record,  # Add the parent record reference
+                        "position": item.get("PosNr"),
+                        "legacy_sku": product_code,
+                        "description": item.get("Bezeichnung", ""),
+                        "quantity": self._to_decimal(item.get("Menge", 0)),
+                        "unit_price": self._to_decimal(item.get("Preis", 0)),
+                        "discount_percentage": self._to_decimal(item.get("Rabatt", 0)),
+                        "tax_rate": tax_rate,
+                        "tax_amount": rounded_tax_amount,
+                        "line_subtotal": calculated_subtotal,
+                        "line_total": rounded_line_total,
+                        "notes": item.get("Anmerkung", ""),
+                        "fulfillment_status": self._map_fulfillment_status(item),
+                        "fulfilled_quantity": self._to_decimal(item.get("Pick_Menge", 0)),
+                    }
+
+                    # Add product reference if found
+                    if product:
+                        transformed_item["product"] = product  # Change from product_id to product
+                        logger.info(
+                            f"Added product reference: ID={product.id}, SKU={product.sku} to item {transformed_item['legacy_id']}"
                         )
+                    else:
                         logger.warning(
-                            f"Multiple products found for legacy_sku {product_code}, using most recent: {product.id}"
+                            f"No product reference added for item {transformed_item['legacy_id']} with legacy_sku {product_code}"
                         )
 
-                # Calculate line item values
-                line_subtotal = self._to_decimal(item.get("Pos_Betrag", 0))
-                tax_rate = Decimal("19.0")  # Default tax rate
-                tax_amount = self._to_decimal(
-                    (line_subtotal * tax_rate / Decimal("100"))
-                )
+                    transformed_items_group.append(transformed_item)
+                    successful_items_group += 1
+                except Exception as e:
+                    logger.error(f"Error transforming line item {item.get('AbsNr')}_{item.get('PosNr')}: {e}", exc_info=True)
+                    failed_items_group += 1
 
-                # Create transformed item
-                transformed_item = {
-                    "legacy_id": f"{item.get('AbsNr')}_{item.get('PosNr')}",
-                    "sales_record_id": parent_id,
-                    "position": item.get("PosNr"),
-                    "legacy_sku": product_code,
-                    "description": item.get("Bezeichnung", ""),
-                    "quantity": self._to_decimal(item.get("Menge", 0)),
-                    "unit_price": self._to_decimal(item.get("Preis", 0)),
-                    "discount_percentage": self._to_decimal(item.get("Rabatt", 0)),
-                    "tax_rate": tax_rate,
-                    "tax_amount": tax_amount,
-                    "line_subtotal": line_subtotal,
-                    "line_total": self._to_decimal(item.get("Pos_Betrag", 0)),
-                    "notes": item.get("Anmerkung", ""),
-                    "fulfillment_status": self._map_fulfillment_status(item),
-                    "fulfilled_quantity": self._to_decimal(item.get("Pick_Menge", 0)),
-                }
-
-                # Add product reference if found
-                if product:
-                    transformed_item["product_id"] = product.id
-                    logger.info(
-                        f"Added product reference: ID={product.id}, SKU={product.sku} to item {transformed_item['legacy_id']}"
-                    )
-                else:
-                    logger.warning(
-                        f"No product reference added for item {transformed_item['legacy_id']} with legacy_sku {product_code}"
-                    )
-
-                transformed_items.append(transformed_item)
-                successful_items += 1
-            except Exception as e:
-                logger.error(f"Error transforming line item: {e}", exc_info=True)
-                failed_items += 1
+            logger.info(
+                f"Finished processing for parent {parent_legacy_id}: "
+                f"{successful_items_group} successful, {failed_items_group} failed."
+            )
+            transformed_items_final.extend(transformed_items_group)
+            total_successful += successful_items_group
+            total_failed += failed_items_group
 
         logger.info(
-            f"Transformed {successful_items} line items successfully, {failed_items} failed"
+            f"Overall line item transformation: {total_successful} successful, {total_failed} failed across {len(grouped_items)} parents."
         )
 
-        if successful_items == 0:
-            logger.warning(
-                f"No line items were successfully transformed for parent_id {parent_id}"
-            )
-
-        return transformed_items
+        return transformed_items_final
 
     def _parse_legacy_date(self, date_str: Optional[str]) -> Optional[str]:
         """Parse legacy date format (D!M!Y) to ISO format."""
@@ -878,7 +956,9 @@ class SalesRecordTransformer(BaseTransformer):
         """Calculate tax amount for line item."""
         subtotal = self._calculate_line_subtotal(item)
         tax_rate = self._extract_line_item_tax_rate(item)
-        return (subtotal * tax_rate) / Decimal("100")
+        # Calculate tax precisely first
+        tax_amount = (subtotal * tax_rate) / Decimal("100")
+        return tax_amount # Rounding happens in the main transform_line_items method
 
     def _calculate_line_subtotal(self, item: Dict[str, Any]) -> Decimal:
         """Calculate subtotal for line item (before tax)."""
