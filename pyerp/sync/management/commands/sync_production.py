@@ -264,8 +264,7 @@ class Command(BaseSyncCommand): # Inherit from BaseSyncCommand
                         f"{log_prefix} Parent ({self.PARENT_ENTITY_TYPE}) load finished: "
                         f"{load_result.created} created, "
                         f"{load_result.updated} updated, {load_result.skipped} skipped, "
-                        f"{load_result.errors} errors.\n" # Added newline for clarity
-                        f"      (Processed: {load_result.processed})" # Add processed count
+                        f"{load_result.errors} errors.\\n" # Added newline for clarity
                     ))
                     self._log_load_errors(log_prefix, "Parent", load_result)
                 else:
@@ -366,8 +365,7 @@ class Command(BaseSyncCommand): # Inherit from BaseSyncCommand
                             f"{log_prefix} Child ({self.CHILD_ENTITY_TYPE}) load finished: "
                             f"{load_result.created} created, "
                             f"{load_result.updated} updated, {load_result.skipped} skipped, "
-                            f"{load_result.errors} errors.\n" # Added newline
-                            f"      (Processed: {load_result.processed})" # Add processed count
+                            f"{load_result.errors} errors.\\n" # Added newline
                         ))
                         self._log_load_errors(log_prefix, "Child", load_result)
                     else:

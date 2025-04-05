@@ -3,6 +3,7 @@ import sys
 import os
 # import re # Import regex module  # Removed unused import
 
+
 def run_sync_command(command_args):
     """Runs Django management command via subprocess, returns True/False."""
     # Correctly locate manage.py at the project root, assuming this script
@@ -53,6 +54,7 @@ def run_sync_command(command_args):
             f"{' '.join(command_args)}: {e}"
         )
         return False
+
 
 if __name__ == "__main__":
     print("Starting sync script...")
