@@ -125,7 +125,7 @@ class ProductAPIViewsTestCase(APITestCase):
 
     def test_product_detail_api(self):
         """Test the product detail API endpoint."""
-        url = reverse('product_detail',
+        url = reverse('products_api:product_detail',
                       kwargs={'pk': self.parent_product.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
