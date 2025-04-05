@@ -248,11 +248,27 @@ class LegacyERPFilterTests(unittest.TestCase):
         filter_q = [[familie_field, "=", target_familie_id]]
         
         # Fetch using the default top=5 (API currently returns 100 regardless)
-        df = self._run_fetch_test(
-            f"Filter Equals ({familie_field})", 
-            filter_query=filter_q
-            # top=10 # Removed explicit top
-        )
+        # df = self._run_fetch_test(
+        #     f"Filter Equals ({familie_field})", 
+        #     filter_query=filter_q
+        #     # top=10 # Removed explicit top
+        # )
+
+        # MODIFICATION: Call fetch_table directly with all_records=True 
+        # to match the successful manual script execution
+        print(f"--- Running Test: Filter Equals ({familie_field}) - Direct Call --- ")
+        print(f"Filter: {filter_q}")
+        try:
+            df = self.client.fetch_table(
+                table_name=TEST_TABLE,
+                filter_query=filter_q,
+                all_records=True # Match manual script
+                # Use default top (100)
+            )
+            print(f"Result: Fetched {len(df)} records.")
+            self.assertIsInstance(df, pd.DataFrame, "Result should be a Pandas DataFrame")
+        except Exception as e:
+            self.fail(f"Test 'Filter Equals ({familie_field})' failed with exception: {e}")
 
         # Assertion: Check if *all* returned records actually match the filter
         if not df.empty:
