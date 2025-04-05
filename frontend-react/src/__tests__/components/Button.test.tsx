@@ -29,11 +29,11 @@ describe('Button Component', () => {
     
     rerender(<Button variant="ghost">Ghost</Button>);
     button = screen.getByRole('button', { name: /ghost/i });
-    expect(button).toHaveClass('text-slate-700');
+    expect(button).toHaveClass('hover:text-accent-foreground');
     
     rerender(<Button variant="link">Link</Button>);
     button = screen.getByRole('button', { name: /link/i });
-    expect(button).toHaveClass('text-blue-600');
+    expect(button).toHaveClass('text-primary');
   });
 
   it('renders with different sizes', () => {
