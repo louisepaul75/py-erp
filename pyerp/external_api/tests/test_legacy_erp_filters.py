@@ -101,7 +101,8 @@ class LegacyERPFilterTests(unittest.TestCase):
     # Note: API returned 500 errors with strict inequality ('>') on DATE_FIELD.
     # Using greater than or equal (>=) as it seems to be supported.
     # @unittest.skip(
-    #     "API returns 500 error on date range filters (>, <) with created_date."
+    #     "API returns 500 error on date range filters (>, <) "
+    #     "with created_date."
     # )
     def test_03_filter_date_greater_than_or_equal(self):
         """Test filtering records created on or after a specific date."""
@@ -128,7 +129,8 @@ class LegacyERPFilterTests(unittest.TestCase):
     # Note: API returned 500 errors with strict inequality ('<') on DATE_FIELD.
     # Using less than or equal (<=) as it seems to be supported.
     # @unittest.skip(
-    #     "API returns 500 error on date range filters (>, <) with created_date."
+    #     "API returns 500 error on date range filters (>, <) "
+    #     "with created_date."
     # )
     def test_04_filter_date_less_than_or_equal(self):
         """Test filtering records created on or before a specific date."""
@@ -159,6 +161,7 @@ class LegacyERPFilterTests(unittest.TestCase):
     def test_05_filter_in_list(self):
         """
         Test filtering where a field value is in a list (simulated with OR).
+        Fetches exactly the number of expected items.
         """
         # Assumption: Need known values for the ID_FIELD.
         # Fetch a couple of records first to get valid IDs.
@@ -179,34 +182,30 @@ class LegacyERPFilterTests(unittest.TestCase):
             id2 = id2.item()
         print(f"Using IDs: {id1}, {id2}")
 
-        # Pass standard python types to the filter query
+        expected_ids_list = [id1, id2]
         filter_q = [
             [ID_FIELD, "=", id1],
             [ID_FIELD, "=", id2]
         ]
         # Since filters are on the same field, base.py joins them with 'OR'
+        # Request exactly the number of items expected.
         df = self._run_fetch_test(
-            "Filter IN List (OR)",
+            "Filter IN List (OR) - Exact Count",
             filter_query=filter_q,
-            # Keep top=10 for now to see API behavior
-            top=10
+            top=len(expected_ids_list)  # Changed from 10 to 2
         )
-        # We expect results matching only the specified IDs.
-        # Revert to original check.
+        # We now expect exactly the requested IDs if the API behaves correctly
+        # when top == number of OR clauses.
         if not df.empty:
-            # Convert expected IDs to list for the 'in' check
-            expected_ids_list = [id1, id2]
-            # Check if the expected IDs are present in the results.
-            # The API might return more records up to the $top limit
-            # when using OR filters.
             returned_ids = set(df[ID_FIELD])
-            self.assertTrue(
-                set(expected_ids_list).issubset(returned_ids),
-                f"Expected IDs {expected_ids_list} not found in results: "
-                f"{list(returned_ids)}"
+            self.assertSetEqual(
+                returned_ids,
+                set(expected_ids_list),
+                f"Expected IDs {set(expected_ids_list)} but got {returned_ids}"
             )
-        # No explicit handling needed if df is empty,
-        # assertTrue would not be called.
+        else:
+            # If df is empty, the assertion fails implicitly unless expected list is also empty
+            self.assertListEqual([], expected_ids_list, "Expected IDs but got empty result")
 
     def test_06_filter_combined_and(self):
         """Test combining filters on different fields (implicit AND)."""
