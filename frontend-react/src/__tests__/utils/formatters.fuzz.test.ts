@@ -4,13 +4,15 @@
  * Demonstrates property-based testing in the frontend codebase.
  */
 
+import fc from 'fast-check';
 import { 
   numberGen, 
   decimalGen, 
   dateGen, 
   stringGen,
-  productGen
-} from './fuzz-utils';
+  productGen,
+  booleanGen
+} from '@/lib/testing/fuzz-utils';
 
 // Formatter functions to test
 // In a real application, you would import these from your actual code

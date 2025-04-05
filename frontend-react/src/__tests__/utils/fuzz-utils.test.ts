@@ -2,6 +2,7 @@
  * Tests for our custom generators
  */
 
+import fc from 'fast-check';
 import {
   stringGen,
   emailGen,
@@ -17,7 +18,7 @@ import {
   customerGen,
   orderItemGen,
   orderGen
-} from './fuzz-utils';
+} from '@/lib/testing/fuzz-utils';
 
 describe('Custom generators', () => {
   test('stringGen generates strings of expected length', () => {
