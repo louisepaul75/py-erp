@@ -155,17 +155,16 @@ class LegacyERPFilterTests(unittest.TestCase):
             "Filter Date Less Than or Equal", filter_query=filter_q
         )
 
-    # @unittest.skip(
-    #     "API's OR filter implementation seems incorrect/unreliable."
-    # )  # Removed skip
+    @unittest.expectedFailure
     def test_05_filter_in_list(self):
         """
         Test filtering where a field value is in a list (simulated with OR).
-        Fetches exactly the number of expected items.
+        EXPECTED TO FAIL: API returns extra incorrect records when using OR + $top.
+        Fetches more items than requested if filter matches fewer than top.
         """
         # Assumption: Need known values for the ID_FIELD.
         # Fetch a couple of records first to get valid IDs.
-        print("\nFetching sample IDs for 'IN LIST' test...")
+        print("\nFetching sample IDs for 'IN LIST' test (EXPECTED FAILURE)..." )
         sample_df = self.client.fetch_table(table_name=TEST_TABLE, top=2)
         if len(sample_df) < 2:
             self.skipTest(
@@ -190,12 +189,13 @@ class LegacyERPFilterTests(unittest.TestCase):
         # Since filters are on the same field, base.py joins them with 'OR'
         # Request using the default top=5.
         df = self._run_fetch_test(
-            "Filter IN List (OR) - Default Top", # Renamed test slightly
+            "Filter IN List (OR) - Default Top",  # Renamed test back
             filter_query=filter_q
-            # top=len(expected_ids_list) # Removed explicit top
+            # Use default top from _run_fetch_test
         )
-        # We now expect *at most* the requested IDs if the API behaves correctly.
-        # The assertion needs to check if the returned IDs are a SUBSET of expected.
+        # We expect exactly the IDs requested if the API behaves correctly.
+        # The assertion needs to check if the returned IDs *equal* the set
+        # expected.
         if not df.empty:
             returned_ids = set(df[ID_FIELD])
             self.assertSetEqual(
@@ -204,7 +204,7 @@ class LegacyERPFilterTests(unittest.TestCase):
                 f"Expected IDs {set(expected_ids_list)} but got {returned_ids}"
             )
         else:
-            # If df is empty, the assertion fails implicitly unless expected list is also empty
+            # If df is empty, the assertion fails unless expected list is also empty
             self.assertListEqual([], expected_ids_list, "Expected IDs but got empty result")
 
     def test_06_filter_combined_and(self):
@@ -225,10 +225,12 @@ class LegacyERPFilterTests(unittest.TestCase):
         """
         Test filtering by the 'Familie_' field, expecting only matching records.
         
-        Working Url: http://192.168.73.28:8080/rest/Artikel_Variante?$filter=%27Familie_%20=%20%227464FEB39C516942B01E62F44B1ED454%22%27
+        Working Url:
+        http://192.168.73.28:8080/rest/Artikel_Variante?
+        $filter=%27Familie_%20=%20%227464FEB39C516942B01E62F44B1ED454%22%27
 
         """
-        familie_field = 'Familie_' # Field used to link variants to parents
+        familie_field = 'Familie_'  # Field used to link variants to parents
 
         # Fetch one record to get a valid Familie_ ID
         print(f"\nFetching sample record for {familie_field} filter test...")
@@ -247,43 +249,48 @@ class LegacyERPFilterTests(unittest.TestCase):
         print(f"Using {familie_field} from sample record: {target_familie_id}")
         filter_q = [[familie_field, "=", target_familie_id]]
         
-        # Fetch using the default top=5 (API currently returns 100 regardless)
-        # df = self._run_fetch_test(
-        #     f"Filter Equals ({familie_field})", 
-        #     filter_query=filter_q
-        #     # top=10 # Removed explicit top
-        # )
-
         # MODIFICATION: Call fetch_table directly with all_records=True 
         # to match the successful manual script execution
-        print(f"--- Running Test: Filter Equals ({familie_field}) - Direct Call --- ")
-        print(f"Filter: {filter_q}")
+        print(f"--- Running Test: Filter Equals ({familie_field}) - All Records --- ")
+        print(f"Filter (direct call): {filter_q}")
         try:
             df = self.client.fetch_table(
                 table_name=TEST_TABLE,
                 filter_query=filter_q,
-                all_records=True # Match manual script
+                all_records=True  # Match manual script
                 # Use default top (100)
             )
             print(f"Result: Fetched {len(df)} records.")
-            self.assertIsInstance(df, pd.DataFrame, "Result should be a Pandas DataFrame")
+            self.assertIsInstance(
+                df, pd.DataFrame, "Result should be a Pandas DataFrame"
+            )
         except Exception as e:
-            self.fail(f"Test 'Filter Equals ({familie_field})' failed with exception: {e}")
+            self.fail(
+                f"Test 'Filter Equals ({familie_field})' failed "
+                f"with exception: {e}"
+            )
 
         # Assertion: Check if *all* returned records actually match the filter
         if not df.empty:
             mismatched_records = df[df[familie_field] != target_familie_id]
             if not mismatched_records.empty:
-                print(f"\nERROR: Found {len(mismatched_records)} records that DID NOT match the filter!")
+                print(
+                    f"\nERROR: Found {len(mismatched_records)} records that "
+                    f"DID NOT match the filter!"
+                )
                 print("Sample mismatched record(s):")
                 print(mismatched_records.head())
                 # Fail the test explicitly
                 self.fail(
-                    f"API returned records where {familie_field} did not match "
+                    f"API returned records where {familie_field} "
+                    f"did not match "
                     f"the requested value '{target_familie_id}'"
                 )
             else:
-                 print(f"SUCCESS: All {len(df)} returned records matched the {familie_field} filter.")
+                print(
+                    f"SUCCESS: All {len(df)} returned records matched the "
+                    f"{familie_field} filter."
+                )
         else:
             print("Warning: No records returned for the filter, assertion skipped.")
 
