@@ -157,8 +157,9 @@ urlpatterns = [
     # Add inventory API URLs with namespace (both versioned and non-versioned)
     path("api/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory"), namespace="inventory")),
     path("api/v1/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory_v1"), namespace="inventory_v1")),
-    # API documentation with drf-docs (basic)
-    path("api/docs/", include_docs_urls(title="pyERP API Documentation")),
+    # API documentation with drf-docs (basic) - Commented out as it relies on coreapi and causes build issues.
+    # Use drf-spectacular endpoints (/api/swagger/, /api/redoc/) instead.
+    # path("api/docs/", include_docs_urls(title="pyERP API Documentation")),
     # Users API (both versioned and non-versioned)
     path("api/users/", include("users.urls", namespace="users")),
     path("api/v1/users/", include("users.urls", namespace="users_v1")),

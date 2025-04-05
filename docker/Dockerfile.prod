@@ -82,6 +82,7 @@ RUN mkdir -p /app/staticfiles/react/app/_next && \
 COPY pyerp/ /app/pyerp/
 COPY users/ /app/users/
 COPY admin_tools/ /app/admin_tools/
+COPY sync_manager/ /app/sync_manager/
 COPY manage.py /app/
 COPY docker/ /app/docker/
 
