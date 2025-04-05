@@ -91,9 +91,8 @@ jest.mock('@/hooks/useGlobalSearch', () => ({
   }))
 }));
 
-// Mock useSidebar
+// Mock useSidebar - Simplified
 jest.mock('@/components/ui/Sidebar', () => ({
-  ...jest.requireActual('@/components/ui/Sidebar'),
   useSidebar: jest.fn(() => ({ 
     state: 'expanded',
     open: true,
