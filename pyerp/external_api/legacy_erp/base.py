@@ -673,13 +673,10 @@ class BaseAPIClient:
                                     formatted_value = value
 
                                 # Construct the filter part string
-                                if isinstance(value, str) and operator == '=':
-                                    # REVERTED: Special handling for string equality - wrap filter part in single quotes
-                                    # This syntax was observed to work in manual tests for Familie_
-                                    filter_part_str = f"'{field} {operator} {formatted_value}'"
-                                else:
-                                    # REVERTED: Standard condition format
-                                    filter_part_str = f"{field} {operator} {formatted_value}"
+                                # NEW LOGIC: Always wrap the individual condition in single quotes
+                                # to match the format observed to work for OR filters: 'Field op Value' or 'Field op Value'
+                                filter_part_str = f"'{field} {operator} {formatted_value}'"
+
                                 filter_parts.append(filter_part_str)
                             except Exception as e:
                                 error_msg = f"Error processing filter item {filter_item}: {str(e)}"
