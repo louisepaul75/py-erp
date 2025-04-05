@@ -49,6 +49,10 @@ if __name__ == "__main__":
     employee_sync_args = ['sync_employees', '--top=1']
     sync_results[' '.join(employee_sync_args)] = run_sync_command(employee_sync_args)
 
+    # --- Customer Sync (Added) ---
+    customer_sync_args = ['sync_customers', '--top=1']
+    sync_results[' '.join(customer_sync_args)] = run_sync_command(customer_sync_args)
+
     # --- Summary --- 
     print("-" * 20)
     print("Sync Script Summary:")
