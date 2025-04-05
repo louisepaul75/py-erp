@@ -116,7 +116,6 @@ class Command(BaseSyncCommand):
                     load_result = customer_pipeline.loader.load(
                         transformed_data,
                         update_existing=options.get("force_update") or options.get("full"),
-                        batch_size=options.get("batch_size"),
                     )
                     self.stdout.write(
                         self.style.SUCCESS(
@@ -173,7 +172,6 @@ class Command(BaseSyncCommand):
                     load_result = address_pipeline.loader.load(
                         transformed_data,
                         update_existing=options.get("force_update") or options.get("full"),
-                        batch_size=options.get("batch_size"),
                     )
                     self.stdout.write(
                         self.style.SUCCESS(
