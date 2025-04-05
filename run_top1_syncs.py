@@ -53,6 +53,10 @@ if __name__ == "__main__":
     customer_sync_args = ['sync_customers', '--top=1']
     sync_results[' '.join(customer_sync_args)] = run_sync_command(customer_sync_args)
 
+    # --- Sales Records Sync (Added) ---
+    sales_sync_args = ['sync_sales_records', '--top=1']
+    sync_results[' '.join(sales_sync_args)] = run_sync_command(sales_sync_args)
+
     # --- Summary --- 
     print("-" * 20)
     print("Sync Script Summary:")
