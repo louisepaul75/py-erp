@@ -67,6 +67,12 @@ jobs:
         working-directory: frontend-react
         run: npm ci
 
+      # Run UI tests
+      - name: Run ui tests
+        if: matrix.test-group == 'ui'
+        working-directory: frontend-react
+        run: npm test -- --coverage
+
       - name: Run ${{ matrix.test-group }} tests
         if: matrix.test-group != 'ui'
         env:
