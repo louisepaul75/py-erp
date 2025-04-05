@@ -676,10 +676,21 @@ class BaseAPIClient:
                                 if fail_on_filter_error:
                                     raise RuntimeError(error_msg) from e
                         if filter_parts:
-                            params["$filter"] = " and ".join(filter_parts)
+                            # Check if all filters are for the same field (heuristic for 'in' or 'or')
+                            is_multi_field = False
+                            if len(filter_parts) > 1:
+                                first_field = filter_query[0][0] if filter_query and len(filter_query[0])==3 else None
+                                if first_field:
+                                    # Check if any item targets a different field
+                                    is_multi_field = any(item[0] != first_field for item in filter_query if len(item)==3)
+
+                            # Use 'or' if all filters target the same field, otherwise 'and'
+                            joiner = " and " if is_multi_field else " or "
+                            params["$filter"] = joiner.join(filter_parts)
                         else:
                              logger.warning("No valid filter parts found in filter query")
                     else:
+                        # Assumes filter_query is already a string if not a list
                         params["$filter"] = filter_query
                 # --- End Filter Query Processing ---
 
