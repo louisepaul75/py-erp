@@ -1,88 +1,65 @@
 """Management command to run employee sync."""
 
-import json
-from django.core.management.base import BaseCommand
-from django.utils import timezone
+# Remove direct BaseCommand import and sync_employees task import
+# import json # No longer needed for parsing filters here
+# from django.core.management.base import BaseCommand
+from django.utils import timezone # Keep if needed for other logic, remove if not
 
-from pyerp.sync.tasks import sync_employees
+# Import the new base command
+from pyerp.sync.management.commands.base_sync_command import BaseSyncCommand
+# from pyerp.sync.tasks import sync_employees # No longer calling task directly
 
 
-class Command(BaseCommand):
-    """Command to run employee sync."""
+# Inherit from BaseSyncCommand
+class Command(BaseSyncCommand):
+    """Command to run employee sync using the base sync structure."""
 
-    help = "Synchronize employee data from legacy ERP"
+    help = "Synchronize employee data from legacy ERP using BaseSyncCommand"
+    entity_type = 'employee' # Define the entity type for this command
 
-    def add_arguments(self, parser):
-        """Add command arguments."""
-        parser.add_argument(
-            "--full",
-            action="store_true",
-            help="Run full sync (not incremental)",
-        )
-        parser.add_argument(
-            "--filters",
-            type=str,
-            help="JSON string with filters to apply",
-        )
+    # Remove add_arguments - handled by BaseSyncCommand
+    # def add_arguments(self, parser):
+    #     """Add command arguments."""
+    #     ...
 
     def handle(self, *args, **options):
-        """Run the command."""
+        """Run the command using the BaseSyncCommand framework."""
+        self.stdout.write(self.style.SUCCESS(f"Starting {self.entity_type} sync..."))
         start_time = timezone.now()
-        time_str = start_time.strftime('%Y-%m-%d %H:%M:%S')
-        self.stdout.write(
-            self.style.SUCCESS(f"Starting employee sync at {time_str}")
-        )
 
-        # Run sync
-        full_sync = options.get("full", False)
-        filters = None
-        
-        # Parse filters if provided
-        if options.get("filters"):
-            try:
-                filters = json.loads(options["filters"])
-                filter_msg = f"with filters: {filters}" if filters else ""
-                sync_type = 'full' if full_sync else 'incremental'
-                self.stdout.write(f"Running {sync_type} sync {filter_msg}")
-            except json.JSONDecodeError:
-                error_msg = "Invalid JSON format for filters"
-                self.stdout.write(
-                    self.style.ERROR(f"Sync failed: {error_msg}")
-                )
-                return
-        else:
-            # No filters provided
-            sync_type = 'full' if full_sync else 'incremental'
-            self.stdout.write(f"Running {sync_type} sync")
-        
-        # Execute sync
         try:
-            # Call the sync_employees function with the specified parameters
-            result = sync_employees(full_sync=full_sync, filters=filters)
-            
-            end_time = timezone.now()
-            duration = (end_time - start_time).total_seconds()
-            
-            # Check the status of the result
-            if result.get("status") == "success":
-                total = result.get('records_processed', 0)
-                success = result.get('records_succeeded', 0)
-                failed = result.get('records_failed', 0)
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Sync completed in {duration:.2f}s: "
-                        f"{total} total, {success} success, {failed} failed"
-                    )
-                )
-            else:
-                # This is important for test_sync_employees_command_failure
-                error_msg = result.get('message', 'Unknown error')
-                self.stdout.write(
-                    self.style.ERROR(f"Sync failed: {error_msg}")
-                )
-        except Exception as e:
-            end_time = timezone.now()
-            duration = (end_time - start_time).total_seconds()
-            self.stdout.write(
-                self.style.ERROR(f"Sync failed: {str(e)}")
+            # 1. Get the mapping configuration
+            mapping = self.get_mapping(self.entity_type)
+            if not mapping:
+                # Error message handled by get_mapping
+                return 
+
+            # 2. Build query parameters from command options
+            query_params = self.build_query_params(options)
+
+            # 3. Run the sync using the base command's runner
+            # run_sync_via_command handles printing success/failure details
+            success = self.run_sync_via_command(
+                mapping=mapping, 
+                query_params=query_params
             ) 
+
+            # Optional: Add final duration summary if needed, 
+            # but run_sync_via_command often reports its own stats/duration.
+            end_time = timezone.now()
+            duration = (end_time - start_time).total_seconds()
+            final_status = "completed successfully" if success else "failed"
+            self.stdout.write(
+                f"{self.entity_type.capitalize()} sync {final_status} in {duration:.2f} seconds."
+            )
+
+        except Exception as e:
+            # Catch any unexpected errors during setup/execution
+            self.stderr.write(self.style.ERROR(f"An unexpected error occurred during {self.entity_type} sync: {e}"))
+            # Optionally re-raise or handle specific exceptions as needed
+
+        # Removed old logic:
+        # start_time = timezone.now()
+        # ... manual filter parsing ...
+        # ... direct call to sync_employees ...
+        # ... manual result reporting ... 
