@@ -189,7 +189,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     fetchProducts();
 
     return () => {
-      controller.abort();
+      try {
+        controller.abort();
+      } catch (error) {
+        console.log("Safely aborting fetch products controller");
+      }
     };
   }, [pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, initialVariantId, initialParentId]);
 
@@ -276,7 +280,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     return () => {
       console.log("Cleaning up detail effect for:", selectedItem);
       isActive = false;
-      controller.abort();
+      try {
+        controller.abort();
+      } catch (error) {
+        console.log("Safely aborting detail controller");
+      }
     };
   }, [selectedItem, pathname, router, isCreatingParent]);
 

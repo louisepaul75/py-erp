@@ -89,6 +89,7 @@ static/
 staticfiles/
 media/
 backup/
+temp/
 
 # Virtual Environment
 venv/
