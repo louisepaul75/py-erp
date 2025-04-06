@@ -192,7 +192,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
       try {
         controller.abort();
       } catch (error) {
-        console.log("Safely aborting fetch products controller");
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log("Fetch products request aborted as expected.");
+        } else {
+          console.error("Unexpected error during fetch products abort:", error);
+        }
       }
     };
   }, [pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, initialVariantId, initialParentId]);
@@ -283,7 +287,11 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
       try {
         controller.abort();
       } catch (error) {
-        console.log("Safely aborting detail controller");
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log("Fetch detail request aborted as expected.");
+        } else {
+          console.error("Unexpected error during fetch detail abort:", error);
+        }
       }
     };
   }, [selectedItem, pathname, router, isCreatingParent]);
@@ -367,14 +375,9 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                     filteredProducts={filteredProducts}
                     totalItems={totalCount}
                     selectedItem={selectedItem}
-                    setSelectedItem={(item: number | string | null) => {
-                      setIsCreatingParent(false);
-                      setSelectedItem(item);
-                    }}
+                    setSelectedItem={setSelectedItem}
                     pagination={pagination}
-                    setPagination={(value: { pageIndex: number; pageSize: number }) => {
-                      handlePaginationChange(value);
-                    }}
+                    setPagination={setPagination}
                     isLoading={isListLoading}
                   />
                 </div>
