@@ -70,8 +70,8 @@ export default function WarehouseLocationList() {
           return;
         }
         
-        // Construct the correct API endpoint URL including the /api/v1/ prefix
-        const inventoryEndpoint = `${API_URL}/api/v1/inventory/storage-locations/`;
+        // Construct the correct API endpoint URL (base URL is already /api)
+        const inventoryEndpoint = `${API_URL}/v1/inventory/storage-locations/`;
 
         const response = await fetch(inventoryEndpoint, {
           headers: {

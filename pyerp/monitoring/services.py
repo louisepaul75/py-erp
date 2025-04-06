@@ -39,10 +39,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Maximum time to wait for each health check (in seconds)
-HEALTH_CHECK_TIMEOUT = 120  # Increased to 2 minutes
+HEALTH_CHECK_TIMEOUT = 15  # Reduced from 120 seconds
 
 # Maximum time to wait for individual component checks
-COMPONENT_CHECK_TIMEOUT = 60
+COMPONENT_CHECK_TIMEOUT = 10 # Reduced from 60 seconds
 
 
 def check_database_connection():
@@ -441,7 +441,7 @@ def get_database_statistics():
 
 def run_all_health_checks(as_array=True):
     """
-    Run all health checks concurrently.
+    Run all health checks sequentially for debugging.
 
     Args:
         as_array (bool): If True, returns results as an array; otherwise as dict
@@ -449,7 +449,7 @@ def run_all_health_checks(as_array=True):
     Returns:
         list or dict: Health check results in the specified format
     """
-    logger.info("Starting health checks")
+    logger.info("Starting health checks sequentially for debugging")
     start_time = time.time()
 
     # Define health check functions to run
@@ -461,47 +461,28 @@ def run_all_health_checks(as_array=True):
 
     results = {}
 
-    # Run health checks concurrently with timeout
-    with ThreadPoolExecutor() as executor:
-        # Submit all health checks
-        future_to_component = {
-            executor.submit(check_func): component
-            for component, check_func in health_checks.items()
-        }
-
-        # Wait for results with timeout
+    # Run health checks sequentially
+    for component, check_func in health_checks.items():
+        logger.debug(f"Running health check for: {component}")
         try:
-            futures = as_completed(future_to_component, timeout=HEALTH_CHECK_TIMEOUT)
-            for future in futures:
-                component = future_to_component[future]
-                try:
-                    result = future.result(timeout=COMPONENT_CHECK_TIMEOUT)
-                    results[component] = result
-                    msg = f"Health check completed for {component}"
-                    logger.debug(f"{msg}: {result['status']}")
-                except Exception as e:
-                    error_msg = f"Health check failed for {component}: {e!s}"
-                    logger.error(error_msg)
-                    results[component] = {
-                        "status": HealthCheckResult.STATUS_ERROR,
-                        "details": error_msg,
-                        "response_time": 0,
-                        "timestamp": timezone.now(),
-                    }
-        except TimeoutError:
-            remaining = set(health_checks.keys()) - set(results.keys())
-            msg = f"Health checks timed out for components: {remaining}"
-            logger.error(msg)
-            for component in remaining:
-                results[component] = {
-                    "status": HealthCheckResult.STATUS_ERROR,
-                    "details": "Health check timed out",
-                    "response_time": HEALTH_CHECK_TIMEOUT * 1000,  # ms
-                    "timestamp": timezone.now(),
-                }
+            # NOTE: Timeouts inside individual check functions might still apply
+            result = check_func()
+            results[component] = result
+            msg = f"Health check completed for {component}"
+            logger.debug(f"{msg}: {result['status']}")
+        except Exception as e:
+            error_msg = f"Health check failed for {component}: {e!s}"
+            logger.exception(error_msg)  # Use logger.exception to include traceback
+            results[component] = {
+                "component": component,
+                "status": HealthCheckResult.STATUS_ERROR,
+                "details": error_msg,
+                "response_time": 0,
+                "timestamp": timezone.now(),
+            }
 
     total_time = time.time() - start_time
-    logger.info(f"All health checks completed in {total_time:.2f} seconds")
+    logger.info(f"All health checks completed sequentially in {total_time:.2f} seconds")
 
     # Return in the requested format
     if as_array:

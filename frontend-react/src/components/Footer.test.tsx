@@ -34,7 +34,7 @@ describe('Footer', () => {
           database: { status: 'connected', message: 'OK' },
           environment: 'test',
         };
-      } else if (url.toString().endsWith('/api/v1/monitoring/health-checks/')) {
+      } else if (url.toString().endsWith('/v1/monitoring/health-checks/')) {
         responseData = { 
           success: true,
           results: [ // Provide the missing results array
@@ -44,7 +44,7 @@ describe('Footer', () => {
           authenticated: false,
           server_time: new Date().toISOString(),
         };
-      } else if (url.toString().endsWith('/api/git/branch/')) {
+      } else if (url.toString().endsWith('/git/branch/')) {
         responseData = { 
           branch: 'test-branch' 
         };

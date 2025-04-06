@@ -45,7 +45,7 @@ export default function HealthStatusPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const healthUrl = `${API_URL}/api/v1/health/`;
+      const healthUrl = `${API_URL}/v1/health/`;
       const response = await fetch(healthUrl, {
         signal: controller.signal
       });
@@ -71,7 +71,7 @@ export default function HealthStatusPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const monitoringUrl = `${API_URL}/api/v1/monitoring/health-checks/`;
+      const monitoringUrl = `${API_URL}/v1/monitoring/health-checks/`;
       const response = await fetch(monitoringUrl, {
         signal: controller.signal
       });

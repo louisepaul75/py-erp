@@ -43,15 +43,18 @@ function mapSyncJobToLogRow(job: SyncJob): WorkflowLogRow {
 /**
  * Fetches the combined system integration data (connections and their workflows).
  */
-export async function fetchSystemIntegrationData(): Promise<SystemIntegrationData> {
+export async function fetchSystemIntegrationData(
+  signal?: AbortSignal,
+): Promise<SystemIntegrationData> {
   const token = await authService.getToken();
-  const endpoint = `${API_URL}/api/sync/system-integrations/`;
+  const endpoint = `/sync/system-integrations/`;
 
-  const response = await fetch(endpoint, {
+  const response = await fetch(API_URL + endpoint, {
     headers: {
       Accept: "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
     },
+    signal: signal,
   });
 
   if (!response.ok) {
@@ -72,9 +75,9 @@ export async function updateConnectionStatus(
   enabled: boolean,
 ): Promise<SystemIntegrationData> {
   const token = await authService.getToken();
-  const endpoint = `${API_URL}/external-api/connections/${connectionName}/`;
+  const endpoint = `/external-api/connections/${connectionName}/`;
 
-  const response = await fetch(endpoint, {
+  const response = await fetch(API_URL + endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -101,9 +104,9 @@ export async function fetchWorkflowLogs(
   workflowSlug: string,
 ): Promise<WorkflowLogRow[]> {
   const token = await authService.getToken();
-  const endpoint = `${API_URL}/api/sync/workflows/${workflowSlug}/recent-jobs/`;
+  const endpoint = `/sync/workflows/${workflowSlug}/recent-jobs/`;
 
-  const response = await fetch(endpoint, {
+  const response = await fetch(API_URL + endpoint, {
     headers: {
       Accept: "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -128,9 +131,9 @@ export async function triggerWorkflowRun(
   payload: TriggerWorkflowPayload,
 ): Promise<SyncJob> {
   const token = await authService.getToken();
-  const endpoint = `${API_URL}/api/sync/workflows/${workflowSlug}/trigger/`;
+  const endpoint = `/sync/workflows/${workflowSlug}/trigger/`;
 
-  const response = await fetch(endpoint, {
+  const response = await fetch(API_URL + endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

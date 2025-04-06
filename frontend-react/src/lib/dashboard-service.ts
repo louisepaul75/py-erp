@@ -55,7 +55,7 @@ export async function fetchDashboardConfig(): Promise<DashboardConfig> {
       };
     }
 
-    const response = await apiInstance.get("api/v1/dashboard/summary/").json<DashboardConfig>();
+    const response = await apiInstance.get("v1/dashboard/summary/").json<DashboardConfig>();
     return {
       grid_layout: response.grid_layout || {
         lg: [],
