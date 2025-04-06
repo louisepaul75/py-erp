@@ -1,18 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import SalesAnalysisWidget from "@/components/widgets/sales-analysis-widget";
+import SalesRecordsTable from "@/components/widgets/sales-records-table";
 
 export default function SalesPage() {
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Sales Dashboard</CardTitle>
+          <CardTitle>Sales Analysis</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            This page is under construction. The sales dashboard will be available soon.
-          </p>
+          <SalesAnalysisWidget />
         </CardContent>
       </Card>
+
+      <SalesRecordsTable />
     </div>
   );
 } 

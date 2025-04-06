@@ -3,6 +3,7 @@ const config = {
   testEnvironment: 'jsdom',
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
   setupFiles: ['<rootDir>/dotenv.setup.js'],
+  modulePaths: ['<rootDir>/src'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
