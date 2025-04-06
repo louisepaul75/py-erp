@@ -115,9 +115,9 @@ const DashboardWidget = ({
           <div className="absolute top-0 right-0 p-1 z-10 flex gap-1">
             {onRemove && (
               <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
+                variant="destructive"
+                size="xs"
+                className="h-6 w-6 rounded-full"
                 onClick={() => onRemove(id)}
               >
                 <X className="h-3 w-3" />
@@ -747,8 +747,8 @@ const Dashboard = () => {
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    size="xs"
+                    className="absolute top-1 right-1 h-6 w-6 rounded-full text-slate-400 hover:text-yellow-500 hover:bg-yellow-100/50 group-hover:opacity-100 opacity-0 transition-opacity z-10"
                     onClick={(e) => {
                       e.stopPropagation()
                       toggleFavorite(tile.id)
