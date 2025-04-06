@@ -20,7 +20,7 @@ class BaseSyncCommand(BaseCommand):
     help = "Base command for sync operations" # Specific commands should override
 
     # Define field names expected by extractors (can be overridden by subclasses or config)
-    DEFAULT_TIMESTAMP_FIELD = "modified_at" # Example, adjust as needed
+    DEFAULT_TIMESTAMP_FIELD = "modified_date"  # Aligned with test_legacy_erp_filters.py
 
     def add_arguments(self, parser: ArgumentParser):
         """Add common command arguments."""
@@ -98,11 +98,11 @@ class BaseSyncCommand(BaseCommand):
             Dictionary of query parameters to be passed to the extractor.
         """
         query_params = {}
-        command_start_time = timezone.now() # Consistent time reference
+        filter_query_list = []  # Initialize the list at the start
+        command_start_time = timezone.now()  # Consistent time reference
 
         # 1. Handle --filters (direct extractor filters)
         raw_custom_filters = options.get("filters")
-        custom_filters_parsed = {}
         if raw_custom_filters:
             try:
                 custom_filters_parsed = json.loads(raw_custom_filters)
@@ -111,7 +111,7 @@ class BaseSyncCommand(BaseCommand):
                         "Ignoring --filters argument: Expected JSON dictionary, "
                         f"got: {raw_custom_filters}"
                     )
-                    custom_filters_parsed = {} # Reset if not a dict
+                    custom_filters_parsed = {}  # Reset if not a dict
                 else:
                     logger.info(
                         f"Parsed custom filters from --filters: {custom_filters_parsed}"
@@ -119,51 +119,46 @@ class BaseSyncCommand(BaseCommand):
                     query_params.update(custom_filters_parsed)
             except json.JSONDecodeError as e:
                 logger.error(
-                    f"Invalid JSON for --filters: {e}. Ignoring this argument."
+                    f"Invalid JSON format for --filters option: {e}. Ignoring."
                 )
-                # Optionally raise CommandError if strict parsing is needed
-                # raise CommandError(f"Invalid JSON format for --filters option: {e}")
 
         # 2. Handle --top
         if options.get("top"):
-            # Extractors are expected to handle a "$top" key
             query_params["$top"] = options["top"]
             logger.info(f"Applied $top filter: {options['top']}")
 
         # 3. Handle --days (Timestamp Filtering)
-        timestamp_field = self.DEFAULT_TIMESTAMP_FIELD # Default
-        # TODO: Potentially override timestamp_field based on mapping.extractor_config if needed
-        if mapping and mapping.mapping_config:
-             extractor_cfg = mapping.mapping_config.get("extractor_config", {})
-             timestamp_field = extractor_cfg.get("timestamp_field", self.DEFAULT_TIMESTAMP_FIELD)
-
+        timestamp_field = self.DEFAULT_TIMESTAMP_FIELD  # Always use modified_date
+        # Note: Not allowing override of timestamp_field to ensure consistency
+        
         if options.get("days") is not None:
-            if timestamp_field in query_params:
-                logger.warning(f"Timestamp field '{timestamp_field}' already present in custom "
-                               f"--filters. Ignoring --days argument.")
-            else:
-                try:
-                    days = int(options["days"])
-                    if days >= 0:
-                        modified_since = command_start_time - timedelta(days=days)
-                        # Use a standardized format/key that extractors will understand
-                        # Example: {"operator": "value"} or specific key like "modified_since"
-                        # Using a specific key for clarity:
-                        query_params["modified_since"] = modified_since.isoformat()
-                        logger.info(f"Applied --days filter: records modified since {modified_since.isoformat()} ({days} days ago) using field '{timestamp_field}'.")
-                        # Note: The extractor needs to know how to map "modified_since"
-                        # to its specific query language (e.g., OData $filter, SQL WHERE)
-                        # and use the correct field name (timestamp_field).
-                    else:
-                         logger.warning(f"Ignoring --days argument: Value must be non-negative, got {days}.")
-                except ValueError:
-                     logger.error(f"Invalid value for --days: {options['days']}. Must be an integer.")
-                     # Optionally raise CommandError
+            try:
+                days = int(options["days"])
+                if days >= 0:
+                    modified_since = command_start_time - timedelta(days=days)
+                    # Format date as YYYY-MM-DD to match test_legacy_erp_filters.py
+                    date_str = modified_since.strftime("%Y-%m-%d")
+                    # Add to filter_query list in the format used by test_legacy_erp_filters.py
+                    filter_query_list.append([timestamp_field, ">=", date_str])
+                    logger.info(
+                        f"Applied --days filter: records modified since {date_str} "
+                        f"({days} days ago) using field '{timestamp_field}'."
+                    )
+                else:
+                    logger.warning(
+                        f"Ignoring --days argument: Value must be non-negative, "
+                        f"got {days}."
+                    )
+            except ValueError:
+                logger.error(
+                    f"Invalid value for --days: {options['days']}. "
+                    f"Must be an integer."
+                )
 
-
-        # 4. Add incremental flag if needed by extractor (optional)
-        # Some extractors might need to know if it's incremental vs full
-        # query_params["is_incremental"] = not (options.get("full") or options.get("force_update"))
+        # Add the filter_query_list to query_params if it has any filters
+        if filter_query_list:
+            query_params["filter_query"] = filter_query_list
+            logger.debug(f"Added filter_query to params: {filter_query_list}")
 
         logger.debug(f"Built query_params: {query_params}")
         return query_params
