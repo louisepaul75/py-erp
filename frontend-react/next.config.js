@@ -42,11 +42,13 @@ const nextConfig = {
       },
       // Direct v1 routes - specific routes first
       {
-        source: '/v1/monitoring/health-checks/',
+        // Match /v1/monitoring/health-checks optionally followed by a slash
+        source: '/v1/monitoring/health-checks{/}?',
         destination: 'http://localhost:8000/api/v1/monitoring/health-checks/',
       },
       {
-        source: '/v1/git/branch/',
+        // Match /v1/git/branch optionally followed by a slash
+        source: '/v1/git/branch{/}?',
         destination: 'http://localhost:8000/api/v1/git/branch/',
       },
       {
