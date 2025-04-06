@@ -57,15 +57,20 @@ const translations = {
   'navigation.ui_components': 'UI Components'
 };
 
+// Define a type for the translation keys
+type TranslationKeys = keyof typeof translations;
+
 jest.mock('@/hooks/useTranslationWrapper', () => {
   const mockTranslation = jest.fn();
   mockTranslation.mockReturnValue({
-    t: jest.fn(key => translations[key] || key),
+    // Type the key parameter
+    t: jest.fn((key: TranslationKeys) => translations[key] || key),
     i18n: { language: 'en' }
   });
+  // Ensure the mock exports useAppTranslation
   return {
     __esModule: true,
-    useTranslation: mockTranslation,
+    useAppTranslation: mockTranslation, // Export the correct hook name
     default: mockTranslation
   };
 });
@@ -77,7 +82,8 @@ jest.mock('@/utils/responsive', () => ({
 const mockMobileMenuFn = jest.fn();
 jest.mock('@/components/MobileMenu', () => ({
   __esModule: true,
-  MobileMenu: props => {
+  // Add type for props
+  MobileMenu: (props: any) => {
     mockMobileMenuFn(props);
     return <div data-testid="mobile-menu-mock" />;
   }
@@ -86,7 +92,7 @@ jest.mock('@/components/MobileMenu', () => ({
 // --- IMPORTS AFTER MOCKS ---
 import Navbar from '@/components/Navbar';
 import { useIsAuthenticated, useLogout } from '@/lib/auth/authHooks';
-import { useTranslation } from '@/hooks/useTranslationWrapper';
+import { useAppTranslation } from '@/hooks/useTranslationWrapper';
 import { useScreenSize } from '@/utils/responsive';
 
 // Original relative path mocks (commented out or removed if not needed)
@@ -144,8 +150,9 @@ describe('Navbar', () => {
       mutate: jest.fn(),
     });
     
-    (useTranslation as jest.Mock).mockReturnValue({
-      t: (key: string) => translations[key] || key,
+    (useAppTranslation as jest.Mock).mockReturnValue({
+      // Type the key parameter
+      t: (key: TranslationKeys) => translations[key] || key,
       i18n: { language: 'en' },
     });
     
@@ -170,7 +177,7 @@ describe('Navbar', () => {
     const links = [
       screen.getByText(translations['navigation.home']),
       screen.getByText(translations['navigation.products']),
-      screen.getByText(translations['navigation.sales'])
+      screen.getByRole('link', { name: translations['navigation.sales'] })
     ];
     
     links.forEach(link => {

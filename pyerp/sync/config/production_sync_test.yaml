@@ -1,8 +1,8 @@
 mappings:
-- entity_type: production_order_test
+- entity_type: production_orders
   mapping_config:
     extractor_config:
-      page_size: 10
+      page_size: 500
       table_name: Werksauftraege
     field_mappings:
       Form_Nr: form_number
@@ -27,10 +27,10 @@ mappings:
     transformer_class: pyerp.sync.transformers.production.ProductionOrderTransformer
   source: legacy_erp
   target: pyerp
-- entity_type: production_order_item_test
+- entity_type: production_order_items
   mapping_config:
     extractor_config:
-      page_size: 20
+      page_size: 500
       table_name: WerksauftrPos
     field_mappings:
       Anteil: product_share

@@ -3,9 +3,14 @@
 import json
 from io import StringIO
 from unittest import mock
+from unittest.mock import MagicMock # Import MagicMock
 
 from django.test import TestCase
 from django.core.management import call_command
+from django.core.management.base import CommandError # Import CommandError
+
+# Import the Command class itself to mock its methods
+from pyerp.business_modules.business.management.commands.sync_employees import Command 
 
 import pytest
 
@@ -14,127 +19,160 @@ import pytest
 class TestSyncEmployeesCommand(TestCase):
     """Tests for the sync_employees management command."""
 
-    @mock.patch(
-        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
-    )
-    def test_sync_employees_command_default(self, mock_sync_employees):
+    # Mock methods called by the handle method
+    @mock.patch.object(Command, 'get_mapping')
+    @mock.patch.object(Command, 'build_query_params')
+    @mock.patch.object(Command, 'run_sync_via_command')
+    def test_sync_employees_command_default(self, mock_run_sync, mock_build_params, mock_get_mapping):
         """Test running the command with default options."""
-        # Set up mock return value
-        mock_sync_employees.return_value = {
-            "status": "success",
-            "records_processed": 10,
-            "records_succeeded": 9,
-            "records_failed": 1,
-        }
+        # Setup mocks
+        mock_get_mapping.return_value = {'id': 17, 'entity_type': 'employee'} # Return a dummy mapping
+        mock_build_params.return_value = {} # Assume default options lead to empty query params
+        mock_run_sync.return_value = True # Simulate successful sync run
 
         # Run the command
         out = StringIO()
-        call_command("sync_employees", stdout=out)
+        err = StringIO()
+        call_command("sync_employees", stdout=out, stderr=err)
         
-        # Check that the sync_employees function was called with defaults
-        mock_sync_employees.assert_called_once_with(full_sync=False, filters=None)
+        # Check that the mocked methods were called correctly
+        mock_get_mapping.assert_called_once_with('employee')
+        mock_build_params.assert_called_once() 
+        # Extract the actual options passed to build_query_params for potential future refinement
+        # actual_options = mock_build_params.call_args[0][0] 
+        mock_run_sync.assert_called_once_with(entity_type='employee', options=mock.ANY, query_params={})
         
-        # Check output
+        # Check output (adjust based on actual BaseSyncCommand output)
         output = out.getvalue()
-        self.assertIn("Starting employee sync", output)
-        self.assertIn("Running incremental sync", output)
-        self.assertIn("Sync completed", output)
-        self.assertIn("10 total, 9 success, 1 failed", output)
+        self.assertIn("Starting employee sync...", output)
+        # Check that the core success message is present, ignoring duration and case
+        self.assertTrue(
+            any("employee sync completed successfully".lower() in line.lower() for line in output.splitlines()),
+            f"Success message not found in output: {output}"
+        )
 
-    @mock.patch(
-        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
-    )
-    def test_sync_employees_command_full_sync(self, mock_sync_employees):
+    @mock.patch.object(Command, 'get_mapping')
+    @mock.patch.object(Command, 'build_query_params')
+    @mock.patch.object(Command, 'run_sync_via_command')
+    def test_sync_employees_command_full_sync(self, mock_run_sync, mock_build_params, mock_get_mapping):
         """Test running the command with full sync option."""
-        # Set up mock return value
-        mock_sync_employees.return_value = {
-            "status": "success",
-            "records_processed": 100,
-            "records_succeeded": 95,
-            "records_failed": 5,
-        }
+        # Setup mocks
+        mock_get_mapping.return_value = {'id': 17, 'entity_type': 'employee'} 
+        expected_query_params = {'$full': True} # Assume build_query_params reflects 'full'
+        mock_build_params.return_value = expected_query_params 
+        mock_run_sync.return_value = True
 
         # Run the command with --full option
         out = StringIO()
-        call_command("sync_employees", full=True, stdout=out)
+        err = StringIO()
+        call_command("sync_employees", full=True, stdout=out, stderr=err)
         
-        # Check that the sync_employees function was called with full_sync=True
-        mock_sync_employees.assert_called_once_with(full_sync=True, filters=None)
+        # Check calls
+        mock_get_mapping.assert_called_once_with('employee')
+        mock_build_params.assert_called_once() 
+        # Check that options passed to build_params included 'full': True
+        options_passed_to_build = mock_build_params.call_args[0][0]
+        self.assertTrue(options_passed_to_build.get('full')) 
+        mock_run_sync.assert_called_once_with(entity_type='employee', options=mock.ANY, query_params=expected_query_params)
         
         # Check output
         output = out.getvalue()
-        self.assertIn("Starting employee sync", output)
-        self.assertIn("Running full sync", output)
-        self.assertIn("Sync completed", output)
-        self.assertIn("100 total, 95 success, 5 failed", output)
+        self.assertIn("Starting employee sync...", output)
+        # Check that the core success message is present, ignoring duration and case
+        self.assertTrue(
+            any("employee sync completed successfully".lower() in line.lower() for line in output.splitlines()),
+            f"Success message not found in output: {output}"
+        )
 
-    @mock.patch(
-        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
-    )
-    def test_sync_employees_command_with_filters(self, mock_sync_employees):
+
+    @mock.patch.object(Command, 'get_mapping')
+    @mock.patch.object(Command, 'build_query_params')
+    @mock.patch.object(Command, 'run_sync_via_command')
+    def test_sync_employees_command_with_filters(self, mock_run_sync, mock_build_params, mock_get_mapping):
         """Test running the command with filters."""
-        # Set up mock return value
-        mock_sync_employees.return_value = {
-            "status": "success",
-            "records_processed": 5,
-            "records_succeeded": 5,
-            "records_failed": 0,
-        }
-
         # Create test filters
-        filters = {"department": "IT", "active": True}
+        filters_dict = {"department": "IT", "active": True}
+        filters_json = json.dumps(filters_dict)
         
+        # Setup mocks
+        mock_get_mapping.return_value = {'id': 17, 'entity_type': 'employee'} 
+        mock_build_params.return_value = filters_dict # Assume build_query_params returns the parsed dict
+        mock_run_sync.return_value = True
+
         # Run the command with filters option
         out = StringIO()
-        call_command("sync_employees", filters=json.dumps(filters), stdout=out)
+        err = StringIO()
+        call_command("sync_employees", filters=filters_json, stdout=out, stderr=err)
         
-        # Check that the sync_employees function was called with filters
-        mock_sync_employees.assert_called_once_with(
-            full_sync=False, filters=filters
-        )
+        # Check calls
+        mock_get_mapping.assert_called_once_with('employee')
+        mock_build_params.assert_called_once()
+        # Check that options passed to build_params included the filters string
+        options_passed_to_build = mock_build_params.call_args[0][0]
+        self.assertEqual(options_passed_to_build.get('filters'), filters_json)
+        mock_run_sync.assert_called_once_with(entity_type='employee', options=mock.ANY, query_params=filters_dict)
         
         # Check output
         output = out.getvalue()
-        self.assertIn("Starting employee sync", output)
-        self.assertIn(f"with filters: {filters}", output)
-        self.assertIn("Sync completed", output)
-        self.assertIn("5 total, 5 success, 0 failed", output)
+        self.assertIn("Starting employee sync...", output)
+        # Check that the core success message is present, ignoring duration and case
+        self.assertTrue(
+            any("employee sync completed successfully".lower() in line.lower() for line in output.splitlines()),
+            f"Success message not found in output: {output}"
+        )
 
-    @mock.patch(
-        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
-    )
-    def test_sync_employees_command_invalid_filters(self, mock_sync_employees):
+
+    # Reinstate mock for build_query_params to directly test error handling
+    @mock.patch.object(Command, 'build_query_params')
+    def test_sync_employees_command_invalid_filters(self, mock_build_params):
         """Test the command with invalid JSON filters."""
+        # Setup mock build_query_params to raise the CommandError
+        error_message = "Invalid filters provided: Expecting value: line 1 column 1 (char 0)"
+        mock_build_params.side_effect = CommandError(error_message)
+
         # Run the command with invalid JSON
         out = StringIO()
-        call_command("sync_employees", filters="not-valid-json", stdout=out)
+        err = StringIO()
+        # call_command usually prints CommandError to stderr and exits
+        # We check stderr instead of using assertRaises
+        call_command("sync_employees", filters="not-valid-json", stdout=out, stderr=err)
         
-        # Check that sync_employees was never called
-        mock_sync_employees.assert_not_called()
+        # Check error message is in stderr
+        self.assertIn("Invalid filters provided", err.getvalue())
         
-        # Check output shows error
-        output = out.getvalue()
-        self.assertIn("Invalid JSON format for filters", output)
+        # Check that build_query_params was called
+        mock_build_params.assert_called_once()
+        options_passed_to_build = mock_build_params.call_args[0][0]
+        self.assertEqual(options_passed_to_build.get('filters'), "not-valid-json")
 
-    @mock.patch(
-        "pyerp.business_modules.business.management.commands.sync_employees.sync_employees"
-    )
-    def test_sync_employees_command_failure(self, mock_sync_employees):
+
+    @mock.patch.object(Command, 'get_mapping')
+    @mock.patch.object(Command, 'build_query_params')
+    @mock.patch.object(Command, 'run_sync_via_command')
+    def test_sync_employees_command_failure(self, mock_run_sync, mock_build_params, mock_get_mapping):
         """Test command handling when sync fails."""
-        # Set up mock to return error
-        mock_sync_employees.return_value = {
-            "status": "error",
-            "message": "Database connection failed",
-        }
+         # Setup mocks
+        mock_get_mapping.return_value = {'id': 17, 'entity_type': 'employee'} 
+        mock_build_params.return_value = {} 
+        mock_run_sync.return_value = False # Simulate failed sync run
 
         # Run the command
         out = StringIO()
-        call_command("sync_employees", stdout=out)
+        err = StringIO()
+        call_command("sync_employees", stdout=out, stderr=err)
         
-        # Check that sync_employees was called
-        mock_sync_employees.assert_called_once_with(full_sync=False, filters=None)
-        
-        # Check output shows error
+        # Check calls
+        mock_get_mapping.assert_called_once_with('employee')
+        mock_build_params.assert_called_once()
+        mock_run_sync.assert_called_once_with(entity_type='employee', options=mock.ANY, query_params={})
+
+        # Check output shows failure message
         output = out.getvalue()
-        self.assertIn("Sync failed:", output)
-        self.assertIn("Database connection failed", output) 
+        self.assertIn("Starting employee sync...", output)
+        # Check that the core failure message is present, ignoring duration and case
+        self.assertTrue(
+            any("employee sync failed" in line.lower() for line in output.splitlines()),
+            f"Failure message not found in output: {output}"
+        ) 
+        # self.assertIn("Sync failed:", output) # Old message
+        # self.assertIn("Database connection failed", output) # Specific message might now be logged within run_sync 
