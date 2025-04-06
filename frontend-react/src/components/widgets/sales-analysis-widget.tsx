@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { instance as api } from "@/lib/api";
+import { API_URL } from "@/lib/config";
 
 interface SalesData {
   date: string;
@@ -89,23 +90,34 @@ export function SalesAnalysisWidget() {
       setIsLoading(true);
       setError(null);
       
-      const endpointUrl = currentMode === 'monthly' 
-        ? 'sales/records/monthly_analysis/' 
-        : 'sales/records/annual_analysis/';
+      // Build the base endpoint URL without /api prefix since we'll add it in the full URL
+      let baseEndpoint = currentMode === 'monthly'
+        ? `v1/sales/records/monthly_analysis`
+        : `v1/sales/records/annual_analysis`;
       
-      console.log(`Fetching from ${API_URL}/${endpointUrl}`);
+      // Create query params string
+      const queryParamsString = currentMode === 'monthly'
+        ? `?month=${month}&year=${year}`
+        : `?year=${year}`;
       
-      const searchParams: Record<string, number> = {};
-      if (currentMode === 'monthly') {
-        searchParams.month = month;
-        searchParams.year = year;
-      } else {
-        searchParams.year = year;
-      }
-
-      const response: SalesAnalysisData = await api.get(endpointUrl, {
-        searchParams: searchParams
-      }).json();
+      console.log(`Base endpoint: ${baseEndpoint}`);
+      
+      // Use fetch directly with the full URL that explicitly includes /api
+      const fullUrl = `http://localhost:8000/api/${baseEndpoint}${queryParamsString}`;
+      
+      console.log(`Fetching from full URL: ${fullUrl}`);
+      
+      const response = await fetch(fullUrl, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      }).then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP Error: ${res.status}`);
+        }
+        return res.json();
+      });
       
       setData(response);
       

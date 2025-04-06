@@ -34,7 +34,7 @@ describe('Footer', () => {
           database: { status: 'connected', message: 'OK' },
           environment: 'test',
         };
-      } else if (url.toString().endsWith('/v1/monitoring/health-checks/')) {
+      } else if (url.toString().endsWith('/monitoring/health-checks/')) {
         responseData = { 
           success: true,
           results: [ // Provide the missing results array

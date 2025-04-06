@@ -71,7 +71,7 @@ export default function WarehouseLocationList() {
         }
         
         // Construct the correct API endpoint URL (base URL is already /api)
-        const inventoryEndpoint = `${API_URL}/inventory/storage-locations/`;
+        const inventoryEndpoint = `${API_URL}/v1/inventory/storage-locations/`;
 
         const response = await fetch(inventoryEndpoint, {
           headers: {
