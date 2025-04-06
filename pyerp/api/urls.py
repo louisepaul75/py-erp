@@ -3,6 +3,7 @@ from .views import (
     PermissionCategoriesView,
     PermissionListView,
     GroupPermissionsView,
+    get_git_branch,
 )
 
 app_name = 'api'  # Optional, but good practice
@@ -32,6 +33,11 @@ urlpatterns = [
             'products/',
             include('pyerp.business_modules.products.api_urls'),
         ),  # Include the products API URLs
+        path(
+            'git/branch/',
+            get_git_branch,
+            name='get_git_branch',
+        ),
     ])),
     # Add other API endpoints here later (permissions, group permissions, etc.)
 ] 

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
 import useAppTranslation from '@/hooks/useTranslationWrapper';
 
 interface HealthCheckResult {
@@ -94,16 +93,13 @@ export function Footer() {
   
   // Fetch health checks (for dev bar condition)
   useEffect(() => {
-    const healthUrl = `${API_URL}/health/`
-    const monitoringUrl = `${API_URL}/v1/monitoring/health-checks/`
-
     const fetchBackendStatus = async () => {
       setIsLoadingChecks(true);
       try {
         let response: Response
         try {
-          console.log("Fetching monitoring status from:", monitoringUrl)
-          response = await fetch(monitoringUrl, {
+          console.log("Fetching monitoring status from: /v1/monitoring/health-checks/")
+          response = await fetch('/v1/monitoring/health-checks/', {
             headers: {
               Accept: "application/json",
             }
@@ -111,8 +107,8 @@ export function Footer() {
         } catch (error) {
           console.warn("Monitoring endpoint failed, trying health endpoint...")
           try {
-            console.log("Fetching health status from:", healthUrl)
-            response = await fetch(healthUrl, {
+            console.log("Fetching health status from: /health/")
+            response = await fetch('/health/', {
               headers: {
                 Accept: "application/json",
               }
@@ -173,7 +169,7 @@ export function Footer() {
         // Set timeout for this specific fetch attempt
         timeoutId = setTimeout(() => controller.abort('timeout'), 5000); 
 
-        const response = await fetch(`${API_URL}/health/`, {
+        const response = await fetch('/health/', {
           signal: signal, // Use the signal from the outer scope
           headers: {
             'Accept': 'application/json'
@@ -263,7 +259,7 @@ export function Footer() {
       
       try {
         
-        const response = await fetch(`${API_URL}/v1/git/branch/`, { 
+        const response = await fetch('/v1/git/branch/', { 
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'

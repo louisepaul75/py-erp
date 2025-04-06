@@ -10,6 +10,10 @@ from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 from users.models import PermissionCategory
 from users.serializers import PermissionCategorySerializer
+import subprocess
+from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 class PermissionCategoriesView(APIView):
     """
@@ -83,4 +87,37 @@ class GroupPermissionsView(APIView):
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
-            ) 
+            )
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_git_branch(request):
+    """
+    API endpoint to retrieve the current git branch name.
+    """
+    try:
+        # Ensure we run the command from the project's root directory
+        project_root = settings.BASE_DIR
+        
+        # Run the git command
+        result = subprocess.run(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            capture_output=True,
+            text=True,
+            check=True, # Raises CalledProcessError if command fails
+            cwd=project_root  # Execute in the project root
+        )
+        
+        branch_name = result.stdout.strip()
+        return JsonResponse({'branch': branch_name})
+
+    except FileNotFoundError:
+        # Git command not found
+        return JsonResponse({'error': 'Git command not found.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except subprocess.CalledProcessError as e:
+        # Git command failed (e.g., not a git repository)
+        error_message = f"Git command failed: {e.stderr.strip()}" if e.stderr else f"Git command failed with exit code {e.returncode}"
+        return JsonResponse({'error': error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        # Catch any other unexpected errors
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
