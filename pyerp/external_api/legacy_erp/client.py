@@ -167,6 +167,7 @@ class LegacyERPClient(BaseAPIClient):
             variants_df = self.fetch_table(
                 table_name="Artikel",
                 filter_query=filter_query,
+                all_records=True,  # Ensure all variants are fetched
             )
             
             logger.info(
@@ -234,7 +235,7 @@ class LegacyERPClient(BaseAPIClient):
         Args:
             top: Number of records to fetch per request (None for no limit).
             skip: Number of records to skip.
-            filter_query: Optional filter query list (e.g., [['field', 'op', 'value']]).
+            filter_query: Optional filter list (e.g., [['f', 'op', 'v']]).
             all_records: Whether to fetch all records, handling pagination.
             new_data_only: Only fetch records newer than last sync timestamp.
             date_created_start: Optional start date for filtering.
@@ -312,17 +313,38 @@ class LegacyERPClient(BaseAPIClient):
 
 
 if __name__ == "__main__":
+    # Reverted: Remove test code from main block
     pd.set_option("display.max_columns", None)
     # pd.set_option('display.max_rows', 10)
     # pd.set_option('display.width', 1000)
 
     client = LegacyERPClient(environment="live")
 
-    form_artikel = client.fetch_table(
+    # Revert operator back to '='
+    # filter_list = [['Familie_', '=', '5E6AF8A299D9DA439F58D32A80D6F4A6']] # Old test ID
+    filter_list = [['Familie_', '=', '7464FEB39C516942B01E62F44B1ED454']]  # Use known working ID
+
+    # Try OData-style string filter (needs quotes around string values)
+    # filter_str = "Familie_ eq '5E6AF8A299D9DA439F58D32A80D6F4A6'"  # 500 error
+    filter_str = "Familie_ eq '5E6AF8A...F4A6'"  # 500 error
+
+    # Define the filter criteria
+    target_familie_id = '5E6AF8A299D9DA439F58D32A80D6F4A6'
+
+    # Fetch all records from the table (client-side filtering needed)
+    print("Fetching records from Artikel_Variante with server-side filter...")
+    all_variants_df = client.fetch_table(
         table_name="Artikel_Variante",
-        top=10  # Just get a sample of 10 employees
+        filter_query=filter_list,
+        all_records=True
     )
-    print(form_artikel.tail())
 
+    print(
+        f"Fetched {len(all_variants_df)} total records "
+        f"using server-side filter."
+    )
 
-    
+    # Print the results directly
+    print("Resulting DataFrame (tail):")
+    print(all_variants_df.tail())
+

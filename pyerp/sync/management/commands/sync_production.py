@@ -1,57 +1,46 @@
 """
 Management command to synchronize production orders and items from legacy ERP.
 
-This command allows syncing production orders and their line items from the legacy ERP
-to the pyERP system, either as a full sync or an incremental update.
+This command allows syncing production orders (werksauftraege) and their line items 
+(werksauftrpos) from the legacy ERP to the pyERP system. It supports filtering 
+like --top to fetch N parent orders and then their corresponding items.
 """
 
-import time
-from typing import Any, Dict, List, Optional
-from datetime import timedelta
+# import time  # Keep for potential wait logic if reintroduced - Removed as not used
+import traceback
+# from typing import Any, Dict, List, Optional # Removed as not explicitly used
 
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+# from django.db import transaction # Removed unused import
 from django.utils import timezone
 from pyerp.utils.logging import get_logger
 
-from pyerp.sync.tasks import (
-    run_production_sync,
-    create_production_mappings,
-    sync_molds,
-    sync_mold_products,
-    run_entity_sync,
-)
-
+# Import necessary components
+from pyerp.sync.pipeline import PipelineFactory
+from .base_sync_command import BaseSyncCommand
 
 logger = get_logger(__name__)
 
 
-class Command(BaseCommand):
-    """Command to sync production orders from legacy ERP."""
+class Command(BaseSyncCommand): # Inherit from BaseSyncCommand
+    """
+    Command to sync production orders (werksauftraege) and items (werksauftrpos).
+    Handles parent/child relationship, respecting filters like --top.
+    """
 
-    help = "Synchronize production orders and items from legacy ERP"
+    help = "Synchronize production orders (werksauftraege) and items (werksauftrpos)"
+
+    # Define legacy key field names (Assuming standard names)
+    PARENT_ENTITY_TYPE = "production_orders"
+    PARENT_LEGACY_KEY_FIELD = "AuftragsNr" # Key field in werksauftraege
+    CHILD_ENTITY_TYPE = "production_order_items"
+    CHILD_PARENT_LINK_FIELD = "AuftragsNr" # Field in werksauftrpos linking back
 
     def add_arguments(self, parser):
-        """Add command arguments."""
-        parser.add_argument(
-            "--incremental",
-            action="store_true",
-            help="Only sync records modified since last sync",
-        )
-        parser.add_argument(
-            "--batch-size",
-            type=int,
-            default=100,
-            help="Number of records to process in each batch",
-        )
-        parser.add_argument(
-            "--wait",
-            type=int,
-            default=0,
-            help=(
-                "Time to wait between syncing orders and order items in seconds"
-            ),
-        )
+        """Add command arguments, inheriting from BaseSyncCommand."""
+        super().add_arguments(parser) # Adds --full, --batch-size, --top, --filters, --debug, --days etc.
+
+        # Add command-specific arguments
         parser.add_argument(
             "--orders-only",
             action="store_true",
@@ -60,225 +49,410 @@ class Command(BaseCommand):
         parser.add_argument(
             "--items-only",
             action="store_true",
-            help="Only sync production order items, not order items",
+            help="Only sync production order items, not orders",
         )
-        parser.add_argument(
-            "--verbose",
-            action="store_true",
-            help="Enable verbose output",
-        )
-        parser.add_argument(
-            "--days",
-            type=int,
-            help="Only sync records modified in the last N days",
-        )
-        parser.add_argument(
-            "--skip-molds",
-            action="store_true",
-            help="Skip syncing molds and mold products",
-        )
-        parser.add_argument(
-            "--molds-only",
-            action="store_true",
-            help="Only sync molds and mold products",
-        )
+        # Remove mold-related args for now, can be added back if needed
+        # parser.add_argument(
+        #     "--skip-molds",
+        #     action="store_true",
+        #     help="Skip syncing molds and mold products",
+        # )
+        # parser.add_argument(
+        #     "--molds-only",
+        #     action="store_true",
+        #     help="Only sync molds and mold products",
+        # )
 
     def handle(self, *args, **options):
-        """Execute the command."""
-        incremental = options["incremental"]
-        batch_size = options["batch_size"]
-        wait_time = options["wait"]
-        orders_only = options["orders_only"]
-        items_only = options["items_only"]
-        verbose = options["verbose"]
-        days = options.get("days")
-        skip_molds = options["skip_molds"]
-        molds_only = options["molds_only"]
+        """Orchestrate the multi-stage production sync process."""
+        command_start_time = timezone.now()
+        self.debug = options.get("debug", False) # Set debug flag from base class arg
+        log_prefix = f"[sync_production - {command_start_time.isoformat()}]"
+        logger.info(
+            f"{log_prefix} Starting production order & items sync orchestrator..."
+        )
+        self.stdout.write(
+            f"{log_prefix} Starting production sync process at {command_start_time}"
+        )
 
-        if (orders_only or items_only) and molds_only:
-            raise CommandError(
-                "Cannot specify both --orders-only/--items-only and --molds-only"
-            )
-        if molds_only and skip_molds:
-            raise CommandError(
-                "Cannot specify both --molds-only and --skip-molds"
-            )
+        # Determine parts to run
+        run_orders = not options.get("items_only", False)
+        run_items = not options.get("orders_only", False)
 
-        # Determine which parts to run
-        run_orders = not items_only and not molds_only
-        run_items = not orders_only and not molds_only
-        run_molds = not skip_molds and not orders_only and not items_only
-
-        # If molds_only is specified, only run molds and mold products
-        if molds_only:
-            run_orders = False
-            run_items = False
-            run_molds = True
-
+        # --- Fetch Mappings ---
+        parent_mapping = None
+        child_mapping = None
         try:
-            # Mappings for Orders/Items are needed only if running them
-            production_order_mapping_id = None
-            production_order_item_mapping_id = None
-            if run_orders or run_items:
-                production_order_mapping_id, \
-                    production_order_item_mapping_id = \
-                    create_production_mappings()
-                if not production_order_mapping_id or \
-                        not production_order_item_mapping_id:
-                    raise CommandError(
-                        "Failed to create or retrieve sync mappings for "
-                        "orders/items"
-                    )
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        "Successfully created/updated order/item sync mappings"
-                    )
-                )
-
-            sync_type = "incremental" if incremental else "full"
-            self.stdout.write(
-                self.style.WARNING(
-                    f"Starting {sync_type} production sync with batch size "
-                    f"{batch_size}"
-                )
-            )
-
-            # Apply days filter if specified (relevant for orders/items)
-            query_params_orders = {}
-            query_params_items = {}
-            if days is not None:
-                modified_since = timezone.now() - timedelta(days=days)
-                date_str = modified_since.strftime("%Y-%m-%d")
-                query_params_orders = {
-                    "filter_query": [["modified_date", ">", date_str]]
-                }
-                query_params_items = {
-                    "filter_query": [["modified_date", ">", date_str]]
-                }
-                self.stdout.write(
-                    f"Filtering orders/items modified in the last {days} days "
-                    f"(since {date_str})"
-                )
-
-            start_time = time.time()
-            results = []
-
-            # --- Sync Molds and Mold Products (if not skipped) ---
-            if run_molds:
-                self.stdout.write("Syncing molds...")
-                mold_result = sync_molds(
-                    incremental=incremental, batch_size=batch_size
-                )
-                results.append(mold_result)
-                if verbose:
-                    self.stdout.write(str(mold_result))
-                mold_status = mold_result.get("status", "unknown")
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Mold sync completed with status: {mold_status}"
-                    )
-                )
-
-                self.stdout.write("Syncing mold products...")
-                mold_product_result = sync_mold_products(
-                    incremental=incremental, batch_size=batch_size
-                )
-                results.append(mold_product_result)
-                if verbose:
-                    self.stdout.write(str(mold_product_result))
-                mold_product_status = mold_product_result.get("status", "unknown")
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Mold product sync completed with status: "
-                        f"{mold_product_status}"
-                    )
-                )
-                
-                if wait_time > 0 and (run_orders or run_items):
-                    self.stdout.write(
-                        f"Waiting {wait_time} seconds before syncing "
-                        f"orders/items..."
-                    )
-                    time.sleep(wait_time)
-
-            # --- Sync Production Orders (if not skipped) ---
             if run_orders:
-                self.stdout.write("Syncing production orders...")
-                self.stdout.write(f"Using filter: {query_params_orders}")
-                
-                order_result = run_entity_sync(
-                    mapping_id=production_order_mapping_id,
-                    incremental=incremental,
-                    batch_size=batch_size,
-                    query_params=query_params_orders,
+                parent_mapping = self.get_mapping(
+                    entity_type=self.PARENT_ENTITY_TYPE
                 )
-                
-                results.append(order_result)
-                
-                if verbose:
-                    self.stdout.write(str(order_result))
-                
-                order_status = order_result.get("status", "unknown")
-                order_count = order_result.get("records_processed", 0)
-                
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Production order sync completed with status: {order_status}"
-                    )
-                )
-                self.stdout.write(
-                    f"Processed {order_count} production orders"
-                )
-                
-                if wait_time > 0:
-                    self.stdout.write(
-                        f"Waiting {wait_time} seconds before syncing items..."
-                    )
-                    time.sleep(wait_time)
-
-            # --- Sync Production Order Items (if not skipped) ---
             if run_items:
-                self.stdout.write("Syncing production order items...")
-                self.stdout.write(f"Using filter: {query_params_items}")
-                
-                item_result = run_entity_sync(
-                    mapping_id=production_order_item_mapping_id,
-                    incremental=incremental,
-                    batch_size=batch_size,
-                    query_params=query_params_items,
+                # Fetch child mapping even if only running items, needed for context
+                child_mapping = self.get_mapping(
+                    entity_type=self.CHILD_ENTITY_TYPE
                 )
-                
-                results.append(item_result)
-                
-                if verbose:
-                    self.stdout.write(str(item_result))
-                
-                item_status = item_result.get("status", "unknown")
-                item_count = item_result.get("records_processed", 0)
-                
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Production order item sync completed with status: "
-                        f"{item_status}"
+            if run_orders and not parent_mapping:
+                raise CommandError(f"Mapping not found for {self.PARENT_ENTITY_TYPE}")
+            if run_items and not child_mapping:
+                raise CommandError(f"Mapping not found for {self.CHILD_ENTITY_TYPE}")
+
+        except CommandError as e:
+            self.stderr.write(self.style.ERROR(
+                f"{log_prefix} Failed to get required sync mappings: {e}"
+            ))
+            raise CommandError(
+                "Sync cannot proceed without required mappings."
+            ) from e
+
+        # --- Build Initial Query Parameters ---
+        # Use parent mapping for context if available, otherwise None
+        initial_query_params = self.build_query_params(
+            options, parent_mapping if parent_mapping else None
+        )
+        logger.info(
+            f"{log_prefix} Initial query parameters built: {initial_query_params}"
+        )
+
+        # --- Step 1: Fetch Parent Record IDs (AuftragsNr) ---
+        parent_record_ids = []
+        if run_items: # Only need parent IDs if we are going to fetch children
+            self.stdout.write(self.style.NOTICE(
+                f"\n{log_prefix} === Step 1: Fetching parent record IDs "
+                f"({self.PARENT_LEGACY_KEY_FIELD}) ===\n"
+            ))
+            logger.info(f"{log_prefix} Starting Step 1: Fetch Parent Record IDs")
+            if not parent_mapping:
+                # Should have been caught earlier, but double check
+                raise CommandError("Cannot fetch parent IDs without parent mapping.")
+
+            try:
+                parent_pipeline_for_id_fetch = PipelineFactory.create_pipeline(
+                    parent_mapping
+                )
+                id_fetch_params = {
+                    **initial_query_params,
+                    "select_fields": [self.PARENT_LEGACY_KEY_FIELD],
+                }
+                logger.info(
+                    f"{log_prefix} Querying extractor for parent IDs with params: "
+                    f"{id_fetch_params}"
+                )
+
+                # Clear cache if requested (only for this first extractor call)
+                if options.get("clear_cache"):
+                    self.stdout.write(
+                        f"{log_prefix} Clearing parent ({self.PARENT_ENTITY_TYPE}) "
+                        "extractor cache..."
+                    )
+                    parent_pipeline_for_id_fetch.extractor.clear_cache()
+
+                with parent_pipeline_for_id_fetch.extractor:
+                    fetched_data_for_ids = (
+                        parent_pipeline_for_id_fetch.extractor.extract(
+                            query_params=id_fetch_params,
+                            fail_on_filter_error=options.get(
+                                "fail_on_filter_error", True
+                            )
+                        )
+                    )
+                logger.info(
+                    f"{log_prefix} Extractor returned {len(fetched_data_for_ids)} "
+                    "potential parent records for ID extraction."
+                )
+
+                # Extract the unique parent key values
+                parent_record_ids = list(
+                    set(
+                        str(record.get(self.PARENT_LEGACY_KEY_FIELD))
+                        for record in fetched_data_for_ids
+                        if record.get(self.PARENT_LEGACY_KEY_FIELD) is not None
                     )
                 )
                 self.stdout.write(
-                    f"Processed {item_count} production order items"
+                    f"{log_prefix} Found {len(parent_record_ids)} unique parent "
+                    f"record IDs ({self.PARENT_LEGACY_KEY_FIELD})."
                 )
+                logger.info(
+                    f"{log_prefix} Step 1: Found {len(parent_record_ids)} unique "
+                    "parent IDs."
+                )
+                if self.debug and parent_record_ids:
+                    self.stdout.write(
+                        f"{log_prefix} Sample Parent IDs: {parent_record_ids[:10]}..."
+                    )
 
-            end_time = time.time()
-            duration = end_time - start_time
-            
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Production sync completed in {duration:.2f} seconds"
+            except Exception as e:
+                self.stderr.write(self.style.ERROR(
+                    f"{log_prefix} Step 1 Failed: Could not fetch parent record IDs "
+                    f"({self.PARENT_LEGACY_KEY_FIELD}): {e}"
+                ))
+                logger.error(
+                    f"{log_prefix} Step 1: Failed to fetch parent IDs: {e}",
+                    exc_info=self.debug
                 )
+                if self.debug:
+                    traceback.print_exc()
+                # If we can't get IDs and need them for items, abort.
+                raise CommandError(
+                    "Could not fetch parent IDs, aborting sync. Error: {e}"
+                )
+        elif not run_orders and run_items:
+            # Running items only, but need a way to filter them.
+            # If --top or other filters applied, Step 1 runs. If no filters,
+            # parent_record_ids remains empty.
+            logger.warning(
+                f"{log_prefix} Running items-only sync. Parent ID fetching "
+                f"skipped unless filters like --top are applied."
             )
-            
-            # Return results as string to avoid error
-            return str(results)
 
-        except Exception as e:
-            logger.error(f"Production sync failed: {e}", exc_info=True)
-            self.stdout.write(self.style.ERROR(f"Error during sync: {e}"))
-            raise CommandError(f"Sync failed: {e}") 
+        # --- Step 2: Run Parent Sync (Production Orders) ---
+        parent_sync_successful = True # Assume success unless an error occurs or skipped
+        if run_orders:
+            self.stdout.write(self.style.NOTICE(
+                f"\n{log_prefix} === Step 2: Running Parent Sync "
+                f"({self.PARENT_ENTITY_TYPE}) ===\n"
+            ))
+            logger.info(
+                f"{log_prefix} Starting Step 2: {self.PARENT_ENTITY_TYPE} Sync"
+            )
+            if not parent_mapping:
+                raise CommandError("Cannot sync parents without parent mapping.")
+
+            try:
+                parent_pipeline = PipelineFactory.create_pipeline(parent_mapping)
+
+                self.stdout.write(
+                    f"{log_prefix} Using query params for parent sync: "
+                    f"{initial_query_params}"
+                )
+                # Clear cache here if only running parents and clear_cache is set
+                if options.get("clear_cache") and not run_items:
+                    self.stdout.write(
+                        f"{log_prefix} Clearing parent ({self.PARENT_ENTITY_TYPE}) "
+                        "extractor cache..."
+                    )
+                    parent_pipeline.extractor.clear_cache()
+
+                with parent_pipeline.extractor:
+                    parent_source_data = parent_pipeline.extractor.extract(
+                        query_params=initial_query_params, # Use initial params
+                        fail_on_filter_error=options.get(
+                            "fail_on_filter_error", True
+                        )
+                    )
+                self.stdout.write(
+                    f"{log_prefix} Extracted {len(parent_source_data)} parent "
+                    f"records ({self.PARENT_ENTITY_TYPE})."
+                )
+
+                if parent_source_data:
+                    transformed_parent_data = (
+                        parent_pipeline.transformer.transform(parent_source_data)
+                    )
+                    self.stdout.write(
+                        f"{log_prefix} Transformed {len(transformed_parent_data)} "
+                        "parent records."
+                    )
+                    load_result = parent_pipeline.loader.load(
+                        transformed_parent_data,
+                        update_existing=(
+                            options.get("force_update") or options.get("full")
+                        ),
+                    )
+                    self.stdout.write(self.style.SUCCESS(
+                        f"{log_prefix} Parent ({self.PARENT_ENTITY_TYPE}) load finished: "
+                        f"{load_result.created} created, "
+                        f"{load_result.updated} updated, {load_result.skipped} skipped, "
+                        f"{load_result.errors} errors.\\n" # Added newline for clarity
+                    ))
+                    self._log_load_errors(log_prefix, "Parent", load_result)
+                else:
+                    self.stdout.write(
+                        f"{log_prefix} No parent records extracted, skipping "
+                        "transform and load.\n" # Added newline
+                    )
+
+                # parent_sync_successful = True # Already initialized to True
+                logger.info(
+                    f"{log_prefix} Step 2: {self.PARENT_ENTITY_TYPE} Sync finished "
+                    "successfully.\n" # Added newline
+                )
+
+            except Exception as e:
+                parent_sync_successful = False # Set to False on error
+                self.stderr.write(self.style.ERROR(
+                    f"{log_prefix} Step 2 Failed: {self.PARENT_ENTITY_TYPE} sync "
+                    f"pipeline error: {e}\n" # Added newline
+                ))
+                logger.error(
+                    f"{log_prefix} Step 2: {self.PARENT_ENTITY_TYPE} Sync failed: {e}",
+                    exc_info=self.debug
+                )
+                if self.debug:
+                    traceback.print_exc()
+                # Continue to item sync, logging the failure.
+
+        # --- Step 3: Run Child Sync (Production Order Items) ---
+        child_sync_successful = True # Assume success unless error or skipped
+        if run_items:
+            self.stdout.write(self.style.NOTICE(
+                f"\n{log_prefix} === Step 3: Running Child Sync "
+                f"({self.CHILD_ENTITY_TYPE}) ===\n"
+            ))
+            logger.info(
+                f"{log_prefix} Starting Step 3: {self.CHILD_ENTITY_TYPE} Sync"
+            )
+            if not child_mapping:
+                raise CommandError("Cannot sync children without child mapping.")
+
+            if not parent_record_ids:
+                # This happens if Step 1 failed or --items-only without filters
+                message = (
+                    f"Skipping child ({self.CHILD_ENTITY_TYPE}) sync as no parent "
+                    f"IDs ({self.PARENT_LEGACY_KEY_FIELD}) were found/fetched.\n" # Added newline
+                )
+                self.stdout.write(self.style.WARNING(f"{log_prefix} {message}"))
+                logger.warning(f"{log_prefix} Step 3: {message}")
+                # child_sync_successful = True # Already initialized
+            else:
+                try:
+                    child_pipeline = PipelineFactory.create_pipeline(child_mapping)
+                    item_filters = {
+                        "parent_record_ids": parent_record_ids,
+                        "parent_field": self.CHILD_PARENT_LINK_FIELD
+                    }
+                    self.stdout.write(
+                        f"{log_prefix} Filtering child sync using "
+                        f"{len(parent_record_ids)} parent IDs "
+                        f"({self.PARENT_LEGACY_KEY_FIELD}) from Step 1.\n" # Added newline
+                    )
+                    logger.info(
+                        f"{log_prefix} Filtering child sync with item_filters: "
+                        f"{item_filters}"
+                    )
+
+                    batch_size = options.get("batch_size", 100)
+
+                    with child_pipeline.extractor:
+                        child_source_data = child_pipeline.extractor.extract(
+                            query_params=item_filters,
+                            fail_on_filter_error=options.get(
+                                "fail_on_filter_error", True
+                            )
+                        )
+                    self.stdout.write(
+                        f"{log_prefix} Extracted {len(child_source_data)} "
+                        f"child records ({self.CHILD_ENTITY_TYPE}).\n" # Added newline
+                    )
+
+                    if child_source_data:
+                        transformed_child_data = (
+                            child_pipeline.transformer.transform(child_source_data)
+                        )
+                        self.stdout.write(
+                            f"{log_prefix} Transformed {len(transformed_child_data)} "
+                            "child records.\n" # Added newline
+                        )
+                        load_result = child_pipeline.loader.load(
+                            transformed_child_data,
+                            update_existing=(
+                               options.get("force_update") or options.get("full")
+                            ),
+                            batch_size=batch_size
+                        )
+                        self.stdout.write(self.style.SUCCESS(
+                            f"{log_prefix} Child ({self.CHILD_ENTITY_TYPE}) load finished: "
+                            f"{load_result.created} created, "
+                            f"{load_result.updated} updated, {load_result.skipped} skipped, "
+                            f"{load_result.errors} errors.\\n" # Added newline
+                        ))
+                        self._log_load_errors(log_prefix, "Child", load_result)
+                    else:
+                        self.stdout.write(
+                            f"{log_prefix} No child records extracted, skipping "
+                            "transform and load.\n" # Added newline
+                        )
+
+                    # child_sync_successful = True # Already initialized
+                    logger.info(
+                        f"{log_prefix} Step 3: {self.CHILD_ENTITY_TYPE} Sync finished "
+                        "successfully.\n" # Added newline
+                    )
+
+                except Exception as e:
+                    child_sync_successful = False # Set to False on error
+                    self.stderr.write(self.style.ERROR(
+                        f"{log_prefix} Step 3 Failed: {self.CHILD_ENTITY_TYPE} sync "
+                        f"pipeline error: {e}\n" # Added newline
+                    ))
+                    logger.error(
+                        f"{log_prefix} Step 3: {self.CHILD_ENTITY_TYPE} Sync failed: {e}",
+                        exc_info=self.debug
+                    )
+                    if self.debug:
+                        traceback.print_exc()
+
+        # --- Step 4: Report Overall Status ---
+        end_time = timezone.now()
+        duration = (end_time - command_start_time).total_seconds()
+        logger.info(
+            f"{log_prefix} Orchestrator finished in {duration:.2f} seconds.\n" # Added newline
+        )
+        self.stdout.write(
+            f"\n{log_prefix} Production sync command finished in "
+            f"{duration:.2f} seconds\n" # Added newline
+        )
+
+        if parent_sync_successful and child_sync_successful:
+            success_msg = (
+                f"{log_prefix} All production sync steps completed successfully.\n" # Added newline
+            )
+            self.stdout.write(self.style.SUCCESS(success_msg))
+            logger.info(success_msg)
+        else:
+            error_msg = (
+                f"{log_prefix} One or more production sync steps failed. "
+                "Check logs for details.\n" # Added newline
+            )
+            logger.error(error_msg)
+            # Determine if the overall command should fail based on which step failed
+            command_failed = False
+            if not parent_sync_successful and run_orders:
+                self.stdout.write(self.style.WARNING(
+                    f"{log_prefix} Note: Parent sync (Step 2) encountered an error.\n" # Added newline
+                ))
+                command_failed = True # If required parent step fails, command fails
+            if not child_sync_successful and run_items:
+                 self.stdout.write(self.style.WARNING(
+                    f"{log_prefix} Note: Child sync (Step 3) encountered an error.\n" # Added newline
+                ))
+                 # Fail if child sync was required (i.e., not --orders-only)
+                 if not options.get("orders_only", False):
+                     command_failed = True
+
+            if command_failed:
+                raise CommandError(error_msg)
+            else:
+                # Errors occurred in optional/skipped steps, issue a warning
+                self.stdout.write(self.style.WARNING(error_msg))
+
+    def _log_load_errors(self, log_prefix, step_name, load_result):
+        """Helper to log loader errors."""
+        if load_result.error_details:
+            self.stdout.write(self.style.WARNING(
+                f"{log_prefix} {step_name} Load Errors:"
+            ))
+            for i, err in enumerate(load_result.error_details):
+                if i < 10:
+                    self.stdout.write(f"- {err}")
+                else:
+                    self.stdout.write(
+                        f"... and {len(load_result.error_details) - 10} more errors."
+                    )
+                    break
+            logger.warning(f"{log_prefix} {step_name} Load encountered {load_result.errors} errors. First few: {load_result.error_details[:5]}")
+
+# Removed old handle logic and imports
+# ... (rest of the file if anything else existed)
+# Ensure no old handle method remains 

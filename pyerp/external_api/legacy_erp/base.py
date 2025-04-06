@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, Any
 import time
+import urllib.parse
 
 import pandas as pd
 import requests
@@ -58,14 +59,17 @@ class BaseAPIClient:
         if environment not in API_ENVIRONMENTS:
             available_envs = list(API_ENVIRONMENTS.keys())
             error_msg = (
-                f"Invalid environment: '{environment}'. " f"Available: {available_envs}"
+                f"Invalid environment: '{environment}'. "
+                f"Available: {available_envs}"
             )
             logger.error(error_msg)
             raise ValueError(error_msg)
 
         env_config = API_ENVIRONMENTS[environment]
         if "base_url" not in env_config:
-            error_msg = f"Missing URL configuration for environment '{environment}'"
+            error_msg = (
+                f"Missing URL configuration for environment '{environment}'"
+            )
             logger.error(error_msg)
             raise ValueError(error_msg)
 
@@ -84,7 +88,8 @@ class BaseAPIClient:
         # Always prefix with REST endpoint
         endpoint = f"{API_REST_ENDPOINT}/{endpoint.lstrip('/')}"
 
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        # REVERTED BACK: Use base_request_url
+        base_request_url = f"{self.base_url}/{endpoint.lstrip('/')}"
 
         # Log the session cookie being used (safely showing only part of it)
         if self.session_id:
@@ -97,58 +102,49 @@ class BaseAPIClient:
         else:
             logger.info("No session cookie available")
 
-        # Construct and log the full URL with parameters for better debugging
-        if "params" in kwargs and kwargs["params"]:
-            from urllib.parse import urlencode
+        # Extract params for logging and request
+        params = kwargs.get("params")
+        encoded_filter_part = None
 
-            # Create a copy of params to avoid modifying the original
-            params_for_logging = kwargs["params"].copy()
+        # --- RE-ADD: Manually URL-encode and append $filter --- 
+        if params and "$filter" in params:
+            filter_value = params.pop("$filter")
+            if isinstance(filter_value, str):
+                # safe='' ensures even special chars like = / etc. are encoded
+                encoded_filter_part = f"$filter={urllib.parse.quote(filter_value, safe='')}"
+                logger.info(f"Manually URL-encoded filter part: {encoded_filter_part}")
+            else:
+                logger.warning("Filter value is not a string, skipping manual encoding/appending.")
+                # Put it back if not encoded? Or maybe error? For now, just log.
+        # --- End Re-Add ---
 
-            # Handle the $filter parameter specially to avoid double encoding
-            # This ensures the filter is properly formatted in the URL
-            query_params = []
-            for key, value in params_for_logging.items():
-                if key == "$filter":
-                    # Add the filter parameter directly without additional encoding
-                    query_params.append(f"{key}={value}")
-                else:
-                    # Use urlencode for other parameters
-                    encoded_param = urlencode({key: value}, doseq=True)
-                    param_value = encoded_param.split("=", 1)[1]
-                    query_params.append(f"{key}={param_value}")
-
-            # Join all parameters with &
-            query_string = "&".join(query_params)
-            full_url = f"{url}?{query_string}"
-            logger.info(f"Full URL: {full_url}")
-
-            # Remove params from kwargs since we're using the manually
-            # constructed URL
-            params = kwargs.pop("params", None)
+        # Construct final URL # RE-ADD logic
+        final_url = base_request_url
+        # Append manually encoded filter if present
+        if encoded_filter_part:
+            # Check if base_request_url already has query params
+            query_separator = "&" if "?" in final_url else "?"
+            final_url += query_separator + encoded_filter_part
+            logger.info(f"URL with manually appended filter: {final_url}")
+        
+        # Log the intended URL and parameters that will be automatically handled by requests # RE-ADD
+        logger.info(f"Request URL (base): {base_request_url}")
+        logger.info(f"Request URL (final): {final_url}")
+        if params: # Log remaining params
+            logger.info(f"Request Params (handled by requests): {params}")
         else:
-            full_url = url
-            params = None
+            logger.info("Request Params (handled by requests): None")
 
         start_time = time.time()
 
         try:
-            print(method, url, kwargs)
-
-            # Extract timeout from kwargs as it's not valid for Request constructor
-            timeout = None
-            if "timeout" in kwargs:
-                timeout = kwargs.pop("timeout", self.timeout)
-            else:
-                timeout = self.timeout
-
-            # Use the manually constructed URL directly instead of relying on
-            # prepare_request to handle the parameters, which would apply automatic
-            # encoding
+            # Use the final URL, pass remaining params directly to requests library # RE-ADD
             response = self.session.request(
-                method=method, url=full_url, **kwargs, timeout=timeout
+                method=method,
+                url=final_url,
+                params=params,
+                timeout=kwargs.get("timeout", self.timeout),
             )
-
-            print("Exact full URL:", full_url)
 
             duration_ms = int((time.time() - start_time) * 1000)
 
@@ -161,7 +157,7 @@ class BaseAPIClient:
                 extra_context={
                     "method": method,
                     "environment": self.environment,
-                    "url": url,
+                    "url": final_url,
                     "params": params if params else {},
                 },
             )
@@ -171,9 +167,8 @@ class BaseAPIClient:
                 log_performance(
                     name=f"legacy_erp_{method}_{endpoint}",
                     duration_ms=duration_ms,
-                    extra_context={"url": url, "params": params if params else {}},
+                    extra_context={"url": final_url, "params": params if params else {}},
                 )
-            print(response)
 
             return response
 
@@ -183,7 +178,7 @@ class BaseAPIClient:
                 error_msg,
                 extra={
                     "method": method,
-                    "url": url,
+                    "url": final_url,
                     "error": str(e),
                 },
             )
@@ -581,7 +576,7 @@ class BaseAPIClient:
             'eingestellt',
             'Artikel_Termin',
             'Datum_begin',
-            
+
         }
 
         for key, value in record.items():
@@ -649,12 +644,11 @@ class BaseAPIClient:
 
             while True:
                 params = {"$skip": current_skip}
-                # If fetching all, use page_size for $top, otherwise use original top
                 request_top = page_size if all_records else top
                 if request_top is not None:
                     params["$top"] = request_top
 
-                # --- Filter Query Processing (same as before) ---
+                # --- Filter Query Processing (REVERTED AND FIXED) ---
                 if filter_query:
                     if isinstance(filter_query, list):
                         filter_parts = []
@@ -667,19 +661,50 @@ class BaseAPIClient:
                                     )
                                     continue
                                 field, operator, value = filter_item
-                                if hasattr(value, "strftime"):
-                                    value = value.strftime("%Y-%m-%d")
-                                filter_parts.append(f"'{field} {operator} {value}'")
+                                # Format value appropriately (e.g., quote strings)
+                                if isinstance(value, str):
+                                    # Escape single quotes within the string value
+                                    safe_value = value  # REMOVED manual escaping
+                                    # Quote the string value using double quotes
+                                    formatted_value = f'"{safe_value}"'
+                                elif hasattr(value, "strftime"):
+                                    formatted_value = value.strftime("%Y-%m-%d")
+                                else:
+                                    formatted_value = value
+
+                                # Construct the filter part string
+                                # NEW LOGIC: Always wrap the individual condition in single quotes
+                                # to match the format observed to work for OR filters: 'Field op Value' or 'Field op Value'
+                                filter_part_str = f"'{field} {operator} {formatted_value}'"
+
+                                filter_parts.append(filter_part_str)
                             except Exception as e:
                                 error_msg = f"Error processing filter item {filter_item}: {str(e)}"
                                 logger.error(error_msg)
                                 if fail_on_filter_error:
                                     raise RuntimeError(error_msg) from e
                         if filter_parts:
-                            params["$filter"] = " and ".join(filter_parts)
+                            # Check if all filters are for the same field
+                            is_multi_field = False
+                            if len(filter_parts) > 1:
+                                first_field = None
+                                if filter_query and len(filter_query[0]) == 3:
+                                    first_field = filter_query[0][0]
+                                if first_field:
+                                    is_multi_field = any(
+                                        item[0] != first_field for item in filter_query
+                                        if len(item) == 3
+                                    )
+
+                            # Use 'or' if all filters target the same field, 'and' otherwise
+                            # KNOWN ISSUE: Using 'or' here can cause issues with the $top parameter
+                            # The API might return more records than specified by $top.
+                            joiner = " and " if is_multi_field else " or "
+                            params["$filter"] = joiner.join(filter_parts)
                         else:
-                             logger.warning("No valid filter parts found in filter query")
+                            logger.warning("No valid filter parts found in filter query")
                     else:
+                        # Assumes filter_query is already a string if not a list
                         params["$filter"] = filter_query
                 # --- End Filter Query Processing ---
 
@@ -696,12 +721,12 @@ class BaseAPIClient:
 
                 if response.status_code != 200:
                     error_msg = (
-                        f"Failed to fetch table {table_name} (page starting at {current_skip}): "
+                        f"Failed to fetch table {table_name} "
+                        f"(page starting at {current_skip}): "
                         f"Status {response.status_code}"
                     )
                     logger.error(error_msg)
-                    # Decide whether to raise immediately or try to return partial data
-                    raise RuntimeError(error_msg) 
+                    raise RuntimeError(error_msg)
 
                 try:
                     data = response.json()
@@ -720,19 +745,16 @@ class BaseAPIClient:
                         self._transform_dates_in_record(record) for record in records
                     ]
                     all_fetched_records.extend(transformed_records)
-                
+
                 # --- Loop termination logic ---
-                if not all_records: 
-                    # If not fetching all, break after the first successful fetch
-                    break 
-                
+                if not all_records:
+                    break
+
                 if num_fetched < page_size:
-                    # If we fetched less than requested, it must be the last page
                     logger.info(f"Last page reached for {table_name}, fetched {num_fetched} records.")
                     break
 
                 if num_fetched == 0:
-                     # If API returns 0 records, we are done.
                     logger.info(f"Empty page received for {table_name}, assuming end of data.")
                     break
                 # --- End Loop termination logic ---
@@ -751,11 +773,11 @@ class BaseAPIClient:
 
             if not all_fetched_records:
                 return pd.DataFrame()  # Return empty DataFrame if no records found
-            
+
             return pd.DataFrame(all_fetched_records)
 
         except Exception as e:
             # Catch any other unexpected errors during the process
             error_msg = f"Error fetching table {table_name}: {str(e)}"
-            logger.exception(error_msg) # Use exception to log traceback
+            logger.exception(error_msg)  # Use exception to log traceback
             raise RuntimeError(error_msg) from e

@@ -4,7 +4,7 @@
 mappings:
   - source: legacy_erp
     target: pyerp
-    entity_type: production_order
+    entity_type: production_orders
     mapping_config:
       field_mappings:
         WerkAufNr: order_number
@@ -30,7 +30,7 @@ mappings:
 
   - source: legacy_erp
     target: pyerp
-    entity_type: production_order_item
+    entity_type: production_order_items
     mapping_config:
       field_mappings:
         W_Auftr_Nr: production_order__order_number

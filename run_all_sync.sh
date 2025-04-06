@@ -1,21 +1,25 @@
 #!/bin/bash
 
 # run_all_sync.sh - Script to run data synchronization commands
-# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--debug]
+# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--sales-only] [--days N] [--debug] [--force-update] [--top N]
 
 # Set default values
 DEBUG=0
 CUSTOMERS_ONLY=0
 PRODUCTS_ONLY=0
 EMPLOYEES_ONLY=0
+SALES_ONLY=0
 FORCE_UPDATE=0
+TOP_VALUE=0
+DAYS_VALUE=0
+EXTRA_FLAGS=""
 
 # Process command line arguments
-for arg in "$@"
-do
-    case $arg in
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
         --debug)
         DEBUG=1
+        EXTRA_FLAGS+=" --debug"
         shift
         ;;
         --customers-only)
@@ -30,37 +34,75 @@ do
         EMPLOYEES_ONLY=1
         shift
         ;;
-        --force-update)
-        FORCE_UPDATE=1
+        --sales-only)
+        SALES_ONLY=1
         shift
         ;;
+        --force-update)
+        FORCE_UPDATE=1
+        EXTRA_FLAGS+=" --force-update"
+        shift
+        ;;
+        --top=*)
+        TOP_VALUE="${1#*=}"
+        EXTRA_FLAGS+=" --top=${TOP_VALUE}"
+        shift
+        ;;
+        --top)
+        if [[ -n "$2" && "$2" != --* ]]; then
+            TOP_VALUE="$2"
+            EXTRA_FLAGS+=" --top=${TOP_VALUE}"
+            shift 2
+        else
+            echo "Error: Argument for --top is missing" >&2
+            exit 1
+        fi
+        ;;
+        --days=*)
+        DAYS_VALUE="${1#*=}"
+        EXTRA_FLAGS+=" --days=${DAYS_VALUE}"
+        shift
+        ;;
+        --days)
+        if [[ -n "$2" && "$2" != --* ]]; then
+            DAYS_VALUE="$2"
+            EXTRA_FLAGS+=" --days=${DAYS_VALUE}"
+            shift 2
+        else
+            echo "Error: Argument for --days is missing" >&2
+            exit 1
+        fi
+        ;;
         *)
-        # Unknown option
+        echo "Unknown option: $1" >&2
         shift
         ;;
     esac
 done
 
-# Set up debug flag
-DEBUG_FLAG=""
+# Report settings based on flags collected
 if [ $DEBUG -eq 1 ]; then
-    DEBUG_FLAG="--debug"
     echo "Debug mode enabled"
 fi
-
-# Set up force update flag
-FORCE_FLAG=""
 if [ $FORCE_UPDATE -eq 1 ]; then
-    FORCE_FLAG="--force-update"
     echo "Force update enabled"
+fi
+if [ $TOP_VALUE -gt 0 ]; then
+    echo "Top limit set to $TOP_VALUE"
+fi
+if [ $DAYS_VALUE -gt 0 ]; then
+    echo "Days filter set to $DAYS_VALUE"
 fi
 
 # Function to run a sync command with proper output formatting
 run_sync() {
+    COMMAND=$1
+    FLAGS=$2
     echo "========================================"
-    echo "Running: $1"
+    printf "Running: %s %s
+" "$COMMAND" "$FLAGS"
     echo "========================================"
-    eval "$1"
+    eval "$COMMAND $FLAGS"
     EXIT_CODE=$?
     if [ $EXIT_CODE -ne 0 ]; then
         echo "Command failed with exit code $EXIT_CODE"
@@ -75,13 +117,10 @@ run_customer_sync() {
     echo "Running customers sync with fixed environment"
     echo "========================================"
     
-    # Set environment variables required by the extractor
-    # These will be picked up by our custom _validate_config method
     export LEGACY_ERP_ENVIRONMENT="live"
     export LEGACY_ERP_TABLE_NAME="Kunden"
     
-    # Run the command directly with the entity type flag
-    run_sync "python manage.py run_sync --entity-type customer $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py run_sync --entity-type customer" "$EXTRA_FLAGS"
     return $?
 }
 
@@ -91,13 +130,19 @@ run_employee_sync() {
     echo "Running employees sync with fixed environment"
     echo "========================================"
     
-    # Set environment variables required by the extractor
-    # These will be picked up by our custom _validate_config method
     export LEGACY_ERP_ENVIRONMENT="live"
     export LEGACY_ERP_TABLE_NAME="Personal"
     
-    # Run the command directly with the entity type flag
-    run_sync "python manage.py run_sync --entity-type employee $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py run_sync --entity-type employee" "$EXTRA_FLAGS"
+    return $?
+}
+
+# Function to run sales record sync
+run_sales_sync() {
+    echo "========================================"
+    echo "Running sales records sync"
+    echo "========================================"
+    run_sync "python manage.py sync_sales_records" "$EXTRA_FLAGS"
     return $?
 }
 
@@ -108,33 +153,35 @@ if [ $CUSTOMERS_ONLY -eq 1 ]; then
     exit $?
 elif [ $PRODUCTS_ONLY -eq 1 ]; then
     echo "Running products sync only"
-    run_sync "python manage.py sync_products $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py sync_products" "$EXTRA_FLAGS"
     exit $?
 elif [ $EMPLOYEES_ONLY -eq 1 ]; then
     echo "Running employees sync only"
     run_employee_sync
     exit $?
+elif [ $SALES_ONLY -eq 1 ]; then
+    echo "Running sales records sync only"
+    run_sales_sync
+    exit $?
 else
     echo "Running all sync processes"
     
-    # Run customer sync first
     run_customer_sync
     CUSTOMER_EXIT=$?
     
-    # Run product sync
-    run_sync "python manage.py sync_products $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py sync_products" "$EXTRA_FLAGS"
     PRODUCT_EXIT=$?
     
-    # Run inventory sync
-    run_sync "python manage.py sync_inventory $DEBUG_FLAG $FORCE_FLAG"
+    run_sync "python manage.py sync_inventory" "$EXTRA_FLAGS"
     INVENTORY_EXIT=$?
     
-    # Run employee sync
     run_employee_sync
     EMPLOYEE_EXIT=$?
     
-    # Report overall status
-    if [ $CUSTOMER_EXIT -ne 0 ] || [ $PRODUCT_EXIT -ne 0 ] || [ $INVENTORY_EXIT -ne 0 ] || [ $EMPLOYEE_EXIT -ne 0 ]; then
+    run_sales_sync
+    SALES_EXIT=$?
+    
+    if [ $CUSTOMER_EXIT -ne 0 ] || [ $PRODUCT_EXIT -ne 0 ] || [ $INVENTORY_EXIT -ne 0 ] || [ $EMPLOYEE_EXIT -ne 0 ] || [ $SALES_EXIT -ne 0 ]; then
         echo "One or more sync processes failed"
         exit 1
     else
