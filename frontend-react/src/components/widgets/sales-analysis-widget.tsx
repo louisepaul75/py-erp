@@ -92,8 +92,8 @@ export function SalesAnalysisWidget() {
       
       // Build the base endpoint URL without /api prefix since we'll add it in the full URL
       let baseEndpoint = currentMode === 'monthly'
-        ? `v1/sales/records/monthly_analysis`
-        : `v1/sales/records/annual_analysis`;
+        ? `v1/sales/records/monthly_analysis/`
+        : `v1/sales/records/annual_analysis/`;
       
       // Create query params string
       const queryParamsString = currentMode === 'monthly'
@@ -101,6 +101,19 @@ export function SalesAnalysisWidget() {
         : `?year=${year}`;
       
       console.log(`Base endpoint: ${baseEndpoint}`);
+      
+      // Get access token from cookie
+      const accessToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('access_token='))
+        ?.split('=')[1];
+      
+      if (!accessToken) {
+        console.error('No access token found in cookies');
+        setError('Authentication failed. Please log in again.');
+        setIsLoading(false);
+        return;
+      }
       
       // Use fetch directly with the full URL that explicitly includes /api
       const fullUrl = `http://localhost:8000/api/${baseEndpoint}${queryParamsString}`;
@@ -110,7 +123,8 @@ export function SalesAnalysisWidget() {
       const response = await fetch(fullUrl, {
         credentials: 'include',
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
         }
       }).then(res => {
         if (!res.ok) {
