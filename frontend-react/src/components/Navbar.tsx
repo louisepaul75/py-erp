@@ -182,6 +182,11 @@ export function Navbar() {
                         {t("navigation.mold_management")}
                       </Link>
                     </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/production/casting" className="flex items-center">
+                        Casting Manager
+                      </Link>
+                    </ShadcnDropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
