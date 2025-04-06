@@ -47,7 +47,8 @@ export async function fetchSystemIntegrationData(
   signal?: AbortSignal,
 ): Promise<SystemIntegrationData> {
   const token = await authService.getToken();
-  const endpoint = `/sync/system-integrations/`;
+  // Ensure the endpoint starts with /api/
+  const endpoint = `/api/sync/system-integrations/`; 
 
   const response = await fetch(API_URL + endpoint, {
     headers: {
@@ -75,7 +76,8 @@ export async function updateConnectionStatus(
   enabled: boolean,
 ): Promise<SystemIntegrationData> {
   const token = await authService.getToken();
-  const endpoint = `/external-api/connections/${connectionName}/`;
+  // Ensure the endpoint starts with /api/
+  const endpoint = `/api/external-api/connections/${connectionName}/`; 
 
   const response = await fetch(API_URL + endpoint, {
     method: "POST",
@@ -104,7 +106,8 @@ export async function fetchWorkflowLogs(
   workflowSlug: string,
 ): Promise<WorkflowLogRow[]> {
   const token = await authService.getToken();
-  const endpoint = `/sync/workflows/${workflowSlug}/recent-jobs/`;
+  // Ensure the endpoint starts with /api/
+  const endpoint = `/api/sync/workflows/${workflowSlug}/recent-jobs/`; 
 
   const response = await fetch(API_URL + endpoint, {
     headers: {
@@ -131,7 +134,8 @@ export async function triggerWorkflowRun(
   payload: TriggerWorkflowPayload,
 ): Promise<SyncJob> {
   const token = await authService.getToken();
-  const endpoint = `/sync/workflows/${workflowSlug}/trigger/`;
+  // Ensure the endpoint starts with /api/
+  const endpoint = `/api/sync/workflows/${workflowSlug}/trigger/`; 
 
   const response = await fetch(API_URL + endpoint, {
     method: "POST",
