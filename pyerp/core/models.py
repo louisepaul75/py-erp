@@ -171,12 +171,13 @@ class UserPreference(models.Model):
         if self.active_layout_id and self.dashboard_layouts:
             layouts = self.dashboard_layouts.get('layouts', {})
             active_layout = next((layout for layout in layouts if layout.get('id') == self.active_layout_id), None)
-            if active_layout and 'grid_layout' in active_layout:
-                return active_layout['grid_layout']
+            # Use .get() for safer access
+            if active_layout and active_layout.get('grid_layout'):
+                return active_layout.get('grid_layout')
         
-        # Fallback to the main dashboard_config
-        if self.dashboard_config and 'grid_layout' in self.dashboard_config:
-            return self.dashboard_config['grid_layout']
+        # Fallback to the main dashboard_config, use .get()
+        if self.dashboard_config and self.dashboard_config.get('grid_layout'):
+            return self.dashboard_config.get('grid_layout')
         
         # If no layout found, return the default
         return self.get_default_dashboard_grid_layout()
