@@ -99,7 +99,6 @@ export function Navbar() {
   const navigationItems = [
     { href: "/dashboard", label: t("navigation.home") },
     { href: "/products", label: t("navigation.products") },
-    { href: "/sales", label: t("navigation.sales") },
     // { href: '/production', label: t('navigation.production') },
   ];
 

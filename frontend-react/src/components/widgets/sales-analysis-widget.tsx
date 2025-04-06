@@ -120,30 +120,54 @@ export function SalesAnalysisWidget() {
       
       console.log(`Fetching from full URL: ${fullUrl}`);
       
-      const response = await fetch(fullUrl, {
+      const res = await fetch(fullUrl, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         }
-      }).then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP Error: ${res.status}`);
-        }
-        return res.json();
       });
+
+      if (!res.ok) {
+        // Check Content-Type before attempting to parse JSON, even for errors
+        const contentType = res.headers.get("content-type");
+        // Check if contentType is not null before using indexOf
+        if (contentType && contentType.indexOf("application/json") === -1) {
+          // If it's not JSON, attempt to read as text to see if it's HTML (likely auth error)
+          const textResponse = await res.text(); // Now await is allowed here
+          if (textResponse.trim().startsWith("<!DOCTYPE") || textResponse.trim().startsWith("<html")) {
+            console.error('Received HTML instead of JSON. Authentication likely failed.');
+            throw new Error(`Authentication failed (HTTP ${res.status}). Received HTML instead of JSON.`);
+          } else {
+            // It's not JSON and not clearly HTML, throw generic error with status
+             throw new Error(`HTTP Error: ${res.status}. Unexpected content type: ${contentType}`);
+          }
+        } else {
+           // It might be a JSON error response from the API
+           try {
+             const errorJson = await res.json();
+             throw new Error(`HTTP Error: ${res.status} - ${errorJson.detail || JSON.stringify(errorJson)}`);
+           } catch (jsonError) {
+             // If parsing error JSON fails, throw generic status error
+             throw new Error(`HTTP Error: ${res.status}`);
+           }
+        }
+      }
+
+      // If response is OK, proceed to parse JSON
+      const responseData = await res.json();
       
-      setData(response);
+      setData(responseData);
       
       // Safely update state based on the actual response structure
-      if (response.selected_period) {
-        if (isMonthInfo(response.selected_period)) {
+      if (responseData.selected_period) {
+        if (isMonthInfo(responseData.selected_period)) {
           // It's monthly data, update both month and year
-          setSelectedMonth(response.selected_period.month);
-          setSelectedYear(response.selected_period.year);
-        } else if ('year' in response.selected_period) {
+          setSelectedMonth(responseData.selected_period.month);
+          setSelectedYear(responseData.selected_period.year);
+        } else if ('year' in responseData.selected_period) {
           // Assume it's annual data (or at least has a year), update year only
-          setSelectedYear(response.selected_period.year);
+          setSelectedYear(responseData.selected_period.year);
         }
       }
 
@@ -473,4 +497,4 @@ export function SalesAnalysisWidget() {
   );
 }
 
-export default SalesAnalysisWidget; 
+export default SalesAnalysisWidget;
