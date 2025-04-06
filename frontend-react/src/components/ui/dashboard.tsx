@@ -335,7 +335,7 @@ const Dashboard = () => {
       console.log("Saving layout to API with headers:", headers);
       
       // Construct the correct API endpoint URL
-      const dashboardSummaryUrl = `${API_URL}/v1/dashboard/summary/`;
+      const dashboardSummaryUrl = `${API_URL}/dashboard/summary/`;
       
       const response = await fetch(dashboardSummaryUrl, {
         method: "PATCH",

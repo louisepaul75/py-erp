@@ -89,10 +89,12 @@ export function SalesAnalysisWidget() {
       setIsLoading(true);
       setError(null);
       
-      const endpoint = currentMode === 'monthly' 
-        ? 'api/v1/sales/records/monthly_analysis/' 
-        : 'api/v1/sales/records/annual_analysis/'; 
-
+      const endpointUrl = currentMode === 'monthly' 
+        ? 'sales/records/monthly_analysis/' 
+        : 'sales/records/annual_analysis/';
+      
+      console.log(`Fetching from ${API_URL}/${endpointUrl}`);
+      
       const searchParams: Record<string, number> = {};
       if (currentMode === 'monthly') {
         searchParams.month = month;
@@ -101,7 +103,7 @@ export function SalesAnalysisWidget() {
         searchParams.year = year;
       }
 
-      const response: SalesAnalysisData = await api.get(endpoint, { // Add type assertion for response
+      const response: SalesAnalysisData = await api.get(endpointUrl, {
         searchParams: searchParams
       }).json();
       

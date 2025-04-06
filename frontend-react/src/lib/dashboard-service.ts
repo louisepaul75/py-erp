@@ -55,7 +55,7 @@ export async function fetchDashboardConfig(): Promise<DashboardConfig> {
       };
     }
 
-    const response = await apiInstance.get("v1/dashboard/summary/").json<DashboardConfig>();
+    const response = await apiInstance.get("dashboard/summary/").json<DashboardConfig>();
     return {
       grid_layout: response.grid_layout || {
         lg: [],
@@ -88,7 +88,7 @@ export async function saveGridLayout(gridLayout: GridLayouts): Promise<GridLayou
       return gridLayout;
     }
 
-    const response = await apiInstance.patch("api/v1/dashboard/summary/", {
+    const response = await apiInstance.patch("dashboard/summary/", {
       json: {
         grid_layout: gridLayout,
       }
@@ -111,7 +111,7 @@ export async function saveNewLayout(name: string, gridLayout: GridLayouts): Prom
       };
     }
 
-    const response = await apiInstance.patch("api/v1/dashboard/summary/", {
+    const response = await apiInstance.patch("dashboard/summary/", {
       json: {
         layout_action: "save",
         layout_name: name,
@@ -144,7 +144,7 @@ export async function updateLayout(layoutId: string, name: string, gridLayout: G
       };
     }
 
-    const response = await apiInstance.patch("api/v1/dashboard/summary/", {
+    const response = await apiInstance.patch("dashboard/summary/", {
       json: {
         layout_action: "save",
         layout_id: layoutId,
@@ -182,7 +182,7 @@ export async function deleteLayout(layoutId: string): Promise<DashboardConfig> {
       };
     }
 
-    const response = await apiInstance.patch("api/v1/dashboard/summary/", {
+    const response = await apiInstance.patch("dashboard/summary/", {
       json: {
         layout_action: "delete",
         layout_id: layoutId,
@@ -226,7 +226,7 @@ export async function activateLayout(layoutId: string): Promise<DashboardConfig>
       };
     }
 
-    const response = await apiInstance.patch("api/v1/dashboard/summary/", {
+    const response = await apiInstance.patch("dashboard/summary/", {
       json: {
         layout_action: "activate",
         layout_id: layoutId,

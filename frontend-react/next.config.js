@@ -34,20 +34,20 @@ const nextConfig = {
       // Handle URLs with trailing slashes
       {
         source: '/api/health/',
-        destination: 'http://localhost:8000/health/',
+        destination: 'http://localhost:8000/api/health/',
       },
       // Handle URLs without trailing slashes
       {
         source: '/api/health',
-        destination: 'http://localhost:8000/health/',
+        destination: 'http://localhost:8000/api/health/',
       },
       {
         source: '/api/monitoring/health-checks/',
-        destination: 'http://localhost:8000/monitoring/health-checks/',
+        destination: 'http://localhost:8000/api/monitoring/health-checks/',
       },
       {
         source: '/api/monitoring/:path+',
-        destination: 'http://localhost:8000/monitoring/:path+',
+        destination: 'http://localhost:8000/api/monitoring/:path+',
       },
       {
         source: '/api/git/branch/',
@@ -106,6 +106,23 @@ const nextConfig = {
       {
         source: '/api/v1/:path*',
         destination: 'http://localhost:8000/api/v1/:path*',
+      },
+      // Add explicit rules for dashboard endpoints
+      {
+        source: '/api/v1/dashboard/summary/',
+        destination: 'http://localhost:8000/api/v1/dashboard/summary/',
+      },
+      {
+        source: '/api/v1/dashboard/summary',
+        destination: 'http://localhost:8000/api/v1/dashboard/summary/',
+      },
+      {
+        source: '/api/v1/dashboard/config/',
+        destination: 'http://localhost:8000/api/v1/dashboard/config/',
+      },
+      {
+        source: '/api/v1/dashboard/config',
+        destination: 'http://localhost:8000/api/v1/dashboard/config/',
       },
       // Catch-all for other /api paths
       // This MUST be last to avoid overriding specific rules above

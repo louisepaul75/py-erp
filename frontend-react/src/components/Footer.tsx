@@ -94,8 +94,8 @@ export function Footer() {
   
   // Fetch health checks (for dev bar condition)
   useEffect(() => {
-    const healthUrl = `${API_URL}/v1/health/`
-    const monitoringUrl = `${API_URL}/v1/monitoring/health-checks/`
+    const healthUrl = `${API_URL}/health/`
+    const monitoringUrl = `${API_URL}/monitoring/health-checks/`
 
     const fetchBackendStatus = async () => {
       setIsLoadingChecks(true);
