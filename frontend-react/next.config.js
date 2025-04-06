@@ -133,9 +133,9 @@ const nextConfig = {
         source: '/dashboard/config/',
         destination: 'http://localhost:8000/api/dashboard/config/',
       },
-      // Catch-all for all other paths - add /api prefix
+      // API-specific paths - don't rewrite client-side routes 
       {
-        source: '/:path*',
+        source: '/api/:path*',
         destination: 'http://localhost:8000/api/:path*',
       }
     ]
