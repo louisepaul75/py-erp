@@ -84,5 +84,26 @@
   "admin_yes": "Yes",
   "admin_no": "No",
   "configuration_saved": "Configuration saved successfully",
-  "configuration_save_error": "Failed to save configuration. Please try again."
+  "configuration_save_error": "Failed to save configuration. Please try again.",
+  "settings_system": {
+    "status": {
+       "success": "Success",
+       "no_runs": "No Runs"
+     },
+    "run": "Run",
+    "never": "Never",
+    "connection": "Connection",
+    "manage_connection_and_workflows": "Manage Connection & Workflows",
+    "enabled": "Enabled",
+    "workflow_name": "Workflow Name",
+    "last_status": "Last Status",
+    "parameters": "Parameters"
+  },
+  "settings_system_logs": {
+    "logs_for": "Logs for",
+    "selected_workflow": "Selected Workflow",
+    "recent_activity_for": "Recent Activity for",
+    "close": "Close",
+    "no_logs_found": "No Logs Found"
+  }
 } 

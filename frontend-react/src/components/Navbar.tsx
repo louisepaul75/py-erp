@@ -1,66 +1,94 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { 
-  Sun, 
-  Moon, 
-  Settings, 
-  LogOut, 
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  Sun,
+  Moon,
+  Settings,
+  LogOut,
   ChevronDown,
   User,
   Palette,
-  Package
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import useTheme from '@/hooks/useTheme';
-import LanguageSelector from './LanguageSelector';
-import { useLogout } from '@/lib/auth/authHooks';
-import useAppTranslation from '@/hooks/useTranslationWrapper';
-import { useIsAuthenticated } from '@/lib/auth/authHooks';
-import { MobileMenu } from './MobileMenu';
-import { useScreenSize } from '@/utils/responsive';
+  Package,
+  Paintbrush,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
+import LanguageSelector from "./LanguageSelector";
+import { useLogout } from "@/lib/auth/authHooks";
+import useAppTranslation from "@/hooks/useTranslationWrapper";
+import { useIsAuthenticated } from "@/lib/auth/authHooks";
+import { MobileMenu } from "./MobileMenu";
+import { useScreenSize } from "@/utils/responsive";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuItem as ShadcnDropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 
+function DropdownItem({
+  children,
+  href,
+  onClick,
+}: {
+  children: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+}) {
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block px-4 py-2 text-sm text-popover-foreground hover:bg-accent hover:text-accent-foreground flex items-center"
+        role="menuitem"
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full text-left block px-4 py-2 text-sm text-popover-foreground",
+        "hover:bg-accent hover:text-accent-foreground flex items-center"
+      )}
+      role="menuitem"
+    >
+      {children}
+    </button>
+  );
+}
+
 export function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
   const [testMenuOpen, setTestMenuOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { t } = useAppTranslation();
   const { user } = useIsAuthenticated();
   const logout = useLogout();
   const { isMobile, isTablet } = useScreenSize();
 
-  // Toggle dropdown
-  const toggleDropdown = () => setIsOpen(!isOpen);
-
-  // Toggle test dropdown
   const toggleTestDropdown = () => setTestMenuOpen(!testMenuOpen);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const dropdown = document.getElementById('user-dropdown');
-      const testDropdown = document.getElementById('test-dropdown');
-      
-      if (dropdown && !dropdown.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-      
+      const testDropdown = document.getElementById("test-dropdown");
+
       if (testDropdown && !testDropdown.contains(event.target as Node)) {
         setTestMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -69,24 +97,24 @@ export function Navbar() {
   };
 
   const navigationItems = [
-    { href: '/dashboard', label: t('navigation.home') },
-    { href: '/products', label: t('navigation.products') },
-    { href: '/sales', label: t('navigation.sales') },
-    { href: '/production', label: t('navigation.production') },
+    { href: "/dashboard", label: t("navigation.home") },
+    { href: "/products", label: t("navigation.products") },
+    { href: "/sales", label: t("navigation.sales") },
+    // { href: '/production', label: t('navigation.production') },
   ];
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md fixed w-full z-50">
+    <nav className="bg-header text-header-foreground shadow-md fixed w-full z-50">
       <div className="max-w-full mx-0 px-2 sm:px-3 lg:px-4">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center pl-2">
             <Link href="/dashboard">
-              <Image 
-                src="/wsz_logo_long.png" 
-                alt="Wilhelm Schweizer Zinnmanufaktur" 
-                width={200} 
-                height={50} 
+              <Image
+                src="/wsz_logo_long.png"
+                alt="Wilhelm Schweizer Zinnmanufaktur"
+                width={200}
+                height={50}
                 className="h-10 w-auto"
               />
             </Link>
@@ -94,164 +122,245 @@ export function Navbar() {
 
           {/* Mobile menu */}
           <div className="flex items-center lg:hidden">
-            <MobileMenu items={[...navigationItems, { href: '/warehouse', label: t('navigation.inventory') }, { href: '/picklist', label: 'Picklist' }]} />
+            <MobileMenu
+              items={user ? [
+                ...navigationItems,
+                { href: "/warehouse", label: t("navigation.inventory") },
+                { href: "/picklist", label: "Picklist" },
+              ] : [
+                { href: "/dashboard", label: t("navigation.home") }
+              ]}
+            />
           </div>
 
           {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex items-center justify-center flex-1">
-            <div className="flex space-x-4">
-              {navigationItems.map(item => (
-                <NavLink key={item.href} href={item.href} label={item.label} />
-              ))}
-              
-              {/* Inventory Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
-                    <Package className="h-4 w-4 mr-2" />
-                    <span>{t('navigation.inventory')}</span>
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem asChild>
-                    <Link href="/warehouse" className="flex items-center">
-                      Warehouse Management
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/picklist" className="flex items-center">
-                      Picklist
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+          {user && (
+            <div className="hidden lg:flex items-center justify-center flex-1">
+              <div className="flex space-x-4">
+                {navigationItems.map((item) => (
+                  <NavLink key={item.href} href={item.href} label={item.label} />
+                ))}
 
-              {/* Test dropdown */}
-              <div className="relative" id="test-dropdown">
-                <button
-                  onClick={toggleTestDropdown}
-                  className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
-                >
-                  <span>Test</span>
-                  <ChevronDown className="ml-1 h-4 w-4" />
-                </button>
-                
-                {testMenuOpen && (
-                  <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                    <div className="py-1" role="menu" aria-orientation="vertical">
-                      <DropdownItem href="/ui-components">
-                        <Palette className="mr-3 h-5 w-5" />
-                        UI Components / Style Guide
-                      </DropdownItem>
-                      <DropdownItem href="/test/feature1">
-                        Feature 1
-                      </DropdownItem>
-                      <DropdownItem href="/test/feature2">
-                        Feature 2
-                      </DropdownItem>
+                {/* Add Sales Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <span>{t("navigation.sales")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/sales" className="flex items-center">
+                        {t("navigation.sales_dashboard")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/sales/customers" className="flex items-center">
+                        {t("navigation.customers")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/*  Production dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <span>{t("navigation.production")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/production" className="flex items-center">
+                        {t("navigation.production")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/mold-management" className="flex items-center">
+                        {t("navigation.mold_management")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Inventory Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <Package className="h-4 w-4 mr-2 text-current" />
+                      <span>{t("navigation.inventory")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/warehouse" className="flex items-center">
+                        Warehouse Management
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/picklist" className="flex items-center">
+                        Picklist
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Test dropdown */}
+                <div className="relative" id="test-dropdown">
+                  <button
+                    onClick={toggleTestDropdown}
+                    className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center"
+                  >
+                    <span>Test</span>
+                    <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                  </button>
+
+                  {testMenuOpen && (
+                    <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-popover text-popover-foreground ring-1 ring-border ring-opacity-5 focus:outline-none z-50">
+                      <div
+                        className="py-1"
+                        role="menu"
+                        aria-orientation="vertical"
+                      >
+                        <DropdownItem href="/ui-components">
+                          <Palette className="mr-3 h-5 w-5" />
+                          UI Components / Style Guide
+                        </DropdownItem>
+                        <DropdownItem href="/test/feature1">
+                          Feature 1
+                        </DropdownItem>
+                        <DropdownItem href="/test/feature2">
+                          Feature 2
+                        </DropdownItem>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* User Menu - Desktop */}
+          {/* User Menu - Desktop - Refactored with Shadcn DropdownMenu */}
           <div className="hidden lg:flex items-center pr-2">
-            <div className="relative" id="user-dropdown">
-              <div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 items-center"
+                  className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring items-center bg-muted/20 border border-border px-3 py-1.5"
                   id="user-menu"
-                  onClick={toggleDropdown}
                 >
                   <span className="sr-only">Open user menu</span>
-                  <span className="mr-2 text-gray-700 dark:text-gray-200">{user?.username || 'Guest'}</span>
-                  <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
-                  <ChevronDown className={`ml-1 h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  <span className="mr-2">
+                    {user?.username || "Guest"}
+                  </span>
+                  <User className="h-8 w-8 rounded-full p-1 bg-muted text-muted-foreground" />
+                  <ChevronDown className="ml-1 h-4 w-4 text-current" />
                 </button>
-              </div>
+              </DropdownMenuTrigger>
 
-              {isOpen && (
-                <div
-                  className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                  role="menu"
-                  aria-orientation="vertical"
-                  aria-labelledby="user-menu"
-                >
-                  <DropdownItem onClick={toggleTheme}>
-                    {theme === 'dark' ? (
-                      <Sun className="mr-3 h-5 w-5" />
-                    ) : (
-                      <Moon className="mr-3 h-5 w-5" />
-                    )}
-                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                  </DropdownItem>
+              <DropdownMenuContent
+                align="end"
+                className="w-48"
+              >
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center w-full text-left px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground">
+                    <Paintbrush className="mr-2 h-4 w-4" />
+                    <span>Change Theme</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <ShadcnDropdownMenuItem onClick={() => setTheme('default-light')}>
+                      Light
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem onClick={() => setTheme('default-dark')}>
+                      Dark
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem onClick={() => setTheme('matsu-light')}>
+                      Cartoon
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
 
-                  <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
-                    <LanguageSelector />
-                  </div>
-
-                  <DropdownItem href="/settings">
-                    <Settings className="mr-3 h-5 w-5" />
-                    {user?.isAdmin ? t('navigation.admin_settings') : t('navigation.settings')}
-                  </DropdownItem>
-
-                  <DropdownItem onClick={handleLogout}>
-                    <LogOut className="mr-3 h-5 w-5" />
-                    Logout
-                  </DropdownItem>
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  <LanguageSelector />
                 </div>
-              )}
-            </div>
+
+                <ShadcnDropdownMenuItem asChild>
+                  <Link href="/settings" className="flex items-center w-full">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>
+                      {user?.isAdmin
+                        ? t("navigation.admin_settings")
+                        : t("navigation.settings")}
+                    </span>
+                  </Link>
+                </ShadcnDropdownMenuItem>
+
+                <ShadcnDropdownMenuItem onClick={handleLogout} className="flex items-center w-full">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </ShadcnDropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
-          {/* Mobile user button - only shows icon to save space */}
+          {/* Mobile user button - Refactored with Shadcn DropdownMenu */}
           {(isMobile || isTablet) && (
-            <div className="flex items-center">
-              <div className="relative ml-3" id="mobile-user-dropdown">
-                <button
-                  type="button"
-                  className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  onClick={toggleDropdown}
-                >
-                  <User className="h-8 w-8 rounded-full p-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300" />
-                </button>
+            <DropdownMenu>
+              <div className="flex items-center">
+                <div className="relative ml-3" id="mobile-user-dropdown">
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring bg-muted/20 border border-border p-1"
+                    >
+                      <User className="h-8 w-8 rounded-full p-1 bg-muted text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
 
-                {isOpen && (
-                  <div
-                    className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-                    role="menu"
-                    aria-orientation="vertical"
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48"
                   >
-                    <DropdownItem onClick={toggleTheme}>
-                      {theme === 'dark' ? (
-                        <Sun className="mr-3 h-5 w-5" />
-                      ) : (
-                        <Moon className="mr-3 h-5 w-5" />
-                      )}
-                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                    </DropdownItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="flex items-center w-full text-left px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground">
+                        <Paintbrush className="mr-2 h-4 w-4" />
+                        <span>Change Theme</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <ShadcnDropdownMenuItem onClick={() => setTheme('default-light')}>
+                          Light
+                        </ShadcnDropdownMenuItem>
+                        <ShadcnDropdownMenuItem onClick={() => setTheme('default-dark')}>
+                          Dark
+                        </ShadcnDropdownMenuItem>
+                        <ShadcnDropdownMenuItem onClick={() => setTheme('matsu-light')}>
+                          Cartoon
+                        </ShadcnDropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
 
-                    <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
                       <LanguageSelector />
                     </div>
 
-                    <DropdownItem href="/settings">
-                      <Settings className="mr-3 h-5 w-5" />
-                      {t('navigation.settings')}
-                    </DropdownItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/settings" className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>{t("navigation.settings")}</span>
+                      </Link>
+                    </ShadcnDropdownMenuItem>
 
-                    <DropdownItem onClick={handleLogout}>
-                      <LogOut className="mr-3 h-5 w-5" />
-                      Logout
-                    </DropdownItem>
-                  </div>
-                )}
+                    <ShadcnDropdownMenuItem onClick={handleLogout} className="flex items-center w-full">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Logout</span>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </div>
               </div>
-            </div>
+            </DropdownMenu>
           )}
         </div>
       </div>
@@ -263,46 +372,11 @@ function NavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+      className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground"
     >
       {label}
     </Link>
   );
 }
 
-function DropdownItem({ 
-  children, 
-  href, 
-  onClick 
-}: { 
-  children: React.ReactNode; 
-  href?: string; 
-  onClick?: () => void;
-}) {
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
-        role="menuitem"
-      >
-        {children}
-      </Link>
-    );
-  }
-  
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-200",
-        "hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
-      )}
-      role="menuitem"
-    >
-      {children}
-    </button>
-  );
-}
-
-export default Navbar; 
+export default Navbar;

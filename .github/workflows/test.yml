@@ -67,6 +67,12 @@ jobs:
         working-directory: frontend-react
         run: npm ci
 
+      # Run UI tests
+      - name: Run ui tests
+        if: matrix.test-group == 'ui'
+        working-directory: frontend-react
+        run: npm test -- --coverage
+
       - name: Run ${{ matrix.test-group }} tests
         if: matrix.test-group != 'ui'
         env:
@@ -86,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.test-group }}
-          path: coverage/*-junit.xml
+          path: ${{ matrix.test-group == 'ui' && 'frontend-react/coverage/*-junit.xml' || 'coverage/*-junit.xml' }}
           retention-days: 14
 
       - name: Store coverage results
@@ -94,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-results-${{ matrix.test-group }}
-          path: coverage/*-coverage.xml
+          path: ${{ matrix.test-group == 'ui' && 'frontend-react/coverage/*-coverage.xml' || 'coverage/*-coverage.xml' }}
           retention-days: 14
 
   upload-results:

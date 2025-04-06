@@ -1,12 +1,20 @@
 "use client"
 
 import React from "react"
-
 import { useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Edit, Trash2, ChevronDown, ChevronRight } from "lucide-react"
 import type { ContainerItem } from "@/types/warehouse-types"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  StatusBadge,
+} from "@/components/ui/data/Table"
 
 interface ContainerManagementTableProps { 
   filteredContainers: ContainerItem[]
@@ -29,10 +37,8 @@ export default function ContainerManagementTable({
   lastPrintDate,
   onLocationClick,
 }: ContainerManagementTableProps) {
-  // State to track which containers are expanded
   const [expandedContainers, setExpandedContainers] = useState<string[]>([])
 
-  // Toggle expanded state for a container
   const handleToggleExpand = (containerId: string) => {
     setExpandedContainers(prev => 
       prev.includes(containerId) 
@@ -41,280 +47,278 @@ export default function ContainerManagementTable({
     )
   }
 
-  // Function to navigate to warehouse location
   const navigateToLocation = (locationString: string, e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent row click
-
-    // Parse the location string (e.g., "11-3-1")
+    e.stopPropagation() 
     const [shelf, compartment, floor] = locationString.split("-").map(Number)
-
-    // Call the callback if provided
     if (onLocationClick) {
       onLocationClick(shelf, compartment, floor)
     } else {
-      // Fallback to window.location if callback not provided
       window.location.href = `/?shelf=${shelf}&compartment=${compartment}&floor=${floor}`
     }
   }
 
-  return (
-    <div className="border rounded-md overflow-hidden">
-      <div className="overflow-auto" style={{ maxHeight: "600px" }}>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100 sticky top-0 z-10">
-            <tr>
-              <th className="w-10 px-4 py-3 text-left">
-                <Checkbox
-                  checked={selectedContainers.length === filteredContainers.length && filteredContainers.length > 0}
-                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                  aria-label="Alle auswählen"
-                />
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Schütten</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Type</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Zweck</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Slots</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Einh.</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">angelegt</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">AZ</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">gedruckt</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">GZ</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Aktionen</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredContainers.length > 0 ? (
-              filteredContainers.map((container) => {
-                // Format today's date for display
-                const today = new Date();
-                const formattedDate = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
-                const formattedTime = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
-                
-                // Get the number of slots and units
-                const slotCount = container.slots?.length || 0;
-                const unitCount = container.units?.length || 0;
-                
-                // Set the purpose class for color coding
-                let purposeClass = "";
-                switch (container.purpose) {
-                  case "Lager":
-                    purposeClass = "bg-blue-100 text-blue-800";
-                    break;
-                  case "Picken":
-                    purposeClass = "bg-green-100 text-green-800";
-                    break;
-                  case "Transport":
-                    purposeClass = "bg-yellow-100 text-yellow-800";
-                    break;
-                  case "Werkstatt":
-                    purposeClass = "bg-purple-100 text-purple-800";
-                    break;
-                  default:
-                    purposeClass = "bg-gray-100 text-gray-800";
-                }
-
-                return (
-                  <React.Fragment key={container.id}>
-                    <tr
-                      className={`hover:bg-gray-50 ${expandedContainers.includes(container.id) ? "bg-gray-50" : ""}`}
-                    >
-                      <td className="w-10 px-4 py-3">
-                        <Checkbox
-                          checked={selectedContainers.includes(container.id)}
-                          onCheckedChange={(checked) => handleSelectContainer(container.id, !!checked)}
-                          aria-label={`Schütte ${container.containerCode} auswählen`}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mr-2 p-0 h-6 w-6"
-                            onClick={() => handleToggleExpand(container.id)}
-                          >
-                            {expandedContainers.includes(container.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <div>
-                            <div className="font-medium">{container.containerCode}</div>
-                            <div className="text-xs text-gray-500">{container.displayCode || ''}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100">
-                          {container.type || 'AR'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${purposeClass}`}>
-                          {container.purpose || 'Lager'}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{slotCount}</td>
-                      <td className="px-4 py-3">{unitCount}/{slotCount}</td>
-                      <td className="px-4 py-3">{formattedDate}</td>
-                      <td className="px-4 py-3">{formattedTime}</td>
-                      <td className="px-4 py-3">
-                        {lastPrintDate && container.id === selectedContainers[0]
-                          ? lastPrintDate.toLocaleDateString("de-DE")
-                          : "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        {lastPrintDate && container.id === selectedContainers[0]
-                          ? lastPrintDate.toLocaleTimeString("de-DE", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : "-"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleEditClick(container, e)}
-                            title="Bearbeiten"
-                          >
-                            <Edit className="h-4 w-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleDeleteClick(container, e)}
-                            title="Löschen"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                    {expandedContainers.includes(container.id) && (
-                      <tr>
-                        <td colSpan={11} className="p-0">
-                          <div className="pl-10 pr-4 pb-4">
-                            <div className="bg-gray-50 rounded-md p-3">
-                              <h4 className="font-medium mb-2">Details</h4>
-                              <div className="grid grid-cols-3 gap-4 mb-4">
-                                <div>
-                                  <p className="text-sm font-medium">Lagerdaten</p>
-                                  <div className="text-sm mt-1">
-                                    <p>
-                                      <span className="font-medium">Lagerort:</span>{" "}
-                                      {container.location ? (
-                                        <button
-                                          onClick={() =>
-                                            onLocationClick && onLocationClick(
-                                              container.shelf || 0,
-                                              container.compartment || 0,
-                                              container.floor || 0
-                                            )
-                                          }
-                                          className="text-blue-600 hover:underline"
-                                        >
-                                          {container.location}
-                                        </button>
-                                      ) : (
-                                        "Kein Lagerort zugewiesen"
-                                      )}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium">Status:</span> {container.status || 'Verfügbar'}
-                                    </p>
-                                    <p>
-                                      <span className="font-medium">Zweck:</span> {container.purpose || 'Lager'}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Beschreibung</p>
-                                  <p className="text-sm mt-1">
-                                    {container.description || "Keine Beschreibung verfügbar"}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Inhalt</p>
-                                  <p className="text-sm mt-1">
-                                    {container.units && container.units.some(
-                                      (unit) => unit.articleNumber || unit.description
-                                    )
-                                      ? `${container.units.filter(
-                                          (unit) => unit.articleNumber || unit.description
-                                        ).length} Artikel`
-                                      : "Keine Artikel"}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <h4 className="font-medium mb-2">Einheiten</h4>
-                              <div className="bg-white rounded border">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                  <thead className="bg-gray-100">
-                                    <tr>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                        Einheit Nr.
-                                      </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                        Artikelnummer
-                                      </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                        Alte Artikelnummer
-                                      </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">
-                                        Beschreibung
-                                      </th>
-                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Bestand</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {container.units?.map((unit) => (
-                                      <tr key={unit.id} className="border-t border-gray-200">
-                                        <td className="px-3 py-2 text-sm">{unit.unitNumber}</td>
-                                        <td className="px-3 py-2 text-sm">
-                                          {unit.articleNumber || "Nicht zugewiesen"}
-                                        </td>
-                                        <td className="px-3 py-2 text-sm">
-                                          {unit.oldArticleNumber || "Nicht zugewiesen"}
-                                        </td>
-                                        <td className="px-3 py-2 text-sm">
-                                          {unit.description || "Keine Beschreibung"}
-                                        </td>
-                                        <td className="px-3 py-2 text-sm">{unit.stock || 0}</td>
-                                      </tr>
-                                    ))}
-                                    {(!container.units || container.units.length === 0) && (
-                                      <tr>
-                                        <td colSpan={6} className="px-3 py-2 text-center text-sm text-gray-500">
-                                          Keine Einheiten vorhanden
-                                        </td>
-                                      </tr>
-                                    )}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })
+  const columns = [
+    {
+      id: "checkbox",
+      header: () => (
+        <Checkbox
+          checked={selectedContainers.length === filteredContainers.length && filteredContainers.length > 0}
+          onCheckedChange={(checked) => handleSelectAll(!!checked)}
+          aria-label="Alle auswählen"
+        />
+      ),
+      cell: (container: ContainerItem) => (
+        <Checkbox
+          checked={selectedContainers.includes(container.id)}
+          onCheckedChange={(checked) => handleSelectContainer(container.id, !!checked)}
+          aria-label={`Schütte ${container.containerCode} auswählen`}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      className: "w-[40px]"
+    },
+    {
+      id: "container",
+      header: "Schütten",
+      cell: (container: ContainerItem) => (
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mr-2 p-0 h-6 w-6"
+            onClick={(e) => { e.stopPropagation(); handleToggleExpand(container.id); }}
+            aria-label={expandedContainers.includes(container.id) ? "Details ausblenden" : "Details anzeigen"}
+          >
+            {expandedContainers.includes(container.id) ? (
+              <ChevronDown className="h-4 w-4" />
             ) : (
-              <tr>
-                <td colSpan={11} className="px-4 py-6 text-center text-gray-500">
-                  Keine Schütten gefunden
-                </td>
-              </tr>
+              <ChevronRight className="h-4 w-4" />
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+          </Button>
+          <div className="font-medium text-lg text-primary">{container.containerCode || "N/A"}</div>
+        </div>
+      )
+    },
+    {
+      id: "type",
+      header: "Typ",
+      cell: (container: ContainerItem) => (
+        <span className="text-xs font-medium text-muted-foreground">
+          {container.type || 'AR'}
+        </span>
+      )
+    },
+    {
+      id: "purpose",
+      header: "Zweck",
+      cell: (container: ContainerItem) => {
+        let status: 'info' | 'active' | 'pending' | 'inactive' | 'default' = 'default';
+        switch (container.purpose) {
+          case "Lager": status = "info"; break;
+          case "Picken": status = "active"; break;
+          case "Transport": status = "pending"; break;
+          case "Werkstatt": status = "inactive"; break;
+          default: status = "default";
+        }
+        return (
+          <StatusBadge status={status}>
+            {container.purpose || 'Lager'}
+          </StatusBadge>
+        );
+      }
+    },
+    {
+      id: "slots",
+      header: "Slots",
+      cell: (container: ContainerItem) => container.slots?.length || 0
+    },
+    {
+      id: "units",
+      header: "Einh.",
+      cell: (container: ContainerItem) => `${container.units?.length || 0}/${container.slots?.length || 0}`
+    },
+    {
+      id: "createdDate",
+      header: "angelegt",
+      cell: (container: ContainerItem) => {
+        const createdDate = container.createdAt ? new Date(container.createdAt) : new Date();
+        return createdDate.toLocaleDateString("de-DE");
+      }
+    },
+    {
+      id: "createdTime",
+      header: "AZ",
+      cell: (container: ContainerItem) => {
+        const createdDate = container.createdAt ? new Date(container.createdAt) : new Date();
+        return createdDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+      }
+    },
+    {
+      id: "printedDate",
+      header: "gedruckt",
+      cell: (container: ContainerItem) => lastPrintDate && selectedContainers.includes(container.id) ? lastPrintDate.toLocaleDateString("de-DE") : "-"
+    },
+    {
+      id: "printedTime",
+      header: "GZ",
+      cell: (container: ContainerItem) => lastPrintDate && selectedContainers.includes(container.id) ? lastPrintDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "-"
+    },
+    {
+      id: "actions",
+      header: "Aktionen",
+      cell: (container: ContainerItem) => (
+        <div className="flex items-center gap-1 justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => handleEditClick(container, e)}
+            title="Bearbeiten"
+          >
+            <Edit className="h-4 w-4 text-primary" />
+            <span className="sr-only">Bearbeiten</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => handleDeleteClick(container, e)}
+            title="Löschen"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+            <span className="sr-only">Löschen</span>
+          </Button>
+        </div>
+      ),
+      className: "text-right"
+    }
+  ];
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead key={column.id} className={column.className}>
+              {typeof column.header === 'function' ? column.header() : column.header}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredContainers.length > 0 ? (
+          filteredContainers.map((container) => (
+            <React.Fragment key={container.id}>
+              <TableRow
+                data-state={selectedContainers.includes(container.id) ? "selected" : undefined}
+                className="cursor-pointer"
+              >
+                {columns.map((column) => (
+                  <TableCell key={`${container.id}-${column.id}`} className={column.className}>
+                    {column.cell(container)}
+                  </TableCell>
+                ))}
+              </TableRow>
+              {expandedContainers.includes(container.id) && (
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableCell colSpan={columns.length} className="p-0">
+                    <div className="p-4">
+                      <h4 className="font-medium mb-2 text-sm">Details für {container.containerCode}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-xs">
+                        <div>
+                          <p className="font-semibold text-muted-foreground">Lagerdaten</p>
+                          <div className="mt-1 space-y-1">
+                            <p>
+                              <span className="font-medium">Lagerort:</span>{" "}
+                              {container.location ? (
+                                <button
+                                  onClick={(e) => navigateToLocation(container.location!, e)}
+                                  className="text-primary hover:underline"
+                                >
+                                  {container.location}
+                                </button>
+                              ) : (
+                                "Kein Lagerort"
+                              )}
+                            </p>
+                            <p>
+                              <span className="font-medium">Status:</span> {container.status || 'Verfügbar'}
+                            </p>
+                            <p>
+                              <span className="font-medium">Zweck:</span> {container.purpose || 'Lager'}
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-muted-foreground">Beschreibung</p>
+                          <p className="mt-1">
+                            {container.description || "-"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-muted-foreground">Inhalt</p>
+                          <p className="mt-1">
+                            {container.units && container.units.some(
+                              (unit) => unit.articleNumber || unit.description
+                            )
+                              ? `${container.units.filter(
+                                  (unit) => unit.articleNumber || unit.description
+                                ).length} Artikel`
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <h4 className="font-medium mb-2 text-sm">Einheiten</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="h-8 px-3 text-xs">Einheit Nr.</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Artikelnummer</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Alte Artikelnummer</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Beschreibung</TableHead>
+                            <TableHead className="h-8 px-3 text-xs">Bestand</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {container.units?.length > 0 ? container.units.map((unit) => (
+                            <TableRow key={unit.id}>
+                              <TableCell className="px-3 py-1.5 text-xs">{unit.unitNumber}</TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">
+                                {unit.articleNumber || "-"}
+                              </TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">
+                                {unit.oldArticleNumber || "-"}
+                              </TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">
+                                {unit.description || "-"}
+                              </TableCell>
+                              <TableCell className="px-3 py-1.5 text-xs">{unit.stock || 0}</TableCell>
+                            </TableRow>
+                          )) : (
+                            <TableRow>
+                              <TableCell colSpan={5} className="h-16 text-center text-xs text-muted-foreground">
+                                Keine Einheiten vorhanden
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </React.Fragment>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="h-24 text-center">
+              Keine Schütten gefunden.
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 }
 

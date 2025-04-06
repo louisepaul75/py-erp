@@ -213,11 +213,10 @@ class TestBaseTransformer:
         assert "target_name" in result
         assert "target_price" in result
         assert "target_code" in result
-        assert "other_field" in result
+        assert "other_field" not in result
         assert result["target_name"] == "Test Product"
         assert result["target_price"] == 10.99
         assert result["target_code"] == "TP001"
-        assert result["other_field"] == "Other value"
 
 
 

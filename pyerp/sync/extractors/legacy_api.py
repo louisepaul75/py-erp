@@ -3,6 +3,7 @@
 import os
 from datetime import datetime
 from typing import Any, Dict, List
+import json
 
 from pyerp.external_api.legacy_erp import LegacyERPClient
 from pyerp.utils.logging import get_logger, log_data_sync_event
@@ -13,9 +14,27 @@ from .base import BaseExtractor
 
 logger = get_logger(__name__)
 
+# Add a response cache to the LegacyAPIExtractor class
+_response_cache = {}
+
 
 class LegacyAPIExtractor(BaseExtractor):
     """Extractor for legacy API data."""
+
+    # Class level cache to store API responses between instances
+    _response_cache = {}
+
+    # Known date keys to check for in query_params
+    # Extend this list if other date fields need filtering
+    KNOWN_DATE_KEYS = ["Datum", "modified_date"]
+
+    def __init__(self, config):
+        """Initialize with configuration.
+
+        Args:
+            config: Configuration dictionary
+        """
+        super().__init__(config)
 
     def get_required_config_fields(self) -> List[str]:
         """Get required configuration fields.
@@ -26,29 +45,35 @@ class LegacyAPIExtractor(BaseExtractor):
         return ["environment", "table_name"]
 
     def _validate_config(self) -> None:
-        """Validate the extractor configuration, checking environment variables as fallback.
+        """Validate extractor config, checking env vars as fallback.
 
         Overrides the base class method to also check environment variables.
 
         Raises:
             ValueError: If required configuration is missing
         """
-        # First check for environment variables and add them to config if available
+        # Check environment variables and add them to config if available
         if "environment" not in self.config:
             env_value = os.environ.get("LEGACY_ERP_ENVIRONMENT")
             if env_value:
-                logger.info(f"Using environment variable LEGACY_ERP_ENVIRONMENT: {env_value}")
+                logger.info(
+                    f"Using environment variable LEGACY_ERP_ENVIRONMENT: {env_value}"
+                )
                 self.config["environment"] = env_value
 
         if "table_name" not in self.config:
             env_value = os.environ.get("LEGACY_ERP_TABLE_NAME")
             if env_value:
-                logger.info(f"Using environment variable LEGACY_ERP_TABLE_NAME: {env_value}")
+                logger.info(
+                    f"Using environment variable LEGACY_ERP_TABLE_NAME: {env_value}"
+                )
                 self.config["table_name"] = env_value
 
-        # Now proceed with normal validation
+        # Proceed with normal validation
         required_fields = self.get_required_config_fields()
-        missing = [field for field in required_fields if field not in self.config]
+        missing = [
+            field for field in required_fields if field not in self.config
+        ]
         if missing:
             raise ValueError(
                 f"Missing required configuration fields: {', '.join(missing)}"
@@ -61,7 +86,9 @@ class LegacyAPIExtractor(BaseExtractor):
             ConnectionError: If connection cannot be established
         """
         try:
-            self.connection = LegacyERPClient(environment=self.config["environment"])
+            self.connection = LegacyERPClient(
+                environment=self.config["environment"]
+            )
             log_data_sync_event(
                 source=f"legacy_api_{self.config['environment']}",
                 destination="pyerp",
@@ -72,174 +99,205 @@ class LegacyAPIExtractor(BaseExtractor):
         except ConnectionError as e:
             raise ConnectionError(f"Failed to connect to legacy API: {e}")
 
-    def extract(
-        self, query_params: Dict[str, Any] = None, fail_on_filter_error: bool = False
-    ) -> List[Dict[str, Any]]:
-        """Extract data from the legacy API.
+    def extract(self, query_params=None, fail_on_filter_error=False):
+        """Extract data from the API.
 
         Args:
-            query_params: Query parameters for filtering data
-            fail_on_filter_error: Whether to raise an error if filter
-                construction fails
+            query_params: Additional query parameters
+            fail_on_filter_error: Whether to fail if filter doesn't work
 
         Returns:
-            List of dictionaries containing the extracted data
-
-        Raises:
-            ExtractError: If data extraction fails or if filter construction
-                fails and fail_on_filter_error is True
+            List of records from the API
         """
-        try:
-            # Get client from connection manager
-            client = self.connection
+        # Initialize client if needed
+        client = self.connection
 
-            # Get page size from config or use default
-            page_size = self.config.get("page_size", 1000)
+        # Ensure query_params is a dictionary
+        query_params = query_params or {}
 
-            # Override page_size with $top from query_params if present
-            if query_params and "$top" in query_params:
-                page_size = int(query_params["$top"])
-                logger.info(f"Using limit from query_params: {page_size}")
+        # Check if we need to limit results
+        top_limit = None
+        if "$top" in query_params:
+            top_limit = int(query_params["$top"])
+            logger.info(f"Will limit results to top {top_limit} records")
 
-            all_records = self.config.get("all_records", False)
-
-            # Initialize variables for pagination
-            skip = 0
-            all_records_list = []
-
-            # If we have a limit, only do one fetch
-            limit_records = query_params and "$top" in query_params
-
-            # Extract filter_query if present in query_params
-            filter_query = None
-            if query_params and "filter_query" in query_params:
-                filter_query = query_params["filter_query"]
-                logger.info(f"Using filter_query from query_params: {filter_query}")
-
-            while True:
-                # Fetch data using the filter query
-                df = client.fetch_table(
-                    table_name=self.config["table_name"],
-                    filter_query=filter_query,
-                    top=page_size,
-                    skip=skip,
-                    all_records=all_records,
-                )
-
-                if df is None or df.empty:
-                    break
-
-                # Convert DataFrame to list of dictionaries and append
-                # Handle case where DataFrame might have column issues
-                try:
-                    records = df.to_dict(orient="records")
-
-                    # Ensure records are properly formatted as dictionaries
-                    valid_records = []
-                    for record in records:
-                        if isinstance(record, dict):
-                            valid_records.append(record)
-                        else:
-                            logger.warning(
-                                f"Skipping non-dictionary record: {type(record)}"
-                            )
-
-                    all_records_list.extend(valid_records)
-                except Exception as e:
-                    logger.error(f"Error converting DataFrame to records: {e}")
-                    # Try to extract raw data if possible
-                    if hasattr(df, "values") and hasattr(df, "columns"):
-                        try:
-                            columns = df.columns.tolist()
-                            for row in df.values:
-                                record = {
-                                    columns[i]: row[i] for i in range(len(columns))
-                                }
-                                all_records_list.append(record)
-                        except Exception as conversion_error:
-                            logger.error(
-                                f"Failed to manually convert DataFrame: {conversion_error}"
-                            )
-
-                # Log progress
+        # Handle parent record IDs filtering if provided
+        parent_filter = None
+        if "parent_record_ids" in query_params:
+            parent_ids = query_params["parent_record_ids"]
+            logger.info(
+                f"Filtering by parent record IDs: {len(parent_ids)} IDs provided"
+            )
+            parent_field = query_params.get("parent_field", "AbsNr")
+            if len(parent_ids) == 1:
+                parent_filter = [[parent_field, "=", parent_ids[0]]]
+            elif len(parent_ids) > 1:
+                parent_filter = [
+                    [parent_field, "=", pid] for pid in parent_ids
+                ]
+            if parent_filter:
                 logger.info(
-                    f"Fetched {len(records)} records (total: {len(all_records_list)})"
+                    f"Created parent filter with {len(parent_filter)} conditions"
                 )
 
-                # If we're using a limit from query_params, break after first fetch
-                if limit_records:
-                    logger.info(
-                        f"Stopping after first fetch due to $top limit: {page_size}"
+        # Generate a cache key based on table name and query params
+        cache_key = self._generate_cache_key(query_params)
+
+        # Check cache
+        if cache_key in self.__class__._response_cache:
+            cached_data = self.__class__._response_cache[cache_key]
+            logger.info(f"Using cached data for {self.config['table_name']}")
+            # Apply top limit if needed
+            if top_limit and isinstance(cached_data, list):
+                return cached_data[:int(top_limit)]
+            return cached_data
+
+        # Execute query and fetch data
+        try:
+            table_name = self.config["table_name"]
+            logger.info(f"Extracting data from {table_name} (cache miss)")
+
+            # --- Build final filter_query --- 
+            final_filter_query = []
+
+            # 1. Get base filter from query_params["filter_query"]
+            base_filter = query_params.get("filter_query")
+            if base_filter:
+                if isinstance(base_filter, list):
+                    final_filter_query.extend(base_filter)
+                else:
+                    logger.warning(
+                        f"Expected list for filter_query, got "
+                        f"{type(base_filter)}. Ignoring."
                     )
-                    break
 
-                # If we got fewer records than page_size, we've reached the end
-                if len(records) < page_size:
-                    break
+            # 2. Add parent filter
+            if parent_filter:
+                final_filter_query.extend(parent_filter)
 
-                # Increment skip for next page
-                skip += page_size
+            # 3. Add date filters
+            for date_key in self.KNOWN_DATE_KEYS:
+                if date_key in query_params and isinstance(query_params[date_key], dict):
+                    date_filter_dict = query_params[date_key]
+                    date_conditions = self._build_date_filter_query(
+                        date_key, date_filter_dict
+                    )
+                    if date_conditions:
+                        logger.info(
+                            f"Adding date filter for key '{date_key}': "
+                            f"{date_conditions}"
+                        )
+                        final_filter_query.extend(date_conditions)
+                    break  # Assume only one date filter key is used per query
 
-            record_count = len(all_records_list)
-            logger.info(f"Extracted {record_count} total records from legacy API")
+            # Determine pagination settings
+            top = query_params.get("$top")  # Can be None
+            all_records = self.config.get("all_records", True) and not top
+            if top:
+                logger.info(f"Using top limit: {top} - disabling pagination")
 
-            return all_records_list
+            # Execute the fetch with combined filters
+            records = client.fetch_table(
+                table_name=table_name,
+                all_records=all_records,
+                filter_query=final_filter_query if final_filter_query else None,
+                top=top
+            )
 
-        except (ConnectionError, ValueError) as e:
-            error_msg = f"Error extracting data from legacy API: {e}"
-            logger.error(error_msg)
-            raise ExtractError(error_msg)
+            # Ensure we have a list of dictionaries before caching
+            if hasattr(records, 'to_dict') and callable(records.to_dict):
+                try:
+                    result = records.to_dict(orient="records")
+                    logger.info(
+                        f"Converted DataFrame to {len(result)} dictionary records"
+                    )
 
-    def _build_date_filter_query(self, query_params: Dict[str, Any]) -> str:
-        """Build OData filter query for date filtering."""
-        modified_date = query_params.get("modified_date")
-        if not modified_date:
-            return None
+                    # Store in cache for future use
+                    self.__class__._response_cache[cache_key] = result
+                    logger.info(
+                        f"Cached {len(result)} records for {table_name}"
+                    )
+                    return result
+                except Exception as e:
+                    logger.error(f"Error converting DataFrame: {e}")
+                    # Store the original format in the cache
+                    self.__class__._response_cache[cache_key] = records
+                    logger.warning("Stored original DataFrame format in cache")
+                    return records
 
-        # Get the field name from config or use default
-        date_field = self.config.get("modified_date_field", "modified_date")
-        logger.info(f"Date field from config: {date_field}")
+            # Store in cache for future use
+            self.__class__._response_cache[cache_key] = records
+            logger.info(
+                f"Fetched {len(records)} records (total: {len(records)})"
+            )
+            return records
+        except Exception as e:
+            logger.error(
+                f"Error extracting data from {self.config['table_name']}: {e}"
+            )
+            if fail_on_filter_error:
+                raise ExtractError(f"Extraction failed: {e}")
+            return []
 
-        # Convert date values to proper format if needed
-        for filter_op in modified_date.keys():
-            try:
-                if hasattr(modified_date[filter_op], "strftime"):
-                    # It's already a datetime object, no need to convert
-                    pass
-            except (TypeError, ValueError, AttributeError):
-                pass
+    def _build_date_filter_query(
+        self, date_key: str, date_filter_dict: Dict[str, Any]
+    ) -> List[List[Any]]:
+        """Build filter query conditions for a specific date key and filter dictionary.
+        
+        Args:
+            date_key: The field name for the date filter (e.g., "Datum").
+            date_filter_dict: Dictionary with operators and values 
+                              (e.g., {"gt": "2023-01-01"}).
 
-        print(f"Modified date: {modified_date}")
+        Returns:
+            List of filter conditions in the format [[field, operator, value], ...]
+        """
+        if not date_filter_dict or not isinstance(date_filter_dict, dict):
+            return []
 
-        # Create filter conditions in the new format: [[field, operator, value], ...]
+        logger.info(
+            f"Building date filter conditions for key: {date_key} "
+            f"with dict: {date_filter_dict}"
+        )
+
         filter_conditions = []
-
-        # Common operators mapping
         operator_map = {
-            "gt": ">",
-            "lt": "<",
-            "gte": ">=",
-            "lte": "<=",
-            "eq": "=",
-            "ne": "!=",
+            "gt": ">", "lt": "<", "gte": ">=", "lte": "<=", "eq": "=", "ne": "!=",
         }
 
-        # Process each filter operator
-        for filter_op, value in modified_date.items():
-            # Map the operator
+        for filter_op, value in date_filter_dict.items():
             operator = operator_map.get(filter_op)
             if not operator:
-                logger.warning(f"Unknown operator '{filter_op}', skipping")
+                logger.warning(
+                    f"Unknown date filter operator '{filter_op}' for key "
+                    f"'{date_key}', skipping."
+                )
                 continue
 
-            # Format the value if it's a datetime
-            if hasattr(value, "strftime"):
-                value = value.strftime("%Y-%m-%d")
+            # Format the value (basic string check, can be expanded)
+            formatted_value = str(value)  # Ensure string representation
+            try:
+                # Attempt basic date format check/conversion
+                if isinstance(value, datetime):
+                    formatted_value = value.strftime("%Y-%m-%d")
+                elif isinstance(value, str) and len(value) >= 10:
+                    # Assume YYYY-MM-DD format is okay, maybe validate?
+                    formatted_value = value[:10]
+                else:
+                    # Log potential issue if format is unexpected
+                    logger.debug(
+                        f"Using potentially unformatted date value '{value}' "
+                        f"for key '{date_key}'"
+                    )
+            except Exception as fmt_err:
+                logger.warning(
+                    f"Could not format date value '{value}' for key "
+                    f"'{date_key}': {fmt_err}"
+                )
 
-            # Add the condition
-            filter_conditions.append([date_field, operator, value])
+            filter_conditions.append([date_key, operator, formatted_value])
 
-        return filter_conditions or None
+        return filter_conditions
 
     def _format_date_for_api(self, date_str: str) -> str:
         """Format a date string for the legacy API.
@@ -264,3 +322,109 @@ class LegacyAPIExtractor(BaseExtractor):
         except Exception as e:
             logger.warning(f"Error formatting date: {str(e)}")
             return date_str  # Return original if parsing fails
+
+    def _generate_cache_key(self, query_params=None):
+        """Generate a cache key based on table name and query params.
+        
+        Args:
+            query_params: Query parameters for filtering
+            
+        Returns:
+            A string cache key
+        """
+        # Create a sorted, deterministic representation of query_params
+        if query_params:
+            # Convert query_params to a sorted, deterministic string representation
+            try:
+                # Sort the keys to ensure consistent ordering
+                sorted_params = sorted(query_params.items())
+                params_str = json.dumps(sorted_params)
+            except (TypeError, ValueError):
+                # If we can't serialize the params, use their string representation
+                params_str = str(
+                    sorted([(k, str(v)) for k, v in query_params.items()])
+                )
+        else:
+            params_str = "none"
+
+        # Create a unique cache key based on table name and parameters
+        table_name = self.config.get('table_name', '')
+        return f"{table_name}_{params_str}"
+
+    @classmethod
+    def clear_cache(cls):
+        """Clear the response cache."""
+        cls._response_cache.clear()
+        logger.info("Cleared LegacyAPIExtractor response cache")
+
+    @classmethod
+    def get_cached_data(cls, table_name, query_params=None):
+        """Retrieve data from cache if available.
+        
+        Args:
+            table_name: Table name to retrieve data for
+            query_params: Query parameters used for the cache key
+            
+        Returns:
+            Cached data if available, None otherwise
+        """
+        # Extract top limit if present
+        top_limit = None
+        if query_params and "$top" in query_params:
+            top_limit = query_params["$top"]
+            logger.info(
+                f"Will limit cached results to top {top_limit} records"
+            )
+
+        # Create a cache key without needing a full instance
+        if query_params:
+            try:
+                # Sort the keys to ensure consistent ordering
+                sorted_params = sorted(query_params.items())
+                params_str = json.dumps(sorted_params)
+            except (TypeError, ValueError):
+                # If we can't serialize the params, use their string representation
+                params_str = str(
+                    sorted([(k, str(v)) for k, v in query_params.items()])
+                )
+        else:
+            params_str = "none"
+
+        # Create a unique cache key based on table name and parameters
+        cache_key = f"{table_name}_{params_str}"
+
+        # Return cached data if available
+        if cache_key in cls._response_cache:
+            data = cls._response_cache[cache_key]
+            logger.info(
+                f"Using cached data for {table_name} (cache key: "
+                f"{cache_key[:50]}...)"
+            )
+
+            # Convert to list of dictionaries if needed
+            if hasattr(data, 'to_dict') and callable(data.to_dict):
+                try:
+                    result = data.to_dict(orient="records")
+                except Exception as e:
+                    logger.error(f"Error converting DataFrame: {e}")
+                    try:
+                        result = data.to_dict('records')
+                    except Exception:
+                        # Manual conversion
+                        result = []
+                        for i in range(len(data)):
+                            result.append(dict(data.iloc[i]))
+            else:
+                result = data
+
+            # Apply top limit if specified
+            if top_limit and isinstance(result, list):
+                logger.info(
+                    f"Limiting cached results to top {top_limit} records "
+                    f"(from {len(result)} total)"
+                )
+                return result[:int(top_limit)]
+
+            return result
+
+        return None

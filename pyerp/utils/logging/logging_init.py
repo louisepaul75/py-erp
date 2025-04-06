@@ -40,8 +40,17 @@ def initialize_logging():
         root_logger.addHandler(pyerp_logging.create_console_handler())
 
     # Add a file handler for critical errors
-    error_handler = pyerp_logging.create_file_handler("errors.log", logging.ERROR)
+    error_handler = pyerp_logging.create_file_handler(
+        "errors.log", logging.ERROR
+    )
     root_logger.addHandler(error_handler)
+
+    # Add a general file handler for all logs based on LOG_LEVEL
+    log_level = getattr(logging, settings.LOG_LEVEL)
+    general_handler = pyerp_logging.create_file_handler(
+        "application.log", log_level
+    )
+    root_logger.addHandler(general_handler)
 
     # Set up loggers for third-party libraries at appropriate levels
     third_party_loggers = {
@@ -58,7 +67,8 @@ def initialize_logging():
 
     # Log startup message
     startup_logger = pyerp_logging.get_logger("pyerp.startup")
-    startup_logger.info(f"Logging initialized with LOG_LEVEL={settings.LOG_LEVEL}")
+    log_msg = f"Logging initialized with LOG_LEVEL={settings.LOG_LEVEL}"
+    startup_logger.info(log_msg)
 
 
 def register_app_loggers(app_configs):

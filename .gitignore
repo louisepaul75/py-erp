@@ -125,3 +125,8 @@ pyerp/external_api/legacy_erp/.global_session_cookie
 
 # External connections configuration
 pyerp/config/external_connections.json
+
+# Package manager
+package-lock.json
+# Keep yarn.lock for consistent installs
+# yarn.lock

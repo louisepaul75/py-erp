@@ -5,7 +5,7 @@ Admin configuration for core app.
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .models import AuditLog
+from .models import AuditLog, UserPreference, Tag, TaggedItem
 
 
 @admin.register(AuditLog)
@@ -89,4 +89,38 @@ class AuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         """Allow deletion only by superusers."""
-        return request.user.is_superuser
+        return False
+
+
+@admin.register(UserPreference)
+class UserPreferenceAdmin(admin.ModelAdmin):
+    """Admin interface for the UserPreference model."""
+    list_display = ('user', 'created_at', 'updated_at')
+    search_fields = ('user__username',)
+    readonly_fields = ('created_at', 'updated_at')
+
+    fieldsets = (
+        (None, {'fields': ('user',)}),
+        (_('Dashboard Configuration'), {'fields': ('dashboard_config',), 'classes': ('collapse',)}),
+        (_('Timestamps'), {'fields': ('created_at', 'updated_at'), 'classes': ('collapse',)}),
+    )
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    """Admin interface for the Tag model."""
+    list_display = ('name', 'slug', 'description', 'created_at')
+    search_fields = ('name', 'slug', 'description')
+    prepopulated_fields = {'slug': ('name',)}
+    list_filter = ('created_at',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(TaggedItem)
+class TaggedItemAdmin(admin.ModelAdmin):
+    """Admin interface for the TaggedItem model."""
+    list_display = ('tag', 'content_type', 'object_id', 'created_at')
+    list_filter = ('tag', 'content_type')
+    search_fields = ('tag__name', 'content_type__app_label', 'content_type__model', 'object_id')
+    readonly_fields = ('created_at',)
+    autocomplete_fields = ('tag',)

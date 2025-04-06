@@ -2,6 +2,8 @@
 const config = {
   testEnvironment: 'jsdom',
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
+  setupFiles: ['<rootDir>/dotenv.setup.js'],
+  modulePaths: ['<rootDir>/src'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
@@ -16,28 +18,16 @@ const config = {
     '<rootDir>/src/__tests__/utils/fuzz-utils.ts'
   ],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json',
-      useESM: true
-    }],
-    '^.+\\.(js|jsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json',
-      useESM: true
-    }]
+    '^.+\\.[tj]sx?$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!jest-fuzz)',
+    '/node_modules/(?!jest-fuzz|ky/)',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
   ],
-  globals: {
-    'ts-jest': {
-      isolatedModules: true
-    }
-  },
   coverageProvider: 'v8'
 };
 

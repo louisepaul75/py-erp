@@ -2,8 +2,6 @@
 
 from django.db import models
 from django.utils import timezone
-from pyerp.utils.json_utils import json_serialize
-import json
 
 
 class SyncSource(models.Model):
@@ -61,18 +59,20 @@ class SyncState(models.Model):
     def update_sync_started(self):
         """Mark a sync operation as started."""
         self.last_sync_time = timezone.now()
-        self.save()
+        self.save(update_fields=['last_sync_time'])
 
     def update_sync_completed(self, success=True):
         """Mark a sync operation as completed."""
         if success:
             self.last_successful_sync_time = self.last_sync_time
             self.last_successful_id = self.last_sync_id
-        self.save()
+            self.save(update_fields=['last_successful_sync_time', 'last_successful_id'])
 
 
 class SyncLog(models.Model):
     """Logs synchronization operations (using the legacy structure)."""
+
+    id = models.BigAutoField(primary_key=True)  # Explicitly define the PK
 
     # Fields matching legacy_sync_synclog / audit_synclog structure
     entity_type = models.CharField(max_length=100, blank=True)
@@ -82,7 +82,7 @@ class SyncLog(models.Model):
     records_processed = models.BigIntegerField(default=0)
     records_created = models.BigIntegerField(default=0)   # New field
     records_updated = models.BigIntegerField(default=0)   # New field
-    records_failed = models.BigIntegerField(default=0)    # Changed to BigIntegerField
+    records_failed = models.BigIntegerField(default=0)
     error_message = models.TextField(blank=True)
 
     # Removed fields: mapping, is_full_sync, sync_params, trace, records_succeeded

@@ -7,6 +7,7 @@ import GewogenTab from "@/components/gewogen-tab";
 import LagerorteTab from "@/components/lagerorte-tab";
 import UmsatzeTab from "@/components/umsatze-tab";
 import BewegungenTab from "@/components/bewegungen-tab";
+import { Card } from "@/components/ui/card";
 
 interface VariantenTabsProps {
   activeTab: string;
@@ -20,7 +21,7 @@ export default function VariantenTabs({
   detailsTab, // Destructure detailsTab
 }: VariantenTabsProps) {
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-red-200 dark:border-slate-800 overflow-hidden">
+    <Card>
       <Tabs
         defaultValue="details"
         value={activeTab}
@@ -96,6 +97,6 @@ export default function VariantenTabs({
           <BewegungenTab />
         </TabsContent>
       </Tabs>
-    </div>
+    </Card>
   );
 }

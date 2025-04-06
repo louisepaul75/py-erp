@@ -1,4 +1,6 @@
-import { useRouter } from 'next/router';
+'use client';
+
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useIsAuthenticated } from '../../lib/auth/authHooks';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -10,15 +12,14 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading } = useIsAuthenticated();
   const router = useRouter();
+  const pathname = usePathname();
   
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push({
-        pathname: '/login',
-        query: { from: router.asPath },
-      });
+    if (!isLoading && !isAuthenticated && pathname) {
+      const redirectUrl = `/login?from=${encodeURIComponent(pathname)}`;
+      router.push(redirectUrl);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, pathname]);
   
   if (isLoading) {
     return <LoadingSpinner />;

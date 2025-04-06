@@ -4,6 +4,15 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
 import type { WarehouseLocation } from "@/types/warehouse-types"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  StatusBadge,
+} from "@/components/ui/data/Table"
 
 interface WarehouseLocationTableProps {
   filteredLocations: WarehouseLocation[]
@@ -22,11 +31,22 @@ export default function WarehouseLocationTable({
   handleDeleteClick,
   highlightedLocationId,
 }: WarehouseLocationTableProps) {
-  // Definiere die Spalten für die sortierbare Tabelle
   const columns = [
     {
       id: "checkbox",
-      header: "",
+      header: () => (
+        <Checkbox
+          checked={selectedLocations.length === filteredLocations.length && filteredLocations.length > 0}
+          onCheckedChange={(checked) => {
+            if (checked) {
+              handleSelectLocation("all", true)
+            } else {
+              handleSelectLocation("none", false)
+            }
+          }}
+          aria-label="Alle auswählen"
+        />
+      ),
       cell: (row: WarehouseLocation) => (
         <Checkbox
           checked={selectedLocations.includes(row.id)}
@@ -35,6 +55,7 @@ export default function WarehouseLocationTable({
           onClick={(e) => e.stopPropagation()}
         />
       ),
+      className: "w-[40px]",
     },
     {
       id: "laNumber",
@@ -51,15 +72,14 @@ export default function WarehouseLocationTable({
     {
       id: "status",
       header: "Status",
-      cell: (row: WarehouseLocation) => (
-        <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            row.status === "free" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-          }`}
-        >
-          {row.status === "free" ? "Frei" : "Belegt"}
-        </span>
-      ),
+      cell: (row: WarehouseLocation) => {
+        const status = row.status === "free" ? "active" : "pending";
+        return (
+          <StatusBadge status={status}>
+            {row.status === "free" ? "Frei" : "Belegt"}
+          </StatusBadge>
+        );
+      },
       sortable: true,
     },
     {
@@ -102,106 +122,71 @@ export default function WarehouseLocationTable({
       id: "actions",
       header: "Aktionen",
       cell: (row: WarehouseLocation) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleDeleteClick(row)
-          }}
-          disabled={row.containerCount > 0}
-          title={
-            row.containerCount > 0 ? "Lagerort enthält Schütten und kann nicht gelöscht werden" : "Lagerort löschen"
-          }
-        >
-          <Trash2 className="h-4 w-4 text-red-500" />
-        </Button>
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDeleteClick(row)
+            }}
+            disabled={row.containerCount > 0}
+            title={
+              row.containerCount > 0 ? "Lagerort enthält Schütten und kann nicht gelöscht werden" : "Lagerort löschen"
+            }
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+            <span className="sr-only">Löschen</span>
+          </Button>
+        </div>
       ),
+      className: "text-right",
     },
   ]
 
   return (
-    <div className="border rounded-md overflow-hidden" style={{ maxHeight: "600px" }}>
-      <div className="overflow-y-auto" style={{ maxHeight: "600px" }}>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100 sticky top-0 z-10">
-            <tr>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead
+              key={column.id}
+              className={column.className}
+            >
+              {typeof column.header === 'function' ? column.header() : column.header}
+            </TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {filteredLocations.length > 0 ? (
+          filteredLocations.map((location) => (
+            <TableRow
+              key={location.id}
+              data-state={selectedLocations.includes(location.id) ? "selected" : undefined}
+              className={`cursor-pointer ${highlightedLocationId === location.id ? "bg-accent" : ""}`}
+              onClick={() => handleRowClick(location)}
+            >
               {columns.map((column) => (
-                <th
-                  key={column.id}
-                  className="px-4 py-3 text-left text-sm font-medium text-gray-500 sticky top-0 bg-gray-100"
+                <TableCell
+                  key={`${location.id}-${column.id}`}
+                  className={column.className}
                 >
-                  {column.header}
-                </th>
+                  {column.cell(location)}
+                </TableCell>
               ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 ">
-            {filteredLocations.length > 0 ? (
-              filteredLocations.map((location) => (
-                <tr
-                  key={location.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${
-                    highlightedLocationId === location.id ? "bg-blue-100" : ""
-                  }`}
-                  onClick={() => handleRowClick(location)}
-                >
-                  <td className="px-4 py-3">
-                    <Checkbox
-                      checked={selectedLocations.includes(location.id)}
-                      onCheckedChange={(checked) => handleSelectLocation(location.id, !!checked)}
-                      aria-label={`Lagerort ${location.laNumber} auswählen`}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-4 py-3">{location.laNumber}</td>
-                  <td className="px-4 py-3">{location.location}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        location.status === "free" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {location.status === "free" ? "Frei" : "Belegt"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{location.forSale ? "✅" : "❌"}</td>
-                  <td className="px-4 py-3">{location.specialStorage ? "✅" : "❌"}</td>
-                  <td className="px-4 py-3">{location.shelf}</td>
-                  <td className="px-4 py-3">{location.compartment}</td>
-                  <td className="px-4 py-3">{location.floor}</td>
-                  <td className="px-4 py-3">{location.containerCount}</td>
-                  <td className="px-4 py-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteClick(location)
-                      }}
-                      disabled={location.containerCount > 0}
-                      title={
-                        location.containerCount > 0
-                          ? "Lagerort enthält Schütten und kann nicht gelöscht werden"
-                          : "Lagerort löschen"
-                      }
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-6 text-center text-gray-500">
-                  Keine Lagerorte gefunden
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="h-24 text-center">
+              Keine Lagerorte gefunden
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   )
 }
 

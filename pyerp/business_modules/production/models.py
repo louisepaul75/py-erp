@@ -311,6 +311,15 @@ class Mold(models.Model):
         help_text=_("Timestamp (__TIMESTAMP) from the legacy 'Formen' table")
     )
     
+    # Change alloy relationship from ForeignKey to ManyToManyField
+    alloys = models.ManyToManyField(
+        ParentProduct,
+        blank=True,
+        related_name='molds_using_alloy',
+        verbose_name=_("Alloys"),
+        help_text=_("The alloy materials used in this mold")
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

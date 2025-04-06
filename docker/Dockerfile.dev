@@ -48,11 +48,15 @@ RUN pip install --no-cache-dir -r /app/requirements/requirements.dev.txt
 COPY setup.py /app/
 RUN pip install -e /app
 
+# Copy Filebeat config early for later use
+COPY docker/filebeat_config.yml /tmp/filebeat_config.yml
+
 # Create directories for static, media, logs, and data files
 RUN mkdir -p /app/static /app/media /app/logs /app/data \
     && mkdir -p /var/log/supervisor \
     && mkdir -p /var/run \
     && mkdir -p /etc/supervisor/conf.d \
+    && mkdir -p /etc/filebeat \
     && chown -R root:root /var/log/supervisor \
     && chown -R root:root /var/run \
     && chmod -R 755 /app/logs
@@ -69,17 +73,33 @@ RUN npm install --legacy-peer-deps && \
     npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event jest-environment-jsdom @babel/preset-env @babel/preset-react @babel/preset-typescript jest-transform-stub identity-obj-proxy ts-jest jest-junit && \
     npm update
 
+# --- Install and Configure Filebeat --- #
+RUN curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-7.17.0-arm64.deb \
+    && dpkg -i filebeat-7.17.0-arm64.deb \
+    && rm filebeat-7.17.0-arm64.deb \
+    # Copy filebeat config from temporary location
+    && cp /tmp/filebeat_config.yml /etc/filebeat/filebeat.yml \
+    # Set correct permissions
+    && chown root:root /etc/filebeat/filebeat.yml \
+    && chmod go-w /etc/filebeat/filebeat.yml \
+    # Create data directory for filebeat registry
+    && mkdir -p /var/lib/filebeat \
+    && chown root:root /var/lib/filebeat \
+    && chmod go-w /var/lib/filebeat
+# --- End Filebeat --- #
+
 # Copy React frontend source files
 COPY frontend-react/ ./
 
 WORKDIR /app
 
 # Expose ports for Django and React
-EXPOSE 8050 6379 3000 
+EXPOSE 8000 6379 3000 
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    # Ensure this path is correct for settings. Must include 'config' in the path!
     DJANGO_SETTINGS_MODULE=pyerp.config.settings.development \
     PYTHONPATH=/app
 

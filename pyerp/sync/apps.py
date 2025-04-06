@@ -2,6 +2,8 @@
 
 from django.apps import AppConfig
 from pyerp.utils.logging import get_logger
+from django.db.models.signals import post_migrate
+from pyerp.celery import app as celery_app
 
 
 logger = get_logger(__name__)
@@ -18,7 +20,6 @@ class SyncConfig(AppConfig):
         # Import and register signals
         try:
             # Import celery app and tasks
-            from pyerp.celery_app import app as celery_app
             from . import tasks
 
             # Register periodic tasks

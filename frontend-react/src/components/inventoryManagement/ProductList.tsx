@@ -1,5 +1,5 @@
 // components/ProductList.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Product } from "@/components/types/product";
 import { ProductListProps } from "@/components/types/product";
 import { SkinnyTable } from "@/components/ui/skinny-table";
 import { StatusBadge } from "@/components/ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search,
   X,
@@ -17,7 +18,10 @@ import {
   Inbox,
   Tag,
   Bookmark,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // interface Product {
 //   nummer: string;
@@ -30,6 +34,7 @@ export default function ProductList({
   searchTerm,
   setSearchTerm,
   filteredProducts,
+  totalItems,
   selectedItem,
   setSelectedItem,
   pagination,
@@ -40,23 +45,38 @@ export default function ProductList({
   const pathname = usePathname();
   const [sortField, setSortField] = useState<keyof Product>("id");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [tableHeight, setTableHeight] = useState("calc(100vh - 250px)");
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50";
-      case "inactive":
-        return "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-200 dark:border-amber-900/50";
-      case "draft":
-        return "bg-slate-50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-      default:
-        return "bg-slate-50 text-slate-700 dark:bg-slate-800/50 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-    }
-  };
+  useEffect(() => {
+    // Handle responsive table height
+    const updateTableHeight = () => {
+      const windowHeight = window.innerHeight;
+      setTableHeight(`calc(${windowHeight}px - 250px)`);
+    };
+    
+    // Set initial height
+    updateTableHeight();
+    
+    // Add event listener for window resize
+    window.addEventListener("resize", updateTableHeight);
+    
+    // Clean up the event listener on component unmount
+    return () => window.removeEventListener("resize", updateTableHeight);
+  }, []);
 
   console.log("filteredProducts in ProductList", filteredProducts);
+  console.log("totalItems in ProductList", totalItems);
+  // Add debug logging for legacy_base_sku values
+  console.log("Legacy SKU values:", filteredProducts?.map(product => ({
+    id: product.id,
+    sku: product.sku,
+    legacy_base_sku: product.legacy_base_sku
+  })));
+  
   const sortedFilteredProducts = useMemo(() => {
-    return [...filteredProducts].sort((a, b) => {
+    // Ensure filteredProducts is an array before sorting
+    const productsToSort = Array.isArray(filteredProducts) ? filteredProducts : [];
+    return [...productsToSort].sort((a, b) => {
       const aValue = a[sortField] ?? ""; // Fallback to an empty string if null/undefined
       const bValue = b[sortField] ?? ""; // Fallback to an empty string if null/undefined
 
@@ -65,6 +85,9 @@ export default function ProductList({
       return 0;
     });
   }, [filteredProducts, sortField, sortOrder]);
+
+  // Calculate total pages - use the totalItems prop from parent
+  const totalPages = Math.max(1, Math.ceil(totalItems / pagination.pageSize));
 
   const handleSort = (field: keyof Product) => {
     setSortField(field);
@@ -83,7 +106,7 @@ export default function ProductList({
   };
 
   return (
-    <div className="h-full w-full md:w-80 lg:w-96 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+    <div className="h-full w-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
       {/* Search and Filters */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
         {/* <div className="relative md:hidden mb-4">
@@ -140,24 +163,40 @@ export default function ProductList({
       </div>
 
       {/* Product List */}
-      <div className="flex-1 overflow-auto ">
+      <div className="flex-1 overflow-auto" style={{ height: tableHeight }}>
         <SkinnyTable
-          data={filteredProducts}
+          data={sortedFilteredProducts}
           columns={[
             { field: "sku", header: "SKU" },
             { field: "name", header: "Name" },
-            { field: "legacy_base_sku", header: "Legacy SKU" },
+            { 
+              field: "legacy_base_sku", 
+              header: "Legacy SKU",
+              render: (item) => {
+                // Custom renderer for legacy_base_sku field
+                const value = item.legacy_base_sku;
+                return value ? String(value) : "—";
+              }
+            },
             {
               field: "is_active",
               header: "Status",
-              render: (item) => (
-                <StatusBadge
-                  status={item.is_active ? "active" : "inactive"}
-                  className="text-xs"
-                >
-                  {item.is_active ? "Active" : "Inactive"}
-                </StatusBadge>
-              ),
+              render: (item) => {
+                const isActive = item.is_active;
+                const variant = isActive ? "default" : "secondary"; // Map active/inactive to variants
+                const colorClass = isActive 
+                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-900/50" 
+                  : "bg-gray-100 text-gray-800 dark:bg-gray-800/30 dark:text-gray-400 border border-gray-200 dark:border-gray-800/50"; // Keep original colors for now
+                
+                return (
+                  <Badge
+                    variant={variant}
+                    className={cn("text-xs", colorClass)} // Apply original colors via className
+                  >
+                    {isActive ? "Active" : "Inactive"}
+                  </Badge>
+                );
+              }
             },
           ]}
           selectedItem={selectedItem}
@@ -169,26 +208,72 @@ export default function ProductList({
 
       {/* Pagination Controls */}
       <div className="flex flex-col w-full border-t border-slate-200 dark:border-slate-800">
-        <div className="flex justify-center items-center gap-2 my-2">
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            Rows per page:
-          </span>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => {
-              setPagination({
-                pageIndex: 0, // Reset to first page
-                pageSize: Number(e.target.value),
-              });
-            }}
-            className="text-sm rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-          >
-            {[20, 30, 40].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+        <div className="flex justify-between items-center px-4 py-2">
+          {/* Rows per page dropdown */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              Rows per page:
+            </span>
+            <Select
+              value={pagination.pageSize.toString()}
+              onValueChange={(value) => {
+                const newPageSize = parseInt(value, 10);
+                setPagination({
+                  pageIndex: 0, // Reset to first page
+                  pageSize: newPageSize,
+                });
+              }}
+            >
+              <SelectTrigger className="w-[100px] h-8 text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-blue-500">
+                <SelectValue placeholder="Size" />
+              </SelectTrigger>
+              <SelectContent>
+                {[20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Page navigation */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              Page {pagination.pageIndex + 1} of {totalPages}
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => setPagination({
+                  ...pagination,
+                  pageIndex: Math.max(0, pagination.pageIndex - 1)
+                })}
+                disabled={pagination.pageIndex === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => {
+                  console.log('Next page button clicked, current pageIndex:', pagination.pageIndex);
+                  const newPageIndex = Math.min(totalPages - 1, pagination.pageIndex + 1);
+                  console.log('Setting new pageIndex:', newPageIndex);
+                  setPagination({
+                    ...pagination,
+                    pageIndex: newPageIndex
+                  });
+                }}
+                disabled={pagination.pageIndex >= totalPages - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

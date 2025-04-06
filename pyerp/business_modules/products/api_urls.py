@@ -4,18 +4,37 @@ URL patterns for the products API.
 
 from django.urls import path
 
-from pyerp.business_modules.products.views import (
-    CategoryListAPIView,
-    ProductDetailAPIView,
+from pyerp.business_modules.products.api import (
+    ProductCategoryViewSet,
     ProductListAPIView,
+    ProductDetailViewSet,
     VariantDetailAPIView,
 )
 
 app_name = "products_api"
 
 urlpatterns = [
-    path("", ProductListAPIView.as_view(), name="api_product_list"),
-    path("categories/", CategoryListAPIView.as_view(), name="api_category_list"),
-    path("<int:pk>/", ProductDetailAPIView.as_view(), name="api_product_detail"),
-    path("variant/<int:pk>/", VariantDetailAPIView.as_view(), name="api_variant_detail"),
+    # Category endpoints
+    path("categories/", ProductCategoryViewSet.as_view({"get": "list", "post": "create"}), name="categories_list"),
+    path("categories/<int:pk>/", ProductCategoryViewSet.as_view({
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+    }), name="category_detail"),
+    path("categories/<int:pk>/children/", ProductCategoryViewSet.as_view({"get": "children"}), name="category_children"),
+    path("categories/tree/", ProductCategoryViewSet.as_view({"get": "tree"}), name="category_tree"),
+    
+    # Product endpoints
+    path("", ProductListAPIView.as_view(), name="product_list"),
+    path("direct-search/", ProductListAPIView.as_view(direct_search=True), name="product_direct_search"),
+    path("<int:pk>/", ProductDetailViewSet.as_view({
+        "get": "retrieve",
+        "put": "update",
+        "patch": "partial_update",
+        "delete": "destroy"
+    }), name="product_detail"),
+    
+    # Variant endpoints
+    path("variant/<int:pk>/", VariantDetailAPIView.as_view(), name="variant_detail"),
 ]

@@ -288,7 +288,7 @@ healthcheck:
 ### Web (Production)
 ```yaml
 healthcheck:
-  test: curl --fail http://localhost:8050/admin/ || exit 1
+  test: curl --fail http://localhost:8000/admin/ || exit 1
   interval: 30s
   timeout: 10s
   retries: 3

@@ -37,7 +37,7 @@ Erstelle eine Konfigurationsdatei, die API-URLs und andere umgebungsspezifische 
 // src/lib/config.ts
 export const API_URL = process.env.NODE_ENV === 'production' 
   ? '/api' 
-  : 'http://localhost:8050/api';
+  : 'http://localhost:8000/api';
 
 export const AUTH_CONFIG = {
   tokenEndpoint: 'token/',

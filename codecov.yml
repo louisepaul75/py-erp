@@ -1,0 +1,59 @@
+coverage:
+  status:
+    project:
+      default:
+        # Inform Codecov about potential coverage changes
+        target: auto
+        threshold: 1%  # Allow coverage to drop by 1% without failing CI
+    patch:
+      default:
+        # Don't fail CI for patch coverage changes
+        target: off
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false  # if true: only post the comment if coverage changes
+
+ignore:
+  - "**/tests"           # Ignore all test directories
+  - "**/test"            # Ignore all test directories
+  - "**/__pycache__"     # Ignore Python cache files
+  - "**/migrations"      # Ignore Django migrations
+  - "**/settings"        # Ignore Django settings directories
+  - "**/static"          # Ignore static file directories
+  - "**/staticfiles"     # Ignore collected static files
+  - "**/media"           # Ignore media file directories
+  - "**/node_modules"    # Ignore Node.js modules
+  - "**/venv"            # Ignore Python virtual environment
+  - "**/.*"              # Ignore hidden files/directories (.git, .vscode, etc.)
+  - "**/.git"
+  - "**/.vscode"
+  - "**/.idea"
+  - "**/.pytest_cache"
+  - "**/.hypothesis"
+  - "**/*.cfg"
+  - "**/*.ini"
+  - "**/*.toml"         # Exclude pyproject.toml, netlify.toml etc. from coverage
+  - "**/manage.py"       # Django management script
+  - "**/wsgi.py"         # WSGI config
+  - "**/asgi.py"         # ASGI config
+  - "**/celery.py"       # Celery config
+  - "**/conftest.py"     # Pytest config
+  - "**/setup.py"        # Setup script
+  - "**/scripts"         # Ignore utility scripts directory
+  - "**/config"          # Ignore config directories
+  - "**/logs"            # Ignore log directories
+  - "**/docs"            # Ignore documentation
+  - "frontend-react/build" # Ignore frontend build output
+  - "frontend-react/public" # Ignore frontend public assets
+  - "frontend-react/*.config.js" # Ignore frontend config files (jest, babel, etc.)
+  - "frontend-react/jest.setup.ts"
+  - "coverage/"          # Ignore the coverage reports directory itself
+  - "data/"              # Ignore data directories
+  - "tools/"             # Ignore tools directories
+
+# Optionally define specific paths if needed, but ignore usually suffices
+# paths:
+#   - pyerp/
+#   - frontend-react/src/ 

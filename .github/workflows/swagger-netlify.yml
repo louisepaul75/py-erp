@@ -1,0 +1,114 @@
+name: Deploy Swagger to Netlify
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pyerp/config/settings/**'
+      - '.github/workflows/swagger-netlify.yml'
+      - 'pyerp/api/**'
+      - 'requirements/**'
+      - 'netlify.toml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Direkt requirements.prod.txt verwenden
+          pip install -r requirements/requirements.prod.txt
+          # Sicherstellen, dass drf-spectacular installiert ist
+          pip install drf-spectacular
+
+      - name: Generate Swagger docs
+        run: |
+          mkdir -p swagger-docs
+          python manage.py spectacular --file swagger-docs/swagger.json --format openapi-json
+          python manage.py spectacular --file swagger-docs/swagger.yaml --format openapi-yaml
+          
+          # Create index.html with Swagger UI
+          cat > swagger-docs/index.html << 'EOL'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>pyERP API Documentation</title>
+            <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.3.1/swagger-ui.css">
+            <style>
+              html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
+              *, *:before, *:after { box-sizing: inherit; }
+              body { margin: 0; padding: 0; }
+              .swagger-ui .topbar { display: none; }
+              .swagger-ui .information-container {
+                background-color: #f8f9fa;
+                padding: 20px;
+                border-radius: 4px;
+                margin-bottom: 20px;
+              }
+              .swagger-ui .information-container .info .title {
+                color: #2c3e50;
+              }
+              .swagger-ui .opblock .opblock-summary-path {
+                max-width: 650px;
+                word-break: break-all;
+              }
+            </style>
+          </head>
+          <body>
+            <div id="swagger-ui"></div>
+            <script src="https://unpkg.com/swagger-ui-dist@5.3.1/swagger-ui-bundle.js"></script>
+            <script>
+              window.onload = function() {
+                const ui = SwaggerUIBundle({
+                  url: "swagger.json",
+                  dom_id: '#swagger-ui',
+                  deepLinking: true,
+                  presets: [SwaggerUIBundle.presets.apis],
+                  layout: "BaseLayout",
+                  docExpansion: 'list',
+                  filter: true,
+                  tagsSorter: 'alpha',
+                  operationsSorter: 'alpha',
+                  persistAuthorization: true,
+                  defaultModelsExpandDepth: 1,
+                  defaultModelExpandDepth: 1
+                });
+                window.ui = ui;
+              };
+            </script>
+          </body>
+          </html>
+          EOL
+          
+          # Create a _redirects file for Netlify
+          cat > swagger-docs/_redirects << 'EOL'
+          # Redirect all routes to index.html for SPA
+          /*    /index.html   200
+          EOL
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: './swagger-docs'
+          production-deploy: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: 'Deploy Swagger Documentation from GitHub Actions'
+          enable-pull-request-comment: true
+          enable-commit-comment: true
+          overwrites-pull-request-comment: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 10 

@@ -74,18 +74,21 @@ def load_environment_variables(verbose=False):
 
     # Define environment file paths with priority
     env_paths = [
-        project_root / "config" / "env" / f".env.{env_name}",  # First priority
-        project_root / "config" / "env" / ".env",  # Second priority
-        project_root / ".env",  # Third priority
+        project_root / "config" / "env" / ".env.dev",  # First priority for development
+        project_root / "config" / "env" / f".env.{env_name}",  # Second priority
+        project_root / "config" / "env" / ".env",  # Third priority
+        project_root / ".env",  # Fourth priority
     ]
 
     success = False
     # Try to load from each path in order
     for env_path in env_paths:
+        if verbose:
+            print(f"Checking for environment file at: {env_path}")
         if env_path.exists():
             if verbose:
                 print(f"Loading environment from {env_path}")
-            load_dotenv(str(env_path))
+            load_dotenv(str(env_path), override=True)  # Added override=True to ensure variables are set
             success = True
             break
 

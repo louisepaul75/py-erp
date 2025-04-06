@@ -154,10 +154,13 @@ class Command(BaseCommand):
             self.stdout.write(f"Updated sync target: {target}")
 
         # Create or update mapping for addresses
+        addresses_config = config.get("addresses", {})
         mapping_config = {
-            "transformation": config.get("addresses", {}).get("transformation", {}),
-            "scheduling": config.get("addresses", {}).get("scheduling", {}),
-            "incremental": config.get("addresses", {}).get("incremental", {}),
+            "transformer": addresses_config.get("transformer", {}),
+            "loader": addresses_config.get("loader", {}),
+            "schedule": addresses_config.get("schedule", {}),
+            "incremental": addresses_config.get("incremental", {}),
+            "dependencies": addresses_config.get("dependencies", []),
         }
         mapping, created = SyncMapping.objects.update_or_create(
             source=source,

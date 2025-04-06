@@ -24,7 +24,7 @@ MIDDLEWARE = [mw for mw in MIDDLEWARE if "debug_toolbar" not in mw]
 # Configure debug toolbar for tests
 DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TOOLBAR_CALLBACK": lambda request: False,
-    "IS_RUNNING_TESTS": True,
+    "IS_RUNNING_TESTS": False,
 }
 
 # Configure model field types for Django 5.x and Python 3.12
@@ -42,11 +42,12 @@ DATABASES = {
 }
 
 # Configure migrations for tests
-MIGRATION_MODULES = {}  # Empty dictionary for migrations
+# MIGRATION_MODULES = {}  # Empty dictionary for migrations - Commented out to allow normal migrations
 
 # Disable transaction management for tests to avoid SQLite issues
 DATABASE_ROUTERS = []
-TEST_NON_SERIALIZED_APPS = []
+# Add 'pyerp.sync' to prevent serialization issues during test setup
+TEST_NON_SERIALIZED_APPS = ['pyerp.sync']
 
 # Configure URL patterns for tests
 ROOT_URLCONF = 'pyerp.urls'
@@ -134,6 +135,10 @@ STATIC_URL = "/static/test/"
 
 # Disable external API calls
 EXTERNAL_API_MOCK = True
+
+# Dummy locations for S3 storage backends during tests
+STATIC_LOCATION = "static-test"
+MEDIA_LOCATION = "media-test"
 
 # Test-specific settings
 TEST_RUNNER = "django.test.runner.DiscoverRunner"

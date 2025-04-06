@@ -12,18 +12,6 @@ from pyerp.business_modules.products.models import (
     ProductImage,
 )
 from pyerp.business_modules.products.tag_models import FieldOverride, M2MOverride
-from pyerp.core.models import Tag
-
-
-@admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    """
-    Admin interface for Tag model.
-    """
-    list_display = ('name', 'slug', 'created_at')
-    search_fields = ('name', 'slug', 'description')
-    prepopulated_fields = {'slug': ('name',)}
-    readonly_fields = ('created_at', 'updated_at')
 
 
 @admin.register(FieldOverride)

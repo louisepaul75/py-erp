@@ -95,14 +95,14 @@ class MockModel(models.Model):
 
 
 @pytest.mark.unit
+@patch('pyerp.sync.loaders.django_model.apps.get_model')
 class TestDjangoModelLoader:
     """Tests for the DjangoModelLoader."""
 
-
-
-
-    def test_get_required_config_fields(self):
+    def test_get_required_config_fields(self, mock_get_model):
         """Test required config fields method."""
+        mock_get_model.return_value = MockModel
+        
         loader = DjangoModelLoader({
             "app_name": "testapp",
             "model_name": "MockModel",
@@ -114,9 +114,6 @@ class TestDjangoModelLoader:
         assert "app_name" in required_fields
         assert "model_name" in required_fields
         assert "unique_field" in required_fields
-
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
-
 
     def test_get_model_class(self, mock_get_model):
         """Test getting model class from configuration."""
@@ -135,27 +132,19 @@ class TestDjangoModelLoader:
         mock_get_model.assert_called_once_with("testapp", "MockModel")
         assert model_class == MockModel
 
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
-
-
     def test_get_model_class_error(self, mock_get_model):
         """Test error handling when getting model class."""
         # Setup the mock to raise an exception
         mock_get_model.side_effect = LookupError("Model not found")
         
-        loader = DjangoModelLoader({
-            "app_name": "testapp",
-            "model_name": "NonExistentModel",
-            "unique_field": "code"
-        })
-        
         with pytest.raises(ValueError) as exc_info:
-            loader._get_model_class()
+            loader = DjangoModelLoader({
+                "app_name": "testapp",
+                "model_name": "NonExistentModel",
+                "unique_field": "code"
+            })
         
         assert "Failed to get model" in str(exc_info.value)
-
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
-
 
     def test_prepare_record(self, mock_get_model):
         """Test preparing a record for loading."""
@@ -201,9 +190,6 @@ class TestDjangoModelLoader:
         assert "id" not in prepared_record  # Should be removed as it's a PK
         assert "non_existent_field" not in prepared_record  # Should be removed as it doesn't exist
 
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
-
-
     def test_prepare_record_missing_unique_field(self, mock_get_model):
         """Test error when unique field is missing."""
         mock_get_model.return_value = MockModel
@@ -223,10 +209,7 @@ class TestDjangoModelLoader:
         
         assert "Record missing unique field: code" in str(exc_info.value)
 
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
-
-
     def test_load_record_create(self, mock_atomic, mock_get_model):
         """Test creating a new record."""
         # Setup mocks
@@ -264,10 +247,7 @@ class TestDjangoModelLoader:
         mock_model_instance.full_clean.assert_called_once()
         mock_model_instance.save.assert_called_once()
 
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
-
-
     def test_load_record_update(self, mock_atomic, mock_get_model):
         """Test updating an existing record."""
         # Setup mocks
@@ -305,10 +285,7 @@ class TestDjangoModelLoader:
         assert mock_model_instance.code == "TEST001"
         assert mock_model_instance.name == "Updated Product"
 
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
-
-
     def test_load_record_skip_existing(self, mock_atomic, mock_get_model):
         """Test skipping an existing record when update_existing is False."""
         # Setup mocks
@@ -338,10 +315,7 @@ class TestDjangoModelLoader:
         assert result is None
         mock_model_instance.save.assert_not_called()
 
-    @patch('pyerp.sync.loaders.django_model.apps.get_model')
     @patch('django.db.transaction.atomic')
-
-
     def test_load_record_validation_error(self, mock_atomic, mock_get_model):
         """Test handling validation errors."""
         # Setup mocks

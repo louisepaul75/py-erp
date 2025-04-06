@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import { Footer } from '@/components/Footer'
 import { Providers } from './providers'
 import MainLayout from '@/components/layout/MainLayout'
+import { LastVisitedProvider } from '@/context/LastVisitedContext'
+import { ThemeProvider } from 'next-themes'
 // import { Theme } from '@radix-ui/themes';
 
 export const viewport: Viewport = {
@@ -31,40 +33,31 @@ export default function RootLayout({
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
-        {/* Add script to set theme before rendering to prevent flash */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  const savedTheme = localStorage.getItem('theme');
-                  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  const theme = savedTheme || systemTheme;
-                  
-                  if (theme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                  }
-                } catch (e) {
-                  console.error('Error setting initial theme:', e);
-                }
-              })();
-            `,
-          }}
-        />
+        {/* Add Google Font links */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700&family=PT+Serif:wght@700&display=swap" rel="stylesheet" />
         {/* Add empty CSRF token meta tag that can be populated by API responses */}
         <meta name="csrf-token" content="" />
       </head>
-      <body className="min-h-screen bg-gray-50 dark:bg-gray-900 text-amber-950 dark:text-gray-100">
-        <Providers>
-          <MainLayout>
-            {/* <Theme> */}
-            {children}
-            {/* </Theme> */}
-          </MainLayout>
-          <Footer />
-        </Providers>
+      {/* Make body a flex container, column direction */}
+      <body className="min-h-screen bg-gray-50 text-amber-950 flex flex-col">
+        {/* Add texture div (will be visually controlled by CSS) */}
+        <div className="texture" />
+        <ThemeProvider attribute="data-theme" defaultTheme="default-light">
+          <Providers>
+            <LastVisitedProvider>
+              {/* Remove the wrapper div */}
+              <MainLayout>
+                {/* <Theme> */}
+                {children}
+                {/* </Theme> */}
+              </MainLayout>
+            </LastVisitedProvider>
+            {/* Footer rendered outside the growing div */}
+            <Footer />
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   )

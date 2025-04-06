@@ -75,8 +75,10 @@ class TestProductTransformer:
         result = self.transformer.transform(source_data)
         
         # Verify transformation result
-        assert len(result) == 1
-        transformed = result[0]
+        assert result is not None
+        assert isinstance(result, dict)
+        
+        transformed = result
         
         assert transformed["sku"] == "12345"
         assert transformed["name"] == "Test Product"
@@ -132,8 +134,9 @@ class TestProductTransformer:
         result = self.transformer.transform(source_data)
         
         # Verify transformation result
-        assert len(result) == 1
-        transformed = result[0]
+        assert result is not None
+        assert isinstance(result, dict)
+        transformed = result
         
         # Verify core fields that should be present based on the mock
         # Only assert on the fields that are actually in the mock return value
@@ -162,9 +165,9 @@ class TestProductTransformer:
         result_1 = self.transformer.transform(source_data_1)
         result_2 = self.transformer.transform(source_data_2)
         
-        # Both should result in empty lists as records are skipped
-        assert len(result_1) == 0
-        assert len(result_2) == 0
+        # Both should result in None as records are skipped
+        assert result_1 is None
+        assert result_2 is None
 
     def test_parse_sku(self):
         """Test parsing of SKU into base SKU and variant code."""

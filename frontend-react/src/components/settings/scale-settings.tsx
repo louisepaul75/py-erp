@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useScaleStore } from "@/lib/stores/scale-store"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
 interface Scale {
   id: string
@@ -111,40 +119,41 @@ export default function ScaleSettings() {
   return (
     <div className="space-y-4">
       <div className="border rounded-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Waage / Ort</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">IP-Adresse</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Toleranz %</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted">
+              <TableHead className="font-medium text-muted-foreground">Waage / Ort</TableHead>
+              <TableHead className="font-medium text-muted-foreground">IP-Adresse</TableHead>
+              <TableHead className="font-medium text-muted-foreground">Toleranz %</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {scales.length > 0 ? (
-              scales.map((scale) => (
-                <tr
+              scales.map((scale: Scale) => (
+                <TableRow
                   key={scale.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${selectedScaleId === scale.id ? "bg-blue-50" : ""}`}
+                  data-state={selectedScaleId === scale.id ? "selected" : undefined}
+                  className="hover:bg-muted/50 cursor-pointer"
                   onClick={() => handleSelectScale(scale)}
                 >
-                  <td className="px-4 py-3 text-sm text-black">{scale.name}</td>
-                  <td className="px-4 py-3 text-sm text-black">{scale.ipAddress}</td>
-                  <td className="px-4 py-3 text-sm text-black">{scale.tolerance.toFixed(2)}</td>
-                </tr>
+                  <TableCell className="text-sm">{scale.name}</TableCell>
+                  <TableCell className="text-sm">{scale.ipAddress}</TableCell>
+                  <TableCell className="text-sm">{scale.tolerance.toFixed(2)}</TableCell>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                   Keine Waagen konfiguriert
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {(isAddingNew || selectedScaleId) && (
-        <div className="border rounded-md p-4 space-y-4">
+        <div className="border rounded-md p-4 space-y-4 bg-muted/50">
           <h3 className="font-medium">{isAddingNew ? "Neue Waage hinzufügen" : "Waage bearbeiten"}</h3>
 
           <div className="space-y-2">
@@ -154,7 +163,7 @@ export default function ScaleSettings() {
               value={newScaleName}
               onChange={(e) => setNewScaleName(e.target.value)}
               placeholder="z.B. 1.Waage im Lager"
-              className={error && !newScaleName ? "border-red-500" : ""}
+              className={error && !newScaleName ? "border-destructive" : ""}
             />
           </div>
 
@@ -165,7 +174,7 @@ export default function ScaleSettings() {
               value={newScaleIp}
               onChange={(e) => setNewScaleIp(e.target.value)}
               placeholder="z.B. 192.168.1.100"
-              className={error && !newScaleIp ? "border-red-500" : ""}
+              className={error && !newScaleIp ? "border-destructive" : ""}
             />
           </div>
 
@@ -179,11 +188,11 @@ export default function ScaleSettings() {
               step="0.01"
               value={newScaleTolerance}
               onChange={(e) => setNewScaleTolerance(e.target.value)}
-              className={error && !newScaleTolerance ? "border-red-500" : ""}
+              className={error && !newScaleTolerance ? "border-destructive" : ""}
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleCancel}>

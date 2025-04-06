@@ -56,5 +56,28 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Product Images Gallery Section -->
+    {% if variant.images.exists %}
+    <div class="product-images-gallery mt-5">
+        <h3>{% trans "Product Images" %}</h3>
+        <div class="row">
+            {% for image in variant.images.all %}
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card">
+                    <img src="{{ image.image_url }}" class="card-img-top img-fluid" alt="{{ variant.name }}{% if image.alt_text %} - {{ image.alt_text }}{% endif %}">
+                    <div class="card-body">
+                        <p class="card-text">
+                            {% if image.is_primary %}<span class="badge bg-primary">{% trans "Primary" %}</span>{% endif %}
+                            {% if image.is_front %}<span class="badge bg-success">{% trans "Front" %}</span>{% endif %}
+                            <small class="text-muted">{{ image.image_type }}</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %} 

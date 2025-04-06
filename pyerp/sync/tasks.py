@@ -256,21 +256,6 @@ def run_full_sync() -> List[Dict]:
     return run_all_mappings(incremental=False)
 
 
-# Add periodic task registration for Celery Beat
-# This will be picked up by Celery Beat scheduler
-run_incremental_sync.periodic_task = {
-    "name": "sync.scheduled_incremental_sync",
-    "schedule": 300.0,  # Every 5 minutes
-    "options": {"expires": 290.0},  # Expire if not executed within 290 seconds
-}
-
-run_full_sync.periodic_task = {
-    "name": "sync.scheduled_full_sync",
-    "schedule": {"cron": {"hour": 2, "minute": 0}},  # Run at 2:00 AM
-    "options": {"expires": 3600.0},  # Expire if not executed within 1 hour
-}
-
-
 @shared_task(name="sync.run_sales_record_sync")
 def run_sales_record_sync(
     incremental: bool = True, batch_size: int = 100
@@ -380,14 +365,6 @@ def run_incremental_sales_record_sync() -> List[Dict]:
     return run_sales_record_sync(incremental=True, batch_size=100)
 
 
-# Configure as a periodic task
-run_incremental_sales_record_sync.periodic_task = {
-    "name": "sync.incremental_sales_record_sync",
-    "schedule": crontab(minute="*/15"),  # Run every 15 minutes
-    "options": {"expires": 900.0},  # Expire if not executed within 15 minutes
-}
-
-
 @shared_task(name="sync.run_full_sales_record_sync")
 def run_full_sales_record_sync() -> List[Dict]:
     """
@@ -409,14 +386,6 @@ def run_full_sales_record_sync() -> List[Dict]:
         },
     )
     return run_sales_record_sync(incremental=False, batch_size=100)
-
-
-# Configure as a periodic task
-run_full_sales_record_sync.periodic_task = {
-    "name": "sync.full_sales_record_sync",
-    "schedule": crontab(hour=3, minute=0),  # Run at 3:00 AM
-    "options": {"expires": 3600.0},  # Expire if not executed within 1 hour
-}
 
 
 def _load_production_yaml() -> Dict:
@@ -868,27 +837,11 @@ def scheduled_employee_sync():
     return sync_employees(full_sync=False)
 
 
-# Add periodic_task attribute for registration in AppConfig
-scheduled_employee_sync.periodic_task = {
-    "name": "sync-employees-every-5-min",
-    "schedule": crontab(minute="*/5"),
-    "options": {"expires": 60 * 4}  # Expires after 4 minutes
-}
-
-
 @shared_task
 def nightly_full_employee_sync():
     """Nightly task for full employee sync."""
     logger.info("Running nightly full employee sync")
     return sync_employees(full_sync=True)
-
-
-# Add periodic_task attribute for registration in AppConfig
-nightly_full_employee_sync.periodic_task = {
-    "name": "sync-employees-nightly",
-    "schedule": crontab(hour=2, minute=15),  # Run at 2:15 AM
-    "options": {"expires": 60 * 60 * 3}  # Expires after 3 hours
-}
 
 
 @shared_task(name="sync.sync_molds")

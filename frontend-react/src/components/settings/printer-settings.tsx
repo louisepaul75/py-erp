@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { usePrinterStore } from "@/lib/stores/printer-store"
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table"
 
 interface Printer {
   id: string
@@ -95,38 +103,39 @@ export default function PrinterSettings() {
   return (
     <div className="space-y-4">
       <div className="border rounded-md overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Drucker Name / Ort</th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">IP-Adresse</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y  ">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted">
+              <TableHead className="font-medium text-muted-foreground">Drucker Name / Ort</TableHead>
+              <TableHead className="font-medium text-muted-foreground">IP-Adresse</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {printers.length > 0 ? (
-              printers.map((printer) => (
-                <tr
+              printers.map((printer: Printer) => (
+                <TableRow
                   key={printer.id}
-                  className={`hover:bg-gray-50 cursor-pointer ${selectedPrinterId === printer.id ? "bg-blue-50" : ""}`}
+                  data-state={selectedPrinterId === printer.id ? "selected" : undefined}
+                  className="hover:bg-muted/50 cursor-pointer"
                   onClick={() => handleSelectPrinter(printer)}
                 >
-                  <td className="px-4 py-3 text-sm text-black">{printer.name}</td>
-                  <td className="px-4 py-3 text-sm text-black">{printer.ipAddress}</td>
-                </tr>
+                  <TableCell className="text-sm">{printer.name}</TableCell>
+                  <TableCell className="text-sm">{printer.ipAddress}</TableCell>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td colSpan={2} className="px-4 py-6 text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
                   Keine Drucker konfiguriert
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {(isAddingNew || selectedPrinterId) && (
-        <div className="border rounded-md p-4 space-y-4">
+        <div className="border rounded-md p-4 space-y-4 bg-muted/50">
           <h3 className="font-medium">{isAddingNew ? "Neuen Drucker hinzufügen" : "Drucker bearbeiten"}</h3>
 
           <div className="space-y-2">
@@ -136,7 +145,7 @@ export default function PrinterSettings() {
               value={newPrinterName}
               onChange={(e) => setNewPrinterName(e.target.value)}
               placeholder="z.B. Lager01-Diessen"
-              className={error && !newPrinterName ? "border-red-500" : ""}
+              className={error && !newPrinterName ? "border-destructive" : ""}
             />
           </div>
 
@@ -147,11 +156,11 @@ export default function PrinterSettings() {
               value={newPrinterIp}
               onChange={(e) => setNewPrinterIp(e.target.value)}
               placeholder="z.B. 192.168.1.100"
-              className={error && !newPrinterIp ? "border-red-500" : ""}
+              className={error && !newPrinterIp ? "border-destructive" : ""}
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-destructive text-sm">{error}</p>}
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleCancel}>

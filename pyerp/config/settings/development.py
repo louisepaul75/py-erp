@@ -12,7 +12,21 @@ import dj_database_url  # noqa: F401
 import psycopg2
 
 from .base import *  # noqa
-from .base import BASE_DIR, SIMPLE_JWT
+
+# Ensure CorsMiddleware is placed correctly
+# It's often best placed high, before CommonMiddleware
+if 'corsheaders.middleware.CorsMiddleware' not in MIDDLEWARE:
+    try:
+        # Attempt to insert before CommonMiddleware
+        common_middleware_index = MIDDLEWARE.index('django.middleware.common.CommonMiddleware')
+        MIDDLEWARE.insert(common_middleware_index, 'corsheaders.middleware.CorsMiddleware')
+    except ValueError:
+        # If CommonMiddleware isn't found, insert at the beginning
+        MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+
+# Ensure corsheaders app is installed (likely already in base.py, but double-check)
+if 'corsheaders' not in INSTALLED_APPS:
+    INSTALLED_APPS += ['corsheaders']
 
 # Import HTTPS settings
 try:
@@ -21,17 +35,15 @@ except ImportError:
     pass
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
+DEBUG = True
+DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Prevent Django from automatically appending trailing slashes to URLs
 # This fixes issues with PATCH requests where the browser might strip the trailing slash
 APPEND_SLASH = False
 
 # Get ALLOWED_HOSTS from environment variable
-ALLOWED_HOSTS = os.environ.get(
-    "ALLOWED_HOSTS",
-    "localhost,127.0.0.1",
-).split(",")
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal"]
 
 # Database configuration with SQLite fallback
 # Define PostgreSQL connection parameters
@@ -85,14 +97,8 @@ except (OSError, psycopg2.OperationalError) as e:
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://0.0.0.0:5173",
-    "http://localhost:8050",
-    "http://127.0.0.1:8050",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://0.0.0.0:3000"
 ]
 
 CORS_ALLOW_METHODS = [
@@ -173,13 +179,25 @@ SIMPLE_JWT.update(
 INSTALLED_APPS += ["debug_toolbar"]  # noqa
 MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa
 
-INTERNAL_IPS = [
-    "127.0.0.1",
-]
+INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
+# Provide a default value for USE_DOCKER here as well
+if env("USE_DOCKER", default="yes") == "yes":
+    import socket
+
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    # Add Docker gateway
+    try:
+        gateway_ip = socket.gethostbyname("host.docker.internal")
+        INTERNAL_IPS.append(gateway_ip)
+    except socket.gaierror:
+        # Handle case where host.docker.internal is not resolvable
+        pass 
 
 # Django Debug Toolbar
 DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
+    "DISABLE_PANELS": ["debug_toolbar.panels.redirects.RedirectsPanel"],
+    "SHOW_TEMPLATE_CONTEXT": True,
 }
 
 # Email backend for development
@@ -226,3 +244,109 @@ REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [  # noqa
 CELERY_TASK_ALWAYS_EAGER = (
     os.environ.get("CELERY_TASK_ALWAYS_EAGER", "True").lower() == "true"
 )
+
+# Override Spectacular settings to only show v1 endpoints
+SPECTACULAR_SETTINGS = {
+    **SPECTACULAR_SETTINGS,
+    'TITLE': 'pyERP API (v1)',
+    'DESCRIPTION': """
+## API Versioning Notice
+
+**IMPORTANT:** This API supports both versioned (/api/v1/...) and non-versioned (/api/...) endpoints. 
+
+⚠️ **Please use only versioned endpoints (/api/v1/...) for all new integrations.**
+
+Non-versioned endpoints are maintained for backward compatibility but may be removed in future releases. 
+Some endpoints might appear duplicated in this documentation - always prefer the versioned variant.
+    """,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'SCHEMA_PATH_PREFIX_INCLUDE': [r'/api/v1/'],
+    'SCHEMA_PATH_PREFIX_EXCLUDE': [],
+    # Add table of contents and search functionality
+    'SWAGGER_UI_SETTINGS': {
+        'docExpansion': 'list',
+        'filter': True,
+        'deepLinking': True,
+    },
+    # Add tag sorting for better organization
+    'TAGS_SORTER': 'alpha',
+    'OPERATIONS_SORTER': 'alpha',
+}
+
+# GENERAL
+# -----------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
+SECRET_KEY = env(
+    "DJANGO_SECRET_KEY",
+    default="607a3WJ4w7A4v0kXF32R2Q5hR5l1wL9uR4hF4zG7aF6vA5pG1jJ0gW4pW8vQ4gS0",
+)
+
+# CACHES
+# -----------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/dev/ref/settings/#caches
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "",
+    }
+}
+
+# EMAIL
+# -----------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+EMAIL_BACKEND = env(
+    "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+
+# django-debug-toolbar
+# -----------------------------------------------------------------------------
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#prerequisites
+# INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405 # Remove this duplicate entry
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#middleware
+# MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405 # Remove this duplicate entry
+# https://django-debug-toolbar.readthedocs.io/en/latest/configuration.html#debug-toolbar-config
+DEBUG_TOOLBAR_CONFIG = {
+    "DISABLE_PANELS": ["debug_toolbar.panels.redirects.RedirectsPanel"],
+    "SHOW_TEMPLATE_CONTEXT": True,
+}
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
+INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
+if env("USE_DOCKER", default="yes") == "yes":
+    import socket
+
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    # Add Docker gateway
+    try:
+        gateway_ip = socket.gethostbyname("host.docker.internal")
+        INTERNAL_IPS.append(gateway_ip)
+    except socket.gaierror:
+        # Handle case where host.docker.internal is not resolvable
+        pass 
+
+# django-extensions
+# -----------------------------------------------------------------------------
+# https://django-extensions.readthedocs.io/en/latest/installation_instructions.html#configuration
+INSTALLED_APPS += ["django_extensions"]  # noqa: F405
+
+# Celery
+# -----------------------------------------------------------------------------
+# https://docs.celeryq.dev/en/stable/userguide/configuration.html#task-eager-propagates
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# CORS Configuration for Development
+# -----------------------------------------------------------------------------
+# INSTALLED_APPS += ['corsheaders'] # Remove this duplicate entry
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # Add CORS middleware first
+    *MIDDLEWARE # Unpack existing middleware after CORS
+] 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", # React frontend
+    "http://127.0.0.1:3000", # Also allow this variant
+]
+# Or, allow all origins for simplicity in local dev (less secure):
+# CORS_ALLOW_ALL_ORIGINS = True
+
+# Your stuff...
+# -----------------------------------------------------------------------------

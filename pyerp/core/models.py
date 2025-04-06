@@ -11,6 +11,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.utils.text import slugify
+from datetime import datetime
 
 User = get_user_model()
 
@@ -140,6 +141,12 @@ class UserPreference(models.Model):
     dashboard_config = models.JSONField(
         default=dict, help_text="JSON configuration of user's dashboard layout"
     )
+    dashboard_layouts = models.JSONField(
+        default=dict, help_text="JSON configuration of user's saved dashboard layouts"
+    )
+    active_layout_id = models.CharField(
+        max_length=100, null=True, blank=True, help_text="ID of the currently active dashboard layout"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -157,12 +164,22 @@ class UserPreference(models.Model):
 
     def get_dashboard_grid_layout(self):
         """
-        Returns the user's dashboard grid layout configuration.
-        If none exists, returns the default grid layout.
+        Returns the grid layout configuration for the dashboard.
+        If no configuration exists, returns the default grid layout.
         """
-        if not self.dashboard_config or "grid_layout" not in self.dashboard_config:
-            return self.get_default_dashboard_grid_layout()
-        return self.dashboard_config.get("grid_layout", {})
+        # If the user has an active layout, use that one
+        if self.active_layout_id and self.dashboard_layouts:
+            layouts = self.dashboard_layouts.get('layouts', {})
+            active_layout = next((layout for layout in layouts if layout.get('id') == self.active_layout_id), None)
+            if active_layout and 'grid_layout' in active_layout:
+                return active_layout['grid_layout']
+        
+        # Fallback to the main dashboard_config
+        if self.dashboard_config and 'grid_layout' in self.dashboard_config:
+            return self.dashboard_config['grid_layout']
+        
+        # If no layout found, return the default
+        return self.get_default_dashboard_grid_layout()
 
     def get_default_dashboard_modules(self):
         """
@@ -251,6 +268,95 @@ class UserPreference(models.Model):
             
         self.save()
         return self.dashboard_config
+        
+    def get_saved_layouts(self):
+        """
+        Returns all saved dashboard layouts for the user.
+        """
+        if not self.dashboard_layouts or 'layouts' not in self.dashboard_layouts:
+            # Initialize with the default layout
+            default_layout = {
+                'id': 'default',
+                'name': 'Default Layout',
+                'grid_layout': self.get_default_dashboard_grid_layout(),
+                'created_at': datetime.now().isoformat()
+            }
+            self.dashboard_layouts = {'layouts': [default_layout]}
+            self.active_layout_id = 'default'
+            self.save()
+        
+        return self.dashboard_layouts.get('layouts', [])
+    
+    def save_layout(self, layout_id, name, grid_layout):
+        """
+        Save a named dashboard layout.
+        If layout_id exists, updates that layout, otherwise creates a new one.
+        """
+        if not self.dashboard_layouts:
+            self.dashboard_layouts = {'layouts': []}
+        
+        layouts = self.dashboard_layouts.get('layouts', [])
+        
+        # Check if layout already exists
+        layout_index = next((i for i, layout in enumerate(layouts) if layout.get('id') == layout_id), None)
+        
+        if layout_index is not None:
+            # Update existing layout
+            layouts[layout_index].update({
+                'name': name,
+                'grid_layout': grid_layout,
+                'updated_at': datetime.now().isoformat()
+            })
+        else:
+            # Create new layout
+            new_layout = {
+                'id': layout_id,
+                'name': name,
+                'grid_layout': grid_layout,
+                'created_at': datetime.now().isoformat()
+            }
+            layouts.append(new_layout)
+        
+        self.dashboard_layouts['layouts'] = layouts
+        self.save()
+        return self.dashboard_layouts
+    
+    def delete_layout(self, layout_id):
+        """
+        Delete a saved dashboard layout by ID.
+        """
+        if not self.dashboard_layouts or 'layouts' not in self.dashboard_layouts:
+            return
+        
+        layouts = self.dashboard_layouts.get('layouts', [])
+        self.dashboard_layouts['layouts'] = [layout for layout in layouts if layout.get('id') != layout_id]
+        
+        # If we deleted the active layout, set active to None
+        if self.active_layout_id == layout_id:
+            self.active_layout_id = None
+            
+            # If we have other layouts, set the first one as active
+            if self.dashboard_layouts['layouts']:
+                self.active_layout_id = self.dashboard_layouts['layouts'][0]['id']
+        
+        self.save()
+        return self.dashboard_layouts
+    
+    def set_active_layout(self, layout_id):
+        """
+        Set the active dashboard layout.
+        """
+        layouts = self.get_saved_layouts()
+        
+        # Check if layout exists
+        layout_exists = any(layout.get('id') == layout_id for layout in layouts)
+        
+        if layout_exists:
+            self.active_layout_id = layout_id
+            self.save()
+            return True
+        
+        return False
 
 
 # --- Tagging System ---

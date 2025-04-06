@@ -131,7 +131,8 @@ class TestBaseTransformer(TestCase):
         self.assertEqual(result["id"], 123)
         self.assertEqual(result["name"], "Test Product")
         self.assertEqual(result["price"], 99.99)
-        self.assertEqual(result["unmapped_field"], "value")
+        # Unmapped fields are no longer preserved by apply_field_mappings
+        self.assertNotIn("unmapped_field", result)
 
     def test_apply_custom_transformers(self):
         """Test that apply_custom_transformers applies custom transformers."""

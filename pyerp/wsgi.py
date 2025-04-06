@@ -11,10 +11,10 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-# Load environment variables using centralized loader
+# Import and use the centralized environment loader
 from pyerp.utils.env_loader import load_environment_variables
 
-load_environment_variables()
+load_environment_variables(verbose=True)
 
 # Set the default Django settings module if not defined
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")

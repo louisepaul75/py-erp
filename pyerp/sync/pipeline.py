@@ -1,15 +1,12 @@
 """Pipeline orchestration for sync operations."""
 
-import json
-import traceback
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
-import math
-import pandas as pd
 from django.utils import timezone
+from django.db import connection
 from pyerp.utils.json_utils import DateTimeEncoder, json_serialize
 from pyerp.utils.logging import get_logger, log_data_sync_event
+from pyerp.utils.constants import SyncStatus
 
 from .extractors.base import BaseExtractor
 from .transformers.base import BaseTransformer
@@ -26,7 +23,9 @@ logger = get_logger(__name__)
 
 
 class SyncPipeline:
-    """Orchestrates extraction, transformation, and loading for sync operations."""
+    """
+    Orchestrates extraction, transformation, and loading for sync operations.
+    """
 
     def __init__(
         self,
@@ -68,15 +67,23 @@ class SyncPipeline:
         Returns:
             SyncLog: The sync log entry for this run
         """
-        # Create sync log entry
+        # Get the next available ID using MAX(id) + 1
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM audit_synclog")
+            next_id = cursor.fetchone()[0]
+
+        # Create sync log entry with explicit ID
+        start_time = timezone.now()
         self.sync_log = SyncLog.objects.create(
-            mapping=self.mapping,
-            status="started",
-            is_full_sync=not incremental,
-            sync_params={
-                "batch_size": batch_size,
-                "query_params": query_params or {},
-            },
+            id=next_id,
+            entity_type=self.mapping.entity_type,
+            status=SyncStatus.STARTED,
+            started_at=start_time,
+            records_processed=0,
+            records_created=0,
+            records_updated=0,
+            records_failed=0,
+            error_message=""
         )
 
         # Update sync state
@@ -92,7 +99,7 @@ class SyncPipeline:
             source=self.mapping.source.name,
             destination=self.mapping.target.name,
             record_count=0,
-            status="started",
+            status=SyncStatus.STARTED,
             details={
                 "entity_type": self.mapping.entity_type,
                 "incremental": incremental,
@@ -101,17 +108,36 @@ class SyncPipeline:
         )
 
         try:
+            # Build query parameters
+            params = query_params or {}
+            if incremental and self.sync_state.last_sync_time:
+                # Add timestamp filter for incremental sync
+                params["timestamp_filter"] = self.sync_state.last_sync_time
+
+            log_data_sync_event(
+                source=self.mapping.source.name,
+                destination=self.mapping.target.name,
+                record_count=0,
+                status=SyncStatus.STARTED,
+                details={
+                    "entity_type": self.mapping.entity_type,
+                    "incremental": incremental,
+                    "batch_size": batch_size,
+                },
+            )
+
             # Extract data
             with self.extractor:
                 source_data = self.extractor.extract(
-                    query_params=params, fail_on_filter_error=fail_on_filter_error
+                    query_params=params,
+                    fail_on_filter_error=fail_on_filter_error
                 )
 
             log_data_sync_event(
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=len(source_data),
-                status="extracted",
+                status=SyncStatus.EXTRACTED,
                 details={
                     "entity_type": self.mapping.entity_type,
                     "incremental": incremental,
@@ -120,51 +146,70 @@ class SyncPipeline:
 
             # Initialize counts before the loop
             self.sync_log.records_processed = 0
-            self.sync_log.records_succeeded = 0
+            self.sync_log.records_created = 0
+            self.sync_log.records_updated = 0
             self.sync_log.records_failed = 0
-            self.sync_log.save(update_fields=['records_processed', 'records_succeeded', 'records_failed'])
+            self.sync_log.save(
+                update_fields=[
+                    'records_processed',
+                    'records_created',
+                    'records_updated',
+                    'records_failed'
+                ]
+            )
 
             # Process data in batches
             total_processed = 0
-            total_success = 0
+            total_created = 0
+            total_updated = 0
             total_failed = 0
 
             # Process all records in a single batch if batch_size is 0
             if batch_size <= 0:
-                batch_size = len(source_data)
+                batch_size = len(source_data) if source_data else 0
 
             # Process data in batches
             for i in range(0, len(source_data), batch_size):
                 batch = source_data[i:i + batch_size]
-                success_count, failure_count = self._process_batch(batch)
+                created_count, updated_count, failure_count = self._process_batch(batch)
 
                 total_processed += len(batch)
-                total_success += success_count
+                total_created += created_count
+                total_updated += updated_count
                 total_failed += failure_count
 
                 # Update sync log with progress
                 self.sync_log.records_processed = total_processed
-                self.sync_log.records_succeeded = total_success
+                self.sync_log.records_created = total_created
+                self.sync_log.records_updated = total_updated
                 self.sync_log.records_failed = total_failed
-                self.sync_log.save()
+                self.sync_log.save(
+                    update_fields=[
+                        'records_processed',
+                        'records_created',
+                        'records_updated',
+                        'records_failed',
+                    ]
+                )
 
             # Update sync state on successful completion
-            # Determine success based on whether any records failed
             success = total_failed == 0
             self.sync_state.update_sync_completed(success=success)
 
-            # Update final sync log status
-            self.sync_log.status = "completed" if success else "completed_with_errors" # More granular status
-            self.sync_log.save()
+            # Update final sync log status and completion time
+            self.sync_log.status = SyncStatus.COMPLETED if success else SyncStatus.COMPLETED_WITH_ERRORS
+            self.sync_log.completed_at = timezone.now()
+            self.sync_log.save(update_fields=['status', 'completed_at'])
 
             log_data_sync_event(
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=total_processed,
-                status="completed",
+                status=SyncStatus.COMPLETED,
                 details={
                     "entity_type": self.mapping.entity_type,
-                    "success_count": total_success,
+                    "created_count": total_created,
+                    "updated_count": total_updated,
                     "failure_count": total_failed,
                 },
             )
@@ -181,24 +226,17 @@ class SyncPipeline:
             
             # Update error in sync log
             if self.sync_log:
-                self.sync_log.status = "failed"
+                self.sync_log.status = SyncStatus.FAILED
                 self.sync_log.error_message = error_msg
-                
-                # Ensure all fields are JSON serializable
-                if hasattr(self.sync_log, 'sync_params') and self.sync_log.sync_params:
-                    self.sync_log.sync_params = json_serialize(self.sync_log.sync_params)
-                
-                try:
-                    self.sync_log.save()
-                except Exception as save_error:
-                    logger.error(f"Error saving sync log: {save_error}")
+                self.sync_log.completed_at = timezone.now()
+                self.sync_log.save(update_fields=['status', 'error_message', 'completed_at'])
             
             # Log the event
             log_data_sync_event(
                 source=self.mapping.source.name,
                 destination=self.mapping.target.name,
                 record_count=0,
-                status="failed",
+                status=SyncStatus.FAILED,
                 details={
                     "entity_type": self.mapping.entity_type,
                     "error": error_msg,
@@ -215,51 +253,63 @@ class SyncPipeline:
             batch: List of records to process
 
         Returns:
-            tuple: (success_count, failure_count)
+            tuple: (created_count, updated_count, failure_count)
         """
-        success_count = 0
+        created_count = 0
+        updated_count = 0
         failure_count = 0
+        all_transformed_records = [] # Collect successfully transformed records
 
-        try:
-            # Transform batch
-            transformed_records = self.transformer.transform(batch)
+        logger.debug("==> [_process_batch] Starting processing for batch of size %s", len(batch))
 
-            # Load transformed records
-            load_result = self.loader.load(transformed_records)
-            
-            # Process load results - LoadResult is an object, not a dictionary
-            # Count the successes and failures
-            success_count = load_result.created + load_result.updated
-            failure_count = load_result.errors
-            
-            # Create log entries for errors
-            # for error_detail in load_result.error_details:
-            #     SyncLogDetail.objects.create(
-            #         sync_log=self.sync_log,
-            #         record_id=str(error_detail.get("record", {}).get("id", "unknown")),
-            #         status="failed",
-            #         error_message=error_detail.get("error", "Unknown error"),
-            #         record_data={
-            #             "source": self._clean_for_json(error_detail.get("record", {})),
-            #         },
-            #     )
+        for record in batch: # Iterate through each record in the batch
+            # Use a consistent way to get ID for logging
+            record_id_str = str(record.get("__KEY", record.get("Nummer", "unknown_id")))
+            logger.debug("==> [_process_batch] Transforming record ID: %s", record_id_str)
+            try:
+                # Transform single record - correctly calling with dict
+                transformed_record = self.transformer.transform(record)
 
-        except Exception as e:
-            # Log batch transformation failure
-            error_msg = str(e)
-            logger.error("Failed to transform batch: {}".format(error_msg))
-            for record in batch:
+                # Transformer returns a list; expect 0 or 1 item for a single input record
+                if transformed_record: # Check if the list is not empty
+                    logger.debug("<== [_process_batch] Successfully transformed record ID: %s", record_id_str)
+                    all_transformed_records.append(transformed_record)
+                else:
+                    # Log or handle transformation failure for this record
+                    logger.warning("<== [_process_batch] Transformation returned None for record ID: %s", record_id_str)
+                    failure_count += 1
+            except Exception as transform_error:
+                # Log transformation error for this specific record
+                logger.error("<== [_process_batch] Error transforming record ID: %s - Error: %s", record_id_str, transform_error, exc_info=True)
                 failure_count += 1
-                cleaned_record = self._clean_for_json(record)
-                # SyncLogDetail.objects.create(
-                #     sync_log=self.sync_log,
-                #     record_id=record.get("id", str(record)),
-                #     status="failed",
-                #     error_message=f"Batch transformation failed: {error_msg}",
-                #     record_data={"source": cleaned_record},
-                # )
 
-        return success_count, failure_count
+        logger.debug("<== [_process_batch] Finished transforming batch. Transformed %s / Failed %s.", len(all_transformed_records), failure_count)
+
+        # Load all successfully transformed records from the batch at once
+        if all_transformed_records:
+            logger.debug("==> [_process_batch] Loading %s transformed records...", len(all_transformed_records))
+            try:
+                load_result = self.loader.load(all_transformed_records) # Load collected records
+                logger.debug("<== [_process_batch] Completed loading. Created: %s, Updated: %s, Errors: %s", load_result.created, load_result.updated, load_result.errors)
+                created_count = load_result.created
+                updated_count = load_result.updated
+                # Add any load errors to the failure count
+                failure_count += load_result.errors
+                # Log details if available and needed (optional)
+                # if load_result.errors > 0 and hasattr(load_result, 'error_details'):
+                #     logger.warning(f"Loading errors encountered: {load_result.error_details}")
+            except Exception as load_error:
+                # Log batch loading failure
+                logger.error("<== [_process_batch] Error loading batch: %s", load_error, exc_info=True)
+                # If loading fails for the whole batch, mark all transformed records as failed
+                failure_count += len(all_transformed_records)
+                created_count = 0 # Reset counts as load failed
+                updated_count = 0
+        else:
+             logger.debug("[_process_batch] No records transformed successfully, skipping load step.")
+
+        logger.debug("<== [_process_batch] Finished processing batch. Result: (Created: %s, Updated: %s, Failed: %s)", created_count, updated_count, failure_count)
+        return created_count, updated_count, failure_count
 
     def _clean_for_json(self, data):
         """Clean data recursively to ensure it can be JSON serialized.
@@ -272,6 +322,156 @@ class SyncPipeline:
         """
         # Use the utility function which handles recursion and types
         return json_serialize(data)
+
+    def fetch_data(self, query_params=None, fail_on_filter_error=False):
+        """Fetch data from source without processing it.
+        
+        This method allows for data to be fetched once and reused across multiple pipelines.
+        
+        Args:
+            query_params: Query parameters for filtering data
+            fail_on_filter_error: Whether to fail if filter doesn't work
+            
+        Returns:
+            List of records fetched from the source
+        """
+        logger.info("Fetching data in extract-only mode...")
+        
+        # Initialize the extractor
+        try:
+            # Make sure the extractor is properly initialized
+            if hasattr(self.extractor, 'initialize') and callable(self.extractor.initialize):
+                self.extractor.initialize()
+            
+            # Use a context manager to ensure proper connection handling
+            with self.extractor:
+                # Extract data from source without transforming or loading
+                logger.debug("==> [fetch_data] Calling self.extractor.extract() with params: %s", query_params)
+                records = self.extractor.extract(
+                    query_params=query_params,
+                    fail_on_filter_error=fail_on_filter_error
+                )
+                logger.debug("<== [fetch_data] Returned from self.extractor.extract(). Found %s records.", len(records))
+                logger.info(f"Fetched {len(records)} records")
+                return records
+        except Exception as e:
+            logger.error(f"Error fetching data: {e}")
+            raise
+        
+    def run_with_data(self, data=None, incremental=True, batch_size=100, query_params=None):
+        """Run the pipeline with pre-fetched data.
+        
+        This method uses provided data instead of extracting it from source.
+        
+        Args:
+            data: Pre-fetched data to use
+            incremental: Whether to run in incremental mode
+            batch_size: Size of batches to process
+            query_params: Original query parameters used for extraction
+            
+        Returns:
+            SyncLog: The sync log for this run
+        """
+        if not data:
+            raise ValueError("No data provided for run_with_data method")
+        
+        # Apply top limit if specified in query_params
+        if query_params and "$top" in query_params and isinstance(data, list):
+            top_limit = int(query_params["$top"])
+            if len(data) > top_limit:
+                logger.info(f"Limiting pre-fetched data to top {top_limit} records (from {len(data)} total)")
+                data = data[:top_limit]
+        
+        logger.info(f"Running pipeline with {len(data)} pre-fetched records")
+        
+        # Create sync log
+        sync_log = self.create_sync_log(incremental=incremental)
+        
+        # Process in batches
+        total_count = len(data)
+        processed_count = 0
+        created_count = 0
+        updated_count = 0
+        failed_count = 0
+        
+        # Process records in batches
+        for start_idx in range(0, total_count, batch_size):
+            end_idx = min(start_idx + batch_size, total_count)
+            batch = data[start_idx:end_idx]
+            batch_size_actual = len(batch)
+            
+            logger.info(f"Processing batch {start_idx//batch_size + 1}: {start_idx} to {end_idx-1}")
+            
+            try:
+                # Process this batch
+                created, updated, failed = self._process_batch(batch)
+                
+                # Update counters
+                processed_count += batch_size_actual
+                created_count += created
+                updated_count += updated
+                failed_count += failed
+                
+            except Exception as e:
+                logger.error(f"Error processing batch: {e}")
+                failed_count += batch_size_actual
+                processed_count += batch_size_actual
+        
+        # Update sync log
+        sync_log.records_processed = processed_count
+        sync_log.records_created = created_count
+        sync_log.records_updated = updated_count
+        sync_log.records_failed = failed_count
+        sync_log.status = SyncStatus.COMPLETED
+        sync_log.completed_at = timezone.now()
+        sync_log.save()
+        
+        return sync_log
+
+    def create_sync_log(self, incremental=True):
+        """Create a new sync log entry.
+        
+        Args:
+            incremental: Whether this is an incremental sync
+            
+        Returns:
+            SyncLog: The newly created sync log entry
+        """
+        # Get the next available ID using MAX(id) + 1
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM audit_synclog")
+            next_id = cursor.fetchone()[0]
+
+        # Create sync log entry with explicit ID
+        start_time = timezone.now()
+        sync_log = SyncLog.objects.create(
+            id=next_id,
+            entity_type=self.mapping.entity_type,
+            status=SyncStatus.STARTED,
+            started_at=start_time,
+            records_processed=0,
+            records_created=0,
+            records_updated=0,
+            records_failed=0,
+            error_message=""
+        )
+        
+        # Update the sync state
+        self.sync_state.update_sync_started()
+        
+        # Log the event
+        log_data_sync_event(
+            source=self.mapping.source.name,
+            destination=self.mapping.target.name,
+            record_count=0,
+            status=SyncStatus.STARTED,
+            details={
+                "entity_type": self.mapping.entity_type,
+                "incremental": incremental,
+            },
+        )
+        
+        return sync_log
 
 
 class PipelineFactory:
@@ -316,17 +516,33 @@ class PipelineFactory:
                     extractor_class or source_config.get("extractor_class")
                 )
 
-            # Merge source_config with mapping's extractor_config
-            merged_extractor_config = source_config.copy()  # Start with base source config
+            # Extract the inner config values from source_config
+            base_extractor_config = source_config.copy() if source_config else {}
+            
+            # Check if config field exists and extract it
+            if "config" in base_extractor_config:
+                inner_config = base_extractor_config.pop("config", {})
+                merged_extractor_config = inner_config.copy()  # Start with inner config values
+                # Add the rest of the source_config fields
+                merged_extractor_config.update(base_extractor_config)
+            else:
+                merged_extractor_config = base_extractor_config.copy()
+
+            # Merge with mapping's extractor_config if present
             if mapping_config and "extractor_config" in mapping_config:
-                merged_extractor_config.update(mapping_config["extractor_config"]) # Override with specific config
+                merged_extractor_config.update(mapping_config["extractor_config"])
+
+            logger.info(f"Extractor config after merging: {merged_extractor_config}")
 
             # Create the extractor using the merged config
             extractor = cls._create_component(
                 extractor_class_instance,
-                merged_extractor_config, # Pass the merged configuration
+                merged_extractor_config,
             )
-            logger.info(f"Created extractor: {extractor.__class__.__name__} with config: {merged_extractor_config}")
+            logger.info(
+                f"Created extractor: {extractor.__class__.__name__} "
+                f"with config: {merged_extractor_config}"
+            )
 
             # Get transformer class
             transformer_instance = None
@@ -335,27 +551,39 @@ class PipelineFactory:
             else:
                 # Determine path from argument or config
                 transformer_class_path = (
-                    transformer_class # String path from arg
+                    transformer_class  # String path from arg
                     or mapping_config.get("transformer_class")
-                    or mapping_config.get("transformation", {}).get("transformer_class")
+                    or mapping_config.get("transformation", {}).get(
+                        "transformer_class"
+                    )
                     or mapping_config.get("transformation", {}).get("class")
+                    or mapping_config.get("transformer", {}).get("class")
                 )
                 if transformer_class_path:
-                    transformer_instance = cls._import_class(transformer_class_path)
+                    transformer_instance = cls._import_class(
+                        transformer_class_path
+                    )
                 else:
                     # Handle case where no transformer class is defined
                     # You might want a default or raise an error
-                    logger.warning("No transformer class defined for mapping.")
-                    # Assign a default pass-through transformer or handle as needed
-                    # from .transformers.base import BaseTransformer # Example default
-                    # transformer_instance = BaseTransformer 
-                    raise ValueError("Transformer class must be provided or defined in mapping config.")
+                    logger.warning(
+                        "No transformer class defined for mapping."
+                    )
+                    # Assign a default pass-through transformer?
+                    # from .transformers.base import BaseTransformer
+                    # transformer_instance = BaseTransformer
+                    raise ValueError(
+                        "Transformer class must be provided or "
+                        "defined in mapping config."
+                    )
 
             transformer = cls._create_component(
                 transformer_instance,
-                mapping_config.get("transformation", {}),
+                mapping_config.get("transformer", {}),
             )
-            logger.info(f"Created transformer: {transformer.__class__.__name__}")
+            logger.info(
+                f"Created transformer: {transformer.__class__.__name__}"
+            )
 
             # Get loader class
             loader_instance = None
@@ -364,29 +592,39 @@ class PipelineFactory:
             else:
                 # Determine path from argument or config
                 loader_class_path = (
-                    loader_class # String path from arg
+                    loader_class  # String path from arg
                     or target_config.get("loader_class")
                     or mapping_config.get("loader", {}).get("class")
-                    # Consider removing default fallback if loader must always be specified
-                    or "pyerp.sync.loaders.django_model.DjangoModelLoader" 
+                    # Consider removing default fallback
+                    or "pyerp.sync.loaders.django_model.DjangoModelLoader"
                 )
                 if loader_class_path:
-                     loader_instance = cls._import_class(loader_class_path)
+                    loader_instance = cls._import_class(loader_class_path)
                 else:
-                     raise ValueError("Loader class must be provided or defined in target/mapping config.")
-            
-            logger.info(f"Using loader class: {loader_instance.__name__ if loader_instance else 'None'}")
-            
-            # Merge target_config with mapping's loader_config
-            merged_loader_config = target_config.copy() # Start with base target config
-            if mapping_config and "loader_config" in mapping_config:
-                merged_loader_config.update(mapping_config["loader_config"]) # Override with specific config
-            
+                    raise ValueError(
+                        "Loader class must be provided or "
+                        "defined in target/mapping config."
+                    )
+
+            logger.info(
+                f"Using loader class: "
+                f"{loader_instance.__name__ if loader_instance else 'None'}"
+            )
+
+            # Merge target_config with mapping's loader config
+            merged_loader_config = target_config.copy()
+            if mapping_config and "loader" in mapping_config:
+                loader_config_from_mapping = mapping_config.get("loader", {}).get("config", {})
+                merged_loader_config.update(loader_config_from_mapping)
+
             loader = cls._create_component(
                 loader_instance,
-                merged_loader_config, # Pass the merged configuration
+                merged_loader_config,
             )
-            logger.info(f"Created loader: {loader.__class__.__name__} with config: {merged_loader_config}")
+            logger.info(
+                f"Created loader: {loader.__class__.__name__} "
+                f"with config: {merged_loader_config}"
+            )
 
             return SyncPipeline(mapping, extractor, transformer, loader)
 
@@ -409,7 +647,10 @@ class PipelineFactory:
         return getattr(module, class_name)
 
     @staticmethod
-    def _create_component(component_class: Type, config: Dict[str, Any]) -> Any:
+    def _create_component(
+        component_class: Type,
+        config: Dict[str, Any]
+    ) -> Any:
         """Create a component instance from its class and config.
 
         Args:

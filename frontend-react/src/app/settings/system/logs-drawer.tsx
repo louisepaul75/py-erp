@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -10,201 +10,261 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchEndpointLogs } from "@/lib/settings/system/api";
-import type { ApiEndpoint, LogEntry, Automation } from "@/types/settings/api";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
 import {
-  X,
-  RefreshCw,
-  Download,
-  AlertCircle,
-  Info,
-  CheckCircle,
-} from "lucide-react";
-import type { JSX } from "react";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
+
+import type { SyncWorkflow, WorkflowLogRow } from "@/types/settings/api";
+import { fetchWorkflowLogs } from "@/lib/settings/system/api";
 import useAppTranslation from "@/hooks/useTranslationWrapper";
 
 interface LogsDrawerProps {
-  endpoint: ApiEndpoint | Automation;
-  open: boolean;
+  workflow: SyncWorkflow | null;
+  isOpen: boolean;
   onClose: () => void;
 }
 
-export function LogsDrawer({ endpoint, open, onClose }: LogsDrawerProps) {
-  const {
-    data: logs = [],
-    isLoading,
-    refetch,
-  } = useQuery({
-    queryKey: ["endpointLogs", endpoint.id],
-    queryFn: () => fetchEndpointLogs(endpoint.id),
-    enabled: open,
-  });
+interface LogMetrics {
+  processed: number | string;
+  created: number | string;
+  updated: number | string;
+  failed: number | string;
+  startTime: string | null;
+  duration: string | null;
+}
 
-  const { t } = useAppTranslation("settings_system");
+// Helper to parse metrics from plain text log details
+function parseLogMetrics(details?: string): LogMetrics | null {
+  if (!details) return null;
 
-  const getLogIcon = (level: string) => {
-    switch (level) {
-      case "error":
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case "warning":
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case "info":
-        return <Info className="h-4 w-4 text-blue-500" />;
-      case "success":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      default:
-        return <Info className="h-4 w-4" />;
-    }
+  const metrics: LogMetrics = {
+    processed: 'N/A',
+    created: 'N/A',
+    updated: 'N/A',
+    failed: 'N/A',
+    startTime: null,
+    duration: null,
   };
+  let foundAny = false;
 
-  const getLogClass = (level: string) => {
+  // Regex for start time
+  const startTimeMatch = details.match(/Starting sync at (.*?)\.\.\./);
+  if (startTimeMatch && startTimeMatch[1]) {
+    metrics.startTime = startTimeMatch[1].trim();
+    foundAny = true;
+  }
+
+  // Regex for duration
+  const durationMatch = details.match(/Sync completed successfully in ([\d.]+) seconds/);
+  if (durationMatch && durationMatch[1]) {
+    metrics.duration = `${durationMatch[1]} seconds`;
+    foundAny = true;
+  }
+
+  // Regex for statistics (check line by line after "Statistics:")
+  const statsHeaderIndex = details.indexOf('Statistics:');
+  if (statsHeaderIndex !== -1) {
+      const statsBlock = details.substring(statsHeaderIndex);
+      // Example: Processed: 113
+      const processedMatch = statsBlock.match(/Processed:\s*(\d+)/);
+      if (processedMatch && processedMatch[1]) {
+          metrics.processed = parseInt(processedMatch[1], 10);
+          foundAny = true;
+      }
+      // Example: Created: 0
+      const createdMatch = statsBlock.match(/Created:\s*(\d+)/);
+      if (createdMatch && createdMatch[1]) {
+          metrics.created = parseInt(createdMatch[1], 10);
+          foundAny = true;
+      }
+      // Example: Updated: 101
+      const updatedMatch = statsBlock.match(/Updated:\s*(\d+)/);
+      if (updatedMatch && updatedMatch[1]) {
+          metrics.updated = parseInt(updatedMatch[1], 10);
+          foundAny = true;
+      }
+      // Example: Failed: 12
+      const failedMatch = statsBlock.match(/Failed:\s*(\d+)/);
+      if (failedMatch && failedMatch[1]) {
+          metrics.failed = parseInt(failedMatch[1], 10);
+          foundAny = true;
+      }
+  }
+
+  // Return metrics only if something was found
+  return foundAny ? metrics : null;
+}
+
+// Helper to format ISO-like date string from logs
+function formatLogDateTime(dateString: string | null): string {
+  if (!dateString) return 'N/A';
+  try {
+    // Attempt to parse potentially non-standard format
+    // Replace space before timezone offset if present
+    const parsableDateString = dateString.replace(/ (\+\d{2}:\d{2})$/, '$1');
+    return new Date(parsableDateString).toLocaleString();
+  } catch {
+    return dateString; // Fallback to original string if parsing fails
+  }
+}
+
+export const LogsDrawer: React.FC<LogsDrawerProps> = ({
+  workflow,
+  isOpen,
+  onClose,
+}) => {
+  const [logs, setLogs] = useState<WorkflowLogRow[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const { t } = useAppTranslation("settings_system_logs");
+
+  useEffect(() => {
+    if (isOpen && workflow) {
+      const loadLogs = async (slug: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+          const fetchedLogs = await fetchWorkflowLogs(slug);
+          setLogs(fetchedLogs);
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load workflow logs.",
+          );
+          setLogs([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadLogs(workflow.slug);
+    } else {
+      setLogs([]);
+      setLoading(false);
+      setError(null);
+    }
+  }, [isOpen, workflow]);
+
+  const getBadgeVariant = (
+    level: WorkflowLogRow["level"],
+  ): "default" | "destructive" | "secondary" | "outline" => {
     switch (level) {
-      case "error":
-        return "bg-red-50 border-red-200";
-      case "warning":
-        return "bg-yellow-50 border-yellow-200";
-      case "info":
-        return "bg-blue-50 border-blue-200";
       case "success":
-        return "bg-green-50 border-green-200";
+        return "default";
+      case "error":
+        return "destructive";
+      case "warning":
+        return "secondary";
+      case "info":
       default:
-        return "bg-gray-50 border-gray-200";
+        return "outline";
     }
   };
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl">
-        <SheetHeader className="flex flex-row items-center justify-between">
-          <div>
-            <SheetTitle>Logs: {endpoint.name}</SheetTitle>
-            <SheetDescription>
-              View all logs for this{" "}
-              {"url" in endpoint ? "API endpoint" : "automation"}
-            </SheetDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              title="Refresh logs"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" title="Download logs">
-              <Download className="h-4 w-4" />
-            </Button>
-            <SheetClose asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <X className="h-4 w-4" />
-              </Button>
-            </SheetClose>
-          </div>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-[500px] sm:w-[640px] flex flex-col">
+        <SheetHeader>
+          <SheetTitle>
+            {t("logs_for", { workflowName: workflow?.name || "..." } as any)}
+          </SheetTitle>
+          <SheetDescription>
+            {t("recent_activity_for", {
+              workflowName: workflow?.name || t("selected_workflow"),
+            } as any)}
+          </SheetDescription>
         </SheetHeader>
-
-        <div className="mt-6">
-          <Tabs defaultValue="all">
-            <TabsList className="grid grid-cols-4 mb-4">
-              <TabsTrigger value="all">{t("all")}</TabsTrigger>
-              <TabsTrigger value="error">{t("errors")}</TabsTrigger>
-              <TabsTrigger value="warning">{t("warnings")}</TabsTrigger>
-              <TabsTrigger value="info">{t("info")}</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all">
-              <LogsList
-                logs={logs}
-                isLoading={isLoading}
-                getLogIcon={getLogIcon}
-                getLogClass={getLogClass}
-              />
-            </TabsContent>
-
-            <TabsContent value="error">
-              <LogsList
-                logs={logs.filter((log) => log.level === "error")}
-                isLoading={isLoading}
-                getLogIcon={getLogIcon}
-                getLogClass={getLogClass}
-              />
-            </TabsContent>
-
-            <TabsContent value="warning">
-              <LogsList
-                logs={logs.filter((log) => log.level === "warning")}
-                isLoading={isLoading}
-                getLogIcon={getLogIcon}
-                getLogClass={getLogClass}
-              />
-            </TabsContent>
-
-            <TabsContent value="info">
-              <LogsList
-                logs={logs.filter(
-                  (log) => log.level === "info" || log.level === "success"
-                )}
-                isLoading={isLoading}
-                getLogIcon={getLogIcon}
-                getLogClass={getLogClass}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
+        <ScrollArea className="flex-grow pr-4 -mr-4">
+          <div className="space-y-4 py-4">
+            {loading && (
+              <>
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </>
+            )}
+            {error && (
+              <Alert variant="destructive">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {!loading && !error && logs.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t("no_logs_found")}</p>
+            )}
+            {!loading && !error && logs.map((log) => {
+              const metrics = parseLogMetrics(log.details);
+              return (
+                <div key={log.id} className="p-3 border rounded-md text-sm">
+                   <div className="flex justify-between items-start mb-1">
+                     <span className="font-mono text-xs text-muted-foreground">
+                       {log.timestamp}
+                     </span>
+                     <Badge 
+                       variant={getBadgeVariant(log.level)}
+                       className={cn(
+                         "capitalize",
+                         {
+                           "bg-[var(--status-success)] text-white border-transparent": log.level === 'success',
+                           "bg-[var(--status-error)] text-white border-transparent": log.level === 'error',
+                         }
+                       )}
+                     >
+                       {log.level}
+                     </Badge>
+                   </div>
+                   <p className="mb-2">{log.message}</p>
+                   {metrics && (
+                     <div className="text-xs text-muted-foreground space-y-1 mb-2">
+                       <div>
+                         <strong>Statistics:</strong>
+                         <span className="ml-2">Processed: <strong>{metrics.processed}</strong></span>
+                         <span className="ml-2">Created: <strong>{metrics.created}</strong></span>
+                         <span className="ml-2">Updated: <strong>{metrics.updated}</strong></span>
+                         <span className="ml-2">Failed: <strong>{metrics.failed}</strong></span>
+                       </div>
+                       {(metrics.startTime || metrics.duration) && (
+                         <div>
+                           <strong>Time:</strong>
+                           {metrics.startTime && <span className="ml-2">Start: <strong>{formatLogDateTime(metrics.startTime)}</strong></span>}
+                           {metrics.duration && <span className="ml-2">Duration: <strong>{metrics.duration}</strong></span>}
+                         </div>
+                       )}
+                     </div>
+                   )}
+                   {log.details && (
+                     <Accordion type="single" collapsible className="w-full">
+                       <AccordionItem value={`item-${log.id}`} className="border-none">
+                         <AccordionTrigger className="text-xs py-1 hover:no-underline justify-start [&[data-state=open]>svg]:rotate-90">
+                           Show Raw Log
+                         </AccordionTrigger>
+                         <AccordionContent className="mt-2 p-2 bg-muted rounded text-xs">
+                           <pre className="whitespace-pre-wrap break-words">
+                             {log.details}
+                           </pre>
+                         </AccordionContent>
+                       </AccordionItem>
+                     </Accordion>
+                   )}
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+        <SheetClose asChild>
+          <Button variant="outline" className="mt-4">
+            {t("close")}
+          </Button>
+        </SheetClose>
       </SheetContent>
     </Sheet>
   );
-}
-
-interface LogsListProps {
-  logs: LogEntry[];
-  isLoading: boolean;
-  getLogIcon: (level: string) => JSX.Element;
-  getLogClass: (level: string) => string;
-}
-
-function LogsList({ logs, isLoading, getLogIcon, getLogClass }: LogsListProps) {
-  if (isLoading) {
-    return <div className="text-center py-8">Loading logs...</div>;
-  }
-
-  if (logs.length === 0) {
-    return <div className="text-center py-8">No logs found</div>;
-  }
-
-  return (
-    <ScrollArea className="h-[calc(100vh-220px)]">
-      <div className="space-y-3">
-        {logs.map((log) => (
-          <div
-            key={log.id}
-            className={`p-3 rounded-md border ${getLogClass(log.level)}`}
-          >
-            <div className="flex items-start gap-2">
-              <div className="mt-0.5">{getLogIcon(log.level)}</div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline">{log.level}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(log.timestamp).toLocaleString()}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm">{log.message}</p>
-                {log.details && (
-                  <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-x-auto">
-                    {typeof log.details === "string"
-                      ? log.details
-                      : JSON.stringify(log.details, null, 2)}
-                  </pre>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
-  );
-}
+};

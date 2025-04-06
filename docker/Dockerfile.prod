@@ -82,6 +82,7 @@ RUN mkdir -p /app/staticfiles/react/app/_next && \
 COPY pyerp/ /app/pyerp/
 COPY users/ /app/users/
 COPY admin_tools/ /app/admin_tools/
+COPY sync_manager/ /app/sync_manager/
 COPY manage.py /app/
 COPY docker/ /app/docker/
 
@@ -92,6 +93,7 @@ RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
     && chown -R root:root /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data
 
 # Set Django settings module for collectstatic
+# IMPORTANT: Must include 'config' in the path - pyerp.config.settings.production
 ARG DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
 ENV DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}
 
@@ -111,7 +113,7 @@ RUN ln -sf /dev/stdout /var/log/nginx/access.log \
 COPY docker/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Expose ports for web services
-EXPOSE 80 443 8050
+EXPOSE 80 443 8000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

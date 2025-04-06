@@ -4,6 +4,9 @@ import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import re
+import math
+import decimal
+from decimal import Decimal, ROUND_DOWN
 
 from .base import BaseTransformer, ValidationError
 
@@ -184,12 +187,26 @@ class EmployeeTransformer(BaseTransformer):
                 try:
                     transformed["annual_salary"] = float(annual_salary)
                 except (ValueError, TypeError):
-                    transformed["annual_salary"] = None
+                    transformed["annual_salary"] = 0.0
         
         # Calculate monthly salary if annual is present but monthly is not
         if "annual_salary" in transformed and transformed["annual_salary"]:
-            if not transformed.get("monthly_salary"):
-                transformed["monthly_salary"] = transformed["annual_salary"] / 12
+            if "Brutto_lohn" in record and record["Brutto_lohn"]:
+                # Use direct value from record
+                try:
+                    monthly_value = float(record["Brutto_lohn"])
+                    # Use Decimal for exact 2 decimal places
+                    transformed["monthly_salary"] = float(Decimal(str(monthly_value)).quantize(Decimal('0.01'), rounding=ROUND_DOWN))
+                except (ValueError, TypeError):
+                    # Fallback to calculation
+                    annual_value = transformed["annual_salary"]
+                    monthly_calc = annual_value / 12
+                    transformed["monthly_salary"] = float(Decimal(str(monthly_calc)).quantize(Decimal('0.01'), rounding=ROUND_DOWN))
+            elif not transformed.get("monthly_salary"):
+                # Calculate from annual and ensure EXACTLY 2 decimal places
+                annual_value = transformed["annual_salary"]
+                monthly_calc = annual_value / 12
+                transformed["monthly_salary"] = float(Decimal(str(monthly_calc)).quantize(Decimal('0.01'), rounding=ROUND_DOWN))
         
         # Ensure all numeric values are properly rounded to avoid validation errors
         # Decimal fields in Django model have specific precision requirements
@@ -203,10 +220,28 @@ class EmployeeTransformer(BaseTransformer):
         for field, decimal_places in numeric_fields.items():
             if field in transformed and transformed[field] is not None:
                 try:
-                    transformed[field] = round(float(transformed[field]), decimal_places)
-                except (ValueError, TypeError) as e:
+                    # First, verify that the value can be converted to a string and then to Decimal
+                    if transformed[field] == "" or transformed[field] is None:
+                        transformed[field] = 0.0
+                        continue
+                        
+                    # Try to convert the value to a Decimal
+                    try:
+                        decimal_value = Decimal(str(transformed[field]))
+                    except (ValueError, TypeError, decimal.InvalidOperation):
+                        logger.warning("Could not convert %s (value: %s) to Decimal, defaulting to 0.0", 
+                                      field, transformed[field])
+                        transformed[field] = 0.0
+                        continue
+                        
+                    # Now quantize to the correct number of decimal places
+                    if field == "monthly_salary":
+                        transformed[field] = float(decimal_value.quantize(Decimal('0.01'), rounding=ROUND_DOWN))
+                    else:
+                        transformed[field] = float(decimal_value.quantize(Decimal('0.' + '0' * (decimal_places - 1) + '1')))
+                except Exception as e:
                     logger.warning("Error processing numeric field %s: %s", field, e)
-                    transformed[field] = None
+                    transformed[field] = 0.0
         
         return transformed
 
@@ -285,6 +320,27 @@ class EmployeeTransformer(BaseTransformer):
         Returns:
             The fully transformed record with special transformations applied
         """
+        # Ensure employee_number is mapped from Pers_Nr if not already done by field mappings
+        if "employee_number" not in transformed and "Pers_Nr" in source_record:
+            transformed["employee_number"] = source_record["Pers_Nr"]
+            logger.debug("Manually mapped Pers_Nr to employee_number: %s", transformed["employee_number"])
+        
+        # Map first_name and last_name fields if they're missing
+        if "first_name" not in transformed and "Vorname" in source_record:
+            transformed["first_name"] = source_record["Vorname"].strip() if source_record["Vorname"] else "Unknown"
+            logger.debug("Manually mapped Vorname to first_name: %s", transformed["first_name"])
+        
+        if "last_name" not in transformed and "Name" in source_record:
+            transformed["last_name"] = source_record["Name"].strip() if source_record["Name"] else "Unknown"
+            logger.debug("Manually mapped Name to last_name: %s", transformed["last_name"])
+        
+        # Ensure first_name and last_name have default values if they're empty after mapping
+        if "first_name" not in transformed or not transformed["first_name"] or transformed["first_name"].strip() == "":
+            transformed["first_name"] = "Unknown"
+        
+        if "last_name" not in transformed or not transformed["last_name"] or transformed["last_name"].strip() == "":
+            transformed["last_name"] = "Unknown"
+        
         # Process date fields
         transformed = self._process_date_fields(transformed, source_record)
         
@@ -309,11 +365,11 @@ class EmployeeTransformer(BaseTransformer):
             Validated record
         """
         # Ensure required fields are not blank
-        if "last_name" in transformed and not transformed["last_name"]:
+        if "last_name" in transformed and (not transformed["last_name"] or transformed["last_name"].strip() == ""):
             # Set a default value for blank last names
             transformed["last_name"] = "Unknown"
             
-        if "first_name" in transformed and not transformed["first_name"].strip():
+        if "first_name" in transformed and (not transformed["first_name"] or transformed["first_name"].strip() == ""):
             # Set a default value for blank first names
             transformed["first_name"] = "Unknown"
             
@@ -335,11 +391,22 @@ class EmployeeTransformer(BaseTransformer):
         # --- END COMMENTING OUT ---
         
         # Ensure fields with decimal values have the correct precision
-        decimal_fields = ["daily_hours", "weekly_hours"]
-        for field in decimal_fields:
+        decimal_fields = {
+            "annual_salary": 2,
+            "monthly_salary": 2,
+            "weekly_hours": 2,
+            "daily_hours": 2
+        }
+        
+        for field, decimal_places in decimal_fields.items():
             if field in transformed and transformed[field] is not None:
                 try:
-                    transformed[field] = round(float(transformed[field]), 2)
+                    if field == "monthly_salary":
+                        # Use Decimal for exact control over decimal places with ROUND_DOWN to ensure truncation
+                        transformed[field] = float(Decimal(str(transformed[field])).quantize(Decimal('0.01'), rounding=ROUND_DOWN))
+                    else:
+                        # For other fields, use Decimal too for consistency
+                        transformed[field] = float(Decimal(str(transformed[field])).quantize(Decimal('0.' + '0' * (decimal_places - 1) + '1')))
                 except (ValueError, TypeError) as e:
                     logger.warning("Error processing decimal field %s: %s", field, e)
                     transformed[field] = 0.0

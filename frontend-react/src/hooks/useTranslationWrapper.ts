@@ -31,29 +31,22 @@ export function useAppTranslation(ns: string | readonly string[] = 'common') {
 
   // Server-side translation function that uses our fallbacks
   const serverSideFallback = (key: string) => {
-    // For keys like 'navigation.home' in the 'common' namespace
-    const mainNs = Array.isArray(ns) ? ns[0] : ns;
-    const lang = 'en' as LanguageKeys; // Default to English for SSR and tests
-    
-    if (
-      resources[lang] &&
-      resources[lang][mainNs as NamespaceKeys<typeof lang>] &&
-      resources[lang][mainNs as NamespaceKeys<typeof lang>][key as TranslationKeys<typeof lang, NamespaceKeys<typeof lang>>]
-    ) {
-      return resources[lang][mainNs as NamespaceKeys<typeof lang>][key as TranslationKeys<typeof lang, NamespaceKeys<typeof lang>>];
-    }
-    
-    // Fallback to the key itself if no translation is found
     return key;
   };
 
   // If we're in a test environment, always use the translation function
   const isTest = process.env.NODE_ENV === 'test';
 
+  // Use translation.ready which indicates if requested namespaces are loaded.
+  // Also ensure we are on the client and the initial mount effect has run (loaded).
+  const shouldUseRealT = isTest || (isClient && loaded && translation.ready);
+
   return {
     ...translation,
-    t: (isTest || (isClient && loaded && translation.i18n?.isInitialized)) ? translation.t : serverSideFallback,
-    ready: isClient ? translation.ready : true,
+    // Use the real 't' function if ready, otherwise the fallback
+    t: shouldUseRealT ? translation.t : serverSideFallback,
+    // Expose the underlying ready state
+    ready: translation.ready,
   };
 }
 

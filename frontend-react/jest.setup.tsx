@@ -1,5 +1,20 @@
+import 'whatwg-fetch';
 import '@testing-library/jest-dom';
 import * as React from 'react';
+import fetchMock from 'jest-fetch-mock';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+// Load environment variables from .env file at the project root
+// <rootDir> in Jest config points to frontend-react, so ../ points to the workspace root
+// dotenv.config({ path: path.resolve(__dirname, '../.env') }); 
+// ^^^ Moved to dotenv.setup.js and executed via setupFiles in jest.config.js
+
+// Explicitly set API_URL for tests if it's defined after dotenv load
+process.env.API_URL = process.env.API_URL || 'http://localhost:8000'; // Provide a default if not set
+
+// Enable fetch mocks globally
+fetchMock.enableMocks();
 
 // Add polyfills for TextEncoder and TextDecoder
 // This is needed for JSDOM in some tests
@@ -54,58 +69,44 @@ jest.mock('next/navigation', () => ({
 jest.mock('next/image', () => ({
   __esModule: true,
   default: function MockImage(props) {
+    // Require React inside the factory function
+    const React = require('react'); 
     return React.createElement('img', { ...props });
   },
 }));
 
-// Mock ky
-jest.mock('ky', () => {
-  interface MockKy {
-    extend: jest.Mock;
-    post: jest.Mock;
-    get: jest.Mock;
-    put: jest.Mock;
-    delete: jest.Mock;
-    create: jest.Mock;
-  }
-
-  const mockKy: MockKy = {
-    extend: jest.fn(),
-    post: jest.fn(),
-    get: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-    create: jest.fn(() => mockKy),
-  };
-  return {
-    __esModule: true,
-    default: mockKy,
-  };
-});
-
-// Mock fetch API
-global.fetch = jest.fn(() =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve({ status: 'ok', branch: 'main' }),
-  })
-) as jest.Mock;
-
 // Mock i18next
-const mockI18n = {
-  use: function() { return this; },
-  init: () => Promise.resolve(),
+// Configure i18n instance before mocking it
+i18n
+  .use(initReactI18next)
+  .init({
+    fallbackLng: 'en',
+    debug: false,
+    interpolation: {
+      escapeValue: false,
+    },
+    resources: {
+      en: { translation: {} },
+      de: { translation: {} },
+    },
+  });
+
+// Use jest.doMock which is not hoisted
+jest.doMock('i18next', () => ({
+  // Define only the necessary mock functions inline
+  changeLanguage: jest.fn((lng: string) => Promise.resolve()),
   t: (key: string) => key,
-  language: 'en',
-  changeLanguage: jest.fn(),
-};
+}));
 
-jest.mock('i18next', () => mockI18n);
-
-jest.mock('react-i18next', () => ({
+// Use jest.doMock which is not hoisted
+jest.doMock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
-    i18n: mockI18n,
+    // Define the nested i18n mock object inline without spreading
+    i18n: {
+      changeLanguage: jest.fn((lng: string) => Promise.resolve()),
+      t: (key: string) => key,
+    },
   }),
   initReactI18next: {
     type: '3rdParty',

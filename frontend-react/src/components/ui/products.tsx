@@ -1,13 +1,21 @@
-// app/inventory-management/page.tsx (or wherever your component lives)
 "use client";
-import React from "react";
-import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+
+// Add this at the top of the file after imports
+declare global {
+  interface Window {
+    debouncedSelectionTimeout?: ReturnType<typeof setTimeout>;
+  }
+}
+
+// app/inventory-management/page.tsx (or wherever your component lives)
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Search, PlusCircle } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import ProductList from "../inventoryManagement/ProductList";
 import ProductDetail from "../inventoryManagement/ProductDetail/ProductDetail";
 import { productApi } from "@/lib/products/api";
 import { Product, ApiResponse } from "../types/product";
+import { useLastVisited } from "@/context/LastVisitedContext";
 
 // Import from centralized component library
 import {
@@ -20,176 +28,382 @@ import {
   Input,
 } from "@/components/ui";
 
-interface InventoryManagementProps {
+// Add proper interface for the ProductList component
+interface ProductListProps {
+  showSidebar: boolean;
+  searchTerm: string;
+  setSearchTerm: (value: string) => void;
+  filteredProducts: Product[];
+  totalItems: number;
+  selectedItem: number | string | null;
+  setSelectedItem: (item: number | string | null) => void;
+  pagination: { pageIndex: number; pageSize: number };
+  setPagination: (pagination: { pageIndex: number; pageSize: number }) => void;
+  isLoading: boolean;
+}
+
+// Add proper interface for the ProductDetail component
+interface ProductDetailProps {
+  selectedItem: number | string | null;
+  selectedProduct: Product | null;
+  isCreatingParent?: boolean;
+  onProductCreated?: (product: Product) => void;
+  onCancel?: () => void;
+}
+
+interface ProductsPageProps {
   initialVariantId?: string;
   initialParentId?: string;
 }
 
-export function InventoryManagement({ initialVariantId, initialParentId }: InventoryManagementProps) {
+export function ProductsPage({ initialVariantId, initialParentId }: ProductsPageProps) {
   const [selectedItem, setSelectedItem] = useState<number | string | null>(
     initialVariantId ? parseInt(initialVariantId) : 
-    initialParentId ? parseInt(initialParentId) : ""
+    initialParentId ? parseInt(initialParentId) : null
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product>({
-    id: 0,
-    name: "",
-    sku: "",
-    description: "",
-    is_active: false,
-    is_discontinued: false,
-    is_new: false,
-    release_date: null,
-    created_at: "",
-    updated_at: "",
-    weight: null,
-    length_mm: null,
-    width_mm: null,
-    height_mm: null,
-    name_en: "",
-    short_description: "",
-    short_description_en: "",
-    description_en: "",
-    keywords: "",
-    legacy_id: "",
-    legacy_base_sku: "",
-    is_hanging: false,
-    is_one_sided: false,
-    images: [],
-    primary_image: null,
-    category: null,
-    tags: [],
-    variants_count: 0,
-  });
+  const [totalCount, setTotalCount] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isCreatingParent, setIsCreatingParent] = useState(false);
   
-  const [pagination, setPagination] = React.useState<{
+  // Separate loading states for list and detail
+  const [isListLoading, setIsListLoading] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  
+  const [pagination, setPagination] = useState<{
     pageIndex: number;
     pageSize: number;
   }>({
     pageIndex: 0,
     pageSize: 20,
   });
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [contentHeight, setContentHeight] = useState("calc(100vh - 15rem)");
   const router = useRouter();
   const pathname = usePathname();
-
-  // Update fetchProducts useEffect to handle both IDs
+  const { addVisitedItem } = useLastVisited();
+  
+  // Debounce search term to prevent too many API requests
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        console.log("Fetching products...");
-        setIsLoading(true);
-        const response = (await productApi.getProducts({
-          page: pagination.pageIndex + 1,
-          page_size: pagination.pageSize,
-        })) as ApiResponse;
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms delay
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
+  // Reset to first page when search term changes
+  useEffect(() => {
+    // Only reset pagination if we're not on the first page already
+    if (pagination.pageIndex !== 0) {
+      setPagination(prev => ({
+        ...prev,
+        pageIndex: 0
+      }));
+    }
+  }, [debouncedSearchTerm]);
 
-        setProducts(response.results);
-        setFilteredProducts(response.results);
+  // Initial fetch and refetch when dependencies change
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    
+    const fetchProducts = async () => {
+      if (signal.aborted) return;
+      
+      try {
+        setIsListLoading(true);
         
-        // Handle initial product selection
-        if (initialVariantId || initialParentId) {
-          const id = initialVariantId || initialParentId;
-          const initialProduct = response.results.find(
-            (product) => product.id === parseInt(id!)
-          );
-          if (initialProduct) {
-            setSelectedItem(initialProduct.id);
-            setSelectedProduct(initialProduct);
-          }
+        // Use direct search endpoint when a search term is provided
+        let response;
+        if (debouncedSearchTerm) {
+          response = await productApi.getProductsDirectSearch({
+            page: pagination.pageIndex + 1,
+            page_size: pagination.pageSize,
+            q: debouncedSearchTerm,
+          }, signal) as ApiResponse;
         } else {
-          // Default behavior
-          setSelectedItem(response.results[0]?.id || null);
-          if (response.results.length > 0 && !selectedProduct.id) {
-            setSelectedProduct(response.results[0]);
-          }
+          // Use regular endpoint when no search term is provided
+          response = await productApi.getProducts({
+            page: pagination.pageIndex + 1,
+            page_size: pagination.pageSize,
+          }, signal) as ApiResponse;
         }
-        
-        console.log("Fetched products:", response);
+
+        if (signal.aborted) return;
+
+        if (response?.results) {
+          setFilteredProducts(response.results);
+          setTotalCount(response.count || 0);
+
+          // Simplified initial load/selection logic without shouldKeepSelection
+          const isFirstPageLoad = pagination.pageIndex === 0 && !debouncedSearchTerm;
+          const initialId = initialVariantId ? parseInt(initialVariantId) : initialParentId ? parseInt(initialParentId) : null;
+
+          if (isFirstPageLoad) { // Only apply special selection logic on the very first load
+            if (initialId) {
+              const initialProduct = response.results.find(
+                (product) => product.id === initialId,
+              );
+              if (initialProduct) {
+                setSelectedItem(initialProduct.id);
+                setSelectedProduct(initialProduct);
+              } else if (response.results.length > 0) { // Fallback if initial ID not found
+                setSelectedItem(response.results[0].id);
+                setSelectedProduct(response.results[0]);
+              }
+            } else if (response.results.length > 0) { // No initial ID, select first item
+              setSelectedItem(response.results[0].id);
+              setSelectedProduct(response.results[0]);
+            }
+            // No need for else block to clear selection here, handled below
+          }
+          
+          // Clear selection if the current response has no results (after initial load logic)
+          if (response.results.length === 0) {
+            setSelectedItem(null);
+            setSelectedProduct(null);
+          }
+        } else { // Handle case where response has no results array
+          setFilteredProducts([]);
+          setTotalCount(0);
+          setSelectedItem(null);
+          setSelectedProduct(null);
+        }
       } catch (error) {
-        console.error("Error fetching products:", error);
+        // Explicitly check for AbortError name
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error("Error fetching products:", error);
+          setFilteredProducts([]);
+          setTotalCount(0);
+        }
       } finally {
-        setIsLoading(false);
+        if (!signal.aborted) {
+          setIsListLoading(false);
+        }
       }
     };
+
     fetchProducts();
-  }, [pagination.pageIndex, pagination.pageSize, initialVariantId, initialParentId]);
 
-  useEffect(() => {
-    console.log("Filtering products by search term");
-    setFilteredProducts(
-      products.filter(
-        (product) =>
-          product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [searchTerm, products]);
+    return () => {
+      controller.abort();
+    };
+  }, [pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, initialVariantId, initialParentId]);
 
-  // Update product selection handling
+  // Handle search input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+  };
+
+  // Effect for updating content height based on window size
   useEffect(() => {
-    if (selectedItem) {
-      const selected = filteredProducts.find(
-        (product) => product.id === selectedItem
-      );
+    const updateContentHeight = () => {
+      const windowHeight = window.innerHeight;
+      setContentHeight(`calc(${windowHeight}px - 15rem)`);
+    };
     
-      if (selected) {
-        setSelectedProduct(selected);
-        const newPath = selected.variants_count > 0
-          ? `/products/parent/${selected.id}`
-          : `/products/variant/${selected.id}`;
+    // Set initial height
+    updateContentHeight();
+    
+    // Add event listener for window resize
+    window.addEventListener("resize", updateContentHeight);
+    
+    // Clean up the event listener on component unmount
+    return () => window.removeEventListener("resize", updateContentHeight);
+  }, []);
+
+  // Update product selection handling AND URL push
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    let isActive = true;
+    
+    const loadProduct = async () => {
+      // **Guard**: Don't load details if the list is loading or no item is selected
+      if (isListLoading || !selectedItem || isCreatingParent || signal.aborted) {
+        console.log("Skipping detail load:", { isListLoading, selectedItem, isCreatingParent, aborted: signal.aborted });
+        // If list is loading, keep the detail loader spinning until list is done
+        if (isListLoading) {
+          setIsDetailLoading(true); 
+        } else {
+          // Only set loading false if not loading list AND conditions met to skip
+          setIsDetailLoading(false);
+        }
+        return;
+      }
+
+      const selectedItemId = typeof selectedItem === 'string' ? parseInt(selectedItem) : selectedItem;
+      console.log("Proceeding to load detail for:", selectedItemId);
+      
+      try {
+        setIsDetailLoading(true); // Ensure loading is true when we start fetching
+        const product = await productApi.getProduct(selectedItemId, signal);
         
+        if (!isActive || signal.aborted) return;
+        
+        console.log("Successfully loaded product detail:", product.id);
+        setSelectedProduct(product);
+        
+        const newPath = product.variants_count > 0
+          ? `/products/parent/${product.id}`
+          : `/products/variant/${product.id}`;
+
         if (pathname !== newPath) {
+          console.log("Pushing new path:", newPath);
           router.push(newPath);
         }
+      } catch (error) {
+        // Explicitly check for AbortError name in detail fetch as well
+        if (!signal.aborted && isActive && !(error instanceof DOMException && error.name === 'AbortError')) {
+          console.error(`Error fetching product ${selectedItemId}:`, error);
+          setSelectedItem(null);
+          setSelectedProduct(null);
+        }
+      } finally {
+        if (!signal.aborted && isActive) {
+          console.log("Finished detail loading attempt for:", selectedItemId);
+          setIsDetailLoading(false);
+        }
       }
+    };
+
+    loadProduct();
+
+    return () => {
+      console.log("Cleaning up detail effect for:", selectedItem);
+      isActive = false;
+      controller.abort();
+    };
+  }, [selectedItem, pathname, router, isCreatingParent]);
+
+  // Add useEffect for tracking visits
+  useEffect(() => {
+    if (selectedProduct && selectedProduct.id && selectedProduct.name && !isCreatingParent) {
+      const path = selectedProduct.variants_count > 0
+        ? `/products/parent/${selectedProduct.id}`
+        : `/products/variant/${selectedProduct.id}`;
+
+      addVisitedItem({
+        type: 'product', // Or determine parent/variant specifically if needed
+        id: String(selectedProduct.id),
+        name: selectedProduct.name,
+        path: path,
+      });
     }
-  }, [selectedItem, filteredProducts, pathname, router]);
+  }, [selectedProduct, addVisitedItem, isCreatingParent]);
+
+  // Handler for creating new parent product
+  const handleCreateNewParent = () => {
+    // Instead of navigating, set the state to indicate we're creating a new parent
+    setIsCreatingParent(true);
+    setSelectedItem(null);
+    setSelectedProduct(null);
+  };
+
+  // Handler for when a new parent product is created
+  const handleParentProductCreated = (newProduct: Product) => {
+    setIsCreatingParent(false);
+    setSelectedItem(newProduct.id);
+    setSelectedProduct(newProduct);
+  };
+
+  // Handler to cancel creating a new parent product
+  const handleCancelCreate = () => {
+    setIsCreatingParent(false);
+    // If there are products in the list, select the first one
+    if (filteredProducts.length > 0) {
+      setSelectedItem(filteredProducts[0].id);
+      setSelectedProduct(filteredProducts[0]);
+    }
+  };
+
+  // Custom function to handle pagination changes
+  const handlePaginationChange = (newPagination: { pageIndex: number, pageSize: number }) => {
+    setPagination(newPagination);
+  };
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
+    <div className="container mx-auto py-4 px-4 md:px-6">
       <div className="max-w-full mx-auto">
         <Card>
-          <CardHeader >
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl font-bold text-primary">Produkte</CardTitle>
-                <CardDescription>Verwalten Sie Ihre Produkte und Varianten</CardDescription>
-              </div>
-              <div className="relative w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   type="search"
-                  placeholder="Suche nach Produkt..."
+                  placeholder="Search by exact SKU or legacy-SKU..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  onChange={handleSearchChange}
+                  className="pl-10 h-9 w-full"
+                  title="Searches for exact matches on SKU or legacy-base-SKU fields. For partial matches, use at least 3 characters."
                 />
+                {searchTerm.length > 0 && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Using direct search for exact matches on SKU and legacy-SKU
+                  </div>
+                )}
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0 ">
-            <div className="flex overflow-hidden h-[calc(100vh-15rem)]">
-              <div className="w-1/3 border-r  dark:border-slate-800">
-                <ProductList
-                  showSidebar={true}
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  filteredProducts={filteredProducts}
-                  selectedItem={selectedItem}
-                  setSelectedItem={setSelectedItem}
-                  pagination={pagination}
-                  setPagination={setPagination}
-                  isLoading={isLoading}
-                />
+            <div className="flex flex-col md:flex-row overflow-hidden" style={{ height: contentHeight }}>
+              <div className="w-full md:w-1/3 border-b md:border-b-0 md:border-r border mb-4 md:mb-0 flex flex-col">
+                <div className="flex-grow overflow-y-auto">
+                  <ProductList
+                    showSidebar={true}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    filteredProducts={filteredProducts}
+                    totalItems={totalCount}
+                    selectedItem={selectedItem}
+                    setSelectedItem={(item: number | string | null) => {
+                      setIsCreatingParent(false);
+                      setSelectedItem(item);
+                    }}
+                    pagination={pagination}
+                    setPagination={(value: { pageIndex: number; pageSize: number }) => {
+                      handlePaginationChange(value);
+                    }}
+                    isLoading={isListLoading}
+                  />
+                </div>
+                <div className="p-4 border-t border flex-shrink-0">
+                  <Button
+                    onClick={handleCreateNewParent}
+                    className="w-full"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    New Parent Product
+                  </Button>
+                </div>
               </div>
-              <div className="w-2/3">
-                <ProductDetail
-                  selectedItem={selectedItem}
-                  selectedProduct={selectedProduct}
-                />
+              <div className="w-full md:w-2/3 h-1/2 md:h-full overflow-auto pl-4">
+                {isCreatingParent ? (
+                  <ProductDetail
+                    selectedItem={null}
+                    selectedProduct={null}
+                    isCreatingParent={true}
+                    onProductCreated={handleParentProductCreated}
+                    onCancel={handleCancelCreate}
+                  />
+                ) : selectedProduct ? (
+                  <ProductDetail
+                    selectedItem={selectedItem}
+                    selectedProduct={selectedProduct}
+                    isCreatingParent={false}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    {isDetailLoading ? (
+                      "Loading product details..."
+                    ) : (
+                      "Select a product to view details or create a new one."
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -200,6 +414,6 @@ export function InventoryManagement({ initialVariantId, initialParentId }: Inven
 }
 
 // Default export for the page
-export default function InventoryManagementPage() {
-  return <InventoryManagement />;
+export default function ProductsPageContainer({ initialVariantId, initialParentId }: ProductsPageProps = {}) {
+  return <ProductsPage initialVariantId={initialVariantId} initialParentId={initialParentId} />;
 }

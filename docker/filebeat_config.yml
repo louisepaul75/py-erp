@@ -41,7 +41,7 @@ filebeat.inputs:
   enabled: true
   paths:
     - /app/logs/*.log
-  exclude_files: ['.*pyerp.*\.log', '.*test_.*\.log']
+  exclude_files: ['.*pyerp.*\\.log', '.*test_.*\\.log', '.*filebeat.*\\.log']
   fields_under_root: true
   fields:
     level: "INFO"
@@ -83,26 +83,26 @@ processors:
 
 output.elasticsearch:
   hosts: ["${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT:9200}"]
-  index: "${ELASTICSEARCH_INDEX_PREFIX:pyerp}-${PYERP_ENV:production}-logs"
+  index: "pyerp-${PYERP_ENV}-logs"
   username: "${ELASTICSEARCH_USERNAME:}"
   password: "${ELASTICSEARCH_PASSWORD:}"
 
-setup.kibana:
-  host: "${KIBANA_HOST}:${KIBANA_PORT:5601}"
-
+#setup.kibana:
+#  host: "${KIBANA_HOST}:${KIBANA_PORT:5601}"
+#
 setup.template.name: "pyerp"
 setup.template.pattern: "pyerp-*"
-setup.template.settings:
-  index.number_of_shards: 1
-  index.number_of_replicas: 0
+#setup.template.settings:
+#  index.number_of_shards: 1
+#  index.number_of_replicas: 0
 setup.ilm.enabled: true
 setup.ilm.policy_name: "pyerp-logs-policy"
-setup.ilm.rollover_alias: "${ELASTICSEARCH_INDEX_PREFIX:pyerp}-${PYERP_ENV:production}-logs"
+setup.ilm.rollover_alias: "pyerp-${PYERP_ENV}-logs"
 setup.ilm.pattern: "{now/d}-000001"
-
-# Pipeline to handle JSON parsing errors
-setup.template.enabled: true
-setup.dashboards.enabled: false
+#
+## Pipeline to handle JSON parsing errors
+#setup.template.enabled: true
+#setup.dashboards.enabled: false
 
 logging.level: debug
 logging.to_files: true

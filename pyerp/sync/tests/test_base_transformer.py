@@ -298,8 +298,7 @@ class TestBaseTransformer:
         assert result["id"] == 123
         assert result["name"] == "Test Product"
         assert result["price"] == "99.99"
-        assert "other_field" in result  # Unmapped fields should be preserved
-        assert result["other_field"] == "value"
+        assert "other_field" not in result
     
 
 

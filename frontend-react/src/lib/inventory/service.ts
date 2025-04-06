@@ -130,7 +130,7 @@ export const transformBoxToContainer = (box: Box): ContainerItem => {
 
   return {
     id: box.id.toString(),
-    containerCode: box.code,
+    containerCode: box.containerCode,
     type: boxTypeCode,
     description: box.notes,
     status: mapBoxStatus(box.status),
@@ -152,6 +152,8 @@ export const fetchContainers = async (page = 1, pageSize = 20): Promise<{
   totalPages: number;
 }> => {
   try {
+    console.log('[DEBUG SERVICE] Starting fetchContainers, page:', page, 'pageSize:', pageSize);
+    
     // Get the token first
     const token = await authService.getToken();
     if (!token) {
@@ -159,8 +161,31 @@ export const fetchContainers = async (page = 1, pageSize = 20): Promise<{
       throw new Error('Authentication required. Please log in to view containers.');
     }
 
+    console.log('[DEBUG SERVICE] Token found, calling fetchBoxes');
     const response = await fetchBoxes(page, pageSize);
+    console.log('[DEBUG SERVICE] fetchBoxes response received:', response);
+    console.log('[DEBUG SERVICE] Number of boxes returned:', response.results ? response.results.length : 0);
+    
+    // Log complete structure of first box
+    if (response.results && response.results.length > 0) {
+      console.log('[DEBUG SERVICE] Full first box structure:', JSON.stringify(response.results[0], null, 2));
+      console.log('[DEBUG SERVICE] Box properties:', Object.keys(response.results[0]));
+    }
+    
     const containers = response.results.map(transformBoxToContainer);
+    console.log('[DEBUG SERVICE] Transformed containers:', containers.length);
+    
+    // Log first container to see structure
+    if (response.results.length > 0) {
+      console.log('[DEBUG SERVICE] First box raw data:', response.results[0]);
+      console.log('[DEBUG SERVICE] Box code check:', response.results[0].code);
+    }
+    
+    // Log first transformed container
+    if (containers.length > 0) {
+      console.log('[DEBUG SERVICE] First transformed container:', containers[0]);
+      console.log('[DEBUG SERVICE] Container code check:', containers[0].containerCode);
+    }
     
     return {
       containers,
@@ -168,7 +193,7 @@ export const fetchContainers = async (page = 1, pageSize = 20): Promise<{
       totalPages: response.total_pages
     };
   } catch (error: any) {
-    console.error('Error fetching containers:', error);
+    console.error('[DEBUG SERVICE] Error in fetchContainers:', error);
     
     if (error.response?.status === 401) {
       // Try to refresh the token

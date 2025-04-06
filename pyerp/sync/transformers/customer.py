@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 from zoneinfo import ZoneInfo
 
 from django.utils import timezone
+from pyerp.business_modules.sales.models import Address
 from .base import BaseTransformer
 
 
@@ -55,6 +56,45 @@ class CustomerTransformer(BaseTransformer):
             try:
                 # Apply basic field mappings
                 record = self.apply_field_mappings(source_record)
+
+                # --- Derive name from related Address ---
+                record['name'] = '' # Default to empty string
+                legacy_addr_num = record.get('legacy_address_number')
+                
+                if legacy_addr_num:
+                    try:
+                        # Query Address using address_number which maps to AdrNr
+                        address = Address.objects.get(address_number=legacy_addr_num)
+                        if address.company_name:
+                            record['name'] = address.company_name.strip()
+                        elif address.first_name or address.last_name:
+                            record['name'] = f"{address.first_name.strip()} {address.last_name.strip()}".strip()
+                        
+                        # Fallback if no name parts found in address
+                        if not record['name'] and record.get('customer_number'):
+                           record['name'] = f"Customer {record['customer_number']}"
+                           
+                    except Address.DoesNotExist:
+                        logger.warning(
+                            f"Address not found for legacy number: {legacy_addr_num} "
+                            f"when transforming customer {record.get('customer_number')}"
+                        )
+                        # Use customer number as fallback name if address not found
+                        if record.get('customer_number'):
+                             record['name'] = f"Customer {record['customer_number']}"
+                             
+                    except Exception as addr_e:
+                         logger.error(
+                            f"Error fetching address {legacy_addr_num} for customer "
+                            f"{record.get('customer_number')}: {addr_e}"
+                        )
+                         # Use customer number as fallback name on error
+                         if record.get('customer_number'):
+                             record['name'] = f"Customer {record['customer_number']}"
+                elif record.get('customer_number'):
+                     # Fallback if no legacy_address_number provided
+                     record['name'] = f"Customer {record['customer_number']}"
+                # ----------------------------------------
 
                 # Convert boolean fields
                 record["delivery_block"] = bool(record.get("delivery_block"))
