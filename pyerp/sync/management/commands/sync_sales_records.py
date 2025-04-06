@@ -32,7 +32,7 @@ class Command(BaseSyncCommand):
         # --days, --fail-on-filter-error, --clear-cache
 
     def handle(self, *args, **options):
-        """Orchestrate the multi-stage sync process."""
+        """Orchestrate the multi-stage sync process with batch processing."""
         command_start_time = timezone.now()  # Use local variable
         self.debug = options.get("debug", False)
         log_prefix = f"[sync_sales_records - {command_start_time.isoformat()}]"
@@ -65,8 +65,12 @@ class Command(BaseSyncCommand):
         logger.info(
             f"{log_prefix} Initial query parameters built: {initial_query_params}"
         )
-
-        # --- Step 1: Fetch Parent Record IDs (AbsNr) using initial filters ---
+        
+        # Get batch size from options
+        batch_size = options.get("batch_size", 100)
+        self.stdout.write(f"{log_prefix} Using batch size: {batch_size}")
+        
+        # --- Step 1: Fetch All Parent Record IDs (AbsNr) using initial filters ---
         self.stdout.write(self.style.NOTICE(
             f"\n{log_prefix} === Step 1: Fetching parent record IDs "
             f"({self.PARENT_LEGACY_KEY_FIELD}) ==="
@@ -145,204 +149,267 @@ class Command(BaseSyncCommand):
             raise CommandError(
                 f"Could not fetch parent IDs, aborting sync. Error: {e}"
             )
-
-        # --- Step 2: Run Full Sales Records Sync (using initial filters) ---
+            
+        # --- Step 2: Process Belege and Belege_Pos records in batches ---
         self.stdout.write(self.style.NOTICE(
-            f"\n{log_prefix} === Step 2: Running Parent Sync "
-            f"({self.PARENT_ENTITY_TYPE}) ==="
+            f"\n{log_prefix} === Step 2: Processing parent and child records in batches ==="
         ))
-        logger.info(
-            f"{log_prefix} Starting Step 2: {self.PARENT_ENTITY_TYPE} Sync"
+        logger.info(f"{log_prefix} Starting Step 2: Batch processing")
+        
+        # Apply top limit if specified
+        if "top" in options and options["top"]:
+            top_limit = int(options["top"])
+            if len(parent_record_ids) > top_limit:
+                parent_record_ids = parent_record_ids[:top_limit]
+                self.stdout.write(
+                    f"{log_prefix} Applied top limit: Processing only first {top_limit} parent IDs."
+                )
+                
+        # Process records in batches
+        total_parent_batches = (len(parent_record_ids) + batch_size - 1) // batch_size
+        self.stdout.write(
+            f"{log_prefix} Will process {len(parent_record_ids)} parent records "
+            f"in {total_parent_batches} batches of ~{batch_size} records each."
         )
-        parent_sync_successful = False
-        try:
-            parent_pipeline = PipelineFactory.create_pipeline(parent_mapping)
-            # Note: Cache was potentially cleared in Step 1 if requested.
-
-            self.stdout.write(
-                f"{log_prefix} Using query params for parent sync: "
-                f"{initial_query_params}"
-            )
-            with parent_pipeline.extractor:
-                parent_source_data = parent_pipeline.extractor.extract(
-                    query_params=initial_query_params,  # Use initial params
-                    fail_on_filter_error=options.get(
-                        "fail_on_filter_error", True
-                    )
-                )
-            self.stdout.write(
-                f"{log_prefix} Extracted {len(parent_source_data)} parent "
-                f"records for full sync."
-            )
-
-            if parent_source_data:
-                transformed_parent_data = (
-                    parent_pipeline.transformer.transform(parent_source_data)
-                )
-                self.stdout.write(
-                    f"{log_prefix} Transformed {len(transformed_parent_data)} "
-                    f"parent records."
-                )
-                load_result = parent_pipeline.loader.load(
-                    transformed_parent_data,
-                    update_existing=(
-                        options.get("force_update") or options.get("full")
-                    ),
-                )
-                self.stdout.write(self.style.SUCCESS(
-                    f"{log_prefix} Parent ({self.PARENT_ENTITY_TYPE}) load finished: "
-                    f"{load_result.created} created, "
-                    f"{load_result.updated} updated, {load_result.skipped} skipped, "
-                    f"{load_result.errors} errors."
-                ))
-                if load_result.error_details:
-                    self.stdout.write(self.style.WARNING(
-                        f"{log_prefix} Parent Load Errors:"
-                    ))
-                    for i, err in enumerate(load_result.error_details):
-                        if i < 10:
-                            self.stdout.write(f"- {err}")
-                        else:
-                            self.stdout.write(
-                                f"... and {len(load_result.error_details) - 10} "
-                                f"more errors."
-                            )
-                            break
-            else:
-                self.stdout.write(
-                    f"{log_prefix} No parent records extracted, skipping "
-                    f"transform and load."
-                )
-
-            parent_sync_successful = True  # Mark success if no exceptions
-            logger.info(
-                f"{log_prefix} Step 2: {self.PARENT_ENTITY_TYPE} Sync finished "
-                f"successfully."
-            )
-
-        except Exception as e:
-            parent_sync_successful = False
-            self.stderr.write(self.style.ERROR(
-                f"{log_prefix} Step 2 Failed: {self.PARENT_ENTITY_TYPE} sync "
-                f"pipeline error: {e}"
+        
+        # Initialize statistics
+        parent_stats = {"created": 0, "updated": 0, "skipped": 0, "errors": 0}
+        child_stats = {"created": 0, "updated": 0, "skipped": 0, "errors": 0}
+        
+        # Initialize success flags
+        parent_sync_successful = True
+        child_sync_successful = True
+        
+        # Create parent pipeline
+        parent_pipeline = PipelineFactory.create_pipeline(parent_mapping)
+        
+        # Create child pipeline
+        child_pipeline = PipelineFactory.create_pipeline(child_mapping)
+        
+        # Process records in batches
+        for batch_index in range(total_parent_batches):
+            start_idx = batch_index * batch_size
+            end_idx = min(start_idx + batch_size, len(parent_record_ids))
+            batch_parent_ids = parent_record_ids[start_idx:end_idx]
+            
+            self.stdout.write(self.style.NOTICE(
+                f"\n{log_prefix} --- Processing Batch {batch_index + 1}/{total_parent_batches} "
+                f"({start_idx+1}-{end_idx} of {len(parent_record_ids)}) ---"
             ))
-            logger.error(
-                f"{log_prefix} Step 2: {self.PARENT_ENTITY_TYPE} Sync failed: {e}",
-                exc_info=self.debug
-            )
-            if self.debug:
-                traceback.print_exc()
-            # Continue to item sync, log failure.
-
-        # --- Step 3: Run Sales Record Items Sync (using ONLY fetched Parent IDs) ---
-        self.stdout.write(self.style.NOTICE(
-            f"\n{log_prefix} === Step 3: Running Child Sync "
-            f"({self.CHILD_ENTITY_TYPE}) ==="
-        ))
-        logger.info(
-            f"{log_prefix} Starting Step 3: {self.CHILD_ENTITY_TYPE} Sync"
-        )
-        child_sync_successful = False
-        if not parent_record_ids:
-            message = (
-                f"Skipping child ({self.CHILD_ENTITY_TYPE}) sync as no parent "
-                f"IDs were found in Step 1."
-            )
-            self.stdout.write(self.style.WARNING(f"{log_prefix} {message}"))
-            logger.warning(f"{log_prefix} Step 3: {message}")
-            child_sync_successful = True  # Mark as successful (nothing to do)
-        else:
+            
+            # ----- Step 2.1: Process parent records (Belege) for this batch -----
             try:
-                child_pipeline = PipelineFactory.create_pipeline(child_mapping)
-                # Prepare filters for items: ONLY use fetched parent IDs
-                item_filters = {
-                    "parent_record_ids": parent_record_ids,
-                    "parent_field": self.CHILD_PARENT_LINK_FIELD
+                # Prepare filters for this batch of parent records
+                parent_batch_filters = {
+                    **initial_query_params,
+                    self.PARENT_LEGACY_KEY_FIELD + "__in": batch_parent_ids
                 }
+                
                 self.stdout.write(
-                    f"{log_prefix} Filtering child sync using "
-                    f"{len(parent_record_ids)} parent IDs "
-                    f"({self.PARENT_LEGACY_KEY_FIELD}) from Step 1."
+                    f"{log_prefix} Extracting {len(batch_parent_ids)} parent records "
+                    f"(Batch {batch_index + 1}/{total_parent_batches})..."
                 )
-                logger.info(
-                    f"{log_prefix} Filtering child sync with item_filters: "
-                    f"{item_filters}"
-                )
-
-                # Do NOT clear cache; Do NOT pass initial query params
-                with child_pipeline.extractor:
-                    child_source_data = child_pipeline.extractor.extract(
-                        query_params=item_filters,  # Use ONLY item-specific filters
+                
+                # Extract parent records for this batch
+                with parent_pipeline.extractor:
+                    parent_source_data = parent_pipeline.extractor.extract(
+                        query_params=parent_batch_filters,
                         fail_on_filter_error=options.get(
                             "fail_on_filter_error", True
                         )
                     )
+                
                 self.stdout.write(
-                    f"{log_prefix} Extracted {len(child_source_data)} "
-                    f"child records."
+                    f"{log_prefix} Extracted {len(parent_source_data)} parent "
+                    f"records for batch {batch_index + 1}."
                 )
-
-                if child_source_data:
-                    transformed_child_data = (
-                        child_pipeline.transformer.transform(child_source_data)
+                
+                if parent_source_data:
+                    # Transform parent records
+                    transformed_parent_data = (
+                        parent_pipeline.transformer.transform(parent_source_data)
                     )
+                    
                     self.stdout.write(
-                        f"{log_prefix} Transformed {len(transformed_child_data)} "
-                        f"child records."
+                        f"{log_prefix} Transformed {len(transformed_parent_data)} "
+                        f"parent records for batch {batch_index + 1}."
                     )
-                    load_result = child_pipeline.loader.load(
-                        transformed_child_data,
+                    
+                    # Load transformed parent records
+                    load_result = parent_pipeline.loader.load(
+                        transformed_parent_data,
                         update_existing=(
-                           options.get("force_update") or options.get("full")
+                            options.get("force_update") or options.get("full")
                         ),
                     )
+                    
+                    # Update statistics
+                    parent_stats["created"] += load_result.created
+                    parent_stats["updated"] += load_result.updated
+                    parent_stats["skipped"] += load_result.skipped
+                    parent_stats["errors"] += load_result.errors
+                    
                     self.stdout.write(self.style.SUCCESS(
-                        f"{log_prefix} Child ({self.CHILD_ENTITY_TYPE}) load finished: "
+                        f"{log_prefix} Parent load for batch {batch_index + 1} finished: "
                         f"{load_result.created} created, "
                         f"{load_result.updated} updated, {load_result.skipped} skipped, "
                         f"{load_result.errors} errors."
                     ))
+                    
+                    # Display errors for this batch if any
                     if load_result.error_details:
                         self.stdout.write(self.style.WARNING(
-                            f"{log_prefix} Child Load Errors:"
+                            f"{log_prefix} Parent Load Errors in batch {batch_index + 1}:"
                         ))
                         for i, err in enumerate(load_result.error_details):
-                            if i < 10:
+                            if i < 5:  # Show only first 5 errors per batch
                                 self.stdout.write(f"- {err}")
                             else:
                                 self.stdout.write(
-                                    f"... and {len(load_result.error_details) - 10} "
+                                    f"... and {len(load_result.error_details) - 5} "
                                     f"more errors."
                                 )
                                 break
                 else:
                     self.stdout.write(
-                        f"{log_prefix} No child records extracted, skipping "
-                        f"transform and load."
+                        f"{log_prefix} No parent records extracted for batch {batch_index + 1}, "
+                        f"skipping transform and load."
                     )
-
-                child_sync_successful = True  # Mark success if no exceptions
-                logger.info(
-                    f"{log_prefix} Step 3: {self.CHILD_ENTITY_TYPE} Sync finished "
-                    f"successfully."
-                )
-
+                
+                # ----- Step 2.2: Process child records (Belege_Pos) for this batch -----
+                # Get the actual AbsNr values from this batch's extracted data
+                batch_abs_nr_values = [
+                    str(record.get(self.PARENT_LEGACY_KEY_FIELD))
+                    for record in parent_source_data
+                    if record.get(self.PARENT_LEGACY_KEY_FIELD) is not None
+                ]
+                
+                if batch_abs_nr_values:
+                    self.stdout.write(
+                        f"{log_prefix} Fetching child records for {len(batch_abs_nr_values)} "
+                        f"parent AbsNr values from batch {batch_index + 1}..."
+                    )
+                    
+                    # Prepare filters for child records using only this batch's parent IDs
+                    child_batch_filters = {
+                        "parent_record_ids": batch_abs_nr_values,
+                        "parent_field": self.CHILD_PARENT_LINK_FIELD
+                    }
+                    
+                    # Extract child records for this batch
+                    with child_pipeline.extractor:
+                        child_source_data = child_pipeline.extractor.extract(
+                            query_params=child_batch_filters,
+                            fail_on_filter_error=options.get(
+                                "fail_on_filter_error", True
+                            )
+                        )
+                    
+                    self.stdout.write(
+                        f"{log_prefix} Extracted {len(child_source_data)} child records "
+                        f"for batch {batch_index + 1}."
+                    )
+                    
+                    if child_source_data:
+                        # Transform child records
+                        transformed_child_data = (
+                            child_pipeline.transformer.transform(child_source_data)
+                        )
+                        
+                        self.stdout.write(
+                            f"{log_prefix} Transformed {len(transformed_child_data)} "
+                            f"child records for batch {batch_index + 1}."
+                        )
+                        
+                        # Load transformed child records
+                        load_result = child_pipeline.loader.load(
+                            transformed_child_data,
+                            update_existing=(
+                                options.get("force_update") or options.get("full")
+                            ),
+                        )
+                        
+                        # Update statistics
+                        child_stats["created"] += load_result.created
+                        child_stats["updated"] += load_result.updated
+                        child_stats["skipped"] += load_result.skipped
+                        child_stats["errors"] += load_result.errors
+                        
+                        self.stdout.write(self.style.SUCCESS(
+                            f"{log_prefix} Child load for batch {batch_index + 1} finished: "
+                            f"{load_result.created} created, "
+                            f"{load_result.updated} updated, {load_result.skipped} skipped, "
+                            f"{load_result.errors} errors."
+                        ))
+                        
+                        # Display errors for this batch if any
+                        if load_result.error_details:
+                            self.stdout.write(self.style.WARNING(
+                                f"{log_prefix} Child Load Errors in batch {batch_index + 1}:"
+                            ))
+                            for i, err in enumerate(load_result.error_details):
+                                if i < 5:  # Show only first 5 errors per batch
+                                    self.stdout.write(f"- {err}")
+                                else:
+                                    self.stdout.write(
+                                        f"... and {len(load_result.error_details) - 5} "
+                                        f"more errors."
+                                    )
+                                    break
+                    else:
+                        self.stdout.write(
+                            f"{log_prefix} No child records extracted for batch {batch_index + 1}, "
+                            f"skipping transform and load."
+                        )
+                else:
+                    self.stdout.write(
+                        f"{log_prefix} No valid parent AbsNr values in batch {batch_index + 1}, "
+                        f"skipping child record processing."
+                    )
+                
             except Exception as e:
+                # Handle errors for this batch
+                parent_sync_successful = False
                 child_sync_successful = False
                 self.stderr.write(self.style.ERROR(
-                    f"{log_prefix} Step 3 Failed: {self.CHILD_ENTITY_TYPE} sync "
-                    f"pipeline error: {e}"
+                    f"{log_prefix} Error processing batch {batch_index + 1}: {e}"
                 ))
                 logger.error(
-                    f"{log_prefix} Step 3: {self.CHILD_ENTITY_TYPE} Sync failed: {e}",
+                    f"{log_prefix} Batch {batch_index + 1} processing failed: {e}",
                     exc_info=self.debug
                 )
                 if self.debug:
                     traceback.print_exc()
-
-        # --- Step 4: Report Overall Status ---
+                # Continue with next batch despite the error
+                continue
+        
+        # --- Step 3: Report Overall Status ---
         end_time = timezone.now()
         duration = (end_time - command_start_time).total_seconds()
+        
+        # Log completion of all batches
+        self.stdout.write(self.style.NOTICE(
+            f"\n{log_prefix} === Step 3: Summary of batch processing ==="
+        ))
+        
+        # Report parent stats
+        self.stdout.write(self.style.SUCCESS(
+            f"{log_prefix} Parent ({self.PARENT_ENTITY_TYPE}) summary: "
+            f"{parent_stats['created']} created, "
+            f"{parent_stats['updated']} updated, "
+            f"{parent_stats['skipped']} skipped, "
+            f"{parent_stats['errors']} errors."
+        ))
+        
+        # Report child stats
+        self.stdout.write(self.style.SUCCESS(
+            f"{log_prefix} Child ({self.CHILD_ENTITY_TYPE}) summary: "
+            f"{child_stats['created']} created, "
+            f"{child_stats['updated']} updated, "
+            f"{child_stats['skipped']} skipped, "
+            f"{child_stats['errors']} errors."
+        ))
+        
         logger.info(
             f"{log_prefix} Orchestrator finished in {duration:.2f} seconds."
         )
@@ -363,12 +430,8 @@ class Command(BaseSyncCommand):
                 f"Check logs for details."
             )
             logger.error(error_msg)
-            if not parent_sync_successful:
-                self.stdout.write(self.style.WARNING(
-                    f"{log_prefix} Note: Parent sync (Step 2) encountered an error."
-                ))
+            # Only raise CommandError if child sync failed
             if not child_sync_successful:
-                # Only raise CommandError if child sync failed
                 raise CommandError(error_msg)
             else:
                 # Parent failed, child succeeded/skipped

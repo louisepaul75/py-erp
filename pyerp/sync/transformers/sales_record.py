@@ -469,11 +469,37 @@ class SalesRecordTransformer(BaseTransformer):
         return "PAID" if paid else "PENDING"
 
     def _to_decimal(self, value) -> Decimal:
-        """Convert value to Decimal, handling various input types."""
+        """Convert value to Decimal, handling various input types and ensuring values fit in database fields."""
         if value is None:
             return Decimal("0")
         try:
-            return Decimal(str(value))
+            # Convert to Decimal first
+            decimal_value = Decimal(str(value))
+            
+            # Check if the value exceeds 12 digits total (10 before decimal, 2 after)
+            # Count digits before decimal point
+            str_value = str(decimal_value)
+            parts = str_value.split('.')
+            digits_before_decimal = len(parts[0].replace('-', ''))  # Remove minus sign when counting
+            
+            # If value has more than 10 digits before decimal point (12 total with 2 decimal places)
+            if digits_before_decimal > 10:
+                logger.warning(f"Value {decimal_value} exceeds maximum allowed digits (10), rounding to 10 digits")
+                
+                # Define quantization pattern for rounding
+                TWO_PLACES = Decimal('0.01')
+                rounded_value = decimal_value.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+                
+                # We need to truncate to 10 digits (8 before decimal for safety)
+                max_value = Decimal('99999999.99')
+                if abs(rounded_value) > max_value:
+                    logger.warning(f"Value {decimal_value} still exceeds maximum after rounding, capping to {max_value}")
+                    return max_value if rounded_value > 0 else -max_value
+                    
+                return rounded_value
+                
+            # If the value fits within the constraint, return it as is
+            return decimal_value
         except (ValueError, TypeError, InvalidOperation):
             return Decimal("0")
 
