@@ -322,7 +322,7 @@ if __name__ == "__main__":
 
     # Revert operator back to '='
     # filter_list = [['Familie_', '=', '5E6AF8A299D9DA439F58D32A80D6F4A6']] # Old test ID
-    filter_list = [['Familie_', '=', '7464FEB39C516942B01E62F44B1ED454']] # Use known working ID
+    filter_list = [['Familie_', '=', '7464FEB39C516942B01E62F44B1ED454']]  # Use known working ID
 
     # Try OData-style string filter (needs quotes around string values)
     # filter_str = "Familie_ eq '5E6AF8A299D9DA439F58D32A80D6F4A6'"  # 500 error
@@ -332,14 +332,17 @@ if __name__ == "__main__":
     target_familie_id = '5E6AF8A299D9DA439F58D32A80D6F4A6'
 
     # Fetch all records from the table (client-side filtering needed)
-    print(f"Fetching records from Artikel_Variante with server-side filter...")
+    print("Fetching records from Artikel_Variante with server-side filter...")
     all_variants_df = client.fetch_table(
         table_name="Artikel_Variante",
         filter_query=filter_list,
         all_records=True
     )
 
-    print(f"Fetched {len(all_variants_df)} total records using server-side filter.")
+    print(
+        f"Fetched {len(all_variants_df)} total records "
+        f"using server-side filter."
+    )
 
     # Print the results directly
     print("Resulting DataFrame (tail):")

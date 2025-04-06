@@ -557,6 +557,7 @@ class PipelineFactory:
                         "transformer_class"
                     )
                     or mapping_config.get("transformation", {}).get("class")
+                    or mapping_config.get("transformer", {}).get("class")
                 )
                 if transformer_class_path:
                     transformer_instance = cls._import_class(
@@ -578,7 +579,7 @@ class PipelineFactory:
 
             transformer = cls._create_component(
                 transformer_instance,
-                mapping_config.get("transformation", {}),
+                mapping_config.get("transformer", {}),
             )
             logger.info(
                 f"Created transformer: {transformer.__class__.__name__}"
@@ -610,10 +611,11 @@ class PipelineFactory:
                 f"{loader_instance.__name__ if loader_instance else 'None'}"
             )
 
-            # Merge target_config with mapping's loader_config
+            # Merge target_config with mapping's loader config
             merged_loader_config = target_config.copy()
-            if mapping_config and "loader_config" in mapping_config:
-                merged_loader_config.update(mapping_config["loader_config"])
+            if mapping_config and "loader" in mapping_config:
+                loader_config_from_mapping = mapping_config.get("loader", {}).get("config", {})
+                merged_loader_config.update(loader_config_from_mapping)
 
             loader = cls._create_component(
                 loader_instance,

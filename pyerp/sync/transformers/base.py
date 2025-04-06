@@ -79,18 +79,20 @@ class BaseTransformer(ABC):
             source_record: Source record to transform
             
         Returns:
-            Transformed record with mapped fields
+            Transformed record containing only the mapped fields.
         """
-        # Start with a copy of the source record to preserve unmapped fields
-        result = source_record.copy()
+        # Start with an empty dictionary
+        result = {}
 
-        # Apply field mappings
+        # Apply field mappings explicitly
         for target_field, source_field in self.field_mappings.items():
+            # Check if the source field exists in the source record
             if source_field in source_record:
+                # Add the mapped value to the result dictionary
                 result[target_field] = source_record[source_field]
-                # Remove the original field if it's different from the target
-                if source_field != target_field and source_field in result:
-                    del result[source_field]
+            # Optionally, log if a mapped source field is missing (for debugging)
+            # else:
+            #     logger.debug(f"Source field '{source_field}' not found in record for target '{target_field}'")
 
         return result
 
