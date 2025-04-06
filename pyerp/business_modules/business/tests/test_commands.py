@@ -124,11 +124,14 @@ class TestSyncEmployeesCommand(TestCase):
 
     # Reinstate mock for build_query_params to directly test error handling
     @mock.patch.object(Command, 'build_query_params')
-    def test_sync_employees_command_invalid_filters(self, mock_build_params):
+    @mock.patch.object(Command, 'get_mapping')
+    def test_sync_employees_command_invalid_filters(self, mock_get_mapping, mock_build_params):
         """Test the command with invalid JSON filters."""
         # Setup mock build_query_params to raise the CommandError
         error_message = "Invalid filters provided: Expecting value: line 1 column 1 (char 0)"
         mock_build_params.side_effect = CommandError(error_message)
+        # Setup mock get_mapping to return a dummy value so it doesn't raise an error
+        mock_get_mapping.return_value = {'id': 99, 'entity_type': 'employee'} 
 
         # Run the command with invalid JSON
         out = StringIO()
