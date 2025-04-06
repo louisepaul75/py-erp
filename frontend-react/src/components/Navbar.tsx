@@ -99,7 +99,7 @@ export function Navbar() {
   const navigationItems = [
     { href: "/dashboard", label: t("navigation.home") },
     { href: "/products", label: t("navigation.products") },
-    { href: "/sales", label: t("navigation.sales") },
+    // { href: "/sales", label: t("navigation.sales") },
     // { href: '/production', label: t('navigation.production') },
   ];
 
@@ -140,6 +140,28 @@ export function Navbar() {
                 {navigationItems.map((item) => (
                   <NavLink key={item.href} href={item.href} label={item.label} />
                 ))}
+
+                {/* Add Sales Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <span>{t("navigation.sales")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/sales" className="flex items-center">
+                        {t("navigation.sales_dashboard")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/sales/customers" className="flex items-center">
+                        {t("navigation.customers")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/*  Production dropdown */}
                 <DropdownMenu>
