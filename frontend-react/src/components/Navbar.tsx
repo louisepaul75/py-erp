@@ -40,6 +40,7 @@ import {
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
+import { useQueryClient } from "@tanstack/react-query";
 
 function DropdownItem({
   children,
@@ -83,7 +84,32 @@ export function Navbar() {
   const { user } = useIsAuthenticated();
   const logout = useLogout();
   const { isMobile, isTablet } = useScreenSize();
-  const { unreadCount, notifications, isLoadingUnreadCount, markAsRead } = useNotifications({ is_read: false, limit: 5 });
+  const queryClient = useQueryClient();
+  const { 
+    unreadCount, 
+    notifications, 
+    isLoadingUnreadCount, 
+    markAsRead,
+    refetchNotifications,
+    refetchUnreadCount 
+  } = useNotifications({ is_read: false, limit: 5 });
+
+  // Debug logs
+  useEffect(() => {
+    console.log("Unread count:", unreadCount);
+    console.log("Notifications:", notifications);
+    console.log("Is loading:", isLoadingUnreadCount);
+  }, [unreadCount, notifications, isLoadingUnreadCount]);
+
+  // Function to refresh notification data with cache reset
+  const refreshNotifications = () => {
+    console.log("Manually refreshing notification data...");
+    // Clear all notification-related caches
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    // Then refetch the data
+    refetchNotifications();
+    refetchUnreadCount();
+  };
 
   const toggleTestDropdown = () => setTestMenuOpen(!testMenuOpen);
 
@@ -268,6 +294,7 @@ export function Navbar() {
                     size="icon"
                     className="relative rounded-full"
                     aria-label={`${unreadCount} unread notifications`}
+                    onClick={refreshNotifications}
                   >
                     <Bell className="h-6 w-6" />
                     {unreadCount > 0 && (
@@ -296,7 +323,17 @@ export function Navbar() {
                         ))}
                       </div>
                     ) : (
-                      <div className="p-4 text-sm text-muted-foreground">No new notifications</div>
+                      <div className="p-4 text-sm text-muted-foreground">
+                        <p>No new notifications</p>
+                        <p className="text-xs mt-2">Debug info:</p>
+                        <pre className="text-xs mt-1 bg-muted p-2 rounded overflow-x-auto">
+                          {JSON.stringify({
+                            unreadCount,
+                            notificationsLength: notifications?.length || 0,
+                            isLoading: isLoadingUnreadCount
+                          }, null, 2)}
+                        </pre>
+                      </div>
                     )}
                   </div>
                   <div className="p-2 border-t text-center">
@@ -381,6 +418,7 @@ export function Navbar() {
                     size="icon"
                     className="relative rounded-full"
                     aria-label={`${unreadCount} unread notifications`}
+                    onClick={refreshNotifications}
                   >
                     <Bell className="h-6 w-6" />
                     {unreadCount > 0 && (
@@ -409,7 +447,17 @@ export function Navbar() {
                         ))}
                       </div>
                     ) : (
-                      <div className="p-4 text-sm text-muted-foreground">No new notifications</div>
+                      <div className="p-4 text-sm text-muted-foreground">
+                        <p>No new notifications</p>
+                        <p className="text-xs mt-2">Debug info:</p>
+                        <pre className="text-xs mt-1 bg-muted p-2 rounded overflow-x-auto">
+                          {JSON.stringify({
+                            unreadCount,
+                            notificationsLength: notifications?.length || 0,
+                            isLoading: isLoadingUnreadCount
+                          }, null, 2)}
+                        </pre>
+                      </div>
                     )}
                   </div>
                   <div className="p-2 border-t text-center">

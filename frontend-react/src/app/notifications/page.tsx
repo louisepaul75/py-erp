@@ -24,10 +24,16 @@ export default function NotificationsPage() {
     markAllAsReadPending,
     sendBroadcast,
     sendBroadcastPending,
+    refetchNotifications,
   } = useNotifications(queryParams);
 
   const handleMarkAllRead = () => {
     markAllAsRead();
+  };
+
+  const handleRefresh = () => {
+    console.log("Manually refreshing notifications...");
+    refetchNotifications();
   };
 
   const notificationList = Array.isArray(notifications) ? notifications : [];
@@ -50,11 +56,46 @@ export default function NotificationsPage() {
         isPending={sendBroadcastPending} 
       />
       
+      {/* Debug Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Debug Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold">Current Filter:</h3>
+              <pre className="bg-muted p-2 rounded text-xs mt-1">
+                {JSON.stringify(queryParams, null, 2)}
+              </pre>
+            </div>
+            <div>
+              <h3 className="font-semibold">Raw Notifications Data:</h3>
+              <pre className="bg-muted p-2 rounded text-xs mt-1 overflow-x-auto max-h-[300px] overflow-y-auto">
+                {JSON.stringify({
+                  notifications,
+                  count: notificationList.length,
+                  unreadCount: unreadNotifications.length,
+                  isLoading: isLoadingNotifications
+                }, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
       {/* Notifications Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>View and manage your notifications.</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>View and manage your notifications.</CardDescription>
+            </div>
+            <Button onClick={handleRefresh} variant="outline" size="sm">
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | 'unread')}>

@@ -19,6 +19,13 @@ interface UnreadCountResponse {
     unread_count: number;
 }
 
+interface PaginatedResponse<T> {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: T[];
+}
+
 // --- API Interaction Functions ---
 
 const fetchNotifications = async (filters: { type?: string; is_read?: boolean; limit?: number } = {}): Promise<Notification[]> => {
@@ -35,8 +42,22 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean; l
     const queryString = params.toString();
 
     const url = queryString ? `api/v1/notifications/?${queryString}` : 'api/v1/notifications/';
-    const response = await apiClient.get<Notification[]>(url).json();
-    return response;
+    
+    try {
+        console.log(`Fetching notifications from: ${url}`);
+        const response = await apiClient.get<PaginatedResponse<Notification>>(url).json();
+        console.log('API Response:', response);
+        
+        if (!response || !response.results) {
+            console.error('Invalid response format:', response);
+            return [];
+        }
+        
+        return response.results; // Return just the results array from the paginated response
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        throw error;
+    }
 };
 
 const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
@@ -82,7 +103,8 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
     } = useQuery<Notification[], Error>({
         queryKey: queryKey,
         queryFn: () => fetchNotifications(filters),
-        // Consider adding options like staleTime if needed
+        refetchOnMount: true,
+        staleTime: 1000, // 1 second - set to a low value to ensure frequent refreshes
     });
 
     /**
@@ -96,9 +118,8 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
     } = useQuery<UnreadCountResponse, Error>({
         queryKey: [queryKeyBase, 'unreadCount'],
         queryFn: fetchUnreadCount,
-        // Often good to have a short staleTime/refetchInterval for unread count
-        // staleTime: 60 * 1000, // 1 minute
-        // refetchInterval: 5 * 60 * 1000, // 5 minutes
+        refetchOnMount: true,
+        staleTime: 1000, // 1 second
     });
 
     const unreadCount = unreadCountData?.unread_count ?? 0;
