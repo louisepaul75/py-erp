@@ -30,23 +30,23 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean } 
         params.append('is_read', String(filters.is_read));
     }
     const queryString = params.toString();
-    const url = queryString ? `notifications/?${queryString}` : 'notifications/';
+    const url = queryString ? `notifications/?${queryString}` : 'api/notifications/';
     const response = await apiClient.get<Notification[]>(url).json();
     return response;
 };
 
 const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    const response = await apiClient.get<UnreadCountResponse>("notifications/unread_count/").json();
+    const response = await apiClient.get<UnreadCountResponse>("api/notifications/unread_count/").json();
     return response;
 };
 
 const markNotificationAsRead = async (id: string): Promise<Notification> => {
-    const response = await apiClient.patch<Notification>(`notifications/${id}/mark_as_read/`).json();
+    const response = await apiClient.patch<Notification>(`api/notifications/${id}/mark_as_read/`).json();
     return response;
 };
 
 const markAllNotificationsAsRead = async (): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>("notifications/mark_all_as_read/").json();
+    const response = await apiClient.patch<{ message: string }>("api/notifications/mark_all_as_read/").json();
     return response;
 };
 
