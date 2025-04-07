@@ -34,4 +34,7 @@ watchdog
 # Linting and formatting
 mypy
 ruff>=0.11.4
-bandit[toml]  # Security testing 
+bandit[toml]  # Security testing
+django-environ
+
+# ... existing code ... 
