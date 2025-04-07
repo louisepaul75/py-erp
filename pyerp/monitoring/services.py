@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 HEALTH_CHECK_TIMEOUT = 15  # Reduced from 120 seconds
 
 # Maximum time to wait for individual component checks
-COMPONENT_CHECK_TIMEOUT = 10 # Reduced from 60 seconds
+COMPONENT_CHECK_TIMEOUT = 14 # Increased from 10 seconds
 
 
 def check_database_connection():
