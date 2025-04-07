@@ -43,7 +43,7 @@ import {
   GridLayouts 
 } from "@/lib/dashboard-service"
 import { v4 as uuidv4 } from "uuid"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 import dynamic from "next/dynamic"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -972,4 +972,4 @@ const Dashboard = () => {
   )
 }
 
-export default Dashboard 
+export default Dashboard

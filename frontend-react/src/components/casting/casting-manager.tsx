@@ -9,7 +9,7 @@ import SessionSelector from "./session-selector"
 import CentrifugeSelector from "./centrifuge-selector"
 import { Button } from "@/components/ui/button"
 import type { Mold, Session, User } from "@/types/casting/mold"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { createSession, initSessionStore } from "@/lib/casting/session-store"
 import { useAuthContext } from "@/context/AuthContext"
 
@@ -162,4 +162,4 @@ export default function CastingManager() {
       )}
     </div>
   )
-} 
+}
