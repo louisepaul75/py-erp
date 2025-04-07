@@ -9,6 +9,7 @@ const nextConfig = {
   // Turbopack will use these settings when not using webpack
   images: {
     remotePatterns: [],
+    unoptimized: true, // Disable Next.js image optimization (Attempt 2)
   },
   typescript: {
     // !! WARN !!

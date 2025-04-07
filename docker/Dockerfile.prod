@@ -55,9 +55,10 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js
+# Install Node.js and common Sharp dependencies
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs libvips libglib2.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
