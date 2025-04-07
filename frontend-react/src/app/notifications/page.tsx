@@ -9,13 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MessageSelectorForm } from '@/components/notifications/MessageSelectorForm';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Bell, Filter } from 'lucide-react';
 
 export default function NotificationsPage() {
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
-  const [messageFormOpen, setMessageFormOpen] = useState(false);
+  const [category, setCategory] = useState<'all' | 'direct' | 'system'>('all');
+  const [readStatus, setReadStatus] = useState<'all' | 'unread'>('all');
 
-  const queryParams = filter === 'unread' ? { is_read: false } : {};
+  // Create query params based on both filters
+  const queryParams = {
+    ...(readStatus === 'unread' ? { is_read: false } : {}),
+    ...(category !== 'all' ? { type: category } : {}),
+  };
 
   const {
     notifications,
@@ -54,6 +58,7 @@ export default function NotificationsPage() {
     setMessageFormOpen(false);
   };
 
+  const [messageFormOpen, setMessageFormOpen] = useState(false);
   const unreadNotifications = notificationList.filter((n: Notification) => !n.is_read);
 
   return (
@@ -90,12 +95,35 @@ export default function NotificationsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as 'all' | 'unread')}>
-            <div className="flex justify-between items-center mb-4">
+          {/* Category tabs - All messages, Direct Messages, System Notifications */}
+          <Tabs value={category} onValueChange={(value) => setCategory(value as 'all' | 'direct' | 'system')} className="mb-6">
+            <div className="flex items-center mb-2">
               <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="unread">Unread</TabsTrigger>
+                <TabsTrigger value="all" className="flex items-center gap-1">
+                  All Messages
+                </TabsTrigger>
+                <TabsTrigger value="direct" className="flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4" />
+                  Direct Messages
+                </TabsTrigger>
+                <TabsTrigger value="system" className="flex items-center gap-1">
+                  <Bell className="h-4 w-4" />
+                  System Notifications
+                </TabsTrigger>
               </TabsList>
+            </div>
+          </Tabs>
+
+          {/* Read status tabs - All vs Unread */}
+          <Tabs value={readStatus} onValueChange={(value) => setReadStatus(value as 'all' | 'unread')}>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="unread">Unread</TabsTrigger>
+                </TabsList>
+              </div>
               <Button
                 onClick={handleMarkAllRead}
                 disabled={markAllAsReadPending || unreadNotifications.length === 0}
@@ -104,6 +132,7 @@ export default function NotificationsPage() {
                 {markAllAsReadPending ? 'Marking...' : 'Mark All as Read'}
               </Button>
             </div>
+            
             <TabsContent value="all">
               {isLoadingNotifications && (
                 <div className="space-y-4">
