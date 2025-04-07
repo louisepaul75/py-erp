@@ -74,4 +74,7 @@ whitenoise
 ddtrace>=3.3.1
 
 # 1Password Connect SDK
-onepasswordconnectsdk 
+onepasswordconnectsdk
+
+# Environment variables
+django-environ==0.11.2 
