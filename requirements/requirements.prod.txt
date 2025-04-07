@@ -25,9 +25,9 @@ billiard==4.2.1
     # via
     #   -r requirements/requirements.prod.in
     #   celery
-boto3==1.37.28
+boto3==1.37.29
     # via -r requirements/requirements.prod.in
-botocore==1.37.28
+botocore==1.37.29
     # via
     #   boto3
     #   s3transfer
@@ -35,7 +35,7 @@ brotli==1.1.0
     # via fonttools
 bytecode==0.16.1
     # via ddtrace
-celery==5.4.0
+celery==5.5.0
     # via
     #   -r requirements/requirements.prod.in
     #   django-celery-beat
@@ -77,7 +77,7 @@ cron-descriptor==1.4.5
     # via django-celery-beat
 cssselect2==0.8.0
     # via weasyprint
-ddtrace==3.3.1
+ddtrace==3.3.2
     # via -r requirements/requirements.prod.in
 deprecated==1.2.18
     # via opentelemetry-api
@@ -100,7 +100,7 @@ django==5.1.8
     #   djangorestframework
     #   djangorestframework-simplejwt
     #   drf-spectacular
-django-allauth==65.6.0
+django-allauth==65.7.0
     # via -r requirements/requirements.prod.in
 django-anymail==13.0
     # via -r requirements/requirements.prod.in
@@ -109,6 +109,8 @@ django-celery-beat==2.7.0
 django-celery-results==2.5.1
     # via -r requirements/requirements.prod.in
 django-cors-headers==4.7.0
+    # via -r requirements/requirements.prod.in
+django-environ==0.11.2
     # via -r requirements/requirements.prod.in
 django-filter==25.1
     # via -r requirements/requirements.prod.in
@@ -133,7 +135,7 @@ drf-spectacular==0.28.0
     # via -r requirements/requirements.prod.in
 envier==0.6.1
     # via ddtrace
-fonttools[woff]==4.56.0
+fonttools[woff]==4.57.0
     # via weasyprint
 gunicorn==23.0.0
     # via -r requirements/requirements.prod.in
@@ -273,7 +275,7 @@ tinycss2==1.4.0
     #   weasyprint
 tinyhtml5==2.0.0
     # via weasyprint
-typing-extensions==4.13.0
+typing-extensions==4.13.1
     # via
     #   anyio
     #   ddtrace
@@ -286,7 +288,6 @@ typing-inspection==0.4.0
     # via pydantic
 tzdata==2025.2
     # via
-    #   celery
     #   django-celery-beat
     #   kombu
     #   pandas
