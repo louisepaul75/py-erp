@@ -23,6 +23,7 @@ import time
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from rest_framework.decorators import action
+from django.contrib.auth import get_user_model
 
 # Set up logging using the centralized logging system
 from pyerp.utils.logging import get_logger
@@ -606,7 +607,7 @@ def csrf_token(request):
     })
 
 
-class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+class NotificationViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows notifications to be viewed or marked as read.
     Provides list, retrieve, mark_as_read, and mark_all_as_read actions.
@@ -654,3 +655,35 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         """Get the count of unread notifications for the user."""
         count = Notification.objects.filter(user=request.user, is_read=False).count()
         return Response({'unread_count': count})
+        
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def send_broadcast(self, request):
+        """Send a broadcast message to all users."""
+        title = request.data.get('title')
+        content = request.data.get('content')
+        
+        if not title or not content:
+            return Response(
+                {'error': _('Title and content are required.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get all active users
+        User = get_user_model()
+        users = User.objects.filter(is_active=True)
+        
+        # Create a notification for each user
+        notifications_created = 0
+        for user in users:
+            Notification.objects.create(
+                user=user,
+                title=title,
+                content=content,
+                type='broadcast_message',
+            )
+            notifications_created += 1
+            
+        return Response({
+            'message': _(f'Broadcast message sent to {notifications_created} users.'),
+            'recipients_count': notifications_created
+        }, status=status.HTTP_201_CREATED)

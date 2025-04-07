@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BroadcastMessageForm } from '@/components/notifications/BroadcastMessageForm';
 
 export default function NotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -21,6 +22,8 @@ export default function NotificationsPage() {
     markAsReadPending,
     markAllAsRead,
     markAllAsReadPending,
+    sendBroadcast,
+    sendBroadcastPending,
   } = useNotifications(queryParams);
 
   const handleMarkAllRead = () => {
@@ -33,10 +36,21 @@ export default function NotificationsPage() {
     markAsRead(id);
   };
 
+  const handleSendBroadcast = (title: string, content: string) => {
+    sendBroadcast({ title, content });
+  };
+
   const unreadNotifications = notificationList.filter((n: Notification) => !n.is_read);
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Broadcast Message Form */}
+      <BroadcastMessageForm 
+        onSendMessage={handleSendBroadcast} 
+        isPending={sendBroadcastPending} 
+      />
+      
+      {/* Notifications Card */}
       <Card>
         <CardHeader>
           <CardTitle>Notifications</CardTitle>

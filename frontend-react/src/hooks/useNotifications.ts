@@ -30,7 +30,8 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean } 
         params.append('is_read', String(filters.is_read));
     }
     const queryString = params.toString();
-    const url = queryString ? `v1/core/notifications/?${queryString}` : 'api/v1/notifications/';
+
+    const url = queryString ? `api/v1/notifications/?${queryString}` : 'api/v1/notifications/';
     const response = await apiClient.get<Notification[]>(url).json();
     return response;
 };
@@ -50,6 +51,13 @@ const markAllNotificationsAsRead = async (): Promise<{ message: string }> => {
     return response;
 };
 
+const sendBroadcastMessage = async (title: string, content: string): Promise<{ message: string, recipients_count: number }> => {
+    const response = await apiClient.post<{ message: string, recipients_count: number }>(
+        "api/v1/notifications/send_broadcast/", 
+        { json: { title, content } }
+    ).json();
+    return response;
+};
 
 // --- React Query Hook ---
 
@@ -134,6 +142,34 @@ export function useNotifications(filters: { type?: string; is_read?: boolean } =
         },
     });
 
+    /**
+     * Mutation: Send broadcast message to all users
+     */
+    const sendBroadcastMutation = useMutation<
+        { message: string; recipients_count: number }, 
+        Error, 
+        { title: string; content: string }
+    >({
+        mutationFn: ({ title, content }) => sendBroadcastMessage(title, content),
+        onSuccess: (data) => {
+            // Invalidate all notification queries and the count
+            queryClient.invalidateQueries({ queryKey: [queryKeyBase] });
+            
+            toast({ 
+                title: "Success", 
+                description: data.message || `Message sent to ${data.recipients_count} users.` 
+            });
+        },
+        onError: (error) => {
+            console.error("Failed to send broadcast message:", error);
+            toast({ 
+                variant: "destructive", 
+                title: "Error", 
+                description: "Failed to send broadcast message." 
+            });
+        },
+    });
+
 
     return {
         // Data
@@ -152,6 +188,8 @@ export function useNotifications(filters: { type?: string; is_read?: boolean } =
         markAsReadPending: markAsReadMutation.isPending,
         markAllAsRead: markAllAsReadMutation.mutate,
         markAllAsReadPending: markAllAsReadMutation.isPending,
+        sendBroadcast: sendBroadcastMutation.mutate,
+        sendBroadcastPending: sendBroadcastMutation.isPending,
         // Refetch functions
         refetchNotifications,
         refetchUnreadCount,
