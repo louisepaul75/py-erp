@@ -9,6 +9,7 @@ const nextConfig = {
   // Turbopack will use these settings when not using webpack
   images: {
     remotePatterns: [],
+    unoptimized: true, // Disable Next.js image optimization (Attempt 2)
   },
   typescript: {
     // !! WARN !!
@@ -74,7 +75,7 @@ const nextConfig = {
         destination: 'http://localhost:8000/api/v1/sales/records/:id/items/',
       },
       {
-        source: '/v1/inventory/storage-locations/',
+        source: '/inventory/storage-locations/',
         destination: 'http://localhost:8000/api/v1/inventory/storage-locations/',
       },
       {
