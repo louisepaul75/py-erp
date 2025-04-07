@@ -80,6 +80,9 @@ urlpatterns = [
         ),
     ])),
     
+    # Include the router URLs under the v1 prefix
+    path("v1/", include(router.urls)),
+    
     # Add JWT token endpoints here # REMOVING THESE AS THEY WERE MOVED BACK
     # path(
     #     "token/",
