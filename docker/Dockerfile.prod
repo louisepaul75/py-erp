@@ -75,7 +75,7 @@ COPY --from=frontend-builder /frontend/public /app/static/
 COPY --from=frontend-builder /frontend/.next/static /app/static/_next/static
 
 # Optional: copy .next (without /static) if needed for custom routing — skip if not used
-# COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
+COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
 
 # Still copy package.json and node_modules if they're needed elsewhere (optional)
 COPY --from=frontend-builder /frontend/node_modules /app/frontend-react/node_modules
