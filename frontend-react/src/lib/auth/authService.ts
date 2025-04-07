@@ -71,8 +71,8 @@ export const csrfService = {
   // Fetch a new CSRF token
   fetchToken: async () => {
     try {
-      // Call the CSRF endpoint
-      const response = await fetch(`${API_URL}/api/csrf/`, {
+      // Call the CSRF endpoint (path relative to API_URL)
+      const response = await fetch(`${API_URL}/csrf/`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -286,8 +286,8 @@ export const authService = {
       }
       
       // Attempt the fetch. The beforeError hook will handle 401/refresh/retry.
-      console.log(`[getCurrentUser] Attempting api.get('api/auth/user/')...`);
-      const user = await api.get('api/auth/user/', {
+      console.log(`[getCurrentUser] Attempting api.get('auth/user/')...`);
+      const user = await api.get('auth/user/', {
         // We still need to provide the initial token for the first attempt
         headers: {
           'Authorization': `Bearer ${token}`
@@ -329,7 +329,7 @@ export const authService = {
       await csrfService.fetchToken();
       
       // Get tokens from the token endpoint (use path relative to API_URL prefix)
-      const tokenResponse = await authApi.post('api/token/', { json: credentials }).json<{
+      const tokenResponse = await authApi.post('token/', { json: credentials }).json<{
         access: string;
         refresh: string;
       }>();
@@ -439,7 +439,7 @@ const refreshAuthToken = async () => {
   }
 
   try {
-    const response = await fetch('/api/auth/token/refresh/', {
+    const response = await fetch('/auth/token/refresh/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

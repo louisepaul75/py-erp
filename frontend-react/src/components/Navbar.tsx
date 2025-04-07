@@ -138,7 +138,7 @@ export function Navbar() {
           <div className="flex-shrink-0 flex items-center pl-2">
             <Link href="/dashboard">
               <Image
-                src="wsz_logo_long.png" // Removed leading slash
+                src="/wsz_logo_long.png"
                 alt="Wilhelm Schweizer Zinnmanufaktur"
                 width={200}
                 height={50}
