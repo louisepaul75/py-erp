@@ -68,15 +68,20 @@ COPY requirements/ /app/requirements/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 
-# Copy the built frontend from the frontend-builder stage
-COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
-COPY --from=frontend-builder /frontend/public /app/frontend-react/public
+# Copy public assets (images, favicon, etc.) into Django static root
+COPY --from=frontend-builder /frontend/public /app/static/
+
+# Copy built Next.js static files into Django static root
+COPY --from=frontend-builder /frontend/.next/static /app/static/_next/static
+
+# Optional: copy .next (without /static) if needed for custom routing — skip if not used
+# COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
+
+# Still copy package.json and node_modules if they're needed elsewhere (optional)
 COPY --from=frontend-builder /frontend/node_modules /app/frontend-react/node_modules
 COPY --from=frontend-builder /frontend/package.json /app/frontend-react/package.json
 
-# Create necessary directories and setup static files
-RUN mkdir -p /app/staticfiles/react/app/_next && \
-    cp -r /app/frontend-react/.next/* /app/staticfiles/react/app/_next/
+
 
 # Copy only necessary project files
 COPY pyerp/ /app/pyerp/
