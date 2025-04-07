@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/popover";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
+import { NotificationItem } from "@/components/notifications/NotificationItem";
 
 function DropdownItem({
   children,
@@ -82,7 +83,7 @@ export function Navbar() {
   const { user } = useIsAuthenticated();
   const logout = useLogout();
   const { isMobile, isTablet } = useScreenSize();
-  const { unreadCount, isLoading: isLoadingUnreadCount } = useNotifications();
+  const { unreadCount, notifications, isLoadingUnreadCount, markAsRead } = useNotifications({ is_read: false, limit: 5 });
 
   const toggleTestDropdown = () => setTestMenuOpen(!testMenuOpen);
 
@@ -280,10 +281,26 @@ export function Navbar() {
                   <div className="p-4 font-medium border-b">
                     Notifications
                   </div>
-                  <div className="p-4 text-sm text-muted-foreground">
-                    Notification list goes here...
-                    <br />
-                    <Link href="/notifications" className="text-primary hover:underline">
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {isLoadingUnreadCount ? (
+                      <div className="p-4 text-sm text-muted-foreground">Loading notifications...</div>
+                    ) : notifications && notifications.length > 0 ? (
+                      <div className="divide-y">
+                        {notifications.slice(0, 5).map((notification) => (
+                          <NotificationItem
+                            key={notification.id}
+                            notification={notification}
+                            onMarkAsRead={markAsRead}
+                            isMarkingRead={false}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-sm text-muted-foreground">No new notifications</div>
+                    )}
+                  </div>
+                  <div className="p-2 border-t text-center">
+                    <Link href="/notifications" className="text-primary hover:underline text-sm">
                       View all notifications
                     </Link>
                   </div>
@@ -377,10 +394,26 @@ export function Navbar() {
                   <div className="p-4 font-medium border-b">
                     Notifications
                   </div>
-                  <div className="p-4 text-sm text-muted-foreground">
-                    Notification list goes here...
-                    <br />
-                    <Link href="/notifications" className="text-primary hover:underline">
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {isLoadingUnreadCount ? (
+                      <div className="p-4 text-sm text-muted-foreground">Loading notifications...</div>
+                    ) : notifications && notifications.length > 0 ? (
+                      <div className="divide-y">
+                        {notifications.slice(0, 5).map((notification) => (
+                          <NotificationItem
+                            key={notification.id}
+                            notification={notification}
+                            onMarkAsRead={markAsRead}
+                            isMarkingRead={false}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-sm text-muted-foreground">No new notifications</div>
+                    )}
+                  </div>
+                  <div className="p-2 border-t text-center">
+                    <Link href="/notifications" className="text-primary hover:underline text-sm">
                       View all notifications
                     </Link>
                   </div>

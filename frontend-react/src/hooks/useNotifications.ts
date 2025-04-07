@@ -21,13 +21,16 @@ interface UnreadCountResponse {
 
 // --- API Interaction Functions ---
 
-const fetchNotifications = async (filters: { type?: string; is_read?: boolean } = {}): Promise<Notification[]> => {
+const fetchNotifications = async (filters: { type?: string; is_read?: boolean; limit?: number } = {}): Promise<Notification[]> => {
     const params = new URLSearchParams();
     if (filters.type) {
         params.append('type', filters.type);
     }
     if (filters.is_read !== undefined) {
         params.append('is_read', String(filters.is_read));
+    }
+    if (filters.limit !== undefined) {
+        params.append('limit', String(filters.limit));
     }
     const queryString = params.toString();
 
@@ -61,7 +64,7 @@ const sendBroadcastMessage = async (title: string, content: string): Promise<{ m
 
 // --- React Query Hook ---
 
-export function useNotifications(filters: { type?: string; is_read?: boolean } = {}) {
+export function useNotifications(filters: { type?: string; is_read?: boolean; limit?: number } = {}) {
     const queryClient = useQueryClient();
     const { toast } = useToast(); // Get toast function
 
