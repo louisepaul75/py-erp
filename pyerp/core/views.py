@@ -12,8 +12,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status, viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
@@ -21,10 +20,20 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.middleware.csrf import get_token
 import time
+from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 # Set up logging using the centralized logging system
 from pyerp.utils.logging import get_logger
-from pyerp.core.models import UserPreference
+from pyerp.core.models import UserPreference, AuditLog, Tag, TaggedItem, Notification
+from pyerp.core.serializers import (
+    UserPreferenceSerializer,
+    AuditLogSerializer,
+    TagSerializer,
+    TaggedItemSerializer,
+    NotificationSerializer,
+)
+from pyerp.core.permissions import IsOwnerOrAdmin
 
 logger = get_logger(__name__)
 
@@ -128,7 +137,7 @@ def git_branch(request):
 class UserProfileView(APIView):
     """View to retrieve and update the authenticated user's profile."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         """Get the authenticated user's profile."""
@@ -229,7 +238,7 @@ class UserProfileView(APIView):
 class DashboardSummaryView(APIView):
     """View to retrieve and update dashboard data."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_dashboard_data(self, user):
         """
@@ -464,7 +473,7 @@ class DashboardSummaryView(APIView):
 class SystemSettingsView(APIView):
     """View to retrieve and update system settings."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_system_settings(self):
         """
@@ -595,3 +604,53 @@ def csrf_token(request):
     return JsonResponse({
         'csrf_token': get_token(request)
     })
+
+
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint that allows notifications to be viewed or marked as read.
+    Provides list, retrieve, mark_as_read, and mark_all_as_read actions.
+    Also provides an unread_count action.
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Ensure users only see their own notifications."""
+        user = self.request.user
+        queryset = Notification.objects.filter(user=user)
+        
+        # Allow filtering by 'type' query parameter
+        notification_type = self.request.query_params.get('type', None)
+        if notification_type:
+            queryset = queryset.filter(type=notification_type)
+            
+        # Allow filtering by 'is_read' query parameter
+        is_read_param = self.request.query_params.get('is_read', None)
+        if is_read_param is not None:
+            is_read = is_read_param.lower() in ['true', '1']
+            queryset = queryset.filter(is_read=is_read)
+            
+        return queryset.order_by('-created_at')
+
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
+    def mark_as_read(self, request, pk=None):
+        """Mark a specific notification as read."""
+        notification = self.get_object() # Checks ownership via get_queryset
+        if not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=['is_read', 'updated_at'])
+        serializer = self.get_serializer(notification)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
+    def mark_all_as_read(self, request):
+        """Mark all notifications for the user as read."""
+        updated_count = Notification.objects.filter(user=request.user, is_read=False).update(is_read=True, updated_at=timezone.now())
+        return Response({'message': _(f'{updated_count} notifications marked as read.')}, status=status.HTTP_200_OK)
+        
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def unread_count(self, request):
+        """Get the count of unread notifications for the user."""
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
+        return Response({'unread_count': count})

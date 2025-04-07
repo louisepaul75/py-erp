@@ -450,3 +450,52 @@ class TaggedItem(models.Model):
         return f"'{self.tag}' tag on {content_obj_str}"
 
 # --- End Tagging System ---
+
+class Notification(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        help_text=_("The user who will receive the notification."),
+    )
+    title = models.CharField(
+        max_length=255,
+        help_text=_("The title of the notification."),
+    )
+    content = models.TextField(
+        blank=True,
+        help_text=_("The main content/body of the notification."),
+    )
+    # Consider using choices for type if you have a fixed set
+    type = models.CharField(
+        max_length=50,
+        default="system",
+        db_index=True,
+        help_text=_("Category of the notification (e.g., 'system', 'user_message', 'task_update')."),
+    )
+    is_read = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=_("Indicates if the user has read the notification."),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text=_("Timestamp when the notification was created."),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text=_("Timestamp when the notification was last updated."),
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read", "-created_at"]),
+            models.Index(fields=["user", "type", "is_read", "-created_at"]),
+        ]
+        verbose_name = _("Notification")
+        verbose_name_plural = _("Notifications")
+
+    def __str__(self):
+        return f"Notification for {self.user}: {self.title} ({'Read' if self.is_read else 'Unread'})"

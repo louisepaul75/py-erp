@@ -13,6 +13,7 @@ import {
   Palette,
   Package,
   Paintbrush,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -31,6 +32,13 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Button } from "@/components/ui/button";
 
 function DropdownItem({
   children,
@@ -74,6 +82,7 @@ export function Navbar() {
   const { user } = useIsAuthenticated();
   const logout = useLogout();
   const { isMobile, isTablet } = useScreenSize();
+  const { unreadCount, isLoading: isLoadingUnreadCount } = useNotifications();
 
   const toggleTestDropdown = () => setTestMenuOpen(!testMenuOpen);
 
@@ -247,8 +256,42 @@ export function Navbar() {
             </div>
           )}
 
-          {/* User Menu - Desktop - Refactored with Shadcn DropdownMenu */}
-          <div className="hidden lg:flex items-center pr-2">
+          {/* Right side icons (Theme, Language, Notifications, User Menu) - Desktop */}
+          <div className="hidden lg:flex items-center space-x-3 pr-2">
+            {/* Notification Popover */}
+            {user && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative rounded-full"
+                    aria-label={`${unreadCount} unread notifications`}
+                  >
+                    <Bell className="h-6 w-6" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="p-4 font-medium border-b">
+                    Notifications
+                  </div>
+                  <div className="p-4 text-sm text-muted-foreground">
+                    Notification list goes here...
+                    <br />
+                    <Link href="/notifications" className="text-primary hover:underline">
+                      View all notifications
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* User Menu - Desktop */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -310,8 +353,42 @@ export function Navbar() {
             </DropdownMenu>
           </div>
 
-          {/* Mobile user button - Refactored with Shadcn DropdownMenu */}
-          {(isMobile || isTablet) && (
+          {/* Right side icons (Notifications, User Menu) - Mobile */}
+          <div className="lg:hidden flex items-center space-x-2">
+            {/* Notification Popover - Mobile */}
+            {user && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative rounded-full"
+                    aria-label={`${unreadCount} unread notifications`}
+                  >
+                    <Bell className="h-6 w-6" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translatey-1/2 bg-red-600 rounded-full">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="p-4 font-medium border-b">
+                    Notifications
+                  </div>
+                  <div className="p-4 text-sm text-muted-foreground">
+                    Notification list goes here...
+                    <br />
+                    <Link href="/notifications" className="text-primary hover:underline">
+                      View all notifications
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Mobile user button */}
             <DropdownMenu>
               <div className="flex items-center">
                 <div className="relative ml-3" id="mobile-user-dropdown">
@@ -365,7 +442,7 @@ export function Navbar() {
                 </div>
               </div>
             </DropdownMenu>
-          )}
+          </div>
         </div>
       </div>
     </nav>

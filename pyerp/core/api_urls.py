@@ -8,12 +8,21 @@ from pyerp.core.views import (
     csrf_token,
     git_branch,
     health_check,
+    DashboardDataView,
+    AuditLogViewSet,
+    TagViewSet,
+    TaggedItemViewSet,
+    NotificationViewSet,
 )
 
 app_name = 'core_api'
 
 # Create a router for core API endpoints
 router = routers.DefaultRouter()
+router.register(r"audit-logs", AuditLogViewSet, basename="auditlog")
+router.register(r"tags", TagViewSet, basename="tag")
+router.register(r"tagged-items", TaggedItemViewSet, basename="taggeditem")
+router.register(r"notifications", NotificationViewSet, basename="notification")
 
 # Core API URLs - non-versioned (for backward compatibility)
 urlpatterns = [
@@ -34,6 +43,11 @@ urlpatterns = [
         "settings/",
         SystemSettingsView.as_view(),
         name="api-system-settings",
+    ),
+    path(
+        "dashboard/",
+        DashboardDataView.as_view(),
+        name="dashboard-data",
     ),
     
     # Include versioned endpoints with a different namespace
