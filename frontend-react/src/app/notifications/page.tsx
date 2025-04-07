@@ -27,7 +27,7 @@ export default function NotificationsPage() {
     markAllAsRead();
   };
 
-  const notificationList = notifications || [];
+  const notificationList = Array.isArray(notifications) ? notifications : [];
 
   const handleMarkOneRead = (id: string) => {
     markAsRead(id);
