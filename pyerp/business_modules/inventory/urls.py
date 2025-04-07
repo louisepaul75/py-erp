@@ -221,7 +221,8 @@ def storage_locations_list(request):
     """
     try:
         locations = StorageLocation.objects.annotate(
-            product_count=models.Count("stored_products", distinct=True)
+            product_count=models.Count("stored_products", distinct=True),
+            box_count=models.Count("boxes", distinct=True)
         )
 
         data = []
@@ -247,8 +248,9 @@ def storage_locations_list(request):
                 "special_spot": location.special_spot,
                 "is_active": location.is_active,
                 "product_count": location.product_count,
-                "location_code": location_code,
+                "location_code": f"LA{location_code}",
                 "legacy_id": location.legacy_id,
+                "status" : "AVAILABLE" if location.box_count < 3 else "OCCUPIED"
             })
 
         return Response(data)
