@@ -1,26 +1,34 @@
 #!/bin/bash
 
-echo "Running all tests..."
-./run_all_tests.sh
-if [ $? -ne 0 ]; then
-    echo "Tests failed. Aborting build."
-    exit 1
-fi
-echo "All tests passed. Proceeding with build..."
-echo "" # Add a newline for spacing
-
-# Parse command line arguments
+# Default values
+RUN_TESTS=true
+RUN_MONITORING=true
 DEBUG_MODE=false
 
-for arg in "$@"
-do
-    case $arg in
-        --debug)
-        DEBUG_MODE=true
-        shift
-        ;;
+# Parse command line arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --no-tests) RUN_TESTS=false; shift ;;
+        --no-monitoring) RUN_MONITORING=false; shift ;;
+        --debug) DEBUG_MODE=true; shift ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
 done
+
+# Run tests unless skipped
+if [ "$RUN_TESTS" = true ]; then
+    echo "Running all tests..."
+    ./run_all_tests.sh
+    if [ $? -ne 0 ]; then
+        echo "Tests failed. Aborting build."
+        exit 1
+    fi
+    echo "All tests passed. Proceeding with build..."
+    echo "" # Add a newline for spacing
+else
+    echo "Skipping tests as requested."
+    echo ""
+fi
 
 # Stop and remove existing containers
 echo "Stopping existing containers..."
@@ -56,35 +64,39 @@ docker run -d \
     -e NEXT_TELEMETRY_DISABLED=1 \
     pyerp-prod-image
 
-echo -e "\nContainer is running in the background. Use 'docker logs pyerp-prod' to view logs again."
+echo -e "\nContainer pyerp-prod is running in the background. Use 'docker logs pyerp-prod' to view logs."
 
-# Start the monitoring container
-echo "Starting monitoring container..."
-docker-compose -f docker/docker-compose.monitoring.yml up -d
+# Start the monitoring container unless skipped
+if [ "$RUN_MONITORING" = true ]; then
+    echo "Starting monitoring container..."
+    docker-compose -f docker/docker-compose.monitoring.yml up -d
 
-echo -e "\nMonitoring services:"
-echo -e "- Elasticsearch: http://localhost:9200"
-echo -e "- Kibana: http://localhost:5601"
-echo -e "Monitoring container logs: docker logs pyerp-elastic-kibana"
+    echo -e "\nMonitoring services:"
+    echo -e "- Elasticsearch: http://localhost:9200"
+    echo -e "- Kibana: http://localhost:5601"
+    echo -e "Monitoring container logs: docker logs pyerp-elastic-kibana"
 
-# Wait for Elasticsearch to be ready before running setup
-echo "Waiting for Elasticsearch to become available..."
-for i in {1..30}; do
-    if curl -s http://localhost:9200 > /dev/null; then
-        echo "Elasticsearch is ready!"
-        break
-    fi
-    echo "Waiting for Elasticsearch... attempt $i of 30"
-    sleep 5
-    
-    if [ $i -eq 30 ]; then
-        echo "Elasticsearch did not start in time. Please check Elasticsearch logs."
-        echo "You can check logs with: docker logs pyerp-elastic-kibana"
-    fi
-done
+    # Wait for Elasticsearch to be ready before running setup
+    echo "Waiting for Elasticsearch to become available..."
+    for i in {1..30}; do
+        if curl -s http://localhost:9200 > /dev/null; then
+            echo "Elasticsearch is ready!"
+            break
+        fi
+        echo "Waiting for Elasticsearch... attempt $i of 30"
+        sleep 5
 
-echo "Waiting 10 seconds before starting health checks..."
-sleep 10
+        if [ $i -eq 30 ]; then
+            echo "Elasticsearch did not start in time. Please check Elasticsearch logs."
+            echo "You can check logs with: docker logs pyerp-elastic-kibana"
+        fi
+    done
+
+    echo "Waiting 10 seconds before starting health checks..."
+    sleep 10
+else
+    echo "Skipping monitoring setup as requested."
+fi
 
 # --- Health Checks ---
 echo -e "\n--- Running Health Checks ---"

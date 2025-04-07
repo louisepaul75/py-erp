@@ -36,9 +36,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         curl \
-        git \
-        netcat-traditional \
+        nginx \
+        redis-server \
         supervisor \
+        netcat-openbsd \
         nginx \
         libffi-dev \
         libjpeg-dev \
@@ -68,15 +69,10 @@ COPY requirements/ /app/requirements/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 
-# Copy public assets from frontend build stage to where Next.js expects them
-COPY --from=frontend-builder /frontend/public /app/frontend-react/public/
-
-# Copy the full .next directory needed for `npm run start`
-COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
-
-# Copy node_modules and package.json needed for `npm run start`
-COPY --from=frontend-builder /frontend/node_modules /app/frontend-react/node_modules
-COPY --from=frontend-builder /frontend/package.json /app/frontend-react/package.json
+# Copy standalone output files
+COPY --from=frontend-builder /frontend/.next/standalone /app/frontend-react/
+COPY --from=frontend-builder /frontend/.next/static /app/frontend-react/.next/static
+COPY --from=frontend-builder /frontend/public /app/frontend-react/public
 
 # Copy project files
 COPY pyerp/ /app/pyerp/
