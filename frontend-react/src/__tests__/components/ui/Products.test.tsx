@@ -5,7 +5,22 @@ import userEvent from '@testing-library/user-event';
 import InventoryManagement from '@/components/ui/products';
 import { productApi } from '@/lib/products/api';
 import { LastVisitedProvider, useLastVisited } from '@/context/LastVisitedContext';
-import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
+import { useRouter, usePathname } from 'next/navigation';
+
+// Mock Next.js navigation hooks
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn().mockImplementation(() => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    query: {}
+  })),
+  usePathname: jest.fn().mockReturnValue('/products'),
+  useSearchParams: jest.fn().mockImplementation(() => ({
+    get: jest.fn()
+  })),
+}));
 
 // Mock the product API
 jest.mock('@/lib/products/api', () => ({
@@ -62,18 +77,32 @@ const mockProducts = [
 describe('Products Component', () => {
   const mockGetProducts = productApi.getProducts as jest.Mock;
   const mockedUseLastVisited = useLastVisited as jest.Mock;
+  const mockUseRouter = useRouter as jest.Mock;
+  const mockUsePathname = usePathname as jest.Mock;
 
   beforeEach(() => {
     // Reset mocks before each test
     mockGetProducts.mockReset();
     mockedUseLastVisited.mockClear(); // Clear calls on the imported mock function
     mockAddLastVisited.mockClear(); // Clear calls on the inner function mock
+    mockUseRouter.mockClear();
+    mockUsePathname.mockClear();
     
     // Reset the return value for the mock hook if necessary (though defined in jest.mock now)
     mockedUseLastVisited.mockReturnValue({
       addVisitedItem: mockAddLastVisited,
       lastVisitedItems: [],
     });
+    
+    // Set default Next.js navigation behavior
+    mockUsePathname.mockReturnValue('/products');
+    mockUseRouter.mockImplementation(() => ({
+      push: jest.fn(),
+      replace: jest.fn(),
+      back: jest.fn(),
+      forward: jest.fn(),
+      query: {}
+    }));
     
     // Default successful API response
     mockGetProducts.mockResolvedValue({ products: mockProducts, total: mockProducts.length, skip: 0, limit: 30 });
@@ -85,13 +114,9 @@ describe('Products Component', () => {
 
   it('renders the Products component correctly', async () => {
     render(
-      <React.StrictMode>
-        <MemoryRouterProvider>
-          <LastVisitedProvider>
-            <InventoryManagement />
-          </LastVisitedProvider>
-        </MemoryRouterProvider>
-      </React.StrictMode>
+      <LastVisitedProvider>
+        <InventoryManagement />
+      </LastVisitedProvider>
     );
     
     // Wait for products to load

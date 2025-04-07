@@ -131,3 +131,5 @@ pyerp/config/external_connections.json
 package-lock.json
 # Keep yarn.lock for consistent installs
 # yarn.lock
+
+.ai/
