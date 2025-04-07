@@ -9,9 +9,9 @@ if [[ "${DJANGO_SETTINGS_MODULE:-}" != "pyerp.config.settings.production" ]]; th
     export DJANGO_SETTINGS_MODULE="pyerp.config.settings.production"
 fi
 
-# Load environment variables first
-echo "Loading environment from /app/config/env/.env.prod"
-source /app/config/env/.env.prod 2>/dev/null || true
+# Environment variables are loaded via --env-file in docker run
+# echo "Loading environment from /app/config/env/.env.prod"
+# source /app/config/env/.env.prod 2>/dev/null || true # Removed this line
 
 # Print database settings for debugging
 echo "Database settings: NAME=$DB_NAME, HOST=$DB_HOST, USER=$DB_USER"
@@ -45,5 +45,7 @@ echo "Log directories configured with correct permissions"
 # Apply Django migrations if needed
 python manage.py migrate
 
-# Start all services using supervisord
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# Start all services using supervisord in the foreground (remove exec)
+# This might show errors if supervisord itself fails immediately
+echo "Starting supervisord..."
+/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

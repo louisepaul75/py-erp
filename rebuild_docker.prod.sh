@@ -51,8 +51,10 @@ if [ "$DEBUG_MODE" = true ]; then
 fi
 
 echo "Starting containers..."
+# Add back -d flag to run in detached mode
 docker run -d \
     --name pyerp-prod \
+    --hostname pyerp-app \
     --network pyerp-network \
     -p 80:80 \
     -p 443:443 \

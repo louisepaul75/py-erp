@@ -6,8 +6,7 @@ set -e
 # Dynamically get the container's primary IP address
 host=$(hostname -i | awk '{print $1}') # Get the first IP if multiple are listed
 port="3000"
-# Correctly define the nginx command without extra quotes around the directive
-cmd="/usr/sbin/nginx -g 'daemon off;'"
+# Nginx command will be executed directly below
 
 echo "Waiting for Next.js on container IP $host:$port..."
 
@@ -23,5 +22,6 @@ while ! curl -fsSo /dev/null http://$host:$port; do
   sleep 1
 done
 
-echo "Next.js is up - executing command: $cmd"
-exec $cmd
+echo "Next.js is up - executing Nginx directly..."
+# Execute nginx directly, passing arguments separately
+exec /usr/sbin/nginx -g 'daemon off;'
