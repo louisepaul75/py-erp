@@ -74,7 +74,7 @@ const nextConfig = {
         destination: 'http://localhost:8000/api/v1/sales/records/:id/items/',
       },
       {
-        source: '/v1/inventory/storage-locations/',
+        source: '/inventory/storage-locations/',
         destination: 'http://localhost:8000/api/v1/inventory/storage-locations/',
       },
       {
