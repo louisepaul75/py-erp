@@ -5,7 +5,7 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dnd-touch-backend": "^16.0.1",
-    "react-router-dom": "^7.4.1"
+    "react-router-dom": "^7.5.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.26.9",
