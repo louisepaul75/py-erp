@@ -210,23 +210,57 @@ class TestAuthAPIViews:
     def api_client(self):
         """APIClient fixture."""
         return APIClient()
+    
+    @pytest.fixture
+    def setup_test_urls(self):
+        """Set up test URLs for isolated testing."""
+        from django.urls import include, path
+        from django.conf.urls.static import static
+        
+        from django.urls.base import clear_url_caches
+        import sys
+        
+        # Import test URL patterns
+        from pyerp.core.tests.api_views_test_urls import urlpatterns as test_urlpatterns
+        
+        # Store the original ROOT_URLCONF
+        from django.conf import settings
+        original_urlconf = settings.ROOT_URLCONF
+        
+        # Set up test URL patterns
+        settings.ROOT_URLCONF = 'pyerp.core.tests.api_views_test_urls'
+        
+        # Clear URL caches
+        clear_url_caches()
+        
+        yield
+        
+        # Restore original URL conf after test
+        settings.ROOT_URLCONF = original_urlconf
+        clear_url_caches()
+        
+        # Clean up any imported modules if needed
+        if 'pyerp.core.tests.api_views_test_urls' in sys.modules:
+            del sys.modules['pyerp.core.tests.api_views_test_urls']
 
-    def test_csrf_token_view(self, api_client):
+    def test_csrf_token_view(self, api_client, setup_test_urls):
         """Test the csrf_token view returns a token and sets the cookie."""
         # Use the literal URL path as reverse() is not working reliably
-        url = reverse('core_api:api-csrf-token')
+        url = '/api/csrf/'
 
         response = api_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
-        assert 'csrf_token' in response.data
-        assert response.data['csrf_token'] is not None
+        # Convert the JSON content to Python
+        response_data = json.loads(response.content.decode('utf-8'))
+        assert 'csrf_token' in response_data
+        assert response_data['csrf_token'] is not None
         assert settings.CSRF_COOKIE_NAME in response.cookies
 
-    def test_token_obtain_pair_success(self, api_client, user):
+    def test_token_obtain_pair_success(self, api_client, user, setup_test_urls):
         """Test successful token retrieval with valid credentials."""
         # Use the literal URL path as reverse() is not working reliably
-        url = reverse('token_obtain_pair')
+        url = '/api/token/'
         data = {
             'username': 'testuser',
             'password': 'password123'
@@ -239,10 +273,10 @@ class TestAuthAPIViews:
         assert response.data['access'] is not None
         assert response.data['refresh'] is not None
 
-    def test_token_obtain_pair_invalid_credentials(self, api_client, user):
+    def test_token_obtain_pair_invalid_credentials(self, api_client, user, setup_test_urls):
         """Test token retrieval failure with invalid credentials."""
         # Use the literal URL path as reverse() is not working reliably
-        url = reverse('token_obtain_pair')
+        url = '/api/token/'
         data = {
             'username': 'testuser',
             'password': 'wrongpassword'
@@ -253,10 +287,10 @@ class TestAuthAPIViews:
         assert 'access' not in response.data
         assert 'refresh' not in response.data
 
-    def test_token_obtain_pair_missing_credentials(self, api_client):
+    def test_token_obtain_pair_missing_credentials(self, api_client, setup_test_urls):
         """Test token retrieval failure with missing credentials."""
         # Use the literal URL path as reverse() is not working reliably
-        url = reverse('token_obtain_pair')
+        url = '/api/token/'
         # Missing password
         data_missing_pw = {'username': 'testuser'}
         response_missing_pw = api_client.post(
