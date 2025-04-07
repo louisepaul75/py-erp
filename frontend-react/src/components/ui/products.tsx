@@ -224,52 +224,40 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     return () => window.removeEventListener("resize", updateContentHeight);
   }, []);
 
-  // Update product selection handling AND URL push
+  // Effect for FETCHING product detail data
   useEffect(() => {
+    // **Guard**: Don't load details if no item is selected or creating parent
+    if (!selectedItem || isCreatingParent) {
+      console.log("Skipping detail load (no item or creating parent):", { selectedItem, isCreatingParent });
+      setSelectedProduct(null); // Clear product if no item selected
+      setIsDetailLoading(false); // Ensure loading is false if we skip
+      return;
+    }
+
     const controller = new AbortController();
     const signal = controller.signal;
     let isActive = true;
-    
-    const loadProduct = async () => {
-      // **Guard**: Don't load details if the list is loading or no item is selected
-      if (isListLoading || !selectedItem || isCreatingParent || signal.aborted) {
-        console.log("Skipping detail load:", { isListLoading, selectedItem, isCreatingParent, aborted: signal.aborted });
-        // If list is loading, keep the detail loader spinning until list is done
-        if (isListLoading) {
-          setIsDetailLoading(true); 
-        } else {
-          // Only set loading false if not loading list AND conditions met to skip
-          setIsDetailLoading(false);
-        }
-        return;
-      }
+    const selectedItemId = typeof selectedItem === 'string' ? parseInt(selectedItem) : selectedItem;
 
-      const selectedItemId = typeof selectedItem === 'string' ? parseInt(selectedItem) : selectedItem;
+    const loadProduct = async () => {
       console.log("Proceeding to load detail for:", selectedItemId);
-      
       try {
         setIsDetailLoading(true); // Ensure loading is true when we start fetching
         const product = await productApi.getProduct(selectedItemId, signal);
-        
-        if (!isActive || signal.aborted) return;
-        
-        console.log("Successfully loaded product detail:", product.id);
-        setSelectedProduct(product);
-        
-        const newPath = product.variants_count > 0
-          ? `/products/parent/${product.id}`
-          : `/products/variant/${product.id}`;
 
-        if (pathname !== newPath) {
-          console.log("Pushing new path:", newPath);
-          router.push(newPath);
-        }
+        if (!isActive || signal.aborted) return;
+
+        console.log("Successfully loaded product detail:", product.id);
+        setSelectedProduct(product); // Only set the product state here
+
       } catch (error) {
         // Explicitly check for AbortError name in detail fetch as well
         if (!signal.aborted && isActive && !(error instanceof DOMException && error.name === 'AbortError')) {
           console.error(`Error fetching product ${selectedItemId}:`, error);
-          setSelectedItem(null);
+          setSelectedItem(null); // Reset selection on error
           setSelectedProduct(null);
+        } else if (error instanceof DOMException && error.name === 'AbortError') {
+           console.log("Fetch detail request aborted as expected (during fetch).");
         }
       } finally {
         if (!signal.aborted && isActive) {
@@ -282,19 +270,39 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     loadProduct();
 
     return () => {
-      console.log("Cleaning up detail effect for:", selectedItem);
+      console.log("Cleaning up detail fetch effect for:", selectedItem);
       isActive = false;
       try {
         controller.abort();
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
-          console.log("Fetch detail request aborted as expected.");
+          console.log("Fetch detail request aborted as expected (in cleanup).");
         } else {
           console.error("Unexpected error during fetch detail abort:", error);
         }
       }
     };
-  }, [selectedItem, pathname, router, isCreatingParent]);
+    // Only depend on the item ID and creation status for fetching
+  }, [selectedItem, isCreatingParent]);
+
+  // Effect for handling NAVIGATION based on the loaded product and current path
+  useEffect(() => {
+      // **Guard**: Only run if we have a selected product and are not creating a parent
+      if (!selectedProduct || isCreatingParent) {
+          return;
+      }
+      
+      const expectedPath = selectedProduct.variants_count > 0
+          ? `/products/parent/${selectedProduct.id}`
+          : `/products/variant/${selectedProduct.id}`;
+
+      // Only push if the path is actually different
+      if (pathname !== expectedPath) {
+          console.log(`Pathname mismatch. Current: "${pathname}", Expected: "${expectedPath}". Pushing new path.`);
+          router.push(expectedPath);
+      }
+  // This effect depends on the product, pathname, router and creation status
+  }, [selectedProduct, pathname, router, isCreatingParent]);
 
   // Add useEffect for tracking visits
   useEffect(() => {
