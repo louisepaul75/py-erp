@@ -41,7 +41,7 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean; l
     }
     const queryString = params.toString();
 
-    const url = queryString ? `api/v1/notifications/?${queryString}` : 'api/v1/notifications/';
+    const url = queryString ? `v1/notifications/?${queryString}` : 'v1/notifications/';
     
     try {
         const response = await apiClient.get<PaginatedResponse<Notification>>(url).json();
@@ -57,23 +57,23 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean; l
 };
 
 const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    const response = await apiClient.get<UnreadCountResponse>("api/v1/notifications/unread_count/").json();
+    const response = await apiClient.get<UnreadCountResponse>("v1/notifications/unread_count/").json();
     return response;
 };
 
 const markNotificationAsRead = async (id: string): Promise<Notification> => {
-    const response = await apiClient.patch<Notification>(`api/v1/notifications/${id}/mark_as_read/`).json();
+    const response = await apiClient.patch<Notification>(`v1/notifications/${id}/mark_as_read/`).json();
     return response;
 };
 
 const markAllNotificationsAsRead = async (): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>("api/v1/notifications/mark_all_as_read/").json();
+    const response = await apiClient.patch<{ message: string }>("v1/notifications/mark_all_as_read/").json();
     return response;
 };
 
 const sendBroadcastMessage = async (title: string, content: string): Promise<{ message: string, recipients_count: number }> => {
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
-        "api/v1/notifications/send_broadcast/", 
+        "v1/notifications/send_broadcast/", 
         { json: { title, content } }
     ).json();
     return response;
@@ -82,7 +82,7 @@ const sendBroadcastMessage = async (title: string, content: string): Promise<{ m
 // Add new functions for sending to groups and individual users
 const sendGroupMessage = async (title: string, content: string, groupId: string): Promise<{ message: string, recipients_count: number }> => {
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
-        "api/v1/notifications/send_group/", 
+        "v1/notifications/send_group/", 
         { json: { title, content, group_id: groupId } }
     ).json();
     return response;
@@ -90,7 +90,7 @@ const sendGroupMessage = async (title: string, content: string, groupId: string)
 
 const sendUserMessage = async (title: string, content: string, userId: string): Promise<{ message: string, recipients_count: number }> => {
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
-        "api/v1/notifications/send_user/", 
+        "v1/notifications/send_user/", 
         { json: { title, content, user_id: userId } }
     ).json();
     return response;

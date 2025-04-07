@@ -68,22 +68,17 @@ COPY requirements/ /app/requirements/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 
-# Copy public assets (images, favicon, etc.) into Django static root
-COPY --from=frontend-builder /frontend/public /app/static/
+# Copy public assets from frontend build stage to where Next.js expects them
+COPY --from=frontend-builder /frontend/public /app/frontend-react/public/
 
-# Copy built Next.js static files into Django static root
-COPY --from=frontend-builder /frontend/.next/static /app/static/_next/static
-
-# Optional: copy .next (without /static) if needed for custom routing — skip if not used
+# Copy the full .next directory needed for `npm run start`
 COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
 
-# Still copy package.json and node_modules if they're needed elsewhere (optional)
+# Copy node_modules and package.json needed for `npm run start`
 COPY --from=frontend-builder /frontend/node_modules /app/frontend-react/node_modules
 COPY --from=frontend-builder /frontend/package.json /app/frontend-react/package.json
 
-
-
-# Copy only necessary project files
+# Copy project files
 COPY pyerp/ /app/pyerp/
 COPY users/ /app/users/
 COPY admin_tools/ /app/admin_tools/
@@ -102,14 +97,14 @@ RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
 ARG DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
 ENV DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}
 
-# Collect static files
+# Collect static files (for Django admin, etc.)
 RUN python manage.py collectstatic --noinput --clear
 
 # Configure Nginx
 RUN mkdir -p /etc/nginx/ssl
 COPY docker/nginx/ssl/server.crt /etc/nginx/ssl/
 COPY docker/nginx/ssl/server.key /etc/nginx/ssl/
-COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/sites-available/default
+COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/conf.d/pyerp.conf
 RUN ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log \
     && mkdir -p /var/log/supervisor
