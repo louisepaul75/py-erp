@@ -8,8 +8,11 @@ export const useUser = () => {
   return useQuery({
     queryKey: ['user'],
     queryFn: authService.getCurrentUser,
-    retry: false,
+    retry: 1,
+    retryDelay: 500,
     staleTime: Infinity,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 };
 
