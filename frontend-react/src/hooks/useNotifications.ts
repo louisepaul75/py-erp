@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import apiClient from "@/lib/api"; // Corrected import path
+import { instance as apiClient } from "@/lib/api"; // Import the named export and alias it as apiClient
 import { useToast } from "@/hooks/use-toast"; // Corrected import path for the toast hook
 
 // Define the Notification type based on your Django model/serializer
