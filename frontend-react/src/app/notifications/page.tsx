@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BroadcastMessageForm } from '@/components/notifications/BroadcastMessageForm';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MessageSelectorForm } from '@/components/notifications/MessageSelectorForm';
+import { MessageSquare } from 'lucide-react';
 
 export default function NotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [messageFormOpen, setMessageFormOpen] = useState(false);
 
   const queryParams = filter === 'unread' ? { is_read: false } : {};
 
@@ -22,8 +25,8 @@ export default function NotificationsPage() {
     markAsReadPending,
     markAllAsRead,
     markAllAsReadPending,
-    sendBroadcast,
-    sendBroadcastPending,
+    sendMessage,
+    sendMessagePending,
     refetchNotifications,
   } = useNotifications(queryParams);
 
@@ -41,21 +44,21 @@ export default function NotificationsPage() {
     markAsRead(id);
   };
 
-  const handleSendBroadcast = (title: string, content: string) => {
-    sendBroadcast({ title, content });
+  const handleSendMessage = (
+    title: string, 
+    content: string, 
+    recipientType: 'broadcast' | 'group' | 'individual', 
+    recipientIds: string[]
+  ) => {
+    sendMessage(title, content, recipientType, recipientIds);
+    setMessageFormOpen(false);
   };
 
   const unreadNotifications = notificationList.filter((n: Notification) => !n.is_read);
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Broadcast Message Form */}
-      <BroadcastMessageForm 
-        onSendMessage={handleSendBroadcast} 
-        isPending={sendBroadcastPending} 
-      />
-      
-      {/* Notifications Card */}
+      {/* Notifications Card with New Message Button */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -63,9 +66,27 @@ export default function NotificationsPage() {
               <CardTitle>Notifications</CardTitle>
               <CardDescription>View and manage your notifications.</CardDescription>
             </div>
-            <Button onClick={handleRefresh} variant="outline" size="sm">
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleRefresh} variant="outline" size="sm">
+                Refresh
+              </Button>
+              <Popover open={messageFormOpen} onOpenChange={setMessageFormOpen}>
+                <PopoverTrigger asChild>
+                  <Button size="sm" className="flex items-center gap-1">
+                    <MessageSquare className="h-4 w-4" />
+                    New Message
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-96 p-4" align="end">
+                  <div className="font-medium mb-2">Send Message</div>
+                  <MessageSelectorForm 
+                    onSendMessage={handleSendMessage}
+                    isPending={sendMessagePending}
+                    onCancel={() => setMessageFormOpen(false)}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

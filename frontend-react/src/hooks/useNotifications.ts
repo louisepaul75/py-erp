@@ -79,6 +79,23 @@ const sendBroadcastMessage = async (title: string, content: string): Promise<{ m
     return response;
 };
 
+// Add new functions for sending to groups and individual users
+const sendGroupMessage = async (title: string, content: string, groupId: string): Promise<{ message: string, recipients_count: number }> => {
+    const response = await apiClient.post<{ message: string, recipients_count: number }>(
+        "api/v1/notifications/send_group/", 
+        { json: { title, content, group_id: groupId } }
+    ).json();
+    return response;
+};
+
+const sendUserMessage = async (title: string, content: string, userId: string): Promise<{ message: string, recipients_count: number }> => {
+    const response = await apiClient.post<{ message: string, recipients_count: number }>(
+        "api/v1/notifications/send_user/", 
+        { json: { title, content, user_id: userId } }
+    ).json();
+    return response;
+};
+
 // --- React Query Hook ---
 
 export function useNotifications(filters: { type?: string; is_read?: boolean; limit?: number } = {}) {
@@ -190,6 +207,77 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         },
     });
 
+    /**
+     * Mutation: Send message to a group
+     */
+    const sendGroupMessageMutation = useMutation<
+        { message: string; recipients_count: number }, 
+        Error, 
+        { title: string; content: string; groupId: string }
+    >({
+        mutationFn: ({ title, content, groupId }) => sendGroupMessage(title, content, groupId),
+        onSuccess: (data) => {
+            // Invalidate all notification queries and the count
+            queryClient.invalidateQueries({ queryKey: [queryKeyBase] });
+            
+            toast({ 
+                title: "Success", 
+                description: data.message || `Message sent to ${data.recipients_count} users in the group.` 
+            });
+        },
+        onError: (error) => {
+            console.error("Failed to send group message:", error);
+            toast({ 
+                variant: "destructive", 
+                title: "Error", 
+                description: "Failed to send message to group." 
+            });
+        },
+    });
+
+    /**
+     * Mutation: Send message to an individual user
+     */
+    const sendUserMessageMutation = useMutation<
+        { message: string; recipients_count: number }, 
+        Error, 
+        { title: string; content: string; userId: string }
+    >({
+        mutationFn: ({ title, content, userId }) => sendUserMessage(title, content, userId),
+        onSuccess: (data) => {
+            // Invalidate all notification queries and the count
+            queryClient.invalidateQueries({ queryKey: [queryKeyBase] });
+            
+            toast({ 
+                title: "Success", 
+                description: data.message || `Message sent to user.` 
+            });
+        },
+        onError: (error) => {
+            console.error("Failed to send user message:", error);
+            toast({ 
+                variant: "destructive", 
+                title: "Error", 
+                description: "Failed to send message to user." 
+            });
+        },
+    });
+
+    // Helper function to send a message based on recipient type
+    const sendMessage = (
+        title: string, 
+        content: string, 
+        recipientType: 'broadcast' | 'group' | 'individual', 
+        recipientIds: string[]
+    ) => {
+        if (recipientType === 'broadcast') {
+            sendBroadcastMutation.mutate({ title, content });
+        } else if (recipientType === 'group' && recipientIds.length > 0) {
+            sendGroupMessageMutation.mutate({ title, content, groupId: recipientIds[0] });
+        } else if (recipientType === 'individual' && recipientIds.length > 0) {
+            sendUserMessageMutation.mutate({ title, content, userId: recipientIds[0] });
+        }
+    };
 
     return {
         // Data
@@ -210,6 +298,14 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         markAllAsReadPending: markAllAsReadMutation.isPending,
         sendBroadcast: sendBroadcastMutation.mutate,
         sendBroadcastPending: sendBroadcastMutation.isPending,
+        sendGroupMessage: sendGroupMessageMutation.mutate,
+        sendGroupMessagePending: sendGroupMessageMutation.isPending,
+        sendUserMessage: sendUserMessageMutation.mutate,
+        sendUserMessagePending: sendUserMessageMutation.isPending,
+        sendMessage,
+        sendMessagePending: sendBroadcastMutation.isPending || 
+                           sendGroupMessageMutation.isPending || 
+                           sendUserMessageMutation.isPending,
         // Refetch functions
         refetchNotifications,
         refetchUnreadCount,

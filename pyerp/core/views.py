@@ -687,3 +687,98 @@ class NotificationViewSet(viewsets.ModelViewSet):
             'message': _(f'Broadcast message sent to {notifications_created} users.'),
             'recipients_count': notifications_created
         }, status=status.HTTP_201_CREATED)
+        
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def send_group(self, request):
+        """Send a message to users in a specific group."""
+        title = request.data.get('title')
+        content = request.data.get('content')
+        group_id = request.data.get('group_id')
+        
+        if not title or not content or not group_id:
+            return Response(
+                {'error': _('Title, content, and group_id are required.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get the group and its users
+        try:
+            from django.contrib.auth.models import Group
+            group = Group.objects.get(id=group_id)
+            User = get_user_model()
+            users = User.objects.filter(groups=group, is_active=True)
+            
+            if not users.exists():
+                return Response(
+                    {'error': _('No active users found in this group.')},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            # Create a notification for each user in the group
+            notifications_created = 0
+            for user in users:
+                Notification.objects.create(
+                    user=user,
+                    title=title,
+                    content=content,
+                    type='group_message',
+                )
+                notifications_created += 1
+                
+            return Response({
+                'message': _(f'Message sent to {notifications_created} users in group "{group.name}".'),
+                'recipients_count': notifications_created
+            }, status=status.HTTP_201_CREATED)
+            
+        except Group.DoesNotExist:
+            return Response(
+                {'error': _('Group not found.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def send_user(self, request):
+        """Send a message to a specific user."""
+        title = request.data.get('title')
+        content = request.data.get('content')
+        user_id = request.data.get('user_id')
+        
+        if not title or not content or not user_id:
+            return Response(
+                {'error': _('Title, content, and user_id are required.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get the user
+        try:
+            User = get_user_model()
+            recipient = User.objects.get(id=user_id, is_active=True)
+            
+            # Create a notification for the user
+            Notification.objects.create(
+                user=recipient,
+                title=title,
+                content=content,
+                type='direct_message',
+            )
+                
+            return Response({
+                'message': _(f'Message sent to {recipient.get_full_name() or recipient.username}.'),
+                'recipients_count': 1
+            }, status=status.HTTP_201_CREATED)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': _('User not found or inactive.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
