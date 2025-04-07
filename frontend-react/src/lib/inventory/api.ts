@@ -147,7 +147,7 @@ export const fetchBoxesByLocationId = async (locationId: number): Promise<Box[]>
   }
 };
 
-// Fetch all storage locations using ky
+// Fetch all storage locations from the API
 export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
   try {
     const response = await api.get('inventory/storage-locations/').json<StorageLocation[]>();
@@ -296,101 +296,3 @@ export const fetchBoxesByProduct = async (productId: number): Promise<Box[]> => 
     throw error;
   }
 };
-
-// Fetch all storage locations from the API
-export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
-  try {
-    const response = await api.get('inventory/storage-locations/').json<StorageLocation[]>();
-    return response;
-  } catch (error) {
-    console.error('Error fetching storage locations:', error);
-    throw error;
-  }
-};
-
-// Fetch products stored in a specific location from the API
-export const fetchProductsByLocation = async (locationId: number): Promise<any[]> => {
-  try {
-    const response = await api.get(`inventory/storage-locations/${locationId}/products/`).json<any[]>();
-    return response;
-  } catch (error) {
-    console.error(`Error fetching products for location ${locationId}:`, error);
-    throw error;
-  }
-};
-
-// Fetch boxes stored in a specific location from the API
-export const fetchBoxesByLocation = async (locationId: number): Promise<any[]> => {
-  try {
-    const response = await api.get(`inventory/storage-locations/${locationId}/products/`).json<any[]>();
-    return response;
-  } catch (error) {
-    console.error(`Error fetching boxes for location ${locationId}:`, error);
-    throw error;
-  }
-};
-
-// Add a product to a box via the API
-export const addProductToBox = async (data: AddProductToBoxRequest): Promise<AddProductToBoxResponse> => {
-  try {
-    const response = await api.post('inventory/add-product-to-box/', {
-      json: data
-    }).json<AddProductToBoxResponse>();
-    return response;
-  } catch (error) {
-    console.error('Error adding product to box:', error);
-    throw error;
-  }
-};
-
-// Move a box to a new location via the API
-export const moveBox = async (data: MoveBoxRequest): Promise<MoveBoxResponse> => {
-  try {
-    const response = await api.post('inventory/move-box/', {
-      json: data
-    }).json<MoveBoxResponse>();
-    return response;
-  } catch (error) {
-    console.error('Error moving box:', error);
-    throw error;
-  }
-};
-
-// Move a product from one box to another via the API
-export const moveProductBetweenBoxes = async (data: MoveProductBetweenBoxesRequest): Promise<MoveProductBetweenBoxesResponse> => {
-  try {
-    const response = await api.post('inventory/move-product-between-boxes/', {
-      json: data
-    }).json<MoveProductBetweenBoxesResponse>();
-    return response;
-  } catch (error) {
-    console.error('Error moving product between boxes:', error);
-    throw error;
-  }
-};
-
-// Removes a product from a box via the API
-export const removeProductFromBox = async (data: RemoveProductFromBoxRequest): Promise<RemoveProductFromBoxResponse> => {
-  try {
-    const response = await api.post('inventory/remove-product-from-box/', {
-      json: data
-    }).json<RemoveProductFromBoxResponse>();
-    return response;
-  } catch (error) {
-    console.error('Error removing product from box:', error);
-    throw error;
-  }
-};
-
-// Removes a box from a location via the API
-export const removeBoxFromLocation = async (data: RemoveBoxFromLocationRequest): Promise<RemoveBoxFromLocationResponse> => {
-  try {
-    const response = await api.post('inventory/remove-box-from-location/', {
-      json: data
-    }).json<RemoveBoxFromLocationResponse>();
-    return response;
-  } catch (error) {
-    console.error('Error removing box from location:', error);
-    throw error;
-  }
-}; 
