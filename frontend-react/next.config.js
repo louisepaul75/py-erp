@@ -31,84 +31,109 @@ const nextConfig = {
   staticPageGenerationTimeout: 180,
   async rewrites() {
     return [
-      // Handle URLs with trailing slashes
+      // Health check routes
       {
-        source: '/api/health/',
-        destination: 'http://localhost:8000/health/',
-      },
-      // Handle URLs without trailing slashes
-      {
-        source: '/api/health',
-        destination: 'http://localhost:8000/health/',
+        source: '/health/',
+        destination: 'http://localhost:8000/api/health/',
       },
       {
-        source: '/api/monitoring/health-checks/',
-        destination: 'http://localhost:8000/monitoring/health-checks/',
+        source: '/health',
+        destination: 'http://localhost:8000/api/health/',
+      },
+      // Direct v1 routes - specific routes first
+      {
+        // Match /v1/monitoring/health-checks optionally followed by a slash
+        source: '/v1/monitoring/health-checks{/}?',
+        destination: 'http://localhost:8000/api/v1/monitoring/health-checks/',
       },
       {
-        source: '/api/monitoring/:path+',
-        destination: 'http://localhost:8000/monitoring/:path+',
+        // Match /v1/git/branch optionally followed by a slash
+        source: '/v1/git/branch{/}?',
+        destination: 'http://localhost:8000/api/v1/git/branch/',
       },
       {
-        source: '/api/git/branch/',
-        destination: 'http://localhost:8000/api/git/branch/',
+        source: '/v1/dashboard/summary/',
+        destination: 'http://localhost:8000/api/v1/dashboard/summary/',
+      },
+      // Sales analysis routes with query parameters
+      {
+        source: '/v1/sales/records/monthly_analysis',
+        destination: 'http://localhost:8000/api/v1/sales/records/monthly_analysis',
       },
       {
-        source: '/api/git/branch',
-        destination: 'http://localhost:8000/api/git/branch/',
+        source: '/v1/sales/records/annual_analysis',
+        destination: 'http://localhost:8000/api/v1/sales/records/annual_analysis',
       },
-      // Add rules for /api/csrf
+      // Regular sales routes
       {
-        source: '/api/csrf/',
-        destination: 'http://localhost:8000/api/csrf/',
-      },
-      {
-        source: '/api/csrf',
-        destination: 'http://localhost:8000/api/csrf/',
-      },
-      // Add rules for /api/token
-      {
-        source: '/api/token/',
-        destination: 'http://localhost:8000/api/token/',
-      },
-      {
-        source: '/api/token',
-        destination: 'http://localhost:8000/api/token/',
-      },
-      // Add rules for /api/auth/user
-      {
-        source: '/api/auth/user/',
-        destination: 'http://localhost:8000/api/auth/user/',
-      },
-      {
-        source: '/api/auth/user',
-        destination: 'http://localhost:8000/api/auth/user/',
-      },
-      // Add explicit rules for sales records BEFORE the general v1 rule
-      {
-        source: '/api/v1/sales/records/', // With slash
+        source: '/v1/sales/records/',
         destination: 'http://localhost:8000/api/v1/sales/records/',
       },
       {
-        source: '/api/v1/sales/records', // Without slash
-        destination: 'http://localhost:8000/api/v1/sales/records/', // Force slash
-      },
-      // Add specific rules for the monthly analysis endpoint
-      {
-        source: '/api/sales/records/monthly_analysis/',
-        destination: 'http://localhost:8000/api/v1/sales/records/monthly_analysis/',
+        source: '/v1/sales/records/:id/items/',
+        destination: 'http://localhost:8000/api/v1/sales/records/:id/items/',
       },
       {
-        source: '/api/sales/records/monthly_analysis',
-        destination: 'http://localhost:8000/api/v1/sales/records/monthly_analysis/',
+        source: '/v1/inventory/storage-locations/',
+        destination: 'http://localhost:8000/api/v1/inventory/storage-locations/',
       },
-      // Add a specific rule for OTHER /api/v1/ paths BEFORE the general catch-all
       {
-        source: '/api/v1/:path*',
+        source: '/v1/inventory/bin-locations/by-order/:id/',
+        destination: 'http://localhost:8000/api/v1/inventory/bin-locations/by-order/:id/',
+      },
+      // Wildcard for any other v1 routes (MUST be after specific routes)
+      {
+        source: '/v1/:path*',
         destination: 'http://localhost:8000/api/v1/:path*',
       },
-      // Catch-all for other /api paths
-      // This MUST be last to avoid overriding specific rules above
+      // Authentication routes
+      {
+        source: '/csrf/',
+        destination: 'http://localhost:8000/api/csrf/',
+      },
+      {
+        source: '/csrf',
+        destination: 'http://localhost:8000/api/csrf/',
+      },
+      {
+        source: '/token/',
+        destination: 'http://localhost:8000/api/token/',
+      },
+      {
+        source: '/token',
+        destination: 'http://localhost:8000/api/token/',
+      },
+      {
+        source: '/auth/user/',
+        destination: 'http://localhost:8000/api/auth/user/',
+      },
+      {
+        source: '/auth/user',
+        destination: 'http://localhost:8000/api/auth/user/',
+      },
+      // Sales API paths (non-versioned)
+      {
+        source: '/sales/records/',
+        destination: 'http://localhost:8000/api/sales/records/',
+      },
+      {
+        source: '/sales/records/monthly_analysis/',
+        destination: 'http://localhost:8000/api/sales/records/monthly_analysis/',
+      },
+      {
+        source: '/sales/records/annual_analysis/',
+        destination: 'http://localhost:8000/api/sales/records/annual_analysis/',
+      },
+      // Dashboard endpoints
+      {
+        source: '/dashboard/summary/',
+        destination: 'http://localhost:8000/api/dashboard/summary/',
+      },
+      {
+        source: '/dashboard/config/',
+        destination: 'http://localhost:8000/api/dashboard/config/',
+      },
+      // API-specific paths - don't rewrite client-side routes 
       {
         source: '/api/:path*',
         destination: 'http://localhost:8000/api/:path*',

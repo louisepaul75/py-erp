@@ -49,7 +49,7 @@ DATABASE_ROUTERS = []
 # Add 'pyerp.sync' to prevent serialization issues during test setup
 TEST_NON_SERIALIZED_APPS = ['pyerp.sync']
 
-# Configure URL patterns for tests
+# Configure URL patterns for tests - USE MINIMAL URLS FOR ISOLATION
 ROOT_URLCONF = 'pyerp.urls'
 
 # Configure template settings for tests

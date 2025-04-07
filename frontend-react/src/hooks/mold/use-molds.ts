@@ -89,7 +89,7 @@ function determineMoldActivityStatus(articles: any[] | undefined): MoldActivityS
 /**
  * API URL for molds
  */
-const API_URL = '/api/production/molds/'
+const API_URL = 'production/molds/'
 
 /**
  * Custom hook for managing molds data
@@ -159,7 +159,7 @@ export function useMolds() {
   const createMoldFn = async (mold: Omit<Mold, "id" | "createdDate">): Promise<Mold> => {
     try {
       // Attempt to create via the API using the shared ky instance
-      const response = await instance.post('/api/production/molds/', {
+      const response = await instance.post(API_URL, {
         json: mold
       }).json()
       
@@ -215,7 +215,7 @@ export function useMolds() {
   const updateMoldFn = async (mold: Mold): Promise<Mold> => {
     try {
       // Attempt to update via the API using the shared ky instance
-      const response = await instance.put(`/api/production/molds/${mold.id}/`, {
+      const response = await instance.put(`${API_URL}${mold.id}/`, {
         json: mold
       }).json()
       
@@ -471,10 +471,10 @@ export function useMolds() {
   const deleteMoldFn = async (id: string): Promise<void> => {
     try {
       // Attempt to delete via the API using the shared ky instance
-      const response = await instance.delete(`/api/production/molds/${id}/`)
+      const response = await instance.delete(`${API_URL}${id}/`)
       
       // If successful, log the activity
-      console.log("Successfully deleted mold via API")
+      console.log("Successfully deleted mold via API", id)
       
       // Since we don't have the mold data anymore after deletion,
       // we'll need to find it in our cache

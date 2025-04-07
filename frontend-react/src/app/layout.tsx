@@ -35,7 +35,7 @@ export default function RootLayout({
       <head>
         {/* Add Google Font links */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin={"anonymous"} />
         <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700&family=PT+Serif:wght@700&display=swap" rel="stylesheet" />
         {/* Add empty CSRF token meta tag that can be populated by API responses */}
         <meta name="csrf-token" content="" />

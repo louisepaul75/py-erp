@@ -16,21 +16,40 @@ export default function IntegrationDashboard() {
   const { t } = useAppTranslation("settings_system");
 
   useEffect(() => {
+    // Create an AbortController
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await fetchSystemIntegrationData();
-        setIntegrationData(data);
+        // Pass the signal to the fetch call
+        const data = await fetchSystemIntegrationData(signal); 
+        // Check if the request was aborted before setting state
+        if (!signal.aborted) {
+          setIntegrationData(data);
+        }
       } catch (err: any) {
-        console.error("Failed to load integration data:", err);
-        setError(err.message || t("error_loading_data"));
+        // Ignore abort errors, as they are expected on cleanup
+        if (err.name !== 'AbortError') {
+          console.error("Failed to load integration data:", err);
+          setError(err.message || t("error_loading_data")); 
+        }
       } finally {
-        setIsLoading(false);
+        // Ensure loading state is unset even if aborted
+        if (!signal.aborted) {
+           setIsLoading(false);
+        }
       }
     };
     loadData();
-  }, [t]);
+
+    // Return cleanup function to abort the request
+    return () => {
+      controller.abort();
+    };
+  }, []); // Remove 't' from dependency array
 
   const handleStatusChange = (updatedData: SystemIntegrationData) => {
     setIntegrationData(updatedData);

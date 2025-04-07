@@ -138,14 +138,14 @@ export default function ProductList({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+              className="rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
             >
               <Filter className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+              className="rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               onClick={() => handleSort("sku")} // Default sort by SKU
               aria-label="Sort by SKU"
             >
@@ -154,7 +154,7 @@ export default function ProductList({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+              className="rounded-full text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
             >
               <Sliders className="h-4 w-4" />
             </Button>
@@ -224,7 +224,7 @@ export default function ProductList({
                 });
               }}
             >
-              <SelectTrigger className="w-[100px] h-8 text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:ring-blue-500">
+              <SelectTrigger className="w-[100px] text-xs">
                 <SelectValue placeholder="Size" />
               </SelectTrigger>
               <SelectContent>
@@ -246,7 +246,6 @@ export default function ProductList({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2"
                 onClick={() => setPagination({
                   ...pagination,
                   pageIndex: Math.max(0, pagination.pageIndex - 1)
@@ -258,7 +257,6 @@ export default function ProductList({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2"
                 onClick={() => {
                   console.log('Next page button clicked, current pageIndex:', pagination.pageIndex);
                   const newPageIndex = Math.min(totalPages - 1, pagination.pageIndex + 1);

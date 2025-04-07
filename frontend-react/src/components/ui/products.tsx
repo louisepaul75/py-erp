@@ -189,7 +189,15 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     fetchProducts();
 
     return () => {
-      controller.abort();
+      try {
+        controller.abort();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log("Fetch products request aborted as expected.");
+        } else {
+          console.error("Unexpected error during fetch products abort:", error);
+        }
+      }
     };
   }, [pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, initialVariantId, initialParentId]);
 
@@ -276,7 +284,15 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
     return () => {
       console.log("Cleaning up detail effect for:", selectedItem);
       isActive = false;
-      controller.abort();
+      try {
+        controller.abort();
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          console.log("Fetch detail request aborted as expected.");
+        } else {
+          console.error("Unexpected error during fetch detail abort:", error);
+        }
+      }
     };
   }, [selectedItem, pathname, router, isCreatingParent]);
 
@@ -359,14 +375,9 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
                     filteredProducts={filteredProducts}
                     totalItems={totalCount}
                     selectedItem={selectedItem}
-                    setSelectedItem={(item: number | string | null) => {
-                      setIsCreatingParent(false);
-                      setSelectedItem(item);
-                    }}
+                    setSelectedItem={setSelectedItem}
                     pagination={pagination}
-                    setPagination={(value: { pageIndex: number; pageSize: number }) => {
-                      handlePaginationChange(value);
-                    }}
+                    setPagination={setPagination}
                     isLoading={isListLoading}
                   />
                 </div>

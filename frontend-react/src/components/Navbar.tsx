@@ -13,6 +13,7 @@ import {
   Palette,
   Package,
   Paintbrush,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -31,6 +32,15 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { useNotifications } from "@/hooks/useNotifications";
+import { Button } from "@/components/ui/button";
+import { NotificationItem } from "@/components/notifications/NotificationItem";
+import { useQueryClient } from "@tanstack/react-query";
 
 function DropdownItem({
   children,
@@ -74,6 +84,24 @@ export function Navbar() {
   const { user } = useIsAuthenticated();
   const logout = useLogout();
   const { isMobile, isTablet } = useScreenSize();
+  const queryClient = useQueryClient();
+  const { 
+    unreadCount, 
+    notifications, 
+    isLoadingUnreadCount, 
+    markAsRead,
+    refetchNotifications,
+    refetchUnreadCount 
+  } = useNotifications({ is_read: false, limit: 5 });
+
+  // Function to refresh notification data with cache reset
+  const refreshNotifications = () => {
+    // Clear all notification-related caches
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    // Then refetch the data
+    refetchNotifications();
+    refetchUnreadCount();
+  };
 
   const toggleTestDropdown = () => setTestMenuOpen(!testMenuOpen);
 
@@ -99,7 +127,6 @@ export function Navbar() {
   const navigationItems = [
     { href: "/dashboard", label: t("navigation.home") },
     { href: "/products", label: t("navigation.products") },
-    { href: "/sales", label: t("navigation.sales") },
     // { href: '/production', label: t('navigation.production') },
   ];
 
@@ -182,6 +209,11 @@ export function Navbar() {
                         {t("navigation.mold_management")}
                       </Link>
                     </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/production/casting" className="flex items-center">
+                        Casting Manager
+                      </Link>
+                    </ShadcnDropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -243,8 +275,61 @@ export function Navbar() {
             </div>
           )}
 
-          {/* User Menu - Desktop - Refactored with Shadcn DropdownMenu */}
-          <div className="hidden lg:flex items-center pr-2">
+          {/* Right side icons (Theme, Language, Notifications, User Menu) - Desktop */}
+          <div className="hidden lg:flex items-center space-x-3 pr-2">
+            {/* Notification Popover */}
+            {user && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative rounded-full"
+                    aria-label={`${unreadCount} unread notifications`}
+                    onClick={refreshNotifications}
+                  >
+                    <Bell className="h-6 w-6" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="p-4 font-medium border-b">
+                    Notifications
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {isLoadingUnreadCount ? (
+                      <div className="p-4 text-sm text-muted-foreground">Loading notifications...</div>
+                    ) : notifications && notifications.length > 0 ? (
+                      <div className="divide-y">
+                        {notifications.slice(0, 5).map((notification) => (
+                          <NotificationItem
+                            key={notification.id}
+                            notification={notification}
+                            onMarkAsRead={markAsRead}
+                            isMarkingRead={false}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-sm text-muted-foreground">
+                        <p>No new notifications</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2 border-t text-center">
+                    <Link href="/notifications" className="text-primary hover:underline text-sm">
+                      View all notifications
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* User Menu - Desktop */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -306,8 +391,61 @@ export function Navbar() {
             </DropdownMenu>
           </div>
 
-          {/* Mobile user button - Refactored with Shadcn DropdownMenu */}
-          {(isMobile || isTablet) && (
+          {/* Right side icons (Notifications, User Menu) - Mobile */}
+          <div className="lg:hidden flex items-center space-x-2">
+            {/* Notification Popover - Mobile */}
+            {user && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative rounded-full"
+                    aria-label={`${unreadCount} unread notifications`}
+                    onClick={refreshNotifications}
+                  >
+                    <Bell className="h-6 w-6" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translatey-1/2 bg-red-600 rounded-full">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="p-4 font-medium border-b">
+                    Notifications
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {isLoadingUnreadCount ? (
+                      <div className="p-4 text-sm text-muted-foreground">Loading notifications...</div>
+                    ) : notifications && notifications.length > 0 ? (
+                      <div className="divide-y">
+                        {notifications.slice(0, 5).map((notification) => (
+                          <NotificationItem
+                            key={notification.id}
+                            notification={notification}
+                            onMarkAsRead={markAsRead}
+                            isMarkingRead={false}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-sm text-muted-foreground">
+                        <p>No new notifications</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2 border-t text-center">
+                    <Link href="/notifications" className="text-primary hover:underline text-sm">
+                      View all notifications
+                    </Link>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Mobile user button */}
             <DropdownMenu>
               <div className="flex items-center">
                 <div className="relative ml-3" id="mobile-user-dropdown">
@@ -361,7 +499,7 @@ export function Navbar() {
                 </div>
               </div>
             </DropdownMenu>
-          )}
+          </div>
         </div>
       </div>
     </nav>

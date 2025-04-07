@@ -44,8 +44,8 @@ export default function CustomerList() {
           throw new Error("Authentication required.");
         }
 
-        // Adjust endpoint if needed (e.g., including /api/v1/)
-        const customerEndpoint = `${API_URL}/api/sales/customers/`;
+        // Construct the endpoint URL (base URL is already /api)
+        const customerEndpoint = `${API_URL}/sales/customers/`;
 
         const response = await fetch(customerEndpoint, {
           headers: {

@@ -11,7 +11,7 @@ import logging
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from pathlib import Path
 
 from django.conf import settings
@@ -39,10 +39,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Maximum time to wait for each health check (in seconds)
-HEALTH_CHECK_TIMEOUT = 120  # Increased to 2 minutes
+HEALTH_CHECK_TIMEOUT = 15  # Reduced from 120 seconds
 
 # Maximum time to wait for individual component checks
-COMPONENT_CHECK_TIMEOUT = 60
+COMPONENT_CHECK_TIMEOUT = 14 # Increased from 10 seconds
 
 
 def check_database_connection():
@@ -441,7 +441,7 @@ def get_database_statistics():
 
 def run_all_health_checks(as_array=True):
     """
-    Run all health checks concurrently.
+    Run all health checks concurrently using ThreadPoolExecutor.
 
     Args:
         as_array (bool): If True, returns results as an array; otherwise as dict
@@ -449,10 +449,9 @@ def run_all_health_checks(as_array=True):
     Returns:
         list or dict: Health check results in the specified format
     """
-    logger.info("Starting health checks")
+    logger.info("Starting health checks concurrently")
     start_time = time.time()
 
-    # Define health check functions to run
     health_checks = {
         HealthCheckResult.COMPONENT_DATABASE: check_database_connection,
         HealthCheckResult.COMPONENT_LEGACY_ERP: check_legacy_erp_connection,
@@ -460,56 +459,94 @@ def run_all_health_checks(as_array=True):
     }
 
     results = {}
+    futures = {}
 
-    # Run health checks concurrently with timeout
-    with ThreadPoolExecutor() as executor:
-        # Submit all health checks
-        future_to_component = {
-            executor.submit(check_func): component
-            for component, check_func in health_checks.items()
-        }
+    executor = ThreadPoolExecutor(max_workers=len(health_checks))
+    try:
+        for component, check_func in health_checks.items():
+            logger.debug(f"Submitting health check for: {component}")
+            futures[executor.submit(check_func)] = component
 
-        # Wait for results with timeout
+        # Process completed futures with overall timeout
+        completed_count = 0
         try:
-            futures = as_completed(future_to_component, timeout=HEALTH_CHECK_TIMEOUT)
-            for future in futures:
-                component = future_to_component[future]
+            for future in as_completed(futures, timeout=HEALTH_CHECK_TIMEOUT):
+                component = futures[future]
+                completed_count += 1
                 try:
+                    # Get result with individual component timeout
                     result = future.result(timeout=COMPONENT_CHECK_TIMEOUT)
                     results[component] = result
-                    msg = f"Health check completed for {component}"
-                    logger.debug(f"{msg}: {result['status']}")
-                except Exception as e:
-                    error_msg = f"Health check failed for {component}: {e!s}"
-                    logger.error(error_msg)
+                    logger.debug(f"Health check completed for {component}: {result['status']}")
+                except TimeoutError:
+                    error_msg = f"Health check timed out for {component} after {COMPONENT_CHECK_TIMEOUT} seconds"
+                    logger.warning(error_msg)
                     results[component] = {
+                        "component": component,
                         "status": HealthCheckResult.STATUS_ERROR,
                         "details": error_msg,
-                        "response_time": 0,
+                        "response_time": COMPONENT_CHECK_TIMEOUT * 1000,
+                        "timestamp": timezone.now(),
+                    }
+                except Exception as e:
+                    error_msg = f"Health check failed for {component}: {e!s}"
+                    logger.exception(error_msg)
+                    results[component] = {
+                        "component": component,
+                        "status": HealthCheckResult.STATUS_ERROR,
+                        "details": error_msg,
+                        "response_time": 0,  # Or calculate time until exception?
                         "timestamp": timezone.now(),
                     }
         except TimeoutError:
-            remaining = set(health_checks.keys()) - set(results.keys())
-            msg = f"Health checks timed out for components: {remaining}"
-            logger.error(msg)
-            for component in remaining:
+            unfinished_count = len(futures) - completed_count
+            logger.warning(
+                f"Overall health check timed out after {HEALTH_CHECK_TIMEOUT} seconds. "\
+                f"{unfinished_count} (of {len(futures)}) futures unfinished."
+            )
+            # Don't wait for hanging futures - this is crucial to avoid Gunicorn timeout
+            # Note: cancel_futures=True is Py 3.9+
+            executor.shutdown(wait=False, cancel_futures=True)
+
+        # Check for any components that didn't get a result recorded
+        # This handles futures that timed out in the as_completed loop
+        # or any other unexpected missing results.
+        for component in health_checks.keys():
+            if component not in results:
+                error_msg = f"Health check result missing for {component} (likely timed out or cancelled)"
+                logger.error(error_msg)
                 results[component] = {
+                    "component": component,
                     "status": HealthCheckResult.STATUS_ERROR,
-                    "details": "Health check timed out",
-                    "response_time": HEALTH_CHECK_TIMEOUT * 1000,  # ms
+                    "details": error_msg,
+                    "response_time": HEALTH_CHECK_TIMEOUT * 1000,
                     "timestamp": timezone.now(),
                 }
 
+    finally:
+        # Ensure shutdown happens even if no timeout occurred in as_completed
+        # but do it without waiting to prevent hangs if a future completed
+        # but somehow got stuck during shutdown.
+        if not executor._shutdown:
+            executor.shutdown(wait=False, cancel_futures=True)
+
     total_time = time.time() - start_time
-    logger.info(f"All health checks completed in {total_time:.2f} seconds")
+    logger.info(f"All health checks processed concurrently in {total_time:.2f} seconds")
 
     # Return in the requested format
     if as_array:
-        # Convert to array format with component included in each result
-        return [
-            {"component": component, **result} for component, result in results.items()
-        ]
+        # Ensure order matches the original definition for consistency
+        ordered_results = []
+        for component in health_checks.keys():
+            # results dict is guaranteed to have all components now
+            result_data = results[component]
+            # Ensure 'component' key exists, even if the check failed early
+            if 'component' not in result_data:
+                result_data['component'] = component
+            ordered_results.append(result_data)
+        return ordered_results
 
+    # Return as dictionary (already guaranteed to have all components)
     return results
 
 

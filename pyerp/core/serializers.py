@@ -1,6 +1,9 @@
 from rest_framework import serializers
+from .models import AuditLog, UserPreference, Tag, TaggedItem, Notification
+from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
-from pyerp.core.models import UserPreference, AuditLog, Tag, TaggedItem
+User = get_user_model()
 
 
 class UserPreferenceSerializer(serializers.ModelSerializer):
@@ -72,3 +75,32 @@ class TaggedItemSerializer(serializers.ModelSerializer):
         model = TaggedItem
         fields = ['id', 'tag', 'content_type', 'object_id', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for the Notification model."""
+    
+    # Optionally make user read-only if it's always set based on the request user
+    # user = serializers.PrimaryKeyRelatedField(read_only=True)
+    # Or include the username for easier frontend display
+    username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = Notification
+        fields = [
+            "id",
+            "user", # Keep if needed, otherwise rely on username
+            "username",
+            "title",
+            "content",
+            "type",
+            "is_read",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "user", "username", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        # Ensure the user is set from the request context, not payload
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

@@ -17,7 +17,7 @@ import {
 import { ItemDetails } from "./booking-dialog/item-details"
 import { CompartmentsInput } from "./booking-dialog/compartments-input"
 import { QuantitySelector } from "./booking-dialog/quantity-selector"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { useHistory } from "./history-context"
 
 interface BookingDialogProps {
@@ -500,4 +500,3 @@ export function BookingDialog({
     </>
   )
 }
-
