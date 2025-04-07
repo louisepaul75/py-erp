@@ -29,22 +29,22 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean } 
     if (filters.is_read !== undefined) {
         params.append('is_read', String(filters.is_read));
     }
-    const response = await apiClient.get<Notification[]>(`core/notifications/?${params.toString()}`).json();
+    const response = await apiClient.get<Notification[]>(`/api/core/notifications/?${params.toString()}`).json();
     return response;
 };
 
 const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    const response = await apiClient.get<UnreadCountResponse>("core/notifications/unread_count/").json();
+    const response = await apiClient.get<UnreadCountResponse>("/api/core/notifications/unread_count/").json();
     return response;
 };
 
 const markNotificationAsRead = async (id: string): Promise<Notification> => {
-    const response = await apiClient.patch<Notification>(`core/notifications/${id}/mark_as_read/`).json();
+    const response = await apiClient.patch<Notification>(`/api/core/notifications/${id}/mark_as_read/`).json();
     return response;
 };
 
 const markAllNotificationsAsRead = async (): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>("core/notifications/mark_all_as_read/").json();
+    const response = await apiClient.patch<{ message: string }>("/api/core/notifications/mark_all_as_read/").json();
     return response;
 };
 
