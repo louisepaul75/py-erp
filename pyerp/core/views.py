@@ -22,6 +22,7 @@ from django.middleware.csrf import get_token
 import time
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from rest_framework.decorators import action
 
 # Set up logging using the centralized logging system
 from pyerp.utils.logging import get_logger
@@ -33,7 +34,6 @@ from pyerp.core.serializers import (
     TaggedItemSerializer,
     NotificationSerializer,
 )
-from pyerp.core.permissions import IsOwnerOrAdmin
 
 logger = get_logger(__name__)
 

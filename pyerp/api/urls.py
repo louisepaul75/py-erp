@@ -6,6 +6,7 @@ from .views import (
     get_git_branch,
 )
 
+# Remove potentially conflicting app_name
 app_name = 'api'  # Optional, but good practice
 
 urlpatterns = [

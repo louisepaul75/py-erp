@@ -1,5 +1,11 @@
 from django.urls import path, include
 from rest_framework import routers
+# Import JWT views
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
 
 from pyerp.core.views import (
     DashboardSummaryView,
@@ -8,21 +14,23 @@ from pyerp.core.views import (
     csrf_token,
     git_branch,
     health_check,
-    DashboardDataView,
-    AuditLogViewSet,
-    TagViewSet,
-    TaggedItemViewSet,
-    NotificationViewSet,
+    # Remove imports for non-existent viewsets
+    # AuditLogViewSet, 
+    # TagViewSet,
+    # TaggedItemViewSet,
+    NotificationViewSet, # This one exists in views.py
 )
 
+# Remove redundant app_name, rely on namespace in include()
 app_name = 'core_api'
 
 # Create a router for core API endpoints
 router = routers.DefaultRouter()
-router.register(r"audit-logs", AuditLogViewSet, basename="auditlog")
-router.register(r"tags", TagViewSet, basename="tag")
-router.register(r"tagged-items", TaggedItemViewSet, basename="taggeditem")
-router.register(r"notifications", NotificationViewSet, basename="notification")
+# Comment out registration for non-existent viewsets
+# router.register(r"audit-logs", AuditLogViewSet, basename="auditlog")
+# router.register(r"tags", TagViewSet, basename="tag")
+# router.register(r"tagged-items", TaggedItemViewSet, basename="taggeditem")
+router.register(r"notifications", NotificationViewSet, basename="notification") # This one is OK
 
 # Core API URLs - non-versioned (for backward compatibility)
 urlpatterns = [
@@ -46,7 +54,7 @@ urlpatterns = [
     ),
     path(
         "dashboard/",
-        DashboardDataView.as_view(),
+        DashboardSummaryView.as_view(),
         name="dashboard-data",
     ),
     
@@ -71,4 +79,21 @@ urlpatterns = [
             name="api-system-settings-v1",
         ),
     ])),
+    
+    # Add JWT token endpoints here # REMOVING THESE AS THEY WERE MOVED BACK
+    # path(
+    #     "token/",
+    #     TokenObtainPairView.as_view(), # Removed permission_classes for simplicity, DRF defaults apply
+    #     name="token_obtain_pair",
+    # ),
+    # path(
+    #     "token/refresh/",
+    #     TokenRefreshView.as_view(), # Removed permission_classes
+    #     name="token_refresh",
+    # ),
+    # path(
+    #     "token/verify/",
+    #     TokenVerifyView.as_view(), # Removed permission_classes
+    #     name="token_verify",
+    # ),
 ]

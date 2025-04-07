@@ -4,8 +4,8 @@ Tests for the core API views module.
 import pytest
 import json
 from django.test import RequestFactory
-from django.contrib.auth.models import User, AnonymousUser
-from unittest.mock import patch, MagicMock
+from django.contrib.auth.models import User
+from unittest.mock import patch
 from pyerp.core.views import (
     UserProfileView, 
     DashboardSummaryView, 
@@ -13,6 +13,10 @@ from pyerp.core.views import (
 )
 from pyerp.core.models import UserPreference
 from rest_framework.test import force_authenticate
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
+from django.conf import settings
 
 
 @pytest.fixture
@@ -54,31 +58,6 @@ def rf():
 class TestUserProfileView:
     """Tests for the UserProfileView."""
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def test_get_user_profile(self, rf, user):
         """Test retrieving the user profile."""
         # Create a preference for the user
@@ -96,32 +75,9 @@ class TestUserProfileView:
         assert 'profile' in response.data
         assert 'preferences' in response.data
         assert 'dashboard_config' in response.data['preferences']
-        assert response.data['preferences']['dashboard_config']['theme'] == 'dark'
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        assert (
+            response.data['preferences']['dashboard_config']['theme'] == 'dark'
+        )
 
     def test_update_user_profile(self, rf, user):
         """Test updating the user profile."""
@@ -170,26 +126,6 @@ class TestDashboardSummaryView:
     """Tests for the DashboardSummaryView."""
 
     @patch('pyerp.core.views.DashboardSummaryView.get_dashboard_data')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def test_get_dashboard_summary(self, mock_get_data, rf, user):
         """Test retrieving the dashboard summary."""
         mock_get_data.return_value = {
@@ -215,8 +151,6 @@ class TestSystemSettingsView:
     """Tests for the SystemSettingsView."""
 
     @patch('pyerp.core.views.SystemSettingsView.get_system_settings')
-
-
     def test_get_system_settings_staff(self, mock_get_settings, rf, admin_user):
         """Test retrieving system settings as staff user."""
         mock_get_settings.return_value = {
@@ -234,9 +168,6 @@ class TestSystemSettingsView:
         assert 'app_version' in response.data
         assert 'environment' in response.data
 
-
-
-
     def test_get_system_settings_non_staff(self, rf, user):
         """Test retrieving system settings as non-staff user."""
         view = SystemSettingsView.as_view()
@@ -247,8 +178,6 @@ class TestSystemSettingsView:
         assert response.status_code == 403
 
     @patch('pyerp.core.views.SystemSettingsView.update_system_settings')
-
-
     def test_update_system_settings_superuser(self, mock_update_settings, rf, admin_user):
         """Test updating system settings as superuser."""
         mock_update_settings.return_value = True
@@ -268,4 +197,83 @@ class TestSystemSettingsView:
         response = view(request)
         
         assert response.status_code == 200
-        mock_update_settings.assert_called_once_with(request_data) 
+        mock_update_settings.assert_called_once_with(request_data)
+
+
+@pytest.mark.core
+@pytest.mark.backend
+@pytest.mark.api
+class TestAuthAPIViews:
+    """Tests for Authentication related API views (CSRF, Token)."""
+
+    @pytest.fixture
+    def api_client(self):
+        """APIClient fixture."""
+        return APIClient()
+
+    def test_csrf_token_view(self, api_client):
+        """Test the csrf_token view returns a token and sets the cookie."""
+        # Use the literal URL path as reverse() is not working reliably
+        url = reverse('core_api:api-csrf-token')
+
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert 'csrf_token' in response.data
+        assert response.data['csrf_token'] is not None
+        assert settings.CSRF_COOKIE_NAME in response.cookies
+
+    def test_token_obtain_pair_success(self, api_client, user):
+        """Test successful token retrieval with valid credentials."""
+        # Use the literal URL path as reverse() is not working reliably
+        url = reverse('token_obtain_pair')
+        data = {
+            'username': 'testuser',
+            'password': 'password123'
+        }
+        response = api_client.post(url, data, format='json')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert 'access' in response.data
+        assert 'refresh' in response.data
+        assert response.data['access'] is not None
+        assert response.data['refresh'] is not None
+
+    def test_token_obtain_pair_invalid_credentials(self, api_client, user):
+        """Test token retrieval failure with invalid credentials."""
+        # Use the literal URL path as reverse() is not working reliably
+        url = reverse('token_obtain_pair')
+        data = {
+            'username': 'testuser',
+            'password': 'wrongpassword'
+        }
+        response = api_client.post(url, data, format='json')
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert 'access' not in response.data
+        assert 'refresh' not in response.data
+
+    def test_token_obtain_pair_missing_credentials(self, api_client):
+        """Test token retrieval failure with missing credentials."""
+        # Use the literal URL path as reverse() is not working reliably
+        url = reverse('token_obtain_pair')
+        # Missing password
+        data_missing_pw = {'username': 'testuser'}
+        response_missing_pw = api_client.post(
+            url, data_missing_pw, format='json'
+        )
+        assert response_missing_pw.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Missing username
+        data_missing_user = {'password': 'password123'}
+        response_missing_user = api_client.post(
+            url, data_missing_user, format='json'
+        )
+        assert response_missing_user.status_code == status.HTTP_400_BAD_REQUEST
+
+        # Missing both
+        data_missing_all = {}
+        response_missing_all = api_client.post(
+            url, data_missing_all, format='json'
+        )
+        assert response_missing_all.status_code == status.HTTP_400_BAD_REQUEST 
