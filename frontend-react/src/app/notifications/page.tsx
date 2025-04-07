@@ -32,7 +32,6 @@ export default function NotificationsPage() {
   };
 
   const handleRefresh = () => {
-    console.log("Manually refreshing notifications...");
     refetchNotifications();
   };
 
@@ -55,34 +54,6 @@ export default function NotificationsPage() {
         onSendMessage={handleSendBroadcast} 
         isPending={sendBroadcastPending} 
       />
-      
-      {/* Debug Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Debug Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold">Current Filter:</h3>
-              <pre className="bg-muted p-2 rounded text-xs mt-1">
-                {JSON.stringify(queryParams, null, 2)}
-              </pre>
-            </div>
-            <div>
-              <h3 className="font-semibold">Raw Notifications Data:</h3>
-              <pre className="bg-muted p-2 rounded text-xs mt-1 overflow-x-auto max-h-[300px] overflow-y-auto">
-                {JSON.stringify({
-                  notifications,
-                  count: notificationList.length,
-                  unreadCount: unreadNotifications.length,
-                  isLoading: isLoadingNotifications
-                }, null, 2)}
-              </pre>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
       
       {/* Notifications Card */}
       <Card>

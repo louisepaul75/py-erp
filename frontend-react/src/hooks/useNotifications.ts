@@ -44,18 +44,14 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean; l
     const url = queryString ? `api/v1/notifications/?${queryString}` : 'api/v1/notifications/';
     
     try {
-        console.log(`Fetching notifications from: ${url}`);
         const response = await apiClient.get<PaginatedResponse<Notification>>(url).json();
-        console.log('API Response:', response);
         
         if (!response || !response.results) {
-            console.error('Invalid response format:', response);
             return [];
         }
         
         return response.results; // Return just the results array from the paginated response
     } catch (error) {
-        console.error('Error fetching notifications:', error);
         throw error;
     }
 };

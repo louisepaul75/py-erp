@@ -94,16 +94,8 @@ export function Navbar() {
     refetchUnreadCount 
   } = useNotifications({ is_read: false, limit: 5 });
 
-  // Debug logs
-  useEffect(() => {
-    console.log("Unread count:", unreadCount);
-    console.log("Notifications:", notifications);
-    console.log("Is loading:", isLoadingUnreadCount);
-  }, [unreadCount, notifications, isLoadingUnreadCount]);
-
   // Function to refresh notification data with cache reset
   const refreshNotifications = () => {
-    console.log("Manually refreshing notification data...");
     // Clear all notification-related caches
     queryClient.invalidateQueries({ queryKey: ['notifications'] });
     // Then refetch the data
@@ -325,14 +317,6 @@ export function Navbar() {
                     ) : (
                       <div className="p-4 text-sm text-muted-foreground">
                         <p>No new notifications</p>
-                        <p className="text-xs mt-2">Debug info:</p>
-                        <pre className="text-xs mt-1 bg-muted p-2 rounded overflow-x-auto">
-                          {JSON.stringify({
-                            unreadCount,
-                            notificationsLength: notifications?.length || 0,
-                            isLoading: isLoadingUnreadCount
-                          }, null, 2)}
-                        </pre>
                       </div>
                     )}
                   </div>
@@ -449,14 +433,6 @@ export function Navbar() {
                     ) : (
                       <div className="p-4 text-sm text-muted-foreground">
                         <p>No new notifications</p>
-                        <p className="text-xs mt-2">Debug info:</p>
-                        <pre className="text-xs mt-1 bg-muted p-2 rounded overflow-x-auto">
-                          {JSON.stringify({
-                            unreadCount,
-                            notificationsLength: notifications?.length || 0,
-                            isLoading: isLoadingUnreadCount
-                          }, null, 2)}
-                        </pre>
                       </div>
                     )}
                   </div>
