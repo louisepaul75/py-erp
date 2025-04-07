@@ -10,14 +10,16 @@ COPY frontend-react/package*.json ./
 # Create .npmrc to reduce warnings and optimize installation
 RUN echo "legacy-peer-deps=true\nloglevel=error" > .npmrc
 
-# Install production dependencies
-RUN npm ci --prefer-offline --no-audit --no-optional --production
+# Install ALL dependencies (including devDependencies) needed for the build
+RUN npm ci --prefer-offline --no-audit --no-optional # Removed --production flag
 
 # Copy only the necessary files for the build
 COPY frontend-react/tsconfig.json ./
 COPY frontend-react/next.config.js ./
-COPY frontend-react/src ./src
-COPY frontend-react/public ./public
+COPY frontend-react/tailwind.config.js ./
+COPY frontend-react/postcss.config.js ./
+COPY frontend-react/src ./src/
+COPY frontend-react/public ./public/
 
 # Build React frontend
 ENV NODE_ENV=production
