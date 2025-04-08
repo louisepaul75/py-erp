@@ -1,7 +1,49 @@
 import type { User } from "../types"
+import { API_BASE_URL } from "../config";
 
 // Mock data
 export let users: User[] = [
+  {
+    id: "1",
+    name: "John Doe",
+    email: "john@example.com",
+    role: "Admin",
+    isActive: true,
+    twoFactorEnabled: true,
+    passwordLastChanged: new Date(2023, 9, 15),
+    phone: "+49 123 456789",
+    lastLogin: new Date(2023, 11, 1),
+    groups: [
+      { id: "1", name: "Administrators" },
+      { id: "2", name: "Content Editors" },
+    ],
+  },
+  {
+    id: "2",
+    name: "Jane Smith",
+    email: "jane@example.com",
+    role: "Editor",
+    isActive: true,
+    twoFactorEnabled: false,
+    passwordLastChanged: new Date(2023, 10, 5),
+    phone: "+49 987 654321",
+    groups: [{ id: "2", name: "Content Editors" }],
+  },
+  {
+    id: "3",
+    name: "Bob Johnson",
+    email: "bob@example.com",
+    role: "Viewer",
+    isActive: false,
+    twoFactorEnabled: false,
+    requirePasswordChange: true,
+    phone: "+49 555 123456",
+    groups: [{ id: "3", name: "Viewers" }],
+  },
+]
+
+// Mock data can be kept for testing or fallback
+export let mockUsers: User[] = [
   {
     id: "1",
     name: "John Doe",
@@ -45,8 +87,39 @@ export let users: User[] = [
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function fetchUsers(): Promise<User[]> {
-  await delay(500)
-  return users
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/users/`);
+    
+    if (!response.ok) {
+      console.error("Error fetching users:", response.statusText);
+      // Fallback to mock data if API call fails
+      return mockUsers;
+    }
+    
+    const data = await response.json();
+    const results = data.results || []; // Handle paginated response format
+    
+    // Transform backend data to match frontend User type if needed
+    const users = results.map((user: any) => ({
+      id: user.id.toString(),
+      name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
+      email: user.email,
+      role: user.is_superuser ? "Admin" : user.is_staff ? "Editor" : "Viewer",
+      isActive: user.is_active,
+      twoFactorEnabled: false, // This might come from a different API or user extension
+      requirePasswordChange: false, // Add this from backend if available
+      lastLogin: user.last_login ? new Date(user.last_login) : undefined,
+      passwordLastChanged: undefined, // Add this from backend if available
+      phone: undefined, // Add this from backend if available
+      groups: user.groups || [], // If groups aren't directly included, we'll need another API call
+    }));
+    
+    return users;
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    // Fallback to mock data on error
+    return mockUsers;
+  }
 }
 
 // Füge diese Funktion zur users.ts hinzu
