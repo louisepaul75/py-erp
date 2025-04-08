@@ -189,8 +189,15 @@ INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
 if env("USE_DOCKER", default="yes") == "yes":
     import socket
 
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    try:
+        hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+        INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    except socket.gaierror:
+        # Handle case where hostname resolution fails
+        hostname = "localhost" # Default hostname
+        ips = ["127.0.0.1"]  # Default IP list
+        INTERNAL_IPS.append("127.0.0.1") # Add default loopback
+
     # Add Docker gateway
     try:
         gateway_ip = socket.gethostbyname("host.docker.internal")
@@ -335,8 +342,15 @@ INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
 if env("USE_DOCKER", default="yes") == "yes":
     import socket
 
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    try:
+        hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+        INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    except socket.gaierror:
+        # Handle case where hostname resolution fails
+        hostname = "localhost" # Default hostname
+        ips = ["127.0.0.1"]  # Default IP list
+        INTERNAL_IPS.append("127.0.0.1") # Add default loopback
+
     # Add Docker gateway
     try:
         gateway_ip = socket.gethostbyname("host.docker.internal")
