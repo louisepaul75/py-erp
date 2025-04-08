@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { instance as apiClient } from "@/lib/api"; // Import the named export and alias it as apiClient
 import { useToast } from "@/hooks/use-toast"; // Corrected import path for the toast hook
+import { useIsAuthenticated } from "@/lib/auth/authHooks"; // Import the auth hook
 
 // Define the Notification type based on your Django model/serializer
 // Ensure this matches the structure returned by your API
@@ -101,6 +102,7 @@ const sendUserMessage = async (title: string, content: string, userId: string): 
 export function useNotifications(filters: { type?: string; is_read?: boolean; limit?: number } = {}) {
     const queryClient = useQueryClient();
     const { toast } = useToast(); // Get toast function
+    const { isAuthenticated } = useIsAuthenticated(); // Get authentication status
 
     const queryKeyBase = "notifications";
     const queryKey = [queryKeyBase, filters]; // Include filters in query key
@@ -118,6 +120,7 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         queryFn: () => fetchNotifications(filters),
         refetchOnMount: true,
         staleTime: 1000, // 1 second - set to a low value to ensure frequent refreshes
+        enabled: isAuthenticated, // Only run if authenticated
     });
 
     /**
@@ -133,6 +136,7 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         queryFn: fetchUnreadCount,
         refetchOnMount: true,
         staleTime: 1000, // 1 second
+        enabled: isAuthenticated, // Only run if authenticated
     });
 
     const unreadCount = unreadCountData?.unread_count ?? 0;

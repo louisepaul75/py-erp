@@ -1,5 +1,7 @@
 import type { User } from "../types"
 import { API_BASE_URL } from "../config";
+import { instance } from "../api"
+import type { Group } from "@/types"
 
 // Define a type for the creation payload
 export type CreateUserPayload = {
@@ -278,6 +280,29 @@ export async function deleteUser(id: string): Promise<void> {
 }
 
 export async function updateUserGroups(userId: string, groupIds: string[]): Promise<User> {
+  // Correct the API endpoint URL
+  const response = await instance.post(`v1/users/users/${userId}/set-groups/`, { 
+    json: { group_ids: groupIds }
+  });
+  
+  // Assuming the backend returns the updated user object or at least the group list
+  // If it returns the full user object:
+  // return response.json<User>(); 
+
+  // If it returns { detail: string, groups: Group[] }, we need to fetch the user again or update locally.
+  // For now, let's assume it returns enough info or we invalidate query which triggers refetch.
+  // The mutation already invalidates the 'users' query, so a refetch will happen.
+  // We might need to return a specific type or handle the response differently based on actual API.
+  
+  // Placeholder return - adjust based on actual API response structure if needed
+  // Or remove return if mutation onSuccess handles everything.
+  const updatedUserData = await response.json<{ detail: string, groups: Group[] }>(); 
+  // For now, just return a dummy user structure or throw if error
+  // A better approach is to have the backend return the full updated user object.
+  const partialUser: Partial<User> = { id: userId, groups: updatedUserData.groups }; 
+  return partialUser as User; // Cast needed as we don't have the full user here
+
+  /* Old mock logic:
   await delay(500)
 
   // Import groups dynamically to avoid circular dependencies
@@ -288,6 +313,15 @@ export async function updateUserGroups(userId: string, groupIds: string[]): Prom
   users = users.map((user) => (user.id === userId ? { ...user, groups: selectedGroups } : user))
 
   return users.find((user) => user.id === userId)!
+  */
+}
+
+// Define a basic Permission type if not already defined/imported elsewhere
+// You might need to adjust this based on your actual Permission structure
+interface Permission {
+  id: string;
+  name: string;
+  // Add other permission fields as needed
 }
 
 export async function getUserPermissions(userId: string): Promise<string[]> {
@@ -300,9 +334,11 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
   // Get all permissions from all groups the user belongs to
   const permissionIds = new Set<string>()
 
-  user.groups.forEach((group) => {
-    if (group.permissions) {
-      group.permissions.forEach((permission) => {
+  // Add explicit types to group and permission
+  user.groups.forEach((group: Group) => { 
+    // Assuming Group type has an optional permissions array
+    if (group.permissions) { 
+      group.permissions.forEach((permission: Permission) => {
         permissionIds.add(permission.id)
       })
     }

@@ -43,6 +43,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     department = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    groups = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -57,6 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "department",
             "status",
+            "groups",
         ]
         read_only_fields = ["is_active", "is_staff", "date_joined"]
 
@@ -71,6 +73,10 @@ class UserSerializer(serializers.ModelSerializer):
         if hasattr(obj, "profile"):
             return obj.profile.status
         return "active"  # Default value
+
+    def get_groups(self, obj):
+        """Return the user's groups with minimal information."""
+        return [{"id": group.id, "name": group.name} for group in obj.groups.all()]
 
 
 class UserDetailSerializer(serializers.ModelSerializer):

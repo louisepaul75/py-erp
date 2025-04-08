@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import useAppTranslation from '@/hooks/useTranslationWrapper';
+import { useIsAuthenticated } from "@/lib/auth/authHooks";
 
 interface HealthCheckResult {
   success: boolean;
@@ -43,6 +44,7 @@ export function Footer() {
   const [isDevBarExpanded, setIsDevBarExpanded] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(true);
   const { t } = useAppTranslation();
+  const { isAuthenticated } = useIsAuthenticated();
   
   // Measure footer height and set CSS variable
   useEffect(() => {
@@ -93,6 +95,8 @@ export function Footer() {
   
   // Fetch health checks (for dev bar condition)
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const fetchBackendStatus = async () => {
       setIsLoadingChecks(true);
       try {
@@ -150,10 +154,12 @@ export function Footer() {
     
     const interval = setInterval(fetchBackendStatus, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]);
 
   // Fetch overall health status (for version and status indicator)
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     // Define controller outside the fetch function so cleanup can access it
     let controller: AbortController;
 
@@ -249,10 +255,12 @@ export function Footer() {
          controller.abort(); 
       }
     };
-  }, []); // Keep empty dependency array
+  }, [isAuthenticated]);
   
   // Fetch git branch info
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const fetchGitBranch = async () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
@@ -296,7 +304,7 @@ export function Footer() {
     };
     
     fetchGitBranch();
-  }, []);
+  }, [isAuthenticated]);
   
   // Show dev mode bar in development OR if the health checks endpoint reports an API error
   const isDevelopment = process.env.NODE_ENV === 'development' || healthChecks?.results.some(r => r.component === 'api' && r.status === 'error');
