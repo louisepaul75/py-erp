@@ -84,6 +84,7 @@ PYTEST_OPTS=""
 if [ "$COVERAGE" = true ]; then
   PYTEST_OPTS="$PYTEST_OPTS --cov=pyerp"
   PYTEST_OPTS="$PYTEST_OPTS --cov-report=xml:coverage/${TEST_GROUP}-coverage.xml"
+  PYTEST_OPTS="$PYTEST_OPTS --cov-report term-missing"
   PYTEST_OPTS="$PYTEST_OPTS --junitxml=coverage/${TEST_GROUP}-junit.xml"
   PYTEST_OPTS="$PYTEST_OPTS -o junit_family=legacy"
 fi
@@ -153,7 +154,7 @@ if [ "$TEST_GROUP" = "ui" ]; then
   if [ "$COVERAGE" = true ]; then
     mkdir -p ../coverage
     cp jest-junit.xml ../coverage/ui-junit.xml
-    cp -r coverage/coverage-final.json ../coverage/ui-coverage.xml
+    cp -r coverage/coverage-final.json ../coverage/ui-coverage.json
   fi
   
   # Return to project root
