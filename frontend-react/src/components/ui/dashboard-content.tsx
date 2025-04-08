@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, useRef } from "react"
 import Link from "next/link"
 import {
   X,
@@ -144,7 +144,6 @@ const DashboardWidget = ({
 
 const Dashboard = () => {
   const [isEditMode, setIsEditMode] = useState(false)
-  const [width, setWidth] = useState(1200) // Default width for SSR
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
@@ -295,6 +294,10 @@ const Dashboard = () => {
     { id: "ORD-7348", customer: "Fischer GmbH", date: "2025-03-12", status: "Delivered", amount: "€3,450.00" },
   ]
 
+  // State for container width
+  const [containerWidth, setContainerWidth] = useState(1200); // Default width
+  const gridContainerRef = useRef<HTMLDivElement>(null); // Ref for the grid container
+
   // Effect to load data
   useEffect(() => {
     // Load data function
@@ -368,16 +371,26 @@ const Dashboard = () => {
     loadData();
   }, []);
 
-  // Update width on window resize
+  // Update width based on container resize
   useEffect(() => {
-    const handleResize = () => {
-      setWidth(window.innerWidth)
-    }
+    const container = gridContainerRef.current;
+    if (!container) return;
 
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+    const resizeObserver = new ResizeObserver(entries => {
+      if (entries[0]) {
+        setContainerWidth(entries[0].contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    // Initial measurement
+    setContainerWidth(container.offsetWidth);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Function to toggle edit mode
   const toggleEditMode = () => {
@@ -690,7 +703,7 @@ const Dashboard = () => {
     ) => {
       
     // Determine the current breakpoint
-    const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"; // Need to match RGL breakpoints
+    const currentBreakpoint = containerWidth >= 1200 ? "lg" : containerWidth >= 996 ? "md" : "sm"; // Need to match RGL breakpoints
 
     // Create a new layouts object to avoid direct state mutation
     const newLayouts = { ...layouts };
@@ -708,8 +721,8 @@ const Dashboard = () => {
 
   // Function to get widget title based on id
   const getWidgetTitle = (id: string): string | null => {
-    // First check in current layout for the title
-    const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
+    // Use containerWidth to determine breakpoint
+    const currentBreakpoint = containerWidth >= 1200 ? "lg" : containerWidth >= 996 ? "md" : "sm" 
     const layoutItem = layouts[currentBreakpoint]?.find((item) => item.i === id)
     
     if (layoutItem?.title) {
@@ -863,7 +876,7 @@ const Dashboard = () => {
   };
 
   // Get current layout based on breakpoints
-  const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
+  const currentBreakpoint = containerWidth >= 1200 ? "lg" : containerWidth >= 996 ? "md" : "sm"
   const currentLayouts = layouts
   const layoutKeys = useMemo(() => 
       Array.from(new Set(Object.values(layouts).flat().map(layout => layout.i)))
@@ -871,11 +884,11 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
+      <div className="w-full max-w-screen-xl mx-auto py-10 px-6 overflow-x-hidden">
         <div className="flex-grow flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => setIsSidebarOpen(true)}
@@ -916,37 +929,84 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="flex-grow">
-            <ResponsiveGridLayout
-              className={`layout ${isEditMode ? 'editing' : ''}`}
-              layouts={layouts}
-              breakpoints={gridBreakpoints}
-              cols={gridCols}
-              rowHeight={gridRowHeight}
-              width={width}
-              margin={gridMargin}
-              onDragStop={handleLayoutChange}
-              onResizeStop={handleLayoutChange}
-              draggableHandle=".draggable-handle"
-            >
-              {layoutKeys.map((key) => (
-                <div 
-                  key={key} 
-                  onClickCapture={() => handleWidgetSelect(key)} 
-                  className={`relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border ${selectedWidgetId === key ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
-                >
-                  <DashboardWidget
-                    id={key}
-                    title={getWidgetTitle(key)}
-                    isEditMode={isEditMode}
-                    onRemove={handleRemoveSelectedWidget}
+          <div className="flex-grow" ref={gridContainerRef}>
+            {containerWidth > 0 && (
+              <ResponsiveGridLayout
+                className={`layout ${isEditMode ? 'editing' : ''}`}
+                layouts={layouts}
+                breakpoints={gridBreakpoints}
+                cols={gridCols}
+                rowHeight={gridRowHeight}
+                width={containerWidth}
+                margin={gridMargin}
+                onDragStop={handleLayoutChange}
+                onResizeStop={handleLayoutChange}
+                draggableHandle=".draggable-handle"
+              >
+                {layoutKeys.map((key) => (
+                  <div 
+                    key={key} 
+                    onClickCapture={() => handleWidgetSelect(key)} 
+                    className={`relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border ${selectedWidgetId === key ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
                   >
-                    {renderWidgetContent(key)}
-                  </DashboardWidget>
-                </div>
-              ))}
-            </ResponsiveGridLayout>
+                    <DashboardWidget
+                      id={key}
+                      title={getWidgetTitle(key)}
+                      isEditMode={isEditMode}
+                      onRemove={handleRemoveSelectedWidget}
+                    >
+                      {renderWidgetContent(key)}
+                    </DashboardWidget>
+                  </div>
+                ))}
+              </ResponsiveGridLayout>
+            )}
           </div>
+
+          {/* Mobile Action Buttons - Below grid, only on small screens */}
+          <div className="md:hidden mt-6 flex justify-center items-center gap-2"> 
+             <Button
+                variant="outline"
+                size="sm" 
+                onClick={() => setIsSidebarOpen(true)}
+                className="border-primary text-primary hover:bg-primary/10 flex-1" 
+                disabled={isEditMode}
+              >
+                <LayoutPanelLeft className="mr-2 h-4 w-4" />
+                Layouts
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm" 
+                onClick={toggleEditMode}
+                className={`${isEditMode ? "border-destructive text-destructive hover:bg-destructive/10" : "border-primary text-primary hover:bg-primary/10"} flex-1`} 
+              >
+                {isEditMode ? (
+                  <>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </>
+                )}
+              </Button>
+
+              {isEditMode && (
+                <Button
+                  size="sm" 
+                  onClick={saveLayout}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1" 
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </Button>
+              )}
+          </div>
+
         </div>
         
         <DashboardSidebar
