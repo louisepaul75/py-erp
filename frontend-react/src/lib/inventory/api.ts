@@ -68,8 +68,7 @@ export interface PaginatedResponse<T> {
 // Fetch all box types using ky
 export const fetchBoxTypes = async (): Promise<BoxType[]> => {
   try {
-    // Use ky instance (now named 'api')
-    const response = await api.get('api/v1/inventory/box-types/').json<BoxType[]>();
+    const response = await api.get('inventory/box-types/').json<BoxType[]>();
     return response;
   } catch (error) {
     console.error('Error fetching box types:', error);
@@ -83,7 +82,7 @@ export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Prom
     console.log(`[DEBUG] Starting fetchBoxes API call: page=${page}, pageSize=${pageSize}`);
     
     // Use ky instance (now named 'api') with searchParams and timeout
-    const response = await api.get('api/v1/inventory/boxes/', {
+    const response = await api.get('inventory/boxes/', {
       searchParams: { // Use searchParams for query parameters with ky
         page,
         page_size: pageSize
@@ -136,7 +135,7 @@ export const fetchBoxes = async (page = 1, pageSize = 20, timeout = 30000): Prom
 export const fetchBoxesByLocationId = async (locationId: number): Promise<Box[]> => {
   try {
     // Use ky instance (now named 'api') with searchParams
-    const response = await api.get('api/v1/inventory/boxes/', {
+    const response = await api.get('inventory/boxes/', {
       searchParams: {
         location_id: locationId
       }
@@ -148,11 +147,10 @@ export const fetchBoxesByLocationId = async (locationId: number): Promise<Box[]>
   }
 };
 
-// Fetch all storage locations using ky
+// Fetch all storage locations from the API
 export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
   try {
-    // Use ky instance (now named 'api')
-    const response = await api.get('api/v1/inventory/storage-locations/').json<StorageLocation[]>();
+    const response = await api.get('inventory/storage-locations/').json<StorageLocation[]>();
     return response;
   } catch (error) {
     console.error('Error fetching storage locations:', error);
@@ -163,12 +161,10 @@ export const fetchStorageLocations = async (): Promise<StorageLocation[]> => {
 // Fetch products by location using ky
 export const fetchProductsByLocation = async (locationId: number): Promise<any[]> => {
   try {
-    // Use ky instance (now named 'api')
-    // Ensure the URL structure is correct for ky (no trailing slash needed usually unless required by backend)
-    const response = await api.get(`api/v1/inventory/storage-locations/${locationId}/products/`).json<any[]>();
+    const response = await api.get(`inventory/storage-locations/${locationId}/products/`).json<any[]>();
     return response;
   } catch (error) {
-    console.error('Error fetching products by location:', error);
+    console.error(`Error fetching products for location ${locationId}:`, error);
     throw error;
   }
 };
@@ -177,11 +173,10 @@ export const fetchProductsByLocation = async (locationId: number): Promise<any[]
 // Consider renaming or removing if it fetches the same data as fetchProductsByLocation
 export const fetchBoxesByLocation = async (locationId: number): Promise<any[]> => {
   try {
-    // Use ky instance (now named 'api')
-    const response = await api.get(`api/v1/inventory/storage-locations/${locationId}/products/`).json<any[]>();
+    const response = await api.get(`inventory/storage-locations/${locationId}/products/`).json<any[]>();
     return response;
   } catch (error) {
-    console.error('Error fetching boxes by location:', error);
+    console.error(`Error fetching boxes for location ${locationId}:`, error);
     throw error;
   }
 };
@@ -196,7 +191,7 @@ export const addProductToBox = async (
 ): Promise<any> => {
   try {
     // Use ky instance (now named 'api') with json payload
-    const response = await api.post('api/v1/inventory/add-product-to-box/', {
+    const response = await api.post('inventory/add-product-to-box/', {
       json: { // Use json for request body with ky
         product_id: productId,
         box_slot_id: boxSlotId,
@@ -216,7 +211,7 @@ export const addProductToBox = async (
 export const moveBox = async (boxId: number, targetLocationId: number): Promise<any> => {
   try {
     // Use ky instance (now named 'api') with json payload
-    const response = await api.post('api/v1/inventory/move-box/', {
+    const response = await api.post('inventory/move-box/', {
       json: {
         box_id: boxId,
         target_location_id: targetLocationId
@@ -237,7 +232,7 @@ export const moveProductBetweenBoxes = async (
 ): Promise<any> => {
   try {
     // Use ky instance (now named 'api') with json payload
-    const response = await api.post('api/v1/inventory/move-product-between-boxes/', {
+    const response = await api.post('inventory/move-product-between-boxes/', {
       json: {
         source_box_storage_id: sourceBoxStorageId,
         target_box_slot_id: targetBoxSlotId,
@@ -259,7 +254,7 @@ export const removeProductFromBox = async (
 ): Promise<any> => {
   try {
     // Use ky instance (now named 'api') with json payload
-    const response = await api.post('api/v1/inventory/remove-product-from-box/', {
+    const response = await api.post('inventory/remove-product-from-box/', {
       json: {
         box_storage_id: boxStorageId,
         quantity,
@@ -277,7 +272,7 @@ export const removeProductFromBox = async (
 export const removeBoxFromLocation = async (boxId: number): Promise<any> => {
   try {
     // Use ky instance (now named 'api') with json payload
-    const response = await api.post('api/v1/inventory/remove-box-from-location/', {
+    const response = await api.post('inventory/remove-box-from-location/', {
       json: {
         box_id: boxId
       }
@@ -287,4 +282,17 @@ export const removeBoxFromLocation = async (boxId: number): Promise<any> => {
     console.error('Error removing box from location:', error);
     throw error;
   }
-}; 
+};
+
+// Fetch boxes that contain a specific product from the API
+export const fetchBoxesByProduct = async (productId: number): Promise<Box[]> => {
+  try {
+    const response = await api.get('inventory/boxes/', {
+      searchParams: { product_id: productId }
+    }).json<Box[]>();
+    return response;
+  } catch (error) {
+    console.error(`Error fetching boxes for product ${productId}:`, error);
+    throw error;
+  }
+};

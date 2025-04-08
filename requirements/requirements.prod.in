@@ -1,5 +1,5 @@
 # Core Django packages
-Django
+Django>=5.1.8
 djangorestframework
 django-filter
 django-cors-headers
@@ -42,8 +42,8 @@ djangorestframework-simplejwt
 django-guardian
 
 # AWS
-boto3
-django-storages
+boto3>=1.37.28
+django-storages>=1.14.6
 
 # PDF Generation
 WeasyPrint
@@ -54,7 +54,7 @@ Pillow
 python-dateutil
 pytz
 requests
-pydantic
+pydantic>=2.11.2
 tabulate
 pandas
 psutil
@@ -64,14 +64,17 @@ structlog
 python-json-logger
 
 # Email
-django-anymail
+django-anymail>=13.0
 
 # Production
 gunicorn
 whitenoise
 
 # Datadog APM and tracing
-ddtrace
+ddtrace>=3.3.1
 
 # 1Password Connect SDK
-onepasswordconnectsdk 
+onepasswordconnectsdk
+
+# Environment variables
+django-environ==0.11.2 

@@ -38,188 +38,238 @@ const authApi = ky.create({
   },
 });
 
-// CSRF token management
+// Log when the auth module is loaded
+console.log('[AuthService] Module initialized');
+
+// Initialize CSRF functionality
 export const csrfService = {
-  // Get CSRF token from various sources
-  getToken: (): string | null => {
-    // First try meta tag
-    const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (metaToken && metaToken.length > 0) {
-      return metaToken;
-    }
-    
-    // Try cookie
-    const cookieToken = clientCookieStorage.getItem('csrftoken');
-    if (cookieToken) {
-      return cookieToken;
-    }
-    
-    // Try Django settings
-    const settingsToken = (window as any)?.DJANGO_SETTINGS?.CSRF_TOKEN;
-    if (settingsToken) {
-      return settingsToken;
+  // Get the CSRF token from the document
+  getToken: () => {
+    if (typeof document !== 'undefined') {
+      // Try to get it from the meta tag first
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      if (meta && meta.getAttribute('content')) {
+        const metaToken = meta.getAttribute('content');
+        if (metaToken && metaToken.length > 0) {
+          return metaToken;
+        }
+      }
+      
+      // Fallback to cookie
+      const csrfCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='));
+      
+      if (csrfCookie) {
+        return csrfCookie.split('=')[1];
+      }
     }
     
     return null;
   },
   
-  // Set CSRF token in meta tag for future use
-  setToken: (token: string): void => {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    if (metaTag) {
-      metaTag.setAttribute('content', token);
-    } else {
-      // Create meta tag if it doesn't exist
-      const newMetaTag = document.createElement('meta');
-      newMetaTag.name = 'csrf-token';
-      newMetaTag.content = token;
-      document.head.appendChild(newMetaTag);
-    }
-  },
-  
-  // Fetch fresh CSRF token from the server
-  fetchToken: async (): Promise<string | null> => {
+  // Fetch a new CSRF token
+  fetchToken: async () => {
     try {
-      // Try to fetch from dedicated CSRF endpoint (relative path)
-      const csrfResponse = await fetch(`/api/csrf/`, {
-        method: "GET",
-        headers: {
-          "Accept": "application/json"
-        },
-        credentials: "include" // Include cookies
+      // Call the CSRF endpoint (path relative to API_URL)
+      const response = await fetch(`${API_URL}/csrf/`, {
+        method: 'GET',
+        credentials: 'include',
       });
       
-      if (csrfResponse.ok) {
-        const data = await csrfResponse.json();
-        if (data.csrf_token) {
-          csrfService.setToken(data.csrf_token);
-          return data.csrf_token;
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSRF token: ${response.status}`);
+      }
+      
+      // The server should set the CSRF cookie/meta tag in the response
+      // Extract from the response header for debugging
+      const csrfHeader = response.headers.get('X-CSRFToken');
+      
+      if (csrfHeader) {
+        // We could update our meta tag directly
+        if (typeof document !== 'undefined') {
+          const meta = document.querySelector('meta[name="csrf-token"]');
+          if (meta) {
+            meta.setAttribute('content', csrfHeader);
+          }
         }
       }
       
-      // Fallback: check if the server set a CSRF cookie during the request
-      const newCookieToken = clientCookieStorage.getItem('csrftoken');
-      if (newCookieToken) {
-        csrfService.setToken(newCookieToken);
-        return newCookieToken;
-      }
-      
-      return null;
+      // Get the token from the cookie/meta tag
+      const token = csrfService.getToken();
+      return token;
     } catch (error) {
-      console.error("Error fetching CSRF token:", error);
+      console.error('Error fetching CSRF token:', error);
       return null;
     }
-  }
+  },
+  
+  // Add CSRF token to headers
+  addToken: (headers: Headers) => {
+    const token = csrfService.getToken();
+    if (token) {
+      headers.set('X-CSRFToken', token);
+    }
+    return headers;
+  },
 };
 
-// API-Instanz mit Auth für reguläre API-Aufrufe
-const api = ky.extend({
+// Centralized API instance for authenticated requests
+export const api = ky.create({
   prefixUrl: API_URL,
   timeout: 30000,
   credentials: 'include',  // Include cookies in requests
   hooks: {
     beforeRequest: [
-      request => {
-        // Add CSRF token to non-GET requests if available
-        if (request.method !== 'GET') {
-          const csrfToken = csrfService.getToken();
+      async request => {
+        // Add CSRF token to all non-GET requests
+        if (request.method !== 'GET' && typeof window !== 'undefined') {
+          // Try to get existing token
+          let csrfToken = csrfService.getToken();
+          
+          // If no token, try to fetch one
+          if (!csrfToken) {
+            csrfToken = await csrfService.fetchToken();
+          }
+          
+          // Add token to request if available
           if (csrfToken) {
             request.headers.set('X-CSRFToken', csrfToken);
-            console.log(`Adding CSRF token to ${request.method} request to ${request.url}`);
-          } else {
-            console.warn(`No CSRF token available for ${request.method} request to ${request.url}`);
           }
         }
         
-        // Add Authorization header with JWT token if available
-        const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+        // Add authorization token to all requests
+        const token = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
         if (token) {
           request.headers.set('Authorization', `Bearer ${token}`);
-          console.log(`Adding Bearer token to request to ${request.url} (token length: ${token.length})`);
-        } else {
-          console.warn(`No access token available for request to ${request.url}`);
         }
       }
     ],
     beforeError: [
-      async (error: HTTPError) => {
-        const { response } = error;
-        console.log(`[Hook:beforeError] Encountered error. Status: ${response?.status}, URL: ${error.request.url}`); // Log entry
-        
-        // 401 Unauthorized Fehler behandeln (Token abgelaufen)
-        if (response.status === 401) {
-          console.log('[Hook:401] Status is 401. Attempting token refresh...'); // Log 401 entry
-          try {
-            // Versuche, den Token zu erneuern
-            const refreshSuccess = await authService.refreshToken();
-            
-            if (refreshSuccess) {
-              console.log('[Hook:401] Refresh successful. Retrying original request...'); // Log refresh success
-              // Request mit neuem Token wiederholen
-              const token = clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-              const request = error.request.clone();
-              if (token) {
-                console.log(`[Hook:401] Adding new token (len: ${token ? token.length : 'null'}) to retry request.`); // Log token add
-                request.headers.set('Authorization', `Bearer ${token}`);
-              } else {
-                console.warn('[Hook:401] No token found after successful refresh? Retrying without Authorization.');
+      async error => {
+        // Check if error is due to 401 Unauthorized
+        if (error instanceof HTTPError && error.response.status === 401) {
+          console.log('[API] Received 401 response, attempting to refresh token...');
+          
+          // Check if we can attempt to refresh the token
+          const refreshToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
+          if (refreshToken && !error.request.url.toString().includes('token/refresh') && !error.request.url.toString().includes('auth/logout')) {
+            try {
+              // Attempt to refresh token
+              const refreshed = await authService.refreshToken();
+              
+              if (refreshed) {
+                console.log('[API] Token refreshed successfully, retrying original request...');
+                
+                // Clone the original request options
+                const options = {
+                  method: error.request.method,
+                  credentials: 'include',
+                  headers: {},
+                };
+                
+                // Copy headers (except possibly outdated Authorization)
+                error.request.headers.forEach((value, key) => {
+                  if (key.toLowerCase() !== 'authorization') {
+                    options.headers[key] = value;
+                  }
+                });
+                
+                // Add fresh token
+                const freshToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
+                if (freshToken) {
+                  options.headers['Authorization'] = `Bearer ${freshToken}`;
+                }
+                
+                // Add body if it existed (for PUT/POST/etc)
+                if (error.request.body) {
+                  try {
+                    // Clone the body as best as possible
+                    if (error.request.body instanceof FormData) {
+                      options.body = error.request.body;
+                    } else if (typeof error.request.body === 'string') {
+                      options.body = error.request.body;
+                    }
+                  } catch (bodyError) {
+                    console.warn('Could not clone request body:', bodyError);
+                  }
+                }
+                
+                // Retry with fresh token
+                const retryResponse = await fetch(error.request.url, options);
+                
+                // Create a new response with the retry response data
+                const clonedResponse = new Response(await retryResponse.blob(), {
+                  status: retryResponse.status,
+                  statusText: retryResponse.statusText,
+                  headers: retryResponse.headers
+                });
+                
+                // Prevent ky from treating this as an error
+                const modifiedError = error;
+                modifiedError.response = clonedResponse;
+                
+                // If retry successful, don't treat as error
+                if (retryResponse.ok) {
+                  console.log('[API] Request retry successful after token refresh');
+                  // Prevent Ky from treating this as an error
+                  return new Response(await retryResponse.blob(), {
+                    status: 200,
+                    statusText: 'OK',
+                    headers: retryResponse.headers
+                  });
+                }
               }
-              // Retry the request using the api instance. DO NOT return the promise.
-              await api(request);
-              // Let ky handle the successful retry transparently.
-              return error; // Return the original error to let ky handle the retry
-            } else {
-              console.log('[Hook:401] Refresh failed. Re-throwing original 401 error.'); // Log refresh fail
-              return error; // Return the original error
+            } catch (refreshError) {
+              console.error('[API] Error refreshing token:', refreshError);
             }
-          } catch (refreshError) {
-            console.error('[Hook:401] Exception during refresh attempt:', refreshError); // Log refresh exception
-            console.log('[Hook:401] Re-throwing original 401 after refresh exception.');
-            return error;
           }
         }
         
-        // 403 Forbidden could be CSRF related
-        if (response.status === 403) {
-           console.log('[Hook:403] Status is 403. Attempting CSRF token refresh...');
-          try {
-            // Try to refresh CSRF token
-            const newCsrfToken = await csrfService.fetchToken();
-            if (newCsrfToken && error.request.method !== 'GET') {
-              console.log('[Hook:403] CSRF refresh successful. Retrying original request...');
-              // Retry request with new CSRF token
-              const request = error.request.clone();
-              request.headers.set('X-CSRFToken', newCsrfToken);
-              // Retry the request using the api instance
-              await api(request);
-              // Do not return the response directly, let ky handle it
-              return error; // Return the original error to let ky handle the retry
-            }
-          } catch (csrfError) {
-            console.error('[Hook:403] CSRF token refresh failed:', csrfError);
-          }
-          // If CSRF refresh didn't happen or failed, re-throw original 403
-          console.log('[Hook:403] Re-throwing original 403 after processing.');
-          return error;
-        }
-        
-        // For other errors, try to parse the message and return the modified error
+        // Process API error response
         try {
-          // Use response.clone() in case the body is needed elsewhere
-          const errorBodyText = await response.clone().text(); 
-          error.message = errorBodyText || response.statusText;
-          console.log(`[Hook:beforeError] Parsed error message for status ${response?.status}: ${error.message}`);
-        } catch (e) {
-          console.log(`[Hook:beforeError] Failed to parse error body for status ${response?.status}. Using statusText.`);
-          error.message = response.statusText;
+          const { response } = error;
+          const contentType = response.headers.get('content-type');
+          
+          if (contentType && contentType.includes('application/json')) {
+            try {
+              const data = await response.json();
+              if (data && typeof data === 'object') {
+                if (data.detail) {
+                  error.message = data.detail;
+                } else if (data.message) {
+                  error.message = data.message;
+                } else {
+                  error.message = JSON.stringify(data);
+                }
+              }
+            } catch (jsonError) {
+              console.warn('Error parsing JSON error response:', jsonError);
+              error.message = await response.text() || response.statusText;
+            }
+          } else {
+            error.message = await response.text() || response.statusText;
+          }
+        } catch (processError) {
+          console.warn('Error processing API error:', processError);
         }
         
-        // Return the error for ky to handle/throw
         return error;
-      },
+      }
     ],
   },
 });
+
+// Helper function to clear auth tokens
+export const clearAuthTokens = async (): Promise<void> => {
+  try {
+    await clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.accessToken);
+    await clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.refreshToken);
+    console.log('[clearAuthTokens] Auth tokens cleared');
+  } catch (error) {
+    console.error('[clearAuthTokens] Error clearing auth tokens:', error);
+  }
+};
 
 // Export the auth service functions
 export const authService = {
@@ -236,8 +286,8 @@ export const authService = {
       }
       
       // Attempt the fetch. The beforeError hook will handle 401/refresh/retry.
-      console.log(`[getCurrentUser] Attempting api.get('api/auth/user/')...`);
-      const user = await api.get('api/auth/user/', {
+      console.log(`[getCurrentUser] Attempting api.get('auth/user/')...`);
+      const user = await api.get('auth/user/', {
         // We still need to provide the initial token for the first attempt
         headers: {
           'Authorization': `Bearer ${token}`
@@ -279,7 +329,7 @@ export const authService = {
       await csrfService.fetchToken();
       
       // Get tokens from the token endpoint (use path relative to API_URL prefix)
-      const tokenResponse = await authApi.post('api/token/', { json: credentials }).json<{
+      const tokenResponse = await authApi.post('token/', { json: credentials }).json<{
         access: string;
         refresh: string;
       }>();
@@ -358,28 +408,29 @@ export const authService = {
   },
   
   changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
-    await api.post('auth/password/change/', {
+    await api.post('auth/change-password/', {
       json: {
         old_password: oldPassword,
-        new_password: newPassword
-      }
+        new_password: newPassword,
+      },
     });
-  }
+  },
 };
 
-const getAuthToken = async () => {
-  return await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.accessToken);
-};
-
-const setAuthTokens = async (tokenResponse: TokenResponse) => {
-  await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.accessToken, tokenResponse.access);
-  await clientCookieStorage.setItem(AUTH_CONFIG.tokenStorage.refreshToken, tokenResponse.refresh);
-};
-
-const clearAuthTokens = async () => {
-  await clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.accessToken);
-  await clientCookieStorage.removeItem(AUTH_CONFIG.tokenStorage.refreshToken);
-};
+// Prefetch user on module load to speed up initial authentication
+if (typeof window !== 'undefined') {
+  // Schedule prefetching after the module loads
+  console.log('[AuthService] Scheduling immediate user prefetch');
+  setTimeout(() => {
+    authService.getCurrentUser()
+      .then(user => {
+        console.log('[AuthService] Initial user prefetch complete:', user ? 'Authenticated' : 'Not authenticated');
+      })
+      .catch(error => {
+        console.error('[AuthService] Initial user prefetch failed:', error);
+      });
+  }, 0);
+}
 
 const refreshAuthToken = async () => {
   const refreshToken = await clientCookieStorage.getItem(AUTH_CONFIG.tokenStorage.refreshToken);
@@ -388,7 +439,7 @@ const refreshAuthToken = async () => {
   }
 
   try {
-    const response = await fetch('/api/auth/token/refresh/', {
+    const response = await fetch('/auth/token/refresh/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -407,6 +458,4 @@ const refreshAuthToken = async () => {
     console.error('Error refreshing token:', error);
     throw error;
   }
-};
-
-export { api }; 
+}; 

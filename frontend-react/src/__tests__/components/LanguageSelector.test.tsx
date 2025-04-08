@@ -1,28 +1,22 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/lib/i18n'; // Adjust path as necessary
-import LanguageSelector from '@/components/LanguageSelector';
-import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 // Mock the react-i18next hook
-jest.mock('react-i18next', () => {
-  const changeLanguageMock = jest.fn();
-  
-  return {
-    // this mock makes sure any components using the translate hook can use it without a warning being shown
-    useTranslation: () => {
-      return {
-        t: (str: string) => str,
-        i18n: {
-          changeLanguage: changeLanguageMock,
-          language: 'en'
-        }
-      };
+const mockChangeLanguage = jest.fn();
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (str: string) => str,
+    i18n: {
+      changeLanguage: mockChangeLanguage,
+      language: 'en'
     }
-  };
-});
+  })
+}));
 
 describe('LanguageSelector', () => {
   beforeEach(() => {
@@ -33,42 +27,54 @@ describe('LanguageSelector', () => {
   it('renders correctly with default language', () => {
     render(<LanguageSelector />);
     
-    // Check if the component renders with English as default (as per our mock)
-    const textElement = screen.getByText(/English/i);
-    expect(textElement).toBeInTheDocument();
-    
-    // For emojis in text content, we need to check the containing element
-    const spanElement = textElement.parentElement;
-    expect(spanElement?.textContent).toContain('🇬🇧');
+    // Check if the button contains both the flag and language name
+    const button = screen.getByRole('button');
+    expect(button).toHaveTextContent('🇬🇧');
+    expect(button).toHaveTextContent('English');
   });
 
-  it('opens dropdown when clicked', () => {
+  it('opens dropdown when clicked', async () => {
+    const user = userEvent.setup();
     render(<LanguageSelector />);
     
-    // Initially dropdown is closed
-    expect(screen.queryByText('Deutsch')).not.toBeInTheDocument();
+    // Click the button to open dropdown
+    const button = screen.getByRole('button');
+    await user.click(button);
     
-    // Click to open dropdown
-    fireEvent.click(screen.getByText(/English/i));
-    
-    // Check if all language options are now visible
-    expect(screen.getByText('Deutsch')).toBeInTheDocument();
-    expect(screen.getByText('Čeština')).toBeInTheDocument();
+    // Wait for the dropdown to be mounted and visible
+    await waitFor(() => {
+      expect(button).toHaveAttribute('data-state', 'open');
+      expect(document.querySelector('[role="menu"]')).toBeInTheDocument();
+    });
+
+    // Check if all languages are present in the dropdown
+    const menu = document.querySelector('[role="menu"]');
+    expect(menu).toBeInTheDocument();
+    expect(menu).toHaveTextContent('Deutsch');
+    expect(menu).toHaveTextContent('English');
+    expect(menu).toHaveTextContent('Čeština');
   });
 
-  it('changes language when an option is selected', () => {
-    // Get the mock implementation to verify the call
-    const { i18n } = useTranslation();
-    
+  it('changes language when an option is selected', async () => {
+    const user = userEvent.setup();
     render(<LanguageSelector />);
     
     // Open dropdown
-    fireEvent.click(screen.getByText(/English/i));
+    const button = screen.getByRole('button');
+    await user.click(button);
     
-    // Select German
-    fireEvent.click(screen.getByText('Deutsch'));
+    // Wait for the dropdown to be mounted and visible
+    await waitFor(() => {
+      expect(button).toHaveAttribute('data-state', 'open');
+      expect(document.querySelector('[role="menu"]')).toBeInTheDocument();
+    });
+
+    // Find and click the German option within the menu
+    const menu = document.querySelector('[role="menu"]');
+    const germanOption = within(menu).getByText('Deutsch');
+    await user.click(germanOption);
     
-    // Check if changeLanguage was called with 'de'
-    expect(i18n.changeLanguage).toHaveBeenCalledWith('de');
+    // Verify language change was called
+    expect(mockChangeLanguage).toHaveBeenCalledWith('de');
   });
 }); 

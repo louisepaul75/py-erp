@@ -8,9 +8,9 @@ pyerp/core/middleware.py.
 import unittest
 import json
 from unittest.mock import patch, MagicMock
-
-from django.http import HttpResponse, JsonResponse
 from django.test import RequestFactory
+from django.http import HttpResponse, JsonResponse
+from django.test import override_settings
 
 from pyerp.core.middleware import (
     AuthExemptMiddleware,
@@ -185,18 +185,24 @@ class DatabaseConnectionMiddlewareTests(unittest.TestCase):
                 db_engine = mock_settings.DATABASES['default']['ENGINE']
                 self.assertEqual(db_engine, 'django.db.backends.postgresql')
     
-    @patch('pyerp.core.middleware.settings')
-    def test_skip_non_postgresql(self, mock_settings):
-        """Test that non-PostgreSQL databases are skipped."""
-        # Mock non-PostgreSQL database settings
-        mock_settings.DATABASES = {
+    @override_settings(
+        DATABASES={
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
                 'NAME': 'db.sqlite3',
             }
         }
-        
+    )
+    def test_skip_non_postgresql(self):
+        """Test that non-PostgreSQL databases are skipped."""
         # With SQLite engine, the function should return early without testing
         with patch('psycopg2.connect') as mock_connect:
-            self.middleware._test_db_connection()
+            # Reset the flag to ensure the check runs
+            self.middleware.db_connection_tested = False
+            # Call the middleware to trigger the check (or skip it)
+            # We don't need the response, just need to trigger the __call__
+            try:
+                self.middleware(self.request)
+            except Exception:  # Catch potential errors if connect was called
+                pass
             mock_connect.assert_not_called() 

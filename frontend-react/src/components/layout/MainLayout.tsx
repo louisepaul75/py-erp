@@ -36,6 +36,7 @@ import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
 import { SearchResultsDropdown } from "@/components/ui/search-results-dropdown"
 import { useState, useEffect } from 'react'
 import { useLastVisited } from '@/context/LastVisitedContext'
+import { Toaster } from '@/components/ui/toaster'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -376,6 +377,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </MainLayoutContent>
         </SidebarProvider>
       </div>
+      <Toaster />
     </div>
   )
 }

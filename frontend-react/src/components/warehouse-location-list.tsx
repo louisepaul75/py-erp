@@ -12,10 +12,8 @@ import LocationDetailDialog from "@/components/location-detail-dialog"
 import WarehouseLocationFilters from "@/components/warehouse-location/warehouse-location-filters"
 import WarehouseLocationMobile from "@/components/warehouse-location/warehouse-location-mobile"
 import WarehouseLocationTable from "@/components/warehouse-location/warehouse-location-table"
-import { generateMockData } from "@/lib/warehouse-service"
 import type { WarehouseLocation, ContainerItem } from "@/types/warehouse-types"
-import { API_URL } from "@/lib/config"
-import { authService } from "@/lib/auth/authService"
+import { fetchStorageLocations } from "@/lib/inventory/api"
 import Link from "next/link"
 import SettingsDialog from "./settings/settings-dialog"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
@@ -56,105 +54,38 @@ export default function WarehouseLocationList() {
   const [activeTab, setActiveTab] = useState<string>("/")
 
   useEffect(() => {
-    const fetchStorageLocations = async () => {
+    const loadStorageLocations = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        // Get the authentication token
-        const token = await authService.getToken();
-        
-        if (!token) {
-          // No token found, redirect to login
-          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-          return;
-        }
-        
-        // Construct the correct API endpoint URL including the /api/v1/ prefix
-        const inventoryEndpoint = `${API_URL}/api/v1/inventory/storage-locations/`;
+        const data = await fetchStorageLocations();
 
-        const response = await fetch(inventoryEndpoint, {
-          headers: {
-            "Accept": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-          credentials: "include" // Include cookies for session auth
-        });
+        const warehouseLocations: WarehouseLocation[] = data.map((item: any) => ({
+          id: item.id.toString(),
+          laNumber: item.legacy_id ? `LA-${item.legacy_id}` : `LA-${item.id}`,
+          location: item.name,
+          forSale: item.sale || false,
+          specialStorage: item.special_spot || false,
+          shelf: parseInt(item.shelf) || 0,
+          compartment: parseInt(item.compartment) || 0,
+          floor: parseInt(item.unit) || 0,
+          containerCount: item.product_count || 0,
+          status: item.product_count > 0 ? "in-use" : "free"
+        }));
         
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Try to refresh the token
-            const refreshSuccess = await authService.refreshToken();
-            if (refreshSuccess) {
-              // Retry the request with new token
-              const newToken = await authService.getToken();
-              const retryResponse = await fetch(inventoryEndpoint, {
-                headers: {
-                  "Accept": "application/json",
-                  "Authorization": `Bearer ${newToken}`,
-                },
-                credentials: "include"
-              });
-              
-              if (!retryResponse.ok) {
-                throw new Error('Authentication failed after token refresh. Please log in again.');
-              }
-              
-              const data = await retryResponse.json();
-              handleSuccessResponse(data);
-              return;
-            } else {
-              // Token refresh failed, redirect to login
-              window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
-              return;
-            }
-          } else if (response.status === 403) {
-            throw new Error('Permission denied. You may need to refresh the page to update your session.');
-          } else if (response.status === 404) {
-            throw new Error('API endpoint not found. The inventory API might not be properly configured.');
-          }
-          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-        }
+        setLocations(warehouseLocations);
+        setFilteredLocations(warehouseLocations);
         
-        const data = await response.json();
-        handleSuccessResponse(data);
-        
-      } catch (error) {
-        console.error("Error fetching storage locations:", error);
-        setError(error instanceof Error ? error.message : "Failed to load storage locations");
-        
-        // Only use mock data in development
-        if (process.env.NODE_ENV === 'development') {
-          const mockData = generateMockData(50);
-          setLocations(mockData);
-          setFilteredLocations(mockData);
-        }
+      } catch (err) {
+        console.error("Error fetching storage locations:", err);
+        setError(err instanceof Error ? err.message : "Failed to load storage locations. Please check the console or try again later.");
       } finally {
         setIsLoading(false);
       }
     };
-    
-    // Helper function to handle successful response
-    const handleSuccessResponse = (data: any[]) => {
-      // Map the API response to match our WarehouseLocation type
-      const warehouseLocations: WarehouseLocation[] = data.map((item: any) => ({
-        id: item.id.toString(),
-        laNumber: item.legacy_id ? `LA-${item.legacy_id}` : `LA-${item.id}`,
-        location: item.name,
-        forSale: item.sale || false,
-        specialStorage: item.special_spot || false,
-        shelf: parseInt(item.shelf) || 0,
-        compartment: parseInt(item.compartment) || 0,
-        floor: parseInt(item.unit) || 0,
-        containerCount: item.product_count || 0,
-        status: item.product_count > 0 ? "in-use" : "free"
-      }));
-      
-      setLocations(warehouseLocations);
-      setFilteredLocations(warehouseLocations);
-    };
-    
-    fetchStorageLocations();
+        
+    loadStorageLocations();
   }, []);
 
   // Highlight location from URL params
@@ -282,7 +213,7 @@ export default function WarehouseLocationList() {
   }
 
   const clearURLParams = useCallback(() => {
-    window.history.pushState({}, "", "/")
+    window.history.pushState({}, "", window.location.pathname)
     setHighlightedLocationId(null)
   }, [])
 
@@ -304,7 +235,7 @@ export default function WarehouseLocationList() {
         <h1 className="text-2xl font-bold text-primary">Lagerort-Verwaltung</h1>
         <div className="flex">
           <Link
-            href="/"
+            href="/warehouse-management"
             className={`flex mx-2 items-center px-4 py-2 rounded-t-lg border-b-2 border-primary text-primary`}
           >
             <Warehouse className="h-4 w-4 mr-2" />

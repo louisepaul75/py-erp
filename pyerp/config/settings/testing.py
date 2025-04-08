@@ -192,3 +192,12 @@ SESSION_COOKIE_SECURE = False
 
 # Media settings for tests
 MEDIA_ROOT = BASE_DIR / "test_media"
+
+# Use a simple, non-empty secret key for testing
+SECRET_KEY = "django-insecure-testing-key-placeholder"
+
+# Define storage locations for testing (can be simple paths)
+STATIC_LOCATION = "static/"
+MEDIA_LOCATION = "media/"
+
+STATIC_URL = "/static/"

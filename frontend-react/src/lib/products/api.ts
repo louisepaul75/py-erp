@@ -170,7 +170,7 @@ export const productApi = {
     };
 
     try {
-      const response = await api.get("api/products/direct-search/", { 
+      const response = await api.get("api/v1/products/direct-search/", { 
         searchParams: defaultParams,
         signal 
       }).json<ApiResponse>();

@@ -37,7 +37,6 @@ export * from './alert';
 export * from './alert-dialog';
 export * from './toast';
 export * from './toaster';
-export * from './use-toast';
 
 // Overlay Components
 export * from './dialog';

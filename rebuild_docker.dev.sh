@@ -77,6 +77,7 @@ HOSTNAME=$(hostname)
 if [ "$MONITORING_MODE" == "none" ]; then
     # No monitoring environment variables needed
     MONITORING_ENV=""
+    MONITORING_SETUP=""
 elif [ "$MONITORING_MODE" == "remote" ]; then
     # Get remote ELK settings from .env.dev file or use defaults
     if [ -f "$ENV_FILE" ]; then
@@ -88,6 +89,17 @@ elif [ "$MONITORING_MODE" == "remote" ]; then
         echo "Warning: No $ENV_FILE found, using default remote ELK settings"
         MONITORING_ENV="-e ELASTICSEARCH_HOST=production-elk-server-address -e ELASTICSEARCH_PORT=9200 -e KIBANA_HOST=production-elk-server-address -e KIBANA_PORT=5601 -e ELASTICSEARCH_INDEX_PREFIX=pyerp-dev -e PYERP_ENV=dev -e HOSTNAME=$HOSTNAME"
     fi
+    
+    # Create Filebeat supervisor config when monitoring is enabled
+    MONITORING_SETUP="echo '[program:filebeat]
+command=/usr/bin/filebeat -e -c /etc/filebeat/filebeat.yml
+autostart=true
+autorestart=true
+startretries=3
+stderr_logfile=/app/logs/filebeat-err.log
+stdout_logfile=/app/logs/filebeat-out.log
+priority=5
+user=root' >> /etc/supervisor/conf.d/supervisord.conf &&"
 fi
 
 # Create necessary directories if they don't exist
@@ -110,7 +122,7 @@ docker run -d \
   -v "$(pwd)/data":/app/data \
   --network pyerp-network \
   pyerp-dev-image \
-  bash -c "cd /app && chmod +x /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_static_dirs.sh && chmod +x /app/docker/ensure_frontend_deps.sh && bash /app/docker/ensure_frontend_deps.sh && /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
+  bash -c "cd /app && chmod +x /app/docker/ensure_static_dirs.sh && bash /app/docker/ensure_static_dirs.sh && chmod +x /app/docker/ensure_frontend_deps.sh && bash /app/docker/ensure_frontend_deps.sh && $MONITORING_SETUP /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf"
 
 # Show the last 50 lines of container logs
 echo "Showing last 50 lines of container logs..."

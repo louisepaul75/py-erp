@@ -10,14 +10,16 @@ COPY frontend-react/package*.json ./
 # Create .npmrc to reduce warnings and optimize installation
 RUN echo "legacy-peer-deps=true\nloglevel=error" > .npmrc
 
-# Install production dependencies
-RUN npm ci --prefer-offline --no-audit --no-optional --production
+# Install ALL dependencies (including devDependencies) needed for the build
+RUN npm ci --prefer-offline --no-audit --no-optional # Removed --production flag
 
 # Copy only the necessary files for the build
 COPY frontend-react/tsconfig.json ./
 COPY frontend-react/next.config.js ./
-COPY frontend-react/src ./src
-COPY frontend-react/public ./public
+COPY frontend-react/tailwind.config.js ./
+COPY frontend-react/postcss.config.js ./
+COPY frontend-react/src ./src/
+COPY frontend-react/public ./public/
 
 # Build React frontend
 ENV NODE_ENV=production
@@ -36,9 +38,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         curl \
-        git \
-        netcat-traditional \
+        nginx \
+        redis-server \
         supervisor \
+        netcat-openbsd \
         nginx \
         libffi-dev \
         libjpeg-dev \
@@ -54,9 +57,10 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js
+# Install Node.js and common Sharp dependencies
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs libvips libglib2.0-0 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -68,17 +72,12 @@ COPY requirements/ /app/requirements/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
 
-# Copy the built frontend from the frontend-builder stage
-COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
+# Copy standalone output files
+COPY --from=frontend-builder /frontend/.next/standalone /app/frontend-react/
+COPY --from=frontend-builder /frontend/.next/static /app/frontend-react/.next/static
 COPY --from=frontend-builder /frontend/public /app/frontend-react/public
-COPY --from=frontend-builder /frontend/node_modules /app/frontend-react/node_modules
-COPY --from=frontend-builder /frontend/package.json /app/frontend-react/package.json
 
-# Create necessary directories and setup static files
-RUN mkdir -p /app/staticfiles/react/app/_next && \
-    cp -r /app/frontend-react/.next/* /app/staticfiles/react/app/_next/
-
-# Copy only necessary project files
+# Copy project files
 COPY pyerp/ /app/pyerp/
 COPY users/ /app/users/
 COPY admin_tools/ /app/admin_tools/
@@ -97,14 +96,14 @@ RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data \
 ARG DJANGO_SETTINGS_MODULE=pyerp.config.settings.production
 ENV DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}
 
-# Collect static files
+# Collect static files (for Django admin, etc.)
 RUN python manage.py collectstatic --noinput --clear
 
 # Configure Nginx
 RUN mkdir -p /etc/nginx/ssl
 COPY docker/nginx/ssl/server.crt /etc/nginx/ssl/
 COPY docker/nginx/ssl/server.key /etc/nginx/ssl/
-COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/sites-available/default
+COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/conf.d/pyerp.conf
 RUN ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log \
     && mkdir -p /var/log/supervisor

@@ -130,6 +130,11 @@ CORS_EXPOSE_HEADERS = [
     "set-cookie"
 ]
 
+# Add CSRF trusted origin for the React frontend
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
+
 # Logging configuration for development
 LOGGING = {
     "version": 1,
@@ -195,9 +200,25 @@ if env("USE_DOCKER", default="yes") == "yes":
         pass 
 
 # Django Debug Toolbar
+def show_toolbar_callback(request):
+    """Determine whether to show the Debug Toolbar."""
+    # Always disable toolbar for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return False
+        
+    # Disable toolbar for API requests or static/media files
+    path = request.path_info
+    if (path.startswith(('/api/', '/static/', '/media/')) or 
+        'application/json' in request.headers.get('Accept', '')):
+        return False
+        
+    # Only show in DEBUG mode for other requests
+    return settings.DEBUG
+
 DEBUG_TOOLBAR_CONFIG = {
     "DISABLE_PANELS": ["debug_toolbar.panels.redirects.RedirectsPanel"],
     "SHOW_TEMPLATE_CONTEXT": True,
+    "SHOW_TOOLBAR_CALLBACK": show_toolbar_callback,
 }
 
 # Email backend for development
@@ -350,3 +371,5 @@ CORS_ALLOWED_ORIGINS = [
 
 # Your stuff...
 # -----------------------------------------------------------------------------
+
+ROOT_URLCONF = "pyerp.urls"

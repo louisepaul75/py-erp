@@ -171,12 +171,13 @@ class UserPreference(models.Model):
         if self.active_layout_id and self.dashboard_layouts:
             layouts = self.dashboard_layouts.get('layouts', {})
             active_layout = next((layout for layout in layouts if layout.get('id') == self.active_layout_id), None)
-            if active_layout and 'grid_layout' in active_layout:
-                return active_layout['grid_layout']
+            # Use .get() for safer access
+            if active_layout and active_layout.get('grid_layout'):
+                return active_layout.get('grid_layout')
         
-        # Fallback to the main dashboard_config
-        if self.dashboard_config and 'grid_layout' in self.dashboard_config:
-            return self.dashboard_config['grid_layout']
+        # Fallback to the main dashboard_config, use .get()
+        if self.dashboard_config and self.dashboard_config.get('grid_layout'):
+            return self.dashboard_config.get('grid_layout')
         
         # If no layout found, return the default
         return self.get_default_dashboard_grid_layout()
@@ -449,3 +450,52 @@ class TaggedItem(models.Model):
         return f"'{self.tag}' tag on {content_obj_str}"
 
 # --- End Tagging System ---
+
+class Notification(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        help_text=_("The user who will receive the notification."),
+    )
+    title = models.CharField(
+        max_length=255,
+        help_text=_("The title of the notification."),
+    )
+    content = models.TextField(
+        blank=True,
+        help_text=_("The main content/body of the notification."),
+    )
+    # Consider using choices for type if you have a fixed set
+    type = models.CharField(
+        max_length=50,
+        default="system",
+        db_index=True,
+        help_text=_("Category of the notification (e.g., 'system', 'user_message', 'task_update')."),
+    )
+    is_read = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text=_("Indicates if the user has read the notification."),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text=_("Timestamp when the notification was created."),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text=_("Timestamp when the notification was last updated."),
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read", "-created_at"]),
+            models.Index(fields=["user", "type", "is_read", "-created_at"]),
+        ]
+        verbose_name = _("Notification")
+        verbose_name_plural = _("Notifications")
+
+    def __str__(self):
+        return f"Notification for {self.user}: {self.title} ({'Read' if self.is_read else 'Unread'})"

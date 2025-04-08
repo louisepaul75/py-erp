@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 import { RefreshCw } from "lucide-react"
 import useAppTranslation from "@/hooks/useTranslationWrapper"
 
@@ -244,4 +244,3 @@ export default function CurrencyForm() {
     </Dialog>
   )
 }
-

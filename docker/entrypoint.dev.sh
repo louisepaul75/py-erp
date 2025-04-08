@@ -185,6 +185,12 @@ echo "Ensuring supervisor directories exist..."
 mkdir -p /var/run /var/log/supervisor
 chmod 755 /var/run /var/log/supervisor
 
+# Explicitly export NEXT_PUBLIC_API_URL if it exists
+if [ -n "${NEXT_PUBLIC_API_URL:-}" ]; then
+    export NEXT_PUBLIC_API_URL
+    echo "Exported NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}"
+fi
+
 # Start supervisord
 echo "Starting supervisord..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

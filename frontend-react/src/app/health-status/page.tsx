@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Activity, AlertTriangle, Clock, Database, Server, RefreshCw, WifiOff } from 'lucide-react';
-import { API_URL } from '@/lib/config';
 import ConnectionStatusAnimation from '@/components/ConnectionStatusAnimation';
 
 interface HealthCheckResult {
@@ -41,27 +40,30 @@ export default function HealthStatusPage() {
   });
 
   const fetchHealthStatus = async () => {
+    setIsLoading(true);
+    
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const healthUrl = `${API_URL}/api/v1/health/`;
-      const response = await fetch(healthUrl, {
-        signal: controller.signal
+      const healthUrl = '/health/';
+      console.log("Fetching health status from:", healthUrl);
+      const healthResponse = await fetch(healthUrl, {
+        headers: {
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
       });
       
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setHealthStatus(data);
+      if (healthResponse.ok) {
+        const healthData = await healthResponse.json();
+        setHealthStatus(healthData);
         setApiErrors(prev => ({...prev, health: false}));
       } else {
         console.error('Failed to fetch health status');
+        setHealthStatus(null);
         setApiErrors(prev => ({...prev, health: true}));
       }
     } catch (error) {
       console.error('Error fetching health status:', error);
+      setHealthStatus(null);
       setApiErrors(prev => ({...prev, health: true}));
     }
   };
@@ -71,9 +73,14 @@ export default function HealthStatusPage() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      const monitoringUrl = `${API_URL}/api/v1/monitoring/health-checks/`;
+      const monitoringUrl = '/v1/monitoring/health-checks/';
+      console.log("Fetching health checks from:", monitoringUrl);
       const response = await fetch(monitoringUrl, {
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        },
+        cache: 'no-store'
       });
       
       clearTimeout(timeoutId);

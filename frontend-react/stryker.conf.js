@@ -12,7 +12,13 @@ module.exports = {
     enableFindRelatedTests: true
   },
   mutate: [
-    'src/**/*.{js,jsx,ts,tsx}',
+    'src/app/**/*.{js,jsx,ts,tsx}',
+    'src/components/**/*.{js,jsx,ts,tsx}',
+    'src/hooks/**/*.{js,jsx,ts,tsx}',
+    'src/lib/**/*.{js,jsx,ts,tsx}',
+    'src/context/**/*.{js,jsx,ts,tsx}',
+    'src/utils/**/*.{js,jsx,ts,tsx}',
+    'src/middleware.{js,jsx,ts,tsx}',
     '!src/**/*.test.{js,jsx,ts,tsx}',
     '!src/**/*.spec.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',

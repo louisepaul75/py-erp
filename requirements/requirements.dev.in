@@ -11,8 +11,8 @@ ipython
 
 # Testing
 pytest
-pytest-django
-pytest-cov
+pytest-django>=4.11.1
+pytest-cov>=6.1.1
 pytest-mock
 requests-mock
 
@@ -47,15 +47,17 @@ mypy
 pep8-naming
 pre-commit
 pylint
+ruff>=0.11.4
 
 # Environment/Config
 pytest-env
+django-environ
 
 # Code quality
 factory-boy
 faker
 mutmut  # Mutation testing
-hypothesis  # Property-based testing
+hypothesis>=6.130.9  # Property-based testing
 
 # Documentation
 sphinx
@@ -65,7 +67,8 @@ sphinx-rtd-theme
 django-browser-reload
 watchdog
 
-# Linting and formatting
+# Security
 bandit[toml]  # Security testing
 
-sentry-sdk[django] 
+# Error tracking
+sentry-sdk[django]

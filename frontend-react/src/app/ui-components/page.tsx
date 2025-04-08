@@ -61,7 +61,7 @@ import {
   Separator,
   Alert, AlertDescription, AlertTitle,
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-  useToast, Toast, ToastProvider, ToastViewport, ToastTitle, ToastDescription, ToastClose, ToastAction, Toaster,
+  Toast, ToastProvider, ToastViewport, ToastTitle, ToastDescription, ToastClose, ToastAction, Toaster,
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose,
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuGroup, DropdownMenuPortal, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
   Popover, PopoverContent, PopoverTrigger,
@@ -245,6 +245,9 @@ const componentTabs = [
   { value: 'icons', label: 'Icons', components: ['Lucide Icons'] },
   { value: 'colors', label: 'Colors', components: ['Semantic Colors', 'Status Colors'] },
 ];
+
+// Import useToast from the correct location
+import { useToast } from '@/hooks/use-toast';
 
 export default function UIComponentsPage() {
   const [activeTab, setActiveTab] = useState(componentTabs[0].value);
@@ -720,6 +723,58 @@ export default function UIComponentsPage() {
             <TabsContent value="feedback" className="space-y-8">
             <Card>
               <CardHeader>
+                  <CardTitle>Toast</CardTitle>
+                  <CardDescription>Toast notifications system</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Click the buttons below to see toast notifications in action:</p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() => {
+                        toast({
+                          title: "Default Toast",
+                          description: "This is a default toast notification",
+                        })
+                      }}
+                    >
+                      Show Toast
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        toast({
+                          variant: "destructive",
+                          title: "Error Toast",
+                          description: "Something went wrong!",
+                        })
+                      }}
+                    >
+                      Show Error Toast
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        toast({
+                          title: "Toast with Action",
+                          description: "This toast has an action button",
+                          action: (
+                            <ToastAction altText="Try again" onClick={() => alert("Action clicked!")}>
+                              Try again
+                            </ToastAction>
+                          ),
+                        })
+                      }}
+                    >
+                      Toast with Action
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                   <CardTitle>Alert</CardTitle>
                   <CardDescription>Displays important messages</CardDescription>
               </CardHeader>
@@ -781,42 +836,6 @@ export default function UIComponentsPage() {
                   </AlertDialog>
                 </CardContent>
               </Card>
-
-                  <Card>
-                    <CardHeader>
-                  <CardTitle>Toast</CardTitle>
-                  <CardDescription>Short, temporary messages</CardDescription>
-                    </CardHeader>
-                <CardContent className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      toast({
-                        title: "Scheduled: Catch up",
-                        description: "Friday, February 10, 2023 at 5:57 PM",
-                        action: (
-                          <ToastAction altText="Goto schedule to undo">Undo</ToastAction>
-                        ),
-                      })
-                    }}
-                  >
-                    Show Default Toast
-                  </Button>
-                   <Button
-                    variant="destructive"
-                    onClick={() => {
-                      toast({
-                        variant: "destructive",
-                        title: "Uh oh! Something went wrong.",
-                        description: "There was a problem with your request.",
-                        action: <ToastAction altText="Try again">Try again</ToastAction>,
-                      })
-                    }}
-                  >
-                    Show Destructive Toast
-                  </Button>
-                    </CardContent>
-                  </Card>
 
                   <Card>
                     <CardHeader>
@@ -1287,8 +1306,7 @@ export default function UIComponentsPage() {
 
         </Tabs>
       </div>
-        <Toaster /> {/* Ensure Toaster is rendered */}
-      </ToastProvider>
+        </ToastProvider>
     </Container>
   );
 }
