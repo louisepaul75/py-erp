@@ -16,7 +16,7 @@ import importlib
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
 # Make sure Django settings are configured
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.test")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.test")
 
 # Mock Django's translation functions to avoid dependencies
 import django.utils.translation

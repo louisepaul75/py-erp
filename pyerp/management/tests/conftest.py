@@ -16,7 +16,7 @@ def django_settings():
     if not settings.configured:
         if (
             hasattr(settings, "SETTINGS_MODULE")
-            and "pyerp.settings.test" not in settings.SETTINGS_MODULE
+            and "pyerp.config.settings.test" not in settings.SETTINGS_MODULE
             and "tests.settings" not in settings.SETTINGS_MODULE
         ):
             settings_module = "tests.settings"
