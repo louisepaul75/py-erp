@@ -244,15 +244,15 @@ const Dashboard = () => {
     { id: "customers", name: "Kunden", icon: Users, iconName: "Users", favorited: false },
     { id: "orders", name: "Aufträge", icon: ShoppingCart, iconName: "ShoppingCart", favorited: false },
     { id: "products", name: "Produkte", icon: Package, iconName: "Package", favorited: false },
-    { id: "reports", name: "Berichte", icon: BarChart3, iconName: "BarChart3", favorited: false },
+    // { id: "reports", name: "Berichte", icon: BarChart3, iconName: "BarChart3", favorited: false },
     { id: "settings", name: "Einstellungen", icon: Settings, iconName: "Settings", favorited: false },
-    { id: "users", name: "Benutzer", icon: Users, iconName: "Users", favorited: false },
-    { id: "finance", name: "Finanzen", icon: BarChart3, iconName: "BarChart3", favorited: false },
+    // { id: "users", name: "Benutzer", icon: Users, iconName: "Users", favorited: false },
+    // { id: "finance", name: "Finanzen", icon: BarChart3, iconName: "BarChart3", favorited: false },
     { id: "inventory", name: "Lager", icon: Package, iconName: "Package", favorited: false },
     { id: "picklist", name: "Picklist", icon: Package, iconName: "Package", favorited: false },
-    { id: "support", name: "Support", icon: Users, iconName: "Users", favorited: false },
-    { id: "documents", name: "Dokumente", icon: Package, iconName: "Package", favorited: false },
-    { id: "dashboard", name: "Dashboard", icon: Home, iconName: "Home", favorited: false },
+    // { id: "support", name: "Support", icon: Users, iconName: "Users", favorited: false },
+    // { id: "documents", name: "Dokumente", icon: Package, iconName: "Package", favorited: false },
+    // { id: "dashboard", name: "Dashboard", icon: Home, iconName: "Home", favorited: false },
   ])
 
   // Quick links
@@ -836,10 +836,10 @@ const Dashboard = () => {
         router.push("/dashboard");
         break;
       case "customers":
-        router.push("/customers");
+        router.push("/sales/customers");
         break;
       case "orders":
-        router.push("/orders");
+        router.push("/sales");
         break;
       case "products":
         router.push("/products");
