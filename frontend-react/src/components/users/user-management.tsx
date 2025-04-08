@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { PlusCircle, Pencil, Trash2, UserPlus, ShieldAlert, Power } from "lucide-react"
+import { PlusCircle, Pencil, Trash2, UserPlus, ShieldAlert, Power, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserGroupsDialog } from "./user-groups-dialog"
 import { fetchUsers, createUser, updateUser, deleteUser } from "@/lib/api/users"
 import { resetPassword, toggleUserActive } from "@/lib/api/profile"
@@ -35,7 +36,10 @@ export function UserManagement() {
     email: "",
     role: "",
     phone: "",
+    password: "",
+    confirmPassword: "",
   })
+  const [createError, setCreateError] = useState<string | null>(null)
 
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false)
   const [resetPasswordMessage, setResetPasswordMessage] = useState("")
@@ -93,7 +97,10 @@ export function UserManagement() {
       email: "",
       role: "",
       phone: "",
+      password: "",
+      confirmPassword: "",
     })
+    setCreateError(null)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +110,13 @@ export function UserManagement() {
 
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault()
-    createUserMutation.mutate(formData)
+    setCreateError(null)
+    if (formData.password !== formData.confirmPassword) {
+      setCreateError("Passwords do not match.")
+      return
+    }
+    const { confirmPassword, ...userData } = formData
+    createUserMutation.mutate(userData)
   }
 
   const handleUpdateUser = (e: React.FormEvent) => {
@@ -250,7 +263,15 @@ export function UserManagement() {
         )}
 
         {/* Create User Dialog */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog
+          open={isCreateDialogOpen}
+          onOpenChange={(isOpen) => {
+            setIsCreateDialogOpen(isOpen)
+            if (!isOpen) {
+              resetForm()
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
@@ -258,6 +279,13 @@ export function UserManagement() {
             </DialogHeader>
             <form onSubmit={handleCreateUser}>
               <div className="grid gap-4 py-4">
+                {createError && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{createError}</AlertDescription>
+                  </Alert>
+                )}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="name" className="text-right">
                     Name
@@ -309,6 +337,34 @@ export function UserManagement() {
                     className="col-span-3"
                   />
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="password" className="text-right">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="confirmPassword" className="text-right">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
               </div>
               <DialogFooter>
                 <Button
@@ -321,7 +377,9 @@ export function UserManagement() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Create</Button>
+                <Button type="submit" disabled={createUserMutation.isPending}>
+                  {createUserMutation.isPending ? "Creating..." : "Create"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
