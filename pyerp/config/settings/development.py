@@ -130,6 +130,11 @@ CORS_EXPOSE_HEADERS = [
     "set-cookie"
 ]
 
+# Add CSRF trusted origin for the React frontend
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
+
 # Logging configuration for development
 LOGGING = {
     "version": 1,
@@ -366,3 +371,5 @@ CORS_ALLOWED_ORIGINS = [
 
 # Your stuff...
 # -----------------------------------------------------------------------------
+
+ROOT_URLCONF = "pyerp.urls"
