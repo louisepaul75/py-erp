@@ -299,7 +299,7 @@ export function SalesAnalysisWidget() {
 
   return (
     <div className="w-full h-full">
-      <Card className="w-full h-full">
+      <Card className="w-full h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <CardTitle>Verkaufsanalyse ({mode === 'monthly' ? 'Monatlich' : 'Jährlich'})</CardTitle>
@@ -402,7 +402,7 @@ export function SalesAnalysisWidget() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col">
           {isLoading ? (
             <div className="w-full h-[200px] flex items-center justify-center">
               <Skeleton className="w-full h-full" />
@@ -412,7 +412,7 @@ export function SalesAnalysisWidget() {
               <p>{error}</p>
             </div>
           ) : data && data.data.length > 0 && data.data.some(item => (item.daily ?? 0) > 0 || (item.cumulative ?? 0) > 0) ? (
-            <div className="w-full h-full">
+            <div className="w-full h-full flex-1 min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={data.data}
