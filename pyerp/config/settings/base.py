@@ -12,7 +12,8 @@ from pathlib import Path
 
 import environ  # Add this import
 import dj_database_url  # noqa: F401
-from celery.schedules import crontab # Import for CELERY_BEAT_SCHEDULE
+from celery.schedules import crontab  # Import for CELERY_BEAT_SCHEDULE
+from django.utils.translation import gettext_lazy as _  # Move import to top
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -88,7 +89,7 @@ LOCAL_APPS = [
     "pyerp.sync",
     "pyerp.external_api.apps.ExternalApiConfig",
     "admin_tools",  # Admin tools app for database table view
-    "pyerp.business_modules.business",  # Business management (HR, finance, etc.)
+    "pyerp.business_modules.business",  # Business management
     "sync_manager",  # App for managing sync workflows
 ]
 
@@ -109,8 +110,9 @@ MIDDLEWARE = [
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Allow React frontend
-    "http://127.0.0.1:3000",  # Also allow 127.0.0.1
+    "http://localhost:3000",  # Allow React dev server
+    "http://127.0.0.1:3000",  # Allow React dev server
+    "https://localhost",      # Allow local HTTPS setup
 ]
 # Allow credentials (like cookies) to be sent
 CORS_ALLOW_CREDENTIALS = True
@@ -186,20 +188,24 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",  # noqa: E501
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.MinimumLengthValidator"
+        ),
     },
     {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.CommonPasswordValidator"
+        ),
     },
     {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.NumericPasswordValidator"
+        ),
     },
 ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
-from django.utils.translation import gettext_lazy as _
-
 LANGUAGE_CODE = "de"  # German as default language
 TIME_ZONE = "Europe/Berlin"
 USE_I18N = True
@@ -369,12 +375,16 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"expires": 3600.0},
     },
     "sync.scheduled_employee_sync": {
-        "task": "pyerp.sync.tasks.scheduled_employee_sync",  # Note: Using full path
+        "task": (
+            "pyerp.sync.tasks.scheduled_employee_sync"  # Note: Using full path
+        ),
         "schedule": crontab(minute="*/5"),  # Every 5 minutes
         "options": {"expires": 240.0},  # Expires after 4 minutes
     },
     "sync.nightly_full_employee_sync": {
-        "task": "pyerp.sync.tasks.nightly_full_employee_sync",  # Note: Using full path
+        "task": (
+            "pyerp.sync.tasks.nightly_full_employee_sync"  # Note: Using full path # noqa E501
+        ),
         "schedule": crontab(hour=2, minute=15),  # Run at 2:15 AM daily
         "options": {"expires": 10800.0},  # Expires after 3 hours
     },
@@ -400,7 +410,10 @@ logs_dir.mkdir(exist_ok=True)
 #     "disable_existing_loggers": False,
 #     "formatters": {
 #         "verbose": {
-#             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+#             "format": (
+#                 "{levelname} {asctime} {module} {process:d} {thread:d} " # noqa E501
+#                 "{message}"
+#             ),
 #             "style": "{",
 #         },
 #         "simple": {

@@ -111,28 +111,34 @@ def health_check(request):
 def git_branch(request):
     """
     Get the current git branch name.
-    Only available in development mode.
+    Returns 'unknown' if git command fails or is unavailable.
+    This is intended for development/debugging and might not work in all production setups.
     """
     if not settings.DEBUG:
-        return JsonResponse(
-            {"error": "Not available in production"},
-            status=403,
-        )
+        # In production or non-debug, gracefully return 'unknown'
+        return JsonResponse({"branch": "unknown"}, status=status.HTTP_200_OK)
 
     try:
+        # Ensure we run the command from the project's root directory
+        project_root = settings.BASE_DIR
+        
         result = subprocess.run(
             ["git", "branch", "--show-current"],
             capture_output=True,
             text=True,
-            check=True,
+            check=True,  # Raises CalledProcessError if command fails
+            cwd=project_root,  # Execute in the project root
         )
         branch = result.stdout.strip()
         return JsonResponse({"branch": branch})
-    except subprocess.CalledProcessError:
-        return JsonResponse(
-            {"error": "Could not get branch name"},
-            status=500,
-        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        # Git command not found or failed (e.g., not a git repository, git not installed)
+        logger.warning("Could not get git branch name in debug mode.")
+        return JsonResponse({"branch": "unknown"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        # Catch any other unexpected errors
+        logger.error(f"Unexpected error in core.views.git_branch: {str(e)}")
+        return JsonResponse({"branch": "error"}, status=status.HTTP_200_OK)
 
 
 class UserProfileView(APIView):
