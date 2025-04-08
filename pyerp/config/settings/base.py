@@ -34,7 +34,9 @@ from pyerp.version import get_version  # noqa: E402
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-in-production")
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-change-me-in-production"
+)
 
 # Get application version
 APP_VERSION = get_version()
@@ -47,7 +49,9 @@ IMAGE_API_TIMEOUT = int(os.environ.get("IMAGE_API_TIMEOUT", "30"))
 IMAGE_API_CACHE_ENABLED = (
     os.environ.get("IMAGE_API_CACHE_ENABLED", "True").lower() == "true"
 )
-IMAGE_API_CACHE_TIMEOUT = int(os.environ.get("IMAGE_API_CACHE_TIMEOUT", "3600"))
+IMAGE_API_CACHE_TIMEOUT = int(
+    os.environ.get("IMAGE_API_CACHE_TIMEOUT", "3600")
+)
 
 # Application definition
 DJANGO_APPS = [
@@ -95,13 +99,10 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "pyerp.core.middleware.DatabaseConnectionMiddleware",
-    "pyerp.core.middleware.AuthExemptMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
@@ -109,10 +110,10 @@ MIDDLEWARE = [
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Allow React frontend
-    "http://127.0.0.1:3000", # Also allow 127.0.0.1
+    "http://127.0.0.1:3000",  # Also allow 127.0.0.1
 ]
 # Allow credentials (like cookies) to be sent
-CORS_ALLOW_CREDENTIALS = True 
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = "pyerp.urls"
 
@@ -158,8 +159,15 @@ DATABASES = {
 }
 
 # Print database connection info for debugging
-print(f"Database settings: NAME={DATABASES['default']['NAME']}, HOST={DATABASES['default']['HOST']}, USER={DATABASES['default']['USER']}")
-print(f"Database password is {'set' if DATABASES['default']['PASSWORD'] else 'NOT SET'}")
+print(
+    f"Database settings: NAME={DATABASES['default']['NAME']}, "
+    f"HOST={DATABASES['default']['HOST']}, "
+    f"USER={DATABASES['default']['USER']}"
+)
+print(
+    f"Database password is "
+    f"{'set' if DATABASES['default']['PASSWORD'] else 'NOT SET'}"
+)
 
 # Alternative DATABASE_URL configuration (commented out)
 
@@ -229,8 +237,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
-        # Add BrowsableAPIRenderer back if needed for development/debugging in browser
-        # "rest_framework.renderers.BrowsableAPIRenderer", 
+        # Add BrowsableAPIRenderer back if needed for development/debugging
+        # in browser
+        # "rest_framework.renderers.BrowsableAPIRenderer",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -244,7 +253,9 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": (
+        "rest_framework.pagination.PageNumberPagination"
+    ),
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
@@ -275,11 +286,14 @@ SPECTACULAR_SETTINGS = {
     },
     'EXCLUDE_PATH_REGEX': [r'/api/token/'],
     
-    # Show v1 endpoints in the schema, but continue to work with non-versioned endpoints
+    # Show v1 endpoints in the schema, but continue to work with
+    # non-versioned endpoints
     'SCHEMA_PATH_PREFIX_INCLUDE': [r'/api/v1/'],
     
     # Exclude non-versioned endpoints from the schema
-    'SCHEMA_PATH_PREFIX_EXCLUDE': [r'^/api/(?!v1/|schema/|swagger/|redoc/).*$'],
+    'SCHEMA_PATH_PREFIX_EXCLUDE': [
+        r'^/api/(?!v1/|schema/|swagger/|redoc/).*$'
+    ],
     
     # Verbessertes Filter-Handling
     'PREPROCESSING_HOOKS': ['pyerp.utils.api_docs.preprocess_filter_fields'],
@@ -287,7 +301,9 @@ SPECTACULAR_SETTINGS = {
         'CustomerGroupEnum': ['Premium', 'Standard', 'Business'],
         'RecordTypeEnum': ['Order', 'Invoice', 'Return'],
         'PaymentStatusEnum': ['Pending', 'Paid', 'Cancelled', 'Refunded'],
-        'FulfillmentStatusEnum': ['Pending', 'Shipped', 'Delivered', 'Cancelled'],
+        'FulfillmentStatusEnum': [
+            'Pending', 'Shipped', 'Delivered', 'Cancelled'
+        ],
     },
     
     # Ensure tags work correctly with versioned endpoints
@@ -316,8 +332,12 @@ SIMPLE_JWT = {
 }
 
 # Celery settings
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "django-db")
+CELERY_BROKER_URL = os.environ.get(
+    "CELERY_BROKER_URL", "redis://localhost:6379/0"
+)
+CELERY_RESULT_BACKEND = os.environ.get(
+    "CELERY_RESULT_BACKEND", "django-db"
+)
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -349,14 +369,14 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"expires": 3600.0},
     },
     "sync.scheduled_employee_sync": {
-        "task": "pyerp.sync.tasks.scheduled_employee_sync", # Note: Using full path for non-named task
-        "schedule": crontab(minute="*/5"), # Every 5 minutes
-        "options": {"expires": 240.0}, # Expires after 4 minutes
+        "task": "pyerp.sync.tasks.scheduled_employee_sync",  # Note: Using full path
+        "schedule": crontab(minute="*/5"),  # Every 5 minutes
+        "options": {"expires": 240.0},  # Expires after 4 minutes
     },
     "sync.nightly_full_employee_sync": {
-        "task": "pyerp.sync.tasks.nightly_full_employee_sync", # Note: Using full path for non-named task
-        "schedule": crontab(hour=2, minute=15), # Run at 2:15 AM daily
-        "options": {"expires": 10800.0}, # Expires after 3 hours
+        "task": "pyerp.sync.tasks.nightly_full_employee_sync",  # Note: Using full path
+        "schedule": crontab(hour=2, minute=15),  # Run at 2:15 AM daily
+        "options": {"expires": 10800.0},  # Expires after 3 hours
     },
     # Add other periodic tasks here if needed
 }
@@ -496,16 +516,24 @@ logs_dir.mkdir(exist_ok=True)
 
 # Image API Configuration
 IMAGE_API = {
-    "BASE_URL": os.environ.get("IMAGE_API_URL", "http://webapp.zinnfiguren.de/api/"),
+    "BASE_URL": os.environ.get(
+        "IMAGE_API_URL", "http://webapp.zinnfiguren.de/api/"
+    ),
     "USERNAME": os.environ.get("IMAGE_API_USERNAME", ""),
     "PASSWORD": os.environ.get("IMAGE_API_PASSWORD", ""),
     "TIMEOUT": int(
         os.environ.get("IMAGE_API_TIMEOUT", 60)
     ),  # Increased default timeout
-    "CACHE_ENABLED": os.environ.get("IMAGE_API_CACHE_ENABLED", "True").lower()
+    "CACHE_ENABLED": os.environ.get(
+        "IMAGE_API_CACHE_ENABLED", "True"
+    ).lower()
     == "true",
-    "CACHE_TIMEOUT": int(os.environ.get("IMAGE_API_CACHE_TIMEOUT", 3600)),  # 1 hour
-    "VERIFY_SSL": os.environ.get("IMAGE_API_VERIFY_SSL", "False").lower()
+    "CACHE_TIMEOUT": int(
+        os.environ.get("IMAGE_API_CACHE_TIMEOUT", 3600)
+    ),  # 1 hour
+    "VERIFY_SSL": os.environ.get(
+        "IMAGE_API_VERIFY_SSL", "False"
+    ).lower()
     == "true",  # Default to not verifying SSL
 }
 

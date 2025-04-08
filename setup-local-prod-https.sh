@@ -81,12 +81,16 @@ mkdir -p ./docker/nginx
 cp -r ./docker/nginx/ssl /tmp/
 cp -r ./docker/nginx/conf.d /tmp/
 
-# Run the production rebuild with environment pointing to local config
-echo "Building and starting production containers locally..."
-./rebuild_docker.prod.sh --no-monitoring --no-tests
+# Run the production rebuild script with flags for this specific setup
+echo "Building and starting production containers locally via rebuild script..."
+./rebuild_docker.prod.sh --no-monitoring --no-tests --local-https
+
+# Give container a moment to start up before copying files
+sleep 5
 
 # Once the container is running, copy the SSL certificates and configs into the container
-echo "Copying SSL certificates to the Docker container..."
+# Ensure Nginx is using the correct config for HTTPS
+echo "Copying SSL certificates and Nginx config to the Docker container..."
 docker cp /tmp/ssl pyerp-prod:/etc/nginx/
 docker cp /tmp/conf.d pyerp-prod:/etc/nginx/
 

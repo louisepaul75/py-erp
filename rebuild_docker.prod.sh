@@ -4,6 +4,7 @@
 RUN_TESTS=true
 RUN_MONITORING=true
 DEBUG_MODE=false
+LOCAL_HTTPS_MODE=false
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -11,6 +12,7 @@ while [[ "$#" -gt 0 ]]; do
         --no-tests) RUN_TESTS=false; shift ;;
         --no-monitoring) RUN_MONITORING=false; shift ;;
         --debug) DEBUG_MODE=true; shift ;;
+        --local-https) LOCAL_HTTPS_MODE=true; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
 done
@@ -51,8 +53,8 @@ if [ "$DEBUG_MODE" = true ]; then
 fi
 
 echo "Starting containers..."
-# Add back -d flag to run in detached mode
-docker run -d \
+# Construct docker run command parts
+DOCKER_RUN_CMD="docker run -d \
     --name pyerp-prod \
     --hostname pyerp-app \
     --network pyerp-network \
@@ -63,8 +65,20 @@ docker run -d \
     -p 8000:8000 \
     --env-file $ENV_FILE \
     -e NODE_ENV=production \
-    -e NEXT_TELEMETRY_DISABLED=1 \
-    pyerp-prod-image
+    -e NEXT_TELEMETRY_DISABLED=1"
+
+# Add conditional HTTPS proxy env var
+if [ "$LOCAL_HTTPS_MODE" = true ]; then
+    DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
+    -e USE_LOCAL_HTTPS_PROXY=true"
+fi
+
+# Add the image name and execute
+DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
+    pyerp-prod-image"
+
+echo "Executing: $DOCKER_RUN_CMD" # Optional: echo the command for debugging
+eval $DOCKER_RUN_CMD # Execute the constructed command
 
 echo -e "\nContainer pyerp-prod is running in the background. Use 'docker logs pyerp-prod' to view logs."
 

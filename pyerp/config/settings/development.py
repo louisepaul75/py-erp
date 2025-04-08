@@ -18,8 +18,12 @@ from .base import *  # noqa
 if 'corsheaders.middleware.CorsMiddleware' not in MIDDLEWARE:
     try:
         # Attempt to insert before CommonMiddleware
-        common_middleware_index = MIDDLEWARE.index('django.middleware.common.CommonMiddleware')
-        MIDDLEWARE.insert(common_middleware_index, 'corsheaders.middleware.CorsMiddleware')
+        common_middleware_index = MIDDLEWARE.index(
+            'django.middleware.common.CommonMiddleware'
+        )
+        MIDDLEWARE.insert(
+            common_middleware_index, 'corsheaders.middleware.CorsMiddleware'
+        )
     except ValueError:
         # If CommonMiddleware isn't found, insert at the beginning
         MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
@@ -29,8 +33,11 @@ if 'corsheaders' not in INSTALLED_APPS:
     INSTALLED_APPS += ['corsheaders']
 
 # Import HTTPS settings
+_https_settings_imported = False
 try:
     from .settings_https import *  # noqa
+    _https_settings_imported = True
+    print("INFO: Loaded HTTPS settings for development environment.")
 except ImportError:
     pass
 
@@ -234,7 +241,9 @@ EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
 # 1Password Connect settings
 EMAIL_USE_1PASSWORD = os.environ.get("EMAIL_USE_1PASSWORD", "").lower() == "true"
 EMAIL_1PASSWORD_ITEM_NAME = os.environ.get("EMAIL_1PASSWORD_ITEM_NAME", "")
-OP_CONNECT_HOST = os.environ.get("OP_CONNECT_HOST", "http://192.168.73.65:8080")
+OP_CONNECT_HOST = os.environ.get(
+    "OP_CONNECT_HOST", "http://192.168.73.65:8080"
+)
 OP_CONNECT_TOKEN = os.environ.get("OP_CONNECT_TOKEN", "")
 OP_CONNECT_VAULT = os.environ.get("OP_CONNECT_VAULT", "dev")
 
@@ -251,7 +260,9 @@ ANYMAIL = {
 INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
 
 # Set this to True to actually send emails in development (using the configured ESP)
-USE_ANYMAIL_IN_DEV = os.environ.get("USE_ANYMAIL_IN_DEV", "").lower() == "true"
+USE_ANYMAIL_IN_DEV = os.environ.get(
+    "USE_ANYMAIL_IN_DEV", ""
+).lower() == "true"
 if USE_ANYMAIL_IN_DEV:
     # Always use the logging email backend for simplicity in development
     EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
@@ -259,9 +270,10 @@ if USE_ANYMAIL_IN_DEV:
 # Disable password validators during development
 AUTH_PASSWORD_VALIDATORS = []
 
-# For development, disable CSRF token check
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+# For development, disable CSRF token check unless HTTPS settings were loaded
+if not _https_settings_imported:
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
 
 # Local development specific REST Framework settings
 REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [  # noqa
