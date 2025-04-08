@@ -237,8 +237,44 @@ export async function updateUser(userData: Partial<User> & { id: string }): Prom
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  await delay(500)
-  users = users.filter((user) => user.id !== id)
+  try {
+    const token = getCookie('access_token');
+    const headers: HeadersInit = {};
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/users/users/${id}/`, { // Append user ID to URL
+      method: 'DELETE', // Use DELETE method
+      headers: headers,
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      // Handle specific statuses if needed (e.g., 404 Not Found)
+      let errorData = { message: `HTTP error! status: ${response.status}` };
+      try {
+        // Check if there's a JSON body with more details, otherwise use status text
+        if (response.headers.get("content-type")?.includes("application/json")) {
+            errorData = await response.json();
+        } else {
+             errorData.message = `HTTP error! status: ${response.status} ${response.statusText}`;
+        }
+      } catch (e) {
+         errorData.message = `HTTP error! status: ${response.status} ${response.statusText}`;
+      }
+      console.error("Error deleting user:", errorData);
+      throw new Error(errorData.message || `Failed to delete user. Status: ${response.status}`);
+    }
+
+    // DELETE requests often return 204 No Content on success, no need to parse JSON body
+    console.log(`User with id ${id} deleted successfully.`);
+
+  } catch (error) {
+    console.error("Error in deleteUser API call:", error);
+    throw error; // Re-throw for react-query's onError
+  }
 }
 
 export async function updateUserGroups(userId: string, groupIds: string[]): Promise<User> {
