@@ -748,7 +748,7 @@ const Dashboard = () => {
     // Check if the id starts with any of our known widget types
     if (id.startsWith("menu-tiles")) {
       return (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {menuTiles.map((tile) => {
             const IconComponent = tile.icon
             return (
