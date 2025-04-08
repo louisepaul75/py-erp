@@ -396,8 +396,8 @@ class ComplexValidationTests(unittest.TestCase):
         })
         self.assertFalse(form.is_valid())
         self.assertIn('email', form.errors)
-        # Django's built-in validation error message for email field
-        self.assertIn('Gib eine gültige E-Mail Adresse an.',
+        # Check for the default Django EmailField error message
+        self.assertIn('Enter a valid email address.',
                       form.errors['email'][0])
 
     def test_invalid_price_format(self):
