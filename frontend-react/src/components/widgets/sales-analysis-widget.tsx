@@ -327,8 +327,8 @@ export function SalesAnalysisWidget() {
               </Button>
             </div>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center space-x-1">
+          <div className="flex items-center justify-between mt-1 flex-wrap">
+            <div className="flex items-center space-x-1 flex-wrap">
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -339,14 +339,14 @@ export function SalesAnalysisWidget() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 flex-wrap">
                 {mode === 'monthly' && (
                   <Select
                     value={selectedMonth.toString()}
                     onValueChange={(value: string) => setSelectedMonth(parseInt(value))}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-7 px-2 text-xs w-[85px]">
+                    <SelectTrigger className="h-7 px-2 text-xs w-[85px] min-w-[70px]">
                       <SelectValue placeholder="Monat" />
                     </SelectTrigger>
                     <SelectContent>
@@ -364,7 +364,7 @@ export function SalesAnalysisWidget() {
                   onValueChange={(value: string) => setSelectedYear(parseInt(value))}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-7 px-2 text-xs w-[70px]">
+                  <SelectTrigger className="h-7 px-2 text-xs w-[70px] min-w-[60px]">
                     <SelectValue placeholder="Jahr" />
                   </SelectTrigger>
                   <SelectContent>
@@ -412,7 +412,7 @@ export function SalesAnalysisWidget() {
               <p>{error}</p>
             </div>
           ) : data && data.data.length > 0 && data.data.some(item => (item.daily ?? 0) > 0 || (item.cumulative ?? 0) > 0) ? (
-            <div className="w-full h-[200px]">
+            <div className="w-full h-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={data.data}
