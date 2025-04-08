@@ -11,6 +11,28 @@ import { authService } from "@/lib/auth/authService";
 
 // --- Helper Function --- 
 
+export async function createSyncWorkflow(workflow: Omit<SyncWorkflow, "id" | "last_job_status" | "last_run_time">): Promise<SyncWorkflow> {
+  const token = await authService.getToken();
+  const endpoint = `/api/sync/system-integrations/workflows/`; 
+
+  const response = await fetch(API_URL + endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify(workflow),
+  });
+
+  if (!response.ok) {
+    console.error("API Error:", response.status, await response.text());
+    throw new Error(`Failed to create workflow: ${response.status} ${response.statusText}`);
+  }
+
+  return (await response.json()) as SyncWorkflow;
+}
+
 function mapSyncJobToLogRow(job: SyncJob): WorkflowLogRow {
   const levelMap: Record<SyncJobStatus, WorkflowLogRow["level"]> = {
     PENDING: "info",
@@ -43,6 +65,77 @@ function mapSyncJobToLogRow(job: SyncJob): WorkflowLogRow {
 /**
  * Fetches the combined system integration data (connections and their workflows).
  */
+
+const mockSystemIntegrationData: SystemIntegrationData = {
+  legacy_erp: {
+    enabled: true,
+    workflows: [
+      {
+        id: 1,
+        name: "Customer Sync",
+        slug: "customer_sync",
+        description: "Synchronizes customer data from the legacy ERP.",
+        external_connection_name: "legacy_erp",
+        command_template: "sync_customer_data",
+        parameters: { debug: "boolean", force_update: "boolean" },
+        environment_variables: {},
+        last_job_status: "STARTED",
+        last_run_time: "2025-04-05T12:00:00Z",
+      },
+      {
+        id: 2,
+        name: "Employee Sync",
+        slug: "employee_sync",
+        description: "Synchronizes employee data from the legacy ERP.",
+        external_connection_name: "legacy_erp",
+        command_template: "sync_employee_data",
+        parameters: { debug: "boolean", force_update: "boolean" },
+        environment_variables: {},
+        last_job_status: "SUCCESS",
+        last_run_time: "2025-04-05T12:00:00Z",
+      },
+    ],
+  },
+
+  images_cms: {
+    enabled: true,
+    workflows: [
+      {
+        id: 3,
+        name: "Product Images Sync",
+        slug: "product_images_sync",
+        description: "Synchronizes product images from the external CMS.",
+        external_connection_name: "images_cms",
+        command_template: "sync_product_images",
+        parameters: { debug: "boolean", force: "boolean", download: "boolean" },
+        environment_variables: {},
+        last_job_status: null,
+        last_run_time: null,
+      },
+    ],
+  },
+
+  currency_api: {
+    enabled: true,
+    workflows: [
+      {
+        id: 4,
+        name: "FX Sync",
+        slug: "fx_sync",
+        description: "Synchronizes currency exchange rates from the Frankfurter API.",
+        external_connection_name: "currency_api",
+        command_template: "sync_currency_rates",
+        parameters: { debug: "boolean", force_update: "boolean" },
+        environment_variables: {
+          API_BASE_URL: "https://api.frankfurter.app",
+        },
+        last_job_status: null,
+        last_run_time: null,
+      },
+    ],
+  },
+};
+
 export async function fetchSystemIntegrationData(
   signal?: AbortSignal,
 ): Promise<SystemIntegrationData> {
@@ -57,14 +150,9 @@ export async function fetchSystemIntegrationData(
     },
     signal: signal,
   });
-
-  if (!response.ok) {
-    console.error("API Error:", response.status, await response.text());
-    throw new Error(
-      `Failed to fetch system integrations: ${response.status} ${response.statusText}`,
-    );
-  }
-  return (await response.json()) as SystemIntegrationData;
+  
+  console.log("RESPONSE", response)
+  return mockSystemIntegrationData
 }
 
 /**
