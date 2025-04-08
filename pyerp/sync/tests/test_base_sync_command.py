@@ -133,28 +133,40 @@ def test_build_query_params_invalid_filters_json(test_command, caplog):
     options = {'filters': '{"invalid json', 'days': None, 'top': None}
     params = test_command.build_query_params(options)
     assert params == {} # Invalid JSON should be ignored
-    assert "Invalid JSON format for --filters option" in caplog.text
+    assert any(
+        rec.levelname == "WARNING" and "Invalid JSON format for --filters option" in rec.message
+        for rec in caplog.records
+    )
 
 def test_build_query_params_non_dict_filters_json(test_command, caplog):
     """Test build_query_params with valid JSON that isn't a dictionary."""
     options = {'filters': '[1, 2, 3]', 'days': None, 'top': None}
     params = test_command.build_query_params(options)
     assert params == {} # Non-dict JSON should be ignored
-    assert "Ignoring --filters: Expected JSON dict" in caplog.text
+    assert any(
+        rec.levelname == "WARNING" and "Ignoring --filters: Expected JSON dict" in rec.message
+        for rec in caplog.records
+    )
 
 def test_build_query_params_negative_days(test_command, caplog):
     """Test build_query_params with a negative value for --days."""
     options = {'days': -5, 'filters': None, 'top': None}
     params = test_command.build_query_params(options)
     assert 'filter_query' not in params # Negative days ignored
-    assert "Ignoring --days: Value must be non-negative" in caplog.text
+    assert any(
+        rec.levelname == "WARNING" and "Ignoring --days: Value must be non-negative" in rec.message
+        for rec in caplog.records
+    )
 
 def test_build_query_params_invalid_days_value(test_command, caplog):
     """Test build_query_params with a non-integer value for --days."""
     options = {'days': 'abc', 'filters': None, 'top': None}
     params = test_command.build_query_params(options)
     assert 'filter_query' not in params # Invalid days ignored
-    assert "Invalid value for --days" in caplog.text
+    assert any(
+        rec.levelname == "WARNING" and "Invalid value for --days" in rec.message
+        for rec in caplog.records
+    )
 
 
 # --- Test get_mapping ---

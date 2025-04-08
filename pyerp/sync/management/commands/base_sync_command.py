@@ -118,8 +118,7 @@ class BaseSyncCommand(BaseCommand):
                 custom_filters_parsed = json.loads(raw_custom_filters)
                 if not isinstance(custom_filters_parsed, dict):
                     logger.warning(
-                        "Ignoring --filters: Expected JSON dict, got: %s",
-                        raw_custom_filters
+                        "Ignoring --filters: Expected JSON dict"
                     )
                     custom_filters_parsed = {}  # Reset if not a dict
                 else:
@@ -129,8 +128,8 @@ class BaseSyncCommand(BaseCommand):
                     )
                     query_params.update(custom_filters_parsed)
             except json.JSONDecodeError as e:
-                logger.error(
-                    "Invalid JSON format for --filters option: %s. Ignoring.", e
+                logger.warning(
+                    "Invalid JSON format for --filters option",
                 )
 
         # 2. Handle --top
@@ -158,13 +157,11 @@ class BaseSyncCommand(BaseCommand):
                     )
                 else:
                     logger.warning(
-                        "Ignoring --days: Value must be non-negative, got %d.",
-                        days
+                        "Ignoring --days: Value must be non-negative",
                     )
-            except ValueError:
-                logger.error(
-                    "Invalid value for --days: %s. Must be an integer.",
-                    options['days']
+            except (ValueError, TypeError):
+                logger.warning(
+                    "Invalid value for --days",
                 )
 
         # Add the filter_query_list to query_params if it has any filters

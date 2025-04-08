@@ -9,7 +9,7 @@ import pytest
 from unittest import mock
 import pandas as pd
 from typing import Dict, Any, List
-from datetime import datetime
+from datetime import datetime, date
 from unittest.mock import patch
 import logging
 
@@ -320,18 +320,27 @@ def test_legacy_api_extractor_format_date_for_api():
     
     # Test with string input
     date_str = "2022-05-01T10:30:00Z"
-    formatted = extractor._format_date_for_api(date_str)
-    assert formatted == "2022-05-01"
+    formatted_str = extractor._format_date_for_api(date_str)
+    assert formatted_str == "2022-05-01T00:00:00Z" # String input defaults to start of day UTC
     
-    # Test with datetime input
-    date_obj = datetime(2022, 5, 1, 10, 30, 0)
-    formatted = extractor._format_date_for_api(date_obj)
-    assert formatted == "2022-05-01"
+    # Test with datetime input (naive, assumed UTC)
+    date_obj_naive = datetime(2022, 5, 1, 10, 30, 0)
+    formatted_dt_naive = extractor._format_date_for_api(date_obj_naive)
+    assert formatted_dt_naive == "2022-05-01T10:30:00Z" # Expect ISO 8601 UTC
+
+    # Test with date input (start of day UTC)
+    date_only = date(2022, 5, 1)
+    formatted_date_only = extractor._format_date_for_api(date_only)
+    assert formatted_date_only == "2022-05-01T00:00:00Z" # Expect ISO 8601 UTC start of day
+
+    # Test with date input and end_of_day=True
+    formatted_date_end = extractor._format_date_for_api(date_only, end_of_day=True)
+    assert formatted_date_end == "2022-05-01T23:59:59Z" # Expect ISO 8601 UTC end of day
     
-    # Test with invalid input (should return original)
+    # Test with invalid input (should return None)
     invalid_date = "not a date"
-    formatted = extractor._format_date_for_api(invalid_date)
-    assert formatted == invalid_date
+    formatted_invalid = extractor._format_date_for_api(invalid_date)
+    assert formatted_invalid is None # Expect None for invalid format
 
 
 @pytest.mark.unit
@@ -352,137 +361,87 @@ def test_build_date_filter_query_no_date():
 @pytest.mark.unit
 @mock.patch("pyerp.sync.extractors.legacy_api.logger")
 def test_build_date_filter_query_with_date_string(mock_logger):
-    """Test _build_date_filter_query with date string."""
-    # Setup
-    config = {
-        "environment": "test", 
-        "table_name": "Products",
-        # modified_date_field is no longer used by extractor?
-        # "modified_date_field": "last_updated"
-    }
+    """Test building filter query with date strings."""
+    config = {"environment": "test", "table_name": "TestTable"}
     extractor = LegacyAPIExtractor(config)
-    
-    # Test data - this dict is passed as the second argument
-    date_filter_dict = {
-        "gt": "2022-01-01",
-        "lt": "2022-01-31"
+    date_filters = {
+        'modified_date': {'gt': '2022-01-01', 'lt': '2022-01-31'}
     }
-    
-    # Execute - Pass the key and the dict
-    result = extractor._build_date_filter_query("modified_date", date_filter_dict)
-    
-    # Verify
-    assert result is not None
-    assert isinstance(result, list)
-    assert len(result) == 2
-    
-    # Check first condition
-    assert result[0][0] == "modified_date" # Key passed as argument
-    assert result[0][1] == ">"  # Operator
-    assert result[0][2] == "2022-01-01"  # Value
-    
-    # Check second condition
-    assert result[1][0] == "modified_date"
-    assert result[1][1] == "<"
-    assert result[1][2] == "2022-01-31"
-    
-    # Verify logger was called
-    mock_logger.info.assert_any_call(
-        "Building date filter conditions for key: modified_date with dict: {'gt': '2022-01-01', 'lt': '2022-01-31'}"
-    )
+    result = extractor._build_date_filter_query('modified_date', date_filters['modified_date'])
+    expected = [
+        ['modified_date', '>', '2022-01-01T00:00:00Z'],
+        ['modified_date', '<', '2022-01-31T23:59:59Z']
+    ]
+    assert sorted(result) == sorted(expected)
+    # Check if the specific log message was recorded
+    expected_info_fmt = "Building date filter conditions for key: %s with dict: %s"
+    mock_logger.info.assert_any_call(expected_info_fmt, 'modified_date', date_filters['modified_date'])
 
 
 @pytest.mark.unit
-def test_build_date_filter_query_with_datetime_object(caplog):
-    """Test _build_date_filter_query with datetime object."""
-    # Setup
-    config = {
-        "environment": "test", 
-        "table_name": "Products"
-    }
+@mock.patch("pyerp.sync.extractors.legacy_api.logger")
+def test_build_date_filter_query_with_datetime_object(mock_logger):
+    """Test building filter query with datetime objects."""
+    config = {"environment": "test", "table_name": "TestTable"}
     extractor = LegacyAPIExtractor(config)
-    
-    # Test data with datetime object
-    date_obj = datetime(2022, 1, 15)
-    date_filter_dict = {
-        "gte": date_obj
+    date_filters = {
+        'creation_date': {'ge': datetime(2022, 2, 15, 10, 30, 0), 'le': datetime(2022, 2, 20)}
     }
-    
-    # Execute
-    # Pass both date_key and the filter dict
-    result = extractor._build_date_filter_query("creation_date", date_filter_dict)
-    
-    # Verify
-    assert result is not None
-    assert isinstance(result, list)
-    assert len(result) == 1
-    
-    assert result[0][0] == "creation_date"  # Key passed as argument
-    assert result[0][1] == ">="  # Operator
-    assert result[0][2] == "2022-01-15"  # Formatted date
-    
-    # Verify logger was called - Check args more flexibly
-    # Verify logger was called (simpler check for existence)
-    assert any(
-        record.levelname == 'INFO' and
-        "Building date filter conditions for key: creation_date" in record.message
-        for record in caplog.records
-    ), f"Expected INFO log for creation_date filter build not found in logs: {caplog.text}"
+    result = extractor._build_date_filter_query('creation_date', date_filters['creation_date'])
+    expected = [
+        ['creation_date', '>=', '2022-02-15T10:30:00Z'],
+        ['creation_date', '<=', '2022-02-20T23:59:59Z']
+    ]
+    assert sorted(result) == sorted(expected)
+    # Check if the specific log message was recorded
+    expected_info_fmt = "Building date filter conditions for key: %s with dict: %s"
+    mock_logger.info.assert_any_call(expected_info_fmt, 'creation_date', date_filters['creation_date'])
 
 
 @pytest.mark.unit
 @mock.patch("pyerp.sync.extractors.legacy_api.logger")
 def test_build_date_filter_query_with_invalid_operator(mock_logger):
-    """Test _build_date_filter_query with invalid operator."""
-    # Setup
-    config = {"environment": "test", "table_name": "Products"}
+    """Test handling of unknown operators."""
+    config = {"environment": "test", "table_name": "TestTable"}
     extractor = LegacyAPIExtractor(config)
-    
-    # Test data with invalid operator
-    date_filter_dict = {
-        "invalid_op": "2022-01-01"
+    date_filters = {
+        'some_date': {'invalid_op': '2022-03-01'}
     }
-    
-    # Execute - Pass key and dict
-    result = extractor._build_date_filter_query("some_date", date_filter_dict)
-    
-    # Verify
-    assert result == [] # Should return empty list for invalid operator
-    
-    # Verify warning was logged
-    mock_logger.warning.assert_called_with(
-        "Unknown date filter operator 'invalid_op' for key 'some_date', skipping."
+    result = extractor._build_date_filter_query('some_date', date_filters['some_date'])
+    assert result == [] # Should skip the invalid operator
+    # Check if the specific warning message was recorded
+    expected_msg = "Unknown date filter operator 'invalid_op' for key 'some_date', skipping."
+    mock_logger.warning.assert_any_call(
+        "Unknown date filter operator '%s' for key '%s', skipping.",
+        'invalid_op', 'some_date'
     )
 
 
 @pytest.mark.unit
 @mock.patch("pyerp.sync.extractors.legacy_api.logger")
 def test_build_date_filter_query_multiple_operators(mock_logger):
-    """Test _build_date_filter_query with multiple operators."""
-    # Setup
-    config = {"environment": "test", "table_name": "Products"}
+    """Test handling multiple operators, including invalid ones."""
+    config = {"environment": "test", "table_name": "TestTable"}
     extractor = LegacyAPIExtractor(config)
-    
-    # Test data with multiple operators
-    date_filter_dict = {
-        "gt": "2022-01-01",
-        "lt": "2022-01-31",
-        "eq": "2022-01-15",
-        "invalid": "should_be_skipped"
+    date_filters = {
+        'event_date': {
+            'gte': '2022-04-10',
+            'lte': '2022-04-20',
+            'invalid': 'some_value' # Should be skipped
+        }
     }
-    
-    # Execute - Pass key and dict
-    result = extractor._build_date_filter_query("event_date", date_filter_dict)
-    
-    # Verify
-    assert result is not None
-    assert isinstance(result, list)
-    assert len(result) == 3  # Should only include the valid operators
-    
-    # Check for warning about invalid operator
-    mock_logger.warning.assert_called_with(
-        "Unknown date filter operator 'invalid' for key 'event_date', skipping."
-    )
+    result = extractor._build_date_filter_query('event_date', date_filters['event_date'])
+    expected = [
+        ['event_date', '>=', '2022-04-10T00:00:00Z'],
+        ['event_date', '<=', '2022-04-20T23:59:59Z']
+    ]
+    assert sorted(result) == sorted(expected)
+    # Check if the warning for the invalid operator was logged
+    expected_warning_fmt = "Unknown date filter operator '%s' for key '%s', skipping."
+    mock_logger.warning.assert_any_call(expected_warning_fmt, 'invalid', 'event_date')
+    # Check that the INFO log for building the valid parts was logged
+    expected_info_fmt = "Building date filter conditions for key: %s with dict: %s"
+    mock_logger.info.assert_any_call(expected_info_fmt, 'event_date', date_filters['event_date'])
 
 
 # DELETE THE DUPLICATED CLASS FROM HERE DOWN
