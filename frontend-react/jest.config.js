@@ -28,7 +28,8 @@ const config = {
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
   ],
-  coverageProvider: 'v8'
+  coverageProvider: 'v8',
+  coverageReporters: ['json', 'lcov', 'clover', 'text', 'text-summary'],
 };
 
 module.exports = config; 

@@ -705,12 +705,11 @@ class ProductImage(models.Model):
         ]
 
     def __str__(self) -> str:
-        # Format expected by tests: "Image IMG<padded_id> for <sku>" or "Image IMG<padded_id> (unlinked)"
-        image_id_str = f"IMG{self.id:03}" # Pad ID to 3 digits
+        # Format expected by tests: "Image <external_id> for <sku>" or "Image <external_id> (unlinked)"
         if self.product:
-            return f"Image {image_id_str} for {self.product.sku}"
+            return f"Image {self.external_id} for {self.product.sku}"
         else:
-            return f"Image {image_id_str} (unlinked)"
+            return f"Image {self.external_id} (unlinked)"
 
 
 class ImageSyncLog(models.Model):

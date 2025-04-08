@@ -15,6 +15,9 @@ from pyerp.utils.env_loader import load_environment_variables
 
 load_environment_variables(verbose=True)
 
+# Ensure DEBUG is True for tests
+DEBUG = True
+
 # Remove debug toolbar from installed apps
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]
 

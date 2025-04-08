@@ -52,4 +52,20 @@ class StorageBackendsTests(TestCase):
         self.assertEqual(static_storage.location, "static-test")
         self.assertEqual(media_storage.location, "media-test")
         self.assertEqual(static_storage.default_acl, "public-read")
+        self.assertFalse(media_storage.file_overwrite)
+
+    @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage',
+                       MEDIA_LOCATION='media-test',
+                       STATIC_LOCATION='static/')
+    def test_storage_with_custom_settings(self):
+        """Test storage backend configuration with overridden settings."""
+        static_storage = StaticStorage()
+        media_storage = MediaStorage()
+
+        # Static location should use the default from testing.py settings
+        self.assertEqual(static_storage.location, "static/")
+        # Media location should use the overridden value
+        self.assertEqual(media_storage.location, "media-test")
+        # Check other default properties remain
+        self.assertEqual(static_storage.default_acl, "public-read")
         self.assertFalse(media_storage.file_overwrite) 
