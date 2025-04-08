@@ -83,7 +83,7 @@ cp -r ./docker/nginx/conf.d /tmp/
 
 # Run the production rebuild with environment pointing to local config
 echo "Building and starting production containers locally..."
-./rebuild_docker.prod.sh
+./rebuild_docker.prod.sh --no-monitoring --no-tests
 
 # Once the container is running, copy the SSL certificates and configs into the container
 echo "Copying SSL certificates to the Docker container..."
