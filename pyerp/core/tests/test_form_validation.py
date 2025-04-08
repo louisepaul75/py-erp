@@ -921,7 +921,7 @@ class ConditionalValidationForm(ValidatedForm):
                 elif not any(char.isdigit() for char in cc_number):
                     result.add_error(
                         'credit_card_number',
-                        'Credit card number must contain digits')
+                        'Credit card number must contain digits'
                     )
 
                 if not cc_expiry:
