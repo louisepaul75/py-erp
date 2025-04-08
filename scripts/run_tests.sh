@@ -136,10 +136,18 @@ if [ "$TEST_GROUP" = "ui" ]; then
     JEST_OPTS="$JEST_OPTS --testMatch='**/?(*.)+(fuzz).test.[jt]s?(x)'"
   fi
   
-  # Run tests with prepared options
-  echo "Running Jest tests with options: $JEST_OPTS"
-  # Add --runInBand to potentially fix worker issues
-  npm test -- $JEST_OPTS --runInBand
+  # Run mutation tests if enabled
+  if [ "$MUTATION" = true ]; then
+    echo "Running Stryker mutation tests for UI"
+    # Make sure Stryker is configured (stryker.conf.js or similar)
+    # Using npx ensures we use the project's local version if available
+    npx stryker run
+  else
+    # Run standard Jest tests if mutation testing is not enabled
+    echo "Running Jest tests with options: $JEST_OPTS"
+    # Add --runInBand to potentially fix worker issues
+    npm test -- $JEST_OPTS --runInBand
+  fi
   
   # Copy test results to the expected location for the CI pipeline
   if [ "$COVERAGE" = true ]; then
