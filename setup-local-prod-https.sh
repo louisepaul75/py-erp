@@ -19,67 +19,22 @@ fi
 mkdir -p ./docker/nginx/conf.d
 
 # Create Nginx configuration files
-echo "Creating Nginx configuration files..."
+# echo "Creating Nginx configuration files..." <-- Removed
 
-cat > ./docker/nginx/conf.d/pyerp.conf << EOL
-server {
-    listen 443 ssl;
-    server_name localhost;
+# Removed cat > ./docker/nginx/conf.d/pyerp.conf block
 
-    ssl_certificate /etc/nginx/ssl/server.crt;
-    ssl_certificate_key /etc/nginx/ssl/server.key;
-    
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-    ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384';
+# Removed cat > ./docker/nginx/conf.d/pyerp.http.conf block
 
-    location / {
-        proxy_pass http://pyerp-app:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-
-    location /api {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
-    location /static/ {
-        alias /app/static/;
-    }
-
-    location /media/ {
-        alias /app/media/;
-    }
-}
-EOL
-
-cat > ./docker/nginx/conf.d/pyerp.http.conf << EOL
-server {
-    listen 80;
-    server_name localhost;
-    
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-EOL
-
-echo "Nginx configuration files created"
+# echo "Nginx configuration files created" <-- Removed
 
 # Create a local link to point to the SSL directories
 echo "Preparing to run production rebuild script..."
 
-# Make sure the certificate is accessible from where production expects it
-mkdir -p ./docker/nginx
+# Make sure the certificate AND the correct config are accessible from where production expects it
+mkdir -p ./docker/nginx # Ensure base dir exists
+rm -rf /tmp/ssl /tmp/conf.d # Clean up previous temp copies
 cp -r ./docker/nginx/ssl /tmp/
-cp -r ./docker/nginx/conf.d /tmp/
+cp -r ./docker/nginx/conf.d /tmp/ # Copy the conf.d directory which should contain the corrected pyerp.prod.conf
 
 # Run the production rebuild script with flags for this specific setup
 echo "Building and starting production containers locally via rebuild script..."
