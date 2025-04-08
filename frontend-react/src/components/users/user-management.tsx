@@ -22,7 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserGroupsDialog } from "./user-groups-dialog"
 import { fetchUsers, createUser, updateUser, deleteUser } from "@/lib/api/users"
 import { resetPassword, toggleUserActive } from "@/lib/api/profile"
-import type { User } from "@/lib/types"
+import type { User, Group } from "@/lib/types"
 
 export function UserManagement() {
   const queryClient = useQueryClient()
@@ -115,8 +115,26 @@ export function UserManagement() {
       setCreateError("Passwords do not match.")
       return
     }
-    const { confirmPassword, ...userData } = formData
-    createUserMutation.mutate(userData)
+
+    // Destructure form data
+    // Remove confirmPassword, role - keep needed fields
+    const { name, email, password, phone /* role */ } = formData
+
+    // Construct payload matching backend expectations
+    const payload = {
+      username: name, // Map form 'name' to 'username'
+      email: email,
+      password: password,
+      profile: {
+        // Nest phone inside profile, handle empty string
+        phone: phone || null,
+      },
+      // We are omitting 'role' for now, assuming backend handles default roles/groups
+    }
+
+    // Pass the structured payload to the mutation
+    // Note: The type expected by createUser might need adjustment if this structure is now standard
+    createUserMutation.mutate(payload)
   }
 
   const handleUpdateUser = (e: React.FormEvent) => {
@@ -149,6 +167,8 @@ export function UserManagement() {
       email: user.email,
       role: user.role,
       phone: user.phone || "",
+      password: "",
+      confirmPassword: "",
     })
     setIsEditDialogOpen(true)
   }
@@ -212,7 +232,7 @@ export function UserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {user.groups?.map((group) => (
+                      {user.groups?.map((group: Group) => (
                         <Badge key={group.id} variant="outline">
                           {group.name}
                         </Badge>

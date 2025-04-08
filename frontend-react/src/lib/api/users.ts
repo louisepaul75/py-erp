@@ -1,6 +1,17 @@
 import type { User } from "../types"
 import { API_BASE_URL } from "../config";
 
+// Define a type for the creation payload
+export type CreateUserPayload = {
+  username: string;
+  email: string;
+  password?: string;
+  profile?: {
+    phone?: string | null;
+  };
+  // Add other expected fields if necessary
+};
+
 // Helper function to get a cookie by name
 function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
@@ -158,19 +169,64 @@ export async function fetchUserById(userId: string): Promise<User> {
   return user
 }
 
+// Replace the mock createUser with a real API call
 export async function createUser(
-  userData: Omit<User, "id" | "groups" | "isActive" | "twoFactorEnabled">,
+  // Use the new payload type
+  userData: CreateUserPayload,
 ): Promise<User> {
-  await delay(500)
-  const newUser: User = {
-    id: Math.random().toString(36).substring(2, 9),
-    ...userData,
-    isActive: true,
-    twoFactorEnabled: false,
-    groups: [],
+  try {
+    const token = getCookie('access_token');
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/users/users/`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(userData), // Send user data (including password) in the body
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      // Attempt to parse error message from backend
+      let errorData = { message: `HTTP error! status: ${response.status}` };
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        // Ignore if response is not JSON
+      }
+      console.error("Error creating user:", errorData);
+      // Throw an error with the backend message if available
+      throw new Error(errorData.message || `Failed to create user. Status: ${response.status}`);
+    }
+
+    const createdUser = await response.json();
+
+    // Transform backend response to frontend User type if needed
+    // This is similar to fetchUsers, adapt based on your actual backend response structure
+    return {
+      id: createdUser.id.toString(),
+      name: createdUser.username,
+      email: createdUser.email,
+      role: createdUser.is_superuser ? "Admin" : createdUser.is_staff ? "Editor" : "Viewer",
+      isActive: createdUser.is_active,
+      twoFactorEnabled: false, // Assuming default, adjust if backend provides this
+      requirePasswordChange: false, // Assuming default
+      lastLogin: createdUser.last_login ? new Date(createdUser.last_login) : undefined,
+      passwordLastChanged: undefined,
+      phone: createdUser.profile?.phone,
+      groups: createdUser.groups || [],
+    };
+
+  } catch (error) {
+    console.error("Error in createUser API call:", error);
+    // Re-throw the error so the mutation's onError can handle it
+    throw error;
   }
-  users = [...users, newUser]
-  return newUser
 }
 
 export async function updateUser(userData: Partial<User> & { id: string }): Promise<User> {
