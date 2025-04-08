@@ -50,7 +50,7 @@ DEBUG_PROPAGATE_EXCEPTIONS = True
 APPEND_SLASH = False
 
 # Get ALLOWED_HOSTS from environment variable
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal", "192.168.65.1"]
 
 # Database configuration with SQLite fallback
 # Define PostgreSQL connection parameters
@@ -151,6 +151,11 @@ LOGGING = {
             "class": "logging.StreamHandler",
         },
     },
+    # Add root logger configuration
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG", 
+    },
     "loggers": {
         "django.security.authentication": {
             "handlers": ["console"],
@@ -166,6 +171,11 @@ LOGGING = {
             "propagate": True,
         },
         "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "users": {
             "handlers": ["console"],
             "level": "DEBUG",
             "propagate": True,
