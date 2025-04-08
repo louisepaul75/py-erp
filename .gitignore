@@ -133,3 +133,11 @@ package-lock.json
 # yarn.lock
 
 .ai/
+
+# SSL Certificates
+*.crt
+*.key
+*.pem
+*.pfx
+*.p12
+docker/nginx/ssl/
