@@ -1,6 +1,14 @@
 import type { User } from "../types"
 import { API_BASE_URL } from "../config";
 
+// Helper function to get a cookie by name
+function getCookie(name: string): string | null {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+}
+
 // Mock data
 export let users: User[] = [
   {
@@ -88,10 +96,26 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function fetchUsers(): Promise<User[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/users/users/`);
+    const token = getCookie('access_token'); // Get token from cookie
+    const headers: HeadersInit = {};
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`; // Set Authorization header
+    }
+
+    const response = await fetch(`${API_BASE_URL}/users/users/`, {
+      method: 'GET', // Explicitly state method
+      headers: headers, // Add headers
+      credentials: 'include' // Keep this for potential CSRF or other cookies
+    });
     
     if (!response.ok) {
-      console.error("Error fetching users:", response.statusText);
+      // Handle 401 specifically - maybe redirect to login or refresh token?
+      if (response.status === 401) {
+        console.error("Authorization failed. Token might be invalid or expired.");
+        // Potentially trigger a token refresh mechanism here
+      }
+      console.error("Error fetching users:", response.statusText, response.status);
       // Fallback to mock data if API call fails
       return mockUsers;
     }
