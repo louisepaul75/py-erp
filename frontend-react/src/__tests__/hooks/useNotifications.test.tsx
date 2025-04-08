@@ -82,8 +82,8 @@ describe('useNotifications hook', () => {
     });
 
     // Verify API endpoints were called
-    expect(apiClient.get).toHaveBeenCalledWith('api/v1/notifications/');
-    expect(apiClient.get).toHaveBeenCalledWith('api/v1/notifications/unread_count/');
+    expect(apiClient.get).toHaveBeenCalledWith('v1/notifications/');
+    expect(apiClient.get).toHaveBeenCalledWith('v1/notifications/unread_count/');
   });
 
   it('should mark a notification as read', async () => {
@@ -128,7 +128,7 @@ describe('useNotifications hook', () => {
     await waitFor(() => !result.current.markAsReadPending);
 
     // Verify API call
-    expect(apiClient.patch).toHaveBeenCalledWith('api/v1/notifications/1/mark_as_read/');
+    expect(apiClient.patch).toHaveBeenCalledWith('v1/notifications/1/mark_as_read/');
   });
 
   it('should mark all notifications as read', async () => {
@@ -172,7 +172,7 @@ describe('useNotifications hook', () => {
     await waitFor(() => !result.current.markAllAsReadPending);
 
     // Verify API call
-    expect(apiClient.patch).toHaveBeenCalledWith('api/v1/notifications/mark_all_as_read/');
+    expect(apiClient.patch).toHaveBeenCalledWith('v1/notifications/mark_all_as_read/');
   });
 
   it('should send a broadcast message', async () => {
@@ -221,7 +221,7 @@ describe('useNotifications hook', () => {
 
     // Verify API call
     expect(apiClient.post).toHaveBeenCalledWith(
-      'api/v1/notifications/send_broadcast/',
+      'v1/notifications/send_broadcast/',
       { json: { title: 'Broadcast Test', content: 'Test broadcast message' } }
     );
   });
@@ -273,7 +273,7 @@ describe('useNotifications hook', () => {
 
     // Verify API call
     expect(apiClient.post).toHaveBeenCalledWith(
-      'api/v1/notifications/send_group/',
+      'v1/notifications/send_group/',
       { json: { title: 'Group Test', content: 'Test group message', group_id: '1' } }
     );
   });
@@ -325,7 +325,7 @@ describe('useNotifications hook', () => {
 
     // Verify API call
     expect(apiClient.post).toHaveBeenCalledWith(
-      'api/v1/notifications/send_user/',
+      'v1/notifications/send_user/',
       { json: { title: 'User Test', content: 'Test user message', user_id: 'user123' } }
     );
   });
