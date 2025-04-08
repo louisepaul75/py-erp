@@ -44,6 +44,7 @@ if DEBUG and not any(arg.startswith('test') for arg in sys.argv):
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://localhost",
     # Add other origins as needed (e.g., production frontend URL)
 ]
 CORS_ALLOW_CREDENTIALS = True

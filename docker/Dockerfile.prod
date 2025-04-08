@@ -54,6 +54,7 @@ RUN apt-get update \
         shared-mime-info \
         libssl-dev \
         redis-server \
+        libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
