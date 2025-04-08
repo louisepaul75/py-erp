@@ -23,6 +23,13 @@ import { UserGroupsDialog } from "./user-groups-dialog"
 import { fetchUsers, createUser, updateUser, deleteUser } from "@/lib/api/users"
 import { resetPassword, toggleUserActive } from "@/lib/api/profile"
 import type { User, Group } from "@/lib/types"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export function UserManagement() {
   const queryClient = useQueryClient()
@@ -43,6 +50,9 @@ export function UserManagement() {
 
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false)
   const [resetPasswordMessage, setResetPasswordMessage] = useState("")
+
+  // Placeholder roles - replace with actual data fetching if needed
+  const roles = ["Admin", "Editor", "Viewer"]
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
@@ -108,6 +118,11 @@ export function UserManagement() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Handler for Select component changes
+  const handleRoleChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, role: value }))
+  }
+
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault()
     setCreateError(null)
@@ -118,7 +133,7 @@ export function UserManagement() {
 
     // Destructure form data
     // Remove confirmPassword, role - keep needed fields
-    const { name, email, password, phone /* role */ } = formData
+    const { name, email, password, phone, role } = formData
 
     // Construct payload matching backend expectations
     const payload = {
@@ -129,6 +144,7 @@ export function UserManagement() {
         // Nest phone inside profile, handle empty string
         phone: phone || null,
       },
+      role: role, // Add role to the payload
       // We are omitting 'role' for now, assuming backend handles default roles/groups
     }
 
@@ -337,13 +353,18 @@ export function UserManagement() {
                   <label htmlFor="role" className="text-right">
                     Role
                   </label>
-                  <Input
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
+                  <Select name="role" onValueChange={handleRoleChange} value={formData.role}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((roleOption) => (
+                        <SelectItem key={roleOption} value={roleOption}>
+                          {roleOption}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="phone" className="text-right">
@@ -445,13 +466,18 @@ export function UserManagement() {
                   <label htmlFor="edit-role" className="text-right">
                     Role
                   </label>
-                  <Input
-                    id="edit-role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
+                  <Select name="role" onValueChange={handleRoleChange} value={formData.role}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((roleOption) => (
+                        <SelectItem key={roleOption} value={roleOption}>
+                          {roleOption}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="phone" className="text-right">
