@@ -145,9 +145,7 @@ MIDDLEWARE = BASE_MIDDLEWARE + [
     # Add production-specific middleware here, if any, or ensure they are
     # already in BASE_MIDDLEWARE if appropriate.
     # Example: Middleware specific to production logging or monitoring
-    "pyerp.middleware.request_logger_middleware.RequestLoggerMiddleware",
-    "pyerp.middleware.correlation_id_middleware.CorrelationIDMiddleware",
-    "pyerp.middleware.user_tracking_middleware.UserTrackingMiddleware",
+    # "pyerp.middleware.request_logger_middleware.RequestLoggerMiddleware",
     # Note: SecurityMiddleware, SessionMiddleware, CorsMiddleware,
     # CommonMiddleware, CsrfViewMiddleware, AuthMiddleware, MessagesMiddleware,
     # LocaleMiddleware, ClickjackingMiddleware, AccountMiddleware
