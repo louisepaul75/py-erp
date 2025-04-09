@@ -1,0 +1,73 @@
+site_name: pyERP Documentation
+site_url: https://example.com/  # Optional: Ersetzen durch die tatsächliche URL, falls vorhanden
+repo_url: https://github.com/your-org/pyERP/  # Optional: Ersetzen durch die tatsächliche Repo-URL
+repo_name: your-org/pyERP  # Optional: Ersetzen
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: de  # Oder en, falls bevorzugt
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]  # Suchpfad für Python-Module
+          options:
+            show_root_heading: true
+            show_source: true
+            members_order: source # alphabetical oder source
+            # Weitere Optionen nach Bedarf: https://mkdocstrings.github.io/python/usage/configuration/
+
+nav:
+  - Home: index.md
+  - Contributing: CONTRIBUTING.md
+  - Deployment: DEPLOYMENT.md
+  - Project Structure: project_structure.md
+  - Testing: testing.md
+  - API Reference:
+      - pyerp Core: api/pyerp.md
+      - Components: api/components.md
+      # Add other relevant markdown files from the `docs` directory as needed
+      # Example:
+      # - Features:
+      #   - Inventory Management: features/inventory_warehouse_management.md
+      #   - Product Image Sync: features/product_image_sync.md
+      # - Implementation Guides:
+      #   - Internationalization: implementation/internationalization.md
+      #   - JWT Auth: implementation/jwt_auth_implementation_guide.md
+      # - Development:
+      #   - Docker: development/docker_deployment.md
+      # Beispiel:
+      # - pyerp/: api/pyerp/
+      # - components/: api/components/ 
