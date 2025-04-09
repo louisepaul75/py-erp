@@ -28,11 +28,11 @@ export interface Product {
   tags: string[]; // Assuming tags are an array of strings
   variants_count: number;
 }
-export interface ApiResponse {
+export interface ApiResponse<T> {
   count: number; // Total number of items available
   page: number; // Current page number
   page_size: number; // Number of items per page
-  results: Product[]; // Array of items (generic type T)
+  results: T[]; // Use the generic type T
 }
 
 export interface SelectedItem {

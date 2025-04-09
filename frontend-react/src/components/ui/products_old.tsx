@@ -56,7 +56,7 @@ interface ProductsPageProps {
   initialParentId?: string;
 }
 
-export function ProductsPage({ initialVariantId, initialParentId }: ProductsPageProps) {
+export function ProductsPageOld({ initialVariantId, initialParentId }: ProductsPageProps) {
   const [selectedItem, setSelectedItem] = useState<number | string | null>(
     initialVariantId ? parseInt(initialVariantId) : 
     initialParentId ? parseInt(initialParentId) : null
@@ -433,6 +433,6 @@ export function ProductsPage({ initialVariantId, initialParentId }: ProductsPage
 }
 
 // Default export for the page
-export default function ProductsPageContainer({ initialVariantId, initialParentId }: ProductsPageProps = {}) {
-  return <ProductsPage initialVariantId={initialVariantId} initialParentId={initialParentId} />;
+export default function ProductsPageContainerOld({ initialVariantId, initialParentId }: ProductsPageProps = {}) {
+  return <ProductsPageOld initialVariantId={initialVariantId} initialParentId={initialParentId} />;
 }
