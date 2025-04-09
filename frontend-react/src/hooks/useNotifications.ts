@@ -65,12 +65,14 @@ const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
 };
 
 const markNotificationAsRead = async (id: string): Promise<Notification> => {
-    const response = await apiClient.patch<Notification>(`v1/notifications/${id}/mark_as_read/`).json();
+    const response = await apiClient.patch<Notification>(`v1/notifications/${id}/mark_as_read/`, {});
+    // Directly return the response, as apiClient.patch already parses JSON
     return response;
 };
 
 const markAllNotificationsAsRead = async (): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>("v1/notifications/mark_all_as_read/").json();
+    const response = await apiClient.patch<{ message: string }>("v1/notifications/mark_all_as_read/", {});
+    // Directly return the response, as apiClient.patch already parses JSON
     return response;
 };
 
@@ -78,7 +80,8 @@ const sendBroadcastMessage = async (title: string, content: string): Promise<{ m
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_broadcast/", 
         { json: { title, content } }
-    ).json();
+    );
+    // Directly return the response, as apiClient.post already parses JSON
     return response;
 };
 
@@ -87,7 +90,8 @@ const sendGroupMessage = async (title: string, content: string, groupId: string)
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_group/", 
         { json: { title, content, group_id: groupId } }
-    ).json();
+    );
+    // Directly return the response, as apiClient.post already parses JSON
     return response;
 };
 
@@ -95,7 +99,8 @@ const sendUserMessage = async (title: string, content: string, userId: string): 
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_user/", 
         { json: { title, content, user_id: userId } }
-    ).json();
+    );
+    // Directly return the response, as apiClient.post already parses JSON
     return response;
 };
 

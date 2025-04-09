@@ -1,14 +1,15 @@
 import React from 'react';
-import { render, screen, waitFor, act, waitForElementToBeRemoved } from '@testing-library/react';
+import { screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { Footer } from '@/components/Footer';
+import { render } from '../utils/test-utils';
 
 // Mock the i18n functionality at component level
 jest.mock('react-i18next', () => ({
   // Mock the useTranslation hook
   useTranslation: () => {
     return {
-      t: (key) => key,
+      t: (key: string) => key,
       i18n: {
         changeLanguage: jest.fn(),
         language: 'en'
@@ -17,13 +18,19 @@ jest.mock('react-i18next', () => ({
   }
 }));
 
+// Mock auth hooks
+jest.mock('@/lib/auth/authHooks', () => ({
+  useIsAuthenticated: () => ({ isAuthenticated: true }),
+  useUser: () => ({ user: null, isLoading: false, error: null })
+}));
+
 jest.mock('@/lib/config', () => ({
   API_URL: 'http://test.com/api',
 }));
 
 // Mock useAppTranslation
 jest.mock('@/hooks/useTranslationWrapper', () => () => ({
-  t: (key) => key, // Simple mock that returns the key
+  t: (key: string) => key, // Simple mock that returns the key
 }));
 
 // Define mock data structures based on actual component interfaces

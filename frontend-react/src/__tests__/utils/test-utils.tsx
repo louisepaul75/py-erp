@@ -1,12 +1,25 @@
 import React from 'react';
 import { render, RenderOptions } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Simple wrapper that doesn't need i18n
+// Create a new QueryClient for each test
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      gcTime: 0,
+    },
+  },
+});
+
+// Provider wrapper that includes all necessary providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
+  const testQueryClient = createTestQueryClient();
+  
   return (
-    <>
+    <QueryClientProvider client={testQueryClient}>
       {children}
-    </>
+    </QueryClientProvider>
   );
 };
 

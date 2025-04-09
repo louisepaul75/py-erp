@@ -19,6 +19,11 @@ jest.mock('@/lib/api', () => ({
   },
 }));
 
+// Mock authentication status using correct relative path
+jest.mock('../../lib/auth/authHooks', () => ({
+  useIsAuthenticated: () => ({ isAuthenticated: true }),
+}));
+
 // Create a wrapper component with QueryClientProvider
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -26,7 +31,7 @@ const createWrapper = () => {
       queries: {
         retry: false,
         // Disable caching for tests
-        cacheTime: 0,
+        gcTime: 0,
       },
     },
   });
@@ -67,9 +72,19 @@ describe('useNotifications hook', () => {
 
   it('should make API calls to fetch notifications and unread count', async () => {
     // Mock implementation for the API calls
-    (apiClient.get as jest.Mock).mockImplementation(() => ({
-      json: () => Promise.resolve({})
-    }));
+    (apiClient.get as jest.Mock).mockImplementation((url) => {
+      if (url.includes('unread_count')) {
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
+      }
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
+    });
 
     // Render the hook
     renderHook(() => useNotifications(), {
@@ -78,38 +93,31 @@ describe('useNotifications hook', () => {
 
     // Wait for the API calls to be made
     await waitFor(() => {
-      return expect(apiClient.get).toHaveBeenCalled();
+      expect(apiClient.get).toHaveBeenCalledWith('v1/notifications/');
+      expect(apiClient.get).toHaveBeenCalledWith('v1/notifications/unread_count/');
     });
-
-    // Verify API endpoints were called
-    expect(apiClient.get).toHaveBeenCalledWith('v1/notifications/');
-    expect(apiClient.get).toHaveBeenCalledWith('v1/notifications/unread_count/');
   });
 
   it('should mark a notification as read', async () => {
     // Mock implementation for the API calls
     (apiClient.get as jest.Mock).mockImplementation((url) => {
       if (url.includes('unread_count')) {
-        return {
-          json: () => Promise.resolve({ unread_count: 1 })
-        };
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
       }
-      return {
-        json: () => Promise.resolve({
-          count: 2,
-          next: null,
-          previous: null,
-          results: mockNotifications
-        })
-      };
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
     });
 
     // Mock patch implementation
-    (apiClient.patch as jest.Mock).mockImplementation(() => ({
-      json: () => Promise.resolve({
+    (apiClient.patch as jest.Mock).mockImplementation(() => Promise.resolve({ // Return payload directly
         ...mockNotifications[0],
         is_read: true,
-      })
     }));
 
     const { result } = renderHook(() => useNotifications(), {
@@ -127,33 +135,29 @@ describe('useNotifications hook', () => {
     // Wait for the mark as read mutation to complete
     await waitFor(() => !result.current.markAsReadPending);
 
-    // Verify API call
-    expect(apiClient.patch).toHaveBeenCalledWith('v1/notifications/1/mark_as_read/');
+    // Verify API call - Expect empty object {} as second arg
+    expect(apiClient.patch).toHaveBeenCalledWith('v1/notifications/1/mark_as_read/', {});
   });
 
   it('should mark all notifications as read', async () => {
     // Mock implementation for the API calls
     (apiClient.get as jest.Mock).mockImplementation((url) => {
       if (url.includes('unread_count')) {
-        return {
-          json: () => Promise.resolve({ unread_count: 1 })
-        };
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
       }
-      return {
-        json: () => Promise.resolve({
-          count: 2,
-          next: null,
-          previous: null,
-          results: mockNotifications
-        })
-      };
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
     });
 
     // Mock patch implementation
-    (apiClient.patch as jest.Mock).mockImplementation(() => ({
-      json: () => Promise.resolve({
-        message: '1 notifications marked as read.',
-      })
+    (apiClient.patch as jest.Mock).mockImplementation(() => Promise.resolve({ // Return payload directly
+      message: '1 notifications marked as read.',
     }));
 
     const { result } = renderHook(() => useNotifications(), {
@@ -171,34 +175,30 @@ describe('useNotifications hook', () => {
     // Wait for the mark all as read mutation to complete
     await waitFor(() => !result.current.markAllAsReadPending);
 
-    // Verify API call
-    expect(apiClient.patch).toHaveBeenCalledWith('v1/notifications/mark_all_as_read/');
+    // Verify API call - Expect empty object {} as second arg
+    expect(apiClient.patch).toHaveBeenCalledWith('v1/notifications/mark_all_as_read/', {});
   });
 
   it('should send a broadcast message', async () => {
     // Mock implementation for the API calls
     (apiClient.get as jest.Mock).mockImplementation((url) => {
       if (url.includes('unread_count')) {
-        return {
-          json: () => Promise.resolve({ unread_count: 1 })
-        };
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
       }
-      return {
-        json: () => Promise.resolve({
-          count: 2,
-          next: null,
-          previous: null,
-          results: mockNotifications
-        })
-      };
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
     });
 
     // Mock post implementation
-    (apiClient.post as jest.Mock).mockImplementation(() => ({
-      json: () => Promise.resolve({
-        message: 'Broadcast message sent to 10 users.',
-        recipients_count: 10,
-      })
+    (apiClient.post as jest.Mock).mockImplementation(() => Promise.resolve({ // Return payload directly
+      message: 'Broadcast message sent to 10 users.',
+      recipients_count: 10,
     }));
 
     const { result } = renderHook(() => useNotifications(), {
@@ -230,26 +230,22 @@ describe('useNotifications hook', () => {
     // Mock implementation for the API calls
     (apiClient.get as jest.Mock).mockImplementation((url) => {
       if (url.includes('unread_count')) {
-        return {
-          json: () => Promise.resolve({ unread_count: 1 })
-        };
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
       }
-      return {
-        json: () => Promise.resolve({
-          count: 2,
-          next: null,
-          previous: null,
-          results: mockNotifications
-        })
-      };
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
     });
     
     // Mock post implementation
-    (apiClient.post as jest.Mock).mockImplementation(() => ({
-      json: () => Promise.resolve({
-        message: 'Message sent to 5 users in group "Admins".',
-        recipients_count: 5,
-      })
+    (apiClient.post as jest.Mock).mockImplementation(() => Promise.resolve({ // Return payload directly
+      message: 'Message sent to 5 users in group "Admins".',
+      recipients_count: 5,
     }));
 
     const { result } = renderHook(() => useNotifications(), {
@@ -282,26 +278,22 @@ describe('useNotifications hook', () => {
     // Mock implementation for the API calls
     (apiClient.get as jest.Mock).mockImplementation((url) => {
       if (url.includes('unread_count')) {
-        return {
-          json: () => Promise.resolve({ unread_count: 1 })
-        };
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
       }
-      return {
-        json: () => Promise.resolve({
-          count: 2,
-          next: null,
-          previous: null,
-          results: mockNotifications
-        })
-      };
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
     });
     
     // Mock post implementation
-    (apiClient.post as jest.Mock).mockImplementation(() => ({
-      json: () => Promise.resolve({
-        message: 'Message sent to John Doe.',
-        recipients_count: 1,
-      })
+    (apiClient.post as jest.Mock).mockImplementation(() => Promise.resolve({ // Return payload directly
+      message: 'Message sent to John Doe.',
+      recipients_count: 1,
     }));
 
     const { result } = renderHook(() => useNotifications(), {
@@ -334,26 +326,22 @@ describe('useNotifications hook', () => {
     // Mock implementation for the API calls
     (apiClient.get as jest.Mock).mockImplementation((url) => {
       if (url.includes('unread_count')) {
-        return {
-          json: () => Promise.resolve({ unread_count: 1 })
-        };
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
       }
-      return {
-        json: () => Promise.resolve({
-          count: 2,
-          next: null,
-          previous: null,
-          results: mockNotifications
-        })
-      };
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
     });
     
     // Mock post implementation
-    (apiClient.post as jest.Mock).mockImplementation(() => ({
-      json: () => Promise.resolve({
-        message: 'Message sent to 5 users in group "Admins".',
-        recipients_count: 5,
-      })
+    (apiClient.post as jest.Mock).mockImplementation(() => Promise.resolve({ // Return payload directly
+      message: 'Message sent to 5 users in group "Admins".',
+      recipients_count: 5,
     }));
 
     const { result } = renderHook(() => useNotifications(), {
@@ -379,4 +367,92 @@ describe('useNotifications hook', () => {
     // Verify API call
     expect(apiClient.post).toHaveBeenCalled();
   });
+
+  it('should handle sendMessage utility function with invalid type', async () => {
+    // Mock implementation for the API calls
+    (apiClient.get as jest.Mock).mockImplementation((url) => {
+      if (url.includes('unread_count')) {
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
+      }
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
+    });
+
+    // Mock post implementation for invalid type
+    (apiClient.post as jest.Mock).mockImplementation(() => Promise.reject(new Error("Should not be called")));
+
+    // Act: use sendMessage utility with invalid type
+    const { result } = renderHook(() => useNotifications(), {
+      wrapper: createWrapper(),
+    });
+
+    // Wait for initial fetch
+    await waitFor(() => !result.current.isLoading);
+
+    act(() => {
+      result.current.sendMessage(
+        'Invalid Message',
+        'This is a test for the invalid type',
+        'invalid',
+        ['invalid-1']
+      );
+    });
+
+    // Wait for the send message mutation to complete
+    await waitFor(() => !result.current.sendMessagePending);
+
+    // Verify API call - Should NOT be called for invalid type
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it('should handle sendMessage utility function with failure case', async () => {
+    // Mock implementation for the API calls
+    (apiClient.get as jest.Mock).mockImplementation((url) => {
+      if (url.includes('unread_count')) {
+        // Return payload directly
+        return Promise.resolve({ unread_count: 1 });
+      }
+      // Return payload directly
+      return Promise.resolve({
+        count: 2,
+        next: null,
+        previous: null,
+        results: mockNotifications,
+      });
+    });
+
+    // Mock post implementation for failure case
+    (apiClient.post as jest.Mock).mockImplementation(() => Promise.reject(new Error("API Error")));
+
+    // Act: test failure case
+    const { result } = renderHook(() => useNotifications(), {
+      wrapper: createWrapper(),
+    });
+
+    // Wait for initial fetch
+    await waitFor(() => !result.current.isLoading);
+
+    act(() => {
+      result.current.sendMessage(
+        'Failure Message',
+        'This is a test for the failure case',
+        'failure',
+        ['failure-1']
+      );
+    });
+
+    // Wait for the send message mutation to complete
+    await waitFor(() => !result.current.sendMessagePending);
+
+    // Verify API call - Should NOT be called for this pseudo 'failure' type
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  // Add tests for error handling if needed
 }); 
