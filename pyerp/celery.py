@@ -80,6 +80,9 @@ else:
             @task_prerun.connect(weak=False)
             def task_prerun_handler(**kwargs):
                 """Take memory snapshot before executing a task."""
+                task_id = kwargs.get('task_id')
+                task_name = kwargs.get('sender').name if kwargs.get('sender') else 'unknown_task'
+                logger.debug(f"[{memory_profiler._process_identifier}] task_prerun signal received for task_id: {task_id}, task_name: {task_name}")
                 memory_profiler.take_snapshot_if_needed()
                 # Optionally log task details: logger.debug(f"Taking snapshot before task: {kwargs.get('task_id')}")
 

@@ -354,41 +354,41 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 # Celery Beat Schedule Configuration
 # https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html#beat-schedule
 CELERY_BEAT_SCHEDULE = {
-    "sync.scheduled_incremental_sync": {
-        "task": "sync.run_incremental_sync",
-        "schedule": 300.0,  # Every 5 minutes
-        "options": {"expires": 290.0},
-    },
-    "sync.scheduled_full_sync": {
-        "task": "sync.run_full_sync",
-        "schedule": crontab(hour=2, minute=0),  # Run at 2:00 AM daily
-        "options": {"expires": 3600.0},
-    },
-    "sync.incremental_sales_record_sync": {
-        "task": "sync.run_incremental_sales_record_sync",
-        "schedule": crontab(minute="*/15"),  # Every 15 minutes
-        "options": {"expires": 900.0},
-    },
-    "sync.full_sales_record_sync": {
-        "task": "sync.run_full_sales_record_sync",
-        "schedule": crontab(hour=3, minute=0),  # Run at 3:00 AM daily
-        "options": {"expires": 3600.0},
-    },
-    "sync.scheduled_employee_sync": {
-        "task": (
-            "pyerp.sync.tasks.scheduled_employee_sync"  # Note: Using full path
-        ),
-        "schedule": crontab(minute="*/5"),  # Every 5 minutes
-        "options": {"expires": 240.0},  # Expires after 4 minutes
-    },
-    "sync.nightly_full_employee_sync": {
-        "task": (
-            "pyerp.sync.tasks.nightly_full_employee_sync"  # Note: Using full path # noqa E501
-        ),
-        "schedule": crontab(hour=2, minute=15),  # Run at 2:15 AM daily
-        "options": {"expires": 10800.0},  # Expires after 3 hours
-    },
-    # Add other periodic tasks here if needed
+    # "sync.scheduled_incremental_sync": {  # COMMENTED OUT
+    #     "task": "sync.run_incremental_sync",
+    #     "schedule": 300.0,  # Every 5 minutes
+    #     "options": {"expires": 290.0},
+    # },
+    # "sync.scheduled_full_sync": { # COMMENTED OUT
+    #     "task": "sync.run_full_sync",
+    #     "schedule": crontab(hour=2, minute=0),  # Run at 2:00 AM daily
+    #     "options": {"expires": 3600.0},
+    # },
+    # "sync.incremental_sales_record_sync": { # COMMENTED OUT
+    #     "task": "sync.run_incremental_sales_record_sync",
+    #     "schedule": crontab(minute="*/15"),  # Every 15 minutes
+    #     "options": {"expires": 900.0},
+    # },
+    # "sync.full_sales_record_sync": { # COMMENTED OUT
+    #     "task": "sync.run_full_sales_record_sync",
+    #     "schedule": crontab(hour=3, minute=0),  # Run at 3:00 AM daily
+    #     "options": {"expires": 3600.0},
+    # },
+    # "sync.scheduled_employee_sync": { # COMMENTED OUT
+    #     "task": (
+    #         "pyerp.sync.tasks.scheduled_employee_sync"  # Note: Using full path
+    #     ),
+    #     "schedule": crontab(minute="*/5"),  # Every 5 minutes
+    #     "options": {"expires": 240.0},  # Expires after 4 minutes
+    # },
+    # "sync.nightly_full_employee_sync": { # COMMENTED OUT
+    #     "task": (
+    #         "pyerp.sync.tasks.nightly_full_employee_sync"  # Note: Using full path # noqa E501
+    #     ),
+    #     "schedule": crontab(hour=2, minute=15),  # Run at 2:15 AM daily
+    #     "options": {"expires": 10800.0},  # Expires after 3 hours
+    # },
+    # Add other periodic tasks here if needed (e.g., monitoring, cleanup)
 }
 
 # Ensure logs directory exists

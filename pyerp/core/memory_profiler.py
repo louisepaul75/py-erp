@@ -29,11 +29,17 @@ def configure_profiler(identifier: str):
 def take_snapshot_if_needed():
     """Takes a memory snapshot if the interval has passed."""
     global _last_snapshot_time
-    if not tracemalloc.is_tracing():
+    is_tracing = tracemalloc.is_tracing()
+    logger.debug(f"[{_process_identifier}] Checking if snapshot needed. Tracing enabled: {is_tracing}")
+    if not is_tracing:
+        logger.debug(f"[{_process_identifier}] Skipping snapshot: tracing disabled.")
         return # Don't try to snapshot if not tracing
 
     current_time = time.monotonic()
-    if (current_time - _last_snapshot_time) < SNAPSHOT_INTERVAL_SECONDS:
+    time_since_last = current_time - _last_snapshot_time
+    logger.debug(f"[{_process_identifier}] Current time: {current_time:.2f}, Last snapshot: {_last_snapshot_time:.2f}, Interval: {SNAPSHOT_INTERVAL_SECONDS}s, Time since last: {time_since_last:.2f}s")
+    if time_since_last < SNAPSHOT_INTERVAL_SECONDS:
+        logger.debug(f"[{_process_identifier}] Skipping snapshot: interval not passed.")
         return
 
     try:

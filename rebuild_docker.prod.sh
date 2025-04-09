@@ -39,6 +39,9 @@ docker build -t pyerp-prod-image -f docker/Dockerfile.prod .
 # Create network if it doesn't exist
 docker network create pyerp-network || true
 
+# Ensure the host directory for memory snapshots exists
+mkdir -p ./memory_snapshots_output/memory_snapshots
+
 # Choose environment file based on mode
 ENV_FILE="config/env/.env.prod"
 if [ "$DEBUG_MODE" = true ]; then
@@ -59,6 +62,11 @@ DOCKER_RUN_CMD="docker run -d \
     --env-file $ENV_FILE \
     -e NODE_ENV=production \
     -e NEXT_TELEMETRY_DISABLED=1"
+
+# Add volume mount for memory snapshots
+# NOTE: Assumes snapshots are written to /app/memory_snapshots inside the container. Adjust if necessary.
+DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
+    -v $(pwd)/memory_snapshots_output/memory_snapshots:/app/data/memory_snapshots"
 
 # Add conditional memory profiling env var
 if [ "$PROFILE_MEMORY" = true ]; then
