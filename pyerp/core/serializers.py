@@ -80,17 +80,20 @@ class TaggedItemSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     """Serializer for the Notification model."""
     
-    # Optionally make user read-only if it's always set based on the request user
-    # user = serializers.PrimaryKeyRelatedField(read_only=True)
-    # Or include the username for easier frontend display
     username = serializers.CharField(source='user.username', read_only=True)
+    # Add fields for sender info, including last_seen
+    sender_username = serializers.CharField(source='sender.username', read_only=True, allow_null=True)
+    sender_last_seen = serializers.DateTimeField(source='sender.profile.last_seen', read_only=True, allow_null=True)
     
     class Meta:
         model = Notification
         fields = [
             "id",
-            "user", # Keep if needed, otherwise rely on username
+            "user",
             "username",
+            "sender", # Keep sender FK if needed
+            "sender_username",
+            "sender_last_seen",
             "title",
             "content",
             "type",
@@ -98,9 +101,15 @@ class NotificationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "user", "username", "created_at", "updated_at"]
+        read_only_fields = ["id", "user", "username", "sender", "sender_username", "sender_last_seen", "created_at", "updated_at"]
 
     def create(self, validated_data):
-        # Ensure the user is set from the request context, not payload
-        validated_data['user'] = self.context['request'].user
+        request = self.context['request']
+        # Ensure the user is set from the request context
+        # Ensure the sender is set from the request context
+        validated_data['sender'] = request.user
+        # If the notification is being created for a specific user (e.g., direct message)
+        # the 'user' (recipient) should likely be passed in the data or determined elsewhere.
+        # If the intention is for the recipient to always be the request user, adjust logic:
+        # validated_data['user'] = request.user
         return super().create(validated_data)

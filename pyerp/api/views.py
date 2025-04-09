@@ -1,24 +1,27 @@
-import json
-import os
+import logging
+import subprocess
+
 from django.conf import settings
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
 from django.contrib.auth.models import Group, Permission
-from rest_framework import status
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.contrib.contenttypes.models import ContentType
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from users.models import PermissionCategory
 from users.serializers import PermissionCategorySerializer
-import subprocess
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+
+logger = logging.getLogger(__name__)
+
 
 class PermissionCategoriesView(APIView):
     """
-    A view to list all permissions grouped by their categories from PermissionCategory model.
+    A view to list all permissions grouped by their categories from
+    PermissionCategory model.
     """
+
     permission_classes = [IsAdminUser]
 
     def get(self, request):
@@ -36,26 +39,34 @@ class PermissionCategoriesView(APIView):
                 status=500
             )
 
+
 class PermissionListView(APIView):
     """
     API endpoint to list all available permissions.
     """
+
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        permissions = Permission.objects.all().values('id', 'name', 'codename', 'content_type__app_label')
+        permissions = Permission.objects.all().values(
+            "id", "name", "codename", "content_type__app_label"
+        )
         return Response(permissions)
+
 
 class GroupPermissionsView(APIView):
     """
     API endpoint to manage permissions for a specific group.
     """
+
     permission_classes = [IsAdminUser]
 
     def get(self, request, group_id):
         """Get permissions for a specific group"""
         group = get_object_or_404(Group, id=group_id)
-        permissions = group.permissions.all().values('id', 'name', 'codename', 'content_type__app_label')
+        permissions = group.permissions.all().values(
+            "id", "name", "codename", "content_type__app_label"
+        )
         return Response(permissions)
 
     def put(self, request, group_id):
@@ -63,10 +74,12 @@ class GroupPermissionsView(APIView):
         group = get_object_or_404(Group, id=group_id)
         
         # Validate request data
-        if not isinstance(request.data.get('permissions'), list):
+        if not isinstance(request.data.get("permissions"), list):
             return Response(
-                {"error": "permissions field must be a list of permission IDs"},
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "error": "permissions field must be a list of permission IDs" # noqa E501
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
@@ -89,11 +102,13 @@ class GroupPermissionsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([AllowAny])
 def get_git_branch(request):
     """
     API endpoint to retrieve the current git branch name.
+    Returns 'unknown' if git command fails or is unavailable.
     """
     try:
         # Ensure we run the command from the project's root directory
@@ -101,23 +116,24 @@ def get_git_branch(request):
         
         # Run the git command
         result = subprocess.run(
-            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True,
             text=True,
-            check=True, # Raises CalledProcessError if command fails
-            cwd=project_root  # Execute in the project root
+            check=True,  # Raises CalledProcessError if command fails
+            cwd=project_root,  # Execute in the project root
         )
         
         branch_name = result.stdout.strip()
         return JsonResponse({'branch': branch_name})
 
-    except FileNotFoundError:
-        # Git command not found
-        return JsonResponse({'error': 'Git command not found.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    except subprocess.CalledProcessError as e:
-        # Git command failed (e.g., not a git repository)
-        error_message = f"Git command failed: {e.stderr.strip()}" if e.stderr else f"Git command failed with exit code {e.returncode}"
-        return JsonResponse({'error': error_message}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        # Git command not found or failed (e.g., not a git repository,
+        # git not installed)
+        # Return a default value instead of 500 error in production
+        return JsonResponse({"branch": "unknown"}, status=status.HTTP_200_OK)
     except Exception as e:
-        # Catch any other unexpected errors
-        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+        # Catch any other unexpected errors, but still try to avoid 500
+        logger.error(
+            f"Unexpected error in get_git_branch: {str(e)}"  # Log the error
+        )
+        return JsonResponse({"branch": "error"}, status=status.HTTP_200_OK)

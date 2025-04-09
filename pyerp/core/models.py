@@ -458,6 +458,14 @@ class Notification(models.Model):
         related_name="notifications",
         help_text=_("The user who will receive the notification."),
     )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, # Keep notification even if sender is deleted
+        null=True,
+        blank=True,
+        related_name="sent_notifications",
+        help_text=_("The user who sent the notification (if applicable)."),
+    )
     title = models.CharField(
         max_length=255,
         help_text=_("The title of the notification."),

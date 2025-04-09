@@ -21,7 +21,7 @@ project_root = os.path.abspath(os.path.join(root_dir, '../../../..'))
 sys.path.insert(0, project_root)
 
 # Load environment variables
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.settings.testing')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.testing')
 os.environ.setdefault('PYERP_ENV', 'test')
 
 # Set test-specific environment variables

@@ -29,6 +29,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'users.middleware.UpdateLastSeenMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -44,6 +45,7 @@ if DEBUG and not any(arg.startswith('test') for arg in sys.argv):
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://localhost",
     # Add other origins as needed (e.g., production frontend URL)
 ]
 CORS_ALLOW_CREDENTIALS = True

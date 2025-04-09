@@ -43,6 +43,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     department = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    groups = serializers.SerializerMethodField()
+    last_seen = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -57,6 +59,8 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "department",
             "status",
+            "groups",
+            "last_seen",
         ]
         read_only_fields = ["is_active", "is_staff", "date_joined"]
 
@@ -72,6 +76,16 @@ class UserSerializer(serializers.ModelSerializer):
             return obj.profile.status
         return "active"  # Default value
 
+    def get_groups(self, obj):
+        """Return the user's groups with minimal information."""
+        return [{"id": group.id, "name": group.name} for group in obj.groups.all()]
+
+    def get_last_seen(self, obj):
+        """Get last_seen from profile."""
+        if hasattr(obj, "profile"):
+            return obj.profile.last_seen
+        return None
+
 
 class UserDetailSerializer(serializers.ModelSerializer):
     """
@@ -80,6 +94,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     groups = serializers.SerializerMethodField()
     profile = UserProfileSerializer()
+    last_seen = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -97,6 +112,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "profile",
             "groups",
             "password",
+            "last_seen",
         ]
         read_only_fields = [
             "is_active",
@@ -112,6 +128,12 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def get_groups(self, obj):
         """Return the user's groups with minimal information."""
         return [{"id": group.id, "name": group.name} for group in obj.groups.all()]
+
+    def get_last_seen(self, obj):
+        """Get last_seen from profile."""
+        if hasattr(obj, "profile"):
+            return obj.profile.last_seen
+        return None
 
     def create(self, validated_data):
         """Create a User with associated UserProfile."""

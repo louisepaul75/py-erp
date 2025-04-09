@@ -14,6 +14,19 @@ from .base import *  # noqa
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
+# Conditionally import HTTPS settings for local proxy setups
+if os.environ.get("USE_LOCAL_HTTPS_PROXY", "False").lower() == "true":
+    try:
+        from .settings_https import *  # noqa
+        print(
+            "INFO: Loaded HTTPS proxy settings for local production environment."
+        )
+    except ImportError:
+        print(
+            "WARNING: USE_LOCAL_HTTPS_PROXY is true, but "
+            "settings_https.py not found."
+        )
+
 # Must be set from environment in production
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
@@ -45,15 +58,23 @@ DATABASES = {
 # }
 
 # Production security settings
-SECURE_SSL_REDIRECT = True
+# Only set SECURE_SSL_REDIRECT if not using a local proxy override
+if not os.environ.get("USE_LOCAL_HTTPS_PROXY", "False").lower() == "true":
+    SECURE_SSL_REDIRECT = True
+else:
+    SECURE_SSL_REDIRECT = False  # Let the local proxy handle redirects
+
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+
+# Set cookie security based on whether HTTPS is effectively enabled
+_use_local_https = os.environ.get("USE_LOCAL_HTTPS_PROXY", "False").lower() == "true"
+CSRF_COOKIE_SECURE = _use_local_https or SECURE_SSL_REDIRECT
+SESSION_COOKIE_SECURE = _use_local_https or SECURE_SSL_REDIRECT
 
 # CORS settings - only allow specific origins in production
 CORS_ALLOWED_ORIGINS = [
@@ -70,7 +91,9 @@ try:
     CACHES = {
         "default": {
             "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
+            "LOCATION": os.environ.get(
+                "REDIS_URL", "redis://localhost:6379/1"
+            ),
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
             },

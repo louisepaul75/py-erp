@@ -2,9 +2,16 @@
 
 import { Notification } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInMinutes } from 'date-fns';
 import { Bell, MessageSquare, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const isUserActive = (lastSeen: string | null | undefined): boolean => {
+  if (!lastSeen) return false;
+  const lastSeenDate = new Date(lastSeen);
+  const now = new Date();
+  return differenceInMinutes(now, lastSeenDate) < 5;
+};
 
 interface NotificationItemProps {
   notification: Notification;
@@ -23,6 +30,9 @@ export function NotificationItem({
     addSuffix: true,
   });
 
+  const isSenderActive = notification.type === 'direct_message' && 
+                         isUserActive(notification.sender_last_seen);
+
   const handleMarkRead = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering other click events if nested
     if (!notification.is_read) {
@@ -40,7 +50,18 @@ export function NotificationItem({
     >
       <Icon className="h-5 w-5 text-muted-foreground mr-4 mt-1 flex-shrink-0" />
       <div className="flex-grow">
-        <h4 className="font-semibold text-sm mb-1">{notification.title}</h4>
+        <div className="flex items-center space-x-2 mb-1">
+          {notification.type === 'direct_message' && notification.sender_username && (
+            <span 
+              className={cn(
+                'h-2 w-2 rounded-full flex-shrink-0',
+                isSenderActive ? 'bg-green-500' : 'bg-gray-400'
+              )}
+              title={isSenderActive ? 'Online' : 'Offline'}
+            />
+          )}
+          <h4 className="font-semibold text-sm leading-tight">{notification.title}</h4>
+        </div>
         <p className="text-sm text-muted-foreground mb-2">{notification.content}</p>
         <p className="text-xs text-muted-foreground/80">{formattedDate}</p>
       </div>
