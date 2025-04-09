@@ -11,6 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import { DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export function CommandMenu() {
   const [open, setOpen] = useState(false)
@@ -30,6 +31,10 @@ export function CommandMenu() {
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
+      <DialogTitle className="sr-only">Command Menu</DialogTitle>
+      <DialogDescription className="sr-only">
+        Type a command or search to navigate or perform actions.
+      </DialogDescription>
       <CommandInput placeholder="Type a command or search..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
