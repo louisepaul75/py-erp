@@ -35,6 +35,7 @@ urlpatterns = [
         "patch": "partial_update",
         "delete": "destroy"
     }), name="product_detail"),
+    path("<int:pk>/variants/", ProductDetailViewSet.as_view({'get': 'variants'}), name="product_variants_list"),
     
     # Variant endpoints
     path("variant/<int:pk>/", VariantDetailAPIView.as_view(), name="variant_detail"),

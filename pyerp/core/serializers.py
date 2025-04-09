@@ -83,7 +83,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     # Add fields for sender info, including last_seen
     sender_username = serializers.CharField(source='sender.username', read_only=True, allow_null=True)
-    sender_last_seen = serializers.DateTimeField(source='sender.profile.last_seen', read_only=True, allow_null=True)
+    sender_last_seen = serializers.SerializerMethodField()
     
     class Meta:
         model = Notification
@@ -102,6 +102,11 @@ class NotificationSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "user", "username", "sender", "sender_username", "sender_last_seen", "created_at", "updated_at"]
+
+    def get_sender_last_seen(self, obj):
+        if obj.sender and hasattr(obj.sender, 'profile') and obj.sender.profile:
+            return obj.sender.profile.last_seen
+        return None
 
     def create(self, validated_data):
         request = self.context['request']

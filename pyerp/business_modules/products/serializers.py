@@ -3,8 +3,9 @@ Serializers for the products app.
 """
 
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 
-from pyerp.business_modules.products.models import ParentProduct, ProductCategory
+from pyerp.business_modules.products.models import ParentProduct, ProductCategory, VariantProduct
 import logging
 
 logger = logging.getLogger(__name__)
@@ -64,3 +65,48 @@ class ParentProductSerializer(serializers.ModelSerializer):
             ret['legacy_base_sku'] = str(legacy_base_sku)
         
         return ret 
+
+class VariantProductSerializer(serializers.ModelSerializer):
+    """Serializer for the VariantProduct model."""
+    parent_id = serializers.PrimaryKeyRelatedField(
+        queryset=ParentProduct.objects.all(),
+        source='parent',
+        write_only=True,
+        help_text=_("ID of the parent product.")
+    )
+    parent = ParentProductSerializer(read_only=True)
+
+    class Meta:
+        model = VariantProduct
+        fields = [
+            "id",
+            "sku",
+            "name",
+            "variant_code",
+            "description",
+            "is_active",
+            "parent_id",
+            "parent",
+            "retail_price",
+            "wholesale_price",
+            "retail_unit",
+            "wholesale_unit",
+            "color",
+            "width_mm",
+            "is_featured",
+            "is_new",
+            "is_bestseller",
+            "legacy_sku",
+            "legacy_base_sku",
+        ]
+        read_only_fields = ["sku"]
+
+    def to_representation(self, instance):
+        """Customize representation to include nested parent details."""
+        representation = super().to_representation(instance)
+        # Ensure parent details are included in the representation
+        if instance.parent:
+            representation['parent'] = ParentProductSerializer(instance.parent).data
+        else:
+            representation['parent'] = None
+        return representation 
