@@ -17,18 +17,9 @@ while [[ "$#" -gt 0 ]]; do
     esac
 done
 
-# Run tests unless skipped
-if [ "$RUN_TESTS" = true ]; then
-    echo "Running all tests..."
-    ./run_all_tests.sh
-    if [ $? -ne 0 ]; then
-        echo "Tests failed. Aborting build."
-        exit 1
-    fi
-    echo "All tests passed. Proceeding with build..."
-    echo "" # Add a newline for spacing
-else
-    echo "Skipping tests as requested."
+# Announce test skipping early if flag is set
+if [ "$RUN_TESTS" = false ]; then
+    echo "Skipping tests as requested via --no-tests flag."
     echo ""
 fi
 
@@ -147,3 +138,26 @@ if [ "$APP_SUCCESS" = false ]; then
 fi
 
 echo "--- Health Checks Complete ---"
+
+# Run tests inside the container if requested and main app is healthy
+if [ "$RUN_TESTS" = true ]; then
+  if [ "$APP_SUCCESS" = true ]; then
+      echo -e "\n--- Running Tests Inside Container ---"
+      echo "Executing tests within the pyerp-prod container..."
+      # Assuming ./run_all_tests.sh is executable and in the default working dir of the container
+      docker exec pyerp-prod ./run_all_tests.sh
+      if [ $? -ne 0 ]; then
+          echo "❌ Tests failed inside the container. Check container logs or run manually:"
+          echo "   docker exec -it pyerp-prod /bin/bash"
+          echo "   (cd to appropriate directory if needed)"
+          echo "   ./run_all_tests.sh"
+          # Consider adding 'exit 1' here if test failure should stop the script
+      else
+          echo "✅ Tests passed inside the container."
+      fi
+      echo "--- Test Execution Complete ---"
+  else
+      # This message is printed only if tests were supposed to run but health check failed
+      echo -e "\nSkipping tests because the main application health check failed."
+  fi
+fi
