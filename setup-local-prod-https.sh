@@ -38,7 +38,7 @@ cp -r ./docker/nginx/conf.d /tmp/ # Copy the conf.d directory which should conta
 
 # Run the production rebuild script with flags for this specific setup
 echo "Building and starting production containers locally via rebuild script..."
-./rebuild_docker.prod.sh --no-monitoring --no-tests --local-https
+./rebuild_docker.prod.sh --no-monitoring --no-tests --local-https --profile-memory
 
 # Give container a moment to start up before copying files
 sleep 5

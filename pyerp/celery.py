@@ -32,6 +32,13 @@ if os.environ.get("SKIP_CELERY_IMPORT") == "1":
         pass
 else:
     from celery import Celery, states
+    # Import signals and logging for profiling
+    from celery.signals import worker_init, beat_init, task_prerun
+    import logging
+    import os
+
+    logger = logging.getLogger(__name__)
+    PROFILING_ENABLED = os.environ.get("ENABLE_MEMORY_PROFILING", "false").lower() == "true"
 
     # Set the Django settings module
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
@@ -49,3 +56,38 @@ else:
     def debug_task(self):
         """Debug task to test Celery functionality."""
         print(f"Request: {self.request!r}")
+
+    # --- Memory Profiling Signal Handlers ---
+    if PROFILING_ENABLED:
+        try:
+            from pyerp.core import memory_profiler
+
+            @worker_init.connect(weak=False)
+            def worker_init_handler(**kwargs):
+                """Configure memory profiler when a Celery worker starts."""
+                identifier = f"celery_worker_{os.getpid()}"
+                memory_profiler.configure_profiler(identifier)
+                logger.info(f"Celery worker_init: Memory profiler configured for {identifier}.")
+
+            @beat_init.connect(weak=False)
+            def beat_init_handler(**kwargs):
+                """Configure memory profiler when Celery beat starts."""
+                identifier = f"celery_beat_{os.getpid()}"
+                memory_profiler.configure_profiler(identifier)
+                logger.info(f"Celery beat_init: Memory profiler configured for {identifier}.")
+
+            # Use task_prerun to take snapshots before tasks (adjust frequency if needed)
+            @task_prerun.connect(weak=False)
+            def task_prerun_handler(**kwargs):
+                """Take memory snapshot before executing a task."""
+                memory_profiler.take_snapshot_if_needed()
+                # Optionally log task details: logger.debug(f"Taking snapshot before task: {kwargs.get('task_id')}")
+
+            logger.info("Celery memory profiling signal handlers connected.")
+
+        except ImportError:
+            logger.error("Celery: Failed to import memory_profiler. Profiling disabled.")
+        except Exception as e:
+            logger.error(f"Celery: Error configuring memory profiler signals: {e}", exc_info=True)
+    else:
+        logger.debug("Celery memory profiling signal handlers disabled.")

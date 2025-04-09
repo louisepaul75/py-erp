@@ -5,6 +5,7 @@ RUN_TESTS=true
 RUN_MONITORING=true
 DEBUG_MODE=false
 LOCAL_HTTPS_MODE=false
+PROFILE_MEMORY=false
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -13,6 +14,7 @@ while [[ "$#" -gt 0 ]]; do
         --no-monitoring) RUN_MONITORING=false; shift ;;
         --debug) DEBUG_MODE=true; shift ;;
         --local-https) LOCAL_HTTPS_MODE=true; shift ;;
+        --profile-memory) PROFILE_MEMORY=true; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
 done
@@ -57,6 +59,13 @@ DOCKER_RUN_CMD="docker run -d \
     --env-file $ENV_FILE \
     -e NODE_ENV=production \
     -e NEXT_TELEMETRY_DISABLED=1"
+
+# Add conditional memory profiling env var
+if [ "$PROFILE_MEMORY" = true ]; then
+    echo "Memory profiling enabled."
+    DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
+    -e ENABLE_MEMORY_PROFILING=true"
+fi
 
 # Add conditional HTTPS proxy env var
 if [ "$LOCAL_HTTPS_MODE" = true ]; then
