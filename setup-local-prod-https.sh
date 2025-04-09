@@ -2,6 +2,12 @@
 
 echo "Setting up production-like environment with HTTPS locally..."
 
+# Remove old memory snapshots if they exist
+echo "Removing old memory snapshots..."
+rm -rf ./memory_snapshots_output/memory_snapshots
+# Ensure the base output directory exists for potential later use (like copying)
+mkdir -p ./memory_snapshots_output
+
 # Ensure SSL directory exists
 mkdir -p ./docker/nginx/ssl
 
