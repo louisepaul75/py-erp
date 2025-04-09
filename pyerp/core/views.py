@@ -768,6 +768,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
             # Create a notification for the user
             Notification.objects.create(
                 user=recipient,
+                sender=request.user,
                 title=title,
                 content=content,
                 type='direct_message',

@@ -7,7 +7,9 @@ import { useIsAuthenticated } from "@/lib/auth/authHooks"; // Import the auth ho
 // Ensure this matches the structure returned by your API
 export interface Notification {
     id: string;
-    username: string; // from serializer
+    username: string; // Recipient username
+    sender_username?: string | null; // Sender username (if applicable)
+    sender_last_seen?: string | null; // Sender last seen timestamp (if applicable)
     title: string;
     content: string;
     type: string;

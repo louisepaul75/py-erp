@@ -49,6 +49,9 @@ class UserProfile(models.Model):
     # Two-factor authentication enabled
     two_factor_enabled = models.BooleanField(default=False)
 
+    # Timestamp of the last time the user was seen active
+    last_seen = models.DateTimeField(null=True, blank=True, verbose_name=_("Last Seen Active"))
+
     class Meta:
         verbose_name = _("user profile")
         verbose_name_plural = _("user profiles")
