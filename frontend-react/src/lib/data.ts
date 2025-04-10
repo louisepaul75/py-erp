@@ -47,4 +47,46 @@ export async function fetchCustomerById(id: string): Promise<FullCustomerProfile
 
 }
 
-// Add other data fetching functions as needed (e.g., fetchCustomers, fetchContacts, etc.) 
+// Add other data fetching functions as needed (e.g., fetchCustomers, fetchContacts, etc.)
+
+// Add a function to fetch multiple customers (mock)
+export async function fetchCustomers(): Promise<Customer[]> { // Using base Customer for list view
+  console.log('Fetching list of customers...');
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  // Return a list of basic customer data
+  const mockCustomers: Customer[] = [
+    {
+      id: 'cus_1',
+      name: 'Mock Customer Alpha',
+      email: 'alpha@example.com',
+      phone: '555-1111',
+      billing_address: { street: '1 Alpha St', city: 'Alphaville', postal_code: '11111', country: 'ALP' },
+    },
+    {
+      id: 'cus_2',
+      name: 'Mock Industries Beta',
+      email: 'contact@beta.inc',
+      phone: '555-2222',
+      tax_id: 'BETA-TAX',
+      billing_address: { street: '2 Beta Blvd', city: 'Betatown', postal_code: '22222', country: 'BTA' },
+    },
+    {
+      id: 'cus_3',
+      name: 'Gamma Services Ltd.',
+      email: 'info@gamma.ltd',
+      phone: '555-3333',
+      website: 'https://gamma.ltd',
+      billing_address: { street: '3 Gamma Grv', city: 'Gammapolis', postal_code: '33333', country: 'GAM' },
+    },
+     {
+      id: 'cus_4',
+      name: 'Delta Supplies',
+      email: 'sales@delta.supplies',
+      phone: '555-4444',
+      billing_address: { street: '4 Delta Dr', city: 'Deltaport', postal_code: '44444', country: 'DEL' },
+    },
+  ];
+  return mockCustomers;
+}

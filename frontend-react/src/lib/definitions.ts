@@ -8,6 +8,9 @@ export type Customer = {
   notes?: string | null; // General notes, specific notes might be separate
   billing_address?: Address | null;
   // Add other fields as needed based on your CustomerForm
+  payment_terms?: string | null; // e.g., "Net 30", "Due on Receipt"
+  bank_iban?: string | null;
+  bank_bic?: string | null;
   // e.g., payment_terms, currency, etc.
 };
 

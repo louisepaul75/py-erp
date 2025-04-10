@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { fetchCustomerById } from '@/lib/data'; // Assume this function exists/will be created
+import { fetchCustomerByIdAPI } from '@/lib/api'; // Import API function
 import CustomerHeader from '@/components/ui/dashboard/customers/CustomerHeader'; // Assume exists
 import CustomerGeneralInfoCard from '@/components/ui/dashboard/customers/CustomerGeneralInfoCard'; // Assume exists
 import CustomerContactPersonsCard from '@/components/ui/dashboard/customers/CustomerContactPersonsCard';
@@ -9,6 +9,7 @@ import CustomerContactInfosCard from '@/components/ui/dashboard/customers/Custom
 import CustomerNotesCard from '@/components/ui/dashboard/customers/CustomerNotesCard';
 import { Skeleton } from '@/components/ui/skeleton'; // For loading states
 import CustomerDocumentsCard from '@/components/ui/dashboard/customers/CustomerDocumentsCard'; // Import the new component
+import CustomerShippingAddressesCard from '@/components/ui/dashboard/customers/CustomerShippingAddressesCard'; // Import shipping address card
 
 // Placeholders for other tabs
 // const CustomerNotesCard = () => <div>Notes Tab Content (Placeholder)</div>; // Remove placeholder
@@ -17,8 +18,8 @@ import CustomerDocumentsCard from '@/components/ui/dashboard/customers/CustomerD
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const customerId = params.id;
 
-  // Fetch customer data using the (currently mock) data function
-  const customer = await fetchCustomerById(customerId);
+  // Fetch customer data using the API function
+  const customer = await fetchCustomerByIdAPI(customerId);
 
   if (!customer) {
     notFound(); // Render 404 if customer not found
@@ -38,10 +39,14 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
         </TabsList>
 
         {/* General Tab */}
-        <TabsContent value="general" className="mt-4">
+        <TabsContent value="general" className="mt-4 space-y-4">
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
             {/* Assume this component takes the customer object */}
             <CustomerGeneralInfoCard customer={customer} />
+          </Suspense>
+          {/* Add Shipping Addresses Card */}
+          <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+             <CustomerShippingAddressesCard addresses={customer.shipping_addresses || []} />
           </Suspense>
         </TabsContent>
 

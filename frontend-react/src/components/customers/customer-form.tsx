@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Customer } from "@/types/sales-types";
+import { Customer, CustomerFormData } from "@/lib/definitions"; // Assuming definitions are updated
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,79 +11,136 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useRouter } from 'next/navigation'; // For redirection
+import { createCustomerAPI, updateCustomerAPI } from "@/lib/api"; // Import API functions
+// Consider adding a toast library for user feedback, e.g., react-hot-toast
+// import toast from 'react-hot-toast';
 
 // Define props for the form component
 export interface CustomerFormProps {
   initialData?: Partial<Customer>; // For editing existing customer
-  onSubmit: (data: Partial<Customer>) => void; // Function to call on form submission
-  isSubmitting: boolean; // Flag to indicate submission status
-  mode: "create" | "edit"; // Mode determines behavior (e.g., show/hide fields)
+  mode: "create" | "edit";
 }
 
 // Define the type for customer type state
 type CustomerType = "b2b" | "b2c";
 
-export default function CustomerForm({ initialData = {}, onSubmit, isSubmitting, mode }: CustomerFormProps) {
-  // State for the current active tab
+// Pass only initialData and mode
+export default function CustomerForm({ initialData = {}, mode }: CustomerFormProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("basic");
-  // State to manage the customer type (company or individual)
   const [customerType, setCustomerType] = useState<CustomerType>(
     initialData.isCompany !== undefined ? (initialData.isCompany ? "b2b" : "b2c") : "b2b"
   );
-  // State to hold all form data, initialized with initialData
-  const [formData, setFormData] = useState<Partial<Customer>>(initialData);
-  // State for shipping addresses (simplified for now, can be expanded)
+  const [formData, setFormData] = useState<Partial<CustomerFormData>>(initialData); // Use specific form data type if different
   const [shippingAddresses, setShippingAddresses] = useState<Partial<any>[]>(initialData.shippingAddresses || []);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Internal loading state
+  const [error, setError] = useState<string | null>(null); // Internal error state
 
-  // Update formData if initialData changes (useful for edit mode when data loads)
   useEffect(() => {
+    // Reset form state when initialData changes (e.g., navigating between edits)
     setFormData(initialData);
-    setCustomerType(initialData.isCompany ? "b2b" : "b2c");
+    setCustomerType(initialData.isCompany !== undefined ? (initialData.isCompany ? "b2b" : "b2c") : "b2b");
     setShippingAddresses(initialData.shippingAddresses || []);
+    setError(null); // Clear previous errors
+    setIsSubmitting(false); // Reset submitting state
   }, [initialData]);
 
   // --- Input Handlers --- //
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
-    let processedValue: string | number | undefined = value;
+    let processedValue: string | number | boolean | undefined = value;
 
-    // Convert to number if input type is number
     if (type === "number") {
-      processedValue = value ? Number.parseFloat(value) : undefined;
-    }
+      processedValue = value === '' ? undefined : Number.parseFloat(value);
+    } else if (type === 'checkbox') {
+      // Handle checkboxes if needed, though handleCheckboxChange might be separate
+      processedValue = (e.target as HTMLInputElement).checked;
+    } // Add other type conversions if needed
 
     setFormData(prev => ({ ...prev, [name]: processedValue }));
   };
 
-  const handleCheckboxChange = (name: keyof Customer, checked: boolean) => {
+  const handleCheckboxChange = (name: keyof CustomerFormData, checked: boolean) => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  const handleSelectChange = (name: keyof Customer, value: string) => {
+  const handleSelectChange = (name: keyof CustomerFormData, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   // Handler for customer type change (radio buttons)
   const handleCustomerTypeChange = (type: CustomerType) => {
     setCustomerType(type);
-    // Clear conflicting fields when switching type
-    if (type === 'b2c') {
-        setFormData(prev => ({ ...prev, companyName: undefined }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      isCompany: type === "b2b",
+      // Clear conflicting fields if necessary
+      companyName: type === 'b2c' ? undefined : prev.companyName,
+      firstName: type === 'b2b' ? undefined : prev.firstName,
+      // lastName is usually required for both, adjust as needed
+    }));
   };
 
   // --- Form Submission --- //
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const finalData = {
-      ...formData,
+    setIsSubmitting(true);
+    setError(null);
+
+    const finalData: CustomerFormData = {
+      ...(formData as CustomerFormData), // Assert type if confident, or validate first
       isCompany: customerType === "b2b",
+      // Ensure required fields are present based on type
       // TODO: Properly integrate shipping address state if implemented
       // shippingAddresses: shippingAddresses,
     };
-    onSubmit(finalData);
+
+    // Basic validation example (adapt as needed)
+    if (customerType === 'b2b' && !finalData.companyName) {
+        setError("Company Name is required for B2B customers.");
+        setIsSubmitting(false);
+        setActiveTab("basic"); // Switch to relevant tab
+        return;
+    }
+    if (customerType === 'b2c' && !finalData.lastName) {
+        setError("Last Name is required for B2C customers.");
+        setIsSubmitting(false);
+        setActiveTab("basic");
+        return;
+    }
+    // Add more validation rules here
+
+    try {
+      let savedCustomer: Customer;
+      if (mode === 'edit') {
+        if (!initialData.id) {
+          throw new Error("Cannot update customer without an ID.");
+        }
+        console.log("Updating customer with data:", finalData);
+        savedCustomer = await updateCustomerAPI(initialData.id, finalData);
+        // toast.success('Customer updated successfully!');
+        console.log('Customer updated successfully!');
+      } else {
+        console.log("Creating customer with data:", finalData);
+        savedCustomer = await createCustomerAPI(finalData);
+        // toast.success('Customer created successfully!');
+        console.log('Customer created successfully!');
+      }
+      // Redirect to the detail page of the newly created/updated customer
+      router.push(`/dashboard/customers/${savedCustomer.id}`);
+      // Optionally refresh data for the list page if needed in background
+      // router.refresh(); // Re-fetches data for current route
+
+    } catch (err: any) {
+      console.error(`Failed to ${mode === 'edit' ? 'update' : 'create'} customer:`, err);
+      // Use error message from API response or provide a generic one
+      setError(err.message || `An error occurred while ${mode === 'edit' ? 'updating' : 'creating'} the customer.`);
+      // toast.error(`Failed to ${mode === 'edit' ? 'update' : 'create'} customer: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // --- JSX --- //
@@ -354,13 +411,19 @@ export default function CustomerForm({ initialData = {}, onSubmit, isSubmitting,
       </Tabs>
 
        {/* Form Actions */} 
-      <div className="flex justify-end gap-4 mt-6">
-          {/* <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
+      <div className="flex flex-col items-end gap-4 mt-6">
+        {error && (
+          <p className="text-sm text-red-500">Error: {error}</p>
+        )}
+        <div className="flex justify-end gap-4">
+             {/* Optional Cancel Button */}
+             <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
                 Cancel
-          </Button> */}
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : (mode === 'create' ? "Create Customer" : "Save Changes")}
-          </Button>
+             </Button>
+             <Button type="submit" disabled={isSubmitting}>
+               {isSubmitting ? "Saving..." : (mode === 'create' ? "Create Customer" : "Save Changes")}
+            </Button>
+        </div>
       </div>
     </form>
   );
