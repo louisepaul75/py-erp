@@ -34,6 +34,11 @@ export async function fetchCustomerById(id: string): Promise<FullCustomerProfile
           { id: 'note1', customer_id: id, content: 'Called customer on 2024-03-10 regarding invoice #123.', created_at: '2024-03-10T10:30:00Z', created_by: 'Admin User' },
           { id: 'note2', customer_id: id, content: 'Met with CEO, discussed expansion plans.', created_at: '2024-03-15T14:00:00Z', created_by: 'Sales Rep' },
         ],
+        documents: [ // Added mock documents
+          { id: 'doc1', customer_id: id, filename: 'Contract_Agreement.pdf', file_type: 'pdf', size: 1024 * 500, upload_date: '2024-01-15T09:00:00Z', created_by: 'Legal Team', url: '/documents/contract_agreement.pdf' },
+          { id: 'doc2', customer_id: id, filename: 'Project_Proposal_v2.docx', file_type: 'docx', size: 1024 * 1200, upload_date: '2024-02-20T11:30:00Z', created_by: 'Sales Rep', url: '/documents/proposal_v2.docx' },
+          { id: 'doc3', customer_id: id, filename: 'Initial_Invoice.pdf', file_type: 'pdf', size: 1024 * 150, upload_date: '2024-03-01T16:45:00Z', created_by: 'Accounting', url: '/documents/invoice_initial.pdf' },
+        ]
       };
       return mockCustomer;
   } else {

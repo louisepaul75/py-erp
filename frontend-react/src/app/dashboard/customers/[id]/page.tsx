@@ -8,10 +8,11 @@ import CustomerContactPersonsCard from '@/components/ui/dashboard/customers/Cust
 import CustomerContactInfosCard from '@/components/ui/dashboard/customers/CustomerContactInfosCard';
 import CustomerNotesCard from '@/components/ui/dashboard/customers/CustomerNotesCard';
 import { Skeleton } from '@/components/ui/skeleton'; // For loading states
+import CustomerDocumentsCard from '@/components/ui/dashboard/customers/CustomerDocumentsCard'; // Import the new component
 
 // Placeholders for other tabs
 // const CustomerNotesCard = () => <div>Notes Tab Content (Placeholder)</div>; // Remove placeholder
-const CustomerDocumentsCard = () => <div>Documents Tab Content (Placeholder)</div>;
+// const CustomerDocumentsCard = () => <div>Documents Tab Content (Placeholder)</div>; // Remove placeholder
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const customerId = params.id;
@@ -64,8 +65,9 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="mt-4">
-          <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-            <CustomerDocumentsCard />
+          <Suspense fallback={<Skeleton className="h-60 w-full" />}> {/* Adjusted skeleton height */}
+            {/* Use the actual component and pass documents data */}
+            <CustomerDocumentsCard documents={customer.documents || []} />
           </Suspense>
         </TabsContent>
       </Tabs>

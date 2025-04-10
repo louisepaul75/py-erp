@@ -51,6 +51,7 @@ export type FullCustomerProfile = Customer & {
   shipping_addresses?: Address[];
   // Add other related data like notes, documents, etc.
   activity_notes?: CustomerNote[]; // Renamed from notes
+  documents?: CustomerDocument[]; // Added documents
 };
 
 export type CustomerNote = {
@@ -59,4 +60,16 @@ export type CustomerNote = {
   content: string;
   created_at: string; // Or Date object, depending on API/preference
   created_by?: string | null; // Optional: User ID or name who created the note
+};
+
+// Type for Customer Documents
+export type CustomerDocument = {
+  id: string; // Assuming UUID
+  customer_id: string; // Foreign key to Customer
+  filename: string;
+  file_type: string; // e.g., 'pdf', 'docx', 'jpg'
+  size: number; // Size in bytes
+  upload_date: string; // Or Date object
+  url?: string | null; // Link to view/download (optional)
+  created_by?: string | null;
 }; 
