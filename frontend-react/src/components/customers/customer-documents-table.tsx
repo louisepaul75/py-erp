@@ -34,7 +34,8 @@ const formatCurrency = (value: number | undefined | null) => {
 
 // Helper to determine Badge variant based on status (customize as needed)
 const getStatusBadgeVariant = (status: string): BadgeProps["variant"] => {
-    const lowerStatus = status.toLowerCase();
+    // Use nullish coalescing (??) to default to empty string if status is null/undefined
+    const lowerStatus = (status ?? '').toLowerCase();
     if (lowerStatus.includes("paid") || lowerStatus.includes("completed") || lowerStatus.includes("delivered")) return "default";
     if (lowerStatus.includes("pending") || lowerStatus.includes("confirmed")) return "default";
     if (lowerStatus.includes("draft")) return "secondary";
@@ -44,7 +45,8 @@ const getStatusBadgeVariant = (status: string): BadgeProps["variant"] => {
 
 // Helper to get the correct link path based on document type
 const getDocumentLink = (doc: Document): string => {
-    switch (doc.type.toLowerCase()) {
+    // Use nullish coalescing (??) to default to empty string if type is null/undefined
+    switch ((doc.type ?? '').toLowerCase()) {
         case 'order':
             return `/sales/orders/${doc.id}`;
         case 'invoice':
