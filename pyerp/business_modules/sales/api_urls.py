@@ -14,7 +14,7 @@ app_name = "sales_api"
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
-router.register(r"customers", CustomerViewSet)
+router.register(r"customers", CustomerViewSet, basename='customers')
 router.register(r"addresses", AddressViewSet)
 router.register(r"records", SalesRecordViewSet)
 router.register(r"record-items", SalesRecordItemViewSet)
