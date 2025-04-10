@@ -1,7 +1,7 @@
 site_name: pyERP Documentation
-site_url: https://example.com/  # Optional: Ersetzen durch die tatsächliche URL, falls vorhanden
-repo_url: https://github.com/your-org/pyERP/  # Optional: Ersetzen durch die tatsächliche Repo-URL
-repo_name: your-org/pyERP  # Optional: Ersetzen
+site_url: https://example.com/
+repo_url: https://github.com/your-org/pyERP/
+repo_name: your-org/pyERP
 
 theme:
   name: material
@@ -15,13 +15,17 @@ theme:
     - content.tabs.link
     - content.code.annotation
     - content.code.copy
-  language: de  # Oder en, falls bevorzugt
+  language: de
   palette:
     - scheme: default
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -29,11 +33,14 @@ theme:
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - attr_list
   - toc:
       permalink: true
 
@@ -42,19 +49,56 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          paths: [src]  # Suchpfad für Python-Module
+          paths: [src]
           options:
             show_root_heading: true
             show_source: true
-            members_order: source # alphabetical oder source
-            # Weitere Optionen nach Bedarf: https://mkdocstrings.github.io/python/usage/configuration/
+            members_order: source
 
 nav:
   - Home: index.md
-  - Contributing: CONTRIBUTING.md
+  - API:
+      - "Swagger UI (Dev)": "http://localhost:8000/api/swagger/"
+      - "Swagger UI (Prod)": "/api/swagger/"
+  - Entwicklung:
+      - Setup: development/setup.md
+      - Docker: development/docker_deployment.md
+      - Lokalisierung: development/localization_best_practices.md
+      - Umgebungskonfiguration: environment_configuration.md
+      - Abhängigkeiten: 
+        - Management: dependency_management.md
+        - Updates: dependency_updates.md
+  - Features:
+      - Inventory & Warehouse: features/inventory_warehouse_management.md
+      - Product Image Sync: features/product_image_sync.md
+  - Implementation:
+      - Datenbank: implementation/database_internationalization.md
+      - Internationalisierung: 
+        - Übersicht: implementation/internationalization.md
+        - Aufgabenliste: implementation/i18n_task_list.md
+      - JWT Auth: 
+        - Guide: implementation/jwt_auth_implementation_guide.md
+        - Plan: implementation/jwt_auth_implementation_plan.md
+      - Produkt-Modul: implementation/product_module_progress.md
+  - Testing:
+      - Übersicht: testing.md
+      - Zusammenfassung: testing_summary.md
+      - Coverage: 
+        - Report: test_coverage_report.md
+        - Verbesserungsplan: test_coverage_improvement_plan.md
+      - Property Based Testing: property_based_testing.md
+      - Mutation Testing: mutation_testing.md
+      - React Testing:
+        - Fixes: react_testing_fixes.md
+        - Verbesserungsplan: react_testing_improvement_plan.md
+  - Sicherheit:
+      - Übersicht: security/README.md
+      - Audit Logging: security/audit_logging.md
   - Deployment: DEPLOYMENT.md
+  - Monitoring: monitoring.md
+  - Contributing: CONTRIBUTING.md
   - Project Structure: project_structure.md
-  - Testing: testing.md
+  - Frameworks & Plugins: frameworks_and_plugins.md
   - API Reference:
       - pyerp Core: api/pyerp.md
       - Components: api/components.md
