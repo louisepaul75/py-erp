@@ -80,7 +80,8 @@ export default function CustomerDocumentsTable({ customerId }: CustomerDocuments
         // Option 1: Nested resource
         // const endpoint = `${API_URL}/sales/customers/${customerId}/documents/`;
         // Option 2: Filter parameter
-        const endpoint = `${API_URL}/sales/documents/?customerId=${customerId}`; // Example endpoint
+        // const endpoint = `${API_URL}/sales/documents/?customerId=${customerId}`; // Example endpoint - OLD
+        const endpoint = `${API_URL}/sales/records/?customer=${customerId}`; // Use records endpoint with 'customer' filter
 
         const response = await fetch(endpoint, {
           headers: {
