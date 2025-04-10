@@ -1,7 +1,7 @@
 """
 Management command to synchronize product images from the external CMS.
 """
-from django.core.management.base import BaseCommand
+from django.core.management.base import CommandError
 from django.utils import timezone
 from django.db import transaction
 
@@ -11,6 +11,7 @@ from pyerp.external_api.images_cms.extractors import ImageApiExtractor
 from pyerp.external_api.images_cms.transformers import ImageTransformer
 from pyerp.external_api.images_cms.loaders import ProductImageLoader
 from pyerp.business_modules.products.models import ImageSyncLog
+from pyerp.sync.management.commands.base_sync_command import BaseSyncCommand
 
 import os
 import json
@@ -19,10 +20,18 @@ import time
 from urllib.parse import urlparse
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
+    """Command to sync product images from the external CMS."""
+
     help = "Synchronize product images from the external CMS"
+    entity_type = "product_images"
 
     def add_arguments(self, parser):
+        """Add command line arguments."""
+        # Add base sync arguments first
+        super().add_arguments(parser)
+
+        # Add command-specific arguments
         parser.add_argument(
             "--dry-run",
             action="store_true",
@@ -32,34 +41,6 @@ class Command(BaseCommand):
             "--product-id",
             type=str,
             help="Sync only a specific product ID",
-        )
-        parser.add_argument(
-            "--start-page",
-            type=int,
-            default=1,
-            help="Starting page number for API requests (default: 1)",
-        )
-        parser.add_argument(
-            "--page-size",
-            type=int,
-            default=100,
-            help="Number of items per page (default: 100)",
-        )
-        parser.add_argument(
-            "--limit-pages",
-            type=int,
-            default=0,
-            help="Maximum number of pages to process (default: 0 = all pages)",
-        )
-        parser.add_argument(
-            "--force",
-            action="store_true",
-            help="Force connection even if it's disabled in the system",
-        )
-        parser.add_argument(
-            "--debug",
-            action="store_true",
-            help="Print detailed debug information about API responses",
         )
         parser.add_argument(
             "--download",
@@ -81,18 +62,17 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Execute the command."""
         self.stdout.write("Starting product image synchronization...")
         
         dry_run = options.get("dry_run", False)
         product_id = options.get("product_id")
-        start_page = options.get("start-page", 1)
-        page_size = options.get("page_size", 100)
-        limit_pages = options.get("limit_pages", 0)
-        force = options.get("force", False)
+        force = options.get("force_update", False)  # Using base command's force flag
         debug = options.get("debug", False)
         download = options.get("download", False)
         preferred_format = options.get("format", "jpg_k")
         pause_duration = options.get("pause", 0.5)
+        batch_size = options.get("batch_size", 100)
         
         # Initialize counters for total processing
         total_processed = 0
@@ -139,159 +119,120 @@ class Command(BaseCommand):
             # Connect to the API to get total records
             extractor.connect()
             
-            # Process specific product if requested
+            # Build query parameters using base command's method
+            query_params = self.build_query_params(options)
+            
+            # Add product_id to query params if specified
             if product_id:
+                query_params['product_id'] = product_id
                 self.stdout.write(f"Syncing images for product ID: {product_id}")
-                query_params = {'product_id': product_id}
-                
-                # Get data for the specific product
-                source_data = extractor.extract(query_params=query_params)
-                self.stdout.write(self.style.SUCCESS(f"Extracted {len(source_data)} images for product {product_id}"))
-                
-                # Transform the data
-                transformed_data = transformer.transform(source_data)
-                self.stdout.write(self.style.SUCCESS(f"Transformed {len(transformed_data)} images"))
-                
-                # Load if not in dry run
-                if not dry_run and transformed_data:
-                    result = loader.load(transformed_data, update_existing=True)
-                    
-                    # Update counters
-                    total_processed += len(transformed_data)
-                    total_created += result.get('created', 0)
-                    total_updated += result.get('updated', 0)
-                    total_skipped += result.get('skipped', 0)
-                    total_errors += result.get('errors', 0)
-                    
-                    self.stdout.write(self.style.SUCCESS(
-                        f"Processed {len(transformed_data)} images: "
-                        f"{result.get('created', 0)} created, "
-                        f"{result.get('updated', 0)} updated, "
-                        f"{result.get('skipped', 0)} skipped, "
-                        f"{result.get('errors', 0)} errors"
-                    ))
-                    
-                    # Handle downloads if requested
-                    if download:
-                        self._download_images(transformed_data, preferred_format, debug)
-            else:
-                # Process all pages (or limited by limit_pages)
-                current_page = start_page
-                has_more_pages = True
-                all_transformed_data = []
-                
-                # Get initial page to determine total count
-                initial_query = {
-                    'page': 1,
-                    'page_size': 1
+            
+            # Extract data with pagination
+            current_page = 1
+            has_more_pages = True
+            all_transformed_data = []
+            
+            while has_more_pages:
+                # Add pagination parameters to query
+                page_params = {
+                    **query_params,
+                    'page': current_page,
+                    'page_size': batch_size
                 }
-                initial_response = extractor.extract(query_params=initial_query)
                 
-                total_items = extractor.total_count if hasattr(extractor, 'total_count') else 0
-                total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 0
+                # Extract data for this page
+                source_data = extractor.extract(query_params=page_params)
                 
-                # Apply limit if specified
-                if limit_pages > 0:
-                    max_pages = min(total_pages, start_page + limit_pages - 1) if total_pages > 0 else limit_pages
-                    self.stdout.write(f"Processing {min(limit_pages, max_pages)} pages out of {total_pages} total pages")
-                else:
-                    max_pages = total_pages if total_pages > 0 else float('inf')
-                    self.stdout.write(f"Processing all {total_pages} pages")
+                # Check if we have more pages
+                has_more_pages = len(source_data) > 0 and (
+                    not options.get("top") or 
+                    total_processed < options.get("top")
+                )
                 
-                # Process each page
-                while has_more_pages and current_page <= max_pages:
-                    self.stdout.write(f"Processing page {current_page} of {max_pages if max_pages != float('inf') else 'unknown'}")
+                if source_data:
+                    self.stdout.write(self.style.SUCCESS(f"Page {current_page}: Extracted {len(source_data)} images"))
                     
-                    # Set up query parameters for this page
-                    query_params = {
-                        'page': current_page,
-                        'page_size': page_size
-                    }
+                    # Transform the data
+                    transformed_data = transformer.transform(source_data)
+                    self.stdout.write(self.style.SUCCESS(f"Page {current_page}: Transformed {len(transformed_data)} images"))
                     
-                    # Extract data for this page
-                    source_data = extractor.extract(query_params=query_params)
+                    # Store transformed data for potential download
+                    if download:
+                        all_transformed_data.extend(transformed_data)
                     
-                    # Check if we have more pages
-                    has_more_pages = len(source_data) > 0
-                    
-                    if has_more_pages:
-                        self.stdout.write(self.style.SUCCESS(f"Page {current_page}: Extracted {len(source_data)} images"))
+                    # Load if not in dry run
+                    if not dry_run and transformed_data:
+                        result = loader.load(transformed_data, update_existing=True)
                         
-                        # Transform the data
-                        transformed_data = transformer.transform(source_data)
-                        self.stdout.write(self.style.SUCCESS(f"Page {current_page}: Transformed {len(transformed_data)} images"))
+                        # Update counters
+                        total_processed += len(transformed_data)
+                        total_created += result.get('created', 0)
+                        total_updated += result.get('updated', 0)
+                        total_skipped += result.get('skipped', 0)
+                        total_errors += result.get('errors', 0)
                         
-                        # Store transformed data for potential download
-                        if download:
-                            all_transformed_data.extend(transformed_data)
-                        
-                        # Load if not in dry run
-                        if not dry_run and transformed_data:
-                            result = loader.load(transformed_data, update_existing=True)
-                            
-                            # Update counters
-                            total_processed += len(transformed_data)
-                            total_created += result.get('created', 0)
-                            total_updated += result.get('updated', 0)
-                            total_skipped += result.get('skipped', 0)
-                            total_errors += result.get('errors', 0)
-                            
-                            self.stdout.write(self.style.SUCCESS(
-                                f"Page {current_page}: Processed {len(transformed_data)} images: "
-                                f"{result.get('created', 0)} created, "
-                                f"{result.get('updated', 0)} updated, "
-                                f"{result.get('skipped', 0)} skipped, "
-                                f"{result.get('errors', 0)} errors"
-                            ))
-                    
-                    # Move to next page
-                    current_page += 1
-                    
-                    # Pause between API requests to avoid overloading the server
-                    if has_more_pages and current_page <= max_pages:
-                        time.sleep(pause_duration)
+                        self.stdout.write(self.style.SUCCESS(
+                            f"Page {current_page}: Processed {len(transformed_data)} images: "
+                            f"{result.get('created', 0)} created, "
+                            f"{result.get('updated', 0)} updated, "
+                            f"{result.get('skipped', 0)} skipped, "
+                            f"{result.get('errors', 0)} errors"
+                        ))
                 
-                # Download images if requested and not in dry run
-                if download and not dry_run and all_transformed_data:
-                    downloaded_count = self._download_images(all_transformed_data, preferred_format, debug)
-                    self.stdout.write(self.style.SUCCESS(f"Downloaded {downloaded_count} images"))
+                # Move to next page
+                current_page += 1
+                
+                # Pause between API requests to avoid overloading the server
+                time.sleep(pause_duration)
+                
+                # Check if we've hit the --top limit
+                if options.get("top") and total_processed >= options.get("top"):
+                    self.stdout.write(self.style.SUCCESS(f"Reached --top limit of {options['top']} records"))
+                    break
             
-            # Clean up the connection
-            try:
-                extractor.close()
-            except Exception as e:
-                if debug:
-                    self.stdout.write(self.style.WARNING(f"Error closing connection: {e}"))
+            # Handle downloads if requested
+            if download and all_transformed_data:
+                self._download_images(all_transformed_data, preferred_format, debug)
             
-            # Update sync log with results
+            # Update sync log
             if sync_log:
                 sync_log.status = "completed"
                 sync_log.completed_at = timezone.now()
-                sync_log.images_added = total_created
-                sync_log.images_updated = total_updated
-                sync_log.products_affected = 0  # We're not tracking this accurately across pages
+                sync_log.total_processed = total_processed
+                sync_log.total_created = total_created
+                sync_log.total_updated = total_updated
+                sync_log.total_skipped = total_skipped
+                sync_log.total_errors = total_errors
                 sync_log.save()
             
             # Final summary
             self.stdout.write(self.style.SUCCESS(
-                f"Image synchronization completed successfully: "
-                f"{total_processed} processed, "
-                f"{total_created} created, "
-                f"{total_updated} updated, "
-                f"{total_skipped} skipped, "
-                f"{total_errors} errors"
+                f"\nSync completed successfully:\n"
+                f"Total processed: {total_processed}\n"
+                f"Created: {total_created}\n"
+                f"Updated: {total_updated}\n"
+                f"Skipped: {total_skipped}\n"
+                f"Errors: {total_errors}"
             ))
             
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error during synchronization: {e}"))
+            # Return None instead of True to avoid boolean being passed to stdout.write()
             
-            # Update sync log with error
+        except Exception as e:
+            error_msg = f"Error during product image sync: {str(e)}"
+            self.stderr.write(self.style.ERROR(error_msg))
+            if debug:
+                import traceback
+                traceback.print_exc()
+            
+            # Update sync log on error
             if sync_log:
                 sync_log.status = "failed"
                 sync_log.completed_at = timezone.now()
-                sync_log.error_message = str(e)
+                sync_log.error_message = error_msg
                 sync_log.save()
-    
+            
+            raise CommandError(error_msg)
+
     def _download_images(self, transformed_data, preferred_format, debug=False):
         """Download images from transformed data."""
         downloaded_count = 0
