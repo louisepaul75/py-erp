@@ -150,7 +150,10 @@ class GlobalSearchViewSet(viewsets.ViewSet):
 
     def _search_storage_locations(self, query):
         """Search storage locations by legacy_id."""
-        locations = StorageLocation.objects.filter(legacy_id__icontains=query)[
+        locations = StorageLocation.objects.filter(
+            Q(legacy_id__icontains=query)
+            | Q(name__icontains=query)
+        )[
             :10
         ]  # Limit to 10 results
 
