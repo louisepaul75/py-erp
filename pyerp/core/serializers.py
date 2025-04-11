@@ -173,16 +173,22 @@ class NotificationSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and hasattr(request, "user") and request.user.is_authenticated:
             validated_data['sender'] = request.user
-        
-        # Recipient ('user') must be provided in the validated_data 
-        # for direct messages/todos assigned to others
-        if 'user' not in validated_data:
-            # Handle cases like system broadcasts where user might be 
-            # set later or is implicit
-            # Or raise error if recipient is always required
-            # For now, let's assume user must be provided if not a broadcast
-            pass 
-        
+
+            # If recipient ('user') is not provided, default to the sender (authenticated user)
+            if 'user' not in validated_data:
+                validated_data['user'] = request.user
+
+        # Recipient ('user') MUST be provided if the request is unauthenticated
+        # or if we explicitly want to allow creating notifications without a logged-in user
+        # (e.g., system processes). Add specific checks if needed.
+        elif 'user' not in validated_data:
+            # This case should ideally not happen for authenticated requests due to the block above.
+            # If it can happen (e.g., anonymous user API access allowed for specific types),
+            # raise an error or handle appropriately.
+            raise serializers.ValidationError({
+                'user': _("Recipient user must be specified.")
+            })
+
         # Handle default values specifically for TODO type if not provided
         if validated_data.get('type') == Notification.NotificationType.TODO:
             validated_data.setdefault('is_completed', False)

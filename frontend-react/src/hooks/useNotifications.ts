@@ -34,6 +34,11 @@ export interface UnreadCountResponse {
     unread_count: number;
 }
 
+// Type alias for notification type
+type NotificationType = 'system' | 'direct_message' | 'todo';
+// Type alias for priority level
+type PriorityLevel = 'low' | 'medium' | 'high';
+
 // --- API Interaction Functions ---
 
 const fetchNotifications = async (filters: { type?: string; is_read?: boolean; limit?: number } = {}): Promise<Notification[]> => {
@@ -93,19 +98,39 @@ const sendBroadcastMessage = async (title: string, content: string): Promise<{ m
 };
 
 // Add new functions for sending to groups and individual users
-const sendGroupMessage = async (title: string, content: string, groupId: string): Promise<{ message: string, recipients_count: number }> => {
+const sendGroupMessage = async (
+    title: string, 
+    content: string, 
+    groupId: string,
+    type?: NotificationType, // Added optional type
+    priority?: PriorityLevel | null // Added optional priority
+): Promise<{ message: string, recipients_count: number }> => {
+    const payload: any = { title, content, group_id: groupId };
+    if (type) payload.type = type;
+    if (priority) payload.priority = priority;
+
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_group/", 
-        { json: { title, content, group_id: groupId } }
+        { json: payload } // Use constructed payload
     );
     const data = await response.json();
     return data;
 };
 
-const sendUserMessage = async (title: string, content: string, userId: string): Promise<{ message: string, recipients_count: number }> => {
+const sendUserMessage = async (
+    title: string, 
+    content: string, 
+    userId: string,
+    type?: NotificationType, // Added optional type
+    priority?: PriorityLevel | null // Added optional priority
+): Promise<{ message: string, recipients_count: number }> => {
+    const payload: any = { title, content, user_id: userId };
+    if (type) payload.type = type;
+    if (priority) payload.priority = priority;
+
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_user/", 
-        { json: { title, content, user_id: userId } }
+        { json: payload } // Use constructed payload
     );
     const data = await response.json();
     return data;
@@ -244,9 +269,16 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
     const sendGroupMessageMutation = useMutation<
         { message: string; recipients_count: number }, 
         Error, 
-        { title: string; content: string; groupId: string }
+        { 
+            title: string; 
+            content: string; 
+            groupId: string; 
+            type?: NotificationType; // Added optional type
+            priority?: PriorityLevel | null; // Added optional priority
+        }
     >({
-        mutationFn: ({ title, content, groupId }) => sendGroupMessage(title, content, groupId),
+        mutationFn: ({ title, content, groupId, type, priority }) => 
+            sendGroupMessage(title, content, groupId, type, priority),
         onSuccess: (data) => {
             // Invalidate all notification queries and the count
             queryClient.invalidateQueries({ queryKey: [queryKeyBase] });
@@ -272,9 +304,16 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
     const sendUserMessageMutation = useMutation<
         { message: string; recipients_count: number }, 
         Error, 
-        { title: string; content: string; userId: string }
+        { 
+            title: string; 
+            content: string; 
+            userId: string; 
+            type?: NotificationType; // Added optional type
+            priority?: PriorityLevel | null; // Added optional priority
+        }
     >({
-        mutationFn: ({ title, content, userId }) => sendUserMessage(title, content, userId),
+        mutationFn: ({ title, content, userId, type, priority }) => 
+            sendUserMessage(title, content, userId, type, priority),
         onSuccess: (data) => {
             // Invalidate all notification queries and the count
             queryClient.invalidateQueries({ queryKey: [queryKeyBase] });
@@ -335,14 +374,33 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         title: string, 
         content: string, 
         recipientType: 'broadcast' | 'group' | 'individual', 
-        recipientIds: string[]
+        recipientIds: string[],
+        notificationType: NotificationType, // Use the correct type name
+        priority?: PriorityLevel | null
     ) => {
         if (recipientType === 'broadcast') {
+            // Broadcast doesn't support type/priority in this setup, send as system/default
             sendBroadcastMutation.mutate({ title, content });
         } else if (recipientType === 'group' && recipientIds.length > 0) {
-            sendGroupMessageMutation.mutate({ title, content, groupId: recipientIds[0] });
+            // --- Pass type and priority to mutate ---
+            sendGroupMessageMutation.mutate({ 
+                title, 
+                content, 
+                groupId: recipientIds[0], 
+                type: notificationType, // Pass type
+                priority // Pass priority (optional)
+            });
+            // --- End Pass ---
         } else if (recipientType === 'individual' && recipientIds.length > 0) {
-            sendUserMessageMutation.mutate({ title, content, userId: recipientIds[0] });
+            // --- Pass type and priority to mutate ---
+            sendUserMessageMutation.mutate({ 
+                title, 
+                content, 
+                userId: recipientIds[0], 
+                type: notificationType, // Pass type
+                priority // Pass priority (optional)
+            });
+            // --- End Pass ---
         }
     };
 

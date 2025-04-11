@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 type RecipientType = 'broadcast' | 'group' | 'individual';
 // --- Add Notification Type and Priority Types ---
 type NotificationType = 'direct_message' | 'todo';
-type PriorityLevel = 'low' | 'medium' | 'high';
+type PriorityLevel = 'low' | 'medium' | 'high' | 'none';
 // --- End Add ---
 
 type Group = {
@@ -59,7 +59,7 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   // --- Add state for type and priority ---
   const [notificationType, setNotificationType] = useState<NotificationType>('direct_message');
-  const [priority, setPriority] = useState<PriorityLevel | ''>(''); // Use '' for unset/none
+  const [priority, setPriority] = useState<PriorityLevel | null>(null); // Use null for unset/none initially
   // --- End Add ---
 
   // Fetch users and groups
@@ -84,7 +84,7 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
   // --- Reset priority when type changes from todo ---
   useEffect(() => {
     if (notificationType !== 'todo') {
-      setPriority('');
+      setPriority(null); // Reset to null
     }
   }, [notificationType]);
   // --- End Reset ---
@@ -93,14 +93,15 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
     e.preventDefault();
     if (title.trim() && content.trim()) {
       // --- Pass type and priority to onSendMessage ---
-      const selectedPriority = notificationType === 'todo' && priority ? priority : null;
+      // Pass priority directly if it's set and type is todo, otherwise null
+      const selectedPriority = notificationType === 'todo' && priority !== 'none' ? priority : null;
       onSendMessage(
         title, 
         content, 
         recipientType, 
         selectedRecipients, 
         notificationType, 
-        selectedPriority // Pass null if not todo or not set
+        selectedPriority 
       );
       // --- End Pass ---
       setTitle('');
@@ -109,7 +110,7 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
       setSelectedRecipients([]);
       // --- Reset type and priority ---
       setNotificationType('direct_message');
-      setPriority('');
+      setPriority(null); // Reset to null
       // --- End Reset ---
     }
   };
@@ -137,8 +138,11 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
 
   // --- Handle Priority Change ---
   const handlePriorityChange = (value: string) => {
-     if (value === 'low' || value === 'medium' || value === 'high' || value === '') {
-       setPriority(value as PriorityLevel | '');
+     // Allow 'none', 'low', 'medium', 'high'
+     if (value === 'low' || value === 'medium' || value === 'high' || value === 'none') {
+       setPriority(value as PriorityLevel);
+     } else {
+       setPriority(null); // Handle potential unexpected values, fallback to null
      }
   };
   // --- End Handle ---
@@ -220,12 +224,12 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
           <label htmlFor="priority-level" className="text-sm font-medium">
             Priority Level (Optional)
           </label>
-          <Select value={priority} onValueChange={handlePriorityChange}>
+          <Select value={priority ?? 'none'} onValueChange={handlePriorityChange}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select priority (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem> 
+              <SelectItem value="none">None</SelectItem>
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="high">High</SelectItem>
