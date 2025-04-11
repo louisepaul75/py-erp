@@ -34,6 +34,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'customer_number',
+            'name',
             'customerName', # Combined name
             'firstName',
             'lastName',

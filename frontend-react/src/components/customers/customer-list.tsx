@@ -233,15 +233,12 @@ export default function CustomerList() {
 
                     return (
                         <TableRow key={customer.id}>
-                            {/* Name Cell with Avatar and Link */}
+                            {/* Name Cell with Link - Avatar Removed */}
                             <TableCell>
-                            <Link href={`/sales/customers/${customer.id}`} className="flex items-center gap-3 group">
-                                <Avatar className="h-9 w-9 border group-hover:border-primary transition-colors">
-                                    <AvatarImage src={customer.avatar || undefined} alt={customerName} />
-                                    <AvatarFallback>{fallbackInitials}</AvatarFallback>
-                                </Avatar>
+                            <Link href={`/sales/customers/${customer.id}`} className="group"> {/* Removed flex items-center gap-3 */}
+                                {/* Avatar component removed */}
                                 <span className="font-medium group-hover:text-primary group-hover:underline transition-colors">
-                                    {customerName}
+                                    {customer.name || 'N/A'} {/* Display customer.name directly */}
                                     <p className="text-xs text-muted-foreground font-normal block sm:hidden">{customer.customer_number}</p> {/* Show number on small screens */}
                                 </span>
                             </Link>
