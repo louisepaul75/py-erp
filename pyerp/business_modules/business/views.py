@@ -14,8 +14,18 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated] # Adjust permissions as needed
     
     # Add filtering and searching capabilities
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['is_active', 'is_terminated', 'is_present'] # Fields for exact match filtering
-    search_fields = ['employee_number', 'first_name', 'last_name', 'email', 'ad_username'] # Fields for text search
-    ordering_fields = ['last_name', 'first_name', 'employee_number', 'hire_date', 'created_at'] # Fields allowed for ordering
-    ordering = ['last_name', 'first_name'] # Default ordering
+    filter_backends = [
+        DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter
+    ]
+    # Fields for exact match filtering
+    filterset_fields = ['is_terminated', 'is_present']
+    # Fields for text search
+    search_fields = [
+        'employee_number', 'first_name', 'last_name', 'email', 'ad_username'
+    ]
+    # Fields allowed for ordering
+    ordering_fields = [
+        'last_name', 'first_name', 'employee_number', 'hire_date', 'created_at'
+    ]
+    # Default ordering
+    ordering = ['last_name', 'first_name']

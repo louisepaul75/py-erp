@@ -1,5 +1,5 @@
 import { instance } from "@/lib/api"; // Correct import for the ky instance
-import { UserSummary } from "./users"; // Assuming a UserSummary type exists
+import { User } from "@/lib/types"; // Import User type instead of UserSummary
 
 // Define the Employee type based on the Django serializer
 export interface Employee {
@@ -14,7 +14,7 @@ export interface Employee {
   date_hired: string; // ISO date string
   date_of_birth: string | null; // ISO date string
   address: string | null; // Consider a structured address type later if needed
-  user: UserSummary | null; // Link to the User model (using a summary type initially)
+  user: User | null; // Use the imported User type
 }
 
 /**
@@ -23,16 +23,16 @@ export interface Employee {
  */
 export const fetchEmployees = async (): Promise<Employee[]> => {
   // TODO: Add parameters for pagination, filtering, sorting, searching
-  const response = await instance.get<Employee[]>("/business/employees/"); // Using relative path assuming baseURL is set in instance
-  return response.data;
+  const response = await instance.get("v1/business/employees/"); // Add v1/ prefix
+  return await response.json(); // Use .json() to parse the response
 };
 
 /**
  * Fetches a single employee by their ID.
  */
 export const fetchEmployeeById = async (id: string | number): Promise<Employee> => {
-  const response = await instance.get<Employee>(`/business/employees/${id}/`);
-  return response.data;
+  const response = await instance.get(`v1/business/employees/${id}/`); // Add v1/ prefix
+  return await response.json(); // Use .json() to parse the response
 };
 
 // Add functions for creating, updating, deleting employees as needed 
