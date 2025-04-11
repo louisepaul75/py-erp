@@ -3,7 +3,7 @@ Core models for the ERP system.
 """
 
 import uuid
-import json
+# import json  # Removed unused import
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -120,7 +120,8 @@ class AuditLog(models.Model):
     def __str__(self):
         if self.username:
             return (
-                f"{self.get_event_type_display()} - {self.username} - {self.timestamp}"
+                f"{self.get_event_type_display()} - {self.username} - "
+                f"{self.timestamp}"
             )
         return f"{self.get_event_type_display()} - {self.timestamp}"
 
@@ -142,10 +143,12 @@ class UserPreference(models.Model):
         default=dict, help_text="JSON configuration of user's dashboard layout"
     )
     dashboard_layouts = models.JSONField(
-        default=dict, help_text="JSON configuration of user's saved dashboard layouts"
+        default=dict, 
+        help_text="JSON configuration of user's saved dashboard layouts"
     )
     active_layout_id = models.CharField(
-        max_length=100, null=True, blank=True, help_text="ID of the currently active dashboard layout"
+        max_length=100, null=True, blank=True, 
+        help_text="ID of the currently active dashboard layout"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -170,7 +173,10 @@ class UserPreference(models.Model):
         # If the user has an active layout, use that one
         if self.active_layout_id and self.dashboard_layouts:
             layouts = self.dashboard_layouts.get('layouts', {})
-            active_layout = next((layout for layout in layouts if layout.get('id') == self.active_layout_id), None)
+            active_layout = next((
+                layout for layout in layouts 
+                if layout.get('id') == self.active_layout_id), None
+            )
             # Use .get() for safer access
             if active_layout and active_layout.get('grid_layout'):
                 return active_layout.get('grid_layout')
@@ -237,19 +243,28 @@ class UserPreference(models.Model):
         # Default grid layout
         return {
             "lg": [
-                {"w": 8, "h": 11, "x": 2, "y": 0, "i": "menu-tiles", "moved": False, "static": False},
-                {"w": 4, "h": 12, "x": 2, "y": 11, "i": "quick-links", "moved": False, "static": False},
-                {"w": 4, "h": 12, "x": 6, "y": 11, "i": "news-pinboard", "moved": False, "static": False}
+                {"w": 8, "h": 11, "x": 2, "y": 0, "i": "menu-tiles", 
+                 "moved": False, "static": False},
+                {"w": 4, "h": 12, "x": 2, "y": 11, "i": "quick-links", 
+                 "moved": False, "static": False},
+                {"w": 4, "h": 12, "x": 6, "y": 11, "i": "news-pinboard", 
+                 "moved": False, "static": False}
             ],
             "md": [
-                {"i": "menu-tiles", "x": 0, "y": 8, "w": 12, "h": 12, "title": "Menü"},
-                {"i": "quick-links", "x": 0, "y": 20, "w": 6, "h": 6, "title": "Schnellzugriff"},
-                {"i": "news-pinboard", "x": 6, "y": 20, "w": 6, "h": 6, "title": "Pinnwand"}
+                {"i": "menu-tiles", "x": 0, "y": 8, "w": 12, "h": 12, 
+                 "title": "Menü"},
+                {"i": "quick-links", "x": 0, "y": 20, "w": 6, "h": 6, 
+                 "title": "Schnellzugriff"},
+                {"i": "news-pinboard", "x": 6, "y": 20, "w": 6, "h": 6, 
+                 "title": "Pinnwand"}
             ],
             "sm": [
-                {"i": "menu-tiles", "x": 0, "y": 8, "w": 12, "h": 14, "title": "Menü"},
-                {"i": "quick-links", "x": 0, "y": 22, "w": 12, "h": 6, "title": "Schnellzugriff"},
-                {"i": "news-pinboard", "x": 0, "y": 28, "w": 12, "h": 6, "title": "Pinnwand"}
+                {"i": "menu-tiles", "x": 0, "y": 8, "w": 12, "h": 14, 
+                 "title": "Menü"},
+                {"i": "quick-links", "x": 0, "y": 22, "w": 12, "h": 6, 
+                 "title": "Schnellzugriff"},
+                {"i": "news-pinboard", "x": 0, "y": 28, "w": 12, "h": 6, 
+                 "title": "Pinnwand"}
             ]
         }
 
@@ -299,7 +314,10 @@ class UserPreference(models.Model):
         layouts = self.dashboard_layouts.get('layouts', [])
         
         # Check if layout already exists
-        layout_index = next((i for i, layout in enumerate(layouts) if layout.get('id') == layout_id), None)
+        layout_index = next((
+            i for i, layout in enumerate(layouts) 
+            if layout.get('id') == layout_id), None
+        )
         
         if layout_index is not None:
             # Update existing layout
@@ -330,7 +348,9 @@ class UserPreference(models.Model):
             return
         
         layouts = self.dashboard_layouts.get('layouts', [])
-        self.dashboard_layouts['layouts'] = [layout for layout in layouts if layout.get('id') != layout_id]
+        self.dashboard_layouts['layouts'] = [
+            layout for layout in layouts if layout.get('id') != layout_id
+        ]
         
         # If we deleted the active layout, set active to None
         if self.active_layout_id == layout_id:
@@ -338,7 +358,9 @@ class UserPreference(models.Model):
             
             # If we have other layouts, set the first one as active
             if self.dashboard_layouts['layouts']:
-                self.active_layout_id = self.dashboard_layouts['layouts'][0]['id']
+                self.active_layout_id = (
+                    self.dashboard_layouts['layouts'][0]['id']
+                )
         
         self.save()
         return self.dashboard_layouts
@@ -350,7 +372,9 @@ class UserPreference(models.Model):
         layouts = self.get_saved_layouts()
         
         # Check if layout exists
-        layout_exists = any(layout.get('id') == layout_id for layout in layouts)
+        layout_exists = any(
+            layout.get('id') == layout_id for layout in layouts
+        )
         
         if layout_exists:
             self.active_layout_id = layout_id
@@ -396,7 +420,7 @@ class Tag(models.Model):
         ordering = ["name"]
         # Ensure the table name remains consistent during the move,
         # or handle renaming explicitly in migrations later.
-        # db_table = 'products_tag' # Temporarily uncomment if needed for migration
+        # db_table = 'products_tag'  # Temporarily uncomment if needed for migration
 
     def __str__(self) -> str:
         return self.name
@@ -423,7 +447,7 @@ class TaggedItem(models.Model):
         help_text=_("Content type of the tagged object")
     )
     object_id = models.PositiveIntegerField(
-        db_index=True, # Add index for faster lookups
+        db_index=True,  # Add index for faster lookups
         help_text=_("Primary key of the tagged object")
     )
     content_object = GenericForeignKey('content_type', 'object_id')
@@ -442,68 +466,138 @@ class TaggedItem(models.Model):
         ]
 
     def __str__(self) -> str:
-        # Use try-except for potentially missing content_object during deletion phases
+        # Use try-except for potentially missing content_object 
+        # during deletion phases
         try:
             content_obj_str = str(self.content_object)
         except AttributeError:
-            content_obj_str = f"{self.content_type}({self.object_id})" # Fallback representation
+            # Fallback representation
+            content_obj_str = f"{self.content_type}({self.object_id})"
         return f"'{self.tag}' tag on {content_obj_str}"
 
 # --- End Tagging System ---
 
 class Notification(models.Model):
+    """
+    Represents a notification sent to a user.
+    Can be system-generated, a direct message, or a to-do item.
+    """
+    class NotificationType(models.TextChoices):
+        SYSTEM = 'system', _('System')
+        DIRECT_MESSAGE = 'direct_message', _('Direct Message')
+        TODO = 'todo', _('To-Do')  # Add the new TODO type
+
+    class PriorityLevel(models.TextChoices):
+        LOW = 'low', _('Low')
+        MEDIUM = 'medium', _('Medium')
+        HIGH = 'high', _('High')
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="notifications",
+        related_name='notifications',
+        verbose_name=_('Recipient User'),
         help_text=_("The user who will receive the notification."),
     )
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL, # Keep notification even if sender is deleted
+        on_delete=models.SET_NULL,  # Keep notification even if sender deleted
         null=True,
         blank=True,
-        related_name="sent_notifications",
+        related_name='sent_notifications',
+        verbose_name=_('Sender User (if applicable)'),
         help_text=_("The user who sent the notification (if applicable)."),
     )
     title = models.CharField(
         max_length=255,
+        verbose_name=_('Title'),
         help_text=_("The title of the notification."),
     )
     content = models.TextField(
-        blank=True,
+        verbose_name=_('Content'),
+        blank=True,  # Keeping blank=True as per original
         help_text=_("The main content/body of the notification."),
     )
-    # Consider using choices for type if you have a fixed set
     type = models.CharField(
-        max_length=50,
-        default="system",
-        db_index=True,
-        help_text=_("Category of the notification (e.g., 'system', 'user_message', 'task_update')."),
+        max_length=20,  # Adjusted length if needed
+        choices=NotificationType.choices,
+        default=NotificationType.SYSTEM,  # Keep default or change if needed
+        db_index=True,  # Keep index
+        verbose_name=_('Notification Type'),
+        help_text=_( # Updated help text
+            "Category of the notification (e.g., 'system', "
+            "'direct_message', 'todo')."
+        ), 
     )
     is_read = models.BooleanField(
         default=False,
-        db_index=True,
+        db_index=True,  # Keep index
+        verbose_name=_('Is Read'),
         help_text=_("Indicates if the user has read the notification."),
     )
+    # --- New fields for To-Do type ---
+    is_completed = models.BooleanField(
+        default=False,
+        null=True,  # Allow null for non-todo types
+        blank=True,
+        verbose_name=_('Is Completed (for To-Do)'),
+        help_text=_( # Help text
+            "Indicates if the to-do item has been completed "
+            "(only applies to 'todo' type)."
+        )
+    )
+    priority = models.CharField(
+        max_length=10,
+        choices=PriorityLevel.choices,
+        null=True,  # Allow null for non-todo types
+        blank=True,
+        verbose_name=_('Priority (for To-Do)'),
+        help_text=_( # Help text
+             "Priority level for the to-do item "
+             "(only applies to 'todo' type)."
+        )
+    )
+    # --- End new fields ---
     created_at = models.DateTimeField(
         auto_now_add=True,
-        db_index=True,
+        db_index=True,  # Keep index
+        verbose_name=_('Created At'),
         help_text=_("Timestamp when the notification was created."),
     )
     updated_at = models.DateTimeField(
         auto_now=True,
+        verbose_name=_('Updated At'),
         help_text=_("Timestamp when the notification was last updated."),
     )
 
     class Meta:
         ordering = ["-created_at"]
         indexes = [
+            # Combined existing and potential new indexes
             models.Index(fields=["user", "is_read", "-created_at"]),
             models.Index(fields=["user", "type", "is_read", "-created_at"]),
+            models.Index( # Index for ToDo filtering
+                fields=["user", "type", "is_completed", "priority"]
+            ), 
+            models.Index( # Index on created_at alone might be redundant
+                fields=["created_at"]
+            ), 
         ]
         verbose_name = _("Notification")
         verbose_name_plural = _("Notifications")
 
     def __str__(self):
-        return f"Notification for {self.user}: {self.title} ({'Read' if self.is_read else 'Unread'})"
+        read_status = 'Read' if self.is_read else 'Unread'
+        if self.type == self.NotificationType.TODO:
+            completed_status = 'Completed' if self.is_completed else 'Pending'
+            priority_display = self.get_priority_display() or 'N/A'
+            return (
+                f"ToDo for {self.user.username}: {self.title} "
+                f"({completed_status}, Priority: {priority_display})"
+            )
+        else:
+            return (
+                f"{self.get_type_display()} for {self.user.username}: "
+                f"{self.title} ({read_status})"
+            )

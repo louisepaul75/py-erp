@@ -9,14 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MessageSelectorForm } from '@/components/notifications/MessageSelectorForm';
-import { MessageSquare, Bell, Filter } from 'lucide-react';
+import { MessageSquare, Bell, Filter, ListTodo } from 'lucide-react';
 
 export default function NotificationsPage() {
-  const [category, setCategory] = useState<'all' | 'direct' | 'system'>('all');
+  const [category, setCategory] = useState<'all' | 'direct' | 'system' | 'todo'>('all');
   const [readStatus, setReadStatus] = useState<'all' | 'unread'>('all');
 
   // Create query params based on both filters
-  const queryParams = {
+  const queryParams: any = {
     ...(readStatus === 'unread' ? { is_read: false } : {}),
     ...(category !== 'all' ? { type: category } : {}),
   };
@@ -31,6 +31,8 @@ export default function NotificationsPage() {
     markAllAsReadPending,
     sendMessage,
     sendMessagePending,
+    toggleComplete,
+    toggleCompletePending,
     refetchNotifications,
   } = useNotifications(queryParams);
 
@@ -48,6 +50,10 @@ export default function NotificationsPage() {
     markAsRead(id);
   };
 
+  const handleToggleComplete = (id: string, isCompleted: boolean) => {
+    toggleComplete({ id, is_completed: isCompleted });
+  };
+
   const handleSendMessage = (
     title: string, 
     content: string, 
@@ -59,7 +65,11 @@ export default function NotificationsPage() {
   };
 
   const [messageFormOpen, setMessageFormOpen] = useState(false);
-  const unreadNotifications = notificationList.filter((n: Notification) => !n.is_read);
+  
+  const unreadNonTodoNotifications = notificationList.filter(
+    (n: Notification) => !n.is_read && n.type !== 'todo'
+  );
+  const unreadNotificationsForTab = notificationList.filter((n: Notification) => !n.is_read);
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
@@ -68,8 +78,8 @@ export default function NotificationsPage() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Notifications</CardTitle>
-              <CardDescription>View and manage your notifications.</CardDescription>
+              <CardTitle>Notifications & Todos</CardTitle>
+              <CardDescription>View messages, system alerts, and manage tasks.</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button onClick={handleRefresh} variant="outline" size="sm">
@@ -95,20 +105,24 @@ export default function NotificationsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Category tabs - All messages, Direct Messages, System Notifications */}
-          <Tabs value={category} onValueChange={(value) => setCategory(value as 'all' | 'direct' | 'system')} className="mb-6">
+          {/* Category tabs - All messages, Direct Messages, System Notifications, Todos */}
+          <Tabs value={category} onValueChange={(value) => setCategory(value as 'all' | 'direct' | 'system' | 'todo')} className="mb-6">
             <div className="flex items-center mb-2">
               <TabsList>
                 <TabsTrigger value="all" className="flex items-center gap-1">
-                  All Messages
+                  All
                 </TabsTrigger>
                 <TabsTrigger value="direct" className="flex items-center gap-1">
                   <MessageSquare className="h-4 w-4" />
-                  Direct Messages
+                  Messages
                 </TabsTrigger>
                 <TabsTrigger value="system" className="flex items-center gap-1">
                   <Bell className="h-4 w-4" />
-                  System Notifications
+                  System
+                </TabsTrigger>
+                <TabsTrigger value="todo" className="flex items-center gap-1">
+                  <ListTodo className="h-4 w-4" />
+                  Todos
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -121,16 +135,18 @@ export default function NotificationsPage() {
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <TabsList>
                   <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="unread">Unread</TabsTrigger>
+                  <TabsTrigger value="unread">Unread/Pending</TabsTrigger>
                 </TabsList>
               </div>
-              <Button
-                onClick={handleMarkAllRead}
-                disabled={markAllAsReadPending || unreadNotifications.length === 0}
-                size="sm"
-              >
-                {markAllAsReadPending ? 'Marking...' : 'Mark All as Read'}
-              </Button>
+              {category !== 'todo' && (
+                 <Button
+                    onClick={handleMarkAllRead}
+                    disabled={markAllAsReadPending || unreadNonTodoNotifications.length === 0}
+                    size="sm"
+                  >
+                    {markAllAsReadPending ? 'Marking...' : 'Mark All as Read'}
+                  </Button>
+              )}
             </div>
             
             <TabsContent value="all">
@@ -141,18 +157,20 @@ export default function NotificationsPage() {
                   <Skeleton className="h-16 w-full" />
                 </div>
               )}
-              {errorNotifications && <p className="text-red-500">Error loading notifications: {errorNotifications.message}</p>}
+              {errorNotifications && <p className="text-red-500">Error loading items: {errorNotifications.message}</p>}
               {!isLoadingNotifications && !errorNotifications && notificationList.length === 0 && (
-                <p className="text-center text-gray-500 py-4">You have no notifications.</p>
+                <p className="text-center text-gray-500 py-4">No items found matching filters.</p>
               )}
               {!isLoadingNotifications && !errorNotifications && notificationList.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2 border rounded-md">
                   {notificationList.map((notification: Notification) => (
                     <NotificationItem
                       key={notification.id}
                       notification={notification}
                       onMarkAsRead={handleMarkOneRead}
                       isMarkingRead={markAsReadPending}
+                      onToggleComplete={handleToggleComplete}
+                      isTogglingComplete={toggleCompletePending}
                     />
                   ))}
                 </div>
@@ -167,18 +185,20 @@ export default function NotificationsPage() {
                   <Skeleton className="h-16 w-full" />
                 </div>
               )}
-              {errorNotifications && <p className="text-red-500">Error loading notifications: {errorNotifications.message}</p>}
-              {!isLoadingNotifications && !errorNotifications && unreadNotifications.length === 0 && (
-                <p className="text-center text-gray-500 py-4">You have no unread notifications.</p>
+              {errorNotifications && <p className="text-red-500">Error loading items: {errorNotifications.message}</p>}
+              {!isLoadingNotifications && !errorNotifications && unreadNotificationsForTab.length === 0 && (
+                <p className="text-center text-gray-500 py-4">You have no unread messages or pending todos.</p>
               )}
-              {!isLoadingNotifications && !errorNotifications && unreadNotifications.length > 0 && (
-                <div className="space-y-2">
-                  {unreadNotifications.map((notification: Notification) => (
+              {!isLoadingNotifications && !errorNotifications && unreadNotificationsForTab.length > 0 && (
+                <div className="space-y-2 border rounded-md">
+                  {unreadNotificationsForTab.map((notification: Notification) => (
                       <NotificationItem
                         key={notification.id}
                         notification={notification}
                         onMarkAsRead={handleMarkOneRead}
                         isMarkingRead={markAsReadPending}
+                        onToggleComplete={handleToggleComplete}
+                        isTogglingComplete={toggleCompletePending}
                       />
                   ))}
                 </div>
