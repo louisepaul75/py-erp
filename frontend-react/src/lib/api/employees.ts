@@ -23,8 +23,22 @@ export interface Employee {
  */
 export const fetchEmployees = async (): Promise<Employee[]> => {
   // TODO: Add parameters for pagination, filtering, sorting, searching
-  const response = await instance.get("v1/business/employees/"); // Add v1/ prefix
-  return await response.json(); // Use .json() to parse the response
+  const response = await instance.get("v1/business/employees/");
+  const data = await response.json();
+
+  // Check if the response looks like a paginated DRF response
+  if (data && typeof data === 'object' && Array.isArray(data.results)) {
+    return data.results; // Return only the results array
+  }
+  
+  // If it's not the expected paginated structure, maybe it's already an array?
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  // Log an error or throw if the structure is unexpected
+  console.error("Unexpected API response structure for fetchEmployees:", data);
+  throw new Error('Failed to fetch employees: Invalid API response format');
 };
 
 /**

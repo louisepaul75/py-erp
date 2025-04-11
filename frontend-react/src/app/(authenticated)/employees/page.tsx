@@ -97,7 +97,7 @@ export default function EmployeesPage() {
                   </AlertDescription>
                 </Alert>
               )}
-              {!isLoadingList && !isErrorList && employees.map((employee) => (
+              {!isLoadingList && !isErrorList && (employees || []).map((employee) => (
                 <Button
                   key={employee.id}
                   variant={selectedEmployeeId === employee.id ? "secondary" : "ghost"}
@@ -115,7 +115,7 @@ export default function EmployeesPage() {
                   </div>
                 </Button>
               ))}
-              {!isLoadingList && !isErrorList && employees.length === 0 && (
+              {!isLoadingList && !isErrorList && employees?.length === 0 && (
                  <p className="text-sm text-muted-foreground p-4 text-center">
                    No employees found.
                  </p>
