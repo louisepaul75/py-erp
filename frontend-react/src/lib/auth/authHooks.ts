@@ -8,8 +8,11 @@ export const useUser = () => {
   return useQuery({
     queryKey: ['user'],
     queryFn: authService.getCurrentUser,
-    retry: false,
+    retry: 1,
+    retryDelay: 500,
     staleTime: Infinity,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -34,9 +37,8 @@ export const useLogout = () => {
   const router = useRouter();
   
   const mutation = useMutation({
-    mutationFn: () => {
-      authService.logout();
-      return Promise.resolve();
+    mutationFn: async () => {
+      await authService.logout();
     },
     onSuccess: () => {
       queryClient.setQueryData(['user'], null);

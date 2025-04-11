@@ -7,11 +7,11 @@ describe('NotFound', () => {
     render(<NotFound />);
     
     // Check for the main elements
-    expect(screen.getByText('404')).toBeInTheDocument();
-    expect(screen.getByText('This page could not be found.')).toBeInTheDocument();
+    expect(screen.getByText('404 - Seite nicht gefunden')).toBeInTheDocument();
+    expect(screen.getByText('Die angeforderte Seite existiert nicht.')).toBeInTheDocument();
     
     // Check for the home link
-    const homeLink = screen.getByRole('link', { name: /return home/i });
+    const homeLink = screen.getByRole('link', { name: /zurück zur startseite/i });
     expect(homeLink).toBeInTheDocument();
     expect(homeLink).toHaveAttribute('href', '/');
   });

@@ -7,7 +7,7 @@ import { TargetTable } from "./target-table"
 import { ScannerInput } from "./scanner-input"
 import { BookingDialog } from "./booking-dialog"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { useWebSocket } from "@/hooks/use-websocket"
 import { useHistory } from "./history-context"
 import { fetchItemsByBox, fetchItemsByOrder, bookItems } from "@/lib/api"
@@ -547,4 +547,3 @@ export function GoodsMovementTab({ tabId, onStatusUpdate }: GoodsMovementTabProp
     </div>
   )
 }
-

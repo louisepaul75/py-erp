@@ -7,7 +7,7 @@ import { API_URL as BASE_URL } from "@/lib/config"
 /**
  * API URL for mold alloys
  */
-const API_URL = '/api/production/molds/alloys/'
+const API_URL = 'production/molds/alloys/'
 
 /**
  * Mock data for alloys, used as fallback

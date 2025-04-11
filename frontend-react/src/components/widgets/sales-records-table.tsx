@@ -73,8 +73,7 @@ function RecordItemsModal({ recordId, recordNumber, trigger }: RecordItemsModalP
     setIsLoading(true);
     setError(null);
     try {
-      // Add /api/ prefix back
-      const data = await api.get(`api/sales/records/${recordId}/items/`).json<SalesRecordItem[]>();
+      const data = await api.get(`v1/sales/records/${recordId}/items/`).json<SalesRecordItem[]>();
       // Now 'data' should be the array directly if the API returns it
       if (Array.isArray(data)) {
           setItems(data);
@@ -188,10 +187,9 @@ export default function SalesRecordsTable() {
       setIsLoading(true);
       setError(null);
       try {
-        // Add /api/ prefix back
         // Add pagination params later: ?page=${pagination.pageIndex + 1}&page_size=${pagination.pageSize}
         // Explicitly type the expected response structure
-        const responseData = await api.get("api/sales/records/").json<PaginatedSalesRecords | SalesRecord[]>();
+        const responseData = await api.get("v1/sales/records/").json<PaginatedSalesRecords | SalesRecord[]>();
 
          // Check if it's paginated or a simple array
          if (responseData && 'results' in responseData && Array.isArray(responseData.results)) {

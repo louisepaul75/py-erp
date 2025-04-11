@@ -11,12 +11,12 @@ ipython
 
 # Testing
 pytest
-pytest-django
-pytest-cov
+pytest-django>=4.11.1
+pytest-cov>=6.1.1
 factory-boy
 faker
 mutmut  # Mutation testing
-hypothesis  # Property-based testing
+hypothesis>=6.130.9  # Property-based testing
 
 # Code quality
 black
@@ -33,5 +33,8 @@ watchdog
 
 # Linting and formatting
 mypy
-ruff
-bandit[toml]  # Security testing 
+ruff>=0.11.4
+bandit[toml]  # Security testing
+django-environ
+
+# ... existing code ... 

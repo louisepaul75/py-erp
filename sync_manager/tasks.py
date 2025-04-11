@@ -3,7 +3,22 @@ import sys
 import shlex # Import shlex for safe command splitting
 from datetime import timezone
 
-from celery import shared_task
+# Create a mock shared_task decorator for tests
+import os
+# Check if we're in test mode
+if os.environ.get("SKIP_CELERY_IMPORT") == "1":
+    # Mock shared_task decorator for tests
+    def shared_task(*args, **kwargs):
+        """Mock shared_task decorator for testing."""
+        def decorator(func):
+            # Just return the function unchanged for tests
+            return func
+        # Handle both @shared_task and @shared_task() syntax
+        return decorator if args and callable(args[0]) else decorator
+else:
+    # Normal import for production
+    from celery import shared_task
+
 from django.core.management import call_command # More robust way? Maybe subprocess is better for isolation/env vars
 from django.utils import timezone as django_timezone
 

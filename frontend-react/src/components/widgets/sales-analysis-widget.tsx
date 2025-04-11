@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { instance as api } from "@/lib/api";
+import { API_URL } from "@/lib/config";
 
 interface SalesData {
   date: string;
@@ -89,33 +90,84 @@ export function SalesAnalysisWidget() {
       setIsLoading(true);
       setError(null);
       
-      const endpoint = currentMode === 'monthly' 
-        ? 'api/v1/sales/records/monthly_analysis/' 
-        : 'api/v1/sales/records/annual_analysis/'; 
+      // Build the base endpoint URL without /api prefix since we'll add it in the full URL
+      let baseEndpoint = currentMode === 'monthly'
+        ? `v1/sales/records/monthly_analysis/`
+        : `v1/sales/records/annual_analysis/`;
+      
+      // Create query params string
+      const queryParamsString = currentMode === 'monthly'
+        ? `?month=${month}&year=${year}`
+        : `?year=${year}`;
+      
+      console.log(`Base endpoint: ${baseEndpoint}`);
+      
+      // Get access token from cookie
+      const accessToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('access_token='))
+        ?.split('=')[1];
+      
+      if (!accessToken) {
+        console.error('No access token found in cookies');
+        setError('Authentication failed. Please log in again.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Use fetch directly with the full URL that explicitly includes /api
+      const fullUrl = `http://localhost:8000/api/${baseEndpoint}${queryParamsString}`;
+      
+      console.log(`Fetching from full URL: ${fullUrl}`);
+      
+      const res = await fetch(fullUrl, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
 
-      const searchParams: Record<string, number> = {};
-      if (currentMode === 'monthly') {
-        searchParams.month = month;
-        searchParams.year = year;
-      } else {
-        searchParams.year = year;
+      if (!res.ok) {
+        // Check Content-Type before attempting to parse JSON, even for errors
+        const contentType = res.headers.get("content-type");
+        // Check if contentType is not null before using indexOf
+        if (contentType && contentType.indexOf("application/json") === -1) {
+          // If it's not JSON, attempt to read as text to see if it's HTML (likely auth error)
+          const textResponse = await res.text(); // Now await is allowed here
+          if (textResponse.trim().startsWith("<!DOCTYPE") || textResponse.trim().startsWith("<html")) {
+            console.error('Received HTML instead of JSON. Authentication likely failed.');
+            throw new Error(`Authentication failed (HTTP ${res.status}). Received HTML instead of JSON.`);
+          } else {
+            // It's not JSON and not clearly HTML, throw generic error with status
+             throw new Error(`HTTP Error: ${res.status}. Unexpected content type: ${contentType}`);
+          }
+        } else {
+           // It might be a JSON error response from the API
+           try {
+             const errorJson = await res.json();
+             throw new Error(`HTTP Error: ${res.status} - ${errorJson.detail || JSON.stringify(errorJson)}`);
+           } catch (jsonError) {
+             // If parsing error JSON fails, throw generic status error
+             throw new Error(`HTTP Error: ${res.status}`);
+           }
+        }
       }
 
-      const response: SalesAnalysisData = await api.get(endpoint, { // Add type assertion for response
-        searchParams: searchParams
-      }).json();
+      // If response is OK, proceed to parse JSON
+      const responseData = await res.json();
       
-      setData(response);
+      setData(responseData);
       
       // Safely update state based on the actual response structure
-      if (response.selected_period) {
-        if (isMonthInfo(response.selected_period)) {
+      if (responseData.selected_period) {
+        if (isMonthInfo(responseData.selected_period)) {
           // It's monthly data, update both month and year
-          setSelectedMonth(response.selected_period.month);
-          setSelectedYear(response.selected_period.year);
-        } else if ('year' in response.selected_period) {
+          setSelectedMonth(responseData.selected_period.month);
+          setSelectedYear(responseData.selected_period.year);
+        } else if ('year' in responseData.selected_period) {
           // Assume it's annual data (or at least has a year), update year only
-          setSelectedYear(response.selected_period.year);
+          setSelectedYear(responseData.selected_period.year);
         }
       }
 
@@ -247,7 +299,7 @@ export function SalesAnalysisWidget() {
 
   return (
     <div className="w-full h-full">
-      <Card className="w-full h-full">
+      <Card className="w-full h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <CardTitle>Verkaufsanalyse ({mode === 'monthly' ? 'Monatlich' : 'Jährlich'})</CardTitle>
@@ -275,8 +327,8 @@ export function SalesAnalysisWidget() {
               </Button>
             </div>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center space-x-1">
+          <div className="flex items-center justify-between mt-1 flex-wrap">
+            <div className="flex items-center space-x-1 flex-wrap">
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -287,14 +339,14 @@ export function SalesAnalysisWidget() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-1 flex-wrap">
                 {mode === 'monthly' && (
                   <Select
                     value={selectedMonth.toString()}
                     onValueChange={(value: string) => setSelectedMonth(parseInt(value))}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className="h-7 px-2 text-xs w-[85px]">
+                    <SelectTrigger className="h-7 px-2 text-xs w-[85px] min-w-[70px]">
                       <SelectValue placeholder="Monat" />
                     </SelectTrigger>
                     <SelectContent>
@@ -312,7 +364,7 @@ export function SalesAnalysisWidget() {
                   onValueChange={(value: string) => setSelectedYear(parseInt(value))}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-7 px-2 text-xs w-[70px]">
+                  <SelectTrigger className="h-7 px-2 text-xs w-[70px] min-w-[60px]">
                     <SelectValue placeholder="Jahr" />
                   </SelectTrigger>
                   <SelectContent>
@@ -350,7 +402,7 @@ export function SalesAnalysisWidget() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col">
           {isLoading ? (
             <div className="w-full h-[200px] flex items-center justify-center">
               <Skeleton className="w-full h-full" />
@@ -360,7 +412,7 @@ export function SalesAnalysisWidget() {
               <p>{error}</p>
             </div>
           ) : data && data.data.length > 0 && data.data.some(item => (item.daily ?? 0) > 0 || (item.cumulative ?? 0) > 0) ? (
-            <div className="w-full h-[200px]">
+            <div className="w-full h-full flex-1 min-h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={data.data}
@@ -445,4 +497,4 @@ export function SalesAnalysisWidget() {
   );
 }
 
-export default SalesAnalysisWidget; 
+export default SalesAnalysisWidget;

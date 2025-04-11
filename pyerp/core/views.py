@@ -12,8 +12,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET
 from django.views.generic import TemplateView
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import status, viewsets, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
@@ -21,10 +20,21 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.middleware.csrf import get_token
 import time
+from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+from rest_framework.decorators import action
+from django.contrib.auth import get_user_model
 
 # Set up logging using the centralized logging system
 from pyerp.utils.logging import get_logger
-from pyerp.core.models import UserPreference
+from pyerp.core.models import UserPreference, AuditLog, Tag, TaggedItem, Notification
+from pyerp.core.serializers import (
+    UserPreferenceSerializer,
+    AuditLogSerializer,
+    TagSerializer,
+    TaggedItemSerializer,
+    NotificationSerializer,
+)
 
 logger = get_logger(__name__)
 
@@ -101,34 +111,40 @@ def health_check(request):
 def git_branch(request):
     """
     Get the current git branch name.
-    Only available in development mode.
+    Returns 'unknown' if git command fails or is unavailable.
+    This is intended for development/debugging and might not work in all production setups.
     """
     if not settings.DEBUG:
-        return JsonResponse(
-            {"error": "Not available in production"},
-            status=403,
-        )
+        # In production or non-debug, gracefully return 'unknown'
+        return JsonResponse({"branch": "unknown"}, status=status.HTTP_200_OK)
 
     try:
+        # Ensure we run the command from the project's root directory
+        project_root = settings.BASE_DIR
+        
         result = subprocess.run(
             ["git", "branch", "--show-current"],
             capture_output=True,
             text=True,
-            check=True,
+            check=True,  # Raises CalledProcessError if command fails
+            cwd=project_root,  # Execute in the project root
         )
         branch = result.stdout.strip()
         return JsonResponse({"branch": branch})
-    except subprocess.CalledProcessError:
-        return JsonResponse(
-            {"error": "Could not get branch name"},
-            status=500,
-        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        # Git command not found or failed (e.g., not a git repository, git not installed)
+        logger.warning("Could not get git branch name in debug mode.")
+        return JsonResponse({"branch": "unknown"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        # Catch any other unexpected errors
+        logger.error(f"Unexpected error in core.views.git_branch: {str(e)}")
+        return JsonResponse({"branch": "error"}, status=status.HTTP_200_OK)
 
 
 class UserProfileView(APIView):
     """View to retrieve and update the authenticated user's profile."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         """Get the authenticated user's profile."""
@@ -229,7 +245,7 @@ class UserProfileView(APIView):
 class DashboardSummaryView(APIView):
     """View to retrieve and update dashboard data."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_dashboard_data(self, user):
         """
@@ -464,7 +480,7 @@ class DashboardSummaryView(APIView):
 class SystemSettingsView(APIView):
     """View to retrieve and update system settings."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_system_settings(self):
         """
@@ -595,3 +611,181 @@ def csrf_token(request):
     return JsonResponse({
         'csrf_token': get_token(request)
     })
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows notifications to be viewed or marked as read.
+    Provides list, retrieve, mark_as_read, and mark_all_as_read actions.
+    Also provides an unread_count action.
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Ensure users only see their own notifications."""
+        user = self.request.user
+        queryset = Notification.objects.filter(user=user)
+        
+        # Allow filtering by 'type' query parameter
+        notification_type = self.request.query_params.get('type', None)
+        if notification_type:
+            queryset = queryset.filter(type=notification_type)
+            
+        # Allow filtering by 'is_read' query parameter
+        is_read_param = self.request.query_params.get('is_read', None)
+        if is_read_param is not None:
+            is_read = is_read_param.lower() in ['true', '1']
+            queryset = queryset.filter(is_read=is_read)
+            
+        return queryset.order_by('-created_at')
+
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
+    def mark_as_read(self, request, pk=None):
+        """Mark a specific notification as read."""
+        notification = self.get_object() # Checks ownership via get_queryset
+        if not notification.is_read:
+            notification.is_read = True
+            notification.save(update_fields=['is_read', 'updated_at'])
+        serializer = self.get_serializer(notification)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
+    def mark_all_as_read(self, request):
+        """Mark all notifications for the user as read."""
+        updated_count = Notification.objects.filter(user=request.user, is_read=False).update(is_read=True, updated_at=timezone.now())
+        return Response({'message': _(f'{updated_count} notifications marked as read.')}, status=status.HTTP_200_OK)
+        
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def unread_count(self, request):
+        """Get the count of unread notifications for the user."""
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
+        return Response({'unread_count': count})
+        
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def send_broadcast(self, request):
+        """Send a broadcast message to all users."""
+        title = request.data.get('title')
+        content = request.data.get('content')
+        
+        if not title or not content:
+            return Response(
+                {'error': _('Title and content are required.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get all active users
+        User = get_user_model()
+        users = User.objects.filter(is_active=True)
+        
+        # Create a notification for each user
+        notifications_created = 0
+        for user in users:
+            Notification.objects.create(
+                user=user,
+                title=title,
+                content=content,
+                type='broadcast_message',
+            )
+            notifications_created += 1
+            
+        return Response({
+            'message': _(f'Broadcast message sent to {notifications_created} users.'),
+            'recipients_count': notifications_created
+        }, status=status.HTTP_201_CREATED)
+        
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def send_group(self, request):
+        """Send a message to users in a specific group."""
+        title = request.data.get('title')
+        content = request.data.get('content')
+        group_id = request.data.get('group_id')
+        
+        if not title or not content or not group_id:
+            return Response(
+                {'error': _('Title, content, and group_id are required.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get the group and its users
+        try:
+            from django.contrib.auth.models import Group
+            group = Group.objects.get(id=group_id)
+            User = get_user_model()
+            users = User.objects.filter(groups=group, is_active=True)
+            
+            if not users.exists():
+                return Response(
+                    {'error': _('No active users found in this group.')},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            # Create a notification for each user in the group
+            notifications_created = 0
+            for user in users:
+                Notification.objects.create(
+                    user=user,
+                    title=title,
+                    content=content,
+                    type='group_message',
+                )
+                notifications_created += 1
+                
+            return Response({
+                'message': _(f'Message sent to {notifications_created} users in group "{group.name}".'),
+                'recipients_count': notifications_created
+            }, status=status.HTTP_201_CREATED)
+            
+        except Group.DoesNotExist:
+            return Response(
+                {'error': _('Group not found.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def send_user(self, request):
+        """Send a message to a specific user."""
+        title = request.data.get('title')
+        content = request.data.get('content')
+        user_id = request.data.get('user_id')
+        
+        if not title or not content or not user_id:
+            return Response(
+                {'error': _('Title, content, and user_id are required.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Get the user
+        try:
+            User = get_user_model()
+            recipient = User.objects.get(id=user_id, is_active=True)
+            
+            # Create a notification for the user
+            Notification.objects.create(
+                user=recipient,
+                sender=request.user,
+                title=title,
+                content=content,
+                type='direct_message',
+            )
+                
+            return Response({
+                'message': _(f'Message sent to {recipient.get_full_name() or recipient.username}.'),
+                'recipients_count': 1
+            }, status=status.HTTP_201_CREATED)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': _('User not found or inactive.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

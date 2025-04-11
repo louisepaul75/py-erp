@@ -28,16 +28,15 @@ const SyncWorkflows: React.FC = () => {
 
   useEffect(() => {
     const fetchWorkflows = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoading(true);
-        // Use the shared ky instance with the API endpoint
-        const response = await api.get('api/v1/sync/workflows/').json<PaginatedWorkflowsResponse>();
-        // Access the 'results' array from the response data
-        setWorkflows(response.results);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching sync workflows:", err);
-        setError("Failed to load workflows. Please try again later.");
+        const response = await api.get('sync/workflows/').json<PaginatedWorkflowsResponse>();
+        setWorkflows(response.results || []);
+      } catch (error) {
+        console.error('Failed to fetch workflows:', error);
+        setError('Failed to load sync workflows. Please try again later.');
       } finally {
         setLoading(false);
       }

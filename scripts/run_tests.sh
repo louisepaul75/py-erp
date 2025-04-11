@@ -84,6 +84,7 @@ PYTEST_OPTS=""
 if [ "$COVERAGE" = true ]; then
   PYTEST_OPTS="$PYTEST_OPTS --cov=pyerp"
   PYTEST_OPTS="$PYTEST_OPTS --cov-report=xml:coverage/${TEST_GROUP}-coverage.xml"
+  PYTEST_OPTS="$PYTEST_OPTS --cov-report term-missing"
   PYTEST_OPTS="$PYTEST_OPTS --junitxml=coverage/${TEST_GROUP}-junit.xml"
   PYTEST_OPTS="$PYTEST_OPTS -o junit_family=legacy"
 fi
@@ -136,16 +137,24 @@ if [ "$TEST_GROUP" = "ui" ]; then
     JEST_OPTS="$JEST_OPTS --testMatch='**/?(*.)+(fuzz).test.[jt]s?(x)'"
   fi
   
-  # Run tests with prepared options
-  echo "Running Jest tests with options: $JEST_OPTS"
-  # Add --runInBand to potentially fix worker issues
-  npm test -- $JEST_OPTS --runInBand
+  # Run mutation tests if enabled
+  if [ "$MUTATION" = true ]; then
+    echo "Running Stryker mutation tests for UI"
+    # Make sure Stryker is configured (stryker.conf.js or similar)
+    # Using npx ensures we use the project's local version if available
+    npx stryker run
+  else
+    # Run standard Jest tests if mutation testing is not enabled
+    echo "Running Jest tests with options: $JEST_OPTS"
+    # Add --runInBand to potentially fix worker issues
+    npm test -- $JEST_OPTS --runInBand
+  fi
   
   # Copy test results to the expected location for the CI pipeline
   if [ "$COVERAGE" = true ]; then
     mkdir -p ../coverage
     cp jest-junit.xml ../coverage/ui-junit.xml
-    cp -r coverage/coverage-final.json ../coverage/ui-coverage.xml
+    cp -r coverage/coverage-final.json ../coverage/ui-coverage.json
   fi
   
   # Return to project root
@@ -159,6 +168,9 @@ elif [ "$TEST_GROUP" = "all" ]; then
   $0 ui
   
   # Then run backend tests
+  
+  # Ensure the correct settings module is used for backend tests
+  export DJANGO_SETTINGS_MODULE=pyerp.config.settings.testing
   
   # Add fuzz test markers if enabled
   if [ "$FUZZ" = true ]; then

@@ -1,4 +1,4 @@
-import { instance } from "@/lib/api"; // Corrected import for ky instance
+import { instance } from "../api"; // Corrected import for ky instance
 
 // Define interfaces for permissions
 export interface Permission {

@@ -59,24 +59,40 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         group_ids = request.data.get("group_ids", [])
 
-        if not group_ids:
+        if not isinstance(group_ids, list):
             return Response(
-                {"detail": "No group IDs provided"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "group_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            groups = UserService.assign_user_to_groups(user, group_ids)
+            # Use set() to avoid potential duplicates and ensure correct type
+            valid_group_ids = {gid for gid in group_ids if isinstance(gid, (int, str))}
+            groups = Group.objects.filter(id__in=valid_group_ids)
+            
+            if len(groups) != len(valid_group_ids):
+                 # Find which IDs were not found
+                 found_ids = {str(g.id) for g in groups}
+                 missing_ids = valid_group_ids - found_ids
+                 return Response(
+                    {"detail": f"One or more groups not found: {', '.join(missing_ids)}"},
+                    status=status.HTTP_404_NOT_FOUND,
+                 )
+
+            user.groups.add(*groups) # Add only the valid, found groups
+            
+            # Return the state *after* adding
+            current_groups = user.groups.all()
             return Response(
                 {
-                    "detail": f"User assigned to {len(groups)} groups",
-                    "groups": GroupSerializer(groups, many=True).data,
+                    "detail": f"User assigned to groups. Now in {len(current_groups)} groups.",
+                    "groups": GroupSerializer(current_groups, many=True).data,
                 }
             )
-        except Group.DoesNotExist:
-            return Response(
-                {"detail": "One or more groups not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        except Exception as e:
+             return Response(
+                 {"detail": f"An error occurred: {str(e)}"},
+                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+             )
 
     @action(detail=True, methods=["post"])
     def remove_groups(self, request, pk=None):
@@ -86,23 +102,76 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         group_ids = request.data.get("group_ids", [])
 
-        if not group_ids:
+        if not isinstance(group_ids, list):
+             return Response(
+                 {"detail": "group_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST
+             )
+
+        try:
+             # Use set() to avoid potential duplicates and ensure correct type
+             valid_group_ids = {gid for gid in group_ids if isinstance(gid, (int, str))}
+             groups = Group.objects.filter(id__in=valid_group_ids)
+            
+             # It's okay if some groups to remove weren't assigned, so no check needed here
+             
+             user.groups.remove(*groups)
+
+             # Return the state *after* removing
+             current_groups = user.groups.all()
+             return Response(
+                 {
+                     "detail": f"User removed from specified groups. Now in {len(current_groups)} groups.",
+                     "groups": GroupSerializer(current_groups, many=True).data,
+                 }
+             )
+        except Exception as e: # Catch broader exceptions during removal
+             return Response(
+                 {"detail": f"An error occurred: {str(e)}"},
+                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+             )
+
+    @action(detail=True, methods=["post"], url_path='set-groups')
+    def set_groups(self, request, pk=None):
+        """
+        Set user's groups, replacing any existing ones.
+        """
+        user = self.get_object()
+        group_ids = request.data.get("group_ids", [])
+
+        if not isinstance(group_ids, list):
             return Response(
-                {"detail": "No group IDs provided"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "group_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            groups = UserService.remove_user_from_groups(user, group_ids)
+            # Validate and filter group IDs
+            valid_group_ids = {str(gid) for gid in group_ids if isinstance(gid, (int, str))}
+            groups = Group.objects.filter(id__in=valid_group_ids)
+
+            # Check if all provided IDs correspond to existing groups
+            if len(groups) != len(valid_group_ids):
+                found_ids = {str(g.id) for g in groups}
+                missing_ids = valid_group_ids - found_ids
+                return Response(
+                    {"detail": f"One or more groups not found: {', '.join(missing_ids)}"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+                
+            # Set the user's groups directly
+            user.groups.set(groups)
+            
+            # Fetch the groups again to be sure (though set should be atomic)
+            current_groups = user.groups.all() 
             return Response(
                 {
-                    "detail": f"User removed from {len(groups)} groups",
-                    "groups": GroupSerializer(groups, many=True).data,
+                    "detail": f"User groups set. Now in {len(current_groups)} groups.",
+                    "groups": GroupSerializer(current_groups, many=True).data,
                 }
             )
-        except Group.DoesNotExist:
+        except Exception as e: # Catch potential errors during the set operation
             return Response(
-                {"detail": "One or more groups not found"},
-                status=status.HTTP_404_NOT_FOUND,
+                {"detail": f"An error occurred while setting groups: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=True, methods=["post"])

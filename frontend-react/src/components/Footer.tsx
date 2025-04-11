@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { API_URL } from '@/lib/config';
 import useAppTranslation from '@/hooks/useTranslationWrapper';
+import { useIsAuthenticated } from "@/lib/auth/authHooks";
 
 interface HealthCheckResult {
   success: boolean;
@@ -44,6 +44,7 @@ export function Footer() {
   const [isDevBarExpanded, setIsDevBarExpanded] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(true);
   const { t } = useAppTranslation();
+  const { isAuthenticated } = useIsAuthenticated();
   
   // Measure footer height and set CSS variable
   useEffect(() => {
@@ -94,16 +95,15 @@ export function Footer() {
   
   // Fetch health checks (for dev bar condition)
   useEffect(() => {
-    const healthUrl = `${API_URL}/api/v1/health/`
-    const monitoringUrl = `${API_URL}/api/v1/monitoring/health-checks/`
+    if (!isAuthenticated) return;
 
     const fetchBackendStatus = async () => {
       setIsLoadingChecks(true);
       try {
         let response: Response
         try {
-          console.log("Fetching monitoring status from:", monitoringUrl)
-          response = await fetch(monitoringUrl, {
+          console.log("Fetching monitoring status from: /v1/monitoring/health-checks/")
+          response = await fetch('/v1/monitoring/health-checks/', {
             headers: {
               Accept: "application/json",
             }
@@ -111,8 +111,8 @@ export function Footer() {
         } catch (error) {
           console.warn("Monitoring endpoint failed, trying health endpoint...")
           try {
-            console.log("Fetching health status from:", healthUrl)
-            response = await fetch(healthUrl, {
+            console.log("Fetching health status from: /health/")
+            response = await fetch('/health/', {
               headers: {
                 Accept: "application/json",
               }
@@ -154,74 +154,120 @@ export function Footer() {
     
     const interval = setInterval(fetchBackendStatus, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]);
 
   // Fetch overall health status (for version and status indicator)
   useEffect(() => {
-    const fetchOverallHealthData = async () => {
-      setIsLoadingHealth(true);
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+    if (!isAuthenticated) return;
 
-        const response = await fetch(`${API_URL}/health/`, {
-          signal: controller.signal,
+    // Define controller outside the fetch function so cleanup can access it
+    let controller: AbortController;
+
+    const fetchOverallHealthData = async () => {
+      // Re-initialize controller for each fetch attempt (including intervals)
+      controller = new AbortController();
+      const signal = controller.signal;
+      
+      setIsLoadingHealth(true);
+      let timeoutId: NodeJS.Timeout | null = null;
+      
+      try {
+        // Set timeout for this specific fetch attempt
+        timeoutId = setTimeout(() => controller.abort('timeout'), 5000); 
+
+        const response = await fetch('/health/', {
+          signal: signal, // Use the signal from the outer scope
           headers: {
             'Accept': 'application/json'
           }
         });
 
-        clearTimeout(timeoutId);
+        // Clear the timeout if the fetch completed successfully
+        if (timeoutId) clearTimeout(timeoutId);
 
         if (response.ok) {
           try {
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
               const data = await response.json();
-              setOverallHealth(data);
-              setApiAvailable(true);
+              // Only update state if the component hasn't been unmounted (signal not aborted)
+              if (!signal.aborted) {
+                setOverallHealth(data);
+                setApiAvailable(true);
+              }
             } else {
               console.error('Health API returned non-JSON content');
-              setOverallHealth(null);
-              setApiAvailable(false);
+               if (!signal.aborted) {
+                 setOverallHealth(null);
+                 setApiAvailable(false);
+               }
             }
           } catch (parseError) {
             console.error('Failed to parse health response as JSON:', parseError);
-            setOverallHealth(null);
-            setApiAvailable(false);
+             if (!signal.aborted) {
+               setOverallHealth(null);
+               setApiAvailable(false);
+             }
           }
         } else {
           console.error('Failed to fetch overall health status');
-          setOverallHealth(null);
-          setApiAvailable(false);
+           if (!signal.aborted) {
+             setOverallHealth(null);
+             setApiAvailable(false);
+           }
         }
       } catch (error) {
-        console.error('Error fetching overall health status:', error);
-        setOverallHealth(null);
-        setApiAvailable(false);
-        if (error instanceof DOMException && error.name === 'AbortError') {
-          console.log('Overall health request timed out');
-        }
+         // Only handle error if it wasn't an intentional abort
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+           console.error('Error fetching overall health status:', error);
+           // Check signal again before setting state in error case
+           if (!signal.aborted) {
+             setOverallHealth(null);
+             setApiAvailable(false);
+           }
+        } else if (controller.signal.reason === 'timeout') {
+            // Log specifically if the abort was due to timeout
+            console.log('Overall health request timed out');
+            if (!signal.aborted) { // Check signal before setting state
+              setOverallHealth(null);
+              setApiAvailable(false);
+            }
+        } // Otherwise (regular abort on unmount), do nothing
       } finally {
-        setIsLoadingHealth(false);
+        // Clear timeout just in case it's still pending after an error
+        if (timeoutId) clearTimeout(timeoutId);
+        // Only update loading state if not aborted
+        if (!signal.aborted) {
+          setIsLoadingHealth(false);
+        }
       }
     };
 
     fetchOverallHealthData();
 
     const interval = setInterval(fetchOverallHealthData, 60000);
-    return () => clearInterval(interval);
-  }, []);
+    
+    // Cleanup function: clear interval AND abort ongoing fetch
+    return () => {
+      clearInterval(interval);
+      // Check if controller exists before aborting (it might not if effect cleans up before first fetch starts)
+      if (controller) {
+         controller.abort(); 
+      }
+    };
+  }, [isAuthenticated]);
   
   // Fetch git branch info
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const fetchGitBranch = async () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
       try {
         
-        const response = await fetch(`${API_URL}/api/git/branch/`, { 
+        const response = await fetch('/v1/git/branch/', { 
           signal: controller.signal,
           headers: {
             'Accept': 'application/json'
@@ -258,7 +304,7 @@ export function Footer() {
     };
     
     fetchGitBranch();
-  }, []);
+  }, [isAuthenticated]);
   
   // Show dev mode bar in development OR if the health checks endpoint reports an API error
   const isDevelopment = process.env.NODE_ENV === 'development' || healthChecks?.results.some(r => r.component === 'api' && r.status === 'error');

@@ -15,6 +15,9 @@ from pyerp.utils.env_loader import load_environment_variables
 
 load_environment_variables(verbose=True)
 
+# Ensure DEBUG is True for tests
+DEBUG = True
+
 # Remove debug toolbar from installed apps
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]
 
@@ -49,7 +52,7 @@ DATABASE_ROUTERS = []
 # Add 'pyerp.sync' to prevent serialization issues during test setup
 TEST_NON_SERIALIZED_APPS = ['pyerp.sync']
 
-# Configure URL patterns for tests
+# Configure URL patterns for tests - USE MINIMAL URLS FOR ISOLATION
 ROOT_URLCONF = 'pyerp.urls'
 
 # Configure template settings for tests

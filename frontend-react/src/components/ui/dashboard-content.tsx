@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState, useRef } from "react"
 import Link from "next/link"
 import {
   X,
@@ -43,7 +43,7 @@ import {
   GridLayouts 
 } from "@/lib/dashboard-service"
 import { v4 as uuidv4 } from "uuid"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "@/hooks/use-toast"
 import dynamic from "next/dynamic"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -115,9 +115,9 @@ const DashboardWidget = ({
           <div className="absolute top-0 right-0 p-1 z-10 flex gap-1">
             {onRemove && (
               <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
+                variant="destructive"
+                size="xs"
+                className="h-6 w-6 rounded-full"
                 onClick={() => onRemove(id)}
               >
                 <X className="h-3 w-3" />
@@ -144,7 +144,6 @@ const DashboardWidget = ({
 
 const Dashboard = () => {
   const [isEditMode, setIsEditMode] = useState(false)
-  const [width, setWidth] = useState(1200) // Default width for SSR
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
@@ -245,15 +244,15 @@ const Dashboard = () => {
     { id: "customers", name: "Kunden", icon: Users, iconName: "Users", favorited: false },
     { id: "orders", name: "Aufträge", icon: ShoppingCart, iconName: "ShoppingCart", favorited: false },
     { id: "products", name: "Produkte", icon: Package, iconName: "Package", favorited: false },
-    { id: "reports", name: "Berichte", icon: BarChart3, iconName: "BarChart3", favorited: false },
+    // { id: "reports", name: "Berichte", icon: BarChart3, iconName: "BarChart3", favorited: false },
     { id: "settings", name: "Einstellungen", icon: Settings, iconName: "Settings", favorited: false },
-    { id: "users", name: "Benutzer", icon: Users, iconName: "Users", favorited: false },
-    { id: "finance", name: "Finanzen", icon: BarChart3, iconName: "BarChart3", favorited: false },
+    // { id: "users", name: "Benutzer", icon: Users, iconName: "Users", favorited: false },
+    // { id: "finance", name: "Finanzen", icon: BarChart3, iconName: "BarChart3", favorited: false },
     { id: "inventory", name: "Lager", icon: Package, iconName: "Package", favorited: false },
     { id: "picklist", name: "Picklist", icon: Package, iconName: "Package", favorited: false },
-    { id: "support", name: "Support", icon: Users, iconName: "Users", favorited: false },
-    { id: "documents", name: "Dokumente", icon: Package, iconName: "Package", favorited: false },
-    { id: "dashboard", name: "Dashboard", icon: Home, iconName: "Home", favorited: false },
+    // { id: "support", name: "Support", icon: Users, iconName: "Users", favorited: false },
+    // { id: "documents", name: "Dokumente", icon: Package, iconName: "Package", favorited: false },
+    // { id: "dashboard", name: "Dashboard", icon: Home, iconName: "Home", favorited: false },
   ])
 
   // Quick links
@@ -294,6 +293,10 @@ const Dashboard = () => {
     { id: "ORD-7349", customer: "Becker & Co.", date: "2025-03-15", status: "Delivered", amount: "€1,790.25" },
     { id: "ORD-7348", customer: "Fischer GmbH", date: "2025-03-12", status: "Delivered", amount: "€3,450.00" },
   ]
+
+  // State for container width
+  const [containerWidth, setContainerWidth] = useState(1200); // Default width
+  const gridContainerRef = useRef<HTMLDivElement>(null); // Ref for the grid container
 
   // Effect to load data
   useEffect(() => {
@@ -368,16 +371,26 @@ const Dashboard = () => {
     loadData();
   }, []);
 
-  // Update width on window resize
+  // Update width based on container resize
   useEffect(() => {
-    const handleResize = () => {
-      setWidth(window.innerWidth)
-    }
+    const container = gridContainerRef.current;
+    if (!container) return;
 
-    handleResize()
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+    const resizeObserver = new ResizeObserver(entries => {
+      if (entries[0]) {
+        setContainerWidth(entries[0].contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    // Initial measurement
+    setContainerWidth(container.offsetWidth);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   // Function to toggle edit mode
   const toggleEditMode = () => {
@@ -690,7 +703,7 @@ const Dashboard = () => {
     ) => {
       
     // Determine the current breakpoint
-    const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"; // Need to match RGL breakpoints
+    const currentBreakpoint = containerWidth >= 1200 ? "lg" : containerWidth >= 996 ? "md" : "sm"; // Need to match RGL breakpoints
 
     // Create a new layouts object to avoid direct state mutation
     const newLayouts = { ...layouts };
@@ -708,8 +721,8 @@ const Dashboard = () => {
 
   // Function to get widget title based on id
   const getWidgetTitle = (id: string): string | null => {
-    // First check in current layout for the title
-    const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
+    // Use containerWidth to determine breakpoint
+    const currentBreakpoint = containerWidth >= 1200 ? "lg" : containerWidth >= 996 ? "md" : "sm" 
     const layoutItem = layouts[currentBreakpoint]?.find((item) => item.i === id)
     
     if (layoutItem?.title) {
@@ -735,7 +748,7 @@ const Dashboard = () => {
     // Check if the id starts with any of our known widget types
     if (id.startsWith("menu-tiles")) {
       return (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {menuTiles.map((tile) => {
             const IconComponent = tile.icon
             return (
@@ -747,8 +760,8 @@ const Dashboard = () => {
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                    size="xs"
+                    className="absolute top-1 right-1 h-6 w-6 rounded-full text-slate-400 hover:text-yellow-500 hover:bg-yellow-100/50 group-hover:opacity-100 opacity-0 transition-opacity z-10"
                     onClick={(e) => {
                       e.stopPropagation()
                       toggleFavorite(tile.id)
@@ -823,10 +836,10 @@ const Dashboard = () => {
         router.push("/dashboard");
         break;
       case "customers":
-        router.push("/customers");
+        router.push("/sales/customers");
         break;
       case "orders":
-        router.push("/orders");
+        router.push("/sales");
         break;
       case "products":
         router.push("/products");
@@ -863,7 +876,7 @@ const Dashboard = () => {
   };
 
   // Get current layout based on breakpoints
-  const currentBreakpoint = width >= 1200 ? "lg" : width >= 996 ? "md" : "sm"
+  const currentBreakpoint = containerWidth >= 1200 ? "lg" : containerWidth >= 996 ? "md" : "sm"
   const currentLayouts = layouts
   const layoutKeys = useMemo(() => 
       Array.from(new Set(Object.values(layouts).flat().map(layout => layout.i)))
@@ -871,11 +884,11 @@ const Dashboard = () => {
 
   return (
     <>
-      <div className="w-full max-w-screen-xl mx-auto py-10 px-6">
+      <div className="w-full max-w-screen-xl mx-auto py-10 px-6 overflow-x-hidden">
         <div className="flex-grow flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold tracking-tight text-primary">Dashboard</h1>
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <Button
                 variant="outline"
                 onClick={() => setIsSidebarOpen(true)}
@@ -916,37 +929,84 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="flex-grow">
-            <ResponsiveGridLayout
-              className={`layout ${isEditMode ? 'editing' : ''}`}
-              layouts={layouts}
-              breakpoints={gridBreakpoints}
-              cols={gridCols}
-              rowHeight={gridRowHeight}
-              width={width}
-              margin={gridMargin}
-              onDragStop={handleLayoutChange}
-              onResizeStop={handleLayoutChange}
-              draggableHandle=".draggable-handle"
-            >
-              {layoutKeys.map((key) => (
-                <div 
-                  key={key} 
-                  onClickCapture={() => handleWidgetSelect(key)} 
-                  className={`relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border ${selectedWidgetId === key ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
-                >
-                  <DashboardWidget
-                    id={key}
-                    title={getWidgetTitle(key)}
-                    isEditMode={isEditMode}
-                    onRemove={handleRemoveSelectedWidget}
+          <div className="flex-grow" ref={gridContainerRef}>
+            {containerWidth > 0 && (
+              <ResponsiveGridLayout
+                className={`layout ${isEditMode ? 'editing' : ''}`}
+                layouts={layouts}
+                breakpoints={gridBreakpoints}
+                cols={gridCols}
+                rowHeight={gridRowHeight}
+                width={containerWidth}
+                margin={gridMargin}
+                onDragStop={handleLayoutChange}
+                onResizeStop={handleLayoutChange}
+                draggableHandle=".draggable-handle"
+              >
+                {layoutKeys.map((key) => (
+                  <div 
+                    key={key} 
+                    onClickCapture={() => handleWidgetSelect(key)} 
+                    className={`relative bg-card p-4 rounded-lg overflow-hidden shadow-sm border ${selectedWidgetId === key ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
                   >
-                    {renderWidgetContent(key)}
-                  </DashboardWidget>
-                </div>
-              ))}
-            </ResponsiveGridLayout>
+                    <DashboardWidget
+                      id={key}
+                      title={getWidgetTitle(key)}
+                      isEditMode={isEditMode}
+                      onRemove={handleRemoveSelectedWidget}
+                    >
+                      {renderWidgetContent(key)}
+                    </DashboardWidget>
+                  </div>
+                ))}
+              </ResponsiveGridLayout>
+            )}
           </div>
+
+          {/* Mobile Action Buttons - Below grid, only on small screens */}
+          <div className="md:hidden mt-6 flex justify-center items-center gap-2"> 
+             <Button
+                variant="outline"
+                size="sm" 
+                onClick={() => setIsSidebarOpen(true)}
+                className="border-primary text-primary hover:bg-primary/10 flex-1" 
+                disabled={isEditMode}
+              >
+                <LayoutPanelLeft className="mr-2 h-4 w-4" />
+                Layouts
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm" 
+                onClick={toggleEditMode}
+                className={`${isEditMode ? "border-destructive text-destructive hover:bg-destructive/10" : "border-primary text-primary hover:bg-primary/10"} flex-1`} 
+              >
+                {isEditMode ? (
+                  <>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel
+                  </>
+                ) : (
+                  <>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </>
+                )}
+              </Button>
+
+              {isEditMode && (
+                <Button
+                  size="sm" 
+                  onClick={saveLayout}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 flex-1" 
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </Button>
+              )}
+          </div>
+
         </div>
         
         <DashboardSidebar
@@ -972,4 +1032,4 @@ const Dashboard = () => {
   )
 }
 
-export default Dashboard 
+export default Dashboard

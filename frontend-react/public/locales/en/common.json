@@ -10,6 +10,8 @@
     "settings": "Settings",
     "logout": "Logout",
     "dashboard": "Dashboard",
+    "sales_dashboard": "Sales Dashboard",
+    "customers": "Customers",
     "admin_settings": "Admin Settings"
   },
   "buttons": {

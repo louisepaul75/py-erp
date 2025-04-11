@@ -18,8 +18,12 @@ from .base import *  # noqa
 if 'corsheaders.middleware.CorsMiddleware' not in MIDDLEWARE:
     try:
         # Attempt to insert before CommonMiddleware
-        common_middleware_index = MIDDLEWARE.index('django.middleware.common.CommonMiddleware')
-        MIDDLEWARE.insert(common_middleware_index, 'corsheaders.middleware.CorsMiddleware')
+        common_middleware_index = MIDDLEWARE.index(
+            'django.middleware.common.CommonMiddleware'
+        )
+        MIDDLEWARE.insert(
+            common_middleware_index, 'corsheaders.middleware.CorsMiddleware'
+        )
     except ValueError:
         # If CommonMiddleware isn't found, insert at the beginning
         MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
@@ -29,8 +33,11 @@ if 'corsheaders' not in INSTALLED_APPS:
     INSTALLED_APPS += ['corsheaders']
 
 # Import HTTPS settings
+_https_settings_imported = False
 try:
     from .settings_https import *  # noqa
+    _https_settings_imported = True
+    print("INFO: Loaded HTTPS settings for development environment.")
 except ImportError:
     pass
 
@@ -43,7 +50,7 @@ DEBUG_PROPAGATE_EXCEPTIONS = True
 APPEND_SLASH = False
 
 # Get ALLOWED_HOSTS from environment variable
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal", "192.168.65.1"]
 
 # Database configuration with SQLite fallback
 # Define PostgreSQL connection parameters
@@ -130,6 +137,11 @@ CORS_EXPOSE_HEADERS = [
     "set-cookie"
 ]
 
+# Add CSRF trusted origin for the React frontend
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
+
 # Logging configuration for development
 LOGGING = {
     "version": 1,
@@ -138,6 +150,11 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
         },
+    },
+    # Add root logger configuration
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG", 
     },
     "loggers": {
         "django.security.authentication": {
@@ -154,6 +171,11 @@ LOGGING = {
             "propagate": True,
         },
         "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "users": {
             "handlers": ["console"],
             "level": "DEBUG",
             "propagate": True,
@@ -184,8 +206,15 @@ INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
 if env("USE_DOCKER", default="yes") == "yes":
     import socket
 
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    try:
+        hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+        INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    except socket.gaierror:
+        # Handle case where hostname resolution fails
+        hostname = "localhost" # Default hostname
+        ips = ["127.0.0.1"]  # Default IP list
+        INTERNAL_IPS.append("127.0.0.1") # Add default loopback
+
     # Add Docker gateway
     try:
         gateway_ip = socket.gethostbyname("host.docker.internal")
@@ -195,9 +224,25 @@ if env("USE_DOCKER", default="yes") == "yes":
         pass 
 
 # Django Debug Toolbar
+def show_toolbar_callback(request):
+    """Determine whether to show the Debug Toolbar."""
+    # Always disable toolbar for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return False
+        
+    # Disable toolbar for API requests or static/media files
+    path = request.path_info
+    if (path.startswith(('/api/', '/static/', '/media/')) or 
+        'application/json' in request.headers.get('Accept', '')):
+        return False
+        
+    # Only show in DEBUG mode for other requests
+    return settings.DEBUG
+
 DEBUG_TOOLBAR_CONFIG = {
     "DISABLE_PANELS": ["debug_toolbar.panels.redirects.RedirectsPanel"],
     "SHOW_TEMPLATE_CONTEXT": True,
+    "SHOW_TOOLBAR_CALLBACK": show_toolbar_callback,
 }
 
 # Email backend for development
@@ -206,7 +251,9 @@ EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
 # 1Password Connect settings
 EMAIL_USE_1PASSWORD = os.environ.get("EMAIL_USE_1PASSWORD", "").lower() == "true"
 EMAIL_1PASSWORD_ITEM_NAME = os.environ.get("EMAIL_1PASSWORD_ITEM_NAME", "")
-OP_CONNECT_HOST = os.environ.get("OP_CONNECT_HOST", "http://192.168.73.65:8080")
+OP_CONNECT_HOST = os.environ.get(
+    "OP_CONNECT_HOST", "http://192.168.73.65:8080"
+)
 OP_CONNECT_TOKEN = os.environ.get("OP_CONNECT_TOKEN", "")
 OP_CONNECT_VAULT = os.environ.get("OP_CONNECT_VAULT", "dev")
 
@@ -223,7 +270,9 @@ ANYMAIL = {
 INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa
 
 # Set this to True to actually send emails in development (using the configured ESP)
-USE_ANYMAIL_IN_DEV = os.environ.get("USE_ANYMAIL_IN_DEV", "").lower() == "true"
+USE_ANYMAIL_IN_DEV = os.environ.get(
+    "USE_ANYMAIL_IN_DEV", ""
+).lower() == "true"
 if USE_ANYMAIL_IN_DEV:
     # Always use the logging email backend for simplicity in development
     EMAIL_BACKEND = "pyerp.utils.email_system.backends.LoggingEmailBackend"
@@ -231,9 +280,10 @@ if USE_ANYMAIL_IN_DEV:
 # Disable password validators during development
 AUTH_PASSWORD_VALIDATORS = []
 
-# For development, disable CSRF token check
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+# For development, disable CSRF token check unless HTTPS settings were loaded
+if not _https_settings_imported:
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SECURE = False
 
 # Local development specific REST Framework settings
 REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] += [  # noqa
@@ -314,8 +364,15 @@ INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
 if env("USE_DOCKER", default="yes") == "yes":
     import socket
 
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    try:
+        hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+        INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
+    except socket.gaierror:
+        # Handle case where hostname resolution fails
+        hostname = "localhost" # Default hostname
+        ips = ["127.0.0.1"]  # Default IP list
+        INTERNAL_IPS.append("127.0.0.1") # Add default loopback
+
     # Add Docker gateway
     try:
         gateway_ip = socket.gethostbyname("host.docker.internal")
@@ -350,3 +407,5 @@ CORS_ALLOWED_ORIGINS = [
 
 # Your stuff...
 # -----------------------------------------------------------------------------
+
+ROOT_URLCONF = "pyerp.urls"

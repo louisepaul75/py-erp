@@ -256,7 +256,7 @@ describe('Warehouse Page', () => {
     (WarehouseLocationList as jest.Mock).mockImplementation(props => {
       // Instead of rendering the actual component, we'll skip that
       // and manually trigger the API call with the expected parameters
-      global.fetch(`${API_URL}/api/v1/inventory/storage-locations/`, {
+      global.fetch(`${API_URL}/inventory/storage-locations/`, {
         headers: {
           "Accept": "application/json",
           "Authorization": "Bearer mock-token"
@@ -271,7 +271,7 @@ describe('Warehouse Page', () => {
     
     // Verify the API call was made with correct parameters
     expect(mockFetch).toHaveBeenCalledWith(
-      `${API_URL}/api/v1/inventory/storage-locations/`,
+      `${API_URL}/inventory/storage-locations/`,
       expect.objectContaining({
         headers: expect.objectContaining({
           'Accept': 'application/json',

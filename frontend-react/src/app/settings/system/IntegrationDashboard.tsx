@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Loader2 } from "lucide-react";
 import { IntegrationGroup } from "./IntegrationGroup";
-import { fetchSystemIntegrationData } from "@/lib/settings/system/api";
+import { fetchSystemIntegrationData, createSyncWorkflow } from "@/lib/settings/system/api";
 import type { SystemIntegrationData } from "@/types/settings/api";
 import useAppTranslation from "@/hooks/useTranslationWrapper";
 
@@ -16,21 +16,56 @@ export default function IntegrationDashboard() {
   const { t } = useAppTranslation("settings_system");
 
   useEffect(() => {
+    // Create an AbortController
+    const controller = new AbortController();
+    const signal = controller.signal;
+
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await fetchSystemIntegrationData();
-        setIntegrationData(data);
+        // Pass the signal to the fetch call
+        // await createSyncWorkflow({
+        //   name: "FX Sync",
+        //   slug: "fx_sync",
+        //   description: "Synchronizes exchange rates from Frankfurter API",
+        //   external_connection_name: "currency_api",
+        //   command_template: "sync_currency_rates",
+        //   parameters: {
+        //     debug: "boolean",
+        //     force_update: "boolean",
+        //   },
+        //   environment_variables: {
+        //     API_BASE_URL: "https://api.frankfurter.app",
+        //   },
+        // });
+        
+        const data = await fetchSystemIntegrationData(signal); 
+        console.log("")
+        // Check if the request was aborted before setting state
+        if (!signal.aborted) {
+          setIntegrationData(data);
+        }
       } catch (err: any) {
-        console.error("Failed to load integration data:", err);
-        setError(err.message || t("error_loading_data"));
+        // Ignore abort errors, as they are expected on cleanup
+        if (err.name !== 'AbortError') {
+          console.error("Failed to load integration data:", err);
+          setError(err.message || t("error_loading_data")); 
+        }
       } finally {
-        setIsLoading(false);
+        // Ensure loading state is unset even if aborted
+        if (!signal.aborted) {
+           setIsLoading(false);
+        }
       }
     };
     loadData();
-  }, [t]);
+
+    // Return cleanup function to abort the request
+    return () => {
+      controller.abort();
+    };
+  }, []); // Remove 't' from dependency array
 
   const handleStatusChange = (updatedData: SystemIntegrationData) => {
     setIntegrationData(updatedData);

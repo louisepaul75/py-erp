@@ -36,7 +36,7 @@ export default function ContainerSelectionDialog({ isOpen, onClose, onSelect }: 
       setIsLoading(true)
       setError(null)
       try {
-        const response = await api.get("api/inventory/boxes/")
+        const response = await api.get("inventory/boxes/")
         if (!response.ok) {
           throw new Error("Failed to fetch containers")
         }

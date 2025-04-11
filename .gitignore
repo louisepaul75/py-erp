@@ -89,6 +89,7 @@ static/
 staticfiles/
 media/
 backup/
+temp/
 
 # Virtual Environment
 venv/
@@ -130,3 +131,13 @@ pyerp/config/external_connections.json
 package-lock.json
 # Keep yarn.lock for consistent installs
 # yarn.lock
+
+.ai/
+
+# SSL Certificates
+*.crt
+*.key
+*.pem
+*.pfx
+*.p12
+docker/nginx/ssl/

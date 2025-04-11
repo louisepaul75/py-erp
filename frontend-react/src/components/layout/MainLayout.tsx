@@ -36,6 +36,7 @@ import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch"
 import { SearchResultsDropdown } from "@/components/ui/search-results-dropdown"
 import { useState, useEffect } from 'react'
 import { useLastVisited } from '@/context/LastVisitedContext'
+import { Toaster } from '@/components/ui/toaster'
 
 // Custom sidebar toggle that's always visible
 const AlwaysVisibleSidebarToggle = () => {
@@ -46,7 +47,7 @@ const AlwaysVisibleSidebarToggle = () => {
     <Button
       variant="outline"
       size="icon"
-      className="fixed top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
+      className="hidden md:block fixed top-1/2 -translate-y-1/2 z-30 h-12 w-8 rounded-r-lg shadow-md bg-background border-l-0 hover:bg-accent transition-all duration-300"
       style={{
         left: isCollapsed ? '0' : 'var(--sidebar-width)',
         marginLeft: isCollapsed ? '0' : '-1px' // Slight adjustment for border overlap
@@ -376,6 +377,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </MainLayoutContent>
         </SidebarProvider>
       </div>
+      <Toaster />
     </div>
   )
 }
