@@ -152,7 +152,10 @@ export function Navbar() {
             <MobileMenu
               items={user ? [
                 ...navigationItems,
+                { href: "/sales", label: t("navigation.sales") },
+                { href: "/production", label: t("navigation.production") },
                 { href: "/warehouse", label: t("navigation.inventory") },
+                { href: "/business", label: t("navigation.business") },
                 { href: "/picklist", label: "Picklist" },
               ] : [
                 { href: "/dashboard", label: t("navigation.home") }
@@ -235,6 +238,23 @@ export function Navbar() {
                     <ShadcnDropdownMenuItem asChild>
                       <Link href="/picklist" className="flex items-center">
                         Picklist
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Business Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <span>{t("navigation.business")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/employees" className="flex items-center">
+                        {t("navigation.employees")}
                       </Link>
                     </ShadcnDropdownMenuItem>
                   </DropdownMenuContent>

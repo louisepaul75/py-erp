@@ -12,7 +12,21 @@
     "dashboard": "Dashboard",
     "sales_dashboard": "Sales Dashboard",
     "customers": "Customers",
-    "admin_settings": "Admin Settings"
+    "admin_settings": "Admin Settings",
+    "business": "Business",
+    "employees": "Employees",
+    "mold_management": "Mold Management",
+    "purchasing": "Purchasing",
+    "accounting": "Accounting",
+    "manufacturing": "Manufacturing",
+    "projects": "Projects",
+    "hr": "HR",
+    "reporting": "Reporting",
+    "administration": "Administration",
+    "users": "Users",
+    "groups": "Groups",
+    "permissions": "Permissions",
+    "system": "System"
   },
   "buttons": {
     "save": "Save",
@@ -45,5 +59,16 @@
     "databaseStatus": "Database Status",
     "gitBranch": "Git Branch",
     "apiAvailable": "API Available"
-  }
+  },
+  "greeting": "Hello!",
+  "search_placeholder": "Search...",
+  "profile": "Profile",
+  "docs": "Documentation",
+  "support": "Support",
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "select_employee_details": "Select an employee to view details"
 } 

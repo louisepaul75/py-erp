@@ -1,9 +1,21 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 
 
 class Employee(models.Model):
     """Employee model representing staff members."""
+
+    # Link to Django User (optional)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="employee_profile",
+        verbose_name=_("Associated User Account"),
+        help_text=_("Link to the Django user account for login and permissions."),
+    )
 
     # Basic information
     employee_number = models.CharField(
