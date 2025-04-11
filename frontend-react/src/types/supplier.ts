@@ -11,14 +11,15 @@ export type Supplier = {
   notes: string | null;
   createdAt: string; // ISO 8601 date string
   updatedAt: string; // ISO 8601 date string
+  syncedAt: string | null; // Added field for sync status timestamp
 };
 
 // Type for creating a new supplier (omitting id, createdAt, updatedAt)
-export type NewSupplier = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
+export type NewSupplier = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt' | 'syncedAt'>;
 
 // Type for updating an existing supplier (all fields optional except id)
 // Using Partial<Omit<...>> makes all fields optional. We add 'id' back as required.
-export type UpdateSupplier = Partial<Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>> & {
+export type UpdateSupplier = Partial<Omit<Supplier, 'id' | 'createdAt' | 'updatedAt' | 'syncedAt'>> & {
   id: number;
 };
 

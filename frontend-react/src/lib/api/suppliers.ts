@@ -102,4 +102,17 @@ export async function deleteSupplier(id: number | string): Promise<void> {
   // Use ky instance with delete method and relative path
   // No need to call .json() for a 204 response
   await instance.delete(`${SUPPLIERS_RELATIVE_PATH}/${id}/`);
+}
+
+// Define the expected response structure for sync
+interface SyncResponse {
+    count: number;
+    // Potentially other fields like 'created', 'updated'
+}
+
+// Sync suppliers from the accounting system
+export async function syncSuppliersFromAccounting(): Promise<SyncResponse> {
+    // Assuming a POST request to trigger the sync process
+    const response = await instance.post(`${SUPPLIERS_RELATIVE_PATH}/sync/`).json<SyncResponse>();
+    return response;
 } 

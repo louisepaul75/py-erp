@@ -1,33 +1,62 @@
-import { Metadata } from 'next';
+'use client';
+
 import React from 'react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { SupplierDashboard } from '@/components/suppliers/SupplierDashboard';
+// Import Tabs components
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Placeholder for the actual dashboard component we will build
-const SupplierDashboardPlaceholder = () => (
-  <div className="p-4 border rounded-lg shadow">
-    <p>Supplier Dashboard will be displayed here.</p>
-    <p>It will contain a data table with add, edit, and delete functionality.</p>
-  </div>
+// Simple placeholder component for future dashboards
+const PlaceholderDashboard = ({ title }: { title: string }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>{title}</CardTitle>
+      <CardDescription>This section is under construction.</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <p>Content for {title.toLowerCase()} will be displayed here.</p>
+    </CardContent>
+  </Card>
 );
-
-export const metadata: Metadata = {
-  title: 'Supplier Management',
-  description: 'Manage business suppliers.',
-};
 
 export default function SuppliersPage() {
   // TODO: Add authentication checks if necessary at the page level,
   // or rely on layout/middleware configurations.
 
   return (
-    // Using common layout classes, adjust if needed
-    <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Supplier Management</h2>
-        {/* Add Button will go here eventually, likely passed to or managed by SupplierDashboard */}
-      </div>
-      {/* Replace placeholder with the actual component later */}
-      <SupplierDashboard />
+    <div className="space-y-6">
+      {/* You might want a page header here similar to the draft's PageHeader */}
+      {/* <PageHeader title="Business Management" description="Manage suppliers, purchases, and documents" /> */}
+      <h1 className="text-2xl font-semibold">Suppliers</h1>
+
+      {/* Wrap content in Tabs */}
+      <Tabs defaultValue="suppliers" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+          <TabsTrigger value="purchases">Purchases</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="suppliers">
+          <SupplierDashboard />
+        </TabsContent>
+
+        <TabsContent value="purchases">
+          {/* Placeholder for Purchases Dashboard */}
+          <PlaceholderDashboard title="Purchases" />
+        </TabsContent>
+
+        <TabsContent value="documents">
+          {/* Placeholder for Documents Dashboard */}
+          <PlaceholderDashboard title="Documents" />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 } 
