@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Employee
+from .models import Employee, Supplier
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -46,3 +46,10 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'created_at', 
             'updated_at'
         ] 
+
+
+class SupplierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Supplier
+        fields = "__all__"
+        read_only_fields = ("id", "created_at", "updated_at", "synced_at") 

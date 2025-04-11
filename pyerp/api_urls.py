@@ -83,6 +83,8 @@ urlpatterns = [
     path("v1/production/", include("pyerp.business_modules.production.urls", namespace="production_api_v1")),
     path("inventory/", include(("pyerp.business_modules.inventory.urls", "inventory"), namespace="inventory")),
     path("v1/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory_v1"), namespace="inventory_v1")),
+    path("business/", include("pyerp.business_modules.business.api_urls", namespace="business_api")),
+    path("v1/business/", include("pyerp.business_modules.business.api_urls", namespace="business_api_v1")),
     path("users/", include("users.urls", namespace="users")),
     path("v1/users/", include("users.urls", namespace="users_v1")),
     path("admin/", include("admin_tools.urls")),

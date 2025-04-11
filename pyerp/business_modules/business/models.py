@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+import uuid  # Add this import at the top
 
 
 class Employee(models.Model):
@@ -184,3 +185,80 @@ class Employee(models.Model):
     def is_active(self):
         """Return whether the employee is active (not terminated)."""
         return not self.is_terminated
+
+
+class Supplier(models.Model):
+    """Supplier model representing business suppliers."""
+    id = models.UUIDField(
+        primary_key=True, 
+        default=uuid.uuid4, 
+        editable=False,
+        verbose_name=_("Supplier ID"),
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name=_("Supplier Name"),
+    )
+    contact_person = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Contact Person"),
+    )
+    email = models.EmailField(
+        blank=True,
+        verbose_name=_("Email"),
+    )
+    phone = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_("Phone"),
+    )
+    address = models.TextField(
+        blank=True,
+        verbose_name=_("Address"),
+    )
+    tax_id = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Tax ID"),
+    )
+    accounting_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Accounting System ID"),
+        help_text=_("ID in the external accounting system, if applicable"),
+    )
+    creditor_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Creditor ID"),
+        help_text=_("Creditor ID for Document Management Systems (e.g., Paperless)"),
+    )
+    notes = models.TextField(
+        blank=True,
+        verbose_name=_("Notes"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Created At"),
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Updated At"),
+    )
+    synced_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Last Synced At"),
+        help_text=_("Timestamp of the last successful sync with external systems"),
+    )
+
+    class Meta:
+        verbose_name = _("Supplier")
+        verbose_name_plural = _("Suppliers")
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

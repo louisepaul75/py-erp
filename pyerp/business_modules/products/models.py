@@ -15,6 +15,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from pyerp.business_modules.products.tag_models import M2MOverride, FieldOverride, InheritableField
 from pyerp.core.models import Tag
 from pyerp.core.models import TaggedItem
+from pyerp.business_modules.business.models import Supplier
 
 
 class ProductCategory(models.Model):
@@ -207,6 +208,17 @@ class ParentProduct(BaseProduct):
         null=True,
         blank=True,
         help_text=_("Height in millimeters"),
+    )
+
+    # Add the supplier field
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+        verbose_name=_("Supplier"),
+        help_text=_("Optional: Link to the primary supplier of this product."),
     )
 
     # Tags - Replaced ManyToManyField with GenericRelation

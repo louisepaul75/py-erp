@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .models import Employee
+from .models import Employee, Supplier
 
 
 @admin.register(Employee)
@@ -82,3 +82,71 @@ class EmployeeAdmin(admin.ModelAdmin):
         }),
     ]
     readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(Supplier)
+class SupplierAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "contact_person",
+        "email",
+        "phone",
+        "tax_id",
+        "creditor_id",
+        "created_at",
+        "updated_at",
+    )
+    search_fields = (
+        "name",
+        "contact_person",
+        "email",
+        "tax_id",
+        "creditor_id",
+    )
+    list_filter = (
+        "created_at",
+        "updated_at",
+    )
+    readonly_fields = (
+        "id",
+        "created_at",
+        "updated_at",
+        "synced_at",
+    )
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "id",
+                    "name",
+                    "contact_person",
+                    "email",
+                    "phone",
+                    "address",
+                    "tax_id",
+                )
+            },
+        ),
+        (
+            _("System IDs & Notes"),
+            {
+                "fields": (
+                    "accounting_id",
+                    "creditor_id",
+                    "notes",
+                    "synced_at",
+                )
+            },
+        ),
+        (
+            _("Timestamps"),
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
