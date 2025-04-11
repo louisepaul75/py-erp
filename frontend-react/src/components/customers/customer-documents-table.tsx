@@ -15,11 +15,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 // Define a basic Document type (adjust fields based on your API response)
 interface Document {
   id: number | string;
-  number: string;
-  type: "Order" | "Invoice" | "DeliveryNote" | string; // Or more specific types
-  date: string | Date;
-  status: string; // e.g., "Draft", "Confirmed", "Paid", "Shipped"
-  amount: number;
+  record_number: string;
+  record_type: "Order" | "Invoice" | "DeliveryNote" | string;
+  record_date: string | Date;
+  payment_status: string;
+  total_amount: number;
 }
 
 // Basic currency formatter (copy or import from utils)
@@ -36,17 +36,17 @@ const formatCurrency = (value: number | undefined | null) => {
 const getStatusBadgeVariant = (status: string): BadgeProps["variant"] => {
     // Use nullish coalescing (??) to default to empty string if status is null/undefined
     const lowerStatus = (status ?? '').toLowerCase();
-    if (lowerStatus.includes("paid") || lowerStatus.includes("completed") || lowerStatus.includes("delivered")) return "default";
-    if (lowerStatus.includes("pending") || lowerStatus.includes("confirmed")) return "default";
-    if (lowerStatus.includes("draft")) return "secondary";
-    if (lowerStatus.includes("cancelled") || lowerStatus.includes("error")) return "destructive";
+    if (lowerStatus.includes("paid") || lowerStatus.includes("completed")) return "success";
+    if (lowerStatus.includes("pending") || lowerStatus.includes("processing")) return "default";
+    if (lowerStatus.includes("draft") || lowerStatus.includes("open")) return "secondary";
+    if (lowerStatus.includes("failed") || lowerStatus.includes("cancelled") || lowerStatus.includes("error")) return "destructive";
     return "outline";
 };
 
 // Helper to get the correct link path based on document type
 const getDocumentLink = (doc: Document): string => {
     // Use nullish coalescing (??) to default to empty string if type is null/undefined
-    switch ((doc.type ?? '').toLowerCase()) {
+    switch ((doc.record_type ?? '').toLowerCase()) {
         case 'order':
             return `/sales/orders/${doc.id}`;
         case 'invoice':
@@ -158,15 +158,15 @@ export default function CustomerDocumentsTable({ customerId }: CustomerDocuments
                 href={getDocumentLink(doc)}
                 className="font-medium text-primary hover:underline"
               >
-                {doc.number}
+                {doc.record_number}
               </Link>
             </TableCell>
-            <TableCell>{doc.type}</TableCell>
-            <TableCell className="hidden md:table-cell">{formatDate(doc.date)}</TableCell>
+            <TableCell>{doc.record_type}</TableCell>
+            <TableCell className="hidden md:table-cell">{formatDate(doc.record_date)}</TableCell>
             <TableCell>
-              <Badge variant={getStatusBadgeVariant(doc.status)}>{doc.status}</Badge>
+              <Badge variant={getStatusBadgeVariant(doc.payment_status)}>{doc.payment_status}</Badge>
             </TableCell>
-            <TableCell className="text-right">{formatCurrency(doc.amount)}</TableCell>
+            <TableCell className="text-right">{formatCurrency(doc.total_amount)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

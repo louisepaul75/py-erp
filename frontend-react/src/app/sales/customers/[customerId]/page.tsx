@@ -357,19 +357,6 @@ export default function CustomerDetailPage() {
                   </a>
                 </div>
               )}
-              {customer.website && (
-                <div className="flex items-center gap-3">
-                  <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <a
-                    href={customer.website.startsWith('http') ? customer.website : `https://${customer.website}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm hover:underline text-blue-600 truncate"
-                  >
-                    {customer.website}
-                  </a>
-                </div>
-              )}
               {customer.isCompany && customer.vat_id && (
                  <>
                     <Separator />
@@ -389,12 +376,11 @@ export default function CustomerDetailPage() {
               {/* TODO: Add Edit Address button */}
             </CardHeader>
             <CardContent>
-              {/* Placeholder: Replace with dedicated Address component if available */}
               <div className="space-y-1 text-sm text-muted-foreground">
                 {customer.billingStreet && <p>{customer.billingStreet}</p>}
                 {customer.billingPostalCode && customer.billingCity && <p>{`${customer.billingPostalCode} ${customer.billingCity}`}</p>}
                 {customer.billingCountry && <p>{customer.billingCountry}</p>}
-                {/* Add more address fields if needed */}
+                {!customer.billingStreet && !customer.billingCity && !customer.billingCountry && <p>No billing address available.</p>}
               </div>
             </CardContent>
           </Card>
@@ -406,26 +392,27 @@ export default function CustomerDetailPage() {
                {/* TODO: Add Edit Payment button */}
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-               {/* Placeholder details - Adapt based on actual fields in Customer type */}
                {customer.paymentTermsOverall && (
                   <div className="flex justify-between">
                       <span className="text-muted-foreground">Payment Term:</span>
-                      <span className="font-medium">{customer.paymentTermsOverall}</span>
+                      <span className="font-medium text-right">{customer.paymentTermsOverall}</span>
                   </div>
                )}
-                {customer.discount && customer.discount > 0 && (
+                {customer.discount !== null && customer.discount > 0 && (
                   <div className="flex justify-between">
                       <span className="text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1" /> Discount:</span>
                       <span className="font-medium">{customer.discount}%</span>
                   </div>
                 )}
-                {customer.creditLimit && (
+                {customer.creditLimit !== null && (
                      <div className="flex justify-between">
                         <span className="text-muted-foreground">Credit Limit:</span>
                         <span className="font-medium">{formatCurrency(customer.creditLimit)}</span>
                     </div>
                 )}
-                {/* Add other payment fields like Bank Info, Allowed Methods, etc. */}
+                {!customer.paymentTermsOverall && customer.discount === null && customer.creditLimit === null && (
+                    <p className="text-center text-muted-foreground">No payment details available.</p>
+                )}
             </CardContent>
           </Card>
         </div>

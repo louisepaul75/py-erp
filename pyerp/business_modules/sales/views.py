@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from django.db.models.functions import TruncDay, TruncMonth
 from collections import OrderedDict
 from django.utils import timezone
-from django.db.models import Prefetch, Count, Sum, Q, Value, DecimalField
+from django.db.models import Prefetch, Count, Sum, Q, Value, DecimalField, Max
 from django.db.models.functions import Coalesce
 
 # Create your views here
@@ -60,7 +60,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 Sum('sales_records__total_amount', filter=Q(sales_records__record_type='INVOICE')),
                 Value(0.0),
                 output_field=DecimalField()
-            )
+            ),
+            # Get the date of the last sales record
+            last_order_date=Max('sales_records__record_date')
         ).order_by('-created_at') # Default ordering, can be overridden by OrderingFilter
 
         # Adjust search_fields if email is only on Address - requires more complex filtering
