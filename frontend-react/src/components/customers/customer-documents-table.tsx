@@ -36,7 +36,7 @@ const formatCurrency = (value: number | undefined | null) => {
 const getStatusBadgeVariant = (status: string): BadgeProps["variant"] => {
     // Use nullish coalescing (??) to default to empty string if status is null/undefined
     const lowerStatus = (status ?? '').toLowerCase();
-    if (lowerStatus.includes("paid") || lowerStatus.includes("completed")) return "success";
+    if (lowerStatus.includes("paid") || lowerStatus.includes("completed")) return "default";
     if (lowerStatus.includes("pending") || lowerStatus.includes("processing")) return "default";
     if (lowerStatus.includes("draft") || lowerStatus.includes("open")) return "secondary";
     if (lowerStatus.includes("failed") || lowerStatus.includes("cancelled") || lowerStatus.includes("error")) return "destructive";
