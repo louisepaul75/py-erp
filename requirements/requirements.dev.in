@@ -13,15 +13,51 @@ ipython
 pytest
 pytest-django>=4.11.1
 pytest-cov>=6.1.1
+pytest-mock
+requests-mock
+
+# Async testing
+pytest-asyncio
+
+# Test runners/enhancements
+pytest-xdist
+pytest-sugar
+
+# Linting & Formatting
+black
+flake8
+flake8-blind-except
+flake8-bugbear
+flake8-builtins
+flake8-commas
+flake8-comprehensions
+flake8-debugger
+flake8-docstrings
+flake8-eradicate
+flake8-isort
+flake8-logging-format
+flake8-mutable
+flake8-print
+flake8-pytest-style
+flake8-simplify
+flake8-tidy-imports
+flake8-unused-arguments
+isort
+mypy
+pep8-naming
+pre-commit
+pylint
+ruff>=0.11.4
+
+# Environment/Config
+pytest-env
+django-environ
+
+# Code quality
 factory-boy
 faker
 mutmut  # Mutation testing
 hypothesis>=6.130.9  # Property-based testing
-
-# Code quality
-black
-flake8
-isort
 
 # Documentation
 sphinx
@@ -31,10 +67,71 @@ sphinx-rtd-theme
 django-browser-reload
 watchdog
 
-# Linting and formatting
-mypy
-ruff>=0.11.4
+# Security
 bandit[toml]  # Security testing
-django-environ
 
-# ... existing code ... 
+# Error tracking
+sentry-sdk[django]
+
+# Development requirements
+
+# Base requirements
+-r base.txt
+
+# Testing
+pytest>=7.0.0,<8.0.0
+pytest-django>=4.5.2,<5.0.0
+pytest-cov>=4.0.0,<5.0.0
+pytest-mock>=3.10.0,<4.0.0
+pytest-asyncio>=0.20.0,<0.21.0
+pytest-xdist>=3.0.0,<4.0.0
+coverage>=7.0.0,<8.0.0
+# Add any other testing-specific libraries below
+factory-boy>=3.2.0,<4.0.0
+freezegun>=1.2.0,<2.0.0
+
+# Linting & Formatting
+black==23.1.0
+isort==5.12.0
+flake8>=6.0.0,<7.0.0
+flake8-bugbear>=23.1.20,<24.0.0
+flake8-comprehensions>=3.10.0,<4.0.0
+flake8-django>=1.2,<2.0
+mypy==1.0.1
+django-stubs[compatible-mypy]>=1.14.0,<2.0.0
+djangorestframework-stubs[compatible-mypy]>=1.8.0,<2.0.0
+types-requests>=2.28.11.8,<3.0.0.0
+types-redis>=4.5.1,<5.0.0
+types-freezegun>=1.1.9,<2.0.0
+types-pytz>=2023.3.0,<2024.0.0
+ruff>=0.0.250,<0.1.0
+pre-commit>=3.0.0,<4.0.0
+
+# Debugging
+ipdb>=0.13.11,<0.14.0
+django-debug-toolbar>=4.0.0,<5.0.0
+werkzeug>=2.2.0,<3.0.0  # Required by debug toolbar
+
+# Security Analysis
+bandit>=1.7.4,<2.0.0
+
+# Other development tools
+django-extensions>=3.2.1,<4.0.0
+watchdog>=2.3.0,<3.0.0  # For runserver_plus --reloader
+
+# Required for building some packages (like psycopg2) on certain systems
+# python3-dev build-essential libpq-dev are often needed system-wide
+
+# Documentation Tools
+mkdocs>=1.4.0,<2.0.0
+mkdocs-material>=9.0.0,<10.0.0
+mkdocstrings[python]>=0.20.0,<0.21.0
+
+
+# Please keep this file sorted alphabetically within sections
+
+# Example of pinning a specific version:
+# requests==2.28.1
+
+# Example of using version ranges:
+# sqlalchemy>=1.4.0,<1.5.0

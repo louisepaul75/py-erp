@@ -186,7 +186,7 @@ def get_logger(name):
         logger.setLevel(getattr(logging, category_config["level"]))
 
         # Don't propagate to parent loggers to avoid duplicate logs
-        logger.propagate = False
+        logger.propagate = True
 
     return logger
 

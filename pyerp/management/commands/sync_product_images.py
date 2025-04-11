@@ -9,4 +9,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Starting product image synchronization...")
-        self.stdout.write(self.style.SUCCESS("Image synchronization completed successfully!")) 
+        self.stdout.write(
+            self.style.SUCCESS("Image sync completed successfully!")
+        ) 

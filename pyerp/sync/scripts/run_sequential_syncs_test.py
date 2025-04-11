@@ -140,6 +140,12 @@ if __name__ == "__main__":
         production_sync_args
     )
 
+    # --- Product Images Sync (Added) ---
+    product_images_sync_args = ['sync_product_images', '--top=1', '--debug']
+    sync_results[' '.join(product_images_sync_args)] = run_sync_command(
+        product_images_sync_args
+    )
+
     # --- Summary ---
     print("-" * 20)
     print("Sync Script Summary:")

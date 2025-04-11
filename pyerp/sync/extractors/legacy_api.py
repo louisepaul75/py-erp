@@ -1,8 +1,8 @@
 """Legacy API data extractor implementation."""
 
 import os
-from datetime import datetime
-from typing import Any, Dict, List
+from datetime import datetime, time, timezone, date
+from typing import Any, Dict, List, Optional
 import json
 
 from pyerp.external_api.legacy_erp import LegacyERPClient
@@ -239,89 +239,116 @@ class LegacyAPIExtractor(BaseExtractor):
                 raise ExtractError(f"Extraction failed: {e}")
             return []
 
-    def _build_date_filter_query(
-        self, date_key: str, date_filter_dict: Dict[str, Any]
-    ) -> List[List[Any]]:
-        """Build filter query conditions for a specific date key and filter dictionary.
-        
-        Args:
-            date_key: The field name for the date filter (e.g., "Datum").
-            date_filter_dict: Dictionary with operators and values 
-                              (e.g., {"gt": "2023-01-01"}).
-
-        Returns:
-            List of filter conditions in the format [[field, operator, value], ...]
-        """
-        if not date_filter_dict or not isinstance(date_filter_dict, dict):
+    def _build_date_filter_query(self, date_key: str, date_filter_dict: Dict[str, Any]) -> List[List[str]]:
+        """Build a filter query list for date-based filtering."""
+        if not date_filter_dict:
             return []
 
         logger.info(
-            f"Building date filter conditions for key: {date_key} "
-            f"with dict: {date_filter_dict}"
+            "Building date filter conditions for key: %s with dict: %s",
+            date_key, date_filter_dict
         )
 
-        filter_conditions = []
+        filter_query = []
         operator_map = {
-            "gt": ">", "lt": "<", "gte": ">=", "lte": "<=", "eq": "=", "ne": "!=",
+            'gt': '>',
+            'gte': '>=',
+            'lt': '<',
+            'lte': '<=',
+            'eq': '=',
+            'ge': '>=',
+            'le': '<='
         }
 
-        for filter_op, value in date_filter_dict.items():
-            operator = operator_map.get(filter_op)
-            if not operator:
+        for op_key, date_value in date_filter_dict.items():
+            api_op = operator_map.get(op_key)
+            if not api_op:
                 logger.warning(
-                    f"Unknown date filter operator '{filter_op}' for key "
-                    f"'{date_key}', skipping."
+                    "Unknown date filter operator '%s' for key '%s', skipping.",
+                    op_key, date_key
                 )
                 continue
 
-            # Format the value (basic string check, can be expanded)
-            formatted_value = str(value)  # Ensure string representation
-            try:
-                # Attempt basic date format check/conversion
-                if isinstance(value, datetime):
-                    formatted_value = value.strftime("%Y-%m-%d")
-                elif isinstance(value, str) and len(value) >= 10:
-                    # Assume YYYY-MM-DD format is okay, maybe validate?
-                    formatted_value = value[:10]
-                else:
-                    # Log potential issue if format is unexpected
-                    logger.debug(
-                        f"Using potentially unformatted date value '{value}' "
-                        f"for key '{date_key}'"
-                    )
-            except Exception as fmt_err:
+            # Determine if this is an end-of-day comparison
+            is_end_of_day = op_key in ('lt', 'lte', 'le')
+            formatted_date = self._format_date_for_api(date_value, is_end_of_day)
+            if formatted_date is None: # Handle formatting errors
                 logger.warning(
-                    f"Could not format date value '{value}' for key "
-                    f"'{date_key}': {fmt_err}"
+                    "Could not format date value '%s' for key '%s' and op '%s', skipping filter.",
+                    date_value, date_key, op_key
                 )
+                continue
+            filter_query.append([date_key, api_op, formatted_date])
 
-            filter_conditions.append([date_key, operator, formatted_value])
+        return filter_query
 
-        return filter_conditions
-
-    def _format_date_for_api(self, date_str: str) -> str:
-        """Format a date string for the legacy API.
+    def _format_date_for_api(self, date_input: Any, end_of_day: bool = False) -> Optional[str]:
+        """
+        Format a date input (string, date, datetime) into an ISO 8601 UTC string.
+        For 'less than' comparisons, set time to end of day (23:59:59).
 
         Args:
-            date_str: ISO format date string
+            date_input: The date value (str, date, datetime).
+            end_of_day: If True, set the time to 23:59:59 for the given date.
 
         Returns:
-            Formatted date string compatible with legacy API
+            Formatted ISO 8601 UTC string (e.g., "YYYY-MM-DDTHH:MM:SSZ") or None if formatting fails.
         """
+        naive_dt: Optional[datetime] = None
+        original_type = type(date_input)
         try:
-            # Parse ISO format date
-            if isinstance(date_str, str):
-                dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            # 1. Parse input into naive datetime
+            if isinstance(date_input, datetime):
+                # If already datetime, check if naive or aware
+                if date_input.tzinfo is None or date_input.tzinfo.utcoffset(date_input) is None:
+                    naive_dt = date_input # Already naive
+                else:
+                    # Convert aware to naive UTC datetime first
+                    naive_dt = date_input.astimezone(timezone.utc).replace(tzinfo=None)
+            elif isinstance(date_input, date):
+                # Combine date with min time
+                naive_dt = datetime.combine(date_input, time.min)
+            elif isinstance(date_input, str):
+                # Try parsing common ISO formats
+                try:
+                    parsed_dt = datetime.fromisoformat(date_input.replace("Z", "+00:00"))
+                    if parsed_dt.tzinfo is None or parsed_dt.tzinfo.utcoffset(parsed_dt) is None:
+                         naive_dt = parsed_dt
+                    else:
+                         naive_dt = parsed_dt.astimezone(timezone.utc).replace(tzinfo=None)
+                except ValueError:
+                     # Fallback for YYYY-MM-DD format
+                    parsed_date = datetime.strptime(date_input, "%Y-%m-%d").date()
+                    naive_dt = datetime.combine(parsed_date, time.min)
             else:
-                dt = date_str
+                logger.warning("Unsupported date type for formatting: %s", type(date_input))
+                return None
 
-            # Format for legacy API (check config for format or use ISO format)
-            # date_format = self.config.get('date_format', '%Y-%m-%d')
-            return dt.strftime("%Y-%m-%d")
+            if naive_dt is None: # Should not happen if parsing worked
+                 logger.warning("Failed to parse date input: %s", date_input)
+                 return None
 
-        except Exception as e:
-            logger.warning(f"Error formatting date: {str(e)}")
-            return date_str  # Return original if parsing fails
+            # 2. Determine target time based on original type and end_of_day
+            target_time: time
+            if end_of_day:
+                target_time = time(23, 59, 59) # Use specific time for end of day
+            elif original_type is datetime:
+                target_time = naive_dt.time() # Preserve original time only for datetime inputs
+            else: # Default to start of day for date or string inputs
+                 target_time = time.min
+
+            # 3. Combine date part with target time
+            final_naive_dt = datetime.combine(naive_dt.date(), target_time)
+
+            # 4. Make aware in UTC
+            aware_dt = final_naive_dt.replace(tzinfo=timezone.utc)
+
+            # 5. Format as ISO 8601 with Z for UTC
+            return aware_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        except (ValueError, TypeError) as e:
+            logger.warning("Error formatting date '%s': %s", date_input, e)
+            return None
 
     def _generate_cache_key(self, query_params=None):
         """Generate a cache key based on table name and query params.

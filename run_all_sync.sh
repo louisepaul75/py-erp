@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # run_all_sync.sh - Script to run data synchronization commands
-# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--sales-only] [--days N] [--debug] [--force-update] [--top N]
+# Usage: ./run_all_sync.sh [--customers-only] [--products-only] [--employees-only] [--sales-only] [--images-only] [--days N] [--debug] [--force-update] [--top N]
 
 # Set default values
 DEBUG=0
@@ -9,6 +9,7 @@ CUSTOMERS_ONLY=0
 PRODUCTS_ONLY=0
 EMPLOYEES_ONLY=0
 SALES_ONLY=0
+IMAGES_ONLY=0
 FORCE_UPDATE=0
 TOP_VALUE=0
 DAYS_VALUE=0
@@ -36,6 +37,10 @@ while [[ "$#" -gt 0 ]]; do
         ;;
         --sales-only)
         SALES_ONLY=1
+        shift
+        ;;
+        --images-only)
+        IMAGES_ONLY=1
         shift
         ;;
         --force-update)
@@ -146,6 +151,15 @@ run_sales_sync() {
     return $?
 }
 
+# Function to run image sync
+run_images_sync() {
+    echo "========================================"
+    echo "Running product images sync"
+    echo "========================================"
+    run_sync "python manage.py sync_product_images" "$EXTRA_FLAGS"
+    return $?
+}
+
 # Determine which sync processes to run
 if [ $CUSTOMERS_ONLY -eq 1 ]; then
     echo "Running customers sync only"
@@ -162,6 +176,10 @@ elif [ $EMPLOYEES_ONLY -eq 1 ]; then
 elif [ $SALES_ONLY -eq 1 ]; then
     echo "Running sales records sync only"
     run_sales_sync
+    exit $?
+elif [ $IMAGES_ONLY -eq 1 ]; then
+    echo "Running product images sync only"
+    run_images_sync
     exit $?
 else
     echo "Running all sync processes"
@@ -180,8 +198,11 @@ else
     
     run_sales_sync
     SALES_EXIT=$?
+
+    run_images_sync
+    IMAGES_EXIT=$?
     
-    if [ $CUSTOMER_EXIT -ne 0 ] || [ $PRODUCT_EXIT -ne 0 ] || [ $INVENTORY_EXIT -ne 0 ] || [ $EMPLOYEE_EXIT -ne 0 ] || [ $SALES_EXIT -ne 0 ]; then
+    if [ $CUSTOMER_EXIT -ne 0 ] || [ $PRODUCT_EXIT -ne 0 ] || [ $INVENTORY_EXIT -ne 0 ] || [ $EMPLOYEE_EXIT -ne 0 ] || [ $SALES_EXIT -ne 0 ] || [ $IMAGES_EXIT -ne 0 ]; then
         echo "One or more sync processes failed"
         exit 1
     else
