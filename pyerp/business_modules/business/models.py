@@ -14,7 +14,7 @@ class Employee(models.Model):
         blank=True,
         related_name="employee_profile",
         verbose_name=_("Associated User Account"),
-        help_text=_("Link to the Django user account for login and permissions."),
+        help_text=_("Link to the Django user for login/permissions."),
     )
 
     # Basic information

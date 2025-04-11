@@ -1,4 +1,4 @@
-import { instance as apiInstance } from "@/lib/api/instance"; // Assuming instance is exported from a central file
+import { instance } from "@/lib/api"; // Correct import for the ky instance
 import { UserSummary } from "./users"; // Assuming a UserSummary type exists
 
 // Define the Employee type based on the Django serializer
@@ -23,7 +23,7 @@ export interface Employee {
  */
 export const fetchEmployees = async (): Promise<Employee[]> => {
   // TODO: Add parameters for pagination, filtering, sorting, searching
-  const response = await apiInstance.get<Employee[]>("/business/employees/"); // Using relative path assuming baseURL is set in instance
+  const response = await instance.get<Employee[]>("/business/employees/"); // Using relative path assuming baseURL is set in instance
   return response.data;
 };
 
@@ -31,7 +31,7 @@ export const fetchEmployees = async (): Promise<Employee[]> => {
  * Fetches a single employee by their ID.
  */
 export const fetchEmployeeById = async (id: string | number): Promise<Employee> => {
-  const response = await apiInstance.get<Employee>(`/business/employees/${id}/`);
+  const response = await instance.get<Employee>(`/business/employees/${id}/`);
   return response.data;
 };
 
