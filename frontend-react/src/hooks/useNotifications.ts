@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { instance as apiClient } from "@/lib/api"; // Import the named export and alias it as apiClient
 import { useToast } from "@/hooks/use-toast"; // Corrected import path for the toast hook
+import { useIsAuthenticated } from "@/lib/auth/authHooks"; // Import the auth hook
 
 // Define the Notification type based on your Django model/serializer
 // Ensure this matches the structure returned by your API
 export interface Notification {
     id: string;
-    username: string; // from serializer
+    username: string; // Recipient username
+    sender_username?: string | null; // Sender username (if applicable)
+    sender_last_seen?: string | null; // Sender last seen timestamp (if applicable)
     title: string;
     content: string;
     type: string;
@@ -62,12 +65,14 @@ const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
 };
 
 const markNotificationAsRead = async (id: string): Promise<Notification> => {
-    const response = await apiClient.patch<Notification>(`v1/notifications/${id}/mark_as_read/`).json();
+    const response = await apiClient.patch<Notification>(`v1/notifications/${id}/mark_as_read/`, {});
+    // Directly return the response, as apiClient.patch already parses JSON
     return response;
 };
 
 const markAllNotificationsAsRead = async (): Promise<{ message: string }> => {
-    const response = await apiClient.patch<{ message: string }>("v1/notifications/mark_all_as_read/").json();
+    const response = await apiClient.patch<{ message: string }>("v1/notifications/mark_all_as_read/", {});
+    // Directly return the response, as apiClient.patch already parses JSON
     return response;
 };
 
@@ -75,7 +80,8 @@ const sendBroadcastMessage = async (title: string, content: string): Promise<{ m
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_broadcast/", 
         { json: { title, content } }
-    ).json();
+    );
+    // Directly return the response, as apiClient.post already parses JSON
     return response;
 };
 
@@ -84,7 +90,8 @@ const sendGroupMessage = async (title: string, content: string, groupId: string)
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_group/", 
         { json: { title, content, group_id: groupId } }
-    ).json();
+    );
+    // Directly return the response, as apiClient.post already parses JSON
     return response;
 };
 
@@ -92,7 +99,8 @@ const sendUserMessage = async (title: string, content: string, userId: string): 
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_user/", 
         { json: { title, content, user_id: userId } }
-    ).json();
+    );
+    // Directly return the response, as apiClient.post already parses JSON
     return response;
 };
 
@@ -101,6 +109,7 @@ const sendUserMessage = async (title: string, content: string, userId: string): 
 export function useNotifications(filters: { type?: string; is_read?: boolean; limit?: number } = {}) {
     const queryClient = useQueryClient();
     const { toast } = useToast(); // Get toast function
+    const { isAuthenticated } = useIsAuthenticated(); // Get authentication status
 
     const queryKeyBase = "notifications";
     const queryKey = [queryKeyBase, filters]; // Include filters in query key
@@ -118,6 +127,7 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         queryFn: () => fetchNotifications(filters),
         refetchOnMount: true,
         staleTime: 1000, // 1 second - set to a low value to ensure frequent refreshes
+        enabled: isAuthenticated, // Only run if authenticated
     });
 
     /**
@@ -133,6 +143,7 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         queryFn: fetchUnreadCount,
         refetchOnMount: true,
         staleTime: 1000, // 1 second
+        enabled: isAuthenticated, // Only run if authenticated
     });
 
     const unreadCount = unreadCountData?.unread_count ?? 0;

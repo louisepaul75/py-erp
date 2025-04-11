@@ -354,11 +354,11 @@ export const authService = {
   logout: async (): Promise<void> => {
     try {
       // Try to call logout endpoint, but don't fail if it doesn't work
-      try {
-        await api.post('auth/logout/');
-      } catch (error) {
-        console.warn('Logout endpoint call failed:', error);
-      }
+      // try {
+      //   await api.post('auth/logout/'); // No standard JWT logout endpoint needed if just clearing client tokens
+      // } catch (error) {
+      //   console.warn('Logout endpoint call failed (expected if not implemented):', error);
+      // }
     } finally {
       // Always clear tokens
       await clearAuthTokens();

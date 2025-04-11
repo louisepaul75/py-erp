@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { PlusCircle, Pencil, Trash2, UserPlus, ShieldAlert, Power } from "lucide-react"
+import { PlusCircle, Pencil, Trash2, UserPlus, ShieldAlert, Power, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,10 +18,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { UserGroupsDialog } from "./user-groups-dialog"
 import { fetchUsers, createUser, updateUser, deleteUser } from "@/lib/api/users"
 import { resetPassword, toggleUserActive } from "@/lib/api/profile"
-import type { User } from "@/lib/types"
+import type { User, Group } from "@/lib/types"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export function UserManagement() {
   const queryClient = useQueryClient()
@@ -35,10 +43,16 @@ export function UserManagement() {
     email: "",
     role: "",
     phone: "",
+    password: "",
+    confirmPassword: "",
   })
+  const [createError, setCreateError] = useState<string | null>(null)
 
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false)
   const [resetPasswordMessage, setResetPasswordMessage] = useState("")
+
+  // Placeholder roles - replace with actual data fetching if needed
+  const roles = ["Admin", "Editor", "Viewer"]
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
@@ -93,7 +107,10 @@ export function UserManagement() {
       email: "",
       role: "",
       phone: "",
+      password: "",
+      confirmPassword: "",
     })
+    setCreateError(null)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,9 +118,39 @@ export function UserManagement() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Handler for Select component changes
+  const handleRoleChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, role: value }))
+  }
+
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault()
-    createUserMutation.mutate(formData)
+    setCreateError(null)
+    if (formData.password !== formData.confirmPassword) {
+      setCreateError("Passwords do not match.")
+      return
+    }
+
+    // Destructure form data
+    // Remove confirmPassword, role - keep needed fields
+    const { name, email, password, phone, role } = formData
+
+    // Construct payload matching backend expectations
+    const payload = {
+      username: name, // Map form 'name' to 'username'
+      email: email,
+      password: password,
+      profile: {
+        // Nest phone inside profile, handle empty string
+        phone: phone || null,
+      },
+      role: role, // Add role to the payload
+      // We are omitting 'role' for now, assuming backend handles default roles/groups
+    }
+
+    // Pass the structured payload to the mutation
+    // Note: The type expected by createUser might need adjustment if this structure is now standard
+    createUserMutation.mutate(payload)
   }
 
   const handleUpdateUser = (e: React.FormEvent) => {
@@ -136,6 +183,8 @@ export function UserManagement() {
       email: user.email,
       role: user.role,
       phone: user.phone || "",
+      password: "",
+      confirmPassword: "",
     })
     setIsEditDialogOpen(true)
   }
@@ -199,7 +248,7 @@ export function UserManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {user.groups?.map((group) => (
+                      {user.groups?.map((group: Group) => (
                         <Badge key={group.id} variant="outline">
                           {group.name}
                         </Badge>
@@ -250,7 +299,15 @@ export function UserManagement() {
         )}
 
         {/* Create User Dialog */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog
+          open={isCreateDialogOpen}
+          onOpenChange={(isOpen) => {
+            setIsCreateDialogOpen(isOpen)
+            if (!isOpen) {
+              resetForm()
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
@@ -258,6 +315,13 @@ export function UserManagement() {
             </DialogHeader>
             <form onSubmit={handleCreateUser}>
               <div className="grid gap-4 py-4">
+                {createError && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>{createError}</AlertDescription>
+                  </Alert>
+                )}
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="name" className="text-right">
                     Name
@@ -289,13 +353,18 @@ export function UserManagement() {
                   <label htmlFor="role" className="text-right">
                     Role
                   </label>
-                  <Input
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
+                  <Select name="role" onValueChange={handleRoleChange} value={formData.role}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((roleOption) => (
+                        <SelectItem key={roleOption} value={roleOption}>
+                          {roleOption}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="phone" className="text-right">
@@ -307,6 +376,34 @@ export function UserManagement() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="password" className="text-right">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="confirmPassword" className="text-right">
+                    Confirm Password
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
                   />
                 </div>
               </div>
@@ -321,7 +418,9 @@ export function UserManagement() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Create</Button>
+                <Button type="submit" disabled={createUserMutation.isPending}>
+                  {createUserMutation.isPending ? "Creating..." : "Create"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -367,13 +466,18 @@ export function UserManagement() {
                   <label htmlFor="edit-role" className="text-right">
                     Role
                   </label>
-                  <Input
-                    id="edit-role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                  />
+                  <Select name="role" onValueChange={handleRoleChange} value={formData.role}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((roleOption) => (
+                        <SelectItem key={roleOption} value={roleOption}>
+                          {roleOption}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label htmlFor="phone" className="text-right">

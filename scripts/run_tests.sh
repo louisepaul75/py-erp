@@ -169,6 +169,9 @@ elif [ "$TEST_GROUP" = "all" ]; then
   
   # Then run backend tests
   
+  # Ensure the correct settings module is used for backend tests
+  export DJANGO_SETTINGS_MODULE=pyerp.config.settings.testing
+  
   # Add fuzz test markers if enabled
   if [ "$FUZZ" = true ]; then
     PYTEST_OPTS="$PYTEST_OPTS -m 'fuzzing or property'"

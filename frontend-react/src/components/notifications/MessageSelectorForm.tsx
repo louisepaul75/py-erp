@@ -13,19 +13,24 @@ import {
 } from "@/components/ui/select";
 import { fetchUsers } from "@/lib/api/users";
 import { useQuery } from '@tanstack/react-query';
+import { User } from '@/types/user';
+import { differenceInMinutes } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // Type definitions for recipients
 type RecipientType = 'broadcast' | 'group' | 'individual';
 
-type User = {
-  id: string;
-  name: string;
-  email: string;
-};
-
 type Group = {
   id: string;
   name: string;
+};
+
+// Function to determine if user is recently active (e.g., within the last 5 minutes)
+const isUserActive = (lastSeen: string | null | undefined): boolean => {
+  if (!lastSeen) return false;
+  const lastSeenDate = new Date(lastSeen);
+  const now = new Date();
+  return differenceInMinutes(now, lastSeenDate) < 5; // Active if seen in last 5 mins
 };
 
 interface MessageSelectorFormProps {
@@ -121,9 +126,18 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
             
             <SelectGroup>
               <SelectLabel>Individual Users</SelectLabel>
-              {users.map((user: User) => (
+              {(users as User[]).map((user: User) => (
                 <SelectItem key={user.id} value={`user-${user.id}`}>
-                  {user.name}
+                  <div className="flex items-center space-x-2">
+                    <span 
+                      className={cn(
+                        'h-2 w-2 rounded-full',
+                        isUserActive(user.last_seen) ? 'bg-green-500' : 'bg-gray-400'
+                      )}
+                      title={isUserActive(user.last_seen) ? 'Online' : 'Offline'}
+                    />
+                    <span>{user.name}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectGroup>
