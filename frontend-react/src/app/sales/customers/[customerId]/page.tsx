@@ -183,9 +183,10 @@ export default function CustomerDetailPage() {
 
 
   // Determine display name and initials
+  const individualName = `${customer.firstName || ""} ${customer.lastName || ""}`.trim();
   const customerName = customer.isCompany
     ? customer.companyName || "Unknown Company"
-    : `${customer.firstName || ""} ${customer.lastName || ""}`.trim() || "Unknown Customer";
+    : individualName || customer.name || "Unknown Customer"; // Use name as fallback
   const initials = getInitials(customer.firstName, customer.lastName, customer.companyName, customer.isCompany);
 
   return (
