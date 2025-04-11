@@ -2,14 +2,12 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-// ColumnDef is not needed for SortableTable
-// import { ColumnDef } from '@tanstack/react-table';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 
 import { Supplier } from '@/types/supplier';
 import { fetchSuppliers, deleteSupplier } from '@/lib/api/suppliers';
-// Correct import name for the sortable table
-import { SortableTable } from '@/components/ui/sortable-table';
+// Remove SortableTable import
+// import { SortableTable } from '@/components/ui/sortable-table';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -21,62 +19,62 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // For error state
 import { useToast } from '@/hooks/use-toast'; // Import useToast
+// Import standard table components
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption, // Optional: if you want a caption
+} from '@/components/ui/table';
 
 // Import the dialog component
 import { SupplierDialog } from './SupplierDialog';
 import { SupplierDeleteDialog } from './SupplierDeleteDialog'; // Import delete dialog
 
-// Define the Column type expected by SortableTable
-interface Column<T> {
-  id: string; // Use id instead of accessorKey for SortableTable
+// Define a simplified Column type for structure, removing sortable
+interface TableColumn<T> {
+  id: string;
   header: string;
   cell: (row: T) => React.ReactNode;
-  sortable?: boolean;
 }
 
-// Adjust columns definition to match SortableTable's expected structure
-// and accept handlers
+// Adjust columns definition - remove sortable property
 const getColumns = (
   onEdit: (supplier: Supplier) => void,
   onDelete: (supplier: Supplier) => void
-): Column<Supplier>[] => [
+): TableColumn<Supplier>[] => [
   {
-    id: 'name', // Use id
+    id: 'name',
     header: 'Name',
-    cell: (row) => row.name, // Direct access or formatting
-    sortable: true,
+    cell: (row) => row.name,
   },
   {
     id: 'contactPerson',
     header: 'Contact Person',
     cell: (row) => row.contactPerson || '-',
-    sortable: true,
   },
   {
     id: 'email',
     header: 'Email',
     cell: (row) => row.email || '-',
-    sortable: true,
   },
   {
     id: 'phone',
     header: 'Phone',
     cell: (row) => row.phone || '-',
-    sortable: true,
   },
   {
     id: 'taxId',
     header: 'Tax ID',
     cell: (row) => row.taxId || '-',
-    sortable: false, // Example: Tax ID might not be sortable
   },
   {
     id: 'actions',
     header: 'Actions',
-    sortable: false,
-    cell: (supplier) => { // Cell function receives the row data directly
-      // const supplier = row.original; // No longer needed
-
+    cell: (supplier) => {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -102,41 +100,34 @@ const getColumns = (
 ];
 
 export function SupplierDashboard() {
-  const queryClient = useQueryClient(); // Get query client instance
-  const { toast } = useToast(); // Get toast function
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
-  // State for dialog visibility and supplier being edited
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-
-  // State for Delete dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(null);
 
-  // Fetch suppliers using TanStack Query
   const {
     data: suppliers,
     isLoading,
     error,
     isError,
   } = useQuery<Supplier[], Error>({
-    queryKey: ['suppliers'], // Unique key for this query
-    queryFn: fetchSuppliers, // Function to fetch data
-    // Optional: Add staleTime, refetchOnWindowFocus, etc. as needed
+    queryKey: ['suppliers'],
+    queryFn: fetchSuppliers,
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: deleteSupplier,
-    onSuccess: (_, deletedId) => { // API function likely takes ID
+    onSuccess: (_, deletedId) => {
       toast({
         title: "Supplier Deleted",
-        // description: `${deletingSupplier?.name} has been deleted.`, // Name might be unavailable after deletion
         description: `Supplier with ID ${deletedId} has been deleted successfully.`
       });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
-      setIsDeleteDialogOpen(false); // Close confirmation dialog
-      setDeletingSupplier(null); // Clear deleting supplier state
+      setIsDeleteDialogOpen(false);
+      setDeletingSupplier(null);
     },
     onError: (error) => {
       toast({
@@ -144,14 +135,13 @@ export function SupplierDashboard() {
         description: error.message || "An unknown error occurred.",
         variant: "destructive",
       });
-       setIsDeleteDialogOpen(false); // Close confirmation dialog even on error
+       setIsDeleteDialogOpen(false);
        setDeletingSupplier(null);
     },
   });
 
-  // Handlers for dialog actions
   const handleAddSupplier = () => {
-    setEditingSupplier(null); // Ensure no supplier is pre-filled
+    setEditingSupplier(null);
     setIsDialogOpen(true);
   };
 
@@ -160,44 +150,51 @@ export function SupplierDashboard() {
     setIsDialogOpen(true);
   };
 
-  // Open delete confirmation dialog
   const handleDeleteSupplier = (supplier: Supplier) => {
     setDeletingSupplier(supplier);
     setIsDeleteDialogOpen(true);
   };
 
-  // Confirm and execute deletion
   const confirmDeleteSupplier = () => {
     if (deletingSupplier) {
       deleteMutation.mutate(deletingSupplier.id);
     }
   };
 
-  // Get columns definition with handlers
   const tableColumns = getColumns(handleEditSupplier, handleDeleteSupplier);
 
-  // Loading State
+  // Updated Loading State Skeleton to resemble standard table
   if (isLoading) {
-    // Show skeleton loaders matching the table structure
+    const skeletonRowCount = 3; // Number of skeleton rows to show
     return (
       <div className="space-y-4">
-         <div className="flex items-center justify-between">
-             <Skeleton className="h-8 w-40" /> {/* Placeholder for Search/Filter */}
-             <Skeleton className="h-10 w-32" /> {/* Placeholder for Add Button */}
-         </div>
+        <div className="flex items-center justify-end"> {/* Only show Add button skeleton */}
+          <Skeleton className="h-10 w-32" />
+        </div>
         <div className="rounded-md border">
-            <div className="p-4"><Skeleton className="h-8 w-full mb-4" /></div> {/* Header row */}
-            <div className="p-4 space-y-3">
-                <Skeleton className="h-6 w-full" /> {/* Data row 1 */}
-                <Skeleton className="h-6 w-full" /> {/* Data row 2 */}
-                <Skeleton className="h-6 w-full" /> {/* Data row 3 */}
-            </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {tableColumns.map((col) => (
+                  <TableHead key={col.id}><Skeleton className="h-5 w-20" /></TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(skeletonRowCount)].map((_, index) => (
+                <TableRow key={index}>
+                  {tableColumns.map((col) => (
+                    <TableCell key={col.id}><Skeleton className="h-4 w-full" /></TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </div>
     );
   }
 
-  // Error State
   if (isError) {
     return (
         <Alert variant="destructive">
@@ -209,23 +206,47 @@ export function SupplierDashboard() {
     );
   }
 
-  // Success State
   return (
-    <div className="space-y-4"> {/* Add spacing */}
-      {/* Add Button outside the table */}
+    <div className="space-y-4">
       <div className="flex justify-end">
         <Button onClick={handleAddSupplier}>
           <PlusCircle className="mr-2 h-4 w-4" /> Add Supplier
         </Button>
       </div>
 
-      {/* Use SortableTable component */}
-      <SortableTable
-        columns={tableColumns}
-        data={suppliers || []}
-        // Pass handleRowClick or onRowClick if needed by SortableTable for other interactions
-        // handleRowClick={(supplier) => console.log('Row clicked:', supplier)}
-      />
+      {/* Use standard Table components */}
+      <div className="rounded-md border"> {/* Add border and rounding */}
+        <Table>
+          {/* Optional: Add a caption */}
+          {/* <TableCaption>A list of your suppliers.</TableCaption> */}
+          <TableHeader>
+            <TableRow>
+              {tableColumns.map((column) => (
+                <TableHead key={column.id}>{column.header}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {suppliers && suppliers.length > 0 ? (
+              suppliers.map((supplier) => (
+                <TableRow key={supplier.id}>
+                  {tableColumns.map((column) => (
+                    <TableCell key={column.id}>
+                      {column.cell(supplier)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={tableColumns.length} className="h-24 text-center">
+                  No suppliers found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Add/Edit Dialog */}
       <SupplierDialog
