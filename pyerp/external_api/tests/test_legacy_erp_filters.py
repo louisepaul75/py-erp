@@ -160,7 +160,8 @@ class LegacyERPFilterTests(unittest.TestCase):
         Test filtering where a field value is in a list (simulated with OR).
         Uses the filter format: 'Field = Val1' or 'Field = Val2'
         confirmed working url:
-        http://192.168.73.28:8080/rest/Artikel_Variante?$filter='Nummer = 803721' or 'Nummer = 731671'
+        http://192.168.73.28:8080/rest/Artikel_Variante?
+        $filter='Nummer = 803721' or 'Nummer = 731671'
         """
         # Assumption: Need known values for the ID_FIELD.
         # Fetch a couple of records first to get valid IDs.
@@ -202,15 +203,17 @@ class LegacyERPFilterTests(unittest.TestCase):
             self.assertSetEqual(
                 returned_ids,
                 set(expected_ids_list),
-                f"Expected IDs {set(expected_ids_list)} but got {returned_ids} "
-                f"using OR simulation"
+                (
+                    f"Expected IDs {set(expected_ids_list)} "
+                    f"but got {returned_ids} using OR simulation"
+                ),
             )
         else:
             # If df is empty, the assertion fails unless expected list is also empty
             self.assertListEqual(
                 [],
                 expected_ids_list,
-                "Expected IDs but got empty result using OR simulation"
+                "Expected IDs but got empty result using OR simulation",
             )
 
     def test_06_filter_combined_and(self):
@@ -229,7 +232,7 @@ class LegacyERPFilterTests(unittest.TestCase):
 
     def test_07_filter_by_familie(self):
         """
-        Test filtering by the 'Familie_' field, expecting only matching records.
+        Test filtering by 'Familie_' field, expecting matching records.
         
         Working Url:
         http://192.168.73.28:8080/rest/Artikel_Variante?
@@ -257,7 +260,10 @@ class LegacyERPFilterTests(unittest.TestCase):
         
         # MODIFICATION: Call fetch_table directly with all_records=True 
         # to match the successful manual script execution
-        print(f"--- Running Test: Filter Equals ({familie_field}) - All Records --- ")
+        print(
+            f"--- Running Test: Filter Equals ({familie_field}) "
+            f"- All Records --- "
+        )
         print(f"Filter (direct call): {filter_q}")
         try:
             df = self.client.fetch_table(
@@ -298,7 +304,10 @@ class LegacyERPFilterTests(unittest.TestCase):
                     f"{familie_field} filter."
                 )
         else:
-            print("Warning: No records returned for the filter, assertion skipped.")
+            print(
+                "Warning: No records returned for the filter, "
+                "assertion skipped."
+            )
 
     # def test_07_filter_numeric_greater_than(self):
     #     """Test filtering on a numeric field."""

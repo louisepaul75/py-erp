@@ -239,6 +239,170 @@ class LegacyAPIExtractor(BaseExtractor):
                 raise ExtractError(f"Extraction failed: {e}")
             return []
 
+    def extract_batched(self, batch_size: int = 100, query_params: Optional[Dict[str, Any]] = None):
+        """
+        Extract data from the API in batches using pagination.
+
+        Args:
+            batch_size: The number of records to fetch per API call.
+            query_params: Additional query parameters, similar to extract(),
+                          but $top and $skip will be managed internally.
+
+        Yields:
+            List of records (each batch) from the API.
+
+        Raises:
+            ExtractError: If data extraction fails during pagination.
+        """
+        client = self.connection
+        table_name = self.config["table_name"]
+        query_params = query_params or {}
+        skip = 0
+        processed_records = 0
+        # Remove $top if present, handle limit within the loop
+        # Keep original $top if user wants to limit overall results
+        top_limit = None
+        if "$top" in query_params:
+             top_limit = int(query_params.pop("$top")) # Remove from params passed to fetch_table
+             logger.info(f"Applying overall top limit of {top_limit} to batched extraction.")
+
+
+        logger.info(
+            f"Starting batched extraction from {table_name} with batch size {batch_size}"
+        )
+
+        # --- Build base filter query (excluding pagination params) ---
+        # Reuse filter building logic but apply it once before looping
+        final_filter_query = []
+        # 1. Get base filter from query_params["filter_query"]
+        base_filter = query_params.get("filter_query")
+        if base_filter:
+            if isinstance(base_filter, list):
+                final_filter_query.extend(base_filter)
+            else:
+                logger.warning(
+                    f"Expected list for filter_query, got {type(base_filter)}. Ignoring."
+                )
+        # 2. Add parent filter (if applicable in this context)
+        # Ensure parent_record_ids logic is appropriate here. If it filters based on
+        # already known IDs, it might not be suitable for initial customer fetching,
+        # but could be used if fetching related data in batches.
+        if "parent_record_ids" in query_params:
+            parent_ids = query_params["parent_record_ids"]
+            logger.info(
+                f"Applying parent record ID filter (batched): {len(parent_ids)} IDs"
+            )
+            parent_field = query_params.get("parent_field", "AbsNr") # Use appropriate field
+            parent_filter_part = [[parent_field, "=", pid] for pid in parent_ids]
+            # If there are many parent IDs, the filter might become too large.
+            # The API client or endpoint needs to handle potentially large 'OR' conditions.
+            # Consider if this filter type is compatible with efficient batching.
+            final_filter_query.extend(parent_filter_part)
+
+        # 3. Add date filters
+        for date_key in self.KNOWN_DATE_KEYS:
+            # Allow multiple date keys if they are in query_params and KNOWN_DATE_KEYS
+            if date_key in query_params and isinstance(query_params[date_key], dict):
+                date_filter_dict = query_params[date_key]
+                date_conditions = self._build_date_filter_query(
+                    date_key, date_filter_dict
+                )
+                if date_conditions:
+                    logger.info(
+                        f"Adding date filter for key '{date_key}' (batched): {date_conditions}"
+                    )
+                    final_filter_query.extend(date_conditions)
+                # Removed break to allow multiple date filters if needed
+
+
+        # --- Pagination loop ---
+        while True:
+            # Determine the size for the current API call
+            current_batch_size = batch_size
+            if top_limit is not None:
+                remaining = top_limit - processed_records
+                if remaining <= 0:
+                    logger.info(f"Reached overall top limit of {top_limit}. Stopping batch fetch.")
+                    break
+                # Request only the remaining number if it's less than the full batch size
+                current_batch_size = min(batch_size, remaining)
+
+            logger.debug(
+                f"Fetching batch: table={table_name}, skip={skip}, top={current_batch_size}"
+            )
+            try:
+                # Assuming fetch_table supports skip and top for pagination
+                # We set all_records=False to enable pagination behaviour
+                # Pass the pre-built filter_query
+                batch = client.fetch_table(
+                    table_name=table_name,
+                    all_records=False, # Explicitly disable fetching all records
+                    filter_query=final_filter_query if final_filter_query else None,
+                    skip=skip,
+                    top=current_batch_size
+                    # Pass other relevant params from query_params if needed, e.g., select, orderby
+                    # select=query_params.get('$select'),
+                    # orderby=query_params.get('$orderby')
+                )
+
+                # Check if batch is None or empty list/DataFrame
+                if batch is None:
+                    logger.warning(f"Received None batch for skip={skip}, top={current_batch_size}. Stopping.")
+                    break
+
+                # Convert to list of dicts if necessary
+                records_list = []
+                batch_record_count = 0
+                if hasattr(batch, 'empty') and batch.empty: # Handle empty DataFrame
+                     logger.debug(f"Received empty DataFrame batch for skip={skip}.")
+                     batch_record_count = 0
+                     records_list = []
+                elif hasattr(batch, 'to_dict') and callable(batch.to_dict):
+                     try:
+                         records_list = batch.to_dict(orient="records")
+                         batch_record_count = len(records_list)
+                     except Exception as e:
+                         logger.error(f"Error converting DataFrame batch: {e}. Stopping batch fetch.")
+                         raise ExtractError(f"Data conversion failed during batch fetch (skip={skip}): {e}") from e
+                elif isinstance(batch, list):
+                    records_list = batch
+                    batch_record_count = len(records_list)
+                else:
+                    logger.error(f"Received unexpected batch type: {type(batch)}. Stopping batch fetch.")
+                    raise ExtractError(f"Unexpected data type received during batch fetch (skip={skip})")
+
+
+                logger.debug(f"Fetched batch of {batch_record_count} records.")
+
+                # If the API returns an empty list/DataFrame, assume end of data
+                if not batch_record_count:
+                    logger.info(f"Received empty batch for skip={skip}. Assuming end of data.")
+                    break
+
+                yield records_list
+                processed_records += batch_record_count
+                skip += batch_record_count # Use actual count for next skip
+
+                # Check if the API returned fewer records than requested (and we didn't hit a top_limit)
+                # This is a common way to detect the last page.
+                if batch_record_count < current_batch_size and (top_limit is None or processed_records < top_limit):
+                    logger.info(f"Received fewer records ({batch_record_count}) than requested ({current_batch_size}). Assuming end of data.")
+                    break
+
+            except Exception as e:
+                # Catch potential errors from fetch_table or processing
+                logger.error(
+                    f"Error during batched extraction from {table_name} "
+                    f"(skip={skip}, top={current_batch_size}): {e}", exc_info=True # Log traceback
+                )
+                # Decide whether to continue or raise based on requirements
+                # Raising an error halts the sync process on batch failure
+                raise ExtractError(
+                    f"Extraction failed during batch fetch (skip={skip}): {e}"
+                ) from e
+
+        logger.info(f"Finished batched extraction from {table_name}. Total records processed: {processed_records}")
+
     def _build_date_filter_query(self, date_key: str, date_filter_dict: Dict[str, Any]) -> List[List[str]]:
         """Build a filter query list for date-based filtering."""
         if not date_filter_dict:
