@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 
 import { Supplier } from '@/types/supplier';
-import { fetchSuppliers, deleteSupplier } from '@/lib/api/suppliers';
+import { fetchSuppliers, deleteSupplier, FetchSuppliersResult, SyncStatus } from '@/lib/api/suppliers';
 // Remove SortableTable import
 // import { SortableTable } from '@/components/ui/sortable-table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,18 @@ import {
 // Import the dialog component
 import { SupplierDialog } from './SupplierDialog';
 import { SupplierDeleteDialog } from './SupplierDeleteDialog'; // Import delete dialog
+
+// Import Pagination component
+import { Pagination } from '@/components/ui/pagination';
+
+// Import Select components
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Define a simplified Column type for structure, removing sortable
 interface TableColumn<T> {
@@ -103,19 +116,28 @@ export function SupplierDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Add state for pagination
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10); // Or make this configurable
+  // Add state for filter
+  const [syncStatusFilter, setSyncStatusFilter] = useState<SyncStatus>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingSupplier, setDeletingSupplier] = useState<Supplier | null>(null);
 
   const {
-    data: suppliers,
+    data, // Will now be FetchSuppliersResult | undefined
     isLoading,
     error,
     isError,
-  } = useQuery<Supplier[], Error>({
-    queryKey: ['suppliers'],
-    queryFn: fetchSuppliers,
+  } = useQuery<FetchSuppliersResult, Error>({
+    // Include filter in the queryKey
+    queryKey: ['suppliers', searchTerm, page, pageSize, syncStatusFilter],
+    // Pass filter to fetchSuppliers
+    queryFn: () => fetchSuppliers(searchTerm, page, pageSize, syncStatusFilter),
+    // keepPreviousData: true, // Optional: Keep showing old data while fetching new page
   });
 
   const deleteMutation = useMutation({
@@ -125,7 +147,12 @@ export function SupplierDashboard() {
         title: "Supplier Deleted",
         description: `Supplier with ID ${deletedId} has been deleted successfully.`
       });
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+      // Invalidate the specific page query including filter
+      queryClient.invalidateQueries({ queryKey: ['suppliers', searchTerm, page, pageSize, syncStatusFilter] });
+      // Optional: Check if the deleted item was the last on the page and go back
+      if (data?.data.length === 1 && page > 1) {
+        setPage(page - 1);
+      }
       setIsDeleteDialogOpen(false);
       setDeletingSupplier(null);
     },
@@ -159,6 +186,20 @@ export function SupplierDashboard() {
     if (deletingSupplier) {
       deleteMutation.mutate(deletingSupplier.id);
     }
+  };
+
+  // Handler for search input changes - reset page to 1
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setPage(1); // Reset to first page on new search
+  };
+
+  // Handler for sync status filter changes
+  const handleSyncStatusChange = (value: string) => {
+    // Ensure the value is a valid SyncStatus type
+    const newStatus = value as SyncStatus;
+    setSyncStatusFilter(newStatus);
+    setPage(1); // Reset to first page on filter change
   };
 
   const tableColumns = getColumns(handleEditSupplier, handleDeleteSupplier);
@@ -208,8 +249,34 @@ export function SupplierDashboard() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={handleAddSupplier}>
+      {/* Modify header: Add filter dropdown next to search */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <div className="flex flex-1 items-center gap-2 w-full sm:w-auto">
+          {/* Search input */}
+          <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search suppliers..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="pl-8 w-full"
+            />
+          </div>
+          {/* Sync Status Filter Dropdown */}
+          <Select value={syncStatusFilter} onValueChange={handleSyncStatusChange}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Sync status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="synced">Synced</SelectItem>
+              <SelectItem value="not_synced">Not Synced</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Add supplier button */}
+        <Button onClick={handleAddSupplier} className="w-full sm:w-auto">
           <PlusCircle className="mr-2 h-4 w-4" /> Add Supplier
         </Button>
       </div>
@@ -227,8 +294,9 @@ export function SupplierDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {suppliers && suppliers.length > 0 ? (
-              suppliers.map((supplier) => (
+            {/* Check data.data instead of suppliers */} 
+            {data && data.data.length > 0 ? (
+              data.data.map((supplier) => (
                 <TableRow key={supplier.id}>
                   {tableColumns.map((column) => (
                     <TableCell key={column.id}>
@@ -247,6 +315,15 @@ export function SupplierDashboard() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Render Pagination if more than one page */}
+      {data && data.meta.totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={data.meta.totalPages}
+          onPageChange={setPage}
+        />
+      )}
 
       {/* Add/Edit Dialog */}
       <SupplierDialog
