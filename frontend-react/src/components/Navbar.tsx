@@ -258,7 +258,7 @@ export function Navbar() {
                       </Link>
                     </ShadcnDropdownMenuItem>
                     <ShadcnDropdownMenuItem asChild>
-                      <Link href="/suppliers" className="flex items-center">
+                      <Link href="/business/suppliers" className="flex items-center">
                         {t("navigation.suppliers")}
                       </Link>
                     </ShadcnDropdownMenuItem>
