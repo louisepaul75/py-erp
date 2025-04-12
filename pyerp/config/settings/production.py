@@ -31,22 +31,22 @@ if os.environ.get("USE_LOCAL_HTTPS_PROXY", "False").lower() == "true":
 # Must be set from environment in production
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
-# Database configuration
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "pyerp_production"),
-        "USER": os.environ.get("DB_USER", "admin"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "192.168.73.64"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-        "OPTIONS": {
-            "connect_timeout": 10,  # Connection timeout in seconds
-            "client_encoding": "UTF8",
-            "sslmode": "prefer",
-        },
-    },
-}
+# Database configuration - REMOVED TO USE BASE SETTINGS WITH 1PASSWORD
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": os.environ.get("DB_NAME", "pyerp_production"),
+#         "USER": os.environ.get("DB_USER", "admin"),
+#         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+#         "HOST": os.environ.get("DB_HOST", "192.168.73.64"),
+#         "PORT": os.environ.get("DB_PORT", "5432"),
+#         "OPTIONS": {
+#             "connect_timeout": 10,  # Connection timeout in seconds
+#             "client_encoding": "UTF8",
+#             "sslmode": "prefer",
+#         },
+#     },
+# }
 
 # Alternative DATABASE_URL configuration (commented out)
 
