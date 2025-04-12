@@ -27,6 +27,13 @@ export interface Product {
   category: string | null; // Assuming category is a string or null
   tags: string[]; // Assuming tags are an array of strings
   variants_count: number;
+  supplier?: Supplier | null; // Add optional supplier field
+}
+
+// Add Supplier type based on API response
+export interface Supplier {
+  id: number;
+  name: string;
 }
 
 export interface ApiResponse<T> {

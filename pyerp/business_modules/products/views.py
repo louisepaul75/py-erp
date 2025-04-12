@@ -35,6 +35,7 @@ from pyerp.business_modules.products.serializers import (
     ParentProductSummarySerializer,
     ProductSearchResultSerializer
 )
+from pyerp.business_modules.business.models import Supplier
 
 # Get standard logger instance
 logger = logging.getLogger(__name__)
@@ -140,6 +141,7 @@ class ProductListView(LoginRequiredMixin, ListView):
 class ProductDetailView(LoginRequiredMixin, DetailView):
     """
     View for displaying product details.
+    Allows updating the linked supplier via POST request.
     """
 
     model = ParentProduct
@@ -156,7 +158,7 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         """
-        Add variants to context.
+        Add variants and suppliers to context.
         """
         context = super().get_context_data(**kwargs)
         product = self.get_object()
@@ -219,7 +221,31 @@ class ProductDetailView(LoginRequiredMixin, DetailView):
                     pass
 
         context["variant_images"] = variant_images
+
+        # Fetch all suppliers for the dropdown
+        context["suppliers"] = Supplier.objects.all()
+
         return context
+
+    # Add POST handler to update supplier
+    def post(self, request, *args, **kwargs):
+        product = self.get_object()
+        supplier_id = request.POST.get('supplier_id')
+        
+        if supplier_id:
+            try:
+                supplier = Supplier.objects.get(pk=supplier_id)
+                product.supplier = supplier
+                messages.success(request, _(f"Product '{product.name}' linked to supplier '{supplier.name}'."))
+            except Supplier.DoesNotExist:
+                messages.error(request, _(f"Supplier with ID {supplier_id} not found."))
+        else:
+            # If no supplier_id is sent (or empty string), unlink the supplier
+            product.supplier = None
+            messages.success(request, _(f"Supplier unlinked from product '{product.name}'."))
+        
+        product.save()
+        return self.get(request, *args, **kwargs) # Redirect back to the detail page by calling get
 
 
 class VariantDetailView(LoginRequiredMixin, DetailView):
@@ -342,6 +368,7 @@ class ProductListAPIView(APIView):
 class ProductDetailAPIView(APIView):
     """
     Get product by ID.
+    Also returns a list of all suppliers for selection.
     """
 
     def get_object(self, pk):
@@ -349,10 +376,16 @@ class ProductDetailAPIView(APIView):
         return get_object_or_404(ParentProduct, pk=pk)
 
     def get(self, request, pk=None):
-        """Get product details."""
+        """Get product details and list of suppliers."""
         product = self.get_object(pk)
         serializer = ParentProductSerializer(product)
-        return Response(serializer.data)
+        product_data = serializer.data
+
+        # Fetch all suppliers and add them to the response
+        suppliers = Supplier.objects.all().values('id', 'name') # Only get ID and name
+        product_data['suppliers'] = list(suppliers)
+
+        return Response(product_data)
 
     def patch(self, request, pk=None):
         """Update product details."""

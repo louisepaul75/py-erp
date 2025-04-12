@@ -5,7 +5,7 @@ import TabsNavigation from "./TabsNavigation";
 import MutterTab from "./MutterTab";
 import VariantenTab from "./VariantenTab";
 import { SelectedItem } from "@/components/types/product";
-import { ProductDetailProps } from "@/components/types/product";
+import { ProductDetailProps, Supplier } from "@/components/types/product";
 import { productApi } from "@/lib/products/api";
 import { Product } from "@/components/types/product";
 
@@ -19,6 +19,7 @@ export default function ProductDetail({
   const [activeTab, setActiveTab] = useState("mutter");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const router = useRouter();
 
   console.log("ProductDetail rendering with selectedProduct:", selectedProduct, "isCreatingParent:", isCreatingParent);
@@ -96,6 +97,32 @@ export default function ProductDetail({
     console.log("ProductDetail selectedProduct updated:", selectedProduct);
   }, [selectedProduct]);
 
+  // Add useEffect to fetch suppliers when product ID changes
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      if (selectedProduct?.id && !isCreatingParent) {
+        setIsLoading(true); // Indicate loading while fetching suppliers too
+        setError(null);
+        try {
+          // Use the existing product detail fetch as it now includes suppliers
+          const productDataWithSuppliers = await productApi.getProductById(selectedProduct.id);
+          if (productDataWithSuppliers.suppliers) {
+            setSuppliers(productDataWithSuppliers.suppliers);
+          } else {
+            setSuppliers([]); // Set empty if not found
+          }
+        } catch (err: any) {
+          console.error("Error fetching suppliers for product:", selectedProduct.id, err);
+          setError(`Failed to fetch suppliers: ${err.message || "Unknown error"}`);
+          setSuppliers([]); // Clear suppliers on error
+        }
+        setIsLoading(false); // Done loading
+      }
+    };
+
+    fetchSuppliers();
+  }, [selectedProduct?.id, isCreatingParent]); // Rerun if product ID changes or creation mode changes
+
   return (
     <div className="z-20 bg-background p-4 lg:p-6">
       {/* Mutter/Varianten Tabs */}
@@ -114,6 +141,7 @@ export default function ProductDetail({
           onSave={isCreatingParent ? handleCreateProduct : undefined}
           onCancel={isCreatingParent ? handleCancel : undefined}
           canEdit={true}
+          suppliers={suppliers}
         />
       ) : (
         <VariantenTab 

@@ -37,6 +37,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Define an extended interface that includes the creation props
 interface MutterTabProps extends ProductDetailProps {
@@ -44,6 +51,7 @@ interface MutterTabProps extends ProductDetailProps {
   onSave?: (data: Omit<Product, "id">) => Promise<void>;
   onCancel?: () => void;
   canEdit?: boolean;
+  suppliers?: Supplier[]; // Add suppliers prop
 }
 
 export default function MutterTab({
@@ -53,6 +61,7 @@ export default function MutterTab({
   onSave,
   onCancel,
   canEdit = false,
+  suppliers = [], // Default to empty array
 }: MutterTabProps) {
   const [isEditing, setIsEditing] = useState(isCreatingParent);
   const [initialProductData, setInitialProductData] = useState<Partial<Product> | null>(null);
@@ -118,6 +127,41 @@ export default function MutterTab({
       ...prev,
       [field]: value
     }));
+  };
+
+  // Handler specifically for supplier change
+  const handleSupplierChange = async (supplierIdString: string) => {
+    const supplierId = supplierIdString ? parseInt(supplierIdString) : null;
+    const selectedSupplier = suppliers.find(s => s.id === supplierId) || null;
+
+    // Optimistically update local state
+    setProductData(prev => ({
+      ...prev,
+      supplier: selectedSupplier ? { id: selectedSupplier.id, name: selectedSupplier.name } : null
+    }));
+
+    // Call API to update
+    if (selectedProduct?.id) {
+      setIsSaving(true);
+      setError(null);
+      try {
+        await productApi.updateProduct(selectedProduct.id.toString(), { supplier: supplierId });
+        // Optionally show success message (or rely on parent component)
+        // alert("Supplier updated successfully!");
+      } catch (err: any) {
+        console.error("Error updating supplier:", err);
+        setError(`Failed to update supplier: ${err.message || "Unknown error"}`);
+        // Revert optimistic update on error
+        setProductData(initialProductData ? JSON.parse(JSON.stringify(initialProductData)) : selectedProduct || {});
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      console.error("Cannot update supplier without product ID");
+      setError("Cannot update supplier: Product ID is missing.");
+      // Revert if needed
+       setProductData(initialProductData ? JSON.parse(JSON.stringify(initialProductData)) : selectedProduct || {});
+    }
   };
 
   // Handler to update categories
@@ -369,6 +413,32 @@ export default function MutterTab({
                 />
               </div>
             </div>
+            {/* Add Supplier Select Field */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+              <label className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Supplier
+              </label>
+              <div className="md:col-span-3 ml-3">
+                <Select
+                  value={productData.supplier?.id?.toString() ?? ""}
+                  onValueChange={handleSupplierChange}
+                  disabled={!isEditing || isSaving}
+                >
+                  <SelectTrigger className="w-full border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <SelectValue placeholder="Select Supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">-- None --</SelectItem>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {/* End Supplier Select Field */}
           </CardContent>
         </Card>
 
