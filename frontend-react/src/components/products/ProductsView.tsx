@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { TwoPaneLayout } from '@/components/ui/TwoPaneLayout';
 
 // TODO: Ensure QueryClientProvider is set up in layout.tsx or a providers file
 
@@ -444,164 +445,142 @@ export function ProductsView() {
   const displayData = !isEditing && selectedProduct ? selectedProduct : productFormData;
   const canRenderDetails = !showDetailPlaceholder && !showDetailLoading && (displayData || isEditingNew);
 
-  return (
-    <div className="flex flex-col md:flex-row gap-4 h-full">
-      {/* Left Pane: Product List / Filters */}
-      <Card className="w-full md:w-1/3 flex flex-col">
-        <CardHeader>
-          <CardTitle>Product List</CardTitle>
-          <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              type="search"
-              placeholder="Search SKU..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="pl-10 h-9 w-full"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="flex-grow overflow-y-auto">
-          {productsQuery.isLoading ? (
-            <p>Loading products...</p>
-          ) : productsQuery.isError ? (
-            <p>Error loading products: {productsQuery.error.message}</p>
-          ) : products.length > 0 ? (
-            <Table>
-              <TableCaption>Product List - Page {pagination.pageIndex + 1}</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>Variants</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow
-                    key={product.id}
-                    onClick={() => handleSelectItem(product.id)}
-                    className={`cursor-pointer ${selectedItemId === product.id ? 'bg-muted' : ''}`}
-                  >
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell>{product.is_active ? 'Yes' : 'No'}</TableCell>
-                    <TableCell>{product.variants_count ?? 0}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-muted-foreground text-center p-4">No products found.</p>
-          )}
-
-          {totalCount > 0 && (
-            <div className="mt-4 flex justify-between items-center px-2 py-1 border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex - 1 }))}
-                disabled={pagination.pageIndex === 0 || productsQuery.isFetching || isEditing}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {pagination.pageIndex + 1} of {Math.ceil(totalCount / pagination.pageSize)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex + 1 }))}
-                disabled={pagination.pageIndex + 1 >= Math.ceil(totalCount / pagination.pageSize) || productsQuery.isFetching || isEditing}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          )}
-        </CardContent>
-        <div className="p-4 border-t flex-shrink-0">
-          <Button className='w-full' onClick={handleCreateNew} disabled={isEditing}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            New Product
-          </Button>
+  const leftPane = (
+    <>
+      <CardHeader>
+        <CardTitle>Product List</CardTitle>
+        <div className="relative mt-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            type="search"
+            placeholder="Search SKU..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="pl-10 h-9 w-full"
+          />
         </div>
-      </Card>
+      </CardHeader>
+      <CardContent className="flex-grow overflow-y-auto">
+        {productsQuery.isLoading ? (
+          <p>Loading products...</p>
+        ) : productsQuery.isError ? (
+          <p>Error loading products: {productsQuery.error.message}</p>
+        ) : products.length > 0 ? (
+          <Table>
+            <TableCaption>Product List - Page {pagination.pageIndex + 1}</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>SKU</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead>Variants</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product) => (
+                <TableRow
+                  key={product.id}
+                  onClick={() => handleSelectItem(product.id)}
+                  className={`cursor-pointer ${selectedItemId === product.id ? 'bg-muted' : ''}`}
+                >
+                  <TableCell>{product.sku}</TableCell>
+                  <TableCell>{product.name}</TableCell>
+                  <TableCell>{product.is_active ? 'Yes' : 'No'}</TableCell>
+                  <TableCell>{product.variants_count ?? 0}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <p className="text-muted-foreground text-center p-4">No products found.</p>
+        )}
 
-      {/* Right Pane: Product Details / Edit Form */}
-      <Card className="w-full md:w-2/3 flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{isEditingNew ? 'Create New Product' : 'Product Details'}</CardTitle>
-          <div className="flex gap-2">
-            {!isEditing && selectedItemId && (
-              <Button variant="outline" size="sm" onClick={handleEdit} disabled={productDetailQuery.isLoading}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            )}
-            {isEditing && (
-              <>
-                <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={isMutating}>
-                  <X className="mr-2 h-4 w-4" />
-                  Cancel
-                </Button>
-                <Button size="sm" onClick={handleSave} disabled={isMutating || !productFormData.name || !productFormData.sku}>
-                  {isMutating ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
-                  ) : (
-                    <><Save className="mr-2 h-4 w-4" />Save</>
-                  )}
-                </Button>
-              </>
-            )}
+        {totalCount > 0 && (
+          <div className="mt-4 flex justify-between items-center px-2 py-1 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex - 1 }))}
+              disabled={pagination.pageIndex === 0 || productsQuery.isFetching || isEditing}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {pagination.pageIndex + 1} of {Math.ceil(totalCount / pagination.pageSize)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex + 1 }))}
+              disabled={pagination.pageIndex + 1 >= Math.ceil(totalCount / pagination.pageSize) || productsQuery.isFetching || isEditing}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent className="flex-grow overflow-y-auto">
-          {showDetailPlaceholder && (
-            <p className="text-muted-foreground flex items-center justify-center h-full">Select a product or create a new one.</p>
-          )}
-          {showDetailLoading && (
-            <p className="text-muted-foreground flex items-center justify-center h-full">Loading details for item {selectedItemId}...</p>
-          )}
-          {apiError && (
-            <Alert variant="destructive" className="my-4">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{apiError}</AlertDescription>
-            </Alert>
-          )}
+        )}
+      </CardContent>
+      <div className="p-4 border-t flex-shrink-0">
+        <Button className='w-full' onClick={handleCreateNew} disabled={isEditing}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Product
+        </Button>
+      </div>
+    </>
+  );
 
-          {canRenderDetails && (
+  const rightPane = (
+    <>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>{isEditingNew ? 'Create New Product' : 'Product Details'}</CardTitle>
+        <div className="flex gap-2">
+          {!isEditing && selectedItemId && (
+            <Button variant="outline" size="sm" onClick={handleEdit} disabled={productDetailQuery.isLoading}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          )}
+          {isEditing && (
             <>
-              {!isEditingNew && selectedItemId && displayData ? (
-                <Tabs defaultValue="parent" value={detailViewMode} onValueChange={(value) => setDetailViewMode(value as 'parent' | 'variants')} className="p-4 h-full flex flex-col">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="parent">Parent Details</TabsTrigger>
-                    <TabsTrigger value="variants">Variants ({selectedProduct?.variants_count ?? 0})</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="parent" className="flex-grow overflow-y-auto space-y-4">
-                    <ProductDetailFormContent
-                      productData={productFormData}
-                      isEditing={isEditing}
-                      handleFormChange={handleFormChange}
-                      handleCheckboxChange={handleCheckboxChange}
-                      handleSupplierChange={handleSupplierChange}
-                      isMutating={isMutating}
-                      fetchedProduct={selectedProduct}
-                      suppliers={productDetailQuery.data?.suppliers ?? []}
-                      router={router}
-                    />
-                  </TabsContent>
-                  <TabsContent value="variants" className="flex-grow overflow-y-auto space-y-4">
-                    <ProductVariantContent
-                      selectedItemId={selectedItemId}
-                      variantsQuery={variantsQuery}
-                    />
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <div className='p-4 space-y-4 flex-grow overflow-y-auto'>
+              <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={isMutating}>
+                <X className="mr-2 h-4 w-4" />
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={isMutating || !productFormData.name || !productFormData.sku}>
+                {isMutating ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                ) : (
+                  <><Save className="mr-2 h-4 w-4" />Save</>
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow overflow-y-auto">
+        {showDetailPlaceholder && (
+          <p className="text-muted-foreground flex items-center justify-center h-full">Select a product or create a new one.</p>
+        )}
+        {showDetailLoading && (
+          <p className="text-muted-foreground flex items-center justify-center h-full">Loading details for item {selectedItemId}...</p>
+        )}
+        {apiError && (
+          <Alert variant="destructive" className="my-4">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{apiError}</AlertDescription>
+          </Alert>
+        )}
+
+        {canRenderDetails && (
+          <>
+            {!isEditingNew && selectedItemId && displayData ? (
+              <Tabs defaultValue="parent" value={detailViewMode} onValueChange={(value) => setDetailViewMode(value as 'parent' | 'variants')} className="p-4 h-full flex flex-col">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="parent">Parent Details</TabsTrigger>
+                  <TabsTrigger value="variants">Variants ({selectedProduct?.variants_count ?? 0})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="parent" className="flex-grow overflow-y-auto space-y-4">
                   <ProductDetailFormContent
                     productData={productFormData}
                     isEditing={isEditing}
@@ -609,17 +588,44 @@ export function ProductsView() {
                     handleCheckboxChange={handleCheckboxChange}
                     handleSupplierChange={handleSupplierChange}
                     isMutating={isMutating}
-                    fetchedProduct={null}
-                    suppliers={[]}
+                    fetchedProduct={selectedProduct}
+                    suppliers={productDetailQuery.data?.suppliers ?? []}
                     router={router}
                   />
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                </TabsContent>
+                <TabsContent value="variants" className="flex-grow overflow-y-auto space-y-4">
+                  <ProductVariantContent
+                    selectedItemId={selectedItemId}
+                    variantsQuery={variantsQuery}
+                  />
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <div className='p-4 space-y-4 flex-grow overflow-y-auto'>
+                <ProductDetailFormContent
+                  productData={productFormData}
+                  isEditing={isEditing}
+                  handleFormChange={handleFormChange}
+                  handleCheckboxChange={handleCheckboxChange}
+                  handleSupplierChange={handleSupplierChange}
+                  isMutating={isMutating}
+                  fetchedProduct={null}
+                  suppliers={[]}
+                  router={router}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </>
+  );
+
+  return (
+    <TwoPaneLayout
+      leftPaneContent={leftPane}
+      rightPaneContent={rightPane}
+    />
   );
 }
 
