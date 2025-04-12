@@ -105,6 +105,10 @@ fi
 # Create necessary directories if they don't exist
 mkdir -p static media logs data
 
+# Clean the host logs directory before mounting it
+echo "Cleaning host logs directory..."
+rm -rf ./logs/*
+
 # Start the pyERP container with improved mount points
 echo "Starting new pyerp-dev container..."
 docker run -d \

@@ -47,3 +47,32 @@ export function safeGetTextContent(
   }
 }
 
+/**
+ * Formats a date string or Date object into a localized string.
+ * @param date The date to format (string, Date, or null/undefined)
+ * @param options Intl.DateTimeFormat options
+ * @returns Formatted date string or '-' if date is invalid
+ */
+export function formatDate(
+  date: string | Date | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }
+): string {
+  if (!date) return '-';
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+        console.warn("Invalid date provided to formatDate:", date);
+        return '-';
+    }
+    return new Intl.DateTimeFormat('default', options).format(dateObj);
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return '-';
+  }
+}
+

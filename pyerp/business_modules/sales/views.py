@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from django.db.models.functions import TruncDay, TruncMonth
 from collections import OrderedDict
 from django.utils import timezone
+from django.db.models import Prefetch, Count, Sum, Q, Value, DecimalField, Max
+from django.db.models.functions import Coalesce
 
 # Create your views here
 
@@ -28,7 +30,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
     API viewset for managing customers.
     """
 
-    queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     filter_backends = [
         DjangoFilterBackend,
@@ -38,6 +39,38 @@ class CustomerViewSet(viewsets.ModelViewSet):
     filterset_fields = ["customer_group", "delivery_block"]
     search_fields = ["name", "customer_number", "email"]
     ordering_fields = ["name", "customer_number", "created_at"]
+
+    def get_queryset(self):
+        """
+        Optimize queryset to prefetch primary address and annotate related data.
+        """
+        queryset = Customer.objects.all().prefetch_related(
+            # Prefetch only the primary address into a predictable attribute
+            Prefetch(
+                'addresses',
+                queryset=Address.objects.filter(is_primary=True),
+                to_attr='primary_address_list' # Use a list attribute
+            )
+        ).annotate(
+            # Calculate order count (adjust if only certain record types count)
+            order_count=Count('sales_records'),
+            # Calculate total spent (sum of INVOICE totals, default to 0.00 if none)
+            # Ensure the output field type is DecimalField
+            total_spent=Coalesce(
+                Sum('sales_records__total_amount', filter=Q(sales_records__record_type='INVOICE')),
+                Value(0.0),
+                output_field=DecimalField()
+            ),
+            # Get the date of the last sales record
+            last_order_date=Max('sales_records__record_date')
+        ).order_by('-created_at') # Default ordering, can be overridden by OrderingFilter
+
+        # Adjust search_fields if email is only on Address - requires more complex filtering
+        # For now, assuming Customer.email might exist or search needs adjustment
+        # Example adjustment (if Customer doesn't have email directly):
+        # self.search_fields = ["name", "customer_number", "addresses__email"]
+
+        return queryset
 
 
 class AddressViewSet(viewsets.ModelViewSet):

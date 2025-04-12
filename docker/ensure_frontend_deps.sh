@@ -5,6 +5,9 @@
 
 cd /app/frontend-react
 
+echo "Ensuring frontend dependencies are installed..."
+npm install
+
 echo "Checking for missing frontend dependencies..."
 
 # Install @testing-library/dom if not already installed

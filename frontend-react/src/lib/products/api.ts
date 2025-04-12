@@ -75,22 +75,42 @@ const api = ky.create({
       async (error: HTTPError) => {
         const { response } = error;
 
-        // Log the error details
+        // Log the error details initially
         console.error("API Error:", {
           status: response?.status,
           method: error.request?.method,
           url: error.request?.url,
-          message: error.message
+          // Log initial message before potentially replacing it
+          message: error.message 
         });
 
-        try {
-          // Try to get and set the error message from response text
-          if (response) {
-            error.message = await response.text();
+        // Attempt to refine the error message based on response content type
+        if (response) {
+          try {
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("text/html")) {
+              // If HTML response, provide a concise error message
+              error.message = `Server returned an HTML error page (Status: ${response.status})`;
+              // Optionally log the first few lines of HTML for context if needed, but avoid logging the whole page
+              // const htmlSnippet = (await response.text()).substring(0, 200); 
+              // console.log("HTML Error Snippet:", htmlSnippet);
+            } else {
+              // Otherwise, try to read the response text (could be JSON error, plain text, etc.)
+              const responseText = await response.text();
+              // Avoid setting message if responseText is empty or just whitespace
+              if (responseText && responseText.trim()) { 
+                error.message = responseText;
+              }
+              // If responseText was empty/whitespace, the original error.message remains
+            }
+          } catch (e) {
+            // If reading response.text() fails, log this secondary error
+            console.error("Failed to read error response body:", e);
+            // Keep the original error message from ky
           }
-        } catch {}
+        }
 
-        // Return the error directly - this is what the type system expects
+        // Return the error (potentially with the modified message)
         return error;
       }
     ],
@@ -143,10 +163,10 @@ export const productApi = {
     };
 
     try {
-      const response = await api.get("api/v1/products/", { 
+      const response = await api.get("v1/products/", { 
         searchParams: defaultParams,
         signal 
-      }).json<ApiResponse>();
+      }).json<ApiResponse<Product>>();
       return response;
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -170,10 +190,10 @@ export const productApi = {
     };
 
     try {
-      const response = await api.get("api/v1/products/direct-search/", { 
+      const response = await api.get("v1/products/direct-search/", { 
         searchParams: defaultParams,
         signal 
-      }).json<ApiResponse>();
+      }).json<ApiResponse<Product>>();
       return response;
     } catch (error) {
       console.error("Error with direct search for products:", error);
@@ -183,7 +203,7 @@ export const productApi = {
 
   getProduct: async (id: string | number, signal?: AbortSignal): Promise<Product> => {
     try {
-      return await api.get(`api/v1/products/${id}/`, { signal }).json();
+      return await api.get(`v1/products/${id}/`, { signal }).json();
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
       throw error;
@@ -191,7 +211,7 @@ export const productApi = {
   },
   getProductBySlug: async (sku: string | number): Promise<Product> => {
     try {
-      return await api.get(`api/v1/products/by-slug/${sku}/`).json();
+      return await api.get(`v1/products/by-slug/${sku}/`).json();
     } catch (error) {
       console.error(`Error fetching product ${sku}:`, error);
       throw error;
@@ -206,7 +226,7 @@ export const productApi = {
         fields: "id,name,sku", // Only fetch necessary fields
         page_size: 10, // Limit results for dropdown
       };
-      const response = await api.get("api/v1/products/", { searchParams: params }).json<ApiResponse>();
+      const response = await api.get("v1/products/", { searchParams: params }).json<ApiResponse<Product>>();
       return response.results || []; // Return results or empty array
     } catch (error) {
       console.error("Error searching parent products:", error);
@@ -216,7 +236,7 @@ export const productApi = {
 
   createProduct: async (productData: Omit<Product, "id"> & { parent_id?: number | string }): Promise<Product> => {
     try {
-      return await api.post("api/v1/products/", { json: productData }).json();
+      return await api.post("v1/products/", { json: productData }).json();
     } catch (error) {
       console.error("Error creating product:", error);
       if (error instanceof HTTPError) {
@@ -231,7 +251,7 @@ export const productApi = {
     productData: Partial<Product>
   ): Promise<Product> => {
     try {
-      return await api.patch(`api/v1/products/${id}/`, { json: productData }).json();
+      return await api.patch(`v1/products/${id}/`, { json: productData }).json();
     } catch (error) {
       console.error(`Error updating product ${id}:`, error);
       throw error;
@@ -240,7 +260,7 @@ export const productApi = {
 
   deleteProduct: async (id: string): Promise<void> => {
     try {
-      await api.delete(`api/v1/products/${id}/`);
+      await api.delete(`v1/products/${id}/`);
     } catch (error) {
       console.error(`Error deleting product ${id}:`, error);
       throw error;
@@ -249,96 +269,37 @@ export const productApi = {
 
   getCategories: async () => {
     try {
-      return await api.get("api/v1/products/categories/").json();
+      return await api.get("v1/products/categories/").json();
     } catch (error) {
       console.error("Error fetching categories:", error);
       throw error;
     }
   },
-};
 
-// Variant API methods
-export const variantApi = {
-  getVariants: async (productId: string): Promise<Variant[]> => {
+  getProductVariants: async (productId: string | number, signal?: AbortSignal): Promise<Variant[]> => {
     try {
-      return await api.get(`api/v1/products/${productId}/variants/`).json();
+      return await api.get(`v1/products/${productId}/variants/`, { signal }).json();
     } catch (error) {
       console.error(`Error fetching variants for product ${productId}:`, error);
       throw error;
     }
   },
 
-  getVariant: async (variantId: string): Promise<Variant> => {
+  // Function to assign a supplier to a product
+  assignSupplierToProduct: async (productId: string | number, supplierId: string): Promise<void> => {
     try {
-      return await api.get(`api/v1/products/variant/${variantId}/`).json();
+      // Construct the correct URL using the supplier ID
+      const url = `v1/business/suppliers/${supplierId}/assign-product/`;
+      // Send POST request with product ID in the body
+      await api.post(url, { json: { product_id: productId } });
     } catch (error) {
-      console.error(`Error fetching variant ${variantId}:`, error);
-      throw error;
-    }
-  },
-
-  createVariant: async (
-    productId: string,
-    variantData: Omit<Variant, "id">
-  ): Promise<Variant> => {
-    try {
-      return await api
-        .post(`api/v1/products/${productId}/variants/`, { json: variantData })
-        .json();
-    } catch (error) {
-      console.error(`Error creating variant for product ${productId}:`, error);
-      throw error;
-    }
-  },
-
-  updateVariant: async (
-    productId: string,
-    variantId: string,
-    variantData: Partial<Variant>
-  ): Promise<Variant> => {
-    try {
-      return await api
-        .patch(`api/v1/products/${productId}/variants/${variantId}/`, {
-          json: variantData,
-        })
-        .json();
-    } catch (error) {
-      console.error(
-        `Error updating variant ${variantId} for product ${productId}:`,
-        error
-      );
-      throw error;
-    }
-  },
-
-  deleteVariant: async (
-    productId: string,
-    variantId: string
-  ): Promise<void> => {
-    try {
-      await api.delete(`api/v1/products/${productId}/variants/${variantId}/`);
-    } catch (error) {
-      console.error(
-        `Error deleting variant ${variantId} for product ${productId}:`,
-        error
-      );
-      throw error;
-    }
-  },
-
-  deleteVariants: async (
-    productId: string,
-    variantIds: string[]
-  ): Promise<void> => {
-    try {
-      await api.delete(`api/v1/products/${productId}/variants/`, {
-        json: { variantIds },
-      });
-    } catch (error) {
-      console.error(`Error deleting variants for product ${productId}:`, error);
-      throw error;
+      console.error(`Error assigning supplier ${supplierId} to product ${productId}:`, error);
+      throw error; // Rethrow to allow calling function to handle UI feedback
     }
   },
 };
+
+// Variant API methods
+// Removed variantApi as getVariants was moved to productApi
 
 export default api;

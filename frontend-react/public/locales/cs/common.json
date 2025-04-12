@@ -9,7 +9,24 @@
     "ui_components": "UI Komponenty",
     "settings": "Nastavení",
     "logout": "Odhlásit se",
-    "admin_settings": "Nastavení administrátora"
+    "dashboard": "Nástěnka",
+    "sales_dashboard": "Prodejní nástěnka",
+    "customers": "Zákazníci",
+    "admin_settings": "Nastavení administrátora",
+    "business": "Podnikání",
+    "employees": "Zaměstnanci",
+    "mold_management": "Správa forem",
+    "purchasing": "Nákup",
+    "accounting": "Účetnictví",
+    "manufacturing": "Výroba",
+    "projects": "Projekty",
+    "hr": "Lidské zdroje",
+    "reporting": "Reporty",
+    "administration": "Administrace",
+    "users": "Uživatelé",
+    "groups": "Skupiny",
+    "permissions": "Oprávnění",
+    "system": "Systém"
   },
   "buttons": {
     "save": "Uložit",
@@ -42,5 +59,17 @@
     "databaseStatus": "Stav databáze",
     "gitBranch": "Git větev",
     "apiAvailable": "API dostupné"
-  }
+  },
+  "greeting": "Ahoj!",
+  "search_placeholder": "Hledat...",
+  "logout": "Odhlásit se",
+  "profile": "Profil",
+  "docs": "Dokumentace",
+  "support": "Podpora",
+  "theme": {
+    "light": "Světlé",
+    "dark": "Tmavé",
+    "system": "Systém"
+  },
+  "select_employee_details": "Vyberte zaměstnance pro zobrazení detailů"
 } 

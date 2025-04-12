@@ -6,6 +6,7 @@ import { useScreenSize } from '@/utils/responsive';
 type NavItem = {
   label: string;
   href: string;
+  icon?: React.ElementType;
 };
 
 type MobileMenuProps = {
@@ -55,9 +56,12 @@ export function MobileMenu({ items }: MobileMenuProps) {
                 <li key={item.href}>
                   <Link 
                     href={item.href}
-                    className="block py-2 px-4 text-lg font-medium hover:bg-secondary hover:text-secondary-foreground rounded-md transition-colors duration-200"
+                    className="flex items-center py-2 px-4 text-lg font-medium hover:bg-secondary hover:text-secondary-foreground rounded-md transition-colors duration-200"
                     onClick={toggleMenu}
                   >
+                    {item.icon && (
+                      <item.icon className="h-5 w-5 mr-3" aria-hidden="true" />
+                    )}
                     {item.label}
                   </Link>
                 </li>

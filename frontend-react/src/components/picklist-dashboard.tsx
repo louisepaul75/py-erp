@@ -607,7 +607,7 @@ export default function PicklistDashboard() {
   // Use the appropriate backend based on device
   const DndBackend = useIsMobile() ? TouchBackend : HTML5Backend
 
-  if (error) {
+  if (error && error.name !== 'AbortError') {
     // Use destructive colors for error message
     return <div className="p-4 border border-destructive/20 bg-destructive/10 text-destructive rounded-md">Fehler beim Laden der Daten: {error.message}</div>
   }

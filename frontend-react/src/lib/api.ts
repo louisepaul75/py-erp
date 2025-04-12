@@ -4,6 +4,7 @@ import { API_URL, AUTH_CONFIG } from './config';
 import { csrfService } from './auth/authService';
 import { cookies } from 'next/headers';
 import { clientCookieStorage } from './auth/clientCookies';
+import { Customer, CustomerFormData } from './definitions'; // Assuming types are defined here
 
 // Create an API client instance with the correct base URL and auth
 // Export the instance so it can be used in other modules
@@ -222,5 +223,111 @@ export async function fetchOrders(): Promise<Order[]> {
     }
     throw error;
   }
+}
+
+// TODO: Replace with environment variable
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const CUSTOMER_API_ENDPOINT = `${API_BASE_URL}/api/v1/sales/customers`;
+
+// Helper function for handling API responses
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    // Try to parse error details from the backend response
+    let errorMessage = `API Error: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      // Adjust based on your Django error response structure
+      errorMessage = errorData.detail || errorData.error || JSON.stringify(errorData);
+    } catch (e) {
+      // Ignore if response body is not JSON or empty
+    }
+    console.error("API request failed:", errorMessage);
+    throw new Error(errorMessage);
+  }
+  // Handle cases with no content (like DELETE)
+  if (response.status === 204) {
+      return undefined as T; // Or return a specific success indicator if needed
+  }
+  return response.json() as Promise<T>;
+}
+
+// Fetch all customers
+export async function fetchCustomersAPI(): Promise<Customer[]> {
+  console.log(`Fetching customers from: ${CUSTOMER_API_ENDPOINT}/`);
+  const response = await fetch(`${CUSTOMER_API_ENDPOINT}/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      // Add Authorization header if needed: e.g., 'Authorization': `Bearer ${token}`
+    },
+    next: { revalidate: 0 } // Opt out of caching for dynamic data
+  });
+  return handleResponse<Customer[]>(response);
+}
+
+// Fetch a single customer by ID
+export async function fetchCustomerByIdAPI(id: string): Promise<Customer | null> {
+  console.log(`Fetching customer by ID: ${id} from: ${CUSTOMER_API_ENDPOINT}/${id}/`);
+  try {
+    const response = await fetch(`${CUSTOMER_API_ENDPOINT}/${id}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add Authorization header if needed
+      },
+      next: { revalidate: 0 } // Opt out of caching
+    });
+    return await handleResponse<Customer>(response);
+  } catch (error: any) {
+    // DRF typically returns 404 if not found
+    if (error.message.includes('404')) {
+        console.warn(`Customer with ID ${id} not found.`);
+        return null; // Return null if customer not found
+    } else {
+        console.error("Failed to fetch customer:", error);
+        throw error; // Re-throw other errors
+    }
+  }
+}
+
+// Create a new customer
+export async function createCustomerAPI(customerData: CustomerFormData): Promise<Customer> {
+  console.log(`Creating customer at: ${CUSTOMER_API_ENDPOINT}/`);
+  const response = await fetch(`${CUSTOMER_API_ENDPOINT}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // Add Authorization header if needed
+    },
+    body: JSON.stringify(customerData),
+  });
+  return handleResponse<Customer>(response);
+}
+
+// Update an existing customer (using PATCH for partial updates)
+export async function updateCustomerAPI(id: string, customerData: Partial<CustomerFormData>): Promise<Customer> {
+  console.log(`Updating customer ID: ${id} at: ${CUSTOMER_API_ENDPOINT}/${id}/`);
+  const response = await fetch(`${CUSTOMER_API_ENDPOINT}/${id}/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      // Add Authorization header if needed
+    },
+    body: JSON.stringify(customerData),
+  });
+  return handleResponse<Customer>(response);
+}
+
+// Delete a customer by ID
+export async function deleteCustomerAPI(id: string): Promise<void> {
+  console.log(`Deleting customer ID: ${id} at: ${CUSTOMER_API_ENDPOINT}/${id}/`);
+  const response = await fetch(`${CUSTOMER_API_ENDPOINT}/${id}/`, {
+    method: 'DELETE',
+    headers: {
+      // Add Authorization header if needed
+    },
+  });
+  // Expecting 204 No Content on successful delete
+  await handleResponse<void>(response);
 }
 

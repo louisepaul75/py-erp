@@ -58,11 +58,12 @@ fi
 mkdir -p /app/media /app/static /app/data /app/pyerp/static
 
 # Initialize React application
-if [ -d "/app/frontend-react" ]; then
-    echo "Initializing React application..."
-    cd /app/frontend-react && npm install --legacy-peer-deps
-    echo "React initialization complete"
-fi
+# Removed the initial npm install from here - moved to just before supervisord starts
+# if [ -d \"/app/frontend-react\" ]; then
+#     echo \"Initializing React application...\"
+#     cd /app/frontend-react && npm install --legacy-peer-deps
+#     echo \"React initialization complete\"
+# fi
 
 # Apply migrations for development only if PostgreSQL is available
 if $PG_AVAILABLE; then
@@ -189,6 +190,14 @@ chmod 755 /var/run /var/log/supervisor
 if [ -n "${NEXT_PUBLIC_API_URL:-}" ]; then
     export NEXT_PUBLIC_API_URL
     echo "Exported NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}"
+fi
+
+# Ensure frontend dependencies are installed BEFORE starting supervisord
+if [ -d "/app/frontend-react" ]; then
+    echo "Ensuring frontend dependencies are fully installed..."
+    cd /app/frontend-react && npm install --legacy-peer-deps
+    echo "Frontend dependencies installation complete."
+    cd /app # Change back to the main app directory
 fi
 
 # Start supervisord

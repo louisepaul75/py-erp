@@ -10,6 +10,7 @@ import os
 import dj_database_url  # noqa: F401
 
 from .base import *  # noqa
+from .base import MIDDLEWARE as BASE_MIDDLEWARE # Import base middleware
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -138,6 +139,35 @@ else:
 
 # Import anymail settings
 from .anymail import *  # noqa
+
+# Middleware configuration - Extend base middleware
+MIDDLEWARE = BASE_MIDDLEWARE + [
+    # Add production-specific middleware here, if any, or ensure they are
+    # already in BASE_MIDDLEWARE if appropriate.
+    # Example: Middleware specific to production logging or monitoring
+    # "pyerp.middleware.request_logger_middleware.RequestLoggerMiddleware",
+    # Note: SecurityMiddleware, SessionMiddleware, CorsMiddleware,
+    # CommonMiddleware, CsrfViewMiddleware, AuthMiddleware, MessagesMiddleware,
+    # LocaleMiddleware, ClickjackingMiddleware, AccountMiddleware
+    # should already be in BASE_MIDDLEWARE.
+    # Ensure Whitenoise is correctly placed (often high up)
+]
+
+# Ensure Whitenoise is placed correctly (after SecurityMiddleware)
+if 'whitenoise.middleware.WhiteNoiseMiddleware' in MIDDLEWARE:
+    MIDDLEWARE.remove('whitenoise.middleware.WhiteNoiseMiddleware')
+if 'django.middleware.security.SecurityMiddleware' in MIDDLEWARE:
+    whitenoise_insert_index = MIDDLEWARE.index('django.middleware.security.SecurityMiddleware') + 1
+    MIDDLEWARE.insert(whitenoise_insert_index, 'whitenoise.middleware.WhiteNoiseMiddleware')
+else: # If SecurityMiddleware is not present for some reason, add it near the top
+    MIDDLEWARE.insert(0, 'whitenoise.middleware.WhiteNoiseMiddleware')
+
+# Conditionally add memory profiler middleware if enabled
+if os.environ.get("ENABLE_MEMORY_PROFILING", "false").lower() == "true":
+    # Insert after security/session/cors but before request-specific logic
+    insert_index = MIDDLEWARE.index("django.middleware.common.CommonMiddleware")
+    MIDDLEWARE.insert(insert_index, "pyerp.middleware.memory_profiler_middleware.MemoryProfilerMiddleware")
+    print("INFO: Memory Profiler Middleware enabled.")
 
 # Add email_system to installed apps
 INSTALLED_APPS += ["pyerp.utils.email_system"]  # noqa

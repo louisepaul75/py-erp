@@ -47,7 +47,7 @@ DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Prevent Django from automatically appending trailing slashes to URLs
 # This fixes issues with PATCH requests where the browser might strip the trailing slash
-APPEND_SLASH = False
+APPEND_SLASH = True
 
 # Get ALLOWED_HOSTS from environment variable
 ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal", "192.168.65.1"]

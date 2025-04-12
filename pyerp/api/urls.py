@@ -39,6 +39,10 @@ urlpatterns = [
             include('pyerp.business_modules.sales.api_urls'),
         ), # Include the sales API URLs
         path(
+            'business/',
+            include('pyerp.business_modules.business.api_urls'),
+        ), # Include the business API URLs
+        path(
             'git/branch/',
             get_git_branch,
             name='get_git_branch',
