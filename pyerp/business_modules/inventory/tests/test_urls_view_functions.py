@@ -90,45 +90,35 @@ class TestInventoryViewFunctions:
         """Test the storage_locations_list view returns expected response."""
         from pyerp.business_modules.inventory.urls import storage_locations_list
         
-        # Create mock storage location
-        mock_location = MagicMock()
+        # Mock user and request
+        user = MagicMock()
+        request = request_factory.get("/api/inventory/storage-locations/")
+        request.user = user
+
+        # Mock the database query result object
+        mock_location = MagicMock(spec=StorageLocation)
         mock_location.id = 1
         mock_location.name = "Test Location"
-        mock_location.description = "Test Description"
-        mock_location.country = "US"
-        mock_location.city_building = "Building 1"
+        mock_location.building = "Building 1"
         mock_location.unit = "Unit 1"
         mock_location.compartment = "Compartment 1"
         mock_location.shelf = "Shelf 1"
-        mock_location.sale = False
-        mock_location.special_spot = False
-        mock_location.is_active = True
-        mock_location.product_count = 5 # Assuming the annotation sets this attribute
+        mock_location.product_count = 5 # Keep as integer
         # Add other potentially accessed attributes if needed by the serializer/view
         mock_location.location_code = (
-            "US-Building 1-Unit 1-Compartment 1-Shelf 1" # Pre-calculate for mock simplicity
+            "US-Building 1-Unit 1-Compartment 1-Shelf 1"
         )
-        mock_location.legacy_id = "LGCY1"
+        # Configure the mock .all() on the return value of annotate
+        mock_annotate.return_value.all.return_value = [mock_location]
 
-        # Create a mock QuerySet that is iterable
-        mock_queryset = MagicMock()
-        mock_queryset.__iter__.return_value = iter([mock_location]) # Make it yield the mock location
-
-        # Configure the patched annotate method to return the mock QuerySet
-        mock_annotate.return_value = mock_queryset
-        
-        # Create a proper request object
-        request = request_factory.get('/api/inventory/storage-locations/')
-        
-        # Mock the permission check
+        # Mock authentication check
         with patch(
             'pyerp.business_modules.inventory.urls.IsAuthenticated.has_permission',
             return_value=True
         ):
             response = storage_locations_list(request)
-            # Consider removing explicit render if content access triggers it
-            response = self.render_response(response) 
-            
+            response = self.render_response(response)
+
         assert response.status_code == status.HTTP_200_OK
         content = json.loads(response.content)
         assert len(content) == 1

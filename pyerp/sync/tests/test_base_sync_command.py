@@ -129,44 +129,32 @@ def test_build_query_params_combinations(test_command, options, expected_params,
     assert params == expected_params
 
 def test_build_query_params_invalid_filters_json(test_command, caplog):
-    """Test build_query_params with invalid JSON in --filters."""
-    options = {'filters': '{"invalid json', 'days': None, 'top': None}
-    params = test_command.build_query_params(options)
-    assert params == {} # Invalid JSON should be ignored
-    assert any(
-        rec.levelname == "WARNING" and "Invalid JSON format for --filters option" in rec.message
-        for rec in caplog.records
-    )
+    options = {"filters": '{"key": "value'}
+    with pytest.raises(CommandError, match="Invalid JSON format for --filters option"):
+        test_command.build_query_params(options)
+    # Check for the specific error log message (Removed, covered by pytest.raises match)
+    # assert any("Invalid JSON format for --filters option" in rec.message for rec in caplog.records)
 
 def test_build_query_params_non_dict_filters_json(test_command, caplog):
-    """Test build_query_params with valid JSON that isn't a dictionary."""
-    options = {'filters': '[1, 2, 3]', 'days': None, 'top': None}
-    params = test_command.build_query_params(options)
-    assert params == {} # Non-dict JSON should be ignored
-    assert any(
-        rec.levelname == "WARNING" and "Ignoring --filters: Expected JSON dict" in rec.message
-        for rec in caplog.records
-    )
+    options = {"filters": '["list", "not_dict"]', "days": None, "top": None}
+    with pytest.raises(CommandError, match="Invalid format for --filters: Expected a JSON dictionary"):
+        test_command.build_query_params(options)
+    # Check for the specific error log message (Removed, covered by pytest.raises match)
+    # assert any("Expected a JSON dictionary" in rec.message for rec in caplog.records)
 
 def test_build_query_params_negative_days(test_command, caplog):
-    """Test build_query_params with a negative value for --days."""
-    options = {'days': -5, 'filters': None, 'top': None}
-    params = test_command.build_query_params(options)
-    assert 'filter_query' not in params # Negative days ignored
-    assert any(
-        rec.levelname == "WARNING" and "Ignoring --days: Value must be non-negative" in rec.message
-        for rec in caplog.records
-    )
+    options = {"days": -5, "filters": None, "top": None}
+    with pytest.raises(CommandError, match="Invalid value for --days: Must be a non-negative integer"):
+        test_command.build_query_params(options)
+    # Check for the specific error log message (Removed, covered by pytest.raises match)
+    # assert any("Must be a non-negative integer" in rec.message for rec in caplog.records)
 
 def test_build_query_params_invalid_days_value(test_command, caplog):
-    """Test build_query_params with a non-integer value for --days."""
-    options = {'days': 'abc', 'filters': None, 'top': None}
-    params = test_command.build_query_params(options)
-    assert 'filter_query' not in params # Invalid days ignored
-    assert any(
-        rec.levelname == "WARNING" and "Invalid value for --days" in rec.message
-        for rec in caplog.records
-    )
+    options = {"days": "abc", "filters": None, "top": None}
+    with pytest.raises(CommandError, match="Invalid value for --days: Must be an integer"):
+        test_command.build_query_params(options)
+    # Check for the specific error log message (Removed, covered by pytest.raises match)
+    # assert any("Must be an integer" in rec.message for rec in caplog.records)
 
 
 # --- Test get_mapping ---
