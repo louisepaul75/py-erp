@@ -82,7 +82,7 @@ export function SupplierDetailDialog({ open, onOpenChange, supplier }: SupplierD
   const [searchError, setSearchError] = React.useState<string | null>(null);
 
   // --- API Functions ---
-  const fetchAssignedProducts = async (supplierId: number) => {
+  const fetchAssignedProducts = async (supplierId: string) => {
     setAssignedLoading(true);
     setAssignedError(null);
     try {

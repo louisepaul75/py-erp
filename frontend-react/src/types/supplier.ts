@@ -1,5 +1,5 @@
 export type Supplier = {
-  id: number; // Assuming Django REST Framework uses integer IDs by default
+  id: string; // Corrected: Backend uses UUID (string)
   name: string;
   contactPerson: string | null; // Assuming these can be optional
   email: string | null;
@@ -20,7 +20,7 @@ export type NewSupplier = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt' | 'syn
 // Type for updating an existing supplier (all fields optional except id)
 // Using Partial<Omit<...>> makes all fields optional. We add 'id' back as required.
 export type UpdateSupplier = Partial<Omit<Supplier, 'id' | 'createdAt' | 'updatedAt' | 'syncedAt'>> & {
-  id: number;
+  id: string; // Corrected: Backend uses UUID (string)
 };
 
 // Optional: Define a type for the API response structure if it's nested
