@@ -28,6 +28,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 // Assume formatDate exists or create a basic one if needed
 import { formatDate } from "@/lib/utils";
+import { cn } from "@/lib/utils"; // Added for class names
 
 // Basic currency formatter (similar to draft)
 const formatCurrency = (value: number | undefined | null) => {
@@ -38,8 +39,13 @@ const formatCurrency = (value: number | undefined | null) => {
     }).format(value);
 };
 
+// Define Props for CustomerList
+interface CustomerListProps {
+  onSelectCustomer: (id: string | number) => void;
+  selectedCustomerId: string | null;
+}
 
-export default function CustomerList() {
+export default function CustomerList({ onSelectCustomer, selectedCustomerId }: CustomerListProps) {
   const router = useRouter(); // Added router hook
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
@@ -232,16 +238,20 @@ export default function CustomerList() {
                         : `${(customer.firstName || 'U')[0]}${(customer.lastName || 'N')[0]}`).toUpperCase();
 
                     return (
-                        <TableRow key={customer.id}>
-                            {/* Name Cell with Link - Avatar Removed */}
+                        <TableRow
+                           key={customer.id}
+                           onClick={() => onSelectCustomer(customer.id)} // Call onSelectCustomer
+                           className={cn( // Apply conditional styling
+                             "cursor-pointer",
+                             String(customer.id) === selectedCustomerId ? 'bg-muted' : '' // Highlight selected row
+                           )}
+                           >
+                            {/* Name Cell - Removed Link */}
                             <TableCell>
-                            <Link href={`/sales/customers/${customer.id}`} className="group"> {/* Removed flex items-center gap-3 */}
-                                {/* Avatar component removed */}
-                                <span className="font-medium group-hover:text-primary group-hover:underline transition-colors">
-                                    {customer.name || 'N/A'} {/* Display customer.name directly */}
-                                    <p className="text-xs text-muted-foreground font-normal block sm:hidden">{customer.customer_number}</p> {/* Show number on small screens */}
+                                <span className="font-medium">
+                                    {customer.name || 'N/A'}
+                                    <p className="text-xs text-muted-foreground font-normal block sm:hidden">{customer.customer_number}</p>
                                 </span>
-                            </Link>
                             </TableCell>
                             {/* Other Data Cells */}
                             <TableCell className="hidden md:table-cell">{customer.emailMain}</TableCell>
@@ -252,8 +262,13 @@ export default function CustomerList() {
                             {/* Actions Cell */}
                             <TableCell>
                             <div className="flex gap-1 justify-end">
-                                {/* Edit Button */}
-                                <Button variant="ghost" size="sm" onClick={() => handleEditCustomer(customer.id)}>
+                                {/* Edit Button - Keep navigation */}
+                                <Button variant="ghost" size="sm"
+                                   onClick={(e) => {
+                                       e.stopPropagation(); // Prevent row click
+                                       handleEditCustomer(customer.id);
+                                   }}
+                                   >
                                     <Edit className="h-4 w-4" />
                                     <span className="sr-only">Edit Customer</span>
                                 </Button>
