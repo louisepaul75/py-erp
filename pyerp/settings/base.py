@@ -116,4 +116,3 @@ ROOT_URLCONF = 'pyerp.urls'
 # WSGI application
 WSGI_APPLICATION = 'pyerp.wsgi.application'
 
-# ... rest of the file remains unchanged ... 
