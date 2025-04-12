@@ -13,7 +13,6 @@ import logging  # Add logging
 
 import environ  # Add this import
 import dj_database_url  # noqa: F401
-from celery.schedules import crontab  # Import for CELERY_BEAT_SCHEDULE
 from django.utils.translation import gettext_lazy as _  # Move import to top
 
 # Import 1Password SDK
@@ -22,11 +21,14 @@ try:
     from onepasswordconnectsdk.models import Field, Item
 except ImportError:
     client = None  # SDK not installed
-    Item = None # Define Item as None if SDK not installed
-    Field = None # Define Field as None if SDK not installed
+    Item = None  # Define Item as None if SDK not installed
+    Field = None  # Define Field as None if SDK not installed
 
 # Basic logging configuration (configure more robustly if needed)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -38,11 +40,14 @@ env = environ.Env()
 # Corrected path joining for .env file
 env_file_path = BASE_DIR / ".env"
 if env_file_path.exists():
-    with open(env_file_path, encoding='utf-8') as f: # Specify encoding
+    with open(env_file_path, encoding='utf-8') as f:  # Specify encoding
         environ.Env.read_env(env_file=f)
     logging.info(f"Loaded environment variables from: {env_file_path}")
 else:
-    logging.warning(f".env file not found at {env_file_path}. Relying on system environment variables.")
+    logging.warning(
+        f".env file not found at {env_file_path}. "
+        "Relying on system environment variables."
+    )
 
 # Add the project root to Python path to ensure imports work
 if str(BASE_DIR) not in sys.path:
@@ -162,7 +167,7 @@ WSGI_APPLICATION = "pyerp.wsgi.application"
 
 # --- Initialize 1Password Connect Client ---
 op_client = None
-if client: # Check if SDK was imported successfully
+if client:  # Check if SDK was imported successfully
     OP_CONNECT_HOST = os.environ.get("OP_CONNECT_HOST")
     OP_CONNECT_TOKEN = os.environ.get("OP_CONNECT_TOKEN")
 
@@ -173,31 +178,43 @@ if client: # Check if SDK was imported successfully
                 OP_CONNECT_HOST,
                 OP_CONNECT_TOKEN
             )
-            # Optional: Test connection by trying to list vaults (add error handling if used)
+            # Optional: Test connection by trying to list vaults
+            # (add error handling if used)
             # op_client.get_vaults()
             logging.info("1Password Connect SDK initialized successfully.")
         except Exception as e:
-            logging.error(f"Failed to initialize 1Password Connect SDK: {e}", exc_info=True)
-            op_client = None # Ensure client is None if init fails
+            logging.error(
+                f"Failed to initialize 1Password Connect SDK: {e}",
+                exc_info=True
+            )
+            op_client = None  # Ensure client is None if init fails
     else:
-        logging.warning("OP_CONNECT_HOST or OP_CONNECT_TOKEN not found in environment. Cannot initialize 1Password SDK.")
+        logging.warning(
+            "OP_CONNECT_HOST or OP_CONNECT_TOKEN not found in environment. "
+            "Cannot initialize 1Password SDK."
+        )
 else:
-    logging.warning("onepasswordconnectsdk not installed. Secrets will be read from environment variables.")
+    logging.warning(
+        "onepasswordconnectsdk not installed. "
+        "Secrets will be read from environment variables."
+    )
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # --- Fetch Database Credentials ---
-db_host = os.environ.get("DB_HOST") # Default added
-db_port = os.environ.get("DB_PORT")      # Default added
+db_host = os.environ.get("DB_HOST")  # Default added
+db_port = os.environ.get("DB_PORT")  # Default added
 db_name = os.environ.get("DB_NAME")
-db_user = os.environ.get("DB_USER")   # Default added
+db_user = os.environ.get("DB_USER")  # Default added
 db_password = os.environ.get("DB_PASSWORD")
-db_engine = os.environ.get("DB_ENGINE", "django.db.backends.postgresql") # Get engine
+db_engine = os.environ.get(
+    "DB_ENGINE", "django.db.backends.postgresql"
+)  # Get engine
 
 db_credentials_source = "environment variables"
 
-if op_client: # Check if client was initialized successfully
+if op_client:  # Check if client was initialized successfully
     try:
         # First, get the list of vaults and find the "dev" vault UUID
         vaults = op_client.get_vaults()
@@ -211,11 +228,18 @@ if op_client: # Check if client was initialized successfully
                 break
                 
         if not vault_uuid:
-            logging.warning(f"Could not find vault named '{op_vault_name}' in 1Password.")
+            logging.warning(
+                f"Could not find vault named '{op_vault_name}' in 1Password."
+            )
             
         else:
-            logging.info(f"Found vault '{op_vault_name}' with UUID: {vault_uuid}")
-            logging.info(f"Attempting to fetch DB credentials from 1Password: Vault='{op_vault_name}', Item='{op_item_name}'")
+            logging.info(
+                f"Found vault '{op_vault_name}' with UUID: {vault_uuid}"
+            )
+            logging.info(
+                "Attempting to fetch DB credentials from 1Password: "
+                f"Vault='{op_vault_name}', Item='{op_item_name}'"
+            )
 
             # Get all items in the vault
             try:
@@ -235,57 +259,92 @@ if op_client: # Check if client was initialized successfully
                     
                     # Process the item fields as before
                     if item and item.fields:
-                        item_fields = {field.label: field.value for field in item.fields if field.value is not None}
+                        item_fields = {
+                            field.label: field.value
+                            for field in item.fields
+                            if field.value is not None
+                        }
 
-                        # Get values, keeping existing env fallbacks if field not found in 1P
+                        # Get values, keeping existing env fallbacks if field
+                        # not found in 1P
                         fetched_host = item_fields.get("server")
                         fetched_port = item_fields.get("port")
                         fetched_user = item_fields.get("username")
                         fetched_password = item_fields.get("password")
                         fetched_name = item_fields.get("database")
 
-                        # Only update if value was actually fetched from 1Password
+                        # Only update if value was actually fetched from
+                        # 1Password
                         if fetched_host is not None:
                             db_host = fetched_host
-                            logging.info(f"Using 1Password value for DB_HOST: {db_host}")
+                            logging.info(
+                                f"Using 1Password value for DB_HOST: {db_host}"
+                            )
                         if fetched_port is not None:
                             db_port = fetched_port
-                            logging.info(f"Using 1Password value for DB_PORT: {db_port}")
+                            logging.info(
+                                f"Using 1Password value for DB_PORT: {db_port}"
+                            )
                         if fetched_user is not None:
                             db_user = fetched_user
-                            logging.info(f"Using 1Password value for DB_USER: {db_user}")
+                            logging.info(
+                                f"Using 1Password value for DB_USER: {db_user}"
+                            )
                         if fetched_password is not None:
                             db_password = fetched_password
                             # Log password presence but not the actual value
-                            logging.info(f"Using 1Password value for DB_PASSWORD: {'*' * (len(fetched_password) if fetched_password else 0)}")
+                            logging.info(
+                                "Using 1Password value for DB_PASSWORD: "
+                                f"{'*' * (len(fetched_password) if fetched_password else 0)}"
+                            )
                         else:
-                            logging.warning("Password field was not found in 1Password or is empty")
+                            logging.warning(
+                                "Password field was not found in 1Password or is empty"
+                            )
                         # Add this block to handle the database name
                         if fetched_name is not None:
                             db_name = fetched_name
-                            logging.info(f"Using 1Password value for DB_NAME: {db_name}")
+                            logging.info(
+                                f"Using 1Password value for DB_NAME: {db_name}"
+                            )
 
-                        # Check if at least one credential was fetched from 1Password
-                        if any(val is not None for val in [fetched_host, fetched_port, fetched_user, fetched_password, fetched_name]):
-                             db_credentials_source = "1Password"
-                             logging.info("Successfully retrieved DB credentials from 1Password.")
+                        # Check if at least one credential was fetched from
+                        # 1Password
+                        if any(val is not None for val in [
+                            fetched_host, fetched_port, fetched_user,
+                            fetched_password, fetched_name
+                        ]):
+                            db_credentials_source = "1Password"
+                            logging.info(
+                                "Successfully retrieved DB credentials from 1Password."
+                            )
                         else:
-                             logging.warning(f"Could not find expected fields (server, port, username, password, database) in 1Password item '{op_item_name}'.")
+                            logging.warning(
+                                "Could not find expected fields (server, port, "
+                                "username, password, database) in 1Password item "
+                                f"'{op_item_name}'."
+                            )
                 else:
-                    logging.warning(f"Item '{op_item_name}' not found in vault '{op_vault_name}'.")
+                    logging.warning(
+                        f"Item '{op_item_name}' not found in vault '{op_vault_name}'."
+                    )
                     
             except Exception as e:
-                logging.error(f"Error fetching items from vault: {e}", exc_info=True)
+                logging.error(
+                    f"Error fetching items from vault: {e}", exc_info=True
+                )
                 
     except Exception as e:
         logging.error(f"Error accessing 1Password: {e}", exc_info=True)
-        logging.warning("Falling back to environment variables for database credentials.")
+        logging.warning(
+            "Falling back to environment variables for database credentials."
+        )
 
 # Use fetched or environment variable values
 DATABASES = {
     "default": {
-        "ENGINE": db_engine, # Use fetched/env engine
-        "NAME": db_name,     # Now potentially fetched from 1Password
+        "ENGINE": db_engine,  # Use fetched/env engine
+        "NAME": db_name,      # Now potentially fetched from 1Password
         "USER": db_user,
         "PASSWORD": db_password,
         "HOST": db_host,
@@ -306,7 +365,7 @@ logging.info(
     f"USER={DATABASES['default']['USER']}"
 )
 if not DATABASES['default']['PASSWORD']:
-     logging.warning("Database password is NOT SET.")
+    logging.warning("Database password is NOT SET.")
 
 # Alternative DATABASE_URL configuration (commented out)
 
@@ -513,7 +572,7 @@ CELERY_BEAT_SCHEDULE = {
     # },
     # "sync.scheduled_employee_sync": { # COMMENTED OUT
     #     "task": (
-    #         "pyerp.sync.tasks.scheduled_employee_sync"  # Note: Using full path
+    #         "pyerp.sync.tasks.scheduled_employee_sync"  # Note: Using full path # noqa E501
     #     ),
     #     "schedule": crontab(minute="*/5"),  # Every 5 minutes
     #     "options": {"expires": 240.0},  # Expires after 4 minutes
@@ -671,10 +730,13 @@ image_api_password = os.environ.get("IMAGE_API_PASSWORD", "")
 image_api_credentials_source = "environment variables"
 
 # Try to get Image API credentials from 1Password if the client is initialized
-if op_client and vault_uuid:  # Use vault_uuid from the database credentials section
+if op_client and vault_uuid:  # Use vault_uuid from db credentials section
     try:
         op_image_item_name = "image_cms_api"
-        logging.info(f"Attempting to fetch Image API credentials from 1Password: Vault='{op_vault_name}', Item='{op_image_item_name}'")
+        logging.info(
+            "Attempting to fetch Image API credentials from 1Password: "
+            f"Vault='{op_vault_name}', Item='{op_image_item_name}'"
+        )
         
         # Get all items in the vault (reusing items list if available)
         items = globals().get('items') or op_client.get_items(vault_uuid)
@@ -691,7 +753,11 @@ if op_client and vault_uuid:  # Use vault_uuid from the database credentials sec
             image_item = op_client.get_item(image_target_item.id, vault_uuid)
             
             if image_item and image_item.fields:
-                image_item_fields = {field.label: field.value for field in image_item.fields if field.value is not None}
+                image_item_fields = {
+                    field.label: field.value
+                    for field in image_item.fields
+                    if field.value is not None
+                }
                 
                 # Get values from 1Password fields
                 fetched_url = image_item_fields.get("URL")
@@ -701,27 +767,46 @@ if op_client and vault_uuid:  # Use vault_uuid from the database credentials sec
                 # Update values if they were fetched
                 if fetched_url is not None:
                     image_api_url = fetched_url
-                    logging.info(f"Using 1Password value for IMAGE_API_URL: {image_api_url}")
+                    logging.info(
+                        f"Using 1Password value for IMAGE_API_URL: {image_api_url}"
+                    )
                 if fetched_username is not None:
                     image_api_username = fetched_username
-                    logging.info(f"Using 1Password value for IMAGE_API_USERNAME: {image_api_username}")
+                    logging.info(
+                        f"Using 1Password value for IMAGE_API_USERNAME: {image_api_username}"
+                    )
                 if fetched_password is not None:
                     image_api_password = fetched_password
                     # Log password presence but not the actual value
-                    logging.info(f"Using 1Password value for IMAGE_API_PASSWORD: {'*' * (len(fetched_password) if fetched_password else 0)}")
+                    logging.info(
+                        "Using 1Password value for IMAGE_API_PASSWORD: "
+                        f"{'*' * (len(fetched_password) if fetched_password else 0)}"
+                    )
                 
                 # Set credential source if at least one value was fetched
-                if any(val is not None for val in [fetched_url, fetched_username, fetched_password]):
+                if any(val is not None for val in [
+                    fetched_url, fetched_username, fetched_password
+                ]):
                     image_api_credentials_source = "1Password"
-                    logging.info("Successfully retrieved Image API credentials from 1Password.")
+                    logging.info(
+                        "Successfully retrieved Image API credentials from 1Password."
+                    )
         else:
-            logging.warning(f"Item '{op_image_item_name}' not found in vault '{op_vault_name}'.")
+            logging.warning(
+                f"Item '{op_image_item_name}' not found in vault '{op_vault_name}'."
+            )
             
     except Exception as e:
-        logging.error(f"Error fetching Image API credentials from 1Password: {e}", exc_info=True)
-        logging.warning("Falling back to environment variables for Image API credentials.")
+        logging.error(
+            f"Error fetching Image API credentials from 1Password: {e}",
+            exc_info=True
+        )
+        logging.warning(
+            "Falling back to environment variables for Image API credentials."
+        )
 
-# Update the initial Image API settings - these might be used directly in some code
+# Update the initial Image API settings - these might be used directly in
+# some code
 IMAGE_API_URL = image_api_url
 IMAGE_API_USERNAME = image_api_username
 IMAGE_API_PASSWORD = image_api_password
