@@ -209,3 +209,23 @@ if [ "$BACKEND_SUCCESS" = false ] && docker ps --filter "name=pyerp-dev" --filte
 fi
 
 echo "--- Health Checks Complete ---"
+
+# --- Check Database Connection Source ---
+echo -e "\n--- Checking Database Connection Source in Logs ---"
+db_source_check_log=$(docker logs pyerp-dev 2>&1 | grep -E 'Database settings source:' | tail -n 1)
+
+if [[ -z "$db_source_check_log" ]]; then
+    echo "❌ Database source log line not found."
+    echo "   Attempting to retrieve full logs for inspection..."
+    docker logs pyerp-dev || true
+elif [[ "$db_source_check_log" == *"1Password"* ]]; then
+    echo "✅ Database connected using 1Password credentials."
+    echo "   Log line found: '$db_source_check_log'"
+elif [[ "$db_source_check_log" == *"environment variables"* ]]; then
+    echo "⚠️ Database connected using environment variables (not 1Password)."
+    echo "   Log line found: '$db_source_check_log'"
+else
+    echo "❓ Unknown database connection source state."
+    echo "   Log line found: '$db_source_check_log'"
+fi
+echo "--- Database Check Complete ---"
