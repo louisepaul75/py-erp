@@ -434,6 +434,41 @@ export default function EmployeesPage() {
                                     <DetailItem label="Date of Birth" value={formatDate(displayEmployee.date_of_birth)} />
                                 </CardContent>
                             </Card>
+                            
+                            {/* Display Assigned User Information */}
+                            <Separator className="my-4" />
+                            <Card>
+                                <CardHeader><CardTitle>User Account</CardTitle></CardHeader>
+                                <CardContent>
+                                    {displayEmployee.user ? (
+                                        // Find the user in the users array
+                                        (() => {
+                                            const assignedUser = users.find(u => u.id === displayEmployee.user);
+                                            if (assignedUser) {
+                                                return (
+                                                    <>
+                                                        <DetailItem label="Username" value={assignedUser.username} />
+                                                        <DetailItem label="Name" value={`${assignedUser.first_name} ${assignedUser.last_name}`.trim()} />
+                                                        <DetailItem label="Email" value={assignedUser.email} />
+                                                    </>
+                                                );
+                                            } else {
+                                                // User ID exists but not found in the list (could be loading)
+                                                return isLoadingUsers ? (
+                                                    <div className="flex items-center py-2">
+                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        <span className="text-sm">Loading user details...</span>
+                                                    </div>
+                                                ) : (
+                                                    <DetailItem label="User ID" value={`${displayEmployee.user} (User details not available)`} />
+                                                );
+                                            }
+                                        })()
+                                    ) : (
+                                        <DetailItem label="User Account" value="No user account associated" />
+                                    )}
+                                </CardContent>
+                            </Card>
                         </dl>
                     )
                 )}
