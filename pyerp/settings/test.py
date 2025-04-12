@@ -4,6 +4,10 @@ Test settings for pyERP project.
 
 # Import base settings
 from .base import *  # noqa
+from pathlib import Path
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent.parent # Assuming settings is inside pyerp/settings
 
 # Disable debug mode
 DEBUG = False
