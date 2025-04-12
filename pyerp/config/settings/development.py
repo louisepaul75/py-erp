@@ -54,11 +54,11 @@ ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal", "1
 
 # Database configuration with SQLite fallback
 # Import the updated values from base settings if 1Password was used
-db_host = globals().get('db_host', os.environ.get("DB_HOST", "192.168.73.65"))
-db_port = globals().get('db_port', os.environ.get("DB_PORT", "5432"))
-db_name = globals().get('db_name', os.environ.get("DB_NAME", "pyerp_testing"))
-db_user = globals().get('db_user', os.environ.get("DB_USER", "postgres"))
-db_password = globals().get('db_password', os.environ.get("DB_PASSWORD", ""))
+db_host = globals().get('db_host', os.environ.get("DB_HOST"))
+db_port = globals().get('db_port', os.environ.get("DB_PORT"))
+db_name = globals().get('db_name', os.environ.get("DB_NAME"))
+db_user = globals().get('db_user', os.environ.get("DB_USER"))
+db_password = globals().get('db_password', os.environ.get("DB_PASSWORD"))
 db_engine = globals().get('db_engine', os.environ.get("DB_ENGINE", "django.db.backends.postgresql"))
 db_credentials_source = globals().get('db_credentials_source', "environment variables (development)")
 

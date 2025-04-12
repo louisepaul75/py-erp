@@ -188,11 +188,11 @@ else:
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 # --- Fetch Database Credentials ---
-db_host = os.environ.get("DB_HOST", "localhost") # Default added
-db_port = os.environ.get("DB_PORT", "5432")      # Default added
-db_name = os.environ.get("DB_NAME", "pyerp_testing")
-db_user = os.environ.get("DB_USER", "postgres")   # Default added
-db_password = os.environ.get("DB_PASSWORD", "")
+db_host = os.environ.get("DB_HOST") # Default added
+db_port = os.environ.get("DB_PORT")      # Default added
+db_name = os.environ.get("DB_NAME")
+db_user = os.environ.get("DB_USER")   # Default added
+db_password = os.environ.get("DB_PASSWORD")
 db_engine = os.environ.get("DB_ENGINE", "django.db.backends.postgresql") # Get engine
 
 db_credentials_source = "environment variables"
@@ -242,6 +242,7 @@ if op_client: # Check if client was initialized successfully
                         fetched_port = item_fields.get("port")
                         fetched_user = item_fields.get("username")
                         fetched_password = item_fields.get("password")
+                        fetched_name = item_fields.get("database")
 
                         # Only update if value was actually fetched from 1Password
                         if fetched_host is not None:
@@ -259,13 +260,17 @@ if op_client: # Check if client was initialized successfully
                             logging.info(f"Using 1Password value for DB_PASSWORD: {'*' * (len(fetched_password) if fetched_password else 0)}")
                         else:
                             logging.warning("Password field was not found in 1Password or is empty")
+                        # Add this block to handle the database name
+                        if fetched_name is not None:
+                            db_name = fetched_name
+                            logging.info(f"Using 1Password value for DB_NAME: {db_name}")
 
                         # Check if at least one credential was fetched from 1Password
-                        if any(val is not None for val in [fetched_host, fetched_port, fetched_user, fetched_password]):
+                        if any(val is not None for val in [fetched_host, fetched_port, fetched_user, fetched_password, fetched_name]):
                              db_credentials_source = "1Password"
                              logging.info("Successfully retrieved DB credentials from 1Password.")
                         else:
-                             logging.warning(f"Could not find expected fields (server, port, username, password) in 1Password item '{op_item_name}'.")
+                             logging.warning(f"Could not find expected fields (server, port, username, password, database) in 1Password item '{op_item_name}'.")
                 else:
                     logging.warning(f"Item '{op_item_name}' not found in vault '{op_vault_name}'.")
                     
@@ -280,7 +285,7 @@ if op_client: # Check if client was initialized successfully
 DATABASES = {
     "default": {
         "ENGINE": db_engine, # Use fetched/env engine
-        "NAME": db_name,     # Keep using env var as requested
+        "NAME": db_name,     # Now potentially fetched from 1Password
         "USER": db_user,
         "PASSWORD": db_password,
         "HOST": db_host,
