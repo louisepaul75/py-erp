@@ -348,7 +348,7 @@ export default function SalesRecordsTable() {
                     <SelectValue placeholder="Filter by Record Type" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">All Record Types</SelectItem>
+                    <SelectItem value="all">All Record Types</SelectItem>
                     {RECORD_TYPE_CHOICES.map(choice => (
                         <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>
                     ))}
@@ -359,7 +359,7 @@ export default function SalesRecordsTable() {
                     <SelectValue placeholder="Filter by Payment Status" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">All Payment Statuses</SelectItem>
+                    <SelectItem value="all">All Payment Statuses</SelectItem>
                     {PAYMENT_STATUS_CHOICES.map(choice => (
                         <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>
                     ))}

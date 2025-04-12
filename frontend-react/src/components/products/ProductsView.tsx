@@ -142,21 +142,23 @@ export function ProductsView() {
     queryFn: ({ signal }) => productApi.getProduct(selectedItemId!, signal),
     enabled: selectedItemId !== null && !isEditingNew,
     staleTime: 15 * 60 * 1000,
-    onSuccess: (data) => {
-      if (!isEditing && data) {
-        setProductFormData({
-          ...defaultProductData,
-          ...data,
-          name: data.name ?? '',
-          sku: data.sku ?? '',
-        });
-        setApiError(null);
-      }
-    },
-    onError: (error) => {
-      setApiError(`Error loading details: ${error.message}`);
-    }
   });
+
+  // Use useEffect to handle side effects of productDetailQuery changes
+  useEffect(() => {
+    if (productDetailQuery.isSuccess && productDetailQuery.data && !isEditing) {
+      const data = productDetailQuery.data;
+      setProductFormData({
+        ...defaultProductData,
+        ...data,
+        name: data.name ?? '',
+        sku: data.sku ?? '',
+      });
+      setApiError(null);
+    } else if (productDetailQuery.isError) {
+      setApiError(`Error loading details: ${productDetailQuery.error.message}`);
+    }
+  }, [productDetailQuery.data, productDetailQuery.isSuccess, productDetailQuery.isError, isEditing]);
 
   // Query for the variants of the selected product
   const variantsQuery: UseQueryResult<ApiResponse<Product>, Error> = useQuery<ApiResponse<Product>, Error>({
@@ -354,6 +356,18 @@ export function ProductsView() {
     }
   };
 
+  const handleSupplierChange = (supplierIdString: string) => {
+    const supplierId = supplierIdString ? parseInt(supplierIdString) : null;
+    const selectedSupplier = productDetailQuery.data?.suppliers.find(s => s.id === supplierId) || null;
+    // Update the form state directly
+    setProductFormData(prev => ({
+      ...prev,
+      supplier: selectedSupplier // Store the Supplier object or null
+    }));
+    // The main handleSave function will pick up this change when the user clicks Save.
+    // No immediate API call here, changes are saved together.
+  };
+
   // --- Render Logic ---
   const products = productsQuery.data?.results ?? [];
   const totalCount = productsQuery.data?.count ?? 0;
@@ -523,6 +537,7 @@ export function ProductsView() {
                       isEditing={isEditing}
                       handleFormChange={handleFormChange}
                       handleCheckboxChange={handleCheckboxChange}
+                      handleSupplierChange={handleSupplierChange}
                       isMutating={isMutating}
                       fetchedProduct={selectedProduct}
                       suppliers={productDetailQuery.data?.suppliers ?? []}
@@ -542,6 +557,7 @@ export function ProductsView() {
                     isEditing={isEditing}
                     handleFormChange={handleFormChange}
                     handleCheckboxChange={handleCheckboxChange}
+                    handleSupplierChange={handleSupplierChange}
                     isMutating={isMutating}
                     fetchedProduct={null}
                     suppliers={[]}
@@ -561,6 +577,7 @@ interface ProductDetailFormContentProps {
   isEditing: boolean;
   handleFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleCheckboxChange: (field: keyof ProductFormData, checked: boolean | 'indeterminate') => void;
+  handleSupplierChange: (supplierIdString: string) => void;
   isMutating: boolean;
   fetchedProduct?: Product | null;
   suppliers?: Supplier[];
@@ -571,60 +588,15 @@ function ProductDetailFormContent({
   isEditing,
   handleFormChange,
   handleCheckboxChange,
+  handleSupplierChange,
   isMutating,
   fetchedProduct,
   suppliers = []
 }: ProductDetailFormContentProps) {
-  const displayProduct = !isEditing && fetchedProduct ? fetchedProduct : productData;
-
-  const getValue = (field: keyof ProductFormData) => {
-    // Prioritize form data if editing, otherwise use fetched data
-    return isEditing
-      ? productData[field]
-      : fetchedProduct
-      ? fetchedProduct[field]
-      : undefined;
-  };
-
-  // Get values for all fields, including new ones
-  const nameValue = getValue('name') ?? '';
-  const skuValue = getValue('sku') ?? '';
-  const categoryValue = getValue('category') ?? '';
-  const descriptionValue = getValue('description') ?? '';
-  const isActiveValue = getValue('is_active') ?? true;
-  const isDiscontinuedValue = getValue('is_discontinued') ?? false;
-  const releaseDateValue = getValue('release_date');
-  const tagsValue = getValue('tags') ?? []; // Default to empty array
-  const keywordsValue = getValue('keywords') ?? '';
-  const legacySkuValue = getValue('legacy_base_sku') ?? ''; // Use empty string for null display
-
-  const heightValue = getValue('height_mm');
-  const lengthValue = getValue('length_mm');
-  const widthValue = getValue('width_mm');
-  const weightValue = getValue('weight');
-
-  const isHangingValue = getValue('is_hanging') ?? false;
-  const isOneSidedValue = getValue('is_one_sided') ?? false;
-  const isNewValue = getValue('is_new') ?? false;
-
-  // Add Supplier handling
-  const supplierValue = getValue('supplier');
-  const handleSupplierChange = (supplierIdString: string) => {
-    const supplierId = supplierIdString ? parseInt(supplierIdString) : null;
-    const selectedSupplier = suppliers.find(s => s.id === supplierId) || null;
-    // Directly update the form state - the save handler will pick it up
-    handleFormChange({ 
-      target: { 
-        name: 'supplier', 
-        value: selectedSupplier, // Store the Supplier object or null
-        type: 'select' // Custom type for handler logic if needed
-      } 
-    } as any); // Use 'as any' or refine type if necessary
-  };
-
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="space-y-6"> {/* Increased spacing */}
-      {fetchedProduct?.primary_image && (
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+      {/* Display image from fetchedProduct only when not editing */}
+      {!isEditing && fetchedProduct?.primary_image && (
         <div className="mb-4">
           <img
             src={fetchedProduct.primary_image}
@@ -641,26 +613,26 @@ function ProductDetailFormContent({
             id="product-name"
             name="name"
             placeholder="e.g., Basic Widget"
-            value={nameValue}
+            value={productData.name ?? ''}
             onChange={handleFormChange}
             required
             disabled={isMutating}
           />
         ) : (
-          <h2 className='text-2xl font-bold text-primary'>{nameValue || '-'}</h2>
+          <h2 className='text-2xl font-bold text-primary'>{fetchedProduct?.name || '-'}</h2>
         )}
       </div>
 
-      {/* Details Grid 1 (SKU, Category, Active, Variants, Release, Discontinued, Legacy SKU) */}
+      {/* Details Grid 1 */}
       <h3 className="text-lg font-semibold border-b pb-1 mb-3">Core Details</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4 text-sm"> {/* Changed to 3 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-4 text-sm">
         {/* SKU */}
         <div className="space-y-1">
           <Label htmlFor="product-sku" className={isEditing ? "" : "text-muted-foreground font-medium"}>SKU <span className="text-red-500">*</span></Label>
           {isEditing ? (
-            <Input id="product-sku" name="sku" placeholder="e.g., WID-001" value={skuValue} onChange={handleFormChange} required disabled={isMutating} />
+            <Input id="product-sku" name="sku" placeholder="e.g., WID-001" value={productData.sku ?? ''} onChange={handleFormChange} required disabled={isMutating} />
           ) : (
-             <p>{skuValue || '-'}</p>
+             <p>{fetchedProduct?.sku || '-'}</p>
           )}
         </div>
 
@@ -668,9 +640,9 @@ function ProductDetailFormContent({
         <div className="space-y-1">
           <Label htmlFor="product-legacy-sku" className={isEditing ? "" : "text-muted-foreground font-medium"}>Legacy SKU</Label>
           {isEditing ? (
-            <Input id="product-legacy-sku" name="legacy_base_sku" placeholder="Optional legacy SKU" value={legacySkuValue} onChange={handleFormChange} disabled={isMutating} />
+            <Input id="product-legacy-sku" name="legacy_base_sku" placeholder="Optional legacy SKU" value={productData.legacy_base_sku ?? ''} onChange={handleFormChange} disabled={isMutating} />
           ) : (
-            <p>{legacySkuValue || 'N/A'}</p>
+            <p>{fetchedProduct?.legacy_base_sku || 'N/A'}</p>
           )}
         </div>
 
@@ -678,18 +650,18 @@ function ProductDetailFormContent({
         <div className="space-y-1">
           <Label htmlFor="product-category" className={isEditing ? "" : "text-muted-foreground font-medium"}>Category</Label>
            {isEditing ? (
-            <Input id="product-category" name="category" placeholder="e.g., Widgets" value={categoryValue} onChange={handleFormChange} disabled={isMutating} />
+            <Input id="product-category" name="category" placeholder="e.g., Widgets" value={productData.category ?? ''} onChange={handleFormChange} disabled={isMutating} />
            ) : (
-              <p>{categoryValue || 'N/A'}</p>
+              <p>{fetchedProduct?.category || 'N/A'}</p>
            )}
         </div>
 
-        {/* Add Supplier Select Field */}
+        {/* Supplier Select Field */}
         <div className="space-y-1">
           <Label htmlFor="product-supplier" className={isEditing ? "" : "text-muted-foreground font-medium"}>Supplier</Label>
           {isEditing ? (
             <Select
-              value={supplierValue?.id?.toString() ?? ""}
+              value={productData.supplier?.id?.toString() ?? "none"}
               onValueChange={handleSupplierChange}
               disabled={isMutating}
             >
@@ -697,7 +669,7 @@ function ProductDetailFormContent({
                 <SelectValue placeholder="Select Supplier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">-- None --</SelectItem>
+                <SelectItem value="none">-- None --</SelectItem>
                 {suppliers.map((supplier) => (
                   <SelectItem key={supplier.id} value={supplier.id.toString()}>
                     {supplier.name}
@@ -706,7 +678,7 @@ function ProductDetailFormContent({
               </SelectContent>
             </Select>
           ) : (
-            <p>{supplierValue?.name ?? 'N/A'}</p>
+            <p>{fetchedProduct?.supplier?.name ?? 'N/A'}</p>
           )}
         </div>
 
@@ -715,11 +687,11 @@ function ProductDetailFormContent({
            <Label className={isEditing ? "" : "text-muted-foreground font-medium"}>Status</Label>
            {isEditing ? (
              <div className="flex items-center space-x-2 pt-1">
-               <Checkbox id="product-active" checked={isActiveValue} onCheckedChange={(checked) => handleCheckboxChange('is_active', checked)} disabled={isMutating} />
+               <Checkbox id="product-active" checked={productData.is_active ?? false} onCheckedChange={(checked) => handleCheckboxChange('is_active', checked)} disabled={isMutating} />
                <Label htmlFor="product-active" className="text-sm font-medium">Active</Label>
              </div>
            ) : (
-             <Badge variant={isActiveValue ? 'default' : 'secondary'}>{isActiveValue ? 'Active' : 'Inactive'}</Badge>
+             <Badge variant={fetchedProduct?.is_active ? 'default' : 'secondary'}>{fetchedProduct?.is_active ? 'Active' : 'Inactive'}</Badge>
            )}
         </div>
 
@@ -728,11 +700,11 @@ function ProductDetailFormContent({
           <Label className={isEditing ? "" : "text-muted-foreground font-medium"}>Lifecycle</Label>
           {isEditing ? (
             <div className="flex items-center space-x-2 pt-1">
-              <Checkbox id="product-discontinued" checked={isDiscontinuedValue} onCheckedChange={(checked) => handleCheckboxChange('is_discontinued', checked)} disabled={isMutating} />
+              <Checkbox id="product-discontinued" checked={productData.is_discontinued ?? false} onCheckedChange={(checked) => handleCheckboxChange('is_discontinued', checked)} disabled={isMutating} />
               <Label htmlFor="product-discontinued" className="text-sm font-medium">Discontinued</Label>
             </div>
           ) : (
-              <Badge variant={isDiscontinuedValue ? 'destructive' : 'secondary'}>{isDiscontinuedValue ? 'Discontinued' : 'Active Lifecycle'}</Badge>
+              <Badge variant={fetchedProduct?.is_discontinued ? 'destructive' : 'secondary'}>{fetchedProduct?.is_discontinued ? 'Discontinued' : 'Active Lifecycle'}</Badge>
           )}
         </div>
 
@@ -740,9 +712,9 @@ function ProductDetailFormContent({
         <div className="space-y-1">
            <Label htmlFor="product-release-date" className={isEditing ? "" : "text-muted-foreground font-medium"}>Release Date</Label>
            {isEditing ? (
-            <Input id="product-release-date" name="release_date" type="date" value={releaseDateValue ? String(releaseDateValue).split('T')[0] : ''} onChange={handleFormChange} disabled={isMutating} />
+            <Input id="product-release-date" name="release_date" type="date" value={(productData.release_date instanceof Date ? productData.release_date.toISOString() : productData.release_date ?? '').split('T')[0]} onChange={handleFormChange} disabled={isMutating} />
            ) : (
-              <p>{releaseDateValue ? new Date(releaseDateValue).toLocaleDateString() : 'N/A'}</p>
+              <p>{fetchedProduct?.release_date ? new Date(fetchedProduct.release_date).toLocaleDateString() : 'N/A'}</p>
            )}
         </div>
 
@@ -755,41 +727,41 @@ function ProductDetailFormContent({
 
       {/* Dimensions Section */}
       <h3 className="text-lg font-semibold border-b pb-1 mb-3 pt-4">Dimensions & Weight</h3>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-4 text-sm"> {/* Changed to 4 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-4 text-sm">
          {/* Height */}
          <div className="space-y-1">
            <Label htmlFor="product-height" className={isEditing ? "" : "text-muted-foreground font-medium"}>Height (mm)</Label>
            {isEditing ? (
-             <Input id="product-height" name="height_mm" type="number" placeholder="e.g., 100" value={heightValue ?? ''} onChange={handleFormChange} disabled={isMutating} />
+             <Input id="product-height" name="height_mm" type="number" placeholder="e.g., 100" value={productData.height_mm ?? ''} onChange={handleFormChange} disabled={isMutating} />
            ) : (
-             <p>{heightValue ?? 'N/A'}</p>
+             <p>{fetchedProduct?.height_mm ?? 'N/A'}</p>
            )}
          </div>
          {/* Length */}
          <div className="space-y-1">
            <Label htmlFor="product-length" className={isEditing ? "" : "text-muted-foreground font-medium"}>Length (mm)</Label>
            {isEditing ? (
-             <Input id="product-length" name="length_mm" type="number" placeholder="e.g., 150" value={lengthValue ?? ''} onChange={handleFormChange} disabled={isMutating} />
+             <Input id="product-length" name="length_mm" type="number" placeholder="e.g., 150" value={productData.length_mm ?? ''} onChange={handleFormChange} disabled={isMutating} />
            ) : (
-             <p>{lengthValue ?? 'N/A'}</p>
+             <p>{fetchedProduct?.length_mm ?? 'N/A'}</p>
            )}
          </div>
          {/* Width */}
          <div className="space-y-1">
            <Label htmlFor="product-width" className={isEditing ? "" : "text-muted-foreground font-medium"}>Width (mm)</Label>
            {isEditing ? (
-             <Input id="product-width" name="width_mm" type="number" placeholder="e.g., 50" value={widthValue ?? ''} onChange={handleFormChange} disabled={isMutating} />
+             <Input id="product-width" name="width_mm" type="number" placeholder="e.g., 50" value={productData.width_mm ?? ''} onChange={handleFormChange} disabled={isMutating} />
            ) : (
-             <p>{widthValue ?? 'N/A'}</p>
+             <p>{fetchedProduct?.width_mm ?? 'N/A'}</p>
            )}
          </div>
          {/* Weight */}
          <div className="space-y-1">
-           <Label htmlFor="product-weight" className={isEditing ? "" : "text-muted-foreground font-medium"}>Weight (g)</Label> {/* Assuming grams */} 
+           <Label htmlFor="product-weight" className={isEditing ? "" : "text-muted-foreground font-medium"}>Weight (g)</Label> 
            {isEditing ? (
-             <Input id="product-weight" name="weight" type="number" placeholder="e.g., 250" value={weightValue ?? ''} onChange={handleFormChange} disabled={isMutating} />
+             <Input id="product-weight" name="weight" type="number" placeholder="e.g., 250" value={productData.weight ?? ''} onChange={handleFormChange} disabled={isMutating} />
            ) : (
-             <p>{weightValue ?? 'N/A'}</p>
+             <p>{fetchedProduct?.weight ?? 'N/A'}</p>
            )}
          </div>
       </div>
@@ -802,11 +774,11 @@ function ProductDetailFormContent({
             <Label className={isEditing ? "" : "text-muted-foreground font-medium"}>Packaging</Label>
             {isEditing ? (
               <div className="flex items-center space-x-2 pt-1">
-                <Checkbox id="product-hanging" checked={isHangingValue} onCheckedChange={(checked) => handleCheckboxChange('is_hanging', checked)} disabled={isMutating} />
+                <Checkbox id="product-hanging" checked={productData.is_hanging ?? false} onCheckedChange={(checked) => handleCheckboxChange('is_hanging', checked)} disabled={isMutating} />
                 <Label htmlFor="product-hanging" className="text-sm font-medium">Hanging</Label>
               </div>
             ) : (
-                <Badge variant={isHangingValue ? 'info' : 'secondary'}>{isHangingValue ? 'Hanging' : 'Not Hanging'}</Badge> // Added custom variant style potential
+                <Badge variant={fetchedProduct?.is_hanging ? 'default' : 'secondary'}>{fetchedProduct?.is_hanging ? 'Hanging' : 'Not Hanging'}</Badge>
             )}
          </div>
          {/* One-Sided */}
@@ -814,11 +786,11 @@ function ProductDetailFormContent({
            <Label className={isEditing ? "" : "text-muted-foreground font-medium"}>Design</Label>
             {isEditing ? (
               <div className="flex items-center space-x-2 pt-1">
-                <Checkbox id="product-one-sided" checked={isOneSidedValue} onCheckedChange={(checked) => handleCheckboxChange('is_one_sided', checked)} disabled={isMutating} />
+                <Checkbox id="product-one-sided" checked={productData.is_one_sided ?? false} onCheckedChange={(checked) => handleCheckboxChange('is_one_sided', checked)} disabled={isMutating} />
                 <Label htmlFor="product-one-sided" className="text-sm font-medium">One-Sided</Label>
               </div>
             ) : (
-                 <Badge variant={isOneSidedValue ? 'info' : 'secondary'}>{isOneSidedValue ? 'One-Sided' : 'Multi-Sided'}</Badge>
+                 <Badge variant={fetchedProduct?.is_one_sided ? 'default' : 'secondary'}>{fetchedProduct?.is_one_sided ? 'One-Sided' : 'Multi-Sided'}</Badge>
             )}
          </div>
          {/* New */}
@@ -826,11 +798,11 @@ function ProductDetailFormContent({
            <Label className={isEditing ? "" : "text-muted-foreground font-medium"}>Release Status</Label>
             {isEditing ? (
               <div className="flex items-center space-x-2 pt-1">
-                <Checkbox id="product-new" checked={isNewValue} onCheckedChange={(checked) => handleCheckboxChange('is_new', checked)} disabled={isMutating} />
+                <Checkbox id="product-new" checked={productData.is_new ?? false} onCheckedChange={(checked) => handleCheckboxChange('is_new', checked)} disabled={isMutating} />
                 <Label htmlFor="product-new" className="text-sm font-medium">Novelty</Label>
               </div>
             ) : (
-                 <Badge variant={isNewValue ? 'info' : 'secondary'}>{isNewValue ? 'Novelty' : 'Established'}</Badge>
+                 <Badge variant={fetchedProduct?.is_new ? 'default' : 'secondary'}>{fetchedProduct?.is_new ? 'Novelty' : 'Established'}</Badge>
             )}
          </div>
        </div>
@@ -839,35 +811,35 @@ function ProductDetailFormContent({
       <h3 className="text-lg font-semibold border-b pb-1 mb-3 pt-4">Description</h3>
       <div className="space-y-1">
         {isEditing ? (
-          <Textarea id="product-description" name="description" placeholder="Detailed description..." value={descriptionValue} onChange={handleFormChange} disabled={isMutating} className={"min-h-[100px]"} rows={4} />
+          <Textarea id="product-description" name="description" placeholder="Detailed description..." value={productData.description ?? ''} onChange={handleFormChange} disabled={isMutating} className={"min-h-[100px]"} rows={4} />
         ) : (
             <p className="text-sm text-muted-foreground min-h-[20px]">
-              {descriptionValue || 'No description provided.'}
+              {fetchedProduct?.description || 'No description provided.'}
             </p>
         )}
       </div>
 
       {/* Tags & Keywords */}
-      {(isEditing || (Array.isArray(tagsValue) && tagsValue.length > 0) || keywordsValue) && (
-        <div className="pt-4"> {/* Added padding top */} 
+      {(isEditing || (Array.isArray(fetchedProduct?.tags) && fetchedProduct.tags.length > 0) || fetchedProduct?.keywords) && (
+        <div className="pt-4">
           <h3 className="text-lg font-semibold border-b pb-1 mb-3">Tags & Keywords</h3>
           {isEditing ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="product-tags">Tags (comma-separated)</Label>
-                <Input id="product-tags" name="tags" placeholder="e.g., tag1, tag2" value={Array.isArray(tagsValue) ? tagsValue.join(', ') : ''} onChange={(e) => setProductData(prev => ({...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)}))} disabled={isMutating} />
+                <Input id="product-tags" name="tags" placeholder="e.g., tag1, tag2" value={Array.isArray(productData.tags) ? productData.tags.join(', ') : ''} onChange={(e) => handleFormChange({ target: { name: 'tags', value: e.target.value.split(',').map(t => t.trim()).filter(Boolean) } } as any)} disabled={isMutating} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="product-keywords">Keywords (comma-separated)</Label>
-                <Input id="product-keywords" name="keywords" placeholder="e.g., keyword1, keyword2" value={keywordsValue} onChange={handleFormChange} disabled={isMutating} />
+                <Input id="product-keywords" name="keywords" placeholder="e.g., keyword1, keyword2" value={productData.keywords ?? ''} onChange={handleFormChange} disabled={isMutating} />
               </div>
             </div>
           ) : (
             <div className="flex flex-wrap gap-1">
-              {Array.isArray(tagsValue) && tagsValue.map((tag) => (
+              {Array.isArray(fetchedProduct?.tags) && fetchedProduct.tags.map((tag) => (
                 <Badge key={tag} variant="outline">{tag}</Badge>
               ))}
-              {keywordsValue?.split(/[,; ]+/).map((keyword) => (
+              {typeof fetchedProduct?.keywords === 'string' && fetchedProduct.keywords.split(/[,; ]+/).map((keyword) => (
                 keyword && <Badge key={keyword} variant="secondary">{keyword}</Badge>
               ))}
             </div>
@@ -877,7 +849,7 @@ function ProductDetailFormContent({
 
       {/* Timestamps (Display Only) */}
       {!isEditing && fetchedProduct && (
-        <div className="text-xs text-muted-foreground mt-6 pt-4 border-t"> {/* Added spacing and border */}
+        <div className="text-xs text-muted-foreground mt-6 pt-4 border-t">
           <p>Created: {fetchedProduct.created_at ? new Date(fetchedProduct.created_at).toLocaleString() : 'N/A'}</p>
           <p>Last Updated: {fetchedProduct.updated_at ? new Date(fetchedProduct.updated_at).toLocaleString() : 'N/A'}</p>
         </div>
@@ -943,14 +915,12 @@ function ProductVariantContent({
   const error = variantsQuery.error;
 
   return (
-    <div className="space-y-4"> {/* Added spacing */} 
-      <div className="flex justify-between items-center"> {/* Header for title and button */} 
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Product Variants</h3>
-        {/* Wrap button in DialogTrigger */} 
         <Dialog open={isCreateVariantDialogOpen} onOpenChange={setIsCreateVariantDialogOpen}>
           <DialogTrigger asChild>
-             {/* Enable button if parent is selected */} 
-            <Button size="sm" disabled={!selectedItemId /* || createVariantMutation.isPending */} >
+            <Button size="sm" disabled={!selectedItemId}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Create New Variant
             </Button>
@@ -973,7 +943,6 @@ function ProductVariantContent({
                    value={newVariantData.name}
                    onChange={handleVariantFormChange}
                    required
-                   // disabled={createVariantMutation.isPending}
                  />
                </div>
                <div className="space-y-1">
@@ -985,17 +954,13 @@ function ProductVariantContent({
                    value={newVariantData.sku}
                    onChange={handleVariantFormChange}
                    required
-                   // disabled={createVariantMutation.isPending}
                  />
                </div>
-              {/* TODO: Add more fields if necessary (e.g., attributes, price) */}
               <DialogFooter>
-                 {/* Use DialogClose for cancel */} 
                 <DialogClose asChild>
-                   <Button type="button" variant="outline" /* disabled={createVariantMutation.isPending} */ >Cancel</Button>
+                   <Button type="button" variant="outline">Cancel</Button>
                 </DialogClose>
-                <Button type="submit" /* disabled={createVariantMutation.isPending || !newVariantData.name || !newVariantData.sku} */ >
-                   {/* {createVariantMutation.isPending ? "Creating..." : "Create Variant"} */}
+                <Button type="submit">
                    Create Variant (Not Impl.)
                 </Button>
               </DialogFooter>
@@ -1006,7 +971,6 @@ function ProductVariantContent({
 
       {isLoading && <p>Loading variants...</p>}
       {isError && <p className="text-destructive">Error loading variants: {error?.message}</p>}
-      {/* Only render table/message when not loading and no error */}
       {!isLoading && !isError && (
         <> 
           {variants.length === 0 ? (
@@ -1018,13 +982,12 @@ function ProductVariantContent({
                    <TableHead>SKU</TableHead>
                    <TableHead>Name</TableHead>
                    <TableHead>Active</TableHead>
-                   {/* TODO: Add more columns as needed (e.g., attributes) */}
-                   <TableHead>Actions</TableHead> {/* Placeholder for actions */}
+                   <TableHead>Actions</TableHead>
                  </TableRow>
                </TableHeader>
                <TableBody>
                  {variants.map((variant) => (
-                   <TableRow key={variant.id} /* onClick={() => handleSelectVariant(variant.id)} */ className="cursor-pointer hover:bg-muted/50">
+                   <TableRow key={variant.id} className="cursor-pointer hover:bg-muted/50">
                      <TableCell>{variant.sku}</TableCell>
                      <TableCell>{variant.name}</TableCell>
                      <TableCell>
@@ -1033,7 +996,6 @@ function ProductVariantContent({
                        </Badge>
                      </TableCell>
                      <TableCell>
-                       {/* TODO: Add Edit/Delete buttons or link to variant detail page */}
                        <Button variant="ghost" size="sm" disabled>...</Button>
                      </TableCell>
                    </TableRow>
