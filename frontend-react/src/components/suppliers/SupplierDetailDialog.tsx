@@ -85,9 +85,34 @@ export function SupplierDetailDialog({ open, onOpenChange, supplier }: SupplierD
   const fetchAssignedProducts = async (supplierId: string) => {
     setAssignedLoading(true);
     setAssignedError(null);
+    const csrftoken = getCookie('csrftoken'); // Get CSRF token
+
+    if (!csrftoken) {
+        // Handle missing CSRF token (optional, but good practice)
+        console.error("CSRF token not found for fetching assigned products.");
+        setAssignedError('Authentication error. Please refresh.');
+        toast.error("Could not load assigned products due to missing token.");
+        setAssignedLoading(false);
+        return;
+    }
+
     try {
-      const response = await fetch(`/api/v1/business/suppliers/${supplierId}/products/`);
+      const response = await fetch(`/api/v1/business/suppliers/${supplierId}/products/`, {
+        headers: {
+          'X-CSRFToken': csrftoken, // Include CSRF token
+        },
+      });
       if (!response.ok) {
+        // Check for specific redirect status codes if needed
+        if (response.status === 302 || response.redirected) {
+             console.error("Redirect detected. Authentication likely required or failed.");
+             setAssignedError('Authentication failed. Please log in again.');
+             toast.error("Authentication failed.");
+        } else {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // Throw an error or handle appropriately if response is still not ok
+        // For example, maybe the token was invalid
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data: ParentProductSummary[] = await response.json();
