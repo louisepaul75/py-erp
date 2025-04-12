@@ -28,6 +28,8 @@ from django.db import connection
 
 from pyerp.business_modules.products.models import ProductCategory, ParentProduct, VariantProduct
 from pyerp.business_modules.products.serializers import ProductCategorySerializer, ParentProductSerializer, VariantProductSerializer
+from pyerp.business_modules.business.models import Supplier
+from pyerp.business_modules.products.serializers import SupplierSerializer
 
 
 @extend_schema_view(
@@ -610,11 +612,18 @@ class ProductDetailViewSet(viewsets.ModelViewSet):
     
     def retrieve(self, request, pk=None):
         """
-        Retrieve a product by its ID.
+        Retrieve a product by its ID and include a list of all suppliers.
         """
         product = self.get_object()
         serializer = self.get_serializer(product)
-        return Response(serializer.data)
+        product_data = serializer.data  # Product data including the linked supplier
+
+        # Fetch all suppliers and add the list to the response
+        all_suppliers = Supplier.objects.all()
+        suppliers_serializer = SupplierSerializer(all_suppliers, many=True)
+        product_data['suppliers'] = suppliers_serializer.data
+
+        return Response(product_data)
     
     def partial_update(self, request, pk=None):
         """

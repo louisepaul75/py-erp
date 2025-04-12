@@ -6,9 +6,16 @@ from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 
 from pyerp.business_modules.products.models import ParentProduct, ProductCategory, VariantProduct
+from pyerp.business_modules.business.models import Supplier
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Simple serializer for Suppliers
+class SupplierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Supplier
+        fields = ['id', 'name']
 
 # New serializer for ParentProduct summary (used in search and supplier detail)
 class ParentProductSummarySerializer(serializers.ModelSerializer):
@@ -48,6 +55,8 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 class ParentProductSerializer(serializers.ModelSerializer):
     """Serializer for the ParentProduct model."""
     legacy_base_sku = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    # Use the simple SupplierSerializer for the related field
+    supplier = SupplierSerializer(read_only=True)
 
     class Meta:
         model = ParentProduct
@@ -66,6 +75,7 @@ class ParentProductSerializer(serializers.ModelSerializer):
             "is_hanging",
             "legacy_base_sku",
             "legacy_id",
+            "supplier",
         ]
         # Add sku to read_only_fields
         read_only_fields = ["sku"]
