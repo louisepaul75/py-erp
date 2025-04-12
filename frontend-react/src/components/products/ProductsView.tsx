@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 // TODO: Ensure QueryClientProvider is set up in layout.tsx or a providers file
 
@@ -89,6 +90,7 @@ export function ProductsView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryClient: QueryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Read initial product ID from URL query parameters
   const initialProductIdParam = searchParams.get('productId');
@@ -191,7 +193,7 @@ export function ProductsView() {
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.set('productId', String(data.id));
       router.replace(`${pathname}?${newSearchParams.toString()}`);
-      alert("Product created successfully!");
+      toast({ title: "Success", description: "Product created successfully." });
     },
     onError: (error) => {
       console.error("Error creating product:", error);
@@ -218,7 +220,7 @@ export function ProductsView() {
       }
       setIsEditing(false);
       setApiError(null);
-      alert("Product updated successfully!");
+      toast({ title: "Success", description: "Product updated successfully." });
     },
     onError: (error) => {
       console.error("Error updating product:", error);
