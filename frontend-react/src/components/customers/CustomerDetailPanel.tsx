@@ -302,8 +302,8 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
                       {/* TODO: Add button to view all documents */}
                     </CardHeader>
                     <CardContent>
-                       {/* Render the CustomerDocumentsTable component */}
-                       <CustomerDocumentsTable customerId={customerId} />
+                       {/* Render the CustomerDocumentsTable component only if customerId exists*/}
+                       {customerId && <CustomerDocumentsTable customerId={customerId} />}
                     </CardContent>
                   </Card>
                 </TabsContent>

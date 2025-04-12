@@ -19,7 +19,7 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 // Added Avatar components
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // Updated icons: removed Eye, kept PlusCircle, Edit
@@ -168,47 +168,28 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
 
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-primary">Customers</h1>
-         <Button onClick={handleCreateCustomer}>
-           <PlusCircle className="mr-2 h-4 w-4" /> New Customer
-         </Button>
-      </div>
-
+    <>
+      <CardHeader>
+        <CardTitle>Customer List</CardTitle>
+        <div className="relative mt-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            type="search"
+            placeholder="Search No., Name, VAT, Email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-9 w-full"
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow overflow-y-auto">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="my-4">
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
-      <Card>
-        <CardHeader>
-           {/* Filters Section - Basic Search */}
-           <div className="flex items-center gap-4">
-             <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by No., Name, VAT, Email, Phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-full" // Use pl-8 for icon padding
-                />
-             </div>
-             {/* Add other filters here e.g., Checkbox for 'Has Orders' */}
-             {/* <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="has-orders"
-                  checked={filterHasOrders}
-                  onCheckedChange={(checked) => setFilterHasOrders(Boolean(checked))}
-                />
-                <Label htmlFor="has-orders">Has Orders</Label>
-              </div> */}
-           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
+        {isLoading ? (
              <div className="space-y-4">
                <Skeleton className="h-10 w-full" />
                <Skeleton className="h-10 w-full" />
@@ -218,7 +199,6 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
             <Table>
               <TableHeader>
                 <TableRow>
-                  {/* Updated Headers */}
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
@@ -240,39 +220,34 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
                     return (
                         <TableRow
                            key={customer.id}
-                           onClick={() => onSelectCustomer(customer.id)} // Call onSelectCustomer
-                           className={cn( // Apply conditional styling
+                           onClick={() => onSelectCustomer(customer.id)}
+                           className={cn(
                              "cursor-pointer",
-                             String(customer.id) === selectedCustomerId ? 'bg-muted' : '' // Highlight selected row
+                             String(customer.id) === selectedCustomerId ? 'bg-muted' : ''
                            )}
                            >
-                            {/* Name Cell - Removed Link */}
                             <TableCell>
                                 <span className="font-medium">
                                     {customer.name || 'N/A'}
                                     <p className="text-xs text-muted-foreground font-normal block sm:hidden">{customer.customer_number}</p>
                                 </span>
                             </TableCell>
-                            {/* Other Data Cells */}
                             <TableCell className="hidden md:table-cell">{customer.emailMain}</TableCell>
                             <TableCell className="hidden md:table-cell">{customer.phoneMain}</TableCell>
                             <TableCell className="hidden sm:table-cell text-center">{customer.orderCount}</TableCell>
                             <TableCell className="hidden lg:table-cell">{formatDate(customer.since)}</TableCell>
                             <TableCell className="hidden lg:table-cell text-right">{formatCurrency(customer.totalSpent)}</TableCell>
-                            {/* Actions Cell */}
                             <TableCell>
                             <div className="flex gap-1 justify-end">
-                                {/* Edit Button - Keep navigation */}
                                 <Button variant="ghost" size="sm"
                                    onClick={(e) => {
-                                       e.stopPropagation(); // Prevent row click
+                                       e.stopPropagation();
                                        handleEditCustomer(customer.id);
                                    }}
                                    >
                                     <Edit className="h-4 w-4" />
                                     <span className="sr-only">Edit Customer</span>
                                 </Button>
-                                {/* Removed View Button */}
                             </div>
                             </TableCell>
                         </TableRow>
@@ -285,11 +260,13 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
                No customers found{searchTerm ? " matching your search" : ""}.
              </div>
            )}
-
-           {/* Add Pagination controls here if implemented */}
-
-        </CardContent>
-      </Card>
-    </div>
+      </CardContent>
+      <div className="p-4 border-t flex-shrink-0">
+        <Button className="w-full" onClick={handleCreateCustomer}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          New Customer
+        </Button>
+      </div>
+    </>
   );
 } 
