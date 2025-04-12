@@ -45,6 +45,8 @@ botocore==1.37.28
     #   s3transfer
 brotli==1.1.0
     # via fonttools
+build==1.2.2.post1
+    # via pip-tools
 bytecode==0.16.1
     # via ddtrace
 celery==5.4.0
@@ -71,6 +73,7 @@ click==8.1.8
     #   click-plugins
     #   click-repl
     #   mutmut
+    #   pip-tools
 click-didyoumean==0.3.1
     # via
     #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
@@ -148,7 +151,9 @@ django-filter==25.1
 django-guardian==2.4.0
     # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
 django-redis==5.4.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via
+    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.dev.in
 django-storages==1.14.6
     # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
 django-timezone-field==7.1
@@ -243,7 +248,9 @@ markdown-it-py[linkify,plugins]==3.0.0
     #   rich
     #   textual
 markupsafe==3.0.2
-    # via jinja2
+    # via
+    #   jinja2
+    #   werkzeug
 matplotlib-inline==0.1.7
     # via ipython
 mccabe==0.7.0
@@ -263,12 +270,15 @@ mypy-extensions==1.0.0
 numpy==2.2.4
     # via pandas
 onepasswordconnectsdk==1.5.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via
+    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.dev.in
 opentelemetry-api==1.31.1
     # via ddtrace
 packaging==24.2
     # via
     #   black
+    #   build
     #   gunicorn
     #   pytest
     #   sphinx
@@ -289,6 +299,8 @@ pillow==11.1.0
     #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
     #   reportlab
     #   weasyprint
+pip-tools==7.4.1
+    # via -r requirements/requirements.dev.in
 platformdirs==4.3.7
     # via
     #   black
@@ -331,6 +343,10 @@ pyjwt==2.9.0
     # via djangorestframework-simplejwt
 pyphen==0.17.2
     # via weasyprint
+pyproject-hooks==1.2.0
+    # via
+    #   build
+    #   pip-tools
 pytest==8.3.5
     # via
     #   -r requirements/requirements.dev.in
@@ -506,6 +522,10 @@ webencodings==0.5.1
     #   cssselect2
     #   tinycss2
     #   tinyhtml5
+werkzeug==3.1.3
+    # via -r requirements/requirements.dev.in
+wheel==0.45.1
+    # via pip-tools
 whitenoise==6.9.0
     # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
 wrapt==1.17.2
@@ -520,4 +540,5 @@ zopfli==0.2.3.post1
     # via fonttools
 
 # The following packages are considered to be unsafe in a requirements file:
+# pip
 # setuptools
