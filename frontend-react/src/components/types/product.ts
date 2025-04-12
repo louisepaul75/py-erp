@@ -32,7 +32,7 @@ export interface Product {
 
 // Add Supplier type based on API response
 export interface Supplier {
-  id: number;
+  id: string; // Changed from number to string (UUID)
   name: string;
 }
 

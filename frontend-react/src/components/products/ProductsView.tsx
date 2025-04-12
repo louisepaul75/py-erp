@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient, useMutation, QueryClient, UseQueryResult } from '@tanstack/react-query';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, PlusCircle, ChevronLeft, ChevronRight, Loader2, Edit, Save, X } from 'lucide-react';
@@ -44,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 // TODO: Ensure QueryClientProvider is set up in layout.tsx or a providers file
 
@@ -588,6 +590,7 @@ export function ProductsView() {
                       isMutating={isMutating}
                       fetchedProduct={selectedProduct}
                       suppliers={productDetailQuery.data?.suppliers ?? []}
+                      router={router}
                     />
                   </TabsContent>
                   <TabsContent value="variants" className="flex-grow overflow-y-auto space-y-4">
@@ -608,6 +611,7 @@ export function ProductsView() {
                     isMutating={isMutating}
                     fetchedProduct={null}
                     suppliers={[]}
+                    router={router}
                   />
                 </div>
               )}
@@ -628,6 +632,7 @@ interface ProductDetailFormContentProps {
   isMutating: boolean;
   fetchedProduct?: Product | null;
   suppliers?: Supplier[];
+  router: AppRouterInstance;
 }
 
 function ProductDetailFormContent({
@@ -638,7 +643,8 @@ function ProductDetailFormContent({
   handleSupplierChange,
   isMutating,
   fetchedProduct,
-  suppliers = []
+  suppliers = [],
+  router
 }: ProductDetailFormContentProps) {
   const selectValue = productData.supplier?.id?.toString() ?? "none";
   console.log(`Rendering ProductDetailFormContent. Select value prop is: '${selectValue}'`, "productData.supplier:", productData.supplier ? { id: productData.supplier.id, name: productData.supplier.name } : null);
@@ -708,7 +714,7 @@ function ProductDetailFormContent({
 
         {/* Supplier Select Field */}
         <div className="space-y-1">
-          <Label htmlFor="product-supplier" className={isEditing ? "" : "text-muted-foreground font-medium"}>Supplier</Label>
+          {/* <Label htmlFor="product-supplier" className={isEditing ? "" : "text-muted-foreground font-medium"}>Supplier</Label> */}
           {isEditing ? (
             <Select
               value={selectValue}
@@ -728,7 +734,19 @@ function ProductDetailFormContent({
               </SelectContent>
             </Select>
           ) : (
-            <p>{fetchedProduct?.supplier?.name ?? 'N/A'}</p>
+            fetchedProduct?.supplier ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="p-1 h-auto justify-start"
+                onClick={() => router.push(`/business/suppliers?supplierId=${fetchedProduct.supplier?.id}`)}
+                title={`View details for ${fetchedProduct.supplier.name}`}
+              >
+                {fetchedProduct.supplier.name}
+              </Button>
+            ) : (
+               <p>N/A</p>
+            )
           )}
         </div>
 
