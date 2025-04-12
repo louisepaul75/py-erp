@@ -144,7 +144,7 @@ echo "--- Database Check Complete ---"
 # Start the monitoring container unless skipped
 if [ "$RUN_MONITORING" = true ]; then
     echo "Starting monitoring container..."
-    docker-compose -f docker/docker-compose.monitoring.yml up -d
+    docker compose -f docker/docker-compose.monitoring.yml up -d
 
     echo -e "\nMonitoring services:"
     echo -e "- Elasticsearch: http://localhost:9200"
