@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 
 import {
@@ -14,12 +14,31 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Loader2, Edit } from "lucide-react"
+import { AlertCircle, Loader2, Edit, Save, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 
-import { fetchEmployees, fetchEmployeeById, type Employee } from '@/lib/api/employees'
+import { fetchEmployees, fetchEmployeeById, updateEmployee, type Employee } from '@/lib/api/employees'
+
+// Define type for form data (start with a subset)
+// Ensure nullable fields match the Employee type
+type EmployeeFormData = Partial<Omit<Employee, 'id' | 'user'> & { 
+  // Make fields potentially editable nullable/string as needed by inputs
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone_number: string | null;
+  address: string | null;
+  department: string | null;
+  job_title: string | null;
+  date_hired: string | null; // Store as string for date input
+  date_of_birth: string | null; // Store as string for date input
+}>;
 
 // Helper to display data or a placeholder
 const DetailItem = ({ label, value }: { label: string; value: string | null | undefined }) => (
@@ -31,7 +50,11 @@ const DetailItem = ({ label, value }: { label: string; value: string | null | un
 
 export default function EmployeesPage() {
   const { t } = useTranslation(['common']);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [employeeFormData, setEmployeeFormData] = useState<EmployeeFormData | null>(null);
 
   // Query for fetching the list of employees
   const { 
@@ -48,15 +71,103 @@ export default function EmployeesPage() {
   const { 
     data: selectedEmployee,
     isLoading: isLoadingDetail,
-    isFetching: isFetchingDetail, // Use isFetching for background refresh indicators
+    isFetching: isFetchingDetail,
     isError: isErrorDetail,
     error: errorDetail
   } = useQuery<Employee>({ 
     queryKey: ['employee', selectedEmployeeId], 
-    queryFn: () => fetchEmployeeById(selectedEmployeeId!), // Assert non-null as it's enabled only when ID exists
-    enabled: !!selectedEmployeeId, // Only run query if an ID is selected
-    // Optional: Add staleTime/cacheTime if desired
+    queryFn: () => fetchEmployeeById(selectedEmployeeId!),
+    enabled: !!selectedEmployeeId,
   });
+
+  // --- Form Data Initialization on Detail Load or Edit Start ---
+  useEffect(() => {
+    if (selectedEmployee && !isEditing) {
+      setEmployeeFormData({
+        ...selectedEmployee,
+        date_hired: selectedEmployee.date_hired ? format(parseISO(selectedEmployee.date_hired), 'yyyy-MM-dd') : null,
+        date_of_birth: selectedEmployee.date_of_birth ? format(parseISO(selectedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+      });
+    }
+    if (!selectedEmployeeId) {
+        setIsEditing(false);
+        setEmployeeFormData(null);
+    }
+  }, [selectedEmployee, isEditing, selectedEmployeeId]);
+
+  // --- Mutation for Updating Employee ---
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: number; formData: EmployeeFormData }) => 
+      updateEmployee(data.id, data.formData),
+    onSuccess: (updatedEmployee) => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.setQueryData(['employee', updatedEmployee.id], updatedEmployee);
+      setIsEditing(false);
+      setEmployeeFormData({
+         ...updatedEmployee,
+         date_hired: updatedEmployee.date_hired ? format(parseISO(updatedEmployee.date_hired), 'yyyy-MM-dd') : null,
+         date_of_birth: updatedEmployee.date_of_birth ? format(parseISO(updatedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+      });
+      toast({ title: "Success", description: "Employee updated successfully." });
+    },
+    onError: (error) => {
+      console.error("Update failed:", error);
+      toast({ 
+          title: "Error", 
+          description: `Failed to update employee: ${error.message}`,
+          variant: "destructive"
+      });
+    },
+  });
+
+  // --- Event Handlers ---
+  const handleSelectItem = (id: number) => {
+    if (isEditing) {
+        const discard = confirm("You have unsaved changes. Discard them and view the selected employee?");
+        if (!discard) return;
+    }
+    setSelectedEmployeeId(id);
+    setIsEditing(false);
+  };
+
+  const handleEdit = () => {
+    if (!selectedEmployee) return;
+    setEmployeeFormData({
+      ...selectedEmployee,
+       date_hired: selectedEmployee.date_hired ? format(parseISO(selectedEmployee.date_hired), 'yyyy-MM-dd') : null,
+       date_of_birth: selectedEmployee.date_of_birth ? format(parseISO(selectedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    if (selectedEmployee) {
+        setEmployeeFormData({
+            ...selectedEmployee,
+            date_hired: selectedEmployee.date_hired ? format(parseISO(selectedEmployee.date_hired), 'yyyy-MM-dd') : null,
+            date_of_birth: selectedEmployee.date_of_birth ? format(parseISO(selectedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+        });
+    }
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEmployeeFormData(prev => prev ? { ...prev, [name]: value } : null);
+  };
+
+  const handleSave = () => {
+    if (!selectedEmployeeId || !employeeFormData) {
+        toast({ title: "Error", description: "Cannot save, employee data is missing.", variant: "destructive" });
+        return;
+    }
+    if (!employeeFormData.first_name || !employeeFormData.last_name) {
+         toast({ title: "Validation Error", description: "First name and last name are required.", variant: "destructive" });
+         return;
+    }
+    
+    updateMutation.mutate({ id: selectedEmployeeId, formData: employeeFormData });
+  };
 
   // Helper to format dates
   const formatDate = (dateString: string | null | undefined) => {
@@ -68,21 +179,19 @@ export default function EmployeesPage() {
     }
   }
 
+  // Determine which data to display (form data if editing, otherwise fetched data)
+  const displayEmployee = isEditing ? employeeFormData : selectedEmployee;
+
   return (
-    // Add an outer div with padding and increased calculated height subtraction
-    <div className="p-4 h-[calc(100vh-8rem)]"> 
-      {/* Updated main container to match ProductsView structure */}
+    <div className="p-4 h-[calc(100vh-8rem)]">
       <div className="flex flex-col md:flex-row gap-4 h-full">
-        {/* Left Pane: Wrapped in Card */}
         <Card className="w-full md:w-1/3 flex flex-col">
-          <CardHeader className="p-4"> {/* Use CardHeader */}
-            <CardTitle className="text-lg">{t('navigation.employees')}</CardTitle> {/* Use CardTitle */}
-            {/* TODO: Add Search/Filter controls here */}
+          <CardHeader className="p-4">
+            <CardTitle className="text-lg">{t('navigation.employees')}</CardTitle>
           </CardHeader>
-          {/* Use CardContent for scrollable area */}
-          <CardContent className="flex-grow overflow-y-auto p-0"> {/* Remove padding from CardContent if ScrollArea handles it */}
-            <ScrollArea className="h-full"> {/* Ensure ScrollArea fills CardContent */}
-              <div className="p-4 space-y-2"> {/* Keep padding inside ScrollArea */}
+          <CardContent className="flex-grow overflow-y-auto p-0">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-2">
                 {isLoadingList && (
                   <>
                     <Skeleton className="h-10 w-full" />
@@ -103,9 +212,10 @@ export default function EmployeesPage() {
                   <Button
                     key={employee.id}
                     variant={selectedEmployeeId === employee.id ? "secondary" : "ghost"}
-                    onClick={() => setSelectedEmployeeId(employee.id)}
+                    onClick={() => handleSelectItem(employee.id)}
                     className="w-full justify-start h-auto py-2 px-3 text-left"
                     aria-current={selectedEmployeeId === employee.id}
+                    disabled={isEditing && selectedEmployeeId === employee.id}
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">
@@ -125,117 +235,162 @@ export default function EmployeesPage() {
               </div>
             </ScrollArea>
           </CardContent>
-        </Card> {/* End Left Pane Card */}
+        </Card>
 
-        {/* Right Pane: Wrapped in Card */}
         <Card className="w-full md:w-2/3 flex flex-col">
-           <CardHeader className="p-6 flex flex-row items-center justify-between"> {/* Use CardHeader, keep flex for spinner */}
-             <CardTitle className="text-lg">Employee Details</CardTitle> {/* Use CardTitle */}
-             {/* Container for buttons and spinner */}
+           <CardHeader className="p-6 flex flex-row items-center justify-between">
+             <CardTitle className="text-lg">
+                {isEditing ? `Editing: ${employeeFormData?.first_name || ''} ${employeeFormData?.last_name || ''}` : 'Employee Details'}
+            </CardTitle>
              <div className="flex items-center gap-2">
-               {/* Edit Button - Visible only when an employee is selected */}
-               {selectedEmployeeId && (
-                 <Button
-                   variant="outline"
-                   size="sm"
-                   onClick={() => { /* TODO: Implement edit functionality */ }}
-                   // disabled={isLoadingDetail || isFetchingDetail} // Optional: Disable while loading/fetching
-                 >
-                   <Edit className="mr-2 h-4 w-4" />
-                   Edit
-                 </Button>
-               )}
-               {/* Show a subtle loading spinner during background refetches */}
-               {isFetchingDetail && !isLoadingDetail && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                {!isEditing && selectedEmployeeId && (
+                    <Button variant="outline" size="sm" onClick={handleEdit} disabled={isLoadingDetail}> 
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                    </Button>
+                )}
+                {isEditing && (
+                    <>
+                        <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateMutation.isPending}>
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
+                        </Button>
+                        <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
+                            {updateMutation.isPending ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                            ) : (
+                                <><Save className="mr-2 h-4 w-4" />Save</>
+                            )}
+                        </Button>
+                    </>
+                )}
+               {!isEditing && isFetchingDetail && !isLoadingDetail && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
              </div>
            </CardHeader>
-           {/* Use CardContent for scrollable area */}
-          <CardContent className="flex-grow overflow-y-auto p-0"> {/* Remove padding from CardContent */}
-            <ScrollArea className="h-full"> {/* Ensure ScrollArea fills CardContent */}
-              <div className="p-6"> {/* Keep padding inside ScrollArea */}
-                {!selectedEmployeeId && (
+          <CardContent className="flex-grow overflow-y-auto p-0">
+            <ScrollArea className="h-full">
+              <div className="p-6">
+                {!selectedEmployeeId && !isEditing && (
                   <div className="flex items-center justify-center h-full min-h-[200px]">
-                    <p className="text-muted-foreground">
-                      {t('select_employee_details') || 'Select an employee to view details'}
-                    </p>
-                  </div>
+                     <p className="text-muted-foreground">
+                       {t('select_employee_details') || 'Select an employee to view details'}
+                     </p>
+                   </div>
                 )}
-
-                {selectedEmployeeId && isLoadingDetail && (
-                  <div className="space-y-4 mt-4">
-                    <Skeleton className="h-8 w-1/2" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Separator className="my-4" />
-                    <Skeleton className="h-4 w-1/4" />
-                    <Skeleton className="h-4 w-full" />
-                     <Skeleton className="h-4 w-1/4" />
-                    <Skeleton className="h-4 w-full" />
-                  </div>
-                )}
-
-                {selectedEmployeeId && isErrorDetail && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error Loading Details</AlertTitle>
-                    <AlertDescription>
-                      {(errorDetail as Error)?.message || "Failed to load employee details."}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {selectedEmployeeId && !isLoadingDetail && !isErrorDetail && selectedEmployee && (
-                  <dl>
-                    <div className="flex items-center space-x-4 mb-6">
-                       <Avatar className="h-16 w-16">
-                          {/* TODO: Add actual avatar URL if available */}
-                          <AvatarImage src={undefined} alt={`${selectedEmployee.first_name} ${selectedEmployee.last_name}`} />
-                          <AvatarFallback>
-                            {selectedEmployee.first_name?.charAt(0).toUpperCase()}
-                            {selectedEmployee.last_name?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 className="text-xl font-semibold">{selectedEmployee.first_name} {selectedEmployee.last_name}</h3>
-                          <p className="text-sm text-muted-foreground">{selectedEmployee.job_title || '-'}</p>
-                        </div>
+                {selectedEmployeeId && isLoadingDetail && !isEditing && (
+                    <div className="space-y-4 mt-4">
+                       <Skeleton className="h-8 w-1/2" />
+                       <Skeleton className="h-4 w-3/4" />
+                       <Skeleton className="h-4 w-1/2" />
+                       <Separator className="my-4" />
+                       <Skeleton className="h-4 w-1/4" />
+                       <Skeleton className="h-4 w-full" />
+                       <Skeleton className="h-4 w-1/4" />
+                       <Skeleton className="h-4 w-full" />
                     </div>
-
-                    <Separator className="my-4" />
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Contact Information</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <DetailItem label="Email" value={selectedEmployee.email} />
-                        <DetailItem label="Phone" value={selectedEmployee.phone_number} />
-                        <DetailItem label="Address" value={selectedEmployee.address} />
-                      </CardContent>
-                    </Card>
-
-                    <Separator className="my-4" />
-
-                    <Card>
-                      <CardHeader>
-                         <CardTitle>Employment Details</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <DetailItem label="Employee Number" value={selectedEmployee.employee_number} />
-                        <DetailItem label="Department" value={selectedEmployee.department} />
-                        <DetailItem label="Date Hired" value={formatDate(selectedEmployee.date_hired)} />
-                        <DetailItem label="Date of Birth" value={formatDate(selectedEmployee.date_of_birth)} />
-                         {/* TODO: Add related User info if needed */}
-                        {/* <DetailItem label="System User" value={selectedEmployee.user?.username} /> */}
-                      </CardContent>
-                    </Card>
-                  </dl>
                 )}
+                {selectedEmployeeId && isErrorDetail && !isEditing && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error Loading Details</AlertTitle>
+                        <AlertDescription>
+                        {(errorDetail as Error)?.message || "Failed to load employee details."}
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {displayEmployee && (
+                    isEditing ? (
+                        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="first_name">First Name <span className="text-red-500">*</span></Label>
+                                    <Input id="first_name" name="first_name" value={employeeFormData?.first_name || ''} onChange={handleFormChange} required disabled={updateMutation.isPending} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="last_name">Last Name <span className="text-red-500">*</span></Label>
+                                    <Input id="last_name" name="last_name" value={employeeFormData?.last_name || ''} onChange={handleFormChange} required disabled={updateMutation.isPending} />
+                                </div>
+                             </div>
+                             <div className="space-y-1">
+                                <Label htmlFor="job_title">Job Title</Label>
+                                <Input id="job_title" name="job_title" value={employeeFormData?.job_title || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                             </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="email">Email</Label>
+                                <Input id="email" name="email" type="email" value={employeeFormData?.email || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="phone_number">Phone</Label>
+                                <Input id="phone_number" name="phone_number" value={employeeFormData?.phone_number || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="address">Address</Label>
+                                <Textarea id="address" name="address" value={employeeFormData?.address || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                            </div>
+                             <Separator className="my-4" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="department">Department</Label>
+                                    <Input id="department" name="department" value={employeeFormData?.department || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="employee_number">Employee Number</Label>
+                                    <Input id="employee_number" name="employee_number" value={displayEmployee.employee_number || '-'} disabled={true} readOnly className="text-muted-foreground" />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="date_hired">Date Hired</Label>
+                                    <Input id="date_hired" name="date_hired" type="date" value={employeeFormData?.date_hired || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="date_of_birth">Date of Birth</Label>
+                                    <Input id="date_of_birth" name="date_of_birth" type="date" value={employeeFormData?.date_of_birth || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                </div>
+                            </div>
+                        </form>
+                    ) : (
+                        <dl>
+                            <div className="flex items-center space-x-4 mb-6">
+                                <Avatar className="h-16 w-16">
+                                    <AvatarImage src={undefined} alt={`${displayEmployee.first_name} ${displayEmployee.last_name}`} />
+                                    <AvatarFallback>
+                                    {displayEmployee.first_name?.charAt(0).toUpperCase()}
+                                    {displayEmployee.last_name?.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <h3 className="text-xl font-semibold">{displayEmployee.first_name} {displayEmployee.last_name}</h3>
+                                    <p className="text-sm text-muted-foreground">{displayEmployee.job_title || '-'}</p>
+                                </div>
+                            </div>
+                            <Separator className="my-4" />
+                            <Card>
+                                <CardHeader><CardTitle>Contact Information</CardTitle></CardHeader>
+                                <CardContent>
+                                    <DetailItem label="Email" value={displayEmployee.email} />
+                                    <DetailItem label="Phone" value={displayEmployee.phone_number} />
+                                    <DetailItem label="Address" value={displayEmployee.address} />
+                                </CardContent>
+                            </Card>
+                            <Separator className="my-4" />
+                            <Card>
+                                <CardHeader><CardTitle>Employment Details</CardTitle></CardHeader>
+                                <CardContent>
+                                    <DetailItem label="Employee Number" value={displayEmployee.employee_number} />
+                                    <DetailItem label="Department" value={displayEmployee.department} />
+                                    <DetailItem label="Date Hired" value={formatDate(displayEmployee.date_hired)} />
+                                    <DetailItem label="Date of Birth" value={formatDate(displayEmployee.date_of_birth)} />
+                                </CardContent>
+                            </Card>
+                        </dl>
+                    )
+                )}
+
               </div>
             </ScrollArea>
           </CardContent>
-        </Card> {/* End Right Pane Card */}
-      </div> // End flex container
-    </div> // End outer padding div
+        </Card>
+      </div>
+    </div>
   )
 } 
