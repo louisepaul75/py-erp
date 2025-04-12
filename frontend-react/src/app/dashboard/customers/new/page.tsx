@@ -1,6 +1,6 @@
 import React from 'react';
 import CustomerForm from '@/components/customers/customer-form';
-import Breadcrumbs from '@/components/ui/dashboard/breadcrumbs';
+// import Breadcrumbs from '@/components/ui/dashboard/breadcrumbs';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <main>
-      <Breadcrumbs
+      {/* <Breadcrumbs
         breadcrumbs={[
           { label: 'Customers', href: '/dashboard/customers' },
           {
@@ -19,7 +19,7 @@ export default function Page() {
             active: true,
           },
         ]}
-      />
+      /> */}
       <CustomerForm mode="create" />
     </main>
   );

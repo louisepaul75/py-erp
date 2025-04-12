@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusIcon, EyeIcon } from 'lucide-react'; // Icons for buttons
 import { Skeleton } from '@/components/ui/skeleton'; // For loading state
-import { Breadcrumbs } from '@/components/ui/dashboard/breadcrumbs'; // Assuming breadcrumbs exist
+// import { Breadcrumbs } from '@/components/ui/dashboard/breadcrumbs'; // Assuming breadcrumbs exist
 
 // Helper function to format address for display in the table
 const formatAddressLine = (address: any): string => {
@@ -70,11 +70,11 @@ async function CustomersTable() {
 export default function CustomersPage() {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
-      <Breadcrumbs
+      {/* <Breadcrumbs
         breadcrumbs={[
           { label: 'Customers', href: '/dashboard/customers', active: true },
         ]}
-      />
+      /> */}
 
       <div className="flex justify-between items-center mt-4 mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Customers</h1>

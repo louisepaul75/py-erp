@@ -1,7 +1,7 @@
 // import { fetchCustomerById } from '@/lib/data'; // Remove mock function import
 import { fetchCustomerByIdAPI } from '@/lib/api'; // Import API function
 import CustomerForm from '@/components/customers/customer-form'; // Corrected path
-import Breadcrumbs from '@/components/ui/dashboard/breadcrumbs'; // Corrected path
+// import Breadcrumbs from '@/components/ui/dashboard/breadcrumbs'; // Corrected path
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 
@@ -20,7 +20,7 @@ export default async function Page({ params }: { params: { id: string } }) {
 
   return (
     <main>
-      <Breadcrumbs
+      {/* <Breadcrumbs
         breadcrumbs={[
           { label: 'Customers', href: '/dashboard/customers' },
           {
@@ -29,7 +29,7 @@ export default async function Page({ params }: { params: { id: string } }) {
             active: true,
           },
         ]}
-      />
+      /> */}
       <CustomerForm customer={customer} mode="edit" /> {/* Pass data and mode */}
     </main>
   );
