@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle, Loader2, Edit } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -69,8 +69,8 @@ export default function EmployeesPage() {
   }
 
   return (
-    // Add an outer div with padding to prevent overlap with navbar
-    <div className="p-4 h-full"> 
+    // Add an outer div with padding and increased calculated height subtraction
+    <div className="p-4 h-[calc(100vh-8rem)]"> 
       {/* Updated main container to match ProductsView structure */}
       <div className="flex flex-col md:flex-row gap-4 h-full">
         {/* Left Pane: Wrapped in Card */}
@@ -131,8 +131,23 @@ export default function EmployeesPage() {
         <Card className="w-full md:w-2/3 flex flex-col">
            <CardHeader className="p-6 flex flex-row items-center justify-between"> {/* Use CardHeader, keep flex for spinner */}
              <CardTitle className="text-lg">Employee Details</CardTitle> {/* Use CardTitle */}
-             {/* Show a subtle loading spinner during background refetches */}
-             {isFetchingDetail && !isLoadingDetail && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+             {/* Container for buttons and spinner */}
+             <div className="flex items-center gap-2">
+               {/* Edit Button - Visible only when an employee is selected */}
+               {selectedEmployeeId && (
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   onClick={() => { /* TODO: Implement edit functionality */ }}
+                   // disabled={isLoadingDetail || isFetchingDetail} // Optional: Disable while loading/fetching
+                 >
+                   <Edit className="mr-2 h-4 w-4" />
+                   Edit
+                 </Button>
+               )}
+               {/* Show a subtle loading spinner during background refetches */}
+               {isFetchingDetail && !isLoadingDetail && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+             </div>
            </CardHeader>
            {/* Use CardContent for scrollable area */}
           <CardContent className="flex-grow overflow-y-auto p-0"> {/* Remove padding from CardContent */}
