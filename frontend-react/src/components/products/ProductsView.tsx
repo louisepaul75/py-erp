@@ -137,9 +137,9 @@ export function ProductsView() {
   });
 
   // Query for the details of the selected product
-  const productDetailQuery = useQuery<Product, Error>({
+  const productDetailQuery = useQuery<Product & { suppliers?: Supplier[] }, Error>({
     queryKey: ['product', selectedItemId],
-    queryFn: ({ signal }) => productApi.getProduct(selectedItemId!, signal),
+    queryFn: ({ signal }) => productApi.getProduct(selectedItemId!, signal) as Promise<Product & { suppliers?: Supplier[] }>,
     enabled: selectedItemId !== null && !isEditingNew,
     staleTime: 15 * 60 * 1000,
   });
@@ -161,7 +161,7 @@ export function ProductsView() {
   }, [productDetailQuery.data, productDetailQuery.isSuccess, productDetailQuery.isError, isEditing]);
 
   // Query for the variants of the selected product
-  const variantsQuery: UseQueryResult<ApiResponse<Product>, Error> = useQuery<ApiResponse<Product>, Error>({
+  const variantsQuery: UseQueryResult<any, Error> = useQuery<any, Error>({
     queryKey: ['productVariants', selectedItemId],
     queryFn: async ({ signal }) => {
       if (typeof productApi.getProductVariants !== 'function') {
@@ -177,7 +177,10 @@ export function ProductsView() {
   // --- Mutations ---
 
   const createProductMutation = useMutation<Product, Error, ProductFormData>({
-    mutationFn: (data) => productApi.createProduct(data),
+    mutationFn: (data) => productApi.createProduct({
+      ...data,
+      description: data.description ?? '',
+    } as Omit<Product, "id"> & { parent_id?: string | number | undefined }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.setQueryData(['product', data.id], data);
@@ -347,7 +350,9 @@ export function ProductsView() {
         ...productFormData,
         name: productFormData.name,
         sku: productFormData.sku,
+        description: productFormData.description ?? '',
     };
+    console.log("Data being sent to API:", dataToSave);
 
     if (isEditingNew) {
       createProductMutation.mutate(dataToSave);
@@ -357,15 +362,31 @@ export function ProductsView() {
   };
 
   const handleSupplierChange = (supplierIdString: string) => {
-    const supplierId = supplierIdString ? parseInt(supplierIdString) : null;
-    const selectedSupplier = productDetailQuery.data?.suppliers.find(s => s.id === supplierId) || null;
-    // Update the form state directly
-    setProductFormData(prev => ({
-      ...prev,
-      supplier: selectedSupplier // Store the Supplier object or null
-    }));
-    // The main handleSave function will pick up this change when the user clicks Save.
-    // No immediate API call here, changes are saved together.
+    console.log(`handleSupplierChange called with value: '${supplierIdString}'`);
+    let selectedSupplier: Supplier | null = null;
+    const availableSuppliers = productDetailQuery.data?.suppliers;
+    console.log('Available suppliers:', availableSuppliers ? availableSuppliers.map((s: Supplier) => ({ id: s.id, name: s.name })) : 'Not loaded');
+
+    if (supplierIdString && supplierIdString !== "none" && availableSuppliers) {
+      selectedSupplier = availableSuppliers.find((s: Supplier) => s.id === supplierIdString) ?? null;
+      console.log(`Found supplier object:`, selectedSupplier ? { id: selectedSupplier.id, name: selectedSupplier.name } : null);
+    } else {
+       console.log("Value is 'none' or suppliers not available. Setting supplier to null.");
+       selectedSupplier = null; // Explicitly null if 'none' or unavailable
+    }
+
+    setProductFormData(prev => {
+      console.log('Current productFormData.supplier:', prev.supplier ? { id: prev.supplier.id, name: prev.supplier.name } : null);
+      if ((!prev.supplier && !selectedSupplier) || (prev.supplier?.id === selectedSupplier?.id)) {
+             console.log("Supplier state effectively unchanged (same ID or both null), skipping update.");
+             return prev;
+      }
+      console.log("Updating productFormData.supplier to:", selectedSupplier ? { id: selectedSupplier.id, name: selectedSupplier.name } : null);
+      return {
+        ...prev,
+        supplier: selectedSupplier
+      };
+    });
   };
 
   // --- Render Logic ---
@@ -593,6 +614,9 @@ function ProductDetailFormContent({
   fetchedProduct,
   suppliers = []
 }: ProductDetailFormContentProps) {
+  const selectValue = productData.supplier?.id?.toString() ?? "none";
+  console.log(`Rendering ProductDetailFormContent. Select value prop is: '${selectValue}'`, "productData.supplier:", productData.supplier ? { id: productData.supplier.id, name: productData.supplier.name } : null);
+
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
       {/* Display image from fetchedProduct only when not editing */}
@@ -661,7 +685,7 @@ function ProductDetailFormContent({
           <Label htmlFor="product-supplier" className={isEditing ? "" : "text-muted-foreground font-medium"}>Supplier</Label>
           {isEditing ? (
             <Select
-              value={productData.supplier?.id?.toString() ?? "none"}
+              value={selectValue}
               onValueChange={handleSupplierChange}
               disabled={isMutating}
             >
@@ -712,7 +736,7 @@ function ProductDetailFormContent({
         <div className="space-y-1">
            <Label htmlFor="product-release-date" className={isEditing ? "" : "text-muted-foreground font-medium"}>Release Date</Label>
            {isEditing ? (
-            <Input id="product-release-date" name="release_date" type="date" value={(productData.release_date instanceof Date ? productData.release_date.toISOString() : productData.release_date ?? '').split('T')[0]} onChange={handleFormChange} disabled={isMutating} />
+            <Input id="product-release-date" name="release_date" type="date" value={(productData.release_date && productData.release_date instanceof Date ? productData.release_date.toISOString() : productData.release_date ?? '').split('T')[0]} onChange={handleFormChange} disabled={isMutating} />
            ) : (
               <p>{fetchedProduct?.release_date ? new Date(fetchedProduct.release_date).toLocaleDateString() : 'N/A'}</p>
            )}
