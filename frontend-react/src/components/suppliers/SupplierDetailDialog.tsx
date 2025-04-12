@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/table"; // Added
 import { ScrollArea } from "@/components/ui/scroll-area"; // Added
 import { toast } from "sonner"; // Added for notifications
+import { api } from '@/lib/auth/authService';
+import { HTTPError } from 'ky'; // Import HTTPError for typed error handling
 
 interface SupplierDetailDialogProps {
   open: boolean;
@@ -50,22 +52,8 @@ interface ProductSearchResult {
   is_variant: boolean; // Flag indicating if the match was a variant
 }
 
-// Helper function to get CSRF token from cookies
-function getCookie(name: string): string | null {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      // Does this cookie string begin with the name we want?
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
+// Helper function to get CSRF token from cookies - NO LONGER NEEDED for api calls
+// function getCookie(name: string): string | null { ... }
 
 export function SupplierDetailDialog({ open, onOpenChange, supplier }: SupplierDetailDialogProps) {
   const isSynced = !!supplier?.syncedAt; // Use syncedAt based on type assumption
@@ -85,42 +73,39 @@ export function SupplierDetailDialog({ open, onOpenChange, supplier }: SupplierD
   const fetchAssignedProducts = async (supplierId: string) => {
     setAssignedLoading(true);
     setAssignedError(null);
-    const csrftoken = getCookie('csrftoken'); // Get CSRF token
-
-    if (!csrftoken) {
-        // Handle missing CSRF token (optional, but good practice)
-        console.error("CSRF token not found for fetching assigned products.");
-        setAssignedError('Authentication error. Please refresh.');
-        toast.error("Could not load assigned products due to missing token.");
-        setAssignedLoading(false);
-        return;
-    }
+    // Remove manual CSRF token fetching - api instance handles it
+    // const csrftoken = getCookie('csrftoken');
+    // if (!csrftoken) { ... }
 
     try {
-      const response = await fetch(`/api/v1/business/suppliers/${supplierId}/products/`, {
-        headers: {
-          'X-CSRFToken': csrftoken, // Include CSRF token
-        },
-      });
-      if (!response.ok) {
-        // Check for specific redirect status codes if needed
-        if (response.status === 302 || response.redirected) {
-             console.error("Redirect detected. Authentication likely required or failed.");
-             setAssignedError('Authentication failed. Please log in again.');
-             toast.error("Authentication failed.");
-        } else {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        // Throw an error or handle appropriately if response is still not ok
-        // For example, maybe the token was invalid
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data: ParentProductSummary[] = await response.json();
+      // Use the centralized api instance which handles auth headers and credentials
+      const data = await api.get(`business/suppliers/${supplierId}/products/`).json<ParentProductSummary[]>();
       setAssignedProducts(data);
     } catch (error) {
       console.error("Failed to fetch assigned products:", error);
-      setAssignedError('Failed to fetch assigned products.');
-      toast.error("Could not load assigned products.");
+      let errorMessage = 'Failed to fetch assigned products.';
+      if (error instanceof HTTPError) {
+        // Try to get a more specific error message from the response
+        try {
+            const errorBody = await error.response.json();
+            errorMessage = errorBody.detail || `HTTP error ${error.response.status}`;
+             // Handle specific statuses like 401/403 for auth errors
+            if (error.response.status === 401 || error.response.status === 403) {
+                errorMessage = 'Authentication failed. Please log in again.';
+                toast.error("Authentication failed.");
+            } else {
+                 toast.error(`Error: ${errorMessage}`);
+            }
+        } catch (parseError) {
+            // Fallback if the error response isn't JSON
+             errorMessage = `HTTP error ${error.response.status}`;
+             toast.error(errorMessage);
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+        toast.error(errorMessage);
+      }
+      setAssignedError(errorMessage);
     } finally {
       setAssignedLoading(false);
     }
@@ -132,6 +117,7 @@ export function SupplierDetailDialog({ open, onOpenChange, supplier }: SupplierD
     setSearchError(null);
     setSearchResults([]);
     try {
+      // TODO: Consider refactoring searchProducts to use 'api.get' as well for consistency
       const response = await fetch(`/api/v1/products/search/?q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -152,6 +138,8 @@ export function SupplierDetailDialog({ open, onOpenChange, supplier }: SupplierD
 
   const assignProduct = async (parentProductId: number) => {
     if (!supplier) return;
+    // TODO: Consider refactoring assignProduct to use 'api.post' for consistency
+    // It already handles CSRF manually, but using 'api' centralizes it.
     const csrftoken = getCookie('csrftoken'); // Get CSRF token
 
     if (!csrftoken) {
