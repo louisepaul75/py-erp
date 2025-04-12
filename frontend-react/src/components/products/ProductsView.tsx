@@ -207,9 +207,32 @@ export function ProductsView() {
     { id: number; data: ProductFormData }
   >({
     mutationFn: ({ id, data }) => productApi.updateProduct(String(id), data),
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.setQueryData(['product', variables.id], data);
+
+      // ** Check if a supplier needs to be assigned **
+      const supplierToAssign = variables.data.supplier;
+      if (supplierToAssign && supplierToAssign.id) {
+        try {
+          await productApi.assignSupplierToProduct(variables.id, supplierToAssign.id);
+          toast({ title: "Success", description: `Product updated and supplier '${supplierToAssign.name}' assigned.` });
+        } catch (assignError) {
+          console.error("Error assigning supplier after product update:", assignError);
+          // Show update success, but supplier assignment failure
+          toast({
+            title: "Update Successful, Assignment Failed",
+            description: `Product details saved, but failed to assign supplier '${supplierToAssign.name}'. Please try assigning again manually. Error: ${assignError instanceof Error ? assignError.message : 'Unknown error'} `,
+            variant: "warning", // Use warning variant
+            duration: 7000, // Longer duration for warning
+          });
+        }
+      } else {
+        // If no supplier was selected, or it was set to 'none', show standard success message
+        toast({ title: "Success", description: "Product updated successfully." });
+      }
+
+      // Reset form state regardless of supplier assignment result
       if (selectedItemId === variables.id && data) {
         setProductFormData({
           ...defaultProductData,
@@ -220,7 +243,6 @@ export function ProductsView() {
       }
       setIsEditing(false);
       setApiError(null);
-      toast({ title: "Success", description: "Product updated successfully." });
     },
     onError: (error) => {
       console.error("Error updating product:", error);

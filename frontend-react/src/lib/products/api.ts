@@ -284,6 +284,19 @@ export const productApi = {
       throw error;
     }
   },
+
+  // Function to assign a supplier to a product
+  assignSupplierToProduct: async (productId: string | number, supplierId: string): Promise<void> => {
+    try {
+      // Construct the correct URL using the supplier ID
+      const url = `v1/business/suppliers/${supplierId}/assign-product/`;
+      // Send POST request with product ID in the body
+      await api.post(url, { json: { product_id: productId } });
+    } catch (error) {
+      console.error(`Error assigning supplier ${supplierId} to product ${productId}:`, error);
+      throw error; // Rethrow to allow calling function to handle UI feedback
+    }
+  },
 };
 
 // Variant API methods
