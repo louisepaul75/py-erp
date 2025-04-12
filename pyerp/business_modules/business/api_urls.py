@@ -44,7 +44,7 @@ class SupplierViewSetWithProducts(SupplierViewSet):
 
 router = DefaultRouter()
 router.register(r'employees', EmployeeViewSet)
-router.register(r'suppliers', SupplierViewSetWithProducts, basename='supplier')
+router.register(r'suppliers', SupplierViewSetWithProducts)
 print(router.urls)  # Add this line for debugging
 
 app_name = 'business_api' # Optional: Define an app namespace
