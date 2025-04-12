@@ -107,57 +107,37 @@ export let mockUsers: User[] = [
 // Simulate API calls with delays
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-export async function fetchUsers(): Promise<User[]> {
-  try {
-    const token = getCookie('access_token'); // Get token from cookie
-    const headers: HeadersInit = {};
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`; // Set Authorization header
-    }
-
-    const response = await fetch(`${API_BASE_URL}/users/users/`, {
-      method: 'GET', // Explicitly state method
-      headers: headers, // Add headers
-      credentials: 'include' // Keep this for potential CSRF or other cookies
-    });
-    
-    if (!response.ok) {
-      // Handle 401 specifically - maybe redirect to login or refresh token?
-      if (response.status === 401) {
-        console.error("Authorization failed. Token might be invalid or expired.");
-        // Potentially trigger a token refresh mechanism here
-      }
-      console.error("Error fetching users:", response.statusText, response.status);
-      // Fallback to mock data if API call fails
-      return mockUsers;
-    }
-    
-    const data = await response.json();
-    const results = data.results || []; // Handle paginated response format
-    
-    // Transform backend data to match frontend User type if needed
-    const users = results.map((user: any) => ({
-      id: user.id.toString(),
-      name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username,
-      email: user.email,
-      role: user.is_superuser ? "Admin" : user.is_staff ? "Editor" : "Viewer",
-      isActive: user.is_active,
-      twoFactorEnabled: false, // This might come from a different API or user extension
-      requirePasswordChange: false, // Add this from backend if available
-      lastLogin: user.last_login ? new Date(user.last_login) : undefined,
-      passwordLastChanged: undefined, // Add this from backend if available
-      phone: undefined, // Add this from backend if available
-      groups: user.groups || [], // If groups aren't directly included, we'll need another API call
-    }));
-    
-    return users;
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    // Fallback to mock data on error
-    return mockUsers;
-  }
+// Define the User type based on the Django UserSerializer
+export interface UserSummary {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
 }
+
+/**
+ * Fetches a list of users from the API.
+ * Supports filtering/searching if implemented in the backend.
+ */
+export const fetchUsers = async (): Promise<UserSummary[]> => {
+  const response = await instance.get("v1/business/users/"); // Correct endpoint
+  const data = await response.json();
+
+  // Check if the response looks like a paginated DRF response
+  if (data && typeof data === 'object' && Array.isArray(data.results)) {
+    return data.results; // Return only the results array
+  }
+
+  // If it's not the expected paginated structure, maybe it's already an array?
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  // Log an error or throw if the structure is unexpected
+  console.error("Unexpected API response structure for fetchUsers:", data);
+  throw new Error('Failed to fetch users: Invalid API response format');
+};
 
 // Füge diese Funktion zur users.ts hinzu
 export async function fetchUserById(userId: string): Promise<User> {

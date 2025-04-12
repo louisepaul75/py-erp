@@ -1,9 +1,18 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, generics
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Employee, Supplier
-from .serializers import EmployeeSerializer, SupplierSerializer
+from .serializers import (
+    EmployeeSerializer, 
+    SupplierSerializer, 
+    UserSerializer, 
+)
+
+User = get_user_model()
 
 # Create your views here.
 
@@ -29,6 +38,14 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     ]
     # Default ordering
     ordering = ['last_name', 'first_name']
+
+class UserListView(generics.ListAPIView):
+    """API endpoint to list users for selection."""
+    queryset = User.objects.filter(is_active=True).order_by('username')
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated] # Any authenticated user can see the list
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'first_name', 'last_name', 'email']
 
 class SupplierViewSet(viewsets.ModelViewSet):
     """API endpoint that allows suppliers to be viewed or edited."""

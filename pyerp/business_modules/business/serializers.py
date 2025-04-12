@@ -1,11 +1,27 @@
 from rest_framework import serializers
 from .models import Employee, Supplier
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serializer for the User model (for selection)."""
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name', 'email']
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
     """Serializer for the Employee model."""
     full_name = serializers.CharField(read_only=True)
     is_active = serializers.BooleanField(read_only=True)
+    # Allow user ID to be passed in for updates, and include it in responses
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(), 
+        allow_null=True, 
+        required=False # Make it optional for updates
+    )
 
     class Meta:
         model = Employee
@@ -36,7 +52,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'annual_vacation_days', 
             'ad_username', 
             'created_at', 
-            'updated_at'
+            'updated_at',
+            'user' # Include user ID
         ]
         read_only_fields = [
             'id', 
@@ -45,6 +62,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'is_active', 
             'created_at', 
             'updated_at'
+            # Remove user from read_only_fields
         ] 
 
 

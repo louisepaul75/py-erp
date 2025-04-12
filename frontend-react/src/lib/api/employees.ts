@@ -14,8 +14,12 @@ export interface Employee {
   date_hired: string; // ISO date string
   date_of_birth: string | null; // ISO date string
   address: string | null; // Consider a structured address type later if needed
-  user: User | null; // Use the imported User type
+  user: number | null; // Changed: Now expecting user ID or null
 }
+
+// Define the shape of the data used for updating
+// Omit fields that shouldn't be sent in PATCH, like read-only fields
+export type EmployeeUpdateData = Partial<Omit<Employee, 'id' | 'employee_number' | 'created_at' | 'updated_at'>>;
 
 /**
  * Fetches a list of employees from the API.
@@ -49,4 +53,14 @@ export const fetchEmployeeById = async (id: string | number): Promise<Employee> 
   return await response.json(); // Use .json() to parse the response
 };
 
-// Add functions for creating, updating, deleting employees as needed 
+/**
+ * Updates an existing employee.
+ */
+export const updateEmployee = async (id: number, data: EmployeeUpdateData): Promise<Employee> => {
+  const response = await instance.patch(`v1/business/employees/${id}/`, {
+    json: data,
+  });
+  return await response.json();
+};
+
+// Add functions for creating, deleting employees as needed 

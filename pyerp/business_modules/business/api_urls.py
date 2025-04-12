@@ -5,7 +5,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 
-from .views import EmployeeViewSet, SupplierViewSet
+from .views import (
+    EmployeeViewSet, 
+    SupplierViewSet,
+    UserListView
+)
 from pyerp.business_modules.products.models import ParentProduct
 from pyerp.business_modules.products.serializers import ParentProductSummarySerializer
 
@@ -51,4 +55,8 @@ app_name = 'business_api' # Optional: Define an app namespace
 
 urlpatterns = [
     path('', include(router.urls)),
+    # Removed endpoint for assigning a user to an employee (handled by EmployeeViewSet PATCH)
+    # path('employees/<int:pk>/assign-user/', EmployeeAssignUserView.as_view(), name='employee-assign-user'),
+    # Endpoint to list users (still needed)
+    path('users/', UserListView.as_view(), name='user-list'),
 ] 

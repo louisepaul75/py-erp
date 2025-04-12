@@ -22,13 +22,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-import { fetchEmployees, fetchEmployeeById, updateEmployee, type Employee } from '@/lib/api/employees'
+import { fetchEmployees, fetchEmployeeById, updateEmployee, type Employee, type EmployeeUpdateData } from '@/lib/api/employees'
+import { fetchUsers, type UserSummary } from '@/lib/api/users'
 
-// Define type for form data (start with a subset)
-// Ensure nullable fields match the Employee type
-type EmployeeFormData = Partial<Omit<Employee, 'id' | 'user'> & { 
-  // Make fields potentially editable nullable/string as needed by inputs
+// Define type for form data
+type EmployeeFormData = Partial<Omit<Employee, 'id'>> & { 
+  // Ensure all editable fields are potentially nullable/string as needed by inputs
   first_name: string;
   last_name: string;
   email: string | null;
@@ -36,9 +37,10 @@ type EmployeeFormData = Partial<Omit<Employee, 'id' | 'user'> & {
   address: string | null;
   department: string | null;
   job_title: string | null;
-  date_hired: string | null; // Store as string for date input
-  date_of_birth: string | null; // Store as string for date input
-}>;
+  date_hired: string | null; 
+  date_of_birth: string | null; 
+  user: number | null; // Add user ID field
+};
 
 // Helper to display data or a placeholder
 const DetailItem = ({ label, value }: { label: string; value: string | null | undefined }) => (
@@ -67,6 +69,15 @@ export default function EmployeesPage() {
     queryFn: fetchEmployees 
   });
 
+  // Query for fetching the list of users
+  const { 
+    data: users = [], 
+    isLoading: isLoadingUsers,
+  } = useQuery<UserSummary[]>({ 
+    queryKey: ['users'], 
+    queryFn: fetchUsers 
+  });
+
   // Query for fetching the details of the selected employee
   const { 
     data: selectedEmployee,
@@ -87,6 +98,7 @@ export default function EmployeesPage() {
         ...selectedEmployee,
         date_hired: selectedEmployee.date_hired ? format(parseISO(selectedEmployee.date_hired), 'yyyy-MM-dd') : null,
         date_of_birth: selectedEmployee.date_of_birth ? format(parseISO(selectedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+        // user is already included via spread, as it's number | null
       });
     }
     if (!selectedEmployeeId) {
@@ -97,7 +109,7 @@ export default function EmployeesPage() {
 
   // --- Mutation for Updating Employee ---
   const updateMutation = useMutation({
-    mutationFn: (data: { id: number; formData: EmployeeFormData }) => 
+    mutationFn: (data: { id: number; formData: EmployeeUpdateData }) => 
       updateEmployee(data.id, data.formData),
     onSuccess: (updatedEmployee) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
@@ -107,6 +119,7 @@ export default function EmployeesPage() {
          ...updatedEmployee,
          date_hired: updatedEmployee.date_hired ? format(parseISO(updatedEmployee.date_hired), 'yyyy-MM-dd') : null,
          date_of_birth: updatedEmployee.date_of_birth ? format(parseISO(updatedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+         // user: updatedEmployee.user // Already included via spread
       });
       toast({ title: "Success", description: "Employee updated successfully." });
     },
@@ -136,6 +149,7 @@ export default function EmployeesPage() {
       ...selectedEmployee,
        date_hired: selectedEmployee.date_hired ? format(parseISO(selectedEmployee.date_hired), 'yyyy-MM-dd') : null,
        date_of_birth: selectedEmployee.date_of_birth ? format(parseISO(selectedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+       // user is already included via spread
     });
     setIsEditing(true);
   };
@@ -147,6 +161,7 @@ export default function EmployeesPage() {
             ...selectedEmployee,
             date_hired: selectedEmployee.date_hired ? format(parseISO(selectedEmployee.date_hired), 'yyyy-MM-dd') : null,
             date_of_birth: selectedEmployee.date_of_birth ? format(parseISO(selectedEmployee.date_of_birth), 'yyyy-MM-dd') : null,
+            // user is already included via spread
         });
     }
   };
@@ -154,6 +169,12 @@ export default function EmployeesPage() {
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEmployeeFormData(prev => prev ? { ...prev, [name]: value } : null);
+  };
+
+  // Handler for Select component changes (specific for user dropdown)
+  const handleUserChange = (value: string) => {
+    const userId = value === 'null' ? null : parseInt(value, 10);
+    setEmployeeFormData(prev => prev ? { ...prev, user: userId } : null);
   };
 
   const handleSave = () => {
@@ -166,7 +187,14 @@ export default function EmployeesPage() {
          return;
     }
     
-    updateMutation.mutate({ id: selectedEmployeeId, formData: employeeFormData });
+    // Prepare data for update, ensuring user ID is correctly formatted
+    const updateData: EmployeeUpdateData = {
+        ...employeeFormData,
+        // Dates are already strings or null
+        // user is already number | null
+    };
+
+    updateMutation.mutate({ id: selectedEmployeeId, formData: updateData });
   };
 
   // Helper to format dates
@@ -347,6 +375,30 @@ export default function EmployeesPage() {
                                     <Input id="date_of_birth" name="date_of_birth" type="date" value={employeeFormData?.date_of_birth || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
                                 </div>
                             </div>
+                            {/* --- Add User Select Dropdown --- */}
+                            <Separator className="my-4" />
+                            <div className="space-y-1">
+                                <Label htmlFor="user">Associated User Account</Label>
+                                <Select 
+                                    value={employeeFormData?.user?.toString() ?? 'null'} 
+                                    onValueChange={handleUserChange} 
+                                    disabled={updateMutation.isPending || isLoadingUsers}
+                                >
+                                    <SelectTrigger id="user">
+                                        <SelectValue placeholder="Select user..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="null">-- Unassigned --</SelectItem>
+                                        {isLoadingUsers && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                                        {!isLoadingUsers && users.map(user => (
+                                            <SelectItem key={user.id} value={user.id.toString()}>
+                                                {user.first_name} {user.last_name} ({user.username})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {/* --- End User Select Dropdown --- */}
                         </form>
                     ) : (
                         <dl>
