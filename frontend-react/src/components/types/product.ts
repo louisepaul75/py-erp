@@ -28,6 +28,7 @@ export interface Product {
   tags: string[]; // Assuming tags are an array of strings
   variants_count: number;
 }
+
 export interface ApiResponse<T> {
   count: number; // Total number of items available
   page: number; // Current page number
@@ -67,3 +68,9 @@ export interface ProductListProps {
     onProductCreated?: (newProduct: Product) => void;
     onCancel?: () => void;
   }
+
+export interface ParentProductSummary {
+  id: number;
+  sku: string;
+  name: string;
+}

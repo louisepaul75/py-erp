@@ -10,6 +10,23 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# New serializer for ParentProduct summary (used in search and supplier detail)
+class ParentProductSummarySerializer(serializers.ModelSerializer):
+    """Minimal serializer for ParentProduct used in listings or relationships."""
+    class Meta:
+        model = ParentProduct
+        fields = ['id', 'sku', 'name']
+
+# New serializer for combined product search results
+class ProductSearchResultSerializer(serializers.Serializer):
+    """Serializer for representing combined search results (Parent or Variant)."""
+    id = serializers.IntegerField(help_text="Parent Product ID")
+    sku = serializers.CharField(max_length=50, help_text="Parent Product SKU")
+    name = serializers.CharField(max_length=255, help_text="Parent Product Name")
+    matched_sku = serializers.CharField(max_length=50, help_text="SKU of the matched item (Parent or Variant)")
+    matched_name = serializers.CharField(max_length=255, help_text="Name of the matched item")
+    is_variant = serializers.BooleanField(help_text="True if the match was a Variant Product")
+
 class ProductCategorySerializer(serializers.ModelSerializer):
     """
     Serializer for the ProductCategory model with drf-spectacular documentation.

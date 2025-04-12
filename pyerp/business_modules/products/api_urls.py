@@ -10,6 +10,7 @@ from pyerp.business_modules.products.api import (
     ProductDetailViewSet,
     VariantDetailAPIView,
 )
+from pyerp.business_modules.products.views import ProductSearchAPIView
 
 app_name = "products_api"
 
@@ -29,6 +30,7 @@ urlpatterns = [
     path("", ProductListAPIView.as_view(), name="product_list"),
     path("", ProductDetailViewSet.as_view({"post": "create"}), name="product_create"),
     path("direct-search/", ProductListAPIView.as_view(direct_search=True), name="product_direct_search"),
+    path("search/", ProductSearchAPIView.as_view(), name="product_search"),
     path("<int:pk>/", ProductDetailViewSet.as_view({
         "get": "retrieve",
         "put": "update",

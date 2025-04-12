@@ -30,7 +30,11 @@ from pyerp.business_modules.products.models import (
     VariantProduct,
 )
 from pyerp.core.models import Tag
-from pyerp.business_modules.products.serializers import ParentProductSerializer
+from pyerp.business_modules.products.serializers import (
+    ParentProductSerializer,
+    ParentProductSummarySerializer,
+    ProductSearchResultSerializer
+)
 
 # Get standard logger instance
 logger = logging.getLogger(__name__)
@@ -585,3 +589,63 @@ class TagDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context["products"] = ParentProduct.objects.filter(tags=self.object)
         return context
+
+
+class ProductSearchAPIView(APIView):
+    """
+    API endpoint for searching Parent and Variant products.
+    Accepts a 'q' query parameter for searching by SKU or Name.
+    Returns a list of matched products, identifying the parent product for each match.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        query = request.query_params.get('q', '').strip()
+        if not query:
+            return Response([], status=status.HTTP_200_OK)
+
+        # Search in ParentProduct
+        parent_matches = ParentProduct.objects.filter(
+            Q(sku__icontains=query) | Q(name__icontains=query)
+        ).distinct()
+
+        # Search in VariantProduct
+        variant_matches = VariantProduct.objects.filter(
+            Q(sku__icontains=query) | Q(name__icontains=query)
+        ).select_related('parent').distinct()
+
+        results = []
+        added_parent_ids = set()
+
+        # Process parent matches first
+        for parent in parent_matches:
+            if parent.id not in added_parent_ids:
+                results.append({
+                    'id': parent.id,
+                    'sku': parent.sku,
+                    'name': parent.name,
+                    'matched_sku': parent.sku,
+                    'matched_name': parent.name,
+                    'is_variant': False
+                })
+                added_parent_ids.add(parent.id)
+
+        # Process variant matches, ensuring parent is included only once if matched directly too
+        for variant in variant_matches:
+            if variant.parent_id not in added_parent_ids:
+                results.append({
+                    'id': variant.parent.id,
+                    'sku': variant.parent.sku,
+                    'name': variant.parent.name,
+                    'matched_sku': variant.sku,
+                    'matched_name': variant.name,
+                    'is_variant': True
+                })
+                added_parent_ids.add(variant.parent_id)
+
+        # Optional: Limit the number of results
+        MAX_RESULTS = 20
+        results = results[:MAX_RESULTS]
+
+        serializer = ProductSearchResultSerializer(results, many=True)
+        return Response(serializer.data)
