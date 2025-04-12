@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, PlusCircle, ChevronLeft, ChevronRight, Loader2, Edit, Save, X } from 'lucide-react';
 import { productApi } from '@/lib/products/api';
-import { Product, ApiResponse } from '@/components/types/product';
+import { Product, ApiResponse, Supplier } from '@/components/types/product';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -36,6 +36,13 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // TODO: Ensure QueryClientProvider is set up in layout.tsx or a providers file
 
@@ -518,6 +525,7 @@ export function ProductsView() {
                       handleCheckboxChange={handleCheckboxChange}
                       isMutating={isMutating}
                       fetchedProduct={selectedProduct}
+                      suppliers={productDetailQuery.data?.suppliers ?? []}
                     />
                   </TabsContent>
                   <TabsContent value="variants" className="flex-grow overflow-y-auto space-y-4">
@@ -536,6 +544,7 @@ export function ProductsView() {
                     handleCheckboxChange={handleCheckboxChange}
                     isMutating={isMutating}
                     fetchedProduct={null}
+                    suppliers={[]}
                   />
                 </div>
               )}
@@ -554,6 +563,7 @@ interface ProductDetailFormContentProps {
   handleCheckboxChange: (field: keyof ProductFormData, checked: boolean | 'indeterminate') => void;
   isMutating: boolean;
   fetchedProduct?: Product | null;
+  suppliers?: Supplier[];
 }
 
 function ProductDetailFormContent({
@@ -562,7 +572,8 @@ function ProductDetailFormContent({
   handleFormChange,
   handleCheckboxChange,
   isMutating,
-  fetchedProduct
+  fetchedProduct,
+  suppliers = []
 }: ProductDetailFormContentProps) {
   const displayProduct = !isEditing && fetchedProduct ? fetchedProduct : productData;
 
@@ -595,6 +606,21 @@ function ProductDetailFormContent({
   const isHangingValue = getValue('is_hanging') ?? false;
   const isOneSidedValue = getValue('is_one_sided') ?? false;
   const isNewValue = getValue('is_new') ?? false;
+
+  // Add Supplier handling
+  const supplierValue = getValue('supplier');
+  const handleSupplierChange = (supplierIdString: string) => {
+    const supplierId = supplierIdString ? parseInt(supplierIdString) : null;
+    const selectedSupplier = suppliers.find(s => s.id === supplierId) || null;
+    // Directly update the form state - the save handler will pick it up
+    handleFormChange({ 
+      target: { 
+        name: 'supplier', 
+        value: selectedSupplier, // Store the Supplier object or null
+        type: 'select' // Custom type for handler logic if needed
+      } 
+    } as any); // Use 'as any' or refine type if necessary
+  };
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-6"> {/* Increased spacing */}
@@ -656,6 +682,32 @@ function ProductDetailFormContent({
            ) : (
               <p>{categoryValue || 'N/A'}</p>
            )}
+        </div>
+
+        {/* Add Supplier Select Field */}
+        <div className="space-y-1">
+          <Label htmlFor="product-supplier" className={isEditing ? "" : "text-muted-foreground font-medium"}>Supplier</Label>
+          {isEditing ? (
+            <Select
+              value={supplierValue?.id?.toString() ?? ""}
+              onValueChange={handleSupplierChange}
+              disabled={isMutating}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Supplier" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">-- None --</SelectItem>
+                {suppliers.map((supplier) => (
+                  <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                    {supplier.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p>{supplierValue?.name ?? 'N/A'}</p>
+          )}
         </div>
 
         {/* Active */}
@@ -803,7 +855,7 @@ function ProductDetailFormContent({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="product-tags">Tags (comma-separated)</Label>
-                <Input id="product-tags" name="tags" placeholder="e.g., tag1, tag2" value={Array.isArray(tagsValue) ? tagsValue.join(', ') : ''} onChange={(e) => setProductFormData(prev => ({...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)}))} disabled={isMutating} />
+                <Input id="product-tags" name="tags" placeholder="e.g., tag1, tag2" value={Array.isArray(tagsValue) ? tagsValue.join(', ') : ''} onChange={(e) => setProductData(prev => ({...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)}))} disabled={isMutating} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="product-keywords">Keywords (comma-separated)</Label>
