@@ -1,9 +1,9 @@
-import 'whatwg-fetch';
-import '@testing-library/jest-dom';
-import * as React from 'react';
-import fetchMock from 'jest-fetch-mock';
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
+require('whatwg-fetch');
+require('@testing-library/jest-dom');
+const React = require('react');
+const fetchMock = require('jest-fetch-mock');
+const i18n = require('i18next');
+const { initReactI18next } = require('react-i18next');
 
 // Load environment variables from .env file at the project root
 // <rootDir> in Jest config points to frontend-react, so ../ points to the workspace root
@@ -94,17 +94,20 @@ i18n
 // Use jest.doMock which is not hoisted
 jest.doMock('i18next', () => ({
   // Define only the necessary mock functions inline
-  changeLanguage: jest.fn((lng: string) => Promise.resolve()),
+  changeLanguage: jest.fn((lng) => Promise.resolve()),
+  // Ensure t always returns the key for consistent mocking
   t: (key: string) => key,
 }));
 
 // Use jest.doMock which is not hoisted
 jest.doMock('react-i18next', () => ({
   useTranslation: () => ({
+    // Ensure t always returns the key
     t: (key: string) => key,
     // Define the nested i18n mock object inline without spreading
     i18n: {
-      changeLanguage: jest.fn((lng: string) => Promise.resolve()),
+      changeLanguage: jest.fn((lng) => Promise.resolve()),
+      // Ensure nested t always returns the key
       t: (key: string) => key,
     },
   }),

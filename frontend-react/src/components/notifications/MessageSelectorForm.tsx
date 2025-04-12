@@ -148,7 +148,7 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
   // --- End Handle ---
 
   return (
-    <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <label htmlFor="recipient-type" className="text-sm font-medium">
           Recipient
@@ -271,12 +271,11 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
         </Button>
         <Button 
           type="submit" 
-          onClick={handleSubmit}
           disabled={isPending || !title.trim() || !content.trim()}
         >
           {isPending ? 'Sending...' : 'Send Message'}
         </Button>
       </div>
-    </div>
+    </form>
   );
 } 

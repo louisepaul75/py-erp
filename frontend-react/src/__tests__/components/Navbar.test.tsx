@@ -214,14 +214,14 @@ describe('Navbar', () => {
     
     renderWithProviders(<Navbar />);
     
-    // Check that MobileMenu was called with translated items
+    // Check that MobileMenu was called with translation keys
     expect(mockMobileMenuFn).toHaveBeenCalledWith(
       expect.objectContaining({
         items: [
-          { href: "/dashboard", label: translations['navigation.home'] },
-          { href: "/products", label: translations['navigation.products'] },
-          { href: "/warehouse", label: translations['navigation.inventory'] },
-          { href: "/picklist", label: "Picklist" }
+          { href: "/dashboard", label: 'navigation.home' }, // Expect key
+          { href: "/products", label: 'navigation.products' }, // Expect key
+          { href: "/warehouse", label: 'navigation.inventory' }, // Expect key
+          { href: "/picklist", label: 'navigation.picklist' } // Expect key
         ]
       })
     );
