@@ -104,12 +104,14 @@ describe('MessageSelectorForm', () => {
     // Submit the form
     await user.click(screen.getByRole('button', { name: /send message/i }));
 
-    // Verify onSendMessage was called with the correct arguments (assuming default is direct_message)
+    // Verify onSendMessage was called with the correct arguments based on initial state
     expect(mockOnSendMessage).toHaveBeenCalledWith(
       'Test Title',
       'Test message content',
-      'direct_message', // Expecting direct_message based on observed behavior
-      null            // Expecting null recipients for direct_message default
+      'broadcast',      // Initial recipientType state
+      [],               // Initial selectedRecipients state
+      'direct_message', // Initial notificationType state
+      null              // Initial priority state
     );
   });
 
