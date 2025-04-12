@@ -1,7 +1,8 @@
 'use client'; // Required for hooks like useQuery and client components
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { PlusCircle, Search, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +13,7 @@ import {
   FetchSuppliersResult,
   SyncStatus,
   syncSuppliersFromAccounting,
+  fetchSupplierById,
 } from '@/lib/api/suppliers';
 // Remove table imports
 // import {
@@ -69,6 +71,7 @@ const getColumns = (
 export function SupplierDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   const [page, setPage] = useState(1);
   // Change pageSize for grid layout
@@ -85,16 +88,40 @@ export function SupplierDashboard() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [viewingSupplier, setViewingSupplier] = useState<Supplier | null>(null);
 
+  // Get supplierId from URL if present
+  const supplierIdFromUrl = searchParams.get('supplierId');
+
+  // Query for the list of suppliers (dashboard view)
   const {
-    data,
-    isLoading,
-    error,
-    isError,
+    data: suppliersListData,
+    isLoading: isListLoading,
+    error: listError,
+    isError: isListError,
   } = useQuery<FetchSuppliersResult, Error>({
     queryKey: ['suppliers', searchTerm, page, pageSize, syncStatusFilter],
-    // Pass updated pageSize
     queryFn: () => fetchSuppliers(searchTerm, page, pageSize, syncStatusFilter),
+    enabled: !supplierIdFromUrl, // Only run if no specific supplier ID is in URL
   });
+
+  // Query to fetch a specific supplier if supplierId is in the URL
+  const supplierDetailQuery = useQuery<Supplier, Error>({
+    queryKey: ['supplier', supplierIdFromUrl],
+    queryFn: () => fetchSupplierById(supplierIdFromUrl!),
+    enabled: !!supplierIdFromUrl, // Only run if supplierIdFromUrl exists
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Effect to open detail dialog when specific supplier data is loaded
+  useEffect(() => {
+    if (supplierDetailQuery.isSuccess && supplierDetailQuery.data) {
+      handleViewDetails(supplierDetailQuery.data);
+      // Optionally, clear the query param after opening the dialog
+      // const newParams = new URLSearchParams(searchParams.toString());
+      // newParams.delete('supplierId');
+      // router.replace(`${pathname}?${newParams.toString()}`, { scroll: false });
+    }
+    // Consider adding error handling if supplierDetailQuery.isError
+  }, [supplierDetailQuery.isSuccess, supplierDetailQuery.data]); // Add dependencies
 
   const syncMutation = useMutation({
     mutationFn: syncSuppliersFromAccounting,
@@ -130,7 +157,7 @@ export function SupplierDashboard() {
       });
       // Invalidate using updated pageSize
       queryClient.invalidateQueries({ queryKey: ['suppliers', searchTerm, page, pageSize, syncStatusFilter] });
-      if (data?.data.length === 1 && page > 1) {
+      if (suppliersListData?.data.length === 1 && page > 1) {
         setPage(page - 1);
       }
       setIsDeleteDialogOpen(false);
@@ -189,8 +216,22 @@ export function SupplierDashboard() {
     syncMutation.mutate();
   };
 
-  // Loading state with card skeletons
+  // Adapt loading and error states based on which query is active
+  const isLoading = supplierIdFromUrl ? supplierDetailQuery.isLoading : isListLoading;
+  const isError = supplierIdFromUrl ? supplierDetailQuery.isError : isListError;
+  const error = supplierIdFromUrl ? supplierDetailQuery.error : listError;
+
+  // Loading state - Show skeleton or specific message
   if (isLoading) {
+    // If loading a specific supplier, maybe show a simpler loading state?
+    if (supplierIdFromUrl) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <p>Loading supplier details...</p> { /* Or a spinner */}
+        </div>
+      );
+    }
+    // Existing skeleton for list view
     return (
       <div className="space-y-4">
         {/* Header remains the same */}
@@ -233,54 +274,61 @@ export function SupplierDashboard() {
     );
   }
 
+  // Error state
   if (isError) {
     return (
-        <Alert variant="destructive">
-            <AlertTitle>Error Fetching Suppliers</AlertTitle>
-            <AlertDescription>
-            {error?.message || 'An unexpected error occurred. Please try again.'}
-            </AlertDescription>
+      <Alert variant="destructive">
+        <AlertTitle>Error Fetching Supplier Data</AlertTitle>
+        <AlertDescription>
+          {error?.message || 'An unexpected error occurred. Please try again.'}
+        </AlertDescription>
       </Alert>
     );
   }
 
+  // Determine which data to display (list or single supplier)
+  const suppliersToDisplay = suppliersListData?.data ?? [];
+  const metaData = suppliersListData?.meta;
+
   return (
     <div className="space-y-4">
-      {/* Header section (Search, Filter, Sync, Add) */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-        {/* Search/Filter */} 
-        <div className="flex flex-1 items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search suppliers..." value={searchTerm} onChange={handleSearchChange} className="pl-8 w-full" />
+      {/* Conditionally render header/search/filters only if not viewing specific supplier */}
+      {!supplierIdFromUrl && (
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+          {/* Search/Filter */}
+          <div className="flex flex-1 items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input type="search" placeholder="Search suppliers..." value={searchTerm} onChange={handleSearchChange} className="pl-8 w-full" />
+            </div>
+            <Select value={syncStatusFilter} onValueChange={handleSyncStatusChange}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Sync status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="synced">Synced</SelectItem>
+                <SelectItem value="not_synced">Not Synced</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={syncStatusFilter} onValueChange={handleSyncStatusChange}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Sync status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="synced">Synced</SelectItem>
-              <SelectItem value="not_synced">Not Synced</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={handleSync} disabled={isSyncing} className="w-full sm:w-auto">
+              <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
+              Sync from Accounting
+            </Button>
+            <Button onClick={handleAddSupplier} className="w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Supplier
+            </Button>
+          </div>
         </div>
-        {/* Action Buttons */} 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button variant="outline" onClick={handleSync} disabled={isSyncing} className="w-full sm:w-auto">
-            <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
-            Sync from Accounting
-          </Button>
-          <Button onClick={handleAddSupplier} className="w-full sm:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Supplier
-          </Button>
-        </div>
-      </div>
+      )}
 
-      {/* Grid for Supplier Cards */}
-      {data && data.data.length > 0 ? (
+      {/* Conditionally render grid or placeholder if viewing specific supplier */} 
+      {!supplierIdFromUrl && suppliersToDisplay.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.data.map((supplier) => (
+          {suppliersToDisplay.map((supplier) => (
             <SupplierCard
               key={supplier.id}
               supplier={supplier}
@@ -290,27 +338,25 @@ export function SupplierDashboard() {
             />
           ))}
         </div>
-      ) : (
-        // Empty state message
+      )}
+
+      {/* Conditionally render empty state only if not viewing specific supplier */}
+      {!supplierIdFromUrl && suppliersToDisplay.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-muted-foreground mb-4">No suppliers found matching your criteria.</p>
-          {/* Optionally add the Add button here too if desired */}
-          {/* <Button onClick={handleAddSupplier}>
-             <PlusCircle className="mr-2 h-4 w-4" /> Add First Supplier
-             </Button> */}
         </div>
       )}
 
-      {/* Pagination */}
-      {data && data.meta.totalPages > 1 && (
+      {/* Conditionally render pagination only if not viewing specific supplier */} 
+      {!supplierIdFromUrl && metaData && metaData.totalPages > 1 && (
         <Pagination
           currentPage={page}
-          totalPages={data.meta.totalPages}
+          totalPages={metaData.totalPages}
           onPageChange={setPage}
         />
       )}
 
-      {/* Add/Edit Dialog */}
+      {/* Dialogs always rendered, controlled by state */}
       <SupplierDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
