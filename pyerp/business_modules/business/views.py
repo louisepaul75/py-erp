@@ -34,6 +34,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
     """API endpoint that allows suppliers to be viewed or edited."""
     queryset = Supplier.objects.all().order_by("name")
     serializer_class = SupplierSerializer
+    lookup_field = 'id' # Explicitly use the UUID field for lookups
     permission_classes = [permissions.IsAuthenticated] # Adjust permissions as needed
     # Add pagination, filtering, search if needed later
     # pagination_class = YourPaginationClass

@@ -12,9 +12,10 @@ from pyerp.business_modules.products.serializers import ParentProductSummarySeri
 
 # Extend SupplierViewSet to include product actions
 class SupplierViewSetWithProducts(SupplierViewSet):
+    lookup_field = 'id'
 
     @action(detail=True, methods=['get'], url_path='products', url_name='supplier_products')
-    def list_products(self, request, pk=None):
+    def list_products(self, request, id=None):
         """Return a list of parent products assigned to this supplier."""
         supplier = self.get_object()
         products = ParentProduct.objects.filter(supplier=supplier).order_by('name')
@@ -22,7 +23,7 @@ class SupplierViewSetWithProducts(SupplierViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'], url_path='assign-product', url_name='supplier_assign_product')
-    def assign_product(self, request, pk=None):
+    def assign_product(self, request, id=None):
         """Assign a parent product to this supplier."""
         supplier = self.get_object()
         product_id = request.data.get('product_id')
