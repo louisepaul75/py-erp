@@ -88,6 +88,9 @@ DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
 echo "Executing: $DOCKER_RUN_CMD" # Optional: echo the command for debugging
 eval $DOCKER_RUN_CMD # Execute the constructed command
 
+echo "Connecting pyerp-prod to Supabase network (replace 'supabase_default' if needed)..."
+docker network connect supabase_default pyerp-prod # <-- Replace 'supabase_default' with the actual network name
+
 echo -e "\nContainer pyerp-prod is running in the background. Use 'docker logs pyerp-prod' to view logs."
 
 # --- Check Database Connection Source ---
