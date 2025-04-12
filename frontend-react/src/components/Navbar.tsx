@@ -14,6 +14,17 @@ import {
   Package,
   Paintbrush,
   Bell,
+  Home,
+  ShoppingCart,
+  FileText,
+  Factory,
+  Users,
+  BarChart,
+  Briefcase,
+  List,
+  Beaker,
+  Building,
+  TestTube,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -125,8 +136,8 @@ export function Navbar() {
   };
 
   const navigationItems = [
-    { href: "/dashboard", label: t("navigation.home") },
-    { href: "/products", label: t("navigation.products") },
+    { href: "/dashboard", label: t("navigation.home"), icon: Home },
+    { href: "/products", label: t("navigation.products"), icon: Package },
     // { href: '/production', label: t('navigation.production') },
   ];
 
@@ -152,10 +163,13 @@ export function Navbar() {
             <MobileMenu
               items={user ? [
                 ...navigationItems,
-                { href: "/warehouse", label: t("navigation.inventory") },
-                { href: "/picklist", label: "Picklist" },
+                { href: "/sales", label: t("navigation.sales"), icon: ShoppingCart },
+                { href: "/production", label: t("navigation.production"), icon: Factory },
+                { href: "/warehouse", label: t("navigation.inventory"), icon: Package },
+                { href: "/business", label: t("navigation.business"), icon: Briefcase },
+                { href: "/picklist", label: "Picklist", icon: List },
               ] : [
-                { href: "/dashboard", label: t("navigation.home") }
+                { href: "/dashboard", label: t("navigation.home"), icon: Home }
               ]}
             />
           </div>
@@ -165,13 +179,14 @@ export function Navbar() {
             <div className="hidden lg:flex items-center justify-center flex-1">
               <div className="flex space-x-4">
                 {navigationItems.map((item) => (
-                  <NavLink key={item.href} href={item.href} label={item.label} />
+                  <NavLink key={item.href} href={item.href} label={item.label} icon={item.icon} />
                 ))}
 
                 {/* Add Sales Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <ShoppingCart className="h-4 w-4 mr-2 text-current" />
                       <span>{t("navigation.sales")}</span>
                       <ChevronDown className="ml-1 h-4 w-4 text-current" />
                     </button>
@@ -179,11 +194,13 @@ export function Navbar() {
                   <DropdownMenuContent>
                     <ShadcnDropdownMenuItem asChild>
                       <Link href="/sales" className="flex items-center">
+                        <BarChart className="h-4 w-4 mr-2 text-current" />
                         {t("navigation.sales_dashboard")}
                       </Link>
                     </ShadcnDropdownMenuItem>
                     <ShadcnDropdownMenuItem asChild>
                       <Link href="/sales/customers" className="flex items-center">
+                        <Users className="h-4 w-4 mr-2 text-current" />
                         {t("navigation.customers")}
                       </Link>
                     </ShadcnDropdownMenuItem>
@@ -194,6 +211,7 @@ export function Navbar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <Factory className="h-4 w-4 mr-2 text-current" />
                       <span>{t("navigation.production")}</span>
                       <ChevronDown className="ml-1 h-4 w-4 text-current" />
                     </button>
@@ -201,16 +219,19 @@ export function Navbar() {
                   <DropdownMenuContent>
                     <ShadcnDropdownMenuItem asChild>
                       <Link href="/production" className="flex items-center">
+                        <Factory className="h-4 w-4 mr-2 text-current" />
                         {t("navigation.production")}
                       </Link>
                     </ShadcnDropdownMenuItem>
                     <ShadcnDropdownMenuItem asChild>
                       <Link href="/mold-management" className="flex items-center">
+                        <Beaker className="h-4 w-4 mr-2 text-current" />
                         {t("navigation.mold_management")}
                       </Link>
                     </ShadcnDropdownMenuItem>
                     <ShadcnDropdownMenuItem asChild>
                       <Link href="/production/casting" className="flex items-center">
+                        <FileText className="h-4 w-4 mr-2 text-current" />
                         Casting Manager
                       </Link>
                     </ShadcnDropdownMenuItem>
@@ -240,12 +261,38 @@ export function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                {/* Business Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center">
+                      <Briefcase className="h-4 w-4 mr-2 text-current" />
+                      <span>{t("navigation.business")}</span>
+                      <ChevronDown className="ml-1 h-4 w-4 text-current" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/employees" className="flex items-center">
+                        <Users className="h-4 w-4 mr-2 text-current" />
+                        {t("navigation.employees")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                    <ShadcnDropdownMenuItem asChild>
+                      <Link href="/business/suppliers" className="flex items-center">
+                        <Building className="h-4 w-4 mr-2 text-current" />
+                        {t("navigation.suppliers")}
+                      </Link>
+                    </ShadcnDropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 {/* Test dropdown */}
                 <div className="relative" id="test-dropdown">
                   <button
                     onClick={toggleTestDropdown}
                     className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center"
                   >
+                    <TestTube className="h-4 w-4 mr-2 text-current" />
                     <span>Test</span>
                     <ChevronDown className="ml-1 h-4 w-4 text-current" />
                   </button>
@@ -262,9 +309,11 @@ export function Navbar() {
                           UI Components / Style Guide
                         </DropdownItem>
                         <DropdownItem href="/test/feature1">
+                          <List className="mr-3 h-5 w-5" />
                           Feature 1
                         </DropdownItem>
                         <DropdownItem href="/test/feature2">
+                          <List className="mr-3 h-5 w-5" />
                           Feature 2
                         </DropdownItem>
                       </div>
@@ -506,12 +555,13 @@ export function Navbar() {
   );
 }
 
-function NavLink({ href, label }: { href: string; label: string }) {
+function NavLink({ href, label, icon: Icon }: { href: string; label: string; icon?: React.ElementType }) {
   return (
     <Link
       href={href}
-      className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+      className="px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground flex items-center"
     >
+      {Icon && <Icon className="h-4 w-4 mr-2 text-current" />}
       {label}
     </Link>
   );

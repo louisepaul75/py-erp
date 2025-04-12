@@ -19,6 +19,10 @@ import { cn } from '@/lib/utils';
 
 // Type definitions for recipients
 type RecipientType = 'broadcast' | 'group' | 'individual';
+// --- Add Notification Type and Priority Types ---
+type NotificationType = 'direct_message' | 'todo';
+type PriorityLevel = 'low' | 'medium' | 'high' | 'none';
+// --- End Add ---
 
 type Group = {
   id: string;
@@ -34,7 +38,16 @@ const isUserActive = (lastSeen: string | null | undefined): boolean => {
 };
 
 interface MessageSelectorFormProps {
-  onSendMessage: (title: string, content: string, recipientType: RecipientType, recipientIds: string[]) => void;
+  // --- Update onSendMessage prop signature ---
+  onSendMessage: (
+    title: string, 
+    content: string, 
+    recipientType: RecipientType, 
+    recipientIds: string[],
+    notificationType: NotificationType, // Added
+    priority?: PriorityLevel | null      // Added (optional)
+  ) => void;
+  // --- End Update ---
   isPending: boolean;
   onCancel: () => void;
 }
@@ -44,6 +57,10 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
   const [content, setContent] = useState<string>('');
   const [recipientType, setRecipientType] = useState<RecipientType>('broadcast');
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  // --- Add state for type and priority ---
+  const [notificationType, setNotificationType] = useState<NotificationType>('direct_message');
+  const [priority, setPriority] = useState<PriorityLevel | null>(null); // Use null for unset/none initially
+  // --- End Add ---
 
   // Fetch users and groups
   const { data: users = [] } = useQuery({
@@ -64,14 +81,37 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
     setSelectedRecipients([]);
   }, [recipientType]);
 
+  // --- Reset priority when type changes from todo ---
+  useEffect(() => {
+    if (notificationType !== 'todo') {
+      setPriority(null); // Reset to null
+    }
+  }, [notificationType]);
+  // --- End Reset ---
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() && content.trim()) {
-      onSendMessage(title, content, recipientType, selectedRecipients);
+      // --- Pass type and priority to onSendMessage ---
+      // Pass priority directly if it's set and type is todo, otherwise null
+      const selectedPriority = notificationType === 'todo' && priority !== 'none' ? priority : null;
+      onSendMessage(
+        title, 
+        content, 
+        recipientType, 
+        selectedRecipients, 
+        notificationType, 
+        selectedPriority 
+      );
+      // --- End Pass ---
       setTitle('');
       setContent('');
       setRecipientType('broadcast');
       setSelectedRecipients([]);
+      // --- Reset type and priority ---
+      setNotificationType('direct_message');
+      setPriority(null); // Reset to null
+      // --- End Reset ---
     }
   };
 
@@ -88,8 +128,27 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
     }
   };
 
+  // --- Handle Notification Type Change ---
+  const handleNotificationTypeChange = (value: string) => {
+    if (value === 'direct_message' || value === 'todo') {
+      setNotificationType(value);
+    }
+  };
+  // --- End Handle ---
+
+  // --- Handle Priority Change ---
+  const handlePriorityChange = (value: string) => {
+     // Allow 'none', 'low', 'medium', 'high'
+     if (value === 'low' || value === 'medium' || value === 'high' || value === 'none') {
+       setPriority(value as PriorityLevel);
+     } else {
+       setPriority(null); // Handle potential unexpected values, fallback to null
+     }
+  };
+  // --- End Handle ---
+
   return (
-    <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <label htmlFor="recipient-type" className="text-sm font-medium">
           Recipient
@@ -146,12 +205,46 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
       </div>
 
       <div className="space-y-2">
+        <label htmlFor="notification-type" className="text-sm font-medium">
+          Message Type
+        </label>
+        <Select value={notificationType} onValueChange={handleNotificationTypeChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select message type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="direct_message">Direct Message</SelectItem>
+            <SelectItem value="todo">To-Do Task</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {notificationType === 'todo' && (
+        <div className="space-y-2">
+          <label htmlFor="priority-level" className="text-sm font-medium">
+            Priority Level (Optional)
+          </label>
+          <Select value={priority ?? 'none'} onValueChange={handlePriorityChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select priority (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="space-y-2">
         <label htmlFor="message-title" className="text-sm font-medium">
-          Message Title
+          {notificationType === 'todo' ? 'Task Title' : 'Message Title'}
         </label>
         <Input
           id="message-title"
-          placeholder="Enter message title"
+          placeholder={notificationType === 'todo' ? 'Enter task title' : 'Enter message title'}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
@@ -160,11 +253,11 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
       
       <div className="space-y-2">
         <label htmlFor="message-content" className="text-sm font-medium">
-          Message Content
+          {notificationType === 'todo' ? 'Task Description' : 'Message Content'}
         </label>
         <Textarea
           id="message-content"
-          placeholder="Enter your message"
+          placeholder={notificationType === 'todo' ? 'Enter task description' : 'Enter your message'}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={4}
@@ -178,12 +271,11 @@ export function MessageSelectorForm({ onSendMessage, isPending, onCancel }: Mess
         </Button>
         <Button 
           type="submit" 
-          onClick={handleSubmit}
           disabled={isPending || !title.trim() || !content.trim()}
         >
           {isPending ? 'Sending...' : 'Send Message'}
         </Button>
       </div>
-    </div>
+    </form>
   );
 } 

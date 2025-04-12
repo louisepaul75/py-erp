@@ -12,22 +12,32 @@ export interface Notification {
     sender_last_seen?: string | null; // Sender last seen timestamp (if applicable)
     title: string;
     content: string;
-    type: string;
+    type: 'system' | 'direct_message' | 'todo'; // Updated type
     is_read: boolean;
+    is_completed?: boolean | null; // New field for To-Do
+    priority?: 'low' | 'medium' | 'high' | null; // New field for To-Do
     created_at: string; // ISO string format
     updated_at: string; // ISO string format
 }
 
-interface UnreadCountResponse {
-    unread_count: number;
-}
-
-interface PaginatedResponse<T> {
+// Define the structure for paginated API responses
+// Make this generic if it's used elsewhere, or specific to Notifications
+export interface PaginatedResponse<T> {
     count: number;
     next: string | null;
     previous: string | null;
     results: T[];
 }
+
+// Define the structure for the unread count response
+export interface UnreadCountResponse {
+    unread_count: number;
+}
+
+// Type alias for notification type
+type NotificationType = 'system' | 'direct_message' | 'todo';
+// Type alias for priority level
+type PriorityLevel = 'low' | 'medium' | 'high';
 
 // --- API Interaction Functions ---
 
@@ -47,33 +57,35 @@ const fetchNotifications = async (filters: { type?: string; is_read?: boolean; l
     const url = queryString ? `v1/notifications/?${queryString}` : 'v1/notifications/';
     
     try {
-        const response = await apiClient.get<PaginatedResponse<Notification>>(url).json();
+        const response = await apiClient.get<PaginatedResponse<Notification>>(url);
+        const data = await response.json();
         
-        if (!response || !response.results) {
+        if (!data || !data.results) {
             return [];
         }
         
-        return response.results; // Return just the results array from the paginated response
+        return data.results;
     } catch (error) {
         throw error;
     }
 };
 
 const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    const response = await apiClient.get<UnreadCountResponse>("v1/notifications/unread_count/").json();
-    return response;
+    const response = await apiClient.get<UnreadCountResponse>("v1/notifications/unread_count/");
+    const data = await response.json();
+    return data;
 };
 
 const markNotificationAsRead = async (id: string): Promise<Notification> => {
     const response = await apiClient.patch<Notification>(`v1/notifications/${id}/mark_as_read/`, {});
-    // Directly return the response, as apiClient.patch already parses JSON
-    return response;
+    const data = await response.json();
+    return data;
 };
 
 const markAllNotificationsAsRead = async (): Promise<{ message: string }> => {
     const response = await apiClient.patch<{ message: string }>("v1/notifications/mark_all_as_read/", {});
-    // Directly return the response, as apiClient.patch already parses JSON
-    return response;
+    const data = await response.json();
+    return data;
 };
 
 const sendBroadcastMessage = async (title: string, content: string): Promise<{ message: string, recipients_count: number }> => {
@@ -81,27 +93,60 @@ const sendBroadcastMessage = async (title: string, content: string): Promise<{ m
         "v1/notifications/send_broadcast/", 
         { json: { title, content } }
     );
-    // Directly return the response, as apiClient.post already parses JSON
-    return response;
+    const data = await response.json();
+    return data;
 };
 
 // Add new functions for sending to groups and individual users
-const sendGroupMessage = async (title: string, content: string, groupId: string): Promise<{ message: string, recipients_count: number }> => {
+const sendGroupMessage = async (
+    title: string, 
+    content: string, 
+    groupId: string,
+    type?: NotificationType, // Added optional type
+    priority?: PriorityLevel | null // Added optional priority
+): Promise<{ message: string, recipients_count: number }> => {
+    const payload: any = { title, content, group_id: groupId };
+    if (type) payload.type = type;
+    if (priority) payload.priority = priority;
+
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_group/", 
-        { json: { title, content, group_id: groupId } }
+        { json: payload } // Use constructed payload
     );
-    // Directly return the response, as apiClient.post already parses JSON
-    return response;
+    const data = await response.json();
+    return data;
 };
 
-const sendUserMessage = async (title: string, content: string, userId: string): Promise<{ message: string, recipients_count: number }> => {
+const sendUserMessage = async (
+    title: string, 
+    content: string, 
+    userId: string,
+    type?: NotificationType, // Added optional type
+    priority?: PriorityLevel | null // Added optional priority
+): Promise<{ message: string, recipients_count: number }> => {
+    const payload: any = { title, content, user_id: userId };
+    if (type) payload.type = type;
+    if (priority) payload.priority = priority;
+
     const response = await apiClient.post<{ message: string, recipients_count: number }>(
         "v1/notifications/send_user/", 
-        { json: { title, content, user_id: userId } }
+        { json: payload } // Use constructed payload
     );
-    // Directly return the response, as apiClient.post already parses JSON
-    return response;
+    const data = await response.json();
+    return data;
+};
+
+// --- New API function to toggle completion status ---
+const toggleNotificationComplete = async (
+    { id, is_completed }: { id: string; is_completed: boolean }
+): Promise<Notification> => {
+    // Assuming a PATCH request to update the specific field
+    const response = await apiClient.patch<Notification>(
+        `v1/notifications/${id}/`, // Use the detail view endpoint
+        { json: { is_completed } } // Send only the field to update
+    );
+    const data = await response.json();
+    return data;
 };
 
 // --- React Query Hook ---
@@ -224,9 +269,16 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
     const sendGroupMessageMutation = useMutation<
         { message: string; recipients_count: number }, 
         Error, 
-        { title: string; content: string; groupId: string }
+        { 
+            title: string; 
+            content: string; 
+            groupId: string; 
+            type?: NotificationType; // Added optional type
+            priority?: PriorityLevel | null; // Added optional priority
+        }
     >({
-        mutationFn: ({ title, content, groupId }) => sendGroupMessage(title, content, groupId),
+        mutationFn: ({ title, content, groupId, type, priority }) => 
+            sendGroupMessage(title, content, groupId, type, priority),
         onSuccess: (data) => {
             // Invalidate all notification queries and the count
             queryClient.invalidateQueries({ queryKey: [queryKeyBase] });
@@ -252,9 +304,16 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
     const sendUserMessageMutation = useMutation<
         { message: string; recipients_count: number }, 
         Error, 
-        { title: string; content: string; userId: string }
+        { 
+            title: string; 
+            content: string; 
+            userId: string; 
+            type?: NotificationType; // Added optional type
+            priority?: PriorityLevel | null; // Added optional priority
+        }
     >({
-        mutationFn: ({ title, content, userId }) => sendUserMessage(title, content, userId),
+        mutationFn: ({ title, content, userId, type, priority }) => 
+            sendUserMessage(title, content, userId, type, priority),
         onSuccess: (data) => {
             // Invalidate all notification queries and the count
             queryClient.invalidateQueries({ queryKey: [queryKeyBase] });
@@ -274,19 +333,74 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         },
     });
 
+    /**
+     * Mutation: Toggle the completion status of a To-Do notification
+     */
+    const toggleCompleteMutation = useMutation<
+        Notification, 
+        Error, 
+        { id: string; is_completed: boolean } // Input type for the mutation
+    >({
+        mutationFn: toggleNotificationComplete,
+        onSuccess: (data, variables) => {
+            // Optimistically update the specific notification in the cache
+            queryClient.setQueryData<Notification[]>(queryKey, (oldData) =>
+                oldData?.map((notif) =>
+                    notif.id === variables.id ? { ...notif, is_completed: variables.is_completed } : notif
+                ) ?? []
+            );
+            
+            // Optional: Invalidate specific queries if needed, though optimistic update might suffice
+            // queryClient.invalidateQueries({ queryKey: queryKey });
+
+            const status = variables.is_completed ? "completed" : "pending";
+            toast({ title: "Success", description: `To-Do marked as ${status}.` });
+        },
+        onError: (error, variables) => {
+            console.error("Failed to toggle To-Do status:", error);
+            const status = variables.is_completed ? "completed" : "pending";
+            toast({ 
+                variant: "destructive", 
+                title: "Error", 
+                description: `Failed to mark To-Do as ${status}.` 
+            });
+            // Optional: Revert optimistic update on error
+            // queryClient.invalidateQueries({ queryKey: queryKey }); 
+        },
+    });
+
     // Helper function to send a message based on recipient type
     const sendMessage = (
         title: string, 
         content: string, 
         recipientType: 'broadcast' | 'group' | 'individual', 
-        recipientIds: string[]
+        recipientIds: string[],
+        notificationType: NotificationType, // Use the correct type name
+        priority?: PriorityLevel | null
     ) => {
         if (recipientType === 'broadcast') {
+            // Broadcast doesn't support type/priority in this setup, send as system/default
             sendBroadcastMutation.mutate({ title, content });
         } else if (recipientType === 'group' && recipientIds.length > 0) {
-            sendGroupMessageMutation.mutate({ title, content, groupId: recipientIds[0] });
+            // --- Pass type and priority to mutate ---
+            sendGroupMessageMutation.mutate({ 
+                title, 
+                content, 
+                groupId: recipientIds[0], 
+                type: notificationType, // Pass type
+                priority // Pass priority (optional)
+            });
+            // --- End Pass ---
         } else if (recipientType === 'individual' && recipientIds.length > 0) {
-            sendUserMessageMutation.mutate({ title, content, userId: recipientIds[0] });
+            // --- Pass type and priority to mutate ---
+            sendUserMessageMutation.mutate({ 
+                title, 
+                content, 
+                userId: recipientIds[0], 
+                type: notificationType, // Pass type
+                priority // Pass priority (optional)
+            });
+            // --- End Pass ---
         }
     };
 
@@ -317,6 +431,8 @@ export function useNotifications(filters: { type?: string; is_read?: boolean; li
         sendMessagePending: sendBroadcastMutation.isPending || 
                            sendGroupMessageMutation.isPending || 
                            sendUserMessageMutation.isPending,
+        toggleComplete: toggleCompleteMutation.mutate,
+        toggleCompletePending: toggleCompleteMutation.isPending,
         // Refetch functions
         refetchNotifications,
         refetchUnreadCount,

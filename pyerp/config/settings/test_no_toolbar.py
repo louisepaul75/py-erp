@@ -5,6 +5,7 @@ These settings extend the test settings but ensure the debug toolbar is complete
 """
 
 from .test import *  # noqa
+import os
 
 # Force remove debug toolbar
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]
@@ -25,7 +26,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "pyerp_testing",
         "USER": "postgres",
-        "PASSWORD": DB_PASSWORD,
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": "192.168.73.65",
         "PORT": "5432",
         "TEST": {

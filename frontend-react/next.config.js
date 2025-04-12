@@ -82,6 +82,11 @@ const nextConfig = {
         source: '/v1/inventory/bin-locations/by-order/:id/',
         destination: 'http://localhost:8000/api/v1/inventory/bin-locations/by-order/:id/',
       },
+      {
+        // Match /v1/business/suppliers optionally followed by a slash
+        source: '/v1/business/suppliers{/}?',
+        destination: 'http://localhost:8000/api/v1/business/suppliers/', // Ensure trailing slash
+      },
       // Wildcard for any other v1 routes (MUST be after specific routes)
       {
         source: '/v1/:path*',

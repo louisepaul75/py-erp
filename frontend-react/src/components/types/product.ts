@@ -27,12 +27,20 @@ export interface Product {
   category: string | null; // Assuming category is a string or null
   tags: string[]; // Assuming tags are an array of strings
   variants_count: number;
+  supplier?: Supplier | null; // Add optional supplier field
 }
-export interface ApiResponse {
+
+// Add Supplier type based on API response
+export interface Supplier {
+  id: string; // Changed from number to string (UUID)
+  name: string;
+}
+
+export interface ApiResponse<T> {
   count: number; // Total number of items available
   page: number; // Current page number
   page_size: number; // Number of items per page
-  results: Product[]; // Array of items (generic type T)
+  results: T[]; // Use the generic type T
 }
 
 export interface SelectedItem {
@@ -67,3 +75,9 @@ export interface ProductListProps {
     onProductCreated?: (newProduct: Product) => void;
     onCancel?: () => void;
   }
+
+export interface ParentProductSummary {
+  id: number;
+  sku: string;
+  name: string;
+}

@@ -8,7 +8,25 @@
     "inventory": "Lager",
     "ui_components": "UI Komponenten",
     "settings": "Einstellungen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "dashboard": "Dashboard",
+    "sales_dashboard": "Verkaufsübersicht",
+    "customers": "Kunden",
+    "admin_settings": "Admin Einstellungen",
+    "business": "Geschäftsbereich",
+    "employees": "Mitarbeiter",
+    "mold_management": "Formenverwaltung",
+    "purchasing": "Einkauf",
+    "accounting": "Buchhaltung",
+    "manufacturing": "Herstellung",
+    "projects": "Projekte",
+    "hr": "Personal",
+    "reporting": "Berichte",
+    "administration": "Administration",
+    "users": "Benutzer",
+    "groups": "Gruppen",
+    "permissions": "Berechtigungen",
+    "system": "System"
   },
   "buttons": {
     "save": "Speichern",
@@ -41,5 +59,16 @@
     "databaseStatus": "Datenbank-Status",
     "gitBranch": "Git Branch",
     "apiAvailable": "API Verfügbar"
-  }
+  },
+  "greeting": "Hallo!",
+  "search_placeholder": "Suchen...",
+  "profile": "Profil",
+  "docs": "Dokumentation",
+  "support": "Support",
+  "theme": {
+    "light": "Hell",
+    "dark": "Dunkel",
+    "system": "System"
+  },
+  "select_employee_details": "Wählen Sie einen Mitarbeiter aus, um Details anzuzeigen"
 } 

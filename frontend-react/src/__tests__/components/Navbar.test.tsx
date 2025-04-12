@@ -52,6 +52,8 @@ const translations = {
   'navigation.production': 'Production',
   'navigation.inventory': 'Inventory',
   'navigation.settings': 'Settings',
+  'navigation.picklist': 'Picklist',
+  'navigation.business': 'Business',
   'user.logout': 'Logout',
   'theme.lightMode': 'Light Mode',
   'theme.darkMode': 'Dark Mode',
@@ -214,17 +216,23 @@ describe('Navbar', () => {
     
     renderWithProviders(<Navbar />);
     
-    // Check that MobileMenu was called with translated items
+    // Check that MobileMenu was called with all expected translated items, ignoring icons
     expect(mockMobileMenuFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        items: [
-          { href: "/dashboard", label: translations['navigation.home'] },
-          { href: "/products", label: translations['navigation.products'] },
-          { href: "/warehouse", label: translations['navigation.inventory'] },
-          { href: "/picklist", label: "Picklist" }
-        ]
+        items: expect.arrayContaining([
+          expect.objectContaining({ href: "/dashboard", label: translations['navigation.home'] }),
+          expect.objectContaining({ href: "/products", label: translations['navigation.products'] }),
+          expect.objectContaining({ href: "/sales", label: translations['navigation.sales'] }),
+          expect.objectContaining({ href: "/production", label: translations['navigation.production'] }),
+          expect.objectContaining({ href: "/warehouse", label: translations['navigation.inventory'] }),
+          expect.objectContaining({ href: "/business", label: translations['navigation.business'] }),
+          expect.objectContaining({ href: "/picklist", label: translations['navigation.picklist'] })
+        ])
       })
     );
+
+    // Optionally, verify the number of items if it's important
+    // expect(mockMobileMenuFn.mock.calls[0][0].items).toHaveLength(7);
   });
 
   it('shows simplified user button on mobile', () => {

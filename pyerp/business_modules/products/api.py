@@ -27,7 +27,9 @@ import logging
 from django.db import connection
 
 from pyerp.business_modules.products.models import ProductCategory, ParentProduct, VariantProduct
-from pyerp.business_modules.products.serializers import ProductCategorySerializer, ParentProductSerializer
+from pyerp.business_modules.products.serializers import ProductCategorySerializer, ParentProductSerializer, VariantProductSerializer
+from pyerp.business_modules.business.models import Supplier
+from pyerp.business_modules.products.serializers import SupplierSerializer
 
 
 @extend_schema_view(
@@ -610,11 +612,18 @@ class ProductDetailViewSet(viewsets.ModelViewSet):
     
     def retrieve(self, request, pk=None):
         """
-        Retrieve a product by its ID.
+        Retrieve a product by its ID and include a list of all suppliers.
         """
         product = self.get_object()
         serializer = self.get_serializer(product)
-        return Response(serializer.data)
+        product_data = serializer.data  # Product data including the linked supplier
+
+        # Fetch all suppliers and add the list to the response
+        all_suppliers = Supplier.objects.all()
+        suppliers_serializer = SupplierSerializer(all_suppliers, many=True)
+        product_data['suppliers'] = suppliers_serializer.data
+
+        return Response(product_data)
     
     def partial_update(self, request, pk=None):
         """
@@ -626,6 +635,23 @@ class ProductDetailViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'], url_path='variants')
+    @extend_schema(
+        summary="List variants for a product",
+        description="Returns a list of variants associated with a specific parent product.",
+        responses={
+            200: VariantProductSerializer(many=True),
+            404: OpenApiResponse(description="Parent product not found."),
+        },
+        tags=["Products", "Variants"]
+    )
+    def variants(self, request, pk=None):
+        """Return a list of variants for the given parent product."""
+        parent_product = self.get_object() # This gets the ParentProduct instance based on pk
+        variants_queryset = VariantProduct.objects.filter(parent=parent_product).order_by('variant_code', 'name')
+        serializer = VariantProductSerializer(variants_queryset, many=True)
+        return Response(serializer.data)
 
     # create, retrieve, update, partial_update, destroy methods 
     # are now inherited from ModelViewSet.

@@ -141,3 +141,6 @@ package-lock.json
 *.pfx
 *.p12
 docker/nginx/ssl/
+
+# Memory profiling snapshots
+memory_snapshots_output/

@@ -47,20 +47,29 @@ DEBUG_PROPAGATE_EXCEPTIONS = True
 
 # Prevent Django from automatically appending trailing slashes to URLs
 # This fixes issues with PATCH requests where the browser might strip the trailing slash
-APPEND_SLASH = False
+APPEND_SLASH = True
 
 # Get ALLOWED_HOSTS from environment variable
 ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "host.docker.internal", "192.168.65.1"]
 
 # Database configuration with SQLite fallback
+# Import the updated values from base settings if 1Password was used
+db_host = globals().get('db_host', os.environ.get("DB_HOST"))
+db_port = globals().get('db_port', os.environ.get("DB_PORT"))
+db_name = globals().get('db_name', os.environ.get("DB_NAME"))
+db_user = globals().get('db_user', os.environ.get("DB_USER"))
+db_password = globals().get('db_password', os.environ.get("DB_PASSWORD"))
+db_engine = globals().get('db_engine', os.environ.get("DB_ENGINE", "django.db.backends.postgresql"))
+db_credentials_source = globals().get('db_credentials_source', "environment variables (development)")
+
 # Define PostgreSQL connection parameters
 PG_PARAMS = {
-    "ENGINE": "django.db.backends.postgresql",
-    "NAME": os.environ.get("DB_NAME", "pyerp_testing"),
-    "USER": os.environ.get("DB_USER", "postgres"),
-    "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-    "HOST": os.environ.get("DB_HOST", "192.168.73.65"),
-    "PORT": os.environ.get("DB_PORT", "5432"),
+    "ENGINE": db_engine,
+    "NAME": db_name,
+    "USER": db_user,
+    "PASSWORD": db_password,
+    "HOST": db_host,
+    "PORT": db_port,
     "OPTIONS": {
         "connect_timeout": 10,  # Connection timeout in seconds
         "client_encoding": "UTF8",
@@ -77,8 +86,13 @@ SQLITE_PARAMS = {
 # Try to connect to PostgreSQL, use SQLite if it fails
 try:
     sys.stderr.write(
-        "Attempting to connect to PostgreSQL at "
-        f"{PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n",
+        f"Attempting to connect to PostgreSQL at {PG_PARAMS['HOST']}:{PG_PARAMS['PORT']}\n"
+    )
+    sys.stderr.write(
+        f"Using database credential source: {db_credentials_source}\n"
+    )
+    sys.stderr.write(
+        f"Username: {PG_PARAMS['USER']}, Password length: {len(PG_PARAMS['PASSWORD']) if PG_PARAMS['PASSWORD'] else 0}\n"
     )
 
     conn = psycopg2.connect(

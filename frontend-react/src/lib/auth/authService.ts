@@ -1,6 +1,6 @@
 import ky, { KyResponse, HTTPError } from 'ky';
 import { jwtDecode } from 'jwt-decode';
-import { API_URL, AUTH_CONFIG } from '../config';
+import { API_URL, API_BASE_URL, AUTH_CONFIG } from '../config';
 import { User, LoginCredentials, JwtPayload, TokenResponse } from './authTypes';
 import { clientCookieStorage } from './clientCookies';
 
@@ -116,7 +116,7 @@ export const csrfService = {
 
 // Centralized API instance for authenticated requests
 export const api = ky.create({
-  prefixUrl: API_URL,
+  prefixUrl: API_BASE_URL,
   timeout: 30000,
   credentials: 'include',  // Include cookies in requests
   hooks: {

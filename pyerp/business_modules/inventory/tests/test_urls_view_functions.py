@@ -7,6 +7,18 @@ import json
 from unittest.mock import patch, MagicMock
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
+from django.urls import reverse
+from django.test import RequestFactory, TestCase
+from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+from pyerp.business_modules.inventory.models import (
+    StorageLocation, ProductStorage, Box, BoxSlot
+)
+from pyerp.business_modules.inventory.urls import (
+    storage_locations_list, products_by_location, box_types_list,
+    placeholder_view, # Include other needed views
+    # ... other view imports from urls.py ...
+)
 
 
 @pytest.mark.django_db
@@ -90,11 +102,16 @@ class TestInventoryViewFunctions:
         """Test the storage_locations_list view returns expected response."""
         from pyerp.business_modules.inventory.urls import storage_locations_list
         
-        # Create mock storage location
-        mock_location = MagicMock()
+        # Mock user and request
+        user = MagicMock()
+        request = request_factory.get("/api/inventory/storage-locations/")
+        request.user = user
+
+        # Mock the database query result object
+        mock_location = MagicMock(spec=StorageLocation)
         mock_location.id = 1
         mock_location.name = "Test Location"
-        mock_location.description = "Test Description"
+        mock_location.description = "Test Desc"
         mock_location.country = "US"
         mock_location.city_building = "Building 1"
         mock_location.unit = "Unit 1"
@@ -103,42 +120,31 @@ class TestInventoryViewFunctions:
         mock_location.sale = False
         mock_location.special_spot = False
         mock_location.is_active = True
-        mock_location.product_count = 5 # Assuming the annotation sets this attribute
+        mock_location.legacy_id = "LGCY-001"
+        mock_location.box_count = 2 # For status check
+        mock_location.product_count = 5 # Keep as integer
         # Add other potentially accessed attributes if needed by the serializer/view
-        mock_location.location_code = (
-            "US-Building 1-Unit 1-Compartment 1-Shelf 1" # Pre-calculate for mock simplicity
-        )
-        mock_location.legacy_id = "LGCY1"
+        # mock_location.location_code is generated in the view, no need to mock directly
+        # Configure the mock to be iterable directly
+        mock_annotate.return_value.__iter__.return_value = [mock_location] # Correct mock for direct iteration
 
-        # Create a mock QuerySet that is iterable
-        mock_queryset = MagicMock()
-        mock_queryset.__iter__.return_value = iter([mock_location]) # Make it yield the mock location
-
-        # Configure the patched annotate method to return the mock QuerySet
-        mock_annotate.return_value = mock_queryset
-        
-        # Create a proper request object
-        request = request_factory.get('/api/inventory/storage-locations/')
-        
-        # Mock the permission check
+        # Mock authentication check
         with patch(
             'pyerp.business_modules.inventory.urls.IsAuthenticated.has_permission',
             return_value=True
         ):
             response = storage_locations_list(request)
-            # Consider removing explicit render if content access triggers it
-            response = self.render_response(response) 
-            
+            response = self.render_response(response)
+
         assert response.status_code == status.HTTP_200_OK
         content = json.loads(response.content)
         assert len(content) == 1
         assert content[0]['id'] == 1
         assert content[0]['name'] == "Test Location"
         assert content[0]['product_count'] == 5
-        # Use the pre-calculated location_code for assertion
-        assert content[0]['location_code'] == (
-            "US-Building 1-Unit 1-Compartment 1-Shelf 1"
-        )
+        # Use the pre-calculated location_code for assertion, including the "LA" prefix
+        expected_location_code = "LAUS-Building 1-Unit 1-Compartment 1-Shelf 1"
+        assert content[0]['location_code'] == expected_location_code
 
     @patch(
         'pyerp.business_modules.inventory.urls.ProductStorage.objects.filter'

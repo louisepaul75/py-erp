@@ -110,6 +110,13 @@ import {
 
 import { SkinnyTable } from "@/components/ui/skinny-table"; // Keep this if SkinnyTable is separate
 
+// Import newly added Resizable components
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+
 // Sample data for charts (keep existing)
 // ... existing chart data ...
 const lineData = [
@@ -240,7 +247,7 @@ const componentTabs = [
   { value: 'dataDisplay', label: 'Data Display', components: ['Table', 'Avatar', 'Badge', 'Calendar', 'Separator', 'StatusBadge', 'SkinnyTable'] },
   { value: 'feedback', label: 'Feedback', components: ['Alert', 'AlertDialog', 'Toast', 'Progress', 'Skeleton', 'Spinner', 'LoadingSpinner'] },
   { value: 'overlays', label: 'Overlays', components: ['Dialog', 'DropdownMenu', 'Popover', 'Sheet', 'Tooltip'] },
-  { value: 'layout', label: 'Layout', components: ['Card', 'Tabs', 'ScrollArea', 'Container'] },
+  { value: 'layout', label: 'Layout', components: ['Card', 'Tabs', 'ScrollArea', 'Container', 'Resizable'] },
   { value: 'charts', label: 'Charts', components: ['RechartsLineChart', 'RechartsBarChart', 'RechartsPieChart', 'AreaChart', 'RadarChart', 'ScatterChart'] },
   { value: 'icons', label: 'Icons', components: ['Lucide Icons'] },
   { value: 'colors', label: 'Colors', components: ['Semantic Colors', 'Status Colors'] },
@@ -1148,6 +1155,51 @@ export default function UIComponentsPage() {
                   <Container className="border border-dashed p-4">
                     <p>This content is inside a Container component.</p>
                   </Container>
+                </CardContent>
+              </Card>
+
+              {/* ADDED: Resizable Panels Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Resizable Panels</CardTitle>
+                  <CardDescription>Allows users to resize panels horizontally or vertically.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">Horizontal Example:</p>
+                  <ResizablePanelGroup
+                    direction="horizontal"
+                    className="max-w-md rounded-lg border h-48 mb-6" // Example sizing and margin
+                  >
+                    <ResizablePanel defaultSize={50}>
+                      <div className="flex h-full items-center justify-center p-6">
+                        <span className="font-semibold">Left Panel</span>
+                      </div>
+                    </ResizablePanel>
+                    <ResizableHandle withHandle />
+                    <ResizablePanel defaultSize={50}>
+                      <div className="flex h-full items-center justify-center p-6">
+                        <span className="font-semibold">Right Panel</span>
+                      </div>
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+
+                  <p className="text-sm text-muted-foreground mb-4">Vertical Example:</p>
+                   <ResizablePanelGroup
+                    direction="vertical"
+                    className="max-w-md rounded-lg border h-72" // Example sizing
+                  >
+                    <ResizablePanel defaultSize={25}>
+                      <div className="flex h-full items-center justify-center p-6">
+                        <span className="font-semibold">Top Panel</span>
+                      </div>
+                    </ResizablePanel>
+                    <ResizableHandle withHandle />
+                    <ResizablePanel defaultSize={75}>
+                      <div className="flex h-full items-center justify-center p-6">
+                        <span className="font-semibold">Bottom Panel</span>
+                      </div>
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
                 </CardContent>
               </Card>
             </TabsContent>

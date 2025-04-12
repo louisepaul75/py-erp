@@ -5,6 +5,7 @@ import { Providers } from './providers'
 import MainLayout from '@/components/layout/MainLayout'
 import { LastVisitedProvider } from '@/context/LastVisitedContext'
 import { ThemeProvider } from 'next-themes'
+import { CommandMenu } from '@/components/command/CommandMenu'
 // import { Theme } from '@radix-ui/themes';
 
 export const viewport: Viewport = {
@@ -53,6 +54,7 @@ export default function RootLayout({
                 {children}
                 {/* </Theme> */}
               </MainLayout>
+              <CommandMenu />
             </LastVisitedProvider>
             {/* Footer rendered outside the growing div */}
             <Footer />

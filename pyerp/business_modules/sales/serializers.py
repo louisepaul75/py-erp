@@ -9,9 +9,112 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
+    # Fields from primary address
+    firstName = serializers.CharField(source='primary_address.first_name', read_only=True)
+    lastName = serializers.CharField(source='primary_address.last_name', read_only=True)
+    companyName = serializers.CharField(source='primary_address.company_name', read_only=True)
+    emailMain = serializers.EmailField(source='primary_address.email', read_only=True)
+    phoneMain = serializers.CharField(source='primary_address.phone', read_only=True)
+    # Added billing address fields
+    billingStreet = serializers.CharField(source='primary_address.street', read_only=True)
+    billingPostalCode = serializers.CharField(source='primary_address.postal_code', read_only=True)
+    billingCity = serializers.CharField(source='primary_address.city', read_only=True)
+    billingCountry = serializers.CharField(source='primary_address.country', read_only=True)
+
+    # Calculated/annotated fields
+    orderCount = serializers.IntegerField(source='order_count', read_only=True)
+    totalSpent = serializers.DecimalField(source='total_spent', max_digits=12, decimal_places=2, read_only=True)
+    since = serializers.DateTimeField(source='created_at', read_only=True)
+    lastOrderDate = serializers.DateField(source='last_order_date', read_only=True, allow_null=True) # Added last order date
+
+    # Fields determined by logic
+    customerName = serializers.SerializerMethodField()
+    isCompany = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+
+    # Renamed direct fields from model
+    discount = serializers.DecimalField(source='discount_percentage', max_digits=5, decimal_places=2, read_only=True, allow_null=True)
+    creditLimit = serializers.DecimalField(source='credit_limit', max_digits=10, decimal_places=2, read_only=True, allow_null=True)
+    # Combined payment terms
+    paymentTermsOverall = serializers.SerializerMethodField()
+
+    # Field to access the primary address easily within the serializer
+    primary_address = serializers.SerializerMethodField()
+
     class Meta:
         model = Customer
-        fields = "__all__"
+        fields = [
+            'id',
+            'customer_number',
+            'name',
+            'customerName', # Combined name
+            'firstName',
+            'lastName',
+            'companyName',
+            'isCompany',
+            'emailMain',
+            'phoneMain',
+            'orderCount',
+            'since',
+            'totalSpent',
+            'lastOrderDate', # Added
+            'avatar',
+            'customer_group',
+            'delivery_block',
+            'vat_id',
+            'created_at', # Keep original if needed
+            'modified_at',
+            # Address fields
+            'billingStreet',
+            'billingPostalCode',
+            'billingCity',
+            'billingCountry',
+            # Payment/Discount fields
+            'creditLimit',
+            'discount',
+            'paymentTermsOverall',
+            # Internal field
+            'primary_address',
+        ]
+        read_only_fields = ['primary_address']
+
+    def get_primary_address(self, obj) -> Address | None:
+        # Access the prefetched primary address
+        primary_addresses = getattr(obj, 'primary_address_list', [])
+        return primary_addresses[0] if primary_addresses else None
+
+    def get_isCompany(self, obj) -> bool:
+        primary_address = self.get_primary_address(obj)
+        return bool(primary_address and primary_address.company_name)
+
+    def get_customerName(self, obj) -> str:
+        primary_address = self.get_primary_address(obj)
+        if primary_address:
+            if primary_address.company_name:
+                return primary_address.company_name
+            else:
+                return f"{primary_address.first_name or ''} {primary_address.last_name or ''}".strip()
+        return obj.name or obj.customer_number
+
+    def get_avatar(self, obj) -> str | None:
+        # Placeholder for avatar logic
+        return None
+
+    def get_paymentTermsOverall(self, obj) -> str | None:
+        """Generates a string representation of the customer's payment terms."""
+        discount_days = obj.payment_terms_discount_days
+        net_days = obj.payment_terms_net_days
+        discount_percent = obj.discount_percentage # Use the direct discount field
+
+        if net_days is None:
+            return None # No payment terms set
+
+        parts = []
+        if discount_days is not None and discount_percent is not None and discount_percent > 0:
+            parts.append(f"{discount_percent}% Skonto bei Zahlung innerhalb {discount_days} Tagen")
+
+        parts.append(f"Netto {net_days} Tage")
+        return ", ".join(parts)
 
 
 class SalesRecordItemSerializer(serializers.ModelSerializer):

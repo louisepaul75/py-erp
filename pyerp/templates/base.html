@@ -40,6 +40,22 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'products:product_list' %}">Products</a>
                     </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="businessDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Business
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="businessDropdown">
+                            <li>
+                                <a
+                                    class="dropdown-item"
+                                    href="/business/suppliers"
+                                >
+                                    <span class="nav-link-title">Suppliers</span>
+                                </a>
+                            </li>
+                            <!-- Add other business links here later, e.g., Employees -->
+                        </ul>
+                    </li>
                 </ul>
             </div>
         </div>

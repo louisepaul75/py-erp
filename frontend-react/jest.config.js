@@ -18,7 +18,7 @@ const config = {
     '<rootDir>/src/__tests__/utils/fuzz-utils.ts'
   ],
   transform: {
-    '^.+\\.[tj]sx?$': 'babel-jest',
+    '^.+\\.[tj]sx?$': ['babel-jest', { configFile: require.resolve('../babel.config.js') }],
   },
   transformIgnorePatterns: [
     '/node_modules/(?!jest-fuzz|ky/)',

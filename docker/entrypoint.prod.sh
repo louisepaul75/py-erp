@@ -20,27 +20,43 @@ if [ -n "$DB_PASSWORD" ]; then
 fi
 
 # Network diagnostics
-echo "Network diagnostics:"
-echo "Checking DNS resolution for $DB_HOST..."
-cat /etc/hosts
-echo "Running ping test..."
-ping -c 1 $DB_HOST || echo "Ping failed but continuing..."
-echo "Running IP resolution test..."
-getent hosts $DB_HOST || echo "Host resolution failed but continuing..."
+# Only run DB checks if HOST and PORT are set
+if [ -n "$DB_HOST" ] && [ -n "$DB_PORT" ]; then
+  echo "Network diagnostics for $DB_HOST:$DB_PORT:"
+  echo "Checking DNS resolution for $DB_HOST..."
+  cat /etc/hosts
+  echo "Running ping test..."
+  ping -c 1 $DB_HOST || echo "Ping failed but continuing..."
+  echo "Running IP resolution test..."
+  getent hosts $DB_HOST || echo "Host resolution failed but continuing..."
 
-# Wait for PostgreSQL
-echo "Attempting connection to PostgreSQL at $DB_HOST:$DB_PORT..."
-until nc -z -v -w30 $DB_HOST $DB_PORT
-do
-  echo "Waiting for PostgreSQL database connection..."
-  sleep 2
-done
-echo "PostgreSQL database is ready!"
+  # Wait for PostgreSQL
+  echo "Attempting connection to PostgreSQL at $DB_HOST:$DB_PORT..."
+  until nc -z -v -w30 $DB_HOST $DB_PORT
+  do
+    echo "Waiting for PostgreSQL database connection..."
+    sleep 2
+  done
+  echo "PostgreSQL database is ready!"
+else
+    echo "DB_HOST or DB_PORT not set. Skipping entrypoint database checks."
+    echo "Assuming database connection details will be provided by the application (e.g., via 1Password)."
+fi
 
 # Create log directory
 mkdir -p /app/logs
 chmod -R 755 /app/logs
 echo "Log directories configured with correct permissions"
+
+# --- Print Environment Variables Before Migrate ---
+echo "DEBUG: Checking environment variables before running migrate:"
+echo "DEBUG: DATABASE_URL = ${DATABASE_URL:-<not set>}"
+echo "DEBUG: DB_HOST = ${DB_HOST:-<not set>}"
+echo "DEBUG: DB_PORT = ${DB_PORT:-<not set>}"
+echo "DEBUG: DB_NAME = ${DB_NAME:-<not set>}"
+echo "DEBUG: DB_USER = ${DB_USER:-<not set>}"
+echo "DEBUG: DB_PASSWORD is ${DB_PASSWORD+set}"
+# --- End Print Environment Variables ---
 
 # Apply Django migrations if needed
 python manage.py migrate

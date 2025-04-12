@@ -117,10 +117,9 @@ class BaseSyncCommand(BaseCommand):
             try:
                 custom_filters_parsed = json.loads(raw_custom_filters)
                 if not isinstance(custom_filters_parsed, dict):
-                    logger.warning(
-                        "Ignoring --filters: Expected JSON dict"
-                    )
-                    custom_filters_parsed = {}  # Reset if not a dict
+                    msg = "Invalid format for --filters: Expected a JSON dictionary."
+                    logger.error(msg)
+                    raise CommandError(msg)
                 else:
                     logger.info(
                         "Parsed custom filters from --filters: %s",
@@ -128,9 +127,9 @@ class BaseSyncCommand(BaseCommand):
                     )
                     query_params.update(custom_filters_parsed)
             except json.JSONDecodeError as e:
-                logger.warning(
-                    "Invalid JSON format for --filters option",
-                )
+                msg = f"Invalid JSON format for --filters option: {e}"
+                logger.error(msg)
+                raise CommandError(msg)
 
         # 2. Handle --top
         if options.get("top"):
@@ -156,13 +155,13 @@ class BaseSyncCommand(BaseCommand):
                         date_str, days, timestamp_field
                     )
                 else:
-                    logger.warning(
-                        "Ignoring --days: Value must be non-negative",
-                    )
+                    msg = "Invalid value for --days: Must be a non-negative integer."
+                    logger.error(msg)
+                    raise CommandError(msg)
             except (ValueError, TypeError):
-                logger.warning(
-                    "Invalid value for --days",
-                )
+                msg = "Invalid value for --days: Must be an integer."
+                logger.error(msg)
+                raise CommandError(msg)
 
         # Add the filter_query_list to query_params if it has any filters
         if filter_query_list:

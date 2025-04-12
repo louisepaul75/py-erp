@@ -5,6 +5,7 @@ RUN_TESTS=true
 RUN_MONITORING=true
 DEBUG_MODE=false
 LOCAL_HTTPS_MODE=false
+PROFILE_MEMORY=false
 
 # Parse command line arguments
 while [[ "$#" -gt 0 ]]; do
@@ -13,6 +14,7 @@ while [[ "$#" -gt 0 ]]; do
         --no-monitoring) RUN_MONITORING=false; shift ;;
         --debug) DEBUG_MODE=true; shift ;;
         --local-https) LOCAL_HTTPS_MODE=true; shift ;;
+        --profile-memory) PROFILE_MEMORY=true; shift ;;
         *) echo "Unknown parameter passed: $1"; exit 1 ;;
     esac
 done
@@ -37,6 +39,9 @@ docker build -t pyerp-prod-image -f docker/Dockerfile.prod .
 # Create network if it doesn't exist
 docker network create pyerp-network || true
 
+# Ensure the host directory for memory snapshots exists
+mkdir -p ./memory_snapshots_output/memory_snapshots
+
 # Choose environment file based on mode
 ENV_FILE="config/env/.env.prod"
 if [ "$DEBUG_MODE" = true ]; then
@@ -58,6 +63,18 @@ DOCKER_RUN_CMD="docker run -d \
     -e NODE_ENV=production \
     -e NEXT_TELEMETRY_DISABLED=1"
 
+# Add volume mount for memory snapshots
+# NOTE: Assumes snapshots are written to /app/memory_snapshots inside the container. Adjust if necessary.
+DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
+    -v $(pwd)/memory_snapshots_output/memory_snapshots:/app/data/memory_snapshots"
+
+# Add conditional memory profiling env var
+if [ "$PROFILE_MEMORY" = true ]; then
+    echo "Memory profiling enabled."
+    DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
+    -e ENABLE_MEMORY_PROFILING=true"
+fi
+
 # Add conditional HTTPS proxy env var
 if [ "$LOCAL_HTTPS_MODE" = true ]; then
     DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
@@ -71,12 +88,63 @@ DOCKER_RUN_CMD="$DOCKER_RUN_CMD \
 echo "Executing: $DOCKER_RUN_CMD" # Optional: echo the command for debugging
 eval $DOCKER_RUN_CMD # Execute the constructed command
 
+echo "Connecting pyerp-prod to Supabase network (replace 'supabase_default' if needed)..."
+docker network connect supabase_default pyerp-prod # <-- Replace 'supabase_default' with the actual network name
+
 echo -e "\nContainer pyerp-prod is running in the background. Use 'docker logs pyerp-prod' to view logs."
+
+# --- Check Database Connection Source ---
+echo -e "\n--- Verifying Database Connection Source in Logs ---"
+# Wait a bit longer initially for the app to start and log the connection source
+echo "Waiting 15 seconds for application logs to populate..."
+sleep 15
+
+DB_SOURCE_CHECK_SUCCESS=false
+DB_SOURCE_LOG_LINE=""
+
+for i in $(seq 1 3); do # Retry a few times in case logs are delayed
+    DB_SOURCE_LOG_LINE=$(docker logs pyerp-prod 2>&1 | grep -E 'Database settings source:' | tail -n 1)
+    if [[ -n "$DB_SOURCE_LOG_LINE" ]]; then
+        if [[ "$DB_SOURCE_LOG_LINE" == *"1Password"* ]]; then
+            echo "✅ Database successfully connected using 1Password credentials."
+            echo "   Log line found: '$DB_SOURCE_LOG_LINE'"
+            DB_SOURCE_CHECK_SUCCESS=true
+            break
+        elif [[ "$DB_SOURCE_LOG_LINE" == *"environment variables"* ]]; then
+            echo "❌ ERROR: Database connected using environment variables, not 1Password!"
+            echo "   Log line found: '$DB_SOURCE_LOG_LINE'"
+            echo "   Stopping build process as 1Password connection failed."
+            exit 1 # Exit script with error
+        else
+            echo "❓ Unknown database connection source state on attempt $i."
+            echo "   Log line found: '$DB_SOURCE_LOG_LINE'"
+            # Continue loop to retry
+        fi
+    else
+        echo "⚠️ Database source log line not found yet (attempt $i). Waiting..."
+    fi
+    if [ "$DB_SOURCE_CHECK_SUCCESS" = false ]; then
+        sleep 5 # Wait before retrying
+    fi
+done
+
+if [ "$DB_SOURCE_CHECK_SUCCESS" = false ]; then
+    echo "❌ ERROR: Failed to verify database connection source after multiple attempts."
+    echo "   Could not find the 'Database settings source:' log line or it indicated failure."
+    echo "   Last checked line (if any): '$DB_SOURCE_LOG_LINE'"
+    echo "   Stopping build process."
+    # Optional: Dump last logs for debugging
+    # echo "--- Last 50 lines of pyerp-prod logs ---"
+    # docker logs --tail 50 pyerp-prod || true
+    # echo "---------------------------------------"
+    exit 1 # Exit script with error
+fi
+echo "--- Database Check Complete ---"
 
 # Start the monitoring container unless skipped
 if [ "$RUN_MONITORING" = true ]; then
     echo "Starting monitoring container..."
-    docker-compose -f docker/docker-compose.monitoring.yml up -d
+    docker compose -f docker/docker-compose.monitoring.yml up -d
 
     echo -e "\nMonitoring services:"
     echo -e "- Elasticsearch: http://localhost:9200"

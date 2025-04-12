@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -20,9 +20,19 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge, badgeVariants, type BadgeProps } from "@/components/ui/badge";
 import type { VariantProps } from "class-variance-authority";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { X } from "lucide-react";
 import { instance as api } from "@/lib/api";
 import { format } from 'date-fns';
 import { toast } from "sonner";
+import debounce from 'lodash/debounce';
 
 interface Customer {
   id: number;
@@ -174,57 +184,115 @@ interface PaginatedSalesRecords {
     results: SalesRecord[];
 }
 
+// Define possible choices based on the backend model
+const RECORD_TYPE_CHOICES = [
+  { value: "INVOICE", label: "Invoice" },
+  { value: "PROPOSAL", label: "Proposal" },
+  { value: "DELIVERY_NOTE", label: "Delivery Note" },
+  { value: "CREDIT_NOTE", label: "Credit Note" },
+  { value: "ORDER_CONFIRMATION", label: "Order Confirmation" },
+];
+
+const PAYMENT_STATUS_CHOICES = [
+  { value: "PENDING", label: "Pending" },
+  { value: "PAID", label: "Paid" },
+  { value: "OVERDUE", label: "Overdue" },
+  { value: "CANCELLED", label: "Cancelled" },
+  // Add PARTIALLY_PAID if used
+  // { value: "PARTIALLY_PAID", label: "Partially Paid" }, 
+];
+
 // --- Sales Records Table ---
 export default function SalesRecordsTable() {
   const [records, setRecords] = useState<SalesRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Add state for search and filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [recordTypeFilter, setRecordTypeFilter] = useState(""); // Empty string means 'all'
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState(""); // Empty string means 'all'
   // Add state for pagination later if needed
   // const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  // Add state for total record count for pagination display
+  // const [totalCount, setTotalCount] = useState(0);
 
-  useEffect(() => {
-    const fetchRecords = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        // Add pagination params later: ?page=${pagination.pageIndex + 1}&page_size=${pagination.pageSize}
-        // Explicitly type the expected response structure
-        const responseData = await api.get("v1/sales/records/").json<PaginatedSalesRecords | SalesRecord[]>();
+  // Debounced search handler
+  const debouncedFetchRecords = useCallback(debounce((filters) => {
+    fetchRecords(filters);
+  }, 500), []); // Adjust debounce time as needed
 
-         // Check if it's paginated or a simple array
-         if (responseData && 'results' in responseData && Array.isArray(responseData.results)) {
-             setRecords(responseData.results);
-             // Set total count for pagination later: setTotalCount(responseData.count);
-         } else if (Array.isArray(responseData)) { // Handle non-paginated results
-             setRecords(responseData);
-         } else {
-             console.error("Unexpected response structure:", responseData);
-             throw new Error("Received unexpected data structure for sales records.");
-         }
-      } catch (err: any) {
-        console.error("Error fetching sales records:", err);
-        // Try to parse error response body if available
-        let detail = "Failed to load sales records.";
-        if (err.response) {
-            try {
-                const errorBody = await err.response.json();
-                detail = errorBody?.detail || JSON.stringify(errorBody) || detail;
-            } catch (parseErr) {
-                // Ignore if error body isn't JSON
-                detail = err.message || detail;
-            }
-        } else {
-            detail = err.message || detail;
-        }
-        setError(detail);
-        toast.error(`Error loading sales records: ${detail}`);
-      } finally {
-        setIsLoading(false);
+  // Moved fetchRecords outside useEffect to be callable by debounce
+  const fetchRecords = async (currentFilters = { searchTerm, recordTypeFilter, paymentStatusFilter }) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Construct query parameters
+      const params = new URLSearchParams();
+      if (currentFilters.searchTerm) {
+        params.append('search', currentFilters.searchTerm);
       }
-    };
+      if (currentFilters.recordTypeFilter) {
+        params.append('record_type', currentFilters.recordTypeFilter);
+      }
+      if (currentFilters.paymentStatusFilter) {
+        params.append('payment_status', currentFilters.paymentStatusFilter);
+      }
+      // Add pagination params later: 
+      // params.append('page', (pagination.pageIndex + 1).toString());
+      // params.append('page_size', pagination.pageSize.toString());
 
-    fetchRecords();
-  }, []); // Add pagination state to dependency array later
+      const queryString = params.toString();
+      const apiUrl = `v1/sales/records/${queryString ? '?' + queryString : ''}`;
+
+      const responseData = await api.get(apiUrl).json<PaginatedSalesRecords | SalesRecord[]>();
+
+       // Check if it's paginated or a simple array
+       if (responseData && 'results' in responseData && Array.isArray(responseData.results)) {
+           setRecords(responseData.results);
+           // Set total count for pagination later: setTotalCount(responseData.count);
+       } else if (Array.isArray(responseData)) { // Handle non-paginated results
+           setRecords(responseData);
+           // Maybe set total count to length if not paginated: setTotalCount(responseData.length);
+       } else {
+           console.error("Unexpected response structure:", responseData);
+           throw new Error("Received unexpected data structure for sales records.");
+       }
+    } catch (err: any) {
+      console.error("Error fetching sales records:", err);
+      // Try to parse error response body if available
+      let detail = "Failed to load sales records.";
+      if (err.response) {
+          try {
+              const errorBody = await err.response.json();
+              detail = errorBody?.detail || JSON.stringify(errorBody) || detail;
+          } catch (parseErr) {
+              // Ignore if error body isn't JSON
+              detail = err.message || detail;
+          }
+      } else {
+          detail = err.message || detail;
+      }
+      setError(detail);
+      toast.error(`Error loading sales records: ${detail}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch and fetch on filter changes (debounced for search)
+  useEffect(() => {
+     // Use debounced fetch for search term changes
+    debouncedFetchRecords({ searchTerm, recordTypeFilter, paymentStatusFilter });
+    // Cleanup debounce on unmount
+    return () => debouncedFetchRecords.cancel(); 
+  }, [searchTerm, recordTypeFilter, paymentStatusFilter, debouncedFetchRecords]);
+
+  // Handler to clear all filters
+  const clearFilters = () => {
+    setSearchTerm("");
+    setRecordTypeFilter("");
+    setPaymentStatusFilter("");
+  };
 
   const renderPaymentStatusBadge = (status: string) => {
       // Use type assertion for variants known to exist
@@ -233,6 +301,7 @@ export default function SalesRecordsTable() {
           case 'PAID': variant = 'default'; break; // Using 'default' (often green/blue) for PAID
           case 'PARTIALLY_PAID': variant = 'amber'; break; // Using 'amber' for warning-like status
           case 'PENDING': variant = 'outline'; break;
+          case 'OVERDUE': variant = 'destructive'; break; // Added Overdue mapping
           case 'CANCELLED': variant = 'destructive'; break;
           // Add more cases as needed
       }
@@ -240,10 +309,15 @@ export default function SalesRecordsTable() {
       return <Badge variant={variant}>{status.replace('_', ' ')}</Badge>;
   };
 
-  if (isLoading) {
+  if (isLoading && records.length === 0) { // Show skeleton only on initial load
     return (
         <div className="space-y-2 mt-6">
-            <Skeleton className="h-8 w-1/4 mb-4" /> {/* Title Skeleton */}
+            <div className="flex flex-wrap gap-2 mb-4">
+                <Skeleton className="h-10 w-full sm:w-64" />
+                <Skeleton className="h-10 w-[150px]" />
+                <Skeleton className="h-10 w-[150px]" />
+                <Skeleton className="h-10 w-[80px]" />
+            </div>
             <Skeleton className="h-12 w-full" /> {/* Header Skeleton */}
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
@@ -257,9 +331,51 @@ export default function SalesRecordsTable() {
     return <p className="text-red-500 mt-6">Error loading sales records: {error}</p>;
   }
 
+  const hasActiveFilters = searchTerm || recordTypeFilter || paymentStatusFilter;
+
   return (
-    <div className="mt-6">
-         <h3 className="text-lg font-semibold mb-4">Recent Sales Records</h3>
+    <div className="mt-6 space-y-4">
+        {/* Filter and Search Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+            <Input
+                placeholder="Search number or customer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-9 max-w-xs"
+            />
+            <Select value={recordTypeFilter} onValueChange={setRecordTypeFilter}>
+                <SelectTrigger className="h-9 w-[180px]">
+                    <SelectValue placeholder="Filter by Record Type" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Record Types</SelectItem>
+                    {RECORD_TYPE_CHOICES.map(choice => (
+                        <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
+                <SelectTrigger className="h-9 w-[180px]">
+                    <SelectValue placeholder="Filter by Payment Status" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Payment Statuses</SelectItem>
+                    {PAYMENT_STATUS_CHOICES.map(choice => (
+                        <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            {hasActiveFilters && (
+                 <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2">
+                    <X className="h-4 w-4 mr-1" /> Clear
+                 </Button>
+            )}
+        </div>
+        
+        {/* Optional: Loading indicator when refetching */}
+        {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>} 
+
+        {/* Table Section */}
          <div className="border rounded-md">
             <Table>
                 <TableHeader>
@@ -273,10 +389,10 @@ export default function SalesRecordsTable() {
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {records.length === 0 && (
+                {!isLoading && records.length === 0 && (
                     <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                        No sales records found.
+                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                        No sales records found matching your criteria.
                     </TableCell>
                     </TableRow>
                 )}

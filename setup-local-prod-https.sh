@@ -2,6 +2,12 @@
 
 echo "Setting up production-like environment with HTTPS locally..."
 
+# Remove old memory snapshots if they exist
+echo "Removing old memory snapshots..."
+rm -rf ./memory_snapshots_output/memory_snapshots
+# Ensure the base output directory exists for potential later use (like copying)
+mkdir -p ./memory_snapshots_output
+
 # Ensure SSL directory exists
 mkdir -p ./docker/nginx/ssl
 
@@ -38,7 +44,7 @@ cp -r ./docker/nginx/conf.d /tmp/ # Copy the conf.d directory which should conta
 
 # Run the production rebuild script with flags for this specific setup
 echo "Building and starting production containers locally via rebuild script..."
-./rebuild_docker.prod.sh --no-monitoring --no-tests --local-https
+./rebuild_docker.prod.sh --no-monitoring --no-tests --local-https --profile-memory
 
 # Give container a moment to start up before copying files
 sleep 5
@@ -47,7 +53,7 @@ sleep 5
 # Ensure Nginx is using the correct config for HTTPS
 echo "Copying SSL certificates and Nginx config to the Docker container..."
 docker cp /tmp/ssl pyerp-prod:/etc/nginx/
-docker cp /tmp/conf.d pyerp-prod:/etc/nginx/
+docker cp /tmp/conf.d/pyerp.prod.conf pyerp-prod:/etc/nginx/conf.d/default.conf
 
 # Restart Nginx in the container
 echo "Restarting Nginx in the container..."
