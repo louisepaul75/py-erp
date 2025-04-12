@@ -82,7 +82,7 @@ const defaultProductData: ProductFormData = {
   is_hanging: false,
   is_one_sided: false,
   is_new: false,
-  legacy_base_sku: null,
+  legacy_base_sku: undefined,
 };
 
 export function ProductsView() {
@@ -206,16 +206,17 @@ export function ProductsView() {
     Error,
     { id: number; data: ProductFormData }
   >({
-    mutationFn: ({ id, data }) => productApi.updateProduct(String(id), data),
-    onSuccess: async (data, variables) => {
+    mutationFn: async ({ id, data }) => {
+      const updatedProduct = await productApi.updateProduct(String(id), data);
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.setQueryData(['product', variables.id], data);
+      queryClient.setQueryData(['product', id], updatedProduct);
 
       // ** Check if a supplier needs to be assigned **
-      const supplierToAssign = variables.data.supplier;
+      const supplierToAssign = data.supplier;
       if (supplierToAssign && supplierToAssign.id) {
         try {
-          await productApi.assignSupplierToProduct(variables.id, supplierToAssign.id);
+          await productApi.assignSupplierToProduct(String(id), supplierToAssign.id);
+          queryClient.invalidateQueries({ queryKey: ['product', id] });
           toast({ title: "Success", description: `Product updated and supplier '${supplierToAssign.name}' assigned.` });
         } catch (assignError) {
           console.error("Error assigning supplier after product update:", assignError);
@@ -223,8 +224,8 @@ export function ProductsView() {
           toast({
             title: "Update Successful, Assignment Failed",
             description: `Product details saved, but failed to assign supplier '${supplierToAssign.name}'. Please try assigning again manually. Error: ${assignError instanceof Error ? assignError.message : 'Unknown error'} `,
-            variant: "warning", // Use warning variant
-            duration: 7000, // Longer duration for warning
+            variant: "destructive",
+            duration: 7000,
           });
         }
       } else {
@@ -233,16 +234,17 @@ export function ProductsView() {
       }
 
       // Reset form state regardless of supplier assignment result
-      if (selectedItemId === variables.id && data) {
+      if (selectedItemId === id && updatedProduct) {
         setProductFormData({
           ...defaultProductData,
-          ...data,
-          name: data.name ?? '',
-          sku: data.sku ?? '',
+          ...updatedProduct,
+          name: updatedProduct.name ?? '',
+          sku: updatedProduct.sku ?? '',
         });
       }
       setIsEditing(false);
       setApiError(null);
+      return updatedProduct;
     },
     onError: (error) => {
       console.error("Error updating product:", error);
@@ -392,7 +394,7 @@ export function ProductsView() {
     console.log('Available suppliers:', availableSuppliers ? availableSuppliers.map((s: Supplier) => ({ id: s.id, name: s.name })) : 'Not loaded');
 
     if (supplierIdString && supplierIdString !== "none" && availableSuppliers) {
-      selectedSupplier = availableSuppliers.find((s: Supplier) => s.id === supplierIdString) ?? null;
+      selectedSupplier = availableSuppliers.find((s: Supplier) => String(s.id) === supplierIdString) ?? null;
       console.log(`Found supplier object:`, selectedSupplier ? { id: selectedSupplier.id, name: selectedSupplier.name } : null);
     } else {
        console.log("Value is 'none' or suppliers not available. Setting supplier to null.");
@@ -760,7 +762,7 @@ function ProductDetailFormContent({
         <div className="space-y-1">
            <Label htmlFor="product-release-date" className={isEditing ? "" : "text-muted-foreground font-medium"}>Release Date</Label>
            {isEditing ? (
-            <Input id="product-release-date" name="release_date" type="date" value={(productData.release_date && productData.release_date instanceof Date ? productData.release_date.toISOString() : productData.release_date ?? '').split('T')[0]} onChange={handleFormChange} disabled={isMutating} />
+            <Input id="product-release-date" name="release_date" type="date" value={productData.release_date ?? ''} onChange={handleFormChange} disabled={isMutating} />
            ) : (
               <p>{fetchedProduct?.release_date ? new Date(fetchedProduct.release_date).toLocaleDateString() : 'N/A'}</p>
            )}

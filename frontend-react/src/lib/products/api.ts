@@ -166,7 +166,7 @@ export const productApi = {
       const response = await api.get("v1/products/", { 
         searchParams: defaultParams,
         signal 
-      }).json<ApiResponse>();
+      }).json<ApiResponse<Product>>();
       return response;
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -193,7 +193,7 @@ export const productApi = {
       const response = await api.get("v1/products/direct-search/", { 
         searchParams: defaultParams,
         signal 
-      }).json<ApiResponse>();
+      }).json<ApiResponse<Product>>();
       return response;
     } catch (error) {
       console.error("Error with direct search for products:", error);
@@ -226,7 +226,7 @@ export const productApi = {
         fields: "id,name,sku", // Only fetch necessary fields
         page_size: 10, // Limit results for dropdown
       };
-      const response = await api.get("v1/products/", { searchParams: params }).json<ApiResponse>();
+      const response = await api.get("v1/products/", { searchParams: params }).json<ApiResponse<Product>>();
       return response.results || []; // Return results or empty array
     } catch (error) {
       console.error("Error searching parent products:", error);
