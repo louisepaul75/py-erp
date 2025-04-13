@@ -23,7 +23,7 @@ COPY frontend-react/public ./public/
 
 # Build React frontend
 ENV NODE_ENV=production
-RUN npm run build
+RUN npm run build -- --debug
 
 # Start the main build
 FROM python:3.12-slim
