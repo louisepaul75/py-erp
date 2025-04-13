@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, PlusCircle, ChevronLeft, ChevronRight, Loader2, Edit, Save, X } from 'lucide-react';
+import { Search, PlusCircle, ChevronLeft, ChevronRight, Loader2, Edit, Save, X, Filter } from 'lucide-react';
 import { productApi } from '@/lib/products/api';
 import { Product, ApiResponse, Supplier } from '@/components/types/product';
 import { Button } from '@/components/ui/button';
@@ -459,29 +459,27 @@ export function ProductsView() {
     <>
       <CardHeader>
         <CardTitle>Product List</CardTitle>
-        <div className="relative mt-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            type="search"
-            placeholder="Search SKU..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="pl-10 h-9 w-full"
-          />
-        </div>
-        <div className="flex items-center space-x-2 pt-3">
-          <Checkbox
-            id="filter-active"
-            checked={filterActive}
-            onCheckedChange={(checked) => setFilterActive(Boolean(checked))}
+        <div className="flex items-center justify-between mt-2 space-x-2">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="search"
+              placeholder="Search SKU or Name..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="pl-10 h-9 w-full"
+              disabled={productsQuery.isFetching || isEditing}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Filter Products"
+            onClick={() => alert('Filter button clicked - Implement filter logic')}
             disabled={productsQuery.isFetching || isEditing}
-          />
-          <Label
-            htmlFor="filter-active"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            Show only active products
-          </Label>
+            <Filter className="h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-y-auto">
