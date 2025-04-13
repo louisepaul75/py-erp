@@ -158,7 +158,7 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
 
 
   return (
-    <>
+    <div className="flex flex-col h-full overflow-hidden">
       <CardHeader>
         <CardTitle>Customer List</CardTitle>
         <div className="flex items-center justify-between mt-2 space-x-2">
@@ -197,14 +197,15 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-y-auto">
-        {error && (
-          <Alert variant="destructive" className="my-4">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {isLoading ? (
+      <CardContent className="flex-grow flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 overflow-y-auto h-full">
+          {error && (
+            <Alert variant="destructive" className="my-4">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {isLoading ? (
              <div className="space-y-4">
                <Skeleton className="h-10 w-full" />
                <Skeleton className="h-10 w-full" />
@@ -321,6 +322,7 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
                No customers found{searchTerm ? " matching your search" : ""}.
              </div>
            )}
+        </div>
       </CardContent>
       <div className="p-4 border-t flex-shrink-0">
         <Button className="w-full" onClick={handleCreateCustomer}>
@@ -328,6 +330,6 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
           New Customer
         </Button>
       </div>
-    </>
+    </div>
   );
 } 
