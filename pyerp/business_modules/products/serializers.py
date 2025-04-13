@@ -30,9 +30,17 @@ class ProductSearchResultSerializer(serializers.Serializer):
     id = serializers.IntegerField(help_text="Parent Product ID")
     sku = serializers.CharField(max_length=50, help_text="Parent Product SKU")
     name = serializers.CharField(max_length=255, help_text="Parent Product Name")
-    matched_sku = serializers.CharField(max_length=50, help_text="SKU of the matched item (Parent or Variant)")
-    matched_name = serializers.CharField(max_length=255, help_text="Name of the matched item")
-    is_variant = serializers.BooleanField(help_text="True if the match was a Variant Product")
+    matched_sku = serializers.CharField(
+        max_length=50, 
+        help_text="SKU of the matched item (Parent or Variant)"
+    )
+    matched_name = serializers.CharField(
+        max_length=255, 
+        help_text="Name of the matched item"
+    )
+    is_variant = serializers.BooleanField(
+        help_text="True if the match was a Variant Product"
+    )
 
 class ProductCategorySerializer(serializers.ModelSerializer):
     """
@@ -51,12 +59,32 @@ class ProductCategorySerializer(serializers.ModelSerializer):
             ret['parent'] = instance.parent.id
         return ret
 
+# New Serializer for ProductImage - moved before ParentProductSerializer
+class ProductImageSerializer(serializers.ModelSerializer):
+    """Serializer for ProductImage model."""
+    class Meta:
+        model = ProductImage
+        fields = [
+            'id', 
+            'image_url', 
+            'thumbnail_url', 
+            'image_type', 
+            'is_primary', 
+            'is_front', 
+            'alt_text'
+        ]
 
 class ParentProductSerializer(serializers.ModelSerializer):
     """Serializer for the ParentProduct model."""
-    legacy_base_sku = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    legacy_base_sku = serializers.CharField(
+        required=False, 
+        allow_null=True, 
+        allow_blank=True
+    )
     # Use the simple SupplierSerializer for the related field
     supplier = SupplierSerializer(read_only=True)
+    # Add primary_image field derived from variants
+    primary_image = ProductImageSerializer(read_only=True)
 
     class Meta:
         model = ParentProduct
@@ -76,37 +104,109 @@ class ParentProductSerializer(serializers.ModelSerializer):
             "legacy_base_sku",
             "legacy_id",
             "supplier",
+            "primary_image",
         ]
         # Add sku to read_only_fields
         read_only_fields = ["sku"]
     
     def to_representation(self, instance):
-        """Override to debug legacy_base_sku field."""
+        """Override to include primary_image derived from variants."""
         ret = super().to_representation(instance)
-        # Debug output to understand the issue
-        legacy_base_sku = getattr(instance, 'legacy_base_sku', None)
-        logger.debug(f"ParentProduct {instance.sku} legacy_base_sku: '{legacy_base_sku}' (type: {type(legacy_base_sku).__name__})")
         
-        # Force legacy_base_sku to be string if it exists
+        # Debug output for legacy_base_sku remains
+        legacy_base_sku = getattr(instance, 'legacy_base_sku', None)
+        logger.debug(
+            f"ParentProduct {instance.sku} legacy_base_sku: '{legacy_base_sku}' "
+            f"(type: {type(legacy_base_sku).__name__})"
+        )
         if legacy_base_sku is not None:
             ret['legacy_base_sku'] = str(legacy_base_sku)
+
+        # --- Start: Logic to find primary_image from variants ---
+        primary_image_obj = None
+        variants = instance.variants.prefetch_related('images').all()
+
+        # 1. Prioritize 'BE' variant's primary/front/Produktfoto image
+        be_variant = next((v for v in variants if v.variant_code == 'BE'), None)
+        if be_variant and be_variant.images.exists():
+            # Try finding primary, front, Produktfoto
+            primary_image_obj = be_variant.images.filter(
+                is_primary=True, 
+                is_front=True, 
+                image_type__iexact="Produktfoto"
+            ).first()
+            if not primary_image_obj:
+                # Try finding primary, Produktfoto
+                primary_image_obj = be_variant.images.filter(
+                    is_primary=True, 
+                    image_type__iexact="Produktfoto"
+                ).first()
+            if not primary_image_obj:
+                # Try finding front, Produktfoto
+                primary_image_obj = be_variant.images.filter(
+                    is_front=True, 
+                    image_type__iexact="Produktfoto"
+                ).first()
+            if not primary_image_obj:
+                # Try finding any Produktfoto
+                primary_image_obj = be_variant.images.filter(
+                    image_type__iexact="Produktfoto"
+                ).first()
+            if not primary_image_obj:
+                # Try finding primary
+                primary_image_obj = be_variant.images.filter(
+                    is_primary=True
+                ).first()
+            if not primary_image_obj:
+                # Fallback to first image of BE variant
+                primary_image_obj = be_variant.images.first()
+
+        # 2. Fallback: Any variant's primary/front/Produktfoto image
+        if not primary_image_obj:
+            for variant in variants:
+                if variant.images.exists():
+                    img = variant.images.filter(
+                        is_primary=True, 
+                        is_front=True, 
+                        image_type__iexact="Produktfoto"
+                    ).first()
+                    if not img:
+                        img = variant.images.filter(
+                            is_primary=True, 
+                            image_type__iexact="Produktfoto"
+                        ).first()
+                    if not img:
+                        img = variant.images.filter(
+                            is_front=True, 
+                            image_type__iexact="Produktfoto"
+                        ).first()
+                    if not img:
+                        img = variant.images.filter(
+                            image_type__iexact="Produktfoto"
+                        ).first()
+                    if not img:
+                        img = variant.images.filter(is_primary=True).first()
+                        
+                    if img:
+                        primary_image_obj = img
+                        break  # Found one, stop searching
+
+        # 3. Fallback: First image of the first variant that has images
+        if not primary_image_obj:
+            for variant in variants:
+                if variant.images.exists():
+                    primary_image_obj = variant.images.first()
+                    if primary_image_obj:
+                        break  # Found one, stop searching
+
+        # Serialize the found image or set to None
+        if primary_image_obj:
+            ret['primary_image'] = ProductImageSerializer(primary_image_obj).data
+        else:
+            ret['primary_image'] = None
+        # --- End: Logic to find primary_image from variants ---
         
         return ret 
-
-# New Serializer for ProductImage
-class ProductImageSerializer(serializers.ModelSerializer):
-    """Serializer for ProductImage model."""
-    class Meta:
-        model = ProductImage
-        fields = [
-            'id', 
-            'image_url', 
-            'thumbnail_url', 
-            'image_type', 
-            'is_primary', 
-            'is_front', 
-            'alt_text'
-        ]
 
 class VariantProductSerializer(serializers.ModelSerializer):
     """Serializer for the VariantProduct model."""

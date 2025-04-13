@@ -490,6 +490,7 @@ export function ProductsView() {
             <TableCaption>Product List - Page {pagination.pageIndex + 1}</TableCaption>
             <TableHeader>
               <TableRow>
+                <TableHead>Image</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Legacy SKU</TableHead>
                 <TableHead>Name</TableHead>
@@ -499,16 +500,33 @@ export function ProductsView() {
             </TableHeader>
             <TableBody>
               {products.map((product) => (
-                <TableRow
-                  key={product.id}
+                <TableRow 
+                  key={product.id} 
+                  className={
+                    selectedItemId === product.id
+                      ? "bg-primary/10"
+                      : undefined
+                  }
                   onClick={() => handleSelectItem(product.id)}
-                  className={`cursor-pointer ${selectedItemId === product.id ? 'bg-muted' : ''}`}
                 >
+                  <TableCell>
+                    {product.primary_image ? (
+                      <Image 
+                        src={product.primary_image.thumbnail_url || product.primary_image.image_url}
+                        alt={product.name}
+                        width={40}
+                        height={40}
+                        className="rounded object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No img</div>
+                    )}
+                  </TableCell>
                   <TableCell>{product.sku}</TableCell>
-                  <TableCell>{product.legacy_base_sku || 'N/A'}</TableCell>
+                  <TableCell>{product.legacy_base_sku}</TableCell>
                   <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.is_active ? 'Yes' : 'No'}</TableCell>
-                  <TableCell>{product.variants_count ?? 0}</TableCell>
+                  <TableCell>{product.is_active ? "Yes" : "No"}</TableCell>
+                  <TableCell>{product.variants_count}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

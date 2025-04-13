@@ -23,7 +23,7 @@ export interface Product {
   is_hanging: boolean;
   is_one_sided: boolean;
   images: string[]; // Assuming images are an array of strings (URLs or paths)
-  primary_image: string | null; // Assuming primary_image is a URL or path
+  primary_image: ProductImage | null; // Image object returned from API
   category: string | null; // Assuming category is a string or null
   tags: string[]; // Assuming tags are an array of strings
   variants_count: number;
@@ -34,6 +34,17 @@ export interface Product {
 export interface Supplier {
   id: string; // Changed from number to string (UUID)
   name: string;
+}
+
+// Add ProductImage interface
+export interface ProductImage {
+  id: number;
+  image_url: string;
+  thumbnail_url?: string;
+  is_primary?: boolean;
+  is_front?: boolean;
+  image_type?: string;
+  alt_text?: string;
 }
 
 export interface ApiResponse<T> {
