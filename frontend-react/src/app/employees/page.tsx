@@ -66,7 +66,9 @@ export default function EmployeesPage() {
     error: errorList 
   } = useQuery<Employee[]>({ 
     queryKey: ['employees'], 
-    queryFn: fetchEmployees 
+    queryFn: fetchEmployees,
+    // Only run this query on the client-side
+    enabled: typeof window !== 'undefined' 
   }); 
 
   // Query for fetching the list of users
@@ -75,7 +77,9 @@ export default function EmployeesPage() {
     isLoading: isLoadingUsers,
   } = useQuery<UserSummary[]>({ 
     queryKey: ['users'], 
-    queryFn: fetchUsers 
+    queryFn: fetchUsers,
+    // Only run this query on the client-side
+    enabled: typeof window !== 'undefined' 
   }); 
 
   // Query for fetching the details of the selected employee
