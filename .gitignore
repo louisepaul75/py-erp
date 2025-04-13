@@ -144,3 +144,4 @@ docker/nginx/ssl/
 
 # Memory profiling snapshots
 memory_snapshots_output/
+env.dev
