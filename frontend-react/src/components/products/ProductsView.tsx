@@ -174,7 +174,7 @@ export function ProductsView() {
   }, [productDetailQuery.data, productDetailQuery.isSuccess, productDetailQuery.isError, isEditing]);
 
   // Query for the variants of the selected product
-  const variantsQuery: UseQueryResult<ApiResponse<Variant>, Error> = useQuery<ApiResponse<Variant>, Error>({
+  const variantsQuery: UseQueryResult<Variant[], Error> = useQuery<Variant[], Error>({
     queryKey: ['productVariants', selectedItemId],
     queryFn: async ({ signal }) => {
       return productApi.getProductVariants(selectedItemId!, signal);
@@ -600,7 +600,14 @@ export function ProductsView() {
               <Tabs defaultValue="parent" value={detailViewMode} onValueChange={(value) => setDetailViewMode(value as 'parent' | 'variants')} className="p-4 h-full flex flex-col">
                 <TabsList className="mb-4">
                   <TabsTrigger value="parent">Parent Details</TabsTrigger>
-                  <TabsTrigger value="variants">Variants ({variantsQuery.data?.results?.length ?? (selectedProduct?.variants_count ?? 0)})</TabsTrigger>
+                  <TabsTrigger value="variants" disabled={!selectedItemId || variantsQuery.isLoading}>
+                    Variants {
+                      selectedItemId && variantsQuery.isLoading ? ' (Loading...)' :
+                      selectedItemId && variantsQuery.isError ? ' (Error)' :
+                      selectedItemId && variantsQuery.data?.length ? ` (${variantsQuery.data.length})` :
+                      ' (0)' // Default or if no product selected
+                    }
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="parent" className="flex-grow overflow-y-auto space-y-4">
                   <ProductDetailFormContent
@@ -958,7 +965,7 @@ function ProductDetailFormContent({
 
 interface ProductVariantContentProps {
   selectedItemId: number | null;
-  variantsQuery: UseQueryResult<ApiResponse<Variant>, Error>;
+  variantsQuery: UseQueryResult<Variant[], Error>;
 }
 
 function ProductVariantContent({
@@ -977,6 +984,20 @@ function ProductVariantContent({
   });
   const [createError, setCreateError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // --- DEBUGGING LOGS ---
+  console.log('ProductVariantContent Render');
+  console.log('  selectedItemId:', selectedItemId);
+  console.log('  variantsQuery Status:', {
+    isLoading: variantsQuery.isLoading,
+    isFetching: variantsQuery.isFetching,
+    isSuccess: variantsQuery.isSuccess,
+    isError: variantsQuery.isError,
+    isFetched: variantsQuery.isFetched,
+    dataUpdatedAt: variantsQuery.dataUpdatedAt,
+  });
+  console.log('  variantsQuery.data:', variantsQuery.data);
+  // --- END DEBUGGING LOGS ---
 
   const createVariantMutation = useMutation<
     Variant,
@@ -1022,7 +1043,7 @@ function ProductVariantContent({
   };
 
   // Use the array directly from the query data
-  const variants = variantsQuery.data?.results ?? [];
+  const variants = variantsQuery.data ?? [];
   // Get the count from the array length
   const totalVariants = variants.length;
 

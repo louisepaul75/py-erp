@@ -296,7 +296,7 @@ export const productApi = {
     }
   },
 
-  getProductVariants: async (productId: string | number, signal?: AbortSignal): Promise<ApiResponse<Variant>> => {
+  getProductVariants: async (productId: string | number, signal?: AbortSignal): Promise<Variant[]> => {
     try {
       return await api.get(`v1/products/${productId}/variants/`, { signal }).json();
     } catch (error) {
