@@ -256,12 +256,45 @@ const componentTabs = [
 // Import useToast from the correct location
 import { useToast } from '@/hooks/use-toast';
 
+// Import the new hook
+import { useDataTable } from '@/hooks/useDataTable';
+
+// Define type for invoice data
+type Invoice = {
+  invoice: string;
+  status: 'success' | 'pending' | 'error';
+  method: string;
+  amount: number; // Use number for sorting
+};
+
+// Sample data for the standardized table
+const invoices: Invoice[] = [
+  { invoice: 'INV001', status: 'success', method: 'Credit Card', amount: 250.00 },
+  { invoice: 'INV002', status: 'pending', method: 'PayPal', amount: 150.00 },
+  { invoice: 'INV003', status: 'error', method: 'Bank Transfer', amount: 350.00 },
+  { invoice: 'INV004', status: 'success', method: 'Stripe', amount: 450.00 },
+  { invoice: 'INV005', status: 'pending', method: 'PayPal', amount: 50.00 },
+];
+
 export default function UIComponentsPage() {
   const [activeTab, setActiveTab] = useState(componentTabs[0].value);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
   // Dummy form setup for Form component example
   const form = useForm();
+
+  // Use the data table hook for the standardized table
+  const { 
+    processedData: sortedInvoices, // Renamed for clarity in this context
+    sortConfig,
+    requestSort,
+    searchTerm,
+    setSearchTerm 
+  } = useDataTable<Invoice>({ 
+    initialData: invoices,
+    initialSortKey: 'invoice', // Optional initial sort
+    searchableFields: ['invoice', 'status', 'method'] // Specify fields for client-side search
+  });
 
   return (
     // Use the Container component for consistent padding
@@ -638,48 +671,90 @@ export default function UIComponentsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Standardized Table Pattern</CardTitle>
-                <CardDescription>A common table setup with search and filtering controls.</CardDescription>
+                <CardDescription>A common table setup with search, filtering, and sorting controls.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
                   <div className="relative w-full max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input placeholder="Search table..." className="pl-10 h-9" />
+                    <Input 
+                      placeholder="Search table..." 
+                      className="pl-10 h-9" 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                     {/* Add clear button for search */}
+                     {searchTerm && (
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-muted-foreground hover:text-foreground"
+                         onClick={() => setSearchTerm('')}
+                       >
+                         <X className="h-3 w-3" />
+                       </Button>
+                     )}
                   </div>
                   <Button variant="outline" size="icon" aria-label="Filter">
                     <Filter className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* Existing Table structure below */}
                 <Table>
                     <TableCaption>A list of recent invoices.</TableCaption>
                   <TableHeader>
-                    <TableRow> 
-                        <TableHead className="w-[100px]">Invoice</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Method</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                    <TableRow>
+                      {/* Invoice Header */}
+                      <TableHead className="w-[100px]">
+                         <Button variant="ghost" onClick={() => requestSort('invoice')} className="px-0 hover:bg-transparent">
+                           Invoice
+                            {sortConfig.key === 'invoice' && (
+                             <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                            )}
+                            {sortConfig.key !== 'invoice' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                         </Button>
+                      </TableHead>
+                      {/* Status Header */}
+                      <TableHead>
+                         <Button variant="ghost" onClick={() => requestSort('status')} className="px-0 hover:bg-transparent">
+                           Status
+                            {sortConfig.key === 'status' && (
+                             <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                            )}
+                            {sortConfig.key !== 'status' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                         </Button>
+                      </TableHead>
+                      {/* Method Header */}
+                      <TableHead>
+                         <Button variant="ghost" onClick={() => requestSort('method')} className="px-0 hover:bg-transparent">
+                           Method
+                            {sortConfig.key === 'method' && (
+                             <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                            )}
+                            {sortConfig.key !== 'method' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                         </Button>
+                      </TableHead>
+                      {/* Amount Header */}
+                      <TableHead className="text-right">
+                         <Button variant="ghost" onClick={() => requestSort('amount')} className="px-0 hover:bg-transparent justify-end w-full">
+                           Amount
+                            {sortConfig.key === 'amount' && (
+                             <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                            )}
+                            {sortConfig.key !== 'amount' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                         </Button>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow>
-                        <TableCell className="font-medium">INV001</TableCell>
-                        <TableCell><StatusBadge status="success">Paid</StatusBadge></TableCell>
-                        <TableCell>Credit Card</TableCell>
-                        <TableCell className="text-right">$250.00</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell className="font-medium">INV002</TableCell>
-                        <TableCell><StatusBadge status="pending">Pending</StatusBadge></TableCell>
-                        <TableCell>PayPal</TableCell>
-                        <TableCell className="text-right">$150.00</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell className="font-medium">INV003</TableCell>
-                        <TableCell><StatusBadge status="error">Failed</StatusBadge></TableCell>
-                        <TableCell>Bank Transfer</TableCell>
-                        <TableCell className="text-right">$350.00</TableCell>
-                    </TableRow>
+                     {/* Render processedData from the hook */}
+                     {sortedInvoices.map((invoice) => (
+                      <TableRow key={invoice.invoice}>
+                        <TableCell className="font-medium">{invoice.invoice}</TableCell>
+                        <TableCell><StatusBadge status={invoice.status}>{invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}</StatusBadge></TableCell>
+                        <TableCell>{invoice.method}</TableCell>
+                        <TableCell className="text-right">${invoice.amount.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </CardContent>

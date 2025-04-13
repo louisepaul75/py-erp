@@ -23,12 +23,15 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 // Added Avatar components
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 // Updated icons: removed Eye, kept PlusCircle, Edit, Filter
-import { PlusCircle, Edit, Search, Filter } from "lucide-react";
+// Add ArrowUpDown for sorting
+import { PlusCircle, Edit, Search, Filter, ArrowUpDown, X } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 // Assume formatDate exists or create a basic one if needed
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils"; // Added for class names
+// Import the hook
+import { useDataTable } from "@/hooks/useDataTable";
 
 // Basic currency formatter (similar to draft)
 const formatCurrency = (value: number | undefined | null) => {
@@ -48,8 +51,6 @@ interface CustomerListProps {
 export default function CustomerList({ onSelectCustomer, selectedCustomerId }: CustomerListProps) {
   const router = useRouter(); // Added router hook
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Add state for other filters if implemented, e.g.:
@@ -60,7 +61,6 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
       setIsLoading(true);
       setError(null);
       setCustomers([]);
-      setFilteredCustomers([]);
 
       try {
         const token = await authService.getToken();
@@ -111,7 +111,6 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
         }));
 
         setCustomers(validCustomers);
-        setFilteredCustomers(validCustomers);
 
       } catch (err) {
         console.error("Error fetching customers:", err);
@@ -124,36 +123,27 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
     fetchCustomers();
   }, []);
 
-  // Effect for client-side filtering
-  useEffect(() => {
-    let filtered = [...customers];
-    const lowerSearchTerm = searchTerm.toLowerCase();
-
-    if (lowerSearchTerm) {
-      filtered = filtered.filter((customer) => {
-          const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase();
-          const companyName = (customer.companyName || '').toLowerCase();
-          // Combine searchable fields
-          return (
-            customer.customer_number.toLowerCase().includes(lowerSearchTerm) ||
-            (customer.isCompany ? companyName.includes(lowerSearchTerm) : fullName.includes(lowerSearchTerm)) ||
-            (customer.vat_id && customer.vat_id.toLowerCase().includes(lowerSearchTerm)) ||
-            (customer.emailMain && customer.emailMain.toLowerCase().includes(lowerSearchTerm)) ||
-            (customer.phoneMain && customer.phoneMain.toLowerCase().includes(lowerSearchTerm))
-          );
-        }
-      );
-    }
-
-    // Add other client-side filters here if needed
-    // Example:
-    // if (filterHasOrders) {
-    //   filtered = filtered.filter(customer => (customer.orderCount || 0) > 0);
-    // }
-
-    setFilteredCustomers(filtered);
-  }, [customers, searchTerm /*, filterHasOrders */]);
-
+  // Use the data table hook
+  const { 
+    processedData: customerList, // Renamed for clarity
+    sortConfig,
+    requestSort,
+    searchTerm,
+    setSearchTerm 
+  } = useDataTable<Customer>({
+    initialData: customers, // Use the fetched customers
+    initialSortKey: 'name', // Default sort by name
+    searchableFields: [ // Define fields for the hook to search
+      'customer_number',
+      'name',
+      'firstName',
+      'lastName',
+      'companyName',
+      'emailMain',
+      'phoneMain',
+      'vat_id'
+    ]
+  });
 
   // Updated action handlers
   const handleEditCustomer = (id: number | string) => {
@@ -174,14 +164,27 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
         <div className="flex items-center justify-between mt-2 space-x-2">
           <div className="relative flex-grow">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            {/* Connect Input to hook's state */}
             <Input
               type="search"
               placeholder="Search No., Name, VAT, Email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchTerm} // Use hook's searchTerm
+              onChange={(e) => setSearchTerm(e.target.value)} // Use hook's setSearchTerm
               className="pl-10 h-9 w-full"
               disabled={isLoading}
             />
+             {/* Add clear button for search */}
+             {searchTerm && (
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full text-muted-foreground hover:text-foreground"
+                 onClick={() => setSearchTerm('')}
+                 disabled={isLoading}
+               >
+                 <X className="h-3 w-3" />
+               </Button>
+             )}
           </div>
           <Button
             variant="outline"
@@ -207,21 +210,67 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
                <Skeleton className="h-10 w-full" />
                <Skeleton className="h-10 w-full" />
             </div>
-          ) : filteredCustomers.length > 0 ? (
+          ) : customerList.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  {/* Name Header - Make sortable */}
+                  <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('name')} className="px-0 hover:bg-transparent">
+                       Name
+                        {sortConfig.key === 'name' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'name' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Email Header - Make sortable */}
+                  <TableHead className="hidden md:table-cell">
+                     <Button variant="ghost" onClick={() => requestSort('emailMain')} className="px-0 hover:bg-transparent">
+                       Email
+                        {sortConfig.key === 'emailMain' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'emailMain' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Phone Header - Non-sortable (example) */}
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
-                  <TableHead className="hidden sm:table-cell">Orders</TableHead>
-                  <TableHead className="hidden lg:table-cell">Since</TableHead>
-                  <TableHead className="hidden lg:table-cell text-right">Total Spent</TableHead>
+                  {/* Orders Header - Make sortable */}
+                  <TableHead className="hidden sm:table-cell">
+                     <Button variant="ghost" onClick={() => requestSort('orderCount')} className="px-0 hover:bg-transparent">
+                       Orders
+                        {sortConfig.key === 'orderCount' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'orderCount' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Since Header - Make sortable */}
+                  <TableHead className="hidden lg:table-cell">
+                     <Button variant="ghost" onClick={() => requestSort('since')} className="px-0 hover:bg-transparent">
+                       Since
+                        {sortConfig.key === 'since' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'since' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
+                  {/* Total Spent Header - Make sortable */}
+                  <TableHead className="hidden lg:table-cell text-right">
+                     <Button variant="ghost" onClick={() => requestSort('totalSpent')} className="px-0 hover:bg-transparent justify-end w-full">
+                       Total Spent
+                        {sortConfig.key === 'totalSpent' && (
+                         <ArrowUpDown className={`ml-2 h-3 w-3 ${sortConfig.direction === 'asc' ? '' : 'rotate-180'}`} />
+                        )}
+                        {sortConfig.key !== 'totalSpent' && <ArrowUpDown className="ml-2 h-3 w-3 opacity-30" />}
+                     </Button>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCustomers.map((customer) => {
+                {customerList.map((customer) => {
                     const customerName = customer.isCompany
                         ? customer.companyName
                         : `${customer.firstName || ''} ${customer.lastName || ''}`;
