@@ -74,18 +74,24 @@ RUN npm install --legacy-peer-deps && \
     npm update
 
 # --- Install and Configure Filebeat --- #
-RUN curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-7.17.0-arm64.deb \
-    && dpkg -i filebeat-7.17.0-arm64.deb \
-    && rm filebeat-7.17.0-arm64.deb \
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "arm64" ]; then \
+        FILEBEAT_ARCH="arm64"; \
+    else \
+        FILEBEAT_ARCH="amd64"; \
+    fi && \
+    curl -L -O https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-7.17.0-${FILEBEAT_ARCH}.deb && \
+    dpkg -i filebeat-7.17.0-${FILEBEAT_ARCH}.deb && \
+    rm filebeat-7.17.0-${FILEBEAT_ARCH}.deb && \
     # Copy filebeat config from temporary location
-    && cp /tmp/filebeat_config.yml /etc/filebeat/filebeat.yml \
+    cp /tmp/filebeat_config.yml /etc/filebeat/filebeat.yml && \
     # Set correct permissions
-    && chown root:root /etc/filebeat/filebeat.yml \
-    && chmod go-w /etc/filebeat/filebeat.yml \
+    chown root:root /etc/filebeat/filebeat.yml && \
+    chmod go-w /etc/filebeat/filebeat.yml && \
     # Create data directory for filebeat registry
-    && mkdir -p /var/lib/filebeat \
-    && chown root:root /var/lib/filebeat \
-    && chmod go-w /var/lib/filebeat
+    mkdir -p /var/lib/filebeat && \
+    chown root:root /var/lib/filebeat && \
+    chmod go-w /var/lib/filebeat
 # --- End Filebeat --- #
 
 # Copy React frontend source files
