@@ -119,19 +119,27 @@ const api = ky.create({
 
 // Interfaces remain unchanged
 
+// --- UPDATED Variant Interface to match API Response ---
 interface Variant {
-  id: string;
-  nummer: string;
-  bezeichnung: string;
-  auspraegung: string;
-  prod: boolean;
-  vertr: boolean;
-  vkArtikel: boolean;
-  releas: string;
-  price: number;
-  selected?: boolean;
-  [key: string]: any;
+  id: number;
+  sku: string;
+  name: string;
+  variant_code?: string | null; // Match API
+  is_active: boolean;
+  // Add other fields returned by the API if needed elsewhere
+  description?: string | null;
+  parent?: { 
+    id: number;
+    sku: string;
+    name: string;
+    // ... other parent fields if needed
+  };
+  // ... potentially retail_price, wholesale_price, etc.
+  
+  // Keep UI-specific selected state separate from API type if possible
+  // selected?: boolean; 
 }
+// --- END UPDATED Variant Interface ---
 
 interface ProductListParams {
   include_variants?: boolean;

@@ -47,6 +47,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { TwoPaneLayout, type MaximizedPaneState } from '@/components/ui/TwoPaneLayout';
+import { type Variant } from '@/lib/products/api';
 
 // TODO: Ensure QueryClientProvider is set up in layout.tsx or a providers file
 
@@ -172,13 +173,9 @@ export function ProductsView() {
   }, [productDetailQuery.data, productDetailQuery.isSuccess, productDetailQuery.isError, isEditing]);
 
   // Query for the variants of the selected product
-  const variantsQuery: UseQueryResult<any, Error> = useQuery<any, Error>({
+  const variantsQuery: UseQueryResult<ApiResponse<Variant>, Error> = useQuery<ApiResponse<Variant>, Error>({
     queryKey: ['productVariants', selectedItemId],
     queryFn: async ({ signal }) => {
-      if (typeof productApi.getProductVariants !== 'function') {
-         console.warn("productApi.getProductVariants is not implemented. Returning empty results.");
-         return { count: 0, next: null, previous: null, results: [] };
-      }
       return productApi.getProductVariants(selectedItemId!, signal);
     },
     enabled: !!selectedItemId,
@@ -602,7 +599,7 @@ export function ProductsView() {
               <Tabs defaultValue="parent" value={detailViewMode} onValueChange={(value) => setDetailViewMode(value as 'parent' | 'variants')} className="p-4 h-full flex flex-col">
                 <TabsList className="mb-4">
                   <TabsTrigger value="parent">Parent Details</TabsTrigger>
-                  <TabsTrigger value="variants">Variants ({selectedProduct?.variants_count ?? 0})</TabsTrigger>
+                  <TabsTrigger value="variants">Variants ({variantsQuery.data?.length ?? (selectedProduct?.variants_count ?? 0)})</TabsTrigger>
                 </TabsList>
                 <TabsContent value="parent" className="flex-grow overflow-y-auto space-y-4">
                   <ProductDetailFormContent
@@ -960,48 +957,62 @@ function ProductDetailFormContent({
 
 interface ProductVariantContentProps {
   selectedItemId: number | null;
-  variantsQuery: UseQueryResult<ApiResponse<Product>, Error>;
+  variantsQuery: UseQueryResult<ApiResponse<Variant>, Error>;
 }
 
 function ProductVariantContent({
   selectedItemId,
   variantsQuery
 }: ProductVariantContentProps) {
-  const [isCreateVariantDialogOpen, setIsCreateVariantDialogOpen] = useState(false);
-  const [newVariantData, setNewVariantData] = useState({ name: '', sku: '' }); // Basic form state
-  const queryClient = useQueryClient(); // Get query client
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newVariantData, setNewVariantData] = useState<{ 
+    variant_code: string;
+    name: string;
+    is_active: boolean;
+  }>({ 
+    variant_code: '',
+    name: '',
+    is_active: true,
+  });
+  const [createError, setCreateError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // TODO: Implement createVariantMutation
-  // Example structure:
-  // const createVariantMutation = useMutation<Product, Error, { parentId: number; data: { name: string; sku: string; is_active?: boolean } }>({
-  //   mutationFn: ({ parentId, data }) => productApi.createProduct({ ...data, parent_id: parentId, is_active: data.is_active ?? true }), // Assuming createProduct handles variants via parent_id
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries({ queryKey: ['productVariants', selectedItemId] });
-  //     queryClient.invalidateQueries({ queryKey: ['product', selectedItemId] }); // Also invalidate parent product to update variant count
-  //     setIsCreateVariantDialogOpen(false);
-  //     setNewVariantData({ name: '', sku: '' });
-  //     alert("Variant created successfully!");
-  //   },
-  //   onError: (error) => {
-  //     // TODO: Show error in dialog
-  //     console.error("Error creating variant:", error);
-  //     alert(`Error creating variant: ${error.message}`);
-  //   },
-  // });
+  const createVariantMutation = useMutation<
+    Variant,
+    Error,
+    Partial<Variant> & { parent_id: number }
+  >({
+    mutationFn: async (data) => {
+      if (!selectedItemId) throw new Error("Parent product ID is missing");
+      return productApi.createProduct({ 
+          ...data,
+          parent_id: selectedItemId 
+      }) as Promise<Variant>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['productVariants', selectedItemId] });
+      setShowCreateForm(false);
+      setNewVariantData({ variant_code: '', name: '', is_active: true });
+      setCreateError(null);
+    },
+    onError: (error) => {
+      console.error("Error creating variant:", error);
+      setCreateError(`Failed to create variant: ${error.message}`);
+    }
+  });
 
   const handleCreateVariantSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newVariantData.variant_code || !newVariantData.name) {
+      setCreateError("Variant Code and Name are required.");
+      return;
+    }
     if (!selectedItemId) {
-      alert("Cannot create variant: Parent product ID is missing.");
+      setCreateError("Cannot create variant: Parent Product ID is missing.");
       return;
     }
-    if (!newVariantData.name || !newVariantData.sku) {
-      alert("Variant Name and SKU are required.");
-      return;
-    }
-    console.log("Submitting variant: ", { parentId: selectedItemId, data: newVariantData });
-    // createVariantMutation.mutate({ parentId: selectedItemId, data: newVariantData });
-    alert("Create variant mutation not yet implemented."); // Placeholder
+    setCreateError(null);
+    createVariantMutation.mutate({ ...newVariantData, parent_id: selectedItemId });
   };
 
   const handleVariantFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1009,101 +1020,109 @@ function ProductVariantContent({
     setNewVariantData(prev => ({ ...prev, [name]: value }));
   };
 
-  const variants = variantsQuery.data?.results ?? [];
-  const isLoading = variantsQuery.isLoading;
-  const isError = variantsQuery.isError;
-  const error = variantsQuery.error;
+  // Use the array directly from the query data
+  const variants = variantsQuery.data ?? [];
+  // Get the count from the array length
+  const totalVariants = variants.length;
+
+  if (variantsQuery.isLoading) {
+    return <p>Loading variants...</p>;
+  }
+
+  if (variantsQuery.isError) {
+    return <p className="text-red-500">Error loading variants: {variantsQuery.error.message}</p>;
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Product Variants</h3>
-        <Dialog open={isCreateVariantDialogOpen} onOpenChange={setIsCreateVariantDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" disabled={!selectedItemId}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create New Variant
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Variant</DialogTitle>
-              <DialogDescription>
-                Enter the details for the new product variant.
-                {/* TODO: Display creation errors here */}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateVariantSubmit} className="space-y-4 py-4">
-               <div className="space-y-1">
-                 <Label htmlFor="variant-name">Variant Name <span className="text-red-500">*</span></Label>
-                 <Input
-                   id="variant-name"
-                   name="name"
-                   placeholder="e.g., Basic Widget - Red"
-                   value={newVariantData.name}
-                   onChange={handleVariantFormChange}
-                   required
-                 />
-               </div>
-               <div className="space-y-1">
-                 <Label htmlFor="variant-sku">Variant SKU <span className="text-red-500">*</span></Label>
-                 <Input
-                   id="variant-sku"
-                   name="sku"
-                   placeholder="e.g., WID-001-RED"
-                   value={newVariantData.sku}
-                   onChange={handleVariantFormChange}
-                   required
-                 />
-               </div>
+        {/* Display count derived from the array length */}
+        <h3 className="text-lg font-semibold">Product Variants ({totalVariants})</h3>
+        <Button size="sm" onClick={() => setShowCreateForm(!showCreateForm)} variant="outline">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          {showCreateForm ? 'Cancel' : 'New Variant'}
+        </Button>
+      </div>
+
+      {showCreateForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create New Variant</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateVariantSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="variant_code">Variant Code <span className="text-red-500">*</span></Label>
+                <Input 
+                  id="variant_code"
+                  name="variant_code"
+                  value={newVariantData.variant_code}
+                  onChange={handleVariantFormChange}
+                  required
+                  disabled={createVariantMutation.isPending}
+                  placeholder="e.g., RED, XL"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="variant_name">Variant Name <span className="text-red-500">*</span></Label>
+                <Input 
+                  id="variant_name"
+                  name="name" 
+                  value={newVariantData.name}
+                  onChange={handleVariantFormChange}
+                  required
+                  disabled={createVariantMutation.isPending}
+                  placeholder="e.g., Product Name - Red"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="variant_is_active"
+                  checked={newVariantData.is_active}
+                  onCheckedChange={(checked) => setNewVariantData(prev => ({ ...prev, is_active: checked === true }))}
+                  disabled={createVariantMutation.isPending}
+                />
+                <Label htmlFor="variant_is_active">Active</Label>
+              </div>
+              {createError && <p className="text-sm text-red-500">{createError}</p>}
               <DialogFooter>
-                <DialogClose asChild>
-                   <Button type="button" variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button type="submit">
-                   Create Variant (Not Impl.)
+                <Button 
+                  type="submit" 
+                  size="sm"
+                  disabled={createVariantMutation.isPending}
+                >
+                  {createVariantMutation.isPending ? 'Creating...' : 'Create Variant'}
                 </Button>
               </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {isLoading && <p>Loading variants...</p>}
-      {isError && <p className="text-destructive">Error loading variants: {error?.message}</p>}
-      {!isLoading && !isError && (
-        <> 
-          {variants.length === 0 ? (
-             <p className="text-muted-foreground italic mt-2">This product has no variants.</p>
-           ) : (
-             <Table>
-               <TableHeader>
-                 <TableRow>
-                   <TableHead>SKU</TableHead>
-                   <TableHead>Name</TableHead>
-                   <TableHead>Active</TableHead>
-                   <TableHead>Actions</TableHead>
-                 </TableRow>
-               </TableHeader>
-               <TableBody>
-                 {variants.map((variant) => (
-                   <TableRow key={variant.id} className="cursor-pointer hover:bg-muted/50">
-                     <TableCell>{variant.sku}</TableCell>
-                     <TableCell>{variant.name}</TableCell>
-                     <TableCell>
-                       <Badge variant={variant.is_active ? 'default' : 'secondary'}>
-                         {variant.is_active ? 'Yes' : 'No'}
-                       </Badge>
-                     </TableCell>
-                     <TableCell>
-                       <Button variant="ghost" size="sm" disabled>...</Button>
-                     </TableCell>
-                   </TableRow>
-                 ))}
-               </TableBody>
-             </Table>
-           )}
-        </>
+      {variants.length > 0 ? (
+        <Table>
+          <TableCaption>List of variants for product ID {selectedItemId}</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>SKU</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Variant Code</TableHead>
+              <TableHead>Active</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {variants.map((variant) => (
+              <TableRow key={variant.id}>
+                <TableCell>{variant.sku}</TableCell>
+                <TableCell>{variant.name}</TableCell>
+                <TableCell>{variant.variant_code || 'N/A'}</TableCell>
+                <TableCell>{variant.is_active ? 'Yes' : 'No'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <p className="text-muted-foreground text-center p-4">No variants found for this product.</p>
       )}
     </div>
   );
