@@ -22,8 +22,8 @@ import {
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 // Added Avatar components
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// Updated icons: removed Eye, kept PlusCircle, Edit
-import { PlusCircle, Edit, Search } from "lucide-react";
+// Updated icons: removed Eye, kept PlusCircle, Edit, Filter
+import { PlusCircle, Edit, Search, Filter } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 // Assume formatDate exists or create a basic one if needed
@@ -171,15 +171,27 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
     <>
       <CardHeader>
         <CardTitle>Customer List</CardTitle>
-        <div className="relative mt-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            type="search"
-            placeholder="Search No., Name, VAT, Email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-9 w-full"
-          />
+        <div className="flex items-center justify-between mt-2 space-x-2">
+          <div className="relative flex-grow">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              type="search"
+              placeholder="Search No., Name, VAT, Email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-9 w-full"
+              disabled={isLoading}
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Filter Customers"
+            onClick={() => alert('Filter button clicked - Implement filter logic')}
+            disabled={isLoading}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-y-auto">
