@@ -356,6 +356,7 @@ class ProductListAPIView(APIView):
             "is_active": product.is_active,
             "is_new": product.is_new if hasattr(product, "is_new") else False,
             "legacy_base_sku": getattr(product, "legacy_base_sku", None),
+            "variants_count": getattr(product, "variants_count", 0),
         }
         
         # Add primary image if available
@@ -395,8 +396,8 @@ class ProductListAPIView(APIView):
     def get(self, request):
         """Handle GET request for product listing with filtering and pagination."""
         try:
-            # Start with the base queryset
-            base_queryset = ParentProduct.objects.all()
+            # Start with the base queryset and annotate with variant count
+            base_queryset = ParentProduct.objects.annotate(variants_count=Count('variants'))
             
             # Apply search filter (this is the most important part)
             search_query = request.GET.get("q")
