@@ -104,7 +104,7 @@ export function ProductsView() {
   const validInitialProductId = Number.isNaN(initialProductId) ? null : initialProductId;
 
   const [selectedItemId, setSelectedItemId] = useState<number | null>(validInitialProductId);
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 20 });
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 15 });
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [detailViewMode, setDetailViewMode] = useState<'parent' | 'variants'>('parent');
@@ -454,7 +454,7 @@ export function ProductsView() {
   const canRenderDetails = !showDetailPlaceholder && !showDetailLoading && (displayData || isEditingNew);
 
   const leftPane = (
-    <>
+    <div className="flex flex-col h-full overflow-hidden">
       <CardHeader>
         <CardTitle>Product List</CardTitle>
         <div className="flex items-center justify-between mt-2 space-x-2">
@@ -480,85 +480,90 @@ export function ProductsView() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-y-auto">
+      <CardContent className="flex-grow flex flex-col overflow-hidden min-h-0">
         {productsQuery.isLoading ? (
           <p>Loading products...</p>
         ) : productsQuery.isError ? (
           <p>Error loading products: {productsQuery.error.message}</p>
         ) : products.length > 0 ? (
-          <Table>
-            <TableCaption>Product List - Page {pagination.pageIndex + 1}</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Legacy SKU</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Active</TableHead>
-                <TableHead>Variants</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow 
-                  key={product.id} 
-                  className={
-                    selectedItemId === product.id
-                      ? "bg-primary/10"
-                      : undefined
-                  }
-                  onClick={() => handleSelectItem(product.id)}
+          <>
+            {/* This div provides flex sizing AND ensures Table's overflow is contained */}
+            <div className="flex-1 overflow-y-auto h-full">
+              <Table>
+                <TableCaption>Product List - Page {pagination.pageIndex + 1}</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Image</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Legacy SKU</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead>Variants</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow 
+                      key={product.id} 
+                      className={
+                        selectedItemId === product.id
+                          ? "bg-primary/10"
+                          : undefined
+                      }
+                      onClick={() => handleSelectItem(product.id)}
+                    >
+                      <TableCell>
+                        {product.primary_image ? (
+                          <Image 
+                            src={product.primary_image.thumbnail_url || product.primary_image.image_url}
+                            alt={product.name}
+                            width={40}
+                            height={40}
+                            className="rounded object-cover"
+                          />
+                        ) : (
+                          <></>
+                        )}
+                      </TableCell>
+                      <TableCell>{product.sku}</TableCell>
+                      <TableCell>{product.legacy_base_sku}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.is_active ? "Yes" : "No"}</TableCell>
+                      <TableCell>{product.variants_count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {totalCount > 0 && (
+              <div className="mt-4 flex justify-between items-center px-2 py-1 border-t flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex - 1 }))}
+                  disabled={pagination.pageIndex === 0 || productsQuery.isFetching || isEditing}
                 >
-                  <TableCell>
-                    {product.primary_image ? (
-                      <Image 
-                        src={product.primary_image.thumbnail_url || product.primary_image.image_url}
-                        alt={product.name}
-                        width={40}
-                        height={40}
-                        className="rounded object-cover"
-                      />
-                    ) : (
-                      <></>
-                    )}
-                  </TableCell>
-                  <TableCell>{product.sku}</TableCell>
-                  <TableCell>{product.legacy_base_sku}</TableCell>
-                  <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.is_active ? "Yes" : "No"}</TableCell>
-                  <TableCell>{product.variants_count}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {pagination.pageIndex + 1} of {Math.ceil(totalCount / pagination.pageSize)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex + 1 }))}
+                  disabled={pagination.pageIndex + 1 >= Math.ceil(totalCount / pagination.pageSize) || productsQuery.isFetching || isEditing}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <p className="text-muted-foreground text-center p-4">No products found.</p>
-        )}
-
-        {totalCount > 0 && (
-          <div className="mt-4 flex justify-between items-center px-2 py-1 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex - 1 }))}
-              disabled={pagination.pageIndex === 0 || productsQuery.isFetching || isEditing}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Previous
-            </Button>
-            <span className="text-sm text-muted-foreground">
-              Page {pagination.pageIndex + 1} of {Math.ceil(totalCount / pagination.pageSize)}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePaginationChange((old) => ({ ...old, pageIndex: old.pageIndex + 1 }))}
-              disabled={pagination.pageIndex + 1 >= Math.ceil(totalCount / pagination.pageSize) || productsQuery.isFetching || isEditing}
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
         )}
       </CardContent>
       <div className="p-4 border-t flex-shrink-0">
@@ -567,7 +572,7 @@ export function ProductsView() {
           New Product
         </Button>
       </div>
-    </>
+    </div>
   );
 
   const rightPane = (

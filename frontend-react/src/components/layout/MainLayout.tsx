@@ -371,7 +371,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="bg-background flex flex-col flex-1">
       <Navbar />
-      <div className="flex flex-1 overflow-auto">
+      <div className="flex flex-1"> 
         <SidebarProvider defaultOpen={isDashboard}>
           <MainLayoutContent>
             {children}
@@ -390,7 +390,7 @@ const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
   // const isCollapsed = state === "collapsed"
   
   return (
-    <div className="w-full flex">
+    <div className="w-full flex flex-1"> 
       {/* Layer 3: Sidebar (as a flex item) */}
       <SidebarContents />
       
@@ -399,11 +399,12 @@ const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
       
       {/* Layer 4: Main content (as the expanding flex item) */}
       <main 
-        className="flex-1 pt-16 p-6 bg-background" 
+        className="flex-1 bg-background flex flex-col"
         style={{ /* Style prop is now empty */ }}
       >
-        <div className="mx-auto max-w-[1400px]">
-          {children}
+        {/* Apply specific padding AND make it fill height */}
+        <div className="mx-auto max-w-[1400px] w-full pt-20 px-6 pb-24 flex flex-col flex-1">
+          {children} 
         </div>
       </main>
     </div>
