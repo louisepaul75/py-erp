@@ -493,6 +493,7 @@ export function ProductsView() {
             <TableHeader>
               <TableRow>
                 <TableHead>SKU</TableHead>
+                <TableHead>Legacy SKU</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Active</TableHead>
                 <TableHead>Variants</TableHead>
@@ -506,6 +507,7 @@ export function ProductsView() {
                   className={`cursor-pointer ${selectedItemId === product.id ? 'bg-muted' : ''}`}
                 >
                   <TableCell>{product.sku}</TableCell>
+                  <TableCell>{product.legacy_base_sku || 'N/A'}</TableCell>
                   <TableCell>{product.name}</TableCell>
                   <TableCell>{product.is_active ? 'Yes' : 'No'}</TableCell>
                   <TableCell>{product.variants_count ?? 0}</TableCell>
