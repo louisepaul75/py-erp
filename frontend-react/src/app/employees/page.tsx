@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea" 
 import { useToast } from "@/hooks/use-toast" 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select" 
+import { TwoPaneLayout, type MaximizedPaneState } from "@/components/ui/TwoPaneLayout"
 
 import { fetchEmployees, fetchEmployeeById, updateEmployee, type Employee, type EmployeeUpdateData } from '@/lib/api/employees' 
 import { fetchUsers, type UserSummary } from '@/lib/api/users' 
@@ -59,6 +60,7 @@ export default function EmployeesPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null); 
   const [isEditing, setIsEditing] = useState(false); 
   const [employeeFormData, setEmployeeFormData] = useState<EmployeeFormData | null>(null); 
+  const [maximizedPane, setMaximizedPane] = useState<MaximizedPaneState>('left');
 
   // Query for fetching the list of employees
   const { 
@@ -143,6 +145,9 @@ export default function EmployeesPage() {
     }
     setSelectedEmployeeId(id);
     setIsEditing(false);
+    if (maximizedPane === 'left') {
+        setMaximizedPane('none');
+    }
   }; 
 
   const handleEdit = () => {
@@ -215,272 +220,278 @@ export default function EmployeesPage() {
 
   return (
     <div className="p-4 h-[calc(100vh-8rem)]">
-      <div className="flex flex-col md:flex-row gap-4 h-full">
-        <Card className="w-full md:w-1/3 flex flex-col">
-          <CardHeader className="p-4">
-            <CardTitle className="text-lg">{t('navigation.employees')}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-grow overflow-y-auto p-0">
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-2">
-                {isLoadingList && (
-                  <>
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-10 w-full" />
-                  </>
-                )}
-                {isErrorList && (
-                   <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>
-                      {(errorList as Error)?.message || "Failed to load employees."}
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {!isLoadingList && !isErrorList && (employees || []).map((employee) => (
-                  <Button
-                    key={employee.id}
-                    variant={selectedEmployeeId === employee.id ? "secondary" : "ghost"}
-                    onClick={() => handleSelectItem(employee.id)}
-                    className="w-full justify-start h-auto py-2 px-3 text-left"
-                    aria-current={selectedEmployeeId === employee.id}
-                    disabled={isEditing && selectedEmployeeId === employee.id}
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">
-                        {employee.first_name} {employee.last_name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {employee.employee_number} - {employee.job_title || 'N/A'}
-                      </span>
-                    </div>
-                  </Button>
-                ))}
-                {!isLoadingList && !isErrorList && employees?.length === 0 && (
-                   <p className="text-sm text-muted-foreground p-4 text-center">
-                     No employees found.
-                   </p>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full md:w-2/3 flex flex-col">
-           <CardHeader className="p-6 flex flex-row items-center justify-between">
-             <CardTitle className="text-lg">
-                {isEditing ? `Editing: ${employeeFormData?.first_name || ''} ${employeeFormData?.last_name || ''}` : 'Employee Details'}
-            </CardTitle>
-             <div className="flex items-center gap-2">
-                {!isEditing && selectedEmployeeId && (
-                    <Button variant="outline" size="sm" onClick={handleEdit} disabled={isLoadingDetail}> 
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
-                )}
-                {isEditing && (
-                    <>
-                        <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateMutation.isPending}>
-                            <X className="mr-2 h-4 w-4" />
-                            Cancel
-                        </Button>
-                        <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
-                            {updateMutation.isPending ? (
-                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
-                            ) : (
-                                <><Save className="mr-2 h-4 w-4" />Save</>
-                            )}
-                        </Button>
-                    </>
-                )}
-               {!isEditing && isFetchingDetail && !isLoadingDetail && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-             </div>
-           </CardHeader>
-          <CardContent className="flex-grow overflow-y-auto p-0">
-            <ScrollArea className="h-full">
-              <div className="p-6">
-                {!selectedEmployeeId && !isEditing && (
-                  <div className="flex items-center justify-center h-full min-h-[200px]">
-                     <p className="text-muted-foreground">
-                       {t('select_employee_details') || 'Select an employee to view details'}
-                     </p>
-                   </div>
-                )}
-                {selectedEmployeeId && isLoadingDetail && !isEditing && (
-                    <div className="space-y-4 mt-4">
-                       <Skeleton className="h-8 w-1/2" />
-                       <Skeleton className="h-4 w-3/4" />
-                       <Skeleton className="h-4 w-1/2" />
-                       <Separator className="my-4" />
-                       <Skeleton className="h-4 w-1/4" />
-                       <Skeleton className="h-4 w-full" />
-                       <Skeleton className="h-4 w-1/4" />
-                       <Skeleton className="h-4 w-full" />
-                    </div>
-                )}
-                {selectedEmployeeId && isErrorDetail && !isEditing && (
-                    <Alert variant="destructive">
+      <TwoPaneLayout
+        maximizedPaneOverride={maximizedPane}
+        onMaximizeChange={setMaximizedPane}
+        containerClassName="gap-4 h-full"
+        leftPaneContent={
+            <Card className="flex flex-col h-full">
+                <CardHeader className="p-4">
+                <CardTitle className="text-lg">{t('navigation.employees')}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow overflow-y-auto p-0">
+                <ScrollArea className="h-full">
+                    <div className="p-4 space-y-2">
+                    {isLoadingList && (
+                        <>
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        </>
+                    )}
+                    {isErrorList && (
+                        <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Error Loading Details</AlertTitle>
+                        <AlertTitle>Error</AlertTitle>
                         <AlertDescription>
-                        {(errorDetail as Error)?.message || "Failed to load employee details."}
+                            {(errorList as Error)?.message || "Failed to load employees."}
                         </AlertDescription>
-                    </Alert>
-                )}
+                        </Alert>
+                    )}
+                    {!isLoadingList && !isErrorList && (employees || []).map((employee) => (
+                        <Button
+                        key={employee.id}
+                        variant={selectedEmployeeId === employee.id ? "secondary" : "ghost"}
+                        onClick={() => handleSelectItem(employee.id)}
+                        className="w-full justify-start h-auto py-2 px-3 text-left"
+                        aria-current={selectedEmployeeId === employee.id}
+                        disabled={isEditing && selectedEmployeeId === employee.id}
+                        >
+                        <div className="flex flex-col">
+                            <span className="font-medium">
+                            {employee.first_name} {employee.last_name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                            {employee.employee_number} - {employee.job_title || 'N/A'}
+                            </span>
+                        </div>
+                        </Button>
+                    ))}
+                    {!isLoadingList && !isErrorList && employees?.length === 0 && (
+                        <p className="text-sm text-muted-foreground p-4 text-center">
+                            No employees found.
+                        </p>
+                    )}
+                    </div>
+                </ScrollArea>
+                </CardContent>
+            </Card>
+        }
+        rightPaneContent={
+            <Card className="flex flex-col h-full">
+                <CardHeader className="p-6 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">
+                    {isEditing ? `Editing: ${employeeFormData?.first_name || ''} ${employeeFormData?.last_name || ''}` : 'Employee Details'}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                    {!isEditing && selectedEmployeeId && (
+                        <Button variant="outline" size="sm" onClick={handleEdit} disabled={isLoadingDetail}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                        </Button>
+                    )}
+                    {isEditing && (
+                        <>
+                            <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={updateMutation.isPending}>
+                                <X className="mr-2 h-4 w-4" />
+                                Cancel
+                            </Button>
+                            <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
+                                {updateMutation.isPending ? (
+                                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                                ) : (
+                                    <><Save className="mr-2 h-4 w-4" />Save</>
+                                )}
+                            </Button>
+                        </>
+                    )}
+                    {!isEditing && isFetchingDetail && !isLoadingDetail && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
+            </CardHeader>
+            <CardContent className="flex-grow overflow-y-auto p-0">
+                <ScrollArea className="h-full">
+                <div className="p-6">
+                    {!selectedEmployeeId && !isEditing && (
+                    <div className="flex items-center justify-center h-full min-h-[200px]">
+                        <p className="text-muted-foreground">
+                        {t('select_employee_details') || 'Select an employee to view details'}
+                        </p>
+                    </div>
+                    )}
+                    {selectedEmployeeId && isLoadingDetail && !isEditing && (
+                        <div className="space-y-4 mt-4">
+                        <Skeleton className="h-8 w-1/2" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Separator className="my-4" />
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-4 w-full" />
+                        </div>
+                    )}
+                    {selectedEmployeeId && isErrorDetail && !isEditing && (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Error Loading Details</AlertTitle>
+                            <AlertDescription>
+                            {(errorDetail as Error)?.message || "Failed to load employee details."}
+                            </AlertDescription>
+                        </Alert>
+                    )}
 
-                {displayEmployee && (
-                    isEditing ? (
-                        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="first_name">First Name <span className="text-red-500">*</span></Label>
-                                    <Input id="first_name" name="first_name" value={employeeFormData?.first_name || ''} onChange={handleFormChange} required disabled={updateMutation.isPending} />
+                    {displayEmployee && (
+                        isEditing ? (
+                            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="first_name">First Name <span className="text-red-500">*</span></Label>
+                                        <Input id="first_name" name="first_name" value={employeeFormData?.first_name || ''} onChange={handleFormChange} required disabled={updateMutation.isPending} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="last_name">Last Name <span className="text-red-500">*</span></Label>
+                                        <Input id="last_name" name="last_name" value={employeeFormData?.last_name || ''} onChange={handleFormChange} required disabled={updateMutation.isPending} />
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="last_name">Last Name <span className="text-red-500">*</span></Label>
-                                    <Input id="last_name" name="last_name" value={employeeFormData?.last_name || ''} onChange={handleFormChange} required disabled={updateMutation.isPending} />
-                                </div>
-                             </div>
-                             <div className="space-y-1">
-                                <Label htmlFor="job_title">Job Title</Label>
-                                <Input id="job_title" name="job_title" value={employeeFormData?.job_title || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
-                             </div>
-                            <div className="space-y-1">
-                                <Label htmlFor="email">Email</Label>
-                                <Input id="email" name="email" type="email" value={employeeFormData?.email || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
-                            </div>
-                            <div className="space-y-1">
-                                <Label htmlFor="phone_number">Phone</Label>
-                                <Input id="phone_number" name="phone_number" value={employeeFormData?.phone_number || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
-                            </div>
-                            <div className="space-y-1">
-                                <Label htmlFor="address">Address</Label>
-                                <Textarea id="address" name="address" value={employeeFormData?.address || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
-                            </div>
-                             <Separator className="my-4" />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="department">Department</Label>
-                                    <Input id="department" name="department" value={employeeFormData?.department || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                    <Label htmlFor="job_title">Job Title</Label>
+                                    <Input id="job_title" name="job_title" value={employeeFormData?.job_title || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="employee_number">Employee Number</Label>
-                                    <Input id="employee_number" name="employee_number" value={displayEmployee.employee_number || '-'} disabled={true} readOnly className="text-muted-foreground" />
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input id="email" name="email" type="email" value={employeeFormData?.email || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="date_hired">Date Hired</Label>
-                                    <Input id="date_hired" name="date_hired" type="date" value={employeeFormData?.date_hired || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                    <Label htmlFor="phone_number">Phone</Label>
+                                    <Input id="phone_number" name="phone_number" value={employeeFormData?.phone_number || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="date_of_birth">Date of Birth</Label>
-                                    <Input id="date_of_birth" name="date_of_birth" type="date" value={employeeFormData?.date_of_birth || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                    <Label htmlFor="address">Address</Label>
+                                    <Textarea id="address" name="address" value={employeeFormData?.address || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
                                 </div>
-                            </div>
-                            {/* --- Add User Select Dropdown --- */}
-                            <Separator className="my-4" />
-                            <div className="space-y-1">
-                                <Label htmlFor="user">Associated User Account</Label>
-                                <Select 
-                                    value={employeeFormData?.user?.toString() ?? 'null'} 
-                                    onValueChange={handleUserChange} 
-                                    disabled={updateMutation.isPending || isLoadingUsers}
-                                >
-                                    <SelectTrigger id="user">
-                                        <SelectValue placeholder="Select user..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="null">-- Unassigned --</SelectItem>
-                                        {isLoadingUsers && <SelectItem value="loading" disabled>Loading...</SelectItem>}
-                                        {!isLoadingUsers && users.map(user => (
-                                            <SelectItem key={user.id} value={user.id.toString()}>
-                                                {user.first_name} {user.last_name} ({user.username})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {/* --- End User Select Dropdown --- */}
-                        </form>
-                    ) : (
-                        <dl>
-                            <div className="flex items-center space-x-4 mb-6">
-                                <Avatar className="h-16 w-16">
-                                    <AvatarImage src={undefined} alt={`${displayEmployee.first_name} ${displayEmployee.last_name}`} />
-                                    <AvatarFallback>
-                                    {displayEmployee.first_name?.charAt(0).toUpperCase()}
-                                    {displayEmployee.last_name?.charAt(0).toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h3 className="text-xl font-semibold">{displayEmployee.first_name} {displayEmployee.last_name}</h3>
-                                    <p className="text-sm text-muted-foreground">{displayEmployee.job_title || '-'}</p>
+                                <Separator className="my-4" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="department">Department</Label>
+                                        <Input id="department" name="department" value={employeeFormData?.department || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="employee_number">Employee Number</Label>
+                                        <Input id="employee_number" name="employee_number" value={displayEmployee.employee_number || '-'} disabled={true} readOnly className="text-muted-foreground" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="date_hired">Date Hired</Label>
+                                        <Input id="date_hired" name="date_hired" type="date" value={employeeFormData?.date_hired || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="date_of_birth">Date of Birth</Label>
+                                        <Input id="date_of_birth" name="date_of_birth" type="date" value={employeeFormData?.date_of_birth || ''} onChange={handleFormChange} disabled={updateMutation.isPending} />
+                                    </div>
                                 </div>
-                            </div>
-                            <Separator className="my-4" />
-                            <Card>
-                                <CardHeader><CardTitle>Contact Information</CardTitle></CardHeader>
-                                <CardContent>
-                                    <DetailItem label="Email" value={displayEmployee.email} />
-                                    <DetailItem label="Phone" value={displayEmployee.phone_number} />
-                                    <DetailItem label="Address" value={displayEmployee.address} />
-                                </CardContent>
-                            </Card>
-                            <Separator className="my-4" />
-                            <Card>
-                                <CardHeader><CardTitle>Employment Details</CardTitle></CardHeader>
-                                <CardContent>
-                                    <DetailItem label="Employee Number" value={displayEmployee.employee_number} />
-                                    <DetailItem label="Department" value={displayEmployee.department} />
-                                    <DetailItem label="Date Hired" value={formatDate(displayEmployee.date_hired)} />
-                                    <DetailItem label="Date of Birth" value={formatDate(displayEmployee.date_of_birth)} />
-                                </CardContent>
-                            </Card>
-                            
-                            {/* Display Assigned User Information */}
-                            <Separator className="my-4" />
-                            <Card>
-                                <CardHeader><CardTitle>User Account</CardTitle></CardHeader>
-                                <CardContent>
-                                    {displayEmployee.user ? (
-                                        // Find the user in the users array
-                                        (() => {
-                                            const assignedUser = users.find(u => u.id === displayEmployee.user);
-                                            if (assignedUser) {
-                                                return (
-                                                    <>
-                                                        <DetailItem label="Username" value={assignedUser.username} />
-                                                        <DetailItem label="Name" value={`${assignedUser.first_name} ${assignedUser.last_name}`.trim()} />
-                                                        <DetailItem label="Email" value={assignedUser.email} />
-                                                    </>
-                                                );
-                                            } else {
-                                                // User ID exists but not found in the list (could be loading)
-                                                return isLoadingUsers ? (
-                                                    <div className="flex items-center py-2">
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                        <span className="text-sm">Loading user details...</span>
-                                                    </div>
-                                                ) : (
-                                                    <DetailItem label="User ID" value={`${displayEmployee.user} (User details not available)`} />
-                                                );
-                                            }
-                                        })()
-                                    ) : (
-                                        <DetailItem label="User Account" value="No user account associated" />
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </dl>
-                    )
-                )}
+                                {/* --- Add User Select Dropdown --- */}
+                                <Separator className="my-4" />
+                                <div className="space-y-1">
+                                    <Label htmlFor="user">Associated User Account</Label>
+                                    <Select
+                                        value={employeeFormData?.user?.toString() ?? 'null'}
+                                        onValueChange={handleUserChange}
+                                        disabled={updateMutation.isPending || isLoadingUsers}
+                                    >
+                                        <SelectTrigger id="user">
+                                            <SelectValue placeholder="Select user..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="null">-- Unassigned --</SelectItem>
+                                            {isLoadingUsers && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                                            {!isLoadingUsers && users.map(user => (
+                                                <SelectItem key={user.id} value={user.id.toString()}>
+                                                    {user.first_name} {user.last_name} ({user.username})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                {/* --- End User Select Dropdown --- */}
+                            </form>
+                        ) : (
+                            <dl>
+                                <div className="flex items-center space-x-4 mb-6">
+                                    <Avatar className="h-16 w-16">
+                                        <AvatarImage src={undefined} alt={`${displayEmployee.first_name} ${displayEmployee.last_name}`} />
+                                        <AvatarFallback>
+                                        {displayEmployee.first_name?.charAt(0).toUpperCase()}
+                                        {displayEmployee.last_name?.charAt(0).toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <h3 className="text-xl font-semibold">{displayEmployee.first_name} {displayEmployee.last_name}</h3>
+                                        <p className="text-sm text-muted-foreground">{displayEmployee.job_title || '-'}</p>
+                                    </div>
+                                </div>
+                                <Separator className="my-4" />
+                                <Card>
+                                    <CardHeader><CardTitle>Contact Information</CardTitle></CardHeader>
+                                    <CardContent>
+                                        <DetailItem label="Email" value={displayEmployee.email} />
+                                        <DetailItem label="Phone" value={displayEmployee.phone_number} />
+                                        <DetailItem label="Address" value={displayEmployee.address} />
+                                    </CardContent>
+                                </Card>
+                                <Separator className="my-4" />
+                                <Card>
+                                    <CardHeader><CardTitle>Employment Details</CardTitle></CardHeader>
+                                    <CardContent>
+                                        <DetailItem label="Employee Number" value={displayEmployee.employee_number} />
+                                        <DetailItem label="Department" value={displayEmployee.department} />
+                                        <DetailItem label="Date Hired" value={formatDate(displayEmployee.date_hired)} />
+                                        <DetailItem label="Date of Birth" value={formatDate(displayEmployee.date_of_birth)} />
+                                    </CardContent>
+                                </Card>
 
-              </div>
-            </ScrollArea>
-          </CardContent>
+                                {/* Display Assigned User Information */}
+                                <Separator className="my-4" />
+                                <Card>
+                                    <CardHeader><CardTitle>User Account</CardTitle></CardHeader>
+                                    <CardContent>
+                                        {displayEmployee.user ? (
+                                            // Find the user in the users array
+                                            (() => {
+                                                const assignedUser = users.find(u => u.id === displayEmployee.user);
+                                                if (assignedUser) {
+                                                    return (
+                                                        <>
+                                                            <DetailItem label="Username" value={assignedUser.username} />
+                                                            <DetailItem label="Name" value={`${assignedUser.first_name} ${assignedUser.last_name}`.trim()} />
+                                                            <DetailItem label="Email" value={assignedUser.email} />
+                                                        </>
+                                                    );
+                                                } else {
+                                                    // User ID exists but not found in the list (could be loading)
+                                                    return isLoadingUsers ? (
+                                                        <div className="flex items-center py-2">
+                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                            <span className="text-sm">Loading user details...</span>
+                                                        </div>
+                                                    ) : (
+                                                        <DetailItem label="User ID" value={`${displayEmployee.user} (User details not available)`} />
+                                                    );
+                                                }
+                                            })()
+                                        ) : (
+                                            <DetailItem label="User Account" value="No user account associated" />
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </dl>
+                        )
+                    )}
+
+                </div>
+                </ScrollArea>
+            </CardContent>
         </Card>
-      </div>
+        }
+      />
     </div>
   ) 
 } 

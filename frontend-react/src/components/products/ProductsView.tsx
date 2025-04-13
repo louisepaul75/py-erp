@@ -46,7 +46,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
-import { TwoPaneLayout } from '@/components/ui/TwoPaneLayout';
+import { TwoPaneLayout, type MaximizedPaneState } from '@/components/ui/TwoPaneLayout';
 
 // TODO: Ensure QueryClientProvider is set up in layout.tsx or a providers file
 
@@ -110,6 +110,7 @@ export function ProductsView() {
   const [isEditingNew, setIsEditingNew] = useState(false);
   const [productFormData, setProductFormData] = useState<ProductFormData>(defaultProductData);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [maximizedPane, setMaximizedPane] = useState<MaximizedPaneState>('left');
 
   // Debounce search term
   useEffect(() => {
@@ -274,6 +275,10 @@ export function ProductsView() {
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.set('productId', String(id));
     router.replace(`${pathname}?${newSearchParams.toString()}`);
+    // Switch to split view if left pane was maximized
+    if (maximizedPane === 'left') {
+        setMaximizedPane('none');
+    }
   };
 
   const handlePaginationChange = (updater: (old: { pageIndex: number, pageSize: number }) => { pageIndex: number, pageSize: number }) => {
@@ -623,6 +628,8 @@ export function ProductsView() {
 
   return (
     <TwoPaneLayout
+      maximizedPaneOverride={maximizedPane}
+      onMaximizeChange={setMaximizedPane}
       leftPaneContent={leftPane}
       rightPaneContent={rightPane}
     />

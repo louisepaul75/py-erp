@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Maximize, Minimize, ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
 import { cn } from "@/lib/utils"; // Assuming you have a utility for class names
 
+export type MaximizedPaneState = 'left' | 'right' | 'none';
+
 interface TwoPaneLayoutProps {
   leftPaneContent: ReactNode;
   rightPaneContent: ReactNode;
@@ -14,6 +16,8 @@ interface TwoPaneLayoutProps {
   containerClassName?: string;
   initialLeftPaneWidth?: string; // e.g., 'w-1/3', 'w-1/4'
   initialRightPaneWidth?: string; // e.g., 'w-2/3', 'w-3/4'
+  maximizedPaneOverride?: MaximizedPaneState; // Allow external control
+  onMaximizeChange?: (newState: MaximizedPaneState) => void; // Callback for state change
 }
 
 export function TwoPaneLayout({
@@ -23,16 +27,34 @@ export function TwoPaneLayout({
   rightPaneClassName = "",
   containerClassName = "gap-4",
   initialLeftPaneWidth = "md:w-1/3",
-  initialRightPaneWidth = "md:w-2/3"
+  initialRightPaneWidth = "md:w-2/3",
+  maximizedPaneOverride,
+  onMaximizeChange
 }: TwoPaneLayoutProps) {
-  const [maximizedPane, setMaximizedPane] = useState<'left' | 'right' | 'none'>('none');
+  const [internalMaximizedPane, setInternalMaximizedPane] = useState<MaximizedPaneState>('none');
+
+  // Determine the effective state: use override if provided, otherwise internal state
+  const maximizedPane = maximizedPaneOverride !== undefined ? maximizedPaneOverride : internalMaximizedPane;
+  const setMaximizedPane = (newState: MaximizedPaneState) => {
+    if (onMaximizeChange) {
+      onMaximizeChange(newState);
+    } else {
+      setInternalMaximizedPane(newState);
+    }
+  };
 
   const isLeftMaximized = maximizedPane === 'left';
   const isRightMaximized = maximizedPane === 'right';
   const isSplit = maximizedPane === 'none';
 
-  const toggleLeftMax = () => setMaximizedPane(prev => (prev === 'left' ? 'none' : 'left'));
-  const toggleRightMax = () => setMaximizedPane(prev => (prev === 'right' ? 'none' : 'right'));
+  const toggleLeftMax = () => {
+    const nextState: MaximizedPaneState = maximizedPane === 'left' ? 'none' : 'left';
+    setMaximizedPane(nextState);
+  };
+  const toggleRightMax = () => {
+    const nextState: MaximizedPaneState = maximizedPane === 'right' ? 'none' : 'right';
+    setMaximizedPane(nextState);
+  };
 
   return (
     <div className={cn("flex flex-col md:flex-row h-full", containerClassName)}>

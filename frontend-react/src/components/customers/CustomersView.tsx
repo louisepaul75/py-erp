@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { TwoPaneLayout } from '@/components/ui/TwoPaneLayout';
+import { TwoPaneLayout, type MaximizedPaneState } from '@/components/ui/TwoPaneLayout';
 import CustomerList from '@/components/customers/customer-list'; // Assuming this path is correct
 import CustomerDetailPanel from '@/components/customers/CustomerDetailPanel'; // We will create this next
 
@@ -16,6 +16,7 @@ export function CustomersView() {
   const initialCustomerId = initialCustomerIdParam || null; // Use null if not present
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(initialCustomerId);
+  const [maximizedPane, setMaximizedPane] = useState<MaximizedPaneState>('left'); // Add state for layout
 
   // Update URL when customer ID changes
   useEffect(() => {
@@ -37,10 +38,16 @@ export function CustomersView() {
   const handleSelectCustomer = (id: string | number) => {
     const customerIdString = String(id); // Ensure it's a string for state/URL
     setSelectedCustomerId(customerIdString);
+    // Switch to split view if left pane was maximized
+    if (maximizedPane === 'left') {
+        setMaximizedPane('none');
+    }
   };
 
   return (
     <TwoPaneLayout
+      maximizedPaneOverride={maximizedPane} // Pass override state
+      onMaximizeChange={setMaximizedPane} // Pass state setter
       leftPaneContent={
         <CustomerList
           onSelectCustomer={handleSelectCustomer}
