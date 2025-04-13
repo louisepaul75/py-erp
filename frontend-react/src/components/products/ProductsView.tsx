@@ -710,7 +710,7 @@ function ProductDetailFormContent({
       {!isEditing && fetchedProduct?.primary_image && (
         <div className="mb-4">
           <img
-            src={fetchedProduct.primary_image}
+            src={fetchedProduct.primary_image.thumbnail_url || fetchedProduct.primary_image.image_url}
             alt={fetchedProduct.name}
             className="max-w-xs max-h-48 object-contain rounded-md border"
           />
