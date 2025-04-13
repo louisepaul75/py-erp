@@ -73,7 +73,8 @@ export function TwoPaneLayout({
             onClick={toggleLeftMax}
             title={isLeftMaximized ? "Restore Panes" : "Maximize Left Pane"}
           >
-            {isLeftMaximized ? <ArrowRightToLine className="h-4 w-4" /> : <ArrowLeftToLine className="h-4 w-4" />}
+            {/* Invert Left Pane Icons */}
+            {isLeftMaximized ? <ArrowLeftToLine className="h-4 w-4" /> : <ArrowRightToLine className="h-4 w-4" />}
           </Button>
            {/* Hide minimize button for right pane when left is maximized */}
           {!isLeftMaximized && (
@@ -102,11 +103,12 @@ export function TwoPaneLayout({
            <Button
              variant="ghost"
              size="icon"
-             className="absolute top-2 right-2 z-10 h-7 w-7"
+             className="absolute top-2 left-2 z-10 h-7 w-7"
              onClick={toggleRightMax}
              title={isRightMaximized ? "Restore Panes" : "Maximize Right Pane"}
            >
-             {isRightMaximized ? <ArrowLeftToLine className="h-4 w-4" /> : <ArrowRightToLine className="h-4 w-4" />}
+             {/* Invert Right Pane Icons */}
+             {isRightMaximized ? <ArrowRightToLine className="h-4 w-4" /> : <ArrowLeftToLine className="h-4 w-4" />}
            </Button>
             {/* Hide minimize button for left pane when right is maximized */}
            {!isRightMaximized && (
