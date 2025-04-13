@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Keep router for Edit/New Order links
 import Link from "next/link";
 import { Customer } from "@/types/sales-types";
+import { ConsentStatus, VerifiedStatus } from "@/types/sales-types";
 import { API_URL } from "@/lib/config";
 import { authService } from "@/lib/auth/authService";
 import { formatDate } from "@/lib/utils";
@@ -34,7 +35,25 @@ import {
   StickyNote,
   Users,
   FileText,
+  ShoppingBag,
+  PhoneCall,
+  History,
+  Info,
+  MessageSquare,
+  ShieldCheck,
+  UserCheck,
+  BadgeCheck,
 } from "lucide-react";
+
+// --- Import components from the draft ---
+// TODO: Ensure these components are copied from frontend-react/temp/customer-management-2/components/customers/ to frontend-react/src/components/customers/ or an appropriate shared location.
+import { DeactivateCustomerDialog } from "@/components/customers/deactivate-customer-dialog"; // Added Import
+import CustomerShopAccountsCard from "@/components/customers/customer-shop-accounts-card"; // Added Import
+import CustomerCallHistoryCard from "@/components/customers/customer-call-history-card"; // Added Import
+import CustomerHistoryCard from "@/components/customers/customer-history-card"; // Added Import
+import CustomerAddressesCard from "@/components/customers/customer-addresses-card"; // Added Import
+import CustomerNotesBlock from "@/components/customers/customer-notes-block"; // Added Import
+// --- End draft component imports ---
 
 // Basic currency formatter (Keep or import from utils)
 const formatCurrency = (value: number | undefined | null) => {
@@ -55,6 +74,11 @@ const getInitials = (firstName?: string, lastName?: string, companyName?: string
     const last = (lastName || '').charAt(0);
     return `${first}${last}`.toUpperCase() || '??';
 };
+
+// --- Add Enums (Example - define properly in types file) ---
+// enum ConsentStatus { Yes = 'YES', No = 'NO', NotSet = 'NOT_SET' }
+// enum VerifiedStatus { Yes = 'YES', No = 'NO', NotSet = 'NOT_SET' }
+// --- End Enums ---
 
 interface CustomerDetailPanelProps {
   customerId: string | null;
@@ -220,10 +244,19 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
               ) : (
                 <Badge variant="secondary">Individual</Badge>
               )}
+              {!customer.isActive && (
+                  <Badge variant="destructive" className="ml-2">Inactive</Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
                 Customer since {formatDate(customer.since)} <span className="hidden sm:inline">• ID: {customer.customer_number}</span>
             </p>
+            {!customer.isActive && customer.inactiveReason && (
+                 <p className="text-sm text-destructive mt-1">
+                   Reason: {customer.inactiveReason}
+                   {customer.inactiveReason === 'OTHER' && customer.inactiveReasonDetails && ` (${customer.inactiveReasonDetails})`}
+                 </p>
+             )}
           </div>
         </div>
         {/* Right side: Action Buttons */}
@@ -246,6 +279,11 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
                <Plus className="mr-2 h-4 w-4" /> New Order
              </Link>
            </Button>
+           <DeactivateCustomerDialog
+               customerId={customerId}
+               customerName={customerName}
+               isActive={customer.isActive ?? true}
+            />
         </div>
       </CardHeader>
 
@@ -282,15 +320,24 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
 
               {/* Tabs for Documents, Contacts, etc. */}
               <Tabs defaultValue="documents" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-4"> {/* Adjust cols based on tabs */}
+                <TabsList className="grid w-full grid-cols-6 mb-4">
                   <TabsTrigger value="documents">
                       <FileText className="mr-2 h-4 w-4"/> Documents
                   </TabsTrigger>
                   <TabsTrigger value="contacts">
                       <Users className="mr-2 h-4 w-4"/> Contacts
                   </TabsTrigger>
+                  <TabsTrigger value="shop-accounts">
+                      <ShoppingBag className="mr-2 h-4 w-4"/> Shop Accounts
+                  </TabsTrigger>
+                  <TabsTrigger value="call-history">
+                      <PhoneCall className="mr-2 h-4 w-4"/> Calls
+                  </TabsTrigger>
                   <TabsTrigger value="notes">
-                      <StickyNote className="mr-2 h-4 w-4"/> Notes
+                      <MessageSquare className="mr-2 h-4 w-4"/> Notes
+                  </TabsTrigger>
+                  <TabsTrigger value="history">
+                      <History className="mr-2 h-4 w-4"/> History
                   </TabsTrigger>
                 </TabsList>
 
@@ -299,7 +346,7 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                       <CardTitle>Recent Documents</CardTitle>
-                      {/* TODO: Add button to view all documents */}
+                      <Button variant="outline" size="sm" disabled>View All</Button>
                     </CardHeader>
                     <CardContent>
                        {/* Render the CustomerDocumentsTable component only if customerId exists*/}
@@ -313,7 +360,7 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
                   <Card>
                      <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Contact Persons & Details</CardTitle>
-                        {/* TODO: Add button to add new contact */}
+                        <Button variant="outline" size="sm" disabled><Plus className="mr-2 h-4 w-4" />Add Contact</Button>
                      </CardHeader>
                      <CardContent>
                         {/* Placeholder: Replace with actual contact components */}
@@ -331,16 +378,32 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
                    <Card>
                      <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Notes</CardTitle>
-                        {/* TODO: Add button to add new note */}
+                        <Button variant="outline" size="sm" disabled><Plus className="mr-2 h-4 w-4" />Add Note</Button>
                      </CardHeader>
                      <CardContent>
                          {/* Placeholder: Replace with actual notes component */}
-                        <div className="text-center text-muted-foreground py-8">
-                             Notes component will go here.
-                        </div>
+                        {customerId && <CustomerNotesBlock customerId={customerId} />}
                          {/* <CustomerNotesCard customerId={customerId} printableNotes={customer.printableNotes} internalNotes={customer.internalNotes} /> */}
                      </CardContent>
                    </Card>
+                </TabsContent>
+
+                {/* Shop Accounts Tab */}
+                <TabsContent value="shop-accounts">
+                  {/* TODO: Pass actual shop accounts data fetched from API */}
+                  {customerId && <CustomerShopAccountsCard customerId={customerId} />}
+                </TabsContent>
+
+                {/* Call History Tab */}
+                <TabsContent value="call-history">
+                  {/* TODO: Pass actual call history data fetched from API */}
+                  {customerId && <CustomerCallHistoryCard customerId={customerId} />}
+                </TabsContent>
+
+                {/* History Tab */}
+                <TabsContent value="history">
+                   {/* TODO: Pass actual history data fetched from API */}
+                  {customerId && <CustomerHistoryCard customerId={customerId} />}
                 </TabsContent>
               </Tabs>
             </div>
@@ -383,9 +446,9 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
 
               {/* Billing Address Card */}
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Billing Address</CardTitle>
-                  {/* TODO: Add Edit Address button */}
+                  <Button variant="ghost" size="sm" disabled><Edit className="h-4 w-4" /></Button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1 text-sm text-muted-foreground">
@@ -397,11 +460,16 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
                 </CardContent>
               </Card>
 
+              {/* Shipping Addresses Card - Use the imported component */}
+              {/* TODO: Pass actual shipping addresses data fetched from API */}
+              {/* Ensure Customer type includes shippingAddresses: Address[]; */}
+              {customerId && <CustomerAddressesCard customerId={customerId} addresses={customer.shippingAddresses || []} />}
+
               {/* Payment Information Card */}
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Payment Details</CardTitle>
-                   {/* TODO: Add Edit Payment button */}
+                   <Button variant="ghost" size="sm" disabled><Edit className="h-4 w-4" /></Button>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
                    {customer.paymentTermsOverall && (
@@ -427,6 +495,56 @@ export default function CustomerDetailPanel({ customerId }: CustomerDetailPanelP
                     )}
                 </CardContent>
               </Card>
+
+              {/* Marketing & Sales Card */}
+              <Card>
+                 <CardHeader>
+                    <CardTitle>Marketing & Sales</CardTitle>
+                 </CardHeader>
+                 <CardContent className="space-y-4">
+                    {/* Consent */}
+                    <div>
+                      <p className="text-sm font-medium mb-2">Advertising Consent</p>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center justify-between">
+                           <span className="text-muted-foreground flex items-center"><BadgeCheck className="h-4 w-4 mr-1.5"/>Postal:</span>
+                           <Badge variant={customer.postalAdvertising === ConsentStatus.GRANTED ? "secondary" : "outline"}>
+                             {customer.postalAdvertising ?? 'Not Set'}
+                           </Badge>
+                         </div>
+                         <div className="flex items-center justify-between">
+                           <span className="text-muted-foreground flex items-center"><BadgeCheck className="h-4 w-4 mr-1.5"/>Email:</span>
+                           <Badge variant={customer.emailAdvertising === ConsentStatus.GRANTED ? "secondary" : "outline"}>
+                              {customer.emailAdvertising ?? 'Not Set'}
+                           </Badge>
+                         </div>
+                       </div>
+                     </div>
+
+                    {/* Sales Rep */}
+                    {customer.salesRepresentative && (
+                      <>
+                         <Separator />
+                         <div>
+                           <p className="text-sm font-medium mb-1 flex items-center"><UserCheck className="h-4 w-4 mr-1.5"/> Sales Representative</p>
+                           <p className="text-sm text-muted-foreground">{customer.salesRepresentative}</p>
+                         </div>
+                       </>
+                     )}
+
+                    {/* Verification Status */}
+                    <Separator />
+                     <div>
+                       <p className="text-sm font-medium mb-1 flex items-center"><ShieldCheck className="h-4 w-4 mr-1.5"/> Verification</p>
+                       <Badge variant={customer.verifiedStatus === VerifiedStatus.VERIFIED ? "secondary" : "outline"}>
+                         {customer.verifiedStatus ?? 'Not Set'}
+                       </Badge>
+                     </div>
+                 </CardContent>
+               </Card>
+
+              {/* Notes Block Card */}
+              {customerId && <CustomerNotesBlock customerId={customerId} />}
             </div>
           </div>
       </CardContent>
