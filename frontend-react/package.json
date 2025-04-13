@@ -87,6 +87,7 @@
   "devDependencies": {
     "@babel/core": "^7.26.10",
     "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.24.7",
     "@next/eslint-plugin-next": "^15.2.4",
     "@stryker-mutator/core": "^8.7.1",
     "@stryker-mutator/jest-runner": "^8.7.1",
