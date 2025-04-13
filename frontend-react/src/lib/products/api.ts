@@ -119,8 +119,18 @@ const api = ky.create({
 
 // Interfaces remain unchanged
 
+export interface ProductImage {
+  id: number;
+  image_url: string;
+  thumbnail_url?: string | null;
+  image_type?: string | null;
+  is_primary?: boolean;
+  is_front?: boolean;
+  alt_text?: string | null;
+}
+
 // --- UPDATED Variant Interface to match API Response ---
-interface Variant {
+export interface Variant {
   id: number;
   sku: string;
   name: string;
@@ -136,6 +146,8 @@ interface Variant {
   };
   // ... potentially retail_price, wholesale_price, etc.
   
+  images?: ProductImage[]; // Add images array
+
   // Keep UI-specific selected state separate from API type if possible
   // selected?: boolean; 
 }
@@ -284,7 +296,7 @@ export const productApi = {
     }
   },
 
-  getProductVariants: async (productId: string | number, signal?: AbortSignal): Promise<Variant[]> => {
+  getProductVariants: async (productId: string | number, signal?: AbortSignal): Promise<ApiResponse<Variant>> => {
     try {
       return await api.get(`v1/products/${productId}/variants/`, { signal }).json();
     } catch (error) {

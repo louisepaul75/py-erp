@@ -48,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import { type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { TwoPaneLayout, type MaximizedPaneState } from '@/components/ui/TwoPaneLayout';
 import { type Variant } from '@/lib/products/api';
+import Image from 'next/image';
 
 // TODO: Ensure QueryClientProvider is set up in layout.tsx or a providers file
 
@@ -599,7 +600,7 @@ export function ProductsView() {
               <Tabs defaultValue="parent" value={detailViewMode} onValueChange={(value) => setDetailViewMode(value as 'parent' | 'variants')} className="p-4 h-full flex flex-col">
                 <TabsList className="mb-4">
                   <TabsTrigger value="parent">Parent Details</TabsTrigger>
-                  <TabsTrigger value="variants">Variants ({variantsQuery.data?.length ?? (selectedProduct?.variants_count ?? 0)})</TabsTrigger>
+                  <TabsTrigger value="variants">Variants ({variantsQuery.data?.results?.length ?? (selectedProduct?.variants_count ?? 0)})</TabsTrigger>
                 </TabsList>
                 <TabsContent value="parent" className="flex-grow overflow-y-auto space-y-4">
                   <ProductDetailFormContent
@@ -1021,7 +1022,7 @@ function ProductVariantContent({
   };
 
   // Use the array directly from the query data
-  const variants = variantsQuery.data ?? [];
+  const variants = variantsQuery.data?.results ?? [];
   // Get the count from the array length
   const totalVariants = variants.length;
 
@@ -1104,6 +1105,7 @@ function ProductVariantContent({
           <TableCaption>List of variants for product ID {selectedItemId}</TableCaption>
           <TableHeader>
             <TableRow>
+              <TableHead>Image</TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Variant Code</TableHead>
@@ -1111,11 +1113,37 @@ function ProductVariantContent({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {variants.map((variant) => (
+            {variants.map((variant: Variant) => (
               <TableRow key={variant.id}>
+                <TableCell>
+                  {variant.images && variant.images.length > 0 && (
+                    (() => {
+                      const primaryImage = 
+                        variant.images.find((img) => img.is_front && img.image_type === "Produktfoto") ||
+                        variant.images.find((img) => img.is_front) ||
+                        variant.images.find((img) => img.is_primary) ||
+                        variant.images.find((img) => img.image_type === "Produktfoto") ||
+                        variant.images[0]; // Fallback to the first image
+                        
+                      const imageUrl = primaryImage?.thumbnail_url || primaryImage?.image_url;
+                      
+                      return imageUrl ? (
+                        <Image 
+                          src={imageUrl}
+                          alt={primaryImage?.alt_text || variant.name}
+                          width={40}
+                          height={40}
+                          className="rounded object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No img</div>
+                      );
+                    })()
+                  )}
+                </TableCell>
                 <TableCell>{variant.sku}</TableCell>
                 <TableCell>{variant.name}</TableCell>
-                <TableCell>{variant.variant_code || 'N/A'}</TableCell>
+                <TableCell>{variant.variant_code}</TableCell>
                 <TableCell>{variant.is_active ? 'Yes' : 'No'}</TableCell>
               </TableRow>
             ))}

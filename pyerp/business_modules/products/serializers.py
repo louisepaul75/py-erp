@@ -5,7 +5,7 @@ Serializers for the products app.
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 
-from pyerp.business_modules.products.models import ParentProduct, ProductCategory, VariantProduct
+from pyerp.business_modules.products.models import ParentProduct, ProductCategory, VariantProduct, ProductImage
 from pyerp.business_modules.business.models import Supplier
 import logging
 
@@ -93,6 +93,21 @@ class ParentProductSerializer(serializers.ModelSerializer):
         
         return ret 
 
+# New Serializer for ProductImage
+class ProductImageSerializer(serializers.ModelSerializer):
+    """Serializer for ProductImage model."""
+    class Meta:
+        model = ProductImage
+        fields = [
+            'id', 
+            'image_url', 
+            'thumbnail_url', 
+            'image_type', 
+            'is_primary', 
+            'is_front', 
+            'alt_text'
+        ]
+
 class VariantProductSerializer(serializers.ModelSerializer):
     """Serializer for the VariantProduct model."""
     parent_id = serializers.PrimaryKeyRelatedField(
@@ -102,6 +117,7 @@ class VariantProductSerializer(serializers.ModelSerializer):
         help_text=_("ID of the parent product.")
     )
     parent = ParentProductSerializer(read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = VariantProduct
@@ -125,6 +141,7 @@ class VariantProductSerializer(serializers.ModelSerializer):
             "is_bestseller",
             "legacy_sku",
             "legacy_base_sku",
+            "images",
         ]
         read_only_fields = ["sku"]
 
