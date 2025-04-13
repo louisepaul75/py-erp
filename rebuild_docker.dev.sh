@@ -120,6 +120,7 @@ docker run -d \
   -p 6379:6379 \
   -p 80:80 \
   -v "$(pwd)":/app \
+  -v /app/frontend-react/node_modules \
   -v "$(pwd)/static":/app/static \
   -v "$(pwd)/media":/app/media \
   -v "$(pwd)/logs":/app/logs \
