@@ -20,6 +20,8 @@ export const resources = {
       "navigation.suppliers": "Lieferanten",
       "navigation.settings": "Einstellungen",
       "navigation.mold_management": "Formenverwaltung",
+      "navigation.sales_dashboard": "Verkaufsübersicht",
+      "navigation.customers": "Kunden",
     },
     mutterTab: {
       active: "Aktiv",
