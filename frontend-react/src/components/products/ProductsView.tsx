@@ -1155,9 +1155,9 @@ function ProductVariantContent({
             {variants.map((variant: Variant) => (
               <TableRow key={variant.id}>
                 <TableCell>
-                  {variant.primary_image ? (
+                  {variant.images && variant.images.length > 0 ? (
                     <Image 
-                      src={variant.primary_image.thumbnail_url || variant.primary_image.image_url}
+                      src={variant.images[0].thumbnail_url || variant.images[0].image_url}
                       alt={variant.name || variant.sku}
                       width={40}
                       height={40}
