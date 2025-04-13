@@ -85,6 +85,8 @@ class ParentProductSerializer(serializers.ModelSerializer):
     supplier = SupplierSerializer(read_only=True)
     # Add primary_image field derived from variants
     primary_image = ProductImageSerializer(read_only=True)
+    # Add a computed field for variants_count
+    variants_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ParentProduct
@@ -105,9 +107,17 @@ class ParentProductSerializer(serializers.ModelSerializer):
             "legacy_id",
             "supplier",
             "primary_image",
+            "variants_count",
         ]
         # Add sku to read_only_fields
         read_only_fields = ["sku"]
+    
+    def get_variants_count(self, obj):
+        """Calculate the number of variants for the parent product."""
+        # Check if the related manager exists before counting
+        if hasattr(obj, 'variants'):
+            return obj.variants.count()
+        return 0 # Return 0 if 'variants' related manager doesn't exist
     
     def to_representation(self, instance):
         """Override to include primary_image derived from variants."""
