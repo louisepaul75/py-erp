@@ -519,7 +519,7 @@ export function ProductsView() {
                         className="rounded object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No img</div>
+                      <></>
                     )}
                   </TableCell>
                   <TableCell>{product.sku}</TableCell>
@@ -1155,29 +1155,16 @@ function ProductVariantContent({
             {variants.map((variant: Variant) => (
               <TableRow key={variant.id}>
                 <TableCell>
-                  {variant.images && variant.images.length > 0 && (
-                    (() => {
-                      const primaryImage = 
-                        variant.images.find((img) => img.is_front && img.image_type === "Produktfoto") ||
-                        variant.images.find((img) => img.is_front) ||
-                        variant.images.find((img) => img.is_primary) ||
-                        variant.images.find((img) => img.image_type === "Produktfoto") ||
-                        variant.images[0]; // Fallback to the first image
-                        
-                      const imageUrl = primaryImage?.thumbnail_url || primaryImage?.image_url;
-                      
-                      return imageUrl ? (
-                        <Image 
-                          src={imageUrl}
-                          alt={primaryImage?.alt_text || variant.name}
-                          width={40}
-                          height={40}
-                          className="rounded object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No img</div>
-                      );
-                    })()
+                  {variant.primary_image ? (
+                    <Image 
+                      src={variant.primary_image.thumbnail_url || variant.primary_image.image_url}
+                      alt={variant.name || variant.sku}
+                      width={40}
+                      height={40}
+                      className="rounded object-cover"
+                    />
+                  ) : (
+                    <></>
                   )}
                 </TableCell>
                 <TableCell>{variant.sku}</TableCell>
