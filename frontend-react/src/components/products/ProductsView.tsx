@@ -111,6 +111,7 @@ export function ProductsView() {
   const [productFormData, setProductFormData] = useState<ProductFormData>(defaultProductData);
   const [apiError, setApiError] = useState<string | null>(null);
   const [maximizedPane, setMaximizedPane] = useState<MaximizedPaneState>('left');
+  const [filterActive, setFilterActive] = useState(true);
 
   // Debounce search term
   useEffect(() => {
@@ -118,24 +119,28 @@ export function ProductsView() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Reset pagination when search term changes
+  // Reset pagination when search term or filter changes
   useEffect(() => {
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, filterActive]);
 
   // --- Data Fetching with React Query ---
 
   // Query for the list of products
   const productsQuery = useQuery<ApiResponse<Product>, Error>({
-    queryKey: ['products', pagination.pageIndex, pagination.pageSize, debouncedSearchTerm],
+    queryKey: ['products', pagination.pageIndex, pagination.pageSize, debouncedSearchTerm, filterActive],
     queryFn: async ({ signal }) => {
-      const params = {
+      const params: Record<string, any> = {
         page: pagination.pageIndex + 1,
         page_size: pagination.pageSize,
+        is_active: filterActive,
       };
-      return debouncedSearchTerm
-        ? productApi.getProductsDirectSearch({ ...params, q: debouncedSearchTerm }, signal)
-        : productApi.getProducts(params, signal);
+      if (debouncedSearchTerm) {
+         params.q = debouncedSearchTerm;
+         return productApi.getProductsDirectSearch(params, signal);
+      } else {
+         return productApi.getProducts(params, signal);
+      }
     },
     placeholderData: (previousData) => previousData,
     staleTime: 5 * 60 * 1000,
@@ -463,6 +468,20 @@ export function ProductsView() {
             onChange={handleSearchChange}
             className="pl-10 h-9 w-full"
           />
+        </div>
+        <div className="flex items-center space-x-2 pt-3">
+          <Checkbox
+            id="filter-active"
+            checked={filterActive}
+            onCheckedChange={(checked) => setFilterActive(Boolean(checked))}
+            disabled={productsQuery.isFetching || isEditing}
+          />
+          <Label
+            htmlFor="filter-active"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Show only active products
+          </Label>
         </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-y-auto">

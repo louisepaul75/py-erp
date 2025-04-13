@@ -634,6 +634,57 @@ export default function UIComponentsPage() {
               </CardContent>
             </Card>
 
+            {/* ADDED: Standardized Table with Search/Filter */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Standardized Table Pattern</CardTitle>
+                <CardDescription>A common table setup with search and filtering controls.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input placeholder="Search table..." className="pl-10 h-9" />
+                  </div>
+                  <Button variant="outline" size="icon" aria-label="Filter">
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Existing Table structure below */}
+                <Table>
+                    <TableCaption>A list of recent invoices.</TableCaption>
+                  <TableHeader>
+                    <TableRow> 
+                        <TableHead className="w-[100px]">Invoice</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Method</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                        <TableCell className="font-medium">INV001</TableCell>
+                        <TableCell><StatusBadge status="success">Paid</StatusBadge></TableCell>
+                        <TableCell>Credit Card</TableCell>
+                        <TableCell className="text-right">$250.00</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell className="font-medium">INV002</TableCell>
+                        <TableCell><StatusBadge status="pending">Pending</StatusBadge></TableCell>
+                        <TableCell>PayPal</TableCell>
+                        <TableCell className="text-right">$150.00</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell className="font-medium">INV003</TableCell>
+                        <TableCell><StatusBadge status="error">Failed</StatusBadge></TableCell>
+                        <TableCell>Bank Transfer</TableCell>
+                        <TableCell className="text-right">$350.00</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
               {/* Add SkinnyTable example if it's used */}
               {typeof SkinnyTable !== 'undefined' && (
             <Card>
