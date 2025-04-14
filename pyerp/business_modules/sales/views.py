@@ -175,18 +175,37 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
                 .order_by('day')
             )
 
+            print("\nDebug: Daily sales query results:")
+            for entry in daily_sales:
+                print(
+                    f"  - Day: {entry['day']}, "
+                    f"Total: {entry['total']}"
+                )
+
             daily_totals = {
                 entry['day'].day: float(entry['total'] or 0)
                 for entry in daily_sales
             }
 
+            print("\nDebug: Daily totals dictionary:")
+            for day, total in daily_totals.items():
+                print(f"  - Day {day}: {total}")
+
             cumulative_data = {}
             cumulative_sum = 0
             num_days = (period_end_date - period_start_date).days + 1
+            
+            print(f"\nDebug: Calculating cumulative for {num_days} days")
             for day_num in range(1, num_days + 1):
                 daily_total = daily_totals.get(day_num, 0)
                 cumulative_sum += daily_total
                 cumulative_data[day_num] = cumulative_sum
+                print(
+                    f"  - Day {day_num}: "
+                    f"Daily={daily_total}, "
+                    f"Cumulative={cumulative_sum}"
+                )
+                
             return cumulative_data, num_days
 
         # --- Current Period ---
@@ -271,7 +290,11 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
 
             # Get pre-calculated cumulative values directly using day_num
             cumulative_value = current_cumulative_data.get(day_num, 0)
+            
+            # For previous year, get the cumulative value up to this day
+            # The cumulative value already includes all previous days
             cumulative_prev_year_value = prev_year_cumulative_data.get(day_num, 0)
+            
             cumulative_avg_5_years_value = avg_5_years_cumulative_data.get(
                 day_num, 0
             )

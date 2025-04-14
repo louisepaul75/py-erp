@@ -16,7 +16,7 @@ app_name = "sales_api"
 router = DefaultRouter()
 router.register(r"customers", CustomerViewSet, basename='customers')
 router.register(r"addresses", AddressViewSet)
-router.register(r"records", SalesRecordViewSet)
+router.register(r"records", SalesRecordViewSet, basename='salesrecord')
 router.register(r"record-items", SalesRecordItemViewSet)
 
 # URL patterns for the sales API
