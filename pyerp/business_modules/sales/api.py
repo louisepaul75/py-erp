@@ -53,21 +53,11 @@ class SalesRecordRelationshipViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         """Ensure queryset is evaluated per request, respecting transactions."""
         # This overrides the class attribute for actual data fetching
-        print("[DEBUG VIEWSET] get_queryset called")  # Add debug print
         qs = SalesRecordRelationship.objects.all()
-        # Add debug print
-        print(f"[DEBUG VIEWSET] get_queryset returning count: {qs.count()}")
         return qs
 
     # Explicitly define list to bypass mixin behavior
     def list(self, request, *args, **kwargs):
-        print("[DEBUG VIEWSET] list method called")
         queryset = self.get_queryset()
-        print(f"[DEBUG VIEWSET] list method queryset count: {queryset.count()}")
         serializer = self.get_serializer(queryset, many=True)
-        # Add debug for serializer data length
-        print(
-            f"[DEBUG VIEWSET] list method serializer data length: "
-            f"{len(serializer.data)}"
-        )
         return Response(serializer.data)
