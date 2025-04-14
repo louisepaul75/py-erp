@@ -11,6 +11,9 @@ import { DocumentTable } from "@/components/document/document-table"
 import { DocumentModals } from "@/components/document/document-modals"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { OrderCancelView } from "@/components/document/order-cancel-view"
+import { useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { instance } from "@/lib/api"
 
 /**
  * Props for the DocumentList component
@@ -26,9 +29,27 @@ interface DocumentListProps {
 export function DocumentList({ onDocumentSelect }: DocumentListProps) {
   // Fetch documents using TanStack Query
   const { data: documentsData, isLoading: isLoadingDocuments, isError: isErrorDocuments } = useDocuments()
-  // Fetch customers using TanStack Query
-  const { data: customersData, isLoading: isLoadingCustomers, isError: isErrorCustomers } = useCustomers()
   const { toast } = useToast()
+
+  // Extract unique customer IDs from the current documents
+  const customerIds = useMemo(() => {
+    if (!documentsData) return [];
+    return Array.from(new Set(documentsData.map(doc => doc.customer?.id).filter(Boolean)));
+  }, [documentsData]);
+
+  // Fetch only the relevant customers for the current documents page
+  const { data: customersData, isLoading: isLoadingCustomers, isError: isErrorCustomers } = useQuery({
+    queryKey: ["customers-by-ids", customerIds],
+    queryFn: async (): Promise<any[]> => {
+      if (customerIds.length === 0) return [];
+      const params = new URLSearchParams();
+      params.append("id__in", customerIds.join(","));
+      const response = await instance.get(`v1/sales/customers/?${params.toString()}`);
+      const data = (await response.json()) as { results?: any[] };
+      return data && Array.isArray(data.results) ? data.results : [];
+    },
+    enabled: customerIds.length > 0,
+  });
 
   // State for the selected document and modal visibility
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
@@ -149,43 +170,28 @@ export function DocumentList({ onDocumentSelect }: DocumentListProps) {
   const isLoading = isLoadingDocuments || isLoadingCustomers;
   const isError = isErrorDocuments || isErrorCustomers;
 
-  // Re-introduce the customer map for efficient lookup
+  // Build the customer map from the filtered results
   const customerMap = useMemo(() => {
-    let customersArray: any[] = [];
-    if (Array.isArray(customersData)) {
-      customersArray = customersData;
-    } else if (customersData?.results && Array.isArray(customersData.results)) {
-      customersArray = customersData.results;
-    }
-    return new Map(
-      customersArray.map((c) => [c.id?.toString?.(), c.name])
-    );
+    if (!Array.isArray(customersData)) return new Map();
+    return new Map(customersData.map((c: any) => [c.id?.toString?.(), c.name]));
   }, [customersData]);
 
   // Enrich documents with customer names once both data sets are loaded
   const enrichedDocuments = useMemo(() => {
-    console.log("[DocumentList] Enriching documents..."); // Log entry
-    console.log("[DocumentList] Customer Map:", customerMap); // Log the map
     if (!documentsData || !customersData) {
-       console.log("[DocumentList] Missing documentsData or customersData");
        return [];
     }
-
     return documentsData.map(doc => {
-      const customerIdStr = doc.customer?.id?.toString(); // Safely get ID as string
-      // Use the map for lookup
-      const foundName = customerIdStr ? customerMap.get(customerIdStr) : undefined; 
-      console.log(`[DocumentList] Doc ${doc.id}: Looking up Customer ID: ${customerIdStr}, Found Name: ${foundName}`); // Log lookup
-      
+      const customerIdStr = doc.customer?.id?.toString();
+      const foundName = customerIdStr ? customerMap.get(customerIdStr) : undefined;
       return {
         ...doc,
         customer: {
           id: doc.customer.id,
-          name: foundName || "Unknown Customer" // Get name from map
+          name: foundName || "Unknown Customer"
         }
       }
     });
-  // Remove customerMap from dependency array
   }, [documentsData, customersData]);
 
   // Loading state

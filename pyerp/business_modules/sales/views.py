@@ -36,7 +36,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
-    filterset_fields = ["customer_group", "delivery_block"]
+    filterset_fields = {
+        "id": ["exact", "in"],
+        "customer_group": ["exact"],
+        "delivery_block": ["exact"],
+    }
     search_fields = ["name", "customer_number", "email"]
     ordering_fields = ["name", "customer_number", "created_at"]
 

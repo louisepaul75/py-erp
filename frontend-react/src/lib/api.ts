@@ -261,10 +261,9 @@ export async function fetchCustomersAPI(): Promise<Customer[]> {
   const endpoint = `v1/sales/customers/` // Use relative path for the instance
   console.log(`Fetching customers from: ${endpoint}`);
   try {
-    // Use the configured ky instance which includes auth hooks
-    // The API returns a direct array of customers
-    const customers = await instance.get(endpoint).json<Customer[]>();
-    return customers || []; 
+    // The API returns a paginated object, so extract the results array
+    const response = await instance.get(endpoint).json<{ results: Customer[] }>();
+    return response.results || [];
   } catch (error) {
     console.error("Error fetching customers:", error);
     if (error instanceof HTTPError) {
