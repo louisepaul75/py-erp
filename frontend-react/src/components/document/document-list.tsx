@@ -173,22 +173,24 @@ export function DocumentList({ onDocumentSelect }: DocumentListProps) {
   // Build the customer map from the filtered results
   const customerMap = useMemo(() => {
     if (!Array.isArray(customersData)) return new Map();
-    return new Map(customersData.map((c: any) => [c.id?.toString?.(), c.name]));
+    // Map customer ID to the full customer object (not just name)
+    return new Map(customersData.map((c: any) => [c.id?.toString?.(), c]));
   }, [customersData]);
 
-  // Enrich documents with customer names once both data sets are loaded
+  // Enrich documents with customer names and numbers once both data sets are loaded
   const enrichedDocuments = useMemo(() => {
     if (!documentsData || !customersData) {
        return [];
     }
     return documentsData.map(doc => {
       const customerIdStr = doc.customer?.id?.toString();
-      const foundName = customerIdStr ? customerMap.get(customerIdStr) : undefined;
+      const foundCustomer = customerIdStr ? customerMap.get(customerIdStr) : undefined;
       return {
         ...doc,
         customer: {
           id: doc.customer.id,
-          name: foundName || "Unknown Customer"
+          name: foundCustomer?.name || "Unknown Customer",
+          customer_number: foundCustomer?.customer_number || "-"
         }
       }
     });

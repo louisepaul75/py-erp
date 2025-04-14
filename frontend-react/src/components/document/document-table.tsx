@@ -86,6 +86,7 @@ export function DocumentTable({
         <TableRow>
           <TableHead>Number</TableHead>
           <TableHead>Type</TableHead>
+          <TableHead>Customer Number</TableHead>
           <TableHead>Customer</TableHead>
           <TableHead>Date</TableHead>
           <TableHead>Status</TableHead>
@@ -106,6 +107,7 @@ export function DocumentTable({
               <TableCell>
                 <Badge className={getTypeColor(document.type)}>{document.type}</Badge>
               </TableCell>
+              <TableCell>{document.customer.customer_number}</TableCell>
               <TableCell>{document.customer.name}</TableCell>
               <TableCell>{formatDate(document.date)}</TableCell>
               <TableCell>
