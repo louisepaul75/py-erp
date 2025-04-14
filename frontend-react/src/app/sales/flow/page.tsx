@@ -24,7 +24,7 @@ export default function SalesFlowPage() {
 
   return (
     // Consider using a standard PageWrapper or Layout component if available in the main app
-    <div className="container mx-auto px-4 py-6"> 
+    <div className="container mx-auto px-4 py-6 h-full overflow-auto"> 
       {/* Use a standardized header component if available */}
       <DocumentHeader /> 
 
