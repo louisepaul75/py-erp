@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { generateMockHistoryEntries } from "@/lib/mock-history-data"
+import { generateMockHistoryEntries } from "@/lib/mock-data/mock-document-history-data"
 
 /**
  * Custom hook for fetching document history

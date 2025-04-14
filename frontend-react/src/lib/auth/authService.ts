@@ -7,7 +7,7 @@ import { clientCookieStorage } from './clientCookies';
 // API-Instanz ohne Auth für Token-Endpunkte
 const authApi = ky.create({
   prefixUrl: API_URL,
-  timeout: 15000,
+  timeout: 35000,
   credentials: 'include',  // Include cookies in requests
   hooks: {
     beforeRequest: [

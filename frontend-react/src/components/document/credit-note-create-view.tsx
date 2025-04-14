@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { useDocuments } from "@/hooks/use-documents"
-import { useCreateDocument } from "@/hooks/use-documents"
+import { useDocuments, useCreateDocument } from "@/hooks/document/use-documents"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -56,7 +55,7 @@ export function CreditNoteCreateView({ onClose, sourceDocumentId }: CreditNoteCr
   // Initialize items when source document changes
   useEffect(() => {
     if (sourceDocument) {
-      const initialItems: SelectedItem[] = sourceDocument.items.map((item) => ({
+      const initialItems: SelectedItem[] = sourceDocument.items.map((item: DocumentItem) => ({
         ...item,
         selected: false,
         creditQuantity: item.quantity, // Default to full quantity
@@ -135,7 +134,10 @@ export function CreditNoteCreateView({ onClose, sourceDocumentId }: CreditNoteCr
         {
           type: "CREDIT",
           number: creditNoteNumber,
-          customerId: sourceDocument.customer.id,
+          customer: {
+            id: sourceDocument.customer.id,
+            name: sourceDocument.customer.name
+          },
           date: creditNoteDate,
           status: creditNoteStatus,
           notes:
