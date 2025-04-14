@@ -298,7 +298,7 @@ export default function UIComponentsPage() {
 
   return (
     // Use the Container component for consistent padding
-    <Container className="py-12"> 
+    <Container className="py-12 h-full overflow-auto"> 
       <ToastProvider>
         <div className="max-w-7xl mx-auto"> {/* Increased max-width for more space */}
         <h1 className="text-3xl font-bold mb-2 text-primary">UI Components / Style Guide</h1>

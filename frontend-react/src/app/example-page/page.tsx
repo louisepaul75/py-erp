@@ -55,7 +55,7 @@ export default function ExamplePage() {
   const categories = Array.from(new Set(SAMPLE_DATA.map(item => item.category)));
 
   return (
-    <div className="container mx-auto py-20 px-4 md:px-6">
+    <div className="container mx-auto py-20 px-4 md:px-6 h-full overflow-auto">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>

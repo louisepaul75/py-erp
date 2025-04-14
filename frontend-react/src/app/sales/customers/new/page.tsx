@@ -85,7 +85,7 @@ export default function NewCustomerPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto px-4 py-8 space-y-6 h-full overflow-auto">
       {/* Header */}
       <div className="flex items-center gap-4">
          <Button variant="outline" size="icon" asChild>

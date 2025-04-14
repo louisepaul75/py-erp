@@ -72,7 +72,7 @@ export default function NotificationsPage() {
   const unreadNotificationsForTab = notificationList.filter((n: Notification) => !n.is_read);
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
+    <div className="container mx-auto px-4 py-8 space-y-8 h-full overflow-auto">
       {/* Notifications Card with New Message Button */}
       <Card>
         <CardHeader>

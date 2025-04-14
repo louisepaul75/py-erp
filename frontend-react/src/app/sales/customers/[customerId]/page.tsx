@@ -190,7 +190,7 @@ export default function CustomerDetailPage() {
   const initials = getInitials(customer.firstName, customer.lastName, customer.companyName, customer.isCompany);
 
   return (
-    <div className="container mx-auto px-4 py-8 flex flex-col gap-6">
+    <div className="container mx-auto px-4 py-8 flex flex-col gap-6 h-full overflow-auto">
       {/* Header with navigation and actions */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         {/* Left side: Avatar, Name, Since */}

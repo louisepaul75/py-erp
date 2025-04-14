@@ -1,0 +1,1642 @@
+Running all tests...
+Running: ./scripts/run_tests.sh all    
+-------------------------------------
+Currently in project root: /Users/sami/Documents/vscode/vue/Erp/pyerp
+Running tests with options:
+  Test group: all
+  Coverage: true
+  Mutation testing: false
+  Fuzz testing: false
+  Verbosity: 1
+Running all tests
+Currently in project root: /Users/sami/Documents/vscode/vue/Erp/pyerp
+Running tests with options:
+  Test group: ui
+  Coverage: true
+  Mutation testing: false
+  Fuzz testing: false
+  Verbosity: 1
+Running UI tests with Jest
+Running Jest tests with options:  --coverage
+
+> frontend-react@1.0.0 test
+> jest --coverage --runInBand
+
+(node:48435) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASS src/__tests__/components/ui/Products.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      89 |         <MemoryRouterProvider>
+      90 |           <LastVisitedProvider>
+    > 91 |             <InventoryManagement />
+         |             ^
+      92 |           </LastVisitedProvider>
+      93 |         </MemoryRouterProvider>
+      94 |       </React.StrictMode>
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Products.test.tsx:91:13)
+
+    console.log
+      filteredProducts in ProductList []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:67:11)
+
+    console.log
+      totalItems in ProductList 0
+
+      at log (src/components/inventoryManagement/ProductList.tsx:68:11)
+
+    console.log
+      Legacy SKU values: []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:70:11)
+
+    console.log
+      filteredProducts in ProductList []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:67:11)
+
+    console.log
+      totalItems in ProductList 0
+
+      at log (src/components/inventoryManagement/ProductList.tsx:68:11)
+
+    console.log
+      Legacy SKU values: []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:70:11)
+
+    console.log
+      SkinnyTable received data: []
+
+      at log (src/components/ui/skinny-table.tsx:51:13)
+
+    console.log
+      Skipping detail load: {
+        isListLoading: false,
+        selectedItem: null,
+        isCreatingParent: false,
+        aborted: false
+      }
+
+      at log (src/components/ui/products.tsx:228:17)
+
+    console.log
+      Cleaning up detail effect for: null
+
+      at log (src/components/ui/products.tsx:277:15)
+
+    console.log
+      SkinnyTable received data: []
+
+      at log (src/components/ui/skinny-table.tsx:51:13)
+
+    console.log
+      Skipping detail load: {
+        isListLoading: false,
+        selectedItem: null,
+        isCreatingParent: false,
+        aborted: false
+      }
+
+      at log (src/components/ui/products.tsx:228:17)
+
+    console.log
+      filteredProducts in ProductList []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:67:11)
+
+    console.log
+      totalItems in ProductList 0
+
+      at log (src/components/inventoryManagement/ProductList.tsx:68:11)
+
+    console.log
+      Legacy SKU values: []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:70:11)
+
+    console.log
+      filteredProducts in ProductList []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:67:11)
+
+    console.log
+      totalItems in ProductList 0
+
+      at log (src/components/inventoryManagement/ProductList.tsx:68:11)
+
+    console.log
+      Legacy SKU values: []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:70:11)
+
+    console.log
+      Cleaning up detail effect for: null
+
+      at log (src/components/ui/products.tsx:277:15)
+
+    console.log
+      Skipping detail load: {
+        isListLoading: true,
+        selectedItem: null,
+        isCreatingParent: false,
+        aborted: false
+      }
+
+      at log (src/components/ui/products.tsx:228:17)
+
+    console.log
+      filteredProducts in ProductList []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:67:11)
+
+    console.log
+      totalItems in ProductList 0
+
+      at log (src/components/inventoryManagement/ProductList.tsx:68:11)
+
+    console.log
+      Legacy SKU values: []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:70:11)
+
+    console.log
+      filteredProducts in ProductList []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:67:11)
+
+    console.log
+      totalItems in ProductList 0
+
+      at log (src/components/inventoryManagement/ProductList.tsx:68:11)
+
+    console.log
+      Legacy SKU values: []
+
+      at log (src/components/inventoryManagement/ProductList.tsx:70:11)
+
+    console.log
+      Cleaning up detail effect for: null
+
+      at log (src/components/ui/products.tsx:277:15)
+
+    console.log
+      Skipping detail load: {
+        isListLoading: true,
+        selectedItem: null,
+        isCreatingParent: false,
+        aborted: false
+      }
+
+      at log (src/components/ui/products.tsx:228:17)
+
+    console.log
+      Cleaning up detail effect for: null
+
+      at log (src/components/ui/products.tsx:277:15)
+          at Array.forEach (<anonymous>)
+
+PASS src/__tests__/components/MobileMenu.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      29 |     });
+      30 |
+    > 31 |     const { container } = render(<MobileMenu items={mockItems} />);
+         |                                  ^
+      32 |     expect(container.firstChild).toBeNull();
+      33 |   });
+      34 |
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/MobileMenu.test.tsx:31:34)
+
+PASS src/__tests__/components/ui/Badge.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       5 | describe('Badge component', () => {
+       6 |   it('renders correctly with default props', () => {
+    >  7 |     render(<Badge>Test Badge</Badge>);
+         |            ^
+       8 |     const badge = screen.getByText('Test Badge');
+       9 |     
+      10 |     expect(badge).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Badge.test.tsx:7:12)
+
+PASS src/__tests__/utils/formatters.fuzz.test.ts
+PASS src/__tests__/components/VariantenTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      29 | describe('VariantenTab', () => {
+      30 |   it('renders correctly with default props', () => {
+    > 31 |     render(<VariantenTab />);
+         |            ^
+      32 |     
+      33 |     // Check if the main heading is rendered
+      34 |     expect(screen.getByText('Varianten')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/VariantenTab.test.tsx:31:12)
+
+PASS src/__tests__/components/ui/ArticlePage.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      51 |
+      52 |   test('renders the component with initial state', async () => {
+    > 53 |     render(<InventoryManagement />);
+         |            ^
+      54 |     
+      55 |     // Check that the component renders with the expected initial state
+      56 |     expect(screen.getByText('Produkte')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/ArticlePage.test.tsx:53:12)
+
+PASS src/__tests__/components/Footer.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      115 |
+      116 |   it('renders footer with healthy status and correct version', async () => {
+    > 117 |     render(<Footer />); 
+          |            ^
+      118 |
+      119 |     // Advance timers minimally to allow initial useEffect fetches and state updates
+      120 |     act(() => {
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Footer.test.tsx:117:12)
+
+    console.log
+      Fetching monitoring status from: http://test.com/api/api/v1/monitoring/health-checks/
+
+      at log (src/components/Footer.tsx:105:19)
+
+    console.log
+      Fetching monitoring status from: http://test.com/api/api/v1/monitoring/health-checks/
+
+      at log (src/components/Footer.tsx:105:19)
+
+    console.log
+      Fetching monitoring status from: http://test.com/api/api/v1/monitoring/health-checks/
+
+      at log (src/components/Footer.tsx:105:19)
+
+    console.log
+      Fetching monitoring status from: http://test.com/api/api/v1/monitoring/health-checks/
+
+      at log (src/components/Footer.tsx:105:19)
+
+    console.log
+      Fetching monitoring status from: http://test.com/api/api/v1/monitoring/health-checks/
+
+      at log (src/components/Footer.tsx:105:19)
+
+PASS src/__tests__/components/ui/Sheet.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      46 |     render(
+      47 |       <Sheet>
+    > 48 |         <SheetTrigger data-testid="sheet-trigger">Open Sheet</SheetTrigger>
+         |         ^
+      49 |         <SheetContent data-testid="sheet-content">
+      50 |           <div>Sheet Content</div>
+      51 |         </SheetContent>
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Sheet.test.tsx:48:9)
+
+PASS src/__tests__/components/LagerorteTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      13 | describe('LagerorteTab Component', () => {
+      14 |   it('renders the component with correct heading', () => {
+    > 15 |     render(<LagerorteTab />);
+         |            ^
+      16 |     
+      17 |     expect(screen.getAllByText('Lagerorte').length).toBeGreaterThanOrEqual(1);
+      18 |   });
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/LagerorteTab.test.tsx:15:12)
+
+PASS src/__tests__/components/ui/Table.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      18 |           <tbody>
+      19 |             <tr>
+    > 20 |               <td>Test Content</td>
+         |               ^
+      21 |             </tr>
+      22 |           </tbody>
+      23 |         </Table>
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Table.test.tsx:20:15)
+
+PASS src/__tests__/components/ui/Label.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      15 | describe('Label Component', () => {
+      16 |   it('renders correctly with default props', () => {
+    > 17 |     render(<Label htmlFor="test-input">Test Label</Label>);
+         |            ^
+      18 |     
+      19 |     const label = screen.getByText('Test Label');
+      20 |     expect(label).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Label.test.tsx:17:12)
+
+PASS src/__tests__/components/ui/Tabs.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       8 |       <Tabs defaultValue="tab1">
+       9 |         <TabsList>
+    > 10 |           <TabsTrigger value="tab1">Tab 1</TabsTrigger>
+         |           ^
+      11 |           <TabsTrigger value="tab2">Tab 2</TabsTrigger>
+      12 |         </TabsList>
+      13 |         <TabsContent value="tab1">Tab 1 Content</TabsContent>
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Tabs.test.tsx:10:11)
+
+PASS src/__tests__/components/ui/Card.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       9 |       render(
+      10 |         <Card>
+    > 11 |           <div data-testid="child">Test Content</div>
+         |           ^
+      12 |         </Card>
+      13 |       );
+      14 |       expect(screen.getByTestId('child')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Card.test.tsx:11:11)
+
+PASS src/__tests__/components/AdminRoute.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      39 |     render(
+      40 |       <AdminRoute>
+    > 41 |         <div data-testid="admin-content">Admin Content</div>
+         |         ^
+      42 |       </AdminRoute>
+      43 |     );
+      44 |
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/AdminRoute.test.tsx:41:9)
+
+PASS src/__tests__/components/ui/DashboardWidget.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      61 |         isEditMode={false}
+      62 |       >
+    > 63 |         <div>Widget Content</div>
+         |         ^
+      64 |       </DashboardWidget>
+      65 |     );
+      66 |
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/DashboardWidget.test.tsx:63:9)
+
+PASS src/__tests__/hooks/useGlobalSearch.test.tsx
+PASS src/__tests__/utils/test-utils.test.ts
+PASS src/__tests__/components/BewegungenTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      14 | describe('BewegungenTab Component', () => {
+      15 |   beforeEach(() => {
+    > 16 |     render(<BewegungenTab />);
+         |            ^
+      17 |   });
+      18 |
+      19 |   test('renders the search input', () => {
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/BewegungenTab.test.tsx:16:12)
+
+PASS src/__tests__/utils/basic-fuzz.test.ts
+PASS src/__tests__/scripts/export-dashboard-layout.test.js
+PASS src/__tests__/components/ui/LoadingSpinner.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       5 | describe('LoadingSpinner Component', () => {
+       6 |   it('renders without crashing', () => {
+    >  7 |     render(<LoadingSpinner data-testid="spinner" />);
+         |            ^
+       8 |     
+       9 |     const spinner = screen.getByTestId('spinner');
+      10 |     expect(spinner).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/LoadingSpinner.test.tsx:7:12)
+
+PASS src/__tests__/components/ui/common/Button.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      43 | describe('Button Component', () => {
+      44 |   it('renders correctly with default props', () => {
+    > 45 |     render(<Button>Click me</Button>);
+         |            ^
+      46 |     
+      47 |     const button = screen.getByText('Click me');
+      48 |     expect(button).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/common/Button.test.tsx:45:12)
+
+PASS src/__tests__/utils/responsive.test.ts
+PASS src/__tests__/utils/generator-fuzz.test.ts
+PASS src/__tests__/hooks/useLanguage.test.tsx
+PASS src/__tests__/components/ui/Input.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       7 | describe('Input Component', () => {
+       8 |   it('renders basic input correctly', () => {
+    >  9 |     render(<Input placeholder="Enter text" />);
+         |            ^
+      10 |     const input = screen.getByPlaceholderText('Enter text');
+      11 |     expect(input).toBeInTheDocument();
+      12 |   });
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Input.test.tsx:9:12)
+
+PASS src/__tests__/hooks/useIsMobile.test.tsx
+PASS src/__tests__/utils/fuzz-utils.test.ts
+PASS src/__tests__/components/ui/Skeleton.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       5 | describe('Skeleton Component', () => {
+       6 |   it('renders without crashing', () => {
+    >  7 |     render(<Skeleton data-testid="skeleton" />);
+         |            ^
+       8 |     
+       9 |     const skeleton = screen.getByTestId('skeleton');
+      10 |     expect(skeleton).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Skeleton.test.tsx:7:12)
+
+PASS src/__tests__/middleware.test.ts
+PASS src/__tests__/utils/business-property-test.test.ts
+PASS src/__tests__/components/ui/Button.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      38 | describe('Button Component', () => {
+      39 |   it('renders correctly with default props', () => {
+    > 40 |     render(<Button>Click me</Button>);
+         |            ^
+      41 |     
+      42 |     const button = screen.getByRole('button', { name: 'Click me' });
+      43 |     expect(button).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Button.test.tsx:40:12)
+
+PASS src/__tests__/utils/simple-fuzz-example.test.ts
+PASS src/__tests__/components/ui/Separator.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       5 | describe('Separator component', () => {
+       6 |   it('renders horizontal separator by default', () => {
+    >  7 |     render(<Separator data-testid="separator" />);
+         |            ^
+       8 |     const separator = screen.getByTestId('separator');
+       9 |     
+      10 |     expect(separator).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Separator.test.tsx:7:12)
+
+PASS src/__tests__/components/MutterTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      11 | describe('MutterTab Component', () => {
+      12 |   beforeEach(() => {
+    > 13 |     render(<MutterTab />);
+         |            ^
+      14 |   });
+      15 |
+      16 |   test('renders input fields with correct default values', () => {
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/MutterTab.test.tsx:13:12)
+
+PASS src/__tests__/components/ui/SearchResultsDropdown.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      62 |   it('renders loading state correctly', () => {
+      63 |     render(
+    > 64 |       <SearchResultsDropdown
+         |       ^
+      65 |         results={[]}
+      66 |         isLoading={true}
+      67 |         open={true}
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/SearchResultsDropdown.test.tsx:64:7)
+
+PASS src/__tests__/components/ConnectionStatusAnimation.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      52 |   it('renders without crashing', () => {
+      53 |     const { container } = render(
+    > 54 |       <ConnectionStatusAnimation status="healthy" />
+         |       ^
+      55 |     );
+      56 |     expect(container.querySelector('canvas')).toBeInTheDocument();
+      57 |   });
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ConnectionStatusAnimation.test.tsx:54:7)
+
+PASS src/__tests__/components/UmsatzeTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      15 | describe('UmsatzeTab Component', () => {
+      16 |   beforeEach(() => {
+    > 17 |     render(<UmsatzeTab />);
+         |            ^
+      18 |   });
+      19 |
+      20 |   test('renders overview cards with correct titles', () => {
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/UmsatzeTab.test.tsx:17:12)
+
+PASS src/__tests__/components/TouchFeedback.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       7 |     render(
+       8 |       <TouchFeedback>
+    >  9 |         <div data-testid="child">Test Content</div>
+         |         ^
+      10 |       </TouchFeedback>
+      11 |     );
+      12 |     
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/TouchFeedback.test.tsx:9:9)
+
+PASS src/__tests__/components/BilderTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      14 | describe('BilderTab Component', () => {
+      15 |   it('renders the component with correct title', () => {
+    > 16 |     render(<BilderTab />);
+         |            ^
+      17 |     
+      18 |     // Check if the title is rendered
+      19 |     expect(screen.getByText('Bilder')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/BilderTab.test.tsx:16:12)
+
+PASS src/__tests__/components/DetailsTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      4 | describe('DetailsTab Component', () => {
+      5 |   it('renders the component with correct heading and instruction text', () => {
+    > 6 |     render(<DetailsTab />);
+        |            ^
+      7 |     
+      8 |     // Check if the heading is rendered
+      9 |     expect(screen.getByText('Produktdetails')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/DetailsTab.test.tsx:6:12)
+
+PASS src/__tests__/components/ui/Dashboard.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      107 | describe('Dashboard Component', () => {
+      108 |   it('renders without crashing', () => {
+    > 109 |     render(<Dashboard />);
+          |            ^
+      110 |     expect(screen.getByTestId('dashboard-mock')).toBeInTheDocument();
+      111 |   });
+      112 | }); 
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Dashboard.test.tsx:109:12)
+
+PASS src/__tests__/components/Switch.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      25 | describe('Switch', () => {
+      26 |   it('renders correctly', () => {
+    > 27 |     render(<Switch />);
+         |            ^
+      28 |     
+      29 |     // Check if the switch is rendered
+      30 |     const switchElement = screen.getByRole('switch');
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Switch.test.tsx:27:12)
+
+PASS src/__tests__/components/Layout.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      22 |     render(
+      23 |       <Layout>
+    > 24 |         <div>Content</div>
+         |         ^
+      25 |       </Layout>
+      26 |     );
+      27 |
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Layout.test.tsx:24:9)
+
+PASS src/__tests__/components/Label.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      10 | describe('Label', () => {
+      11 |   it('renders correctly', () => {
+    > 12 |     render(<Label>Test Label</Label>);
+         |            ^
+      13 |     expect(screen.getByText('Test Label')).toBeInTheDocument();
+      14 |   });
+      15 |
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Label.test.tsx:12:12)
+
+PASS src/__tests__/components/ui/Sidebar.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      83 |       <SidebarProvider defaultOpen={true}>
+      84 |         <Sidebar data-testid="sidebar">
+    > 85 |           <SidebarHeader>Header</SidebarHeader>
+         |           ^
+      86 |           <SidebarContent>Content</SidebarContent>
+      87 |           <SidebarFooter>Footer</SidebarFooter>
+      88 |         </Sidebar>
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Sidebar.test.tsx:85:11)
+
+PASS src/__tests__/components/ResponsiveCard.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      34 |
+      35 |   it('renders title correctly', () => {
+    > 36 |     render(<ResponsiveCard title="Test Card" />);
+         |            ^
+      37 |     expect(screen.getByText('Test Card')).toBeInTheDocument();
+      38 |   });
+      39 |
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ResponsiveCard.test.tsx:36:12)
+
+PASS src/__tests__/components/NotFound.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       5 | describe('NotFound', () => {
+       6 |   it('renders the 404 message', () => {
+    >  7 |     render(<NotFound />);
+         |            ^
+       8 |     
+       9 |     // Check for the main elements
+      10 |     expect(screen.getByText('404')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/NotFound.test.tsx:7:12)
+
+PASS src/__tests__/components/Navbar.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      159 |
+      160 |   it('renders the logo', () => {
+    > 161 |     render(<Navbar />);
+          |            ^
+      162 |     const logo = screen.getByAltText('Wilhelm Schweizer Zinnmanufaktur');
+      163 |     expect(logo).toBeInTheDocument();
+      164 |   });
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Navbar.test.tsx:161:12)
+
+PASS src/__tests__/components/ui/Tooltip.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      23 |       <TooltipProvider>
+      24 |         <Tooltip>
+    > 25 |           <TooltipTrigger data-testid="tooltip-trigger">Hover me</TooltipTrigger>
+         |           ^
+      26 |           <TooltipContent>Tooltip content</TooltipContent>
+      27 |         </Tooltip>
+      28 |       </TooltipProvider>
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Tooltip.test.tsx:25:11)
+
+PASS src/__tests__/components/GewogenTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      12 | describe('GewogenTab Component', () => {
+      13 |   it('renders the component with correct card titles', () => {
+    > 14 |     render(<GewogenTab />);
+         |            ^
+      15 |     
+      16 |     // Check if the card titles are rendered
+      17 |     expect(screen.getByText('Gewicht')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/GewogenTab.test.tsx:14:12)
+
+PASS src/__tests__/components/Page.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      18 |
+      19 |   it('should render the Dashboard component', () => {
+    > 20 |     const { getByTestId } = render(<Home />);
+         |                                    ^
+      21 |     expect(getByTestId('dashboard')).toBeInTheDocument();
+      22 |   });
+      23 | }); 
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Page.test.tsx:20:36)
+
+PASS src/__tests__/components/Button.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       6 | describe('Button Component', () => {
+       7 |   it('renders correctly with default props', () => {
+    >  8 |     render(<Button>Click me</Button>);
+         |            ^
+       9 |     
+      10 |     const button = screen.getByRole('button', { name: /click me/i });
+      11 |     expect(button).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Button.test.tsx:8:12)
+
+PASS src/__tests__/components/ui/Switch.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      12 | describe('Switch Component', () => {
+      13 |   it('renders correctly with default props', () => {
+    > 14 |     render(<Switch data-testid="test-switch" />);
+         |            ^
+      15 |     
+      16 |     const switchElement = screen.getByTestId('test-switch');
+      17 |     expect(switchElement).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/Switch.test.tsx:14:12)
+
+PASS src/__tests__/components/LoadingSpinner.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       6 | describe('LoadingSpinner Component', () => {
+       7 |   it('renders with default (medium) size', () => {
+    >  8 |     const { container } = render(<LoadingSpinner />);
+         |                                  ^
+       9 |     
+      10 |     const spinnerElement = container.querySelector('.animate-spin');
+      11 |     expect(spinnerElement).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/LoadingSpinner.test.tsx:8:34)
+
+PASS src/__tests__/components/Loading.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+       5 | describe('Loading', () => {
+       6 |   it('renders without crashing and returns null', () => {
+    >  7 |     const { container } = render(<Loading />);
+         |                                  ^
+       8 |     
+       9 |     // The component returns null, so the container should be empty
+      10 |     expect(container.firstChild).toBeNull();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/Loading.test.tsx:7:34)
+
+PASS src/__tests__/components/ProtectedRoute.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      34 |         <MemoryRouterProvider>
+      35 |           <ProtectedRoute>
+    > 36 |             <div data-testid="child-component">Protected Content</div>
+         |             ^
+      37 |           </ProtectedRoute>
+      38 |         </MemoryRouterProvider>
+      39 |       </React.StrictMode>
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ProtectedRoute.test.tsx:36:13)
+
+PASS src/__tests__/components/ui/DashboardLayout.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      117 |     
+      118 |     render(
+    > 119 |       <DashboardContent
+          |       ^
+      120 |         isEditMode={false}
+      121 |         width={1200}
+      122 |         layouts={mockLayouts}
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/ui/DashboardLayout.test.tsx:119:7)
+
+PASS src/__tests__/components/LogoutButton.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      25 |
+      26 |   it('renders correctly with default state', () => {
+    > 27 |     render(<LogoutButton />);
+         |            ^
+      28 |     
+      29 |     const button = screen.getByRole('button', { name: /abmelden/i });
+      30 |     expect(button).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/LogoutButton.test.tsx:27:12)
+
+PASS src/__tests__/components/TeileTab.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      14 | describe('TeileTab Component', () => {
+      15 |   it('renders the component with correct headings', () => {
+    > 16 |     render(<TeileTab />);
+         |            ^
+      17 |     
+      18 |     // Check if the headings are rendered
+      19 |     // Using getAllByText as there are multiple elements with the same text
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/TeileTab.test.tsx:16:12)
+
+PASS src/__tests__/pages/warehouse.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      138 |     (global.fetch as jest.Mock).mockImplementation(() => new Promise(() => {}));
+      139 |
+    > 140 |     render(<WarehousePage />);
+          |            ^
+      141 |     
+      142 |     // Loading state should be visible immediately
+      143 |     expect(screen.getByTestId('loading-state')).toBeInTheDocument();
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/pages/warehouse.test.tsx:140:12)
+
+PASS src/__tests__/components/LanguageSelector.test.tsx
+  ● Console
+
+    console.warn
+      Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform
+
+      32 |
+      33 |   it('renders correctly with default language', () => {
+    > 34 |     render(<LanguageSelector />);
+         |            ^
+      35 |     
+      36 |     // Check if the component renders with English as default (as per our mock)
+      37 |     const textElement = screen.getByText(/English/i);
+
+      at Object.<anonymous>.process.env.NODE_ENV.exports.createElement (node_modules/react/cjs/react.development.js:991:19)
+      at Object.__jsx (src/__tests__/components/LanguageSelector.test.tsx:34:12)
+
+--------------------------------------------------|---------|----------|---------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------
+File                                              | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                                                                                                                             
+--------------------------------------------------|---------|----------|---------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------
+All files                                         |   12.63 |    47.41 |   25.64 |   12.63 |                                                                                                                                                               
+ src                                              |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  middleware.ts                                   |     100 |      100 |     100 |     100 |                                                                                                                                                               
+ src/__tests__/utils                              |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  test-helpers.tsx                                |       0 |        0 |       0 |       0 | 1-179                                                                                                                                                         
+  test-utils.tsx                                  |       0 |        0 |       0 |       0 | 1-27                                                                                                                                                          
+ src/app                                          |    2.39 |       50 |      50 |    2.39 |                                                                                                                                                               
+  article-page.tsx                                |       0 |        0 |       0 |       0 | 1-856                                                                                                                                                         
+  layout.tsx                                      |       0 |        0 |       0 |       0 | 1-64                                                                                                                                                          
+  loading.tsx                                     |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  not-found.tsx                                   |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  page.tsx                                        |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  providers.tsx                                   |       0 |        0 |       0 |       0 | 1-57                                                                                                                                                          
+ src/app/api/auth/cookies                         |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  route.ts                                        |       0 |        0 |       0 |       0 | 1-18                                                                                                                                                          
+ src/app/container-management                     |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-9                                                                                                                                                           
+ src/app/dashboard                                |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-12                                                                                                                                                          
+ src/app/example-page                             |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-186                                                                                                                                                         
+ src/app/health-status                            |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-399                                                                                                                                                         
+ src/app/history                                  |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-299                                                                                                                                                         
+ src/app/login                                    |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-83                                                                                                                                                          
+ src/app/mold-management                          |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-13                                                                                                                                                          
+ src/app/picklist                                 |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-14                                                                                                                                                          
+ src/app/production                               |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-18                                                                                                                                                          
+ src/app/products                                 |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-5                                                                                                                                                           
+ src/app/products/parent/[id]                     |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-12                                                                                                                                                          
+ src/app/products/parent/create                   |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-42                                                                                                                                                          
+ src/app/products/variant/[id]                    |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-12                                                                                                                                                          
+ src/app/products/variant/create                  |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-125                                                                                                                                                         
+ src/app/profile                                  |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-35                                                                                                                                                          
+ src/app/sales                                    |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-18                                                                                                                                                          
+ src/app/settings                                 |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-950                                                                                                                                                         
+ src/app/settings/currencies                      |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  currency-form.tsx                               |       0 |        0 |       0 |       0 | 1-246                                                                                                                                                         
+  currency-history-chart.tsx                      |       0 |        0 |       0 |       0 | 1-230                                                                                                                                                         
+  currency-list.tsx                               |       0 |        0 |       0 |       0 | 1-214                                                                                                                                                         
+  currency-provider.tsx                           |       0 |        0 |       0 |       0 | 1-46                                                                                                                                                          
+  delete-currency-dialog.tsx                      |       0 |        0 |       0 |       0 | 1-75                                                                                                                                                          
+ src/app/settings/system                          |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  IntegrationDashboard.tsx                        |       0 |        0 |       0 |       0 | 1-77                                                                                                                                                          
+  IntegrationGroup.tsx                            |       0 |        0 |       0 |       0 | 1-303                                                                                                                                                         
+  api-endpoints-list.tsx                          |       0 |        0 |       0 |       0 | 1-166                                                                                                                                                         
+  automations-list.tsx                            |       0 |        0 |       0 |       0 | 1-271                                                                                                                                                         
+  changes-modal.tsx                               |       0 |        0 |       0 |       0 | 1-240                                                                                                                                                         
+  logs-drawer.tsx                                 |       0 |        0 |       0 |       0 | 1-270                                                                                                                                                         
+  schedule-modal.tsx                              |       0 |        0 |       0 |       0 | 1-193                                                                                                                                                         
+ src/app/test-search                              |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-98                                                                                                                                                          
+ src/app/ui-components                            |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-1341                                                                                                                                                        
+ src/app/users                                    |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-38                                                                                                                                                          
+  preview.tsx                                     |       0 |        0 |       0 |       0 | 1-12                                                                                                                                                          
+ src/app/warehouse                                |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  page.tsx                                        |     100 |      100 |     100 |     100 |                                                                                                                                                               
+ src/app/warehouse-movement                       |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  page.tsx                                        |       0 |        0 |       0 |       0 | 1-89                                                                                                                                                          
+ src/components                                   |   19.91 |    63.04 |   37.66 |   19.91 |                                                                                                                                                               
+  ConnectionStatusAnimation.tsx                   |   95.96 |    52.63 |     100 |   95.96 | 81-85                                                                                                                                                         
+  Footer.test.tsx                                 |       0 |        0 |       0 |       0 | 1-99                                                                                                                                                          
+  Footer.tsx                                      |   68.93 |       68 |   83.33 |   68.93 | 58-59,73-89,112-125,134-136,138-140,142-144,146-147,184-187,189-192,203-204,240-242,244-246,248-249,251-257,319-363                                           
+  LanguageSelector.tsx                            |     100 |     87.5 |     100 |     100 | 30                                                                                                                                                            
+  Layout.tsx                                      |       0 |        0 |       0 |       0 | 1-21                                                                                                                                                          
+  MobileMenu.tsx                                  |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  Navbar.tsx                                      |   93.88 |    71.42 |   33.33 |   93.88 | 55-68,82-86,96,131,273                                                                                                                                        
+  ResponsiveCard.tsx                              |     100 |    81.25 |     100 |     100 | 36,57,65                                                                                                                                                      
+  SimpleGlobalSearch.tsx                          |       0 |        0 |       0 |       0 | 1-37                                                                                                                                                          
+  TouchFeedback.tsx                               |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  activity-log-dialog.tsx                         |       0 |        0 |       0 |       0 | 1-239                                                                                                                                                         
+  bewegungen-tab.tsx                              |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  bilder-tab.tsx                                  |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  confirmation-dialog.tsx                         |       0 |        0 |       0 |       0 | 1-59                                                                                                                                                          
+  container-detail-dialog copy 2.tsx              |       0 |        0 |       0 |       0 | 1-363                                                                                                                                                         
+  container-detail-dialog copy.tsx                |       0 |        0 |       0 |       0 | 1-365                                                                                                                                                         
+  container-detail-dialog.tsx                     |       0 |        0 |       0 |       0 | 1-365                                                                                                                                                         
+  container-management.tsx                        |       0 |        0 |       0 |       0 | 1-514                                                                                                                                                         
+  container-selection-dialog.tsx                  |       0 |        0 |       0 |       0 | 1-302                                                                                                                                                         
+  create-container-dialog.tsx                     |       0 |        0 |       0 |       0 | 1-195                                                                                                                                                         
+  delete-confirm-dialog.tsx                       |       0 |        0 |       0 |       0 | 1-70                                                                                                                                                          
+  delete-container-dialog.tsx                     |       0 |        0 |       0 |       0 | 1-49                                                                                                                                                          
+  details-tab.tsx                                 |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  edit-container-dialog.tsx                       |       0 |        0 |       0 |       0 | 1-188                                                                                                                                                         
+  gewogen-tab.tsx                                 |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  lagerorte-tab.tsx                               |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  location-detail-dialog.tsx                      |       0 |        0 |       0 |       0 | 1-756                                                                                                                                                         
+  mold-management-dashboard.tsx                   |       0 |        0 |       0 |       0 | 1-89                                                                                                                                                          
+  multi-picking-process.tsx                       |       0 |        0 |       0 |       0 | 1-551                                                                                                                                                         
+  multiple-warehouse-locations-modal.tsx          |       0 |        0 |       0 |       0 | 1-347                                                                                                                                                         
+  mutter-tab.tsx                                  |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  new-warehouse-location-modal.tsx                |       0 |        0 |       0 |       0 | 1-192                                                                                                                                                         
+  order-detail-view.tsx                           |       0 |        0 |       0 |       0 | 1-379                                                                                                                                                         
+  page-size-selector.tsx                          |       0 |        0 |       0 |       0 | 1-32                                                                                                                                                          
+  picking-process.tsx                             |       0 |        0 |       0 |       0 | 1-405                                                                                                                                                         
+  picklist-dashboard.tsx                          |       0 |        0 |       0 |       0 | 1-947                                                                                                                                                         
+  picklist-filters.tsx                            |       0 |        0 |       0 |       0 | 1-43                                                                                                                                                          
+  picklist-search.tsx                             |       0 |        0 |       0 |       0 | 1-24                                                                                                                                                          
+  picklist-skeleton.tsx                           |       0 |        0 |       0 |       0 | 1-26                                                                                                                                                          
+  print-container-dialog.tsx                      |       0 |        0 |       0 |       0 | 1-94                                                                                                                                                          
+  print-dialog.tsx                                |       0 |        0 |       0 |       0 | 1-88                                                                                                                                                          
+  providers.tsx                                   |       0 |        0 |       0 |       0 | 1-34                                                                                                                                                          
+  remove-container-dialog.tsx                     |       0 |        0 |       0 |       0 | 1-73                                                                                                                                                          
+  scan-popup.tsx                                  |       0 |        0 |       0 |       0 | 1-135                                                                                                                                                         
+  scanner-input-dialog.tsx                        |       0 |        0 |       0 |       0 | 1-103                                                                                                                                                         
+  storage-location-popup.tsx                      |       0 |        0 |       0 |       0 | 1-90                                                                                                                                                          
+  teile-tab.tsx                                   |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  time-header.tsx                                 |       0 |        0 |       0 |       0 | 1-112                                                                                                                                                         
+  umsatze-tab.tsx                                 |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  varianten-tab.tsx                               |   42.12 |      100 |      20 |   42.12 | 196-276,278-333,335-388,390-470                                                                                                                               
+  warehouse-location-list.tsx                     |       0 |        0 |       0 |       0 | 1-550                                                                                                                                                         
+ src/components/auth                              |    97.1 |    95.23 |     100 |    97.1 |                                                                                                                                                               
+  AdminRoute.tsx                                  |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  LogoutButton.tsx                                |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  ProtectedRoute.tsx                              |    93.1 |    85.71 |     100 |    93.1 | 25-26                                                                                                                                                         
+ src/components/container                         |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  container-detail-dialog.tsx                     |       0 |        0 |       0 |       0 | 1-358                                                                                                                                                         
+  container-detail-view.tsx                       |       0 |        0 |       0 |       0 | 1-114                                                                                                                                                         
+  container-info-tab.tsx                          |       0 |        0 |       0 |       0 | 1-224                                                                                                                                                         
+  container-list-view.tsx                         |       0 |        0 |       0 |       0 | 1-178                                                                                                                                                         
+  container-location-tab.tsx                      |       0 |        0 |       0 |       0 | 1-48                                                                                                                                                          
+  container-management-filters.tsx                |       0 |        0 |       0 |       0 | 1-110                                                                                                                                                         
+  container-management-table.tsx                  |       0 |        0 |       0 |       0 | 1-323                                                                                                                                                         
+  container-units-tab.tsx                         |       0 |        0 |       0 |       0 | 1-415                                                                                                                                                         
+ src/components/goods-movement                    |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  booking-dialog.tsx                              |       0 |        0 |       0 |       0 | 1-502                                                                                                                                                         
+  correction-dialog.tsx                           |       0 |        0 |       0 |       0 | 1-230                                                                                                                                                         
+  goods-movement-tab.tsx                          |       0 |        0 |       0 |       0 | 1-549                                                                                                                                                         
+  history-context.tsx                             |       0 |        0 |       0 |       0 | 1-41                                                                                                                                                          
+  inventory-correction-dialog.tsx                 |       0 |        0 |       0 |       0 | 1-225                                                                                                                                                         
+  scanner-input.tsx                               |       0 |        0 |       0 |       0 | 1-57                                                                                                                                                          
+  settings-dialog.tsx                             |       0 |        0 |       0 |       0 | 1-100                                                                                                                                                         
+  source-table.tsx                                |       0 |        0 |       0 |       0 | 1-322                                                                                                                                                         
+  target-table.tsx                                |       0 |        0 |       0 |       0 | 1-297                                                                                                                                                         
+  websocket-provider.tsx                          |       0 |        0 |       0 |       0 | 1-85                                                                                                                                                          
+ src/components/goods-movement/booking-dialog     |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  compartments-input.tsx                          |       0 |        0 |       0 |       0 | 1-109                                                                                                                                                         
+  item-details.tsx                                |       0 |        0 |       0 |       0 | 1-34                                                                                                                                                          
+  quantity-selector.tsx                           |       0 |        0 |       0 |       0 | 1-110                                                                                                                                                         
+  weighing-process.tsx                            |       0 |        0 |       0 |       0 | 1-225                                                                                                                                                         
+ src/components/inventoryManagement               |   43.43 |    47.61 |   29.41 |   43.43 |                                                                                                                                                               
+  Header.tsx                                      |       0 |        0 |       0 |       0 | 1-100                                                                                                                                                         
+  MainSidebar.tsx                                 |       0 |        0 |       0 |       0 | 1-137                                                                                                                                                         
+  ProductList.tsx                                 |   80.07 |    52.63 |   33.33 |   80.07 | 1,71-73,80-85,93-94,98-105,176-179,185-199,220-225,251-253,263-270                                                                                            
+ src/components/inventoryManagement/ProductDetail |   10.86 |    33.33 |   52.94 |   10.86 |                                                                                                                                                               
+  MutterTab.tsx                                   |    8.61 |    33.33 |      50 |    8.61 | 1,50-557                                                                                                                                                      
+  ProductDetail.tsx                               |    8.73 |    33.33 |      75 |    8.73 | 1,13-126                                                                                                                                                      
+  TabsNavigation.tsx                              |    17.8 |      100 |       0 |    17.8 | 14-73                                                                                                                                                         
+  VariantenTab.tsx                                |   14.33 |    33.33 |      50 |   14.33 | 6,44-293                                                                                                                                                      
+ src/components/inventoryManagement/variants      |   19.69 |    33.33 |   42.85 |   19.69 |                                                                                                                                                               
+  DetailsTab.tsx                                  |   16.87 |      100 |       0 |   16.87 | 41-237                                                                                                                                                        
+  VariantenHeader.tsx                             |   20.48 |    33.33 |      50 |   20.48 | 1,44-205                                                                                                                                                      
+  VariantenTable.tsx                              |   22.63 |    33.33 |      50 |   22.63 | 1,57-243                                                                                                                                                      
+  VariantenTabs.tsx                               |   17.64 |      100 |       0 |   17.64 | 19-102                                                                                                                                                        
+ src/components/layout                            |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  MainLayout.tsx                                  |       0 |        0 |       0 |       0 | 1-409                                                                                                                                                         
+ src/components/mold                              |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  activity-log.tsx                                |       0 |        0 |       0 |       0 | 1-573                                                                                                                                                         
+  alloy-manager.tsx                               |       0 |        0 |       0 |       0 | 1-292                                                                                                                                                         
+  article-table.tsx                               |       0 |        0 |       0 |       0 | 1-378                                                                                                                                                         
+  filter-panel.tsx                                |       0 |        0 |       0 |       0 | 1-320                                                                                                                                                         
+  mold-form-dialog.tsx                            |       0 |        0 |       0 |       0 | 1-632                                                                                                                                                         
+  mold-form-dialog1.tsx                           |       0 |        0 |       0 |       0 | 1-460                                                                                                                                                         
+  mold-size-manager.tsx                           |       0 |        0 |       0 |       0 | 1-356                                                                                                                                                         
+  mold-table.tsx                                  |       0 |        0 |       0 |       0 | 1-350                                                                                                                                                         
+  settings-dialog.tsx                             |       0 |        0 |       0 |       0 | 1-70                                                                                                                                                          
+  settings-dialogg.tsx                            |       0 |        0 |       0 |       0 | 1-106                                                                                                                                                         
+  tag-manager.tsx                                 |       0 |        0 |       0 |       0 | 1-310                                                                                                                                                         
+  technology-manager.tsx                          |       0 |        0 |       0 |       0 | 1-294                                                                                                                                                         
+ src/components/mold/article                      |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  article-instance-row.tsx                        |       0 |        0 |       0 |       0 | 1-57                                                                                                                                                          
+  article-row.tsx                                 |       0 |        0 |       0 |       0 | 1-353                                                                                                                                                         
+  new-article-row.tsx                             |       0 |        0 |       0 |       0 | 1-195                                                                                                                                                         
+ src/components/mold/form                         |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  date-picker-field.tsx                           |       0 |        0 |       0 |       0 | 1-45                                                                                                                                                          
+  image-uploader.tsx                              |       0 |        0 |       0 |       0 | 1-109                                                                                                                                                         
+  mold-form-schema.ts                             |       0 |        0 |       0 |       0 | 1-34                                                                                                                                                          
+  tag-selector.tsx                                |       0 |        0 |       0 |       0 | 1-167                                                                                                                                                         
+ src/components/mold/mold                         |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  filter-badges.tsx                               |       0 |        0 |       0 |       0 | 1-127                                                                                                                                                         
+  mold-table-actions.tsx                          |       0 |        0 |       0 |       0 | 1-178                                                                                                                                                         
+  mold-table-header.tsx                           |       0 |        0 |       0 |       0 | 1-29                                                                                                                                                          
+  mold-table-row.tsx                              |       0 |        0 |       0 |       0 | 1-142                                                                                                                                                         
+ src/components/mold/mold-form                    |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  article-form-dialog.tsx                         |       0 |        0 |       0 |       0 | 1-231                                                                                                                                                         
+  articles-tab.tsx                                |       0 |        0 |       0 |       0 | 1-102                                                                                                                                                         
+  barcode-scanner-dialog.tsx                      |       0 |        0 |       0 |       0 | 1-87                                                                                                                                                          
+  general-tab.tsx                                 |       0 |        0 |       0 |       0 | 1-463                                                                                                                                                         
+  warehouse-location-dialog.tsx                   |       0 |        0 |       0 |       0 | 1-112                                                                                                                                                         
+ src/components/products                          |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  delete-confirm-dialog.tsx                       |       0 |        0 |       0 |       0 | 1-64                                                                                                                                                          
+  parent-product-form.tsx                         |       0 |        0 |       0 |       0 | 1-205                                                                                                                                                         
+  product-detail-dialog.tsx                       |       0 |        0 |       0 |       0 | 1-158                                                                                                                                                         
+  product-filters.tsx                             |       0 |        0 |       0 |       0 | 1-100                                                                                                                                                         
+  product-list.tsx                                |       0 |        0 |       0 |       0 | 1-410                                                                                                                                                         
+  product-mobile.tsx                              |       0 |        0 |       0 |       0 | 1-114                                                                                                                                                         
+  variant-product-form.tsx                        |       0 |        0 |       0 |       0 | 1-262                                                                                                                                                         
+ src/components/settings                          |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  container-type-dialog.tsx                       |       0 |        0 |       0 |       0 | 1-335                                                                                                                                                         
+  container-type-settings.tsx                     |       0 |        0 |       0 |       0 | 1-175                                                                                                                                                         
+  printer-settings.tsx                            |       0 |        0 |       0 |       0 | 1-184                                                                                                                                                         
+  scale-settings.tsx                              |       0 |        0 |       0 |       0 | 1-216                                                                                                                                                         
+  settings-dialog.tsx                             |       0 |        0 |       0 |       0 | 1-66                                                                                                                                                          
+ src/components/settings/sync                     |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  SyncWorkflows.tsx                               |       0 |        0 |       0 |       0 | 1-107                                                                                                                                                         
+ src/components/tempFiles                         |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  VariantenTabb.tsx                               |       0 |        0 |       0 |       0 | 1-909                                                                                                                                                         
+ src/components/timer                             |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  global-timer.tsx                                |       0 |        0 |       0 |       0 | 1-99                                                                                                                                                          
+  pause-overlay.tsx                               |       0 |        0 |       0 |       0 | 1-31                                                                                                                                                          
+  screen-lock-overlay.tsx                         |       0 |        0 |       0 |       0 | 1-30                                                                                                                                                          
+  timer-context.tsx                               |       0 |        0 |       0 |       0 | 1-135                                                                                                                                                         
+ src/components/types                             |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  product.ts                                      |       0 |        0 |       0 |       0 | 1-69                                                                                                                                                          
+ src/components/ui                                |   36.87 |    47.26 |   25.89 |   36.87 |                                                                                                                                                               
+  LoadingSpinner.tsx                              |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  ProductCreateForm.tsx                           |       0 |        0 |       0 |       0 | 1-288                                                                                                                                                         
+  accordion.tsx                                   |       0 |        0 |       0 |       0 | 1-57                                                                                                                                                          
+  alert-dialog.tsx                                |   52.58 |      100 |       0 |   52.58 | 14-26,31-41,45-55,62-66,74-78,86-90,98-102                                                                                                                    
+  alert.tsx                                       |   67.24 |      100 |     100 |   67.24 | 25-31,38-43,50-55                                                                                                                                             
+  article-page.tsx                                |   88.26 |    84.61 |   45.45 |   88.26 | 73-81,85-96,200-202,209-215,270-275,291-297,550-574                                                                                                           
+  avatar.tsx                                      |      52 |      100 |     100 |      52 | 12-20,27-32,39-47                                                                                                                                             
+  badge.tsx                                       |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  button.tsx                                      |     100 |       50 |     100 |     100 | 46                                                                                                                                                            
+  calendar.tsx                                    |   21.21 |      100 |       0 |   21.21 | 12-63                                                                                                                                                         
+  card.tsx                                        |   94.73 |    66.66 |     100 |   94.73 | 50-54                                                                                                                                                         
+  checkbox.tsx                                    |   53.57 |      100 |     100 |   53.57 | 13-25                                                                                                                                                         
+  container.tsx                                   |   57.14 |      100 |       0 |   57.14 | 9-14                                                                                                                                                          
+  dashboard-content.tsx                           |       0 |        0 |       0 |       0 | 1-975                                                                                                                                                         
+  dashboard-sidebar.tsx                           |       0 |        0 |       0 |       0 | 1-149                                                                                                                                                         
+  dashboard.tsx                                   |   10.96 |      100 |       0 |   10.96 | 65-80,134-178,181-862,866-1129                                                                                                                                
+  date-range-picker.tsx                           |       0 |        0 |       0 |       0 | 1-54                                                                                                                                                          
+  dialog.tsx                                      |   47.54 |      100 |       0 |   47.54 | 21-29,36-53,57-67,71-81,88-96,103-108                                                                                                                         
+  dropdown-menu.tsx                               |   54.72 |      100 |       0 |   54.72 | 27-39,47-55,84-93,100-116,124-139,148-157,164-169,173-182                                                                                                     
+  error-boundary.tsx                              |       0 |        0 |       0 |       0 | 1-48                                                                                                                                                          
+  error-message.tsx                               |       0 |        0 |       0 |       0 | 1-50                                                                                                                                                          
+  form.tsx                                        |   46.06 |      100 |       0 |   46.06 | 32-42,45-65,79-86,93-103,110-125,132-142,149-166                                                                                                              
+  index.ts                                        |   52.23 |    22.34 |    8.57 |   52.23 | 11-16,28-32,36-40,43-47,50-53,56-60,63-64                                                                                                                     
+  input.tsx                                       |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  label.tsx                                       |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  layout-editor-sidebar.tsx                       |       0 |        0 |       0 |       0 | 1-90                                                                                                                                                          
+  new-safe-search-results-dropdown.tsx            |       0 |        0 |       0 |       0 | 1-17                                                                                                                                                          
+  popover.tsx                                     |   58.06 |      100 |     100 |   58.06 | 16-28                                                                                                                                                         
+  products.tsx                                    |   71.59 |    46.55 |   47.05 |   71.59 | 20,91,101-105,122-126,138-168,176-181,198-199,238,245,247-252,256-258,260-271,286-296,301-304,309-311,316-321,326,346-348,363-365,368-369,385-391,393-397     
+  progress.tsx                                    |      50 |      100 |     100 |      50 | 12-25                                                                                                                                                         
+  radio-group.tsx                                 |   47.72 |      100 |     100 |   47.72 | 13-20,27-41                                                                                                                                                   
+  safe-search-results-dropdown.tsx                |       0 |        0 |       0 |       0 | 1-17                                                                                                                                                          
+  scroll-area.tsx                                 |   41.66 |      100 |     100 |   41.66 | 12-23,30-45                                                                                                                                                   
+  search-results-dropdown.tsx                     |   94.79 |    75.86 |     100 |   94.79 | 67-68,70-71,73                                                                                                                                                
+  select.tsx                                      |   92.68 |      100 |     100 |   92.68 | 106-111,145-150                                                                                                                                               
+  separator.tsx                                   |     100 |       50 |     100 |     100 | 22                                                                                                                                                            
+  sheet.tsx                                       |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  sidebar.tsx                                     |   57.68 |       80 |     100 |   57.68 | 38-39,143-155,158-175,225-248,252-263,268-280,295-304,323-331,336-351,356-373,378-380,384-385,389-390,423-453,463-484,489-504,513-537,542-553,557-558,569-588 
+  simple-search-dropdown.tsx                      |       0 |        0 |       0 |       0 | 1-24                                                                                                                                                          
+  skeleton.tsx                                    |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  skinny-table.tsx                                |   63.04 |    61.53 |   33.33 |   63.04 | 44-46,57-60,68-73,82-88,124-171                                                                                                                               
+  slider.tsx                                      |      50 |      100 |     100 |      50 | 12-25                                                                                                                                                         
+  sortable-table.tsx                              |       0 |        0 |       0 |       0 | 1-181                                                                                                                                                         
+  spinner.tsx                                     |   38.46 |      100 |       0 |   38.46 | 11-26                                                                                                                                                         
+  switch.tsx                                      |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  table.tsx                                       |    87.5 |      100 |     100 |    87.5 | 43-51,103-108                                                                                                                                                 
+  tabs.tsx                                        |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  tempProducts.tsx                                |       0 |        0 |       0 |       0 | 1-1023                                                                                                                                                        
+  textarea.tsx                                    |      50 |      100 |     100 |      50 | 9-19                                                                                                                                                          
+  toast.tsx                                       |   61.24 |      100 |     100 |   61.24 | 16-24,48-55,62-70,77-88,95-100,107-112                                                                                                                        
+  toaster.tsx                                     |   37.14 |      100 |       0 |   37.14 | 14-35                                                                                                                                                         
+  toggle-group.tsx                                |   54.09 |      100 |     100 |   54.09 | 22-31,40-57                                                                                                                                                   
+  toggle.tsx                                      |   86.66 |      100 |     100 |   86.66 | 36-41                                                                                                                                                         
+  tooltip.tsx                                     |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  use-toast.ts                                    |   36.08 |      100 |       0 |   36.08 | 30-33,62-75,78-130,136-141,145-172,174-192                                                                                                                    
+ src/components/ui/common                         |   93.47 |    41.02 |     100 |   93.47 |                                                                                                                                                               
+  Button.tsx                                      |   93.18 |       10 |     100 |   93.18 | 69-72,76,82                                                                                                                                                   
+  Card.tsx                                        |     100 |    93.33 |     100 |     100 | 63                                                                                                                                                            
+  Input.tsx                                       |   86.81 |     7.14 |     100 |   86.81 | 49-51,56-59,76-79,84                                                                                                                                          
+ src/components/ui/data                           |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  Table.tsx                                       |     100 |      100 |     100 |     100 |                                                                                                                                                               
+ src/components/users                             |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  add-group-dialog.tsx                            |       0 |        0 |       0 |       0 | 1-136                                                                                                                                                         
+  group-management.tsx                            |       0 |        0 |       0 |       0 | 1-120                                                                                                                                                         
+  group-permissions-dialog.tsx                    |       0 |        0 |       0 |       0 | 1-177                                                                                                                                                         
+  password-policy.tsx                             |       0 |        0 |       0 |       0 | 1-154                                                                                                                                                         
+  permission-check.tsx                            |       0 |        0 |       0 |       0 | 1-21                                                                                                                                                          
+  permission-management.tsx                       |       0 |        0 |       0 |       0 | 1-313                                                                                                                                                         
+  profile-management.tsx                          |       0 |        0 |       0 |       0 | 1-355                                                                                                                                                         
+  two-factor-setup.tsx                            |       0 |        0 |       0 |       0 | 1-293                                                                                                                                                         
+  user-groups-dialog.tsx                          |       0 |        0 |       0 |       0 | 1-102                                                                                                                                                         
+  user-management.tsx                             |       0 |        0 |       0 |       0 | 1-480                                                                                                                                                         
+ src/components/warehouse-location                |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  warehouse-location-filters.tsx                  |       0 |        0 |       0 |       0 | 1-169                                                                                                                                                         
+  warehouse-location-mobile.tsx                   |       0 |        0 |       0 |       0 | 1-89                                                                                                                                                          
+  warehouse-location-table.tsx                    |       0 |        0 |       0 |       0 | 1-191                                                                                                                                                         
+ src/components/widgets                           |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  sales-analysis-widget.tsx                       |       0 |        0 |       0 |       0 | 1-448                                                                                                                                                         
+ src/context                                      |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  LastVisitedContext.tsx                          |       0 |        0 |       0 |       0 | 1-76                                                                                                                                                          
+ src/examples                                     |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  GlobalSearchExample.tsx                         |       0 |        0 |       0 |       0 | 1-40                                                                                                                                                          
+ src/hooks                                        |   36.66 |    82.14 |   35.29 |   36.66 |                                                                                                                                                               
+  use-currencies.ts                               |       0 |        0 |       0 |       0 | 1-140                                                                                                                                                         
+  use-currency-history.ts                         |       0 |        0 |       0 |       0 | 1-93                                                                                                                                                          
+  use-mobile.ts                                   |   51.02 |      100 |   66.66 |   51.02 | 26-49                                                                                                                                                         
+  use-toast.ts                                    |   36.08 |      100 |       0 |   36.08 | 30-33,62-75,78-130,136-141,145-172,174-192                                                                                                                    
+  use-websocket.ts                                |       0 |        0 |       0 |       0 | 1-41                                                                                                                                                          
+  useGlobalSearch.ts                              |     100 |    85.71 |     100 |     100 | 66,92                                                                                                                                                         
+  useLanguage.ts                                  |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  useTranslationWrapper.ts                        |   35.84 |      100 |       0 |   35.84 | 18-51                                                                                                                                                         
+ src/hooks/mold                                   |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  use-activity-log.ts                             |       0 |        0 |       0 |       0 | 1-149                                                                                                                                                         
+  use-alloys.ts                                   |       0 |        0 |       0 |       0 | 1-70                                                                                                                                                          
+  use-articles.ts                                 |       0 |        0 |       0 |       0 | 1-563                                                                                                                                                         
+  use-mobile.tsx                                  |       0 |        0 |       0 |       0 | 1-19                                                                                                                                                          
+  use-mold-sizes.ts                               |       0 |        0 |       0 |       0 | 1-179                                                                                                                                                         
+  use-molds.ts                                    |       0 |        0 |       0 |       0 | 1-588                                                                                                                                                         
+  use-tags.ts                                     |       0 |        0 |       0 |       0 | 1-67                                                                                                                                                          
+  use-technologies.ts                             |       0 |        0 |       0 |       0 | 1-185                                                                                                                                                         
+  use-warehouse-locations.ts                      |       0 |        0 |       0 |       0 | 1-74                                                                                                                                                          
+ src/lib                                          |    7.18 |     12.5 |   11.11 |    7.18 |                                                                                                                                                               
+  api.ts                                          |       0 |        0 |       0 |       0 | 1-225                                                                                                                                                         
+  config.ts                                       |     100 |        0 |     100 |     100 | 1                                                                                                                                                             
+  container-utils.ts                              |       0 |        0 |       0 |       0 | 1-194                                                                                                                                                         
+  dashboard-service.ts                            |       0 |        0 |       0 |       0 | 1-256                                                                                                                                                         
+  i18n-types.ts                                   |       0 |        0 |       0 |       0 | 1-50                                                                                                                                                          
+  i18n.ts                                         |       0 |        0 |       0 |       0 | 1-1295                                                                                                                                                        
+  theme-config.ts                                 |     100 |      100 |     100 |     100 |                                                                                                                                                               
+  utils.ts                                        |   43.75 |      100 |   33.33 |   43.75 | 15-29,37-48                                                                                                                                                   
+  warehouse-service.ts                            |       0 |        0 |       0 |       0 | 1-189                                                                                                                                                         
+ src/lib/api                                      |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  container-types.ts                              |       0 |        0 |       0 |       0 | 1-31                                                                                                                                                          
+  groups.ts                                       |       0 |        0 |       0 |       0 | 1-63                                                                                                                                                          
+  permissions.ts                                  |       0 |        0 |       0 |       0 | 1-170                                                                                                                                                         
+  profile.ts                                      |       0 |        0 |       0 |       0 | 1-207                                                                                                                                                         
+  users.ts                                        |       0 |        0 |       0 |       0 | 1-123                                                                                                                                                         
+ src/lib/auth                                     |   15.91 |        0 |       0 |   15.91 |                                                                                                                                                               
+  authHooks.ts                                    |       0 |        0 |       0 |       0 | 1-88                                                                                                                                                          
+  authService.ts                                  |   20.38 |      100 |       0 |   20.38 | 15-23,27-35,45-63,68-77,82-112,123-142,146-218,227-260,264-273,277-301,305-315,319-352,356-357,361-367,371-372,375-377,380-382,385-410                        
+  authTypes.ts                                    |       0 |        0 |       0 |       0 | 1-29                                                                                                                                                          
+  clientCookies.ts                                |   45.83 |      100 |       0 |   45.83 | 5,9-14,18-23                                                                                                                                                  
+  serverActions.ts                                |       0 |        0 |       0 |       0 | 1-15                                                                                                                                                          
+  serverCookies.ts                                |       0 |        0 |       0 |       0 | 1-29                                                                                                                                                          
+ src/lib/inventory                                |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  api.ts                                          |       0 |        0 |       0 |       0 | 1-290                                                                                                                                                         
+  service.ts                                      |       0 |        0 |       0 |       0 | 1-221                                                                                                                                                         
+ src/lib/mold                                     |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  utils.ts                                        |       0 |        0 |       0 |       0 | 1-47                                                                                                                                                          
+  validation.ts                                   |       0 |        0 |       0 |       0 | 1-8                                                                                                                                                           
+ src/lib/products                                 |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  api.ts                                          |       0 |        0 |       0 |       0 | 1-344                                                                                                                                                         
+ src/lib/query                                    |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  queryClient.ts                                  |       0 |        0 |       0 |       0 | 1-11                                                                                                                                                          
+ src/lib/settings/system                          |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  api.ts                                          |       0 |        0 |       0 |       0 | 1-150                                                                                                                                                         
+ src/lib/stores                                   |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  container-type-store.ts                         |       0 |        0 |       0 |       0 | 1-84                                                                                                                                                          
+  printer-store.ts                                |       0 |        0 |       0 |       0 | 1-35                                                                                                                                                          
+  purpose-store.ts                                |       0 |        0 |       0 |       0 | 1-26                                                                                                                                                          
+  scale-store.ts                                  |       0 |        0 |       0 |       0 | 1-36                                                                                                                                                          
+ src/lib/testing                                  |    98.5 |    96.77 |     100 |    98.5 |                                                                                                                                                               
+  fuzz-utils.ts                                   |    98.5 |    96.77 |     100 |    98.5 | 131-132                                                                                                                                                       
+ src/pages                                        |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  404.js                                          |       0 |        0 |       0 |       0 | 1-16                                                                                                                                                          
+  500.js                                          |       0 |        0 |       0 |       0 | 1-8                                                                                                                                                           
+  _app.tsx                                        |       0 |        0 |       0 |       0 | 1-59                                                                                                                                                          
+  _document.tsx                                   |       0 |        0 |       0 |       0 | 1-47                                                                                                                                                          
+  _error.js                                       |       0 |        0 |       0 |       0 | 1-19                                                                                                                                                          
+  unauthorized.tsx                                |       0 |        0 |       0 |       0 | 1-33                                                                                                                                                          
+ src/scripts                                      |   52.58 |       80 |      50 |   52.58 |                                                                                                                                                               
+  export-dashboard-layout.js                      |   52.58 |       80 |      50 |   52.58 | 18-22,29-30,50-68,77-101,105-108                                                                                                                              
+ src/types                                        |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  types.ts                                        |       0 |        0 |       0 |       0 | 1-43                                                                                                                                                          
+  warehouse-types.ts                              |       0 |        0 |       0 |       0 | 1-94                                                                                                                                                          
+ src/types/mold                                   |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  activity-log.ts                                 |       0 |        0 |       0 |       0 | 1-55                                                                                                                                                          
+  alloy.ts                                        |       0 |        0 |       0 |       0 | 1-7                                                                                                                                                           
+  article.ts                                      |       0 |        0 |       0 |       0 | 1-37                                                                                                                                                          
+  mold-size.ts                                    |       0 |        0 |       0 |       0 | 1-8                                                                                                                                                           
+  mold.ts                                         |       0 |        0 |       0 |       0 | 1-34                                                                                                                                                          
+  tag.ts                                          |       0 |        0 |       0 |       0 | 1-7                                                                                                                                                           
+  technology.ts                                   |       0 |        0 |       0 |       0 | 1-7                                                                                                                                                           
+  warehouse-location.ts                           |       0 |        0 |       0 |       0 | 1-9                                                                                                                                                           
+ src/types/settings                               |       0 |        0 |       0 |       0 |                                                                                                                                                               
+  api.ts                                          |       0 |        0 |       0 |       0 | 1-94                                                                                                                                                          
+  currency-history.ts                             |       0 |        0 |       0 |       0 | 1-12                                                                                                                                                          
+  currency.ts                                     |       0 |        0 |       0 |       0 | 1-19                                                                                                                                                          
+ src/utils                                        |     100 |    81.25 |     100 |     100 |                                                                                                                                                               
+  responsive.ts                                   |     100 |       70 |     100 |     100 | 15-16,25                                                                                                                                                      
+  test-utils.ts                                   |     100 |      100 |     100 |     100 |                                                                                                                                                               
+--------------------------------------------------|---------|----------|---------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Test Suites: 62 passed, 62 total
+Tests:       3 skipped, 404 passed, 407 total
+Snapshots:   0 total
+Time:        18.321 s
+Ran all test suites.
+UI tests completed
+./scripts/run_tests.sh: line 169: python: command not found
+All tests passed. Proceeding with build...
+
+Stopping existing containers...
+pyerp-prod
+pyerp-prod
+pyerp-elastic-kibana
+pyerp-elastic-kibana
+Building Docker image...
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.prod
+#1 transferring dockerfile: 4.18kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:20-slim
+#2 DONE 0.9s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 0.9s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 803B done
+#4 DONE 0.0s
+
+#5 [frontend-builder  1/10] FROM docker.io/library/node:20-slim@sha256:d6e4ec9eaf2390129b5d23904d07ae03ef744818386bcab3fc45fe63405b5eb2
+#5 DONE 0.0s
+
+#6 [stage-1  1/27] FROM docker.io/library/python:3.12-slim@sha256:a866731a6b71c4a194a845d86e06568725e430ed21821d0c52e4efb385cf6c6f
+#6 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 140.44kB 0.3s done
+#7 DONE 0.3s
+
+#8 [stage-1  2/27] RUN apt-get update     && apt-get install -y --no-install-recommends         build-essential         curl         git         netcat-traditional         supervisor         nginx         libffi-dev         libjpeg-dev         libxml2-dev         libxslt-dev         zlib1g-dev         libcairo2-dev         libpango1.0-dev         libgdk-pixbuf2.0-dev         shared-mime-info         libssl-dev         redis-server     && apt-get clean     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [frontend-builder  7/10] COPY frontend-react/next.config.js ./
+#9 CACHED
+
+#10 [frontend-builder  2/10] WORKDIR /frontend
+#10 CACHED
+
+#11 [stage-1 25/27] COPY docker/supervisord.prod.conf /etc/supervisor/conf.d/supervisord.conf
+#11 CACHED
+
+#12 [stage-1  7/27] COPY --from=frontend-builder /frontend/.next /app/frontend-react/.next
+#12 CACHED
+
+#13 [stage-1 14/27] COPY admin_tools/ /app/admin_tools/
+#13 CACHED
+
+#14 [frontend-builder  8/10] COPY frontend-react/src ./src
+#14 CACHED
+
+#15 [frontend-builder 10/10] RUN npm run build
+#15 CACHED
+
+#16 [stage-1  3/27] RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -     && apt-get install -y nodejs     && apt-get clean     && rm -rf /var/lib/apt/lists/*
+#16 CACHED
+
+#17 [frontend-builder  9/10] COPY frontend-react/public ./public
+#17 CACHED
+
+#18 [stage-1  9/27] COPY --from=frontend-builder /frontend/node_modules /app/frontend-react/node_modules
+#18 CACHED
+
+#19 [stage-1 24/27] RUN ln -sf /dev/stdout /var/log/nginx/access.log     && ln -sf /dev/stderr /var/log/nginx/error.log     && mkdir -p /var/log/supervisor     && nginx -t  # Test config
+#19 CACHED
+
+#20 [stage-1  5/27] COPY requirements/ /app/requirements/
+#20 CACHED
+
+#21 [stage-1 13/27] COPY users/ /app/users/
+#21 CACHED
+
+#22 [stage-1 26/27] COPY docker/entrypoint.prod.sh /entrypoint.sh
+#22 CACHED
+
+#23 [stage-1 22/27] COPY docker/nginx/ssl/server.key /etc/nginx/ssl/
+#23 CACHED
+
+#24 [stage-1  6/27] RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir -r /app/requirements/requirements.prod.txt
+#24 CACHED
+
+#25 [frontend-builder  4/10] RUN echo "legacy-peer-deps=true\nloglevel=error" > .npmrc
+#25 CACHED
+
+#26 [frontend-builder  6/10] COPY frontend-react/tsconfig.json ./
+#26 CACHED
+
+#27 [stage-1  4/27] WORKDIR /app
+#27 CACHED
+
+#28 [stage-1 21/27] COPY docker/nginx/ssl/server.crt /etc/nginx/ssl/
+#28 CACHED
+
+#29 [stage-1 12/27] COPY pyerp/ /app/pyerp/
+#29 CACHED
+
+#30 [stage-1 19/27] RUN python manage.py collectstatic --noinput --clear
+#30 CACHED
+
+#31 [stage-1 17/27] COPY docker/ /app/docker/
+#31 CACHED
+
+#32 [stage-1 15/27] COPY sync_manager/ /app/sync_manager/
+#32 CACHED
+
+#33 [frontend-builder  5/10] RUN npm ci --prefer-offline --no-audit --no-optional --production
+#33 CACHED
+
+#34 [stage-1 20/27] RUN mkdir -p /etc/nginx/ssl
+#34 CACHED
+
+#35 [stage-1 10/27] COPY --from=frontend-builder /frontend/package.json /app/frontend-react/package.json
+#35 CACHED
+
+#36 [frontend-builder  3/10] COPY frontend-react/package*.json ./
+#36 CACHED
+
+#37 [stage-1 16/27] COPY manage.py /app/
+#37 CACHED
+
+#38 [stage-1 18/27] RUN mkdir -p /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data     && chmod +x /app/docker/ensure_static_dirs.sh     && /app/docker/ensure_static_dirs.sh     && chown -R root:root /app/staticfiles /app/pyerp/static /app/media /app/logs /app/data
+#38 CACHED
+
+#39 [stage-1 23/27] COPY docker/nginx/conf.d/pyerp.conf /etc/nginx/conf.d/pyerp.conf
+#39 CACHED
+
+#40 [stage-1  8/27] COPY --from=frontend-builder /frontend/public /app/frontend-react/public
+#40 CACHED
+
+#41 [stage-1 11/27] RUN mkdir -p /app/staticfiles/react/app/_next &&     cp -r /app/frontend-react/.next/* /app/staticfiles/react/app/_next/
+#41 CACHED
+
+#42 [stage-1 27/27] RUN chmod +x /entrypoint.sh
+#42 CACHED
+
+#43 exporting to image
+#43 exporting layers done
+#43 writing image sha256:b48e24c8800003ce485e2b04161f3c76e21d6b7abdc3764444664a86af9f69d9 done
+#43 naming to docker.io/library/pyerp-prod-image done
+#43 DONE 0.0s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/1s3se4q1mju4ojrsxfoq5ejo6
+Error response from daemon: network with name pyerp-network already exists
+Starting containers...
+7e48855a04ca875b13797bc69749992a0022ec2b011df6aa1b881197fe704199
+
+Container is running in the background. Use 'docker logs pyerp-prod' to view logs again.
+Starting monitoring container...
+ Container pyerp-elastic-kibana  Creating
+ Container pyerp-elastic-kibana  Created
+ Container pyerp-elastic-kibana  Starting
+ Container pyerp-elastic-kibana  Started
+
+Monitoring services:
+- Elasticsearch: http://localhost:9200
+- Kibana: http://localhost:5601
+Monitoring container logs: docker logs pyerp-elastic-kibana
+Waiting for Elasticsearch to become available...
+Waiting for Elasticsearch... attempt 1 of 30
+Waiting for Elasticsearch... attempt 2 of 30
+Elasticsearch is ready!
+Waiting 10 seconds before starting health checks...
+
+--- Running Health Checks ---
+Checking main application endpoint (http://localhost:80)...
+✅ Main application endpoint is responsive.
+--- Health Checks Complete ---

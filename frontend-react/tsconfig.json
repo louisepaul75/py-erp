@@ -15,6 +15,7 @@
     "jsx": "preserve",
     "jsxImportSource": "react",
     "incremental": true,
+    "types": ["react", "node"],
     "plugins": [
       {
         "name": "next"

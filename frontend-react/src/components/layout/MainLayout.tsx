@@ -369,7 +369,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const isDashboard = pathname === '/dashboard'
 
   return (
-    <div className="bg-background flex flex-col flex-1">
+    <div className="bg-background h-full flex flex-col flex-1 ">
       <Navbar />
       <div className="flex flex-1"> 
         <SidebarProvider defaultOpen={isDashboard}>
@@ -403,7 +403,7 @@ const MainLayoutContent = ({ children }: { children: React.ReactNode }) => {
         style={{ /* Style prop is now empty */ }}
       >
         {/* Apply specific padding AND make it fill height */}
-        <div className="mx-auto max-w-[1400px] w-full pt-20 px-6 pb-24 flex flex-col flex-1">
+        <div className="mx-auto max-w-[1400px] md:max-h-[95vh] w-full pt-20  flex flex-col flex-1 ">
           {children} 
         </div>
       </main>

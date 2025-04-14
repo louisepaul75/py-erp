@@ -4,7 +4,7 @@ import { PicklistSkeleton } from "@/components/picklist-skeleton"
 
 export default function Home() {
   return (
-    <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8 h-full overflow-auto">
       {/* <h1 className="text-2xl font-bold mb-6">Lager Pickliste</h1> */}
       <Suspense fallback={<PicklistSkeleton />}>
         <PicklistDashboard />
