@@ -1,4 +1,5 @@
 import './globals.css'
+import * as React from "react";
 import type { Metadata, Viewport } from 'next'
 import { Footer } from '@/components/Footer'
 import { Providers } from './providers'

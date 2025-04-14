@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // Added for navigation
 import Link from "next/link"; // Added for links
@@ -198,7 +199,7 @@ export default function CustomerList({ onSelectCustomer, selectedCustomerId }: C
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col overflow-hidden min-h-0">
-        <div className="flex-1 overflow-y-auto h-full">
+        <div className="flex-1 overflow-y-auto h-full scrollbar-thin max-md:scrollbar md:scrollbar-none">
           {error && (
             <Alert variant="destructive" className="my-4">
               <AlertTitle>Error</AlertTitle>

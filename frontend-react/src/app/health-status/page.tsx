@@ -198,7 +198,7 @@ export default function HealthStatusPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 h-full overflow-auto">
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
@@ -223,7 +223,7 @@ export default function HealthStatusPage() {
   const displayHealthStatus = apiErrors.health ? mockHealthStatus : healthStatus;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 max-w-6xl h-full overflow-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">System Health Status</h1>
         <button

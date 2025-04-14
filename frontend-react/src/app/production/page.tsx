@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ProductionPage() {
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 h-full overflow-auto">
       <Card>
         <CardHeader>
           <CardTitle>Production Dashboard</CardTitle>

@@ -361,7 +361,7 @@ export function Footer() {
       </footer>
       
       {/* Dev Mode Bar - Positioned above footer */}
-      {isDevelopment && (
+      {/* {isDevelopment && (
         <div className="fixed w-full z-20" style={{
           bottom: `var(--footer-height, 2.75rem)`
         }}>
@@ -407,7 +407,7 @@ export function Footer() {
             </div>
           )}
         </div>
-      )}
+      )} */}
     </>
   );
 } 
