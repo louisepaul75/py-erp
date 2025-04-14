@@ -17,16 +17,41 @@ export function useDocuments() {
     queryFn: async () => {
       try {
         // Fetch data from the API endpoint using the shared instance
-        const response = await instance.get(API_URL).json()
-        // Basic check if response is an array (adjust if API returns nested structure)
-        if (Array.isArray(response)) {
-          return response;
-        } else if (response && Array.isArray((response as any).results)) {
-            // Handle paginated response common in DRF
-           return (response as any).results;
+        const response = await instance.get(API_URL).json<any>() // Use any temporarily for mapping
+        let results: any[] = []
+
+        // Handle paginated response common in DRF
+        if (response && Array.isArray(response.results)) {
+           results = response.results;
+        } else if (Array.isArray(response)) {
+           // Handle non-paginated response if applicable
+           results = response;
+        } else {
+           console.warn("Unexpected API response structure:", response);
+           return [] // Return empty array if structure is wrong
         }
-        console.warn("Unexpected API response structure:", response);
-        return [] // Return empty array if structure is wrong
+
+        // Map API response to Document type
+        const mappedDocuments: Document[] = results.map(doc => ({
+          id: doc.id.toString(), // Ensure ID is string
+          type: doc.record_type as DocumentType, // Assuming record_type maps to DocumentType
+          number: doc.record_number,
+          date: doc.record_date,
+          status: doc.payment_status, // Assuming payment_status maps to status
+          customer: {
+            id: doc.customer.toString(), // Map customer ID
+            name: doc.customer_details?.name || "Unknown Customer" // Provide a fallback name
+            // TODO: Fetch full customer details if needed separately or adjust API
+          },
+          amount: parseFloat(doc.total_amount) || 0, // Parse amount, default to 0
+          items: [], // TODO: Map items if available and needed in the table
+          notes: doc.notes,
+          // TODO: Map paymentInfo if available and needed
+          paymentInfo: undefined, 
+        }));
+
+        return mappedDocuments;
+
       } catch (error) {
         console.error("Error fetching documents:", error)
         throw new Error("Failed to fetch documents") // Re-throw error for React Query
