@@ -6,6 +6,7 @@ import { useForm, SubmitHandler, useFieldArray, Controller } from 'react-hook-fo
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group" // Import RadioGroup
 import { Badge } from "@/components/ui/badge"; // Import Badge
 import { StarIcon } from 'lucide-react'; // Import StarIcon
+import { z } from 'zod';
 
 // ... addressSchema ...
 
@@ -17,7 +18,8 @@ const customerFormSchema = z.object({
 });
 
 // Infer the TypeScript type from the Zod schema
-type CustomerFormData = z.infer<typeof customerFormSchema>;
+// Export the type so it can be used elsewhere
+export type CustomerFormData = z.infer<typeof customerFormSchema>;
 
 // Define Props interface for the component
 interface CustomerFormProps {

@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useDocuments } from "@/hooks/document/use-documents"
+import { useCustomers } from "@/hooks/customer/use-customers"
 import { Button } from "@/components/ui/button"
 import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -24,7 +25,9 @@ interface DocumentListProps {
  */
 export function DocumentList({ onDocumentSelect }: DocumentListProps) {
   // Fetch documents using TanStack Query
-  const { data: documents, isLoading, isError } = useDocuments()
+  const { data: documentsData, isLoading: isLoadingDocuments, isError: isErrorDocuments } = useDocuments()
+  // Fetch customers using TanStack Query
+  const { data: customersData, isLoading: isLoadingCustomers, isError: isErrorCustomers } = useCustomers()
   const { toast } = useToast()
 
   // State for the selected document and modal visibility
@@ -142,6 +145,49 @@ export function DocumentList({ onDocumentSelect }: DocumentListProps) {
     }
   }
 
+  // Combine loading and error states
+  const isLoading = isLoadingDocuments || isLoadingCustomers;
+  const isError = isErrorDocuments || isErrorCustomers;
+
+  // Re-introduce the customer map for efficient lookup
+  const customerMap = useMemo(() => {
+    let customersArray: any[] = [];
+    if (Array.isArray(customersData)) {
+      customersArray = customersData;
+    } else if (customersData?.results && Array.isArray(customersData.results)) {
+      customersArray = customersData.results;
+    }
+    return new Map(
+      customersArray.map((c) => [c.id?.toString?.(), c.name])
+    );
+  }, [customersData]);
+
+  // Enrich documents with customer names once both data sets are loaded
+  const enrichedDocuments = useMemo(() => {
+    console.log("[DocumentList] Enriching documents..."); // Log entry
+    console.log("[DocumentList] Customer Map:", customerMap); // Log the map
+    if (!documentsData || !customersData) {
+       console.log("[DocumentList] Missing documentsData or customersData");
+       return [];
+    }
+
+    return documentsData.map(doc => {
+      const customerIdStr = doc.customer?.id?.toString(); // Safely get ID as string
+      // Use the map for lookup
+      const foundName = customerIdStr ? customerMap.get(customerIdStr) : undefined; 
+      console.log(`[DocumentList] Doc ${doc.id}: Looking up Customer ID: ${customerIdStr}, Found Name: ${foundName}`); // Log lookup
+      
+      return {
+        ...doc,
+        customer: {
+          id: doc.customer.id,
+          name: foundName || "Unknown Customer" // Get name from map
+        }
+      }
+    });
+  // Remove customerMap from dependency array
+  }, [documentsData, customersData]);
+
   // Loading state
   if (isLoading) {
     return <div className="flex justify-center p-8">Loading documents...</div>
@@ -162,7 +208,7 @@ export function DocumentList({ onDocumentSelect }: DocumentListProps) {
       </div>
 
       <DocumentTable
-        documents={documents || []}
+        documents={enrichedDocuments || []}
         onView={handleView}
         onEdit={handleEdit}
         onCancelDocument={handleCancelDocument}

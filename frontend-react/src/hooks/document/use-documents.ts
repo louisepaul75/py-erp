@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import type { Document } from "@/types/document/document"
+import type { Document, DocumentType } from "@/types/document/document"
 import { instance } from "@/lib/api" // Use the shared API instance
 import { useToast } from "@/hooks/use-toast"
 
