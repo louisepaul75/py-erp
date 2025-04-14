@@ -10,10 +10,10 @@ from .serializers import (
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models.functions import TruncDay, TruncMonth
-from collections import OrderedDict
 from django.utils import timezone
 from django.db.models import Prefetch, Count, Sum, Q, Value, DecimalField, Max
 from django.db.models.functions import Coalesce
+from django.shortcuts import render
 
 # Create your views here
 
@@ -49,26 +49,36 @@ class CustomerViewSet(viewsets.ModelViewSet):
             Prefetch(
                 'addresses',
                 queryset=Address.objects.filter(is_primary=True),
-                to_attr='primary_address_list' # Use a list attribute
+                to_attr='primary_address_list'  # Use a list attribute
             )
         ).annotate(
             # Calculate order count (adjust if only certain record types count)
             order_count=Count('sales_records'),
-            # Calculate total spent (sum of INVOICE totals, default to 0.00 if none)
+            # Calculate total spent (sum of INVOICE totals,
+            # default to 0.00 if none)
             # Ensure the output field type is DecimalField
             total_spent=Coalesce(
-                Sum('sales_records__total_amount', filter=Q(sales_records__record_type='INVOICE')),
+                Sum(
+                    'sales_records__total_amount',
+                    filter=Q(sales_records__record_type='INVOICE')
+                ),
                 Value(0.0),
                 output_field=DecimalField()
             ),
             # Get the date of the last sales record
             last_order_date=Max('sales_records__record_date')
-        ).order_by('-created_at') # Default ordering, can be overridden by OrderingFilter
+        ).order_by(
+            '-created_at'
+        )  # Default ordering, can be overridden by OrderingFilter
 
-        # Adjust search_fields if email is only on Address - requires more complex filtering
-        # For now, assuming Customer.email might exist or search needs adjustment
+        # Adjust search_fields if email is only on Address - requires
+        # more complex filtering
+        # For now, assuming Customer.email might exist or search needs
+        # adjustment
         # Example adjustment (if Customer doesn't have email directly):
-        # self.search_fields = ["name", "customer_number", "addresses__email"]
+        # self.search_fields = [
+        #     "name", "customer_number", "addresses__email"
+        # ]
 
         return queryset
 
@@ -212,7 +222,9 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
         }
 
         # --- Previous Year ---
-        prev_year_cumulative_data, _ = get_cumulative_daily_data(year - 1, month)
+        prev_year_cumulative_data, _ = get_cumulative_daily_data(
+            year - 1, month
+        )
 
         # --- 5-Year Average ---
         past_5_years_cumulative = {}  # {day_num: [cumulative1, ...]}
@@ -236,7 +248,7 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
             target_year = year - i
             # Stop if we go before the earliest possible year
             if target_year < earliest_possible_year:
-                break # Changed from continue for clarity and efficiency
+                break  # Changed from continue for clarity and efficiency
 
             past_cumulative, num_days_past = get_cumulative_daily_data(
                 target_year, month
@@ -262,7 +274,9 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
         num_days_in_month = (end_date - start_date).days + 1
 
         for day_num in range(1, num_days_in_month + 1):
-            current_day_date = start_date + datetime.timedelta(days=day_num - 1)
+            current_day_date = start_date + datetime.timedelta(
+                days=day_num - 1
+            )
             day_iso = current_day_date.isoformat()
 
             # Explicitly initialize comparison values
@@ -271,7 +285,9 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
 
             # Get pre-calculated cumulative values directly using day_num
             cumulative_value = current_cumulative_data.get(day_num, 0)
-            cumulative_prev_year_value = prev_year_cumulative_data.get(day_num, 0)
+            cumulative_prev_year_value = prev_year_cumulative_data.get(
+                day_num, 0
+            )
             cumulative_avg_5_years_value = avg_5_years_cumulative_data.get(
                 day_num, 0
             )
@@ -423,7 +439,7 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
             target_year = year - i
             # Stop if we go before the earliest possible year
             if target_year < earliest_possible_year:
-                break # Changed from continue for clarity
+                break  # Changed from continue for clarity
             
             past_cumulative = get_cumulative_monthly_data(target_year)
             for month_num in range(1, 13):
@@ -454,24 +470,27 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
             cumulative_avg_5_years_value = None
 
             # Get pre-calculated cumulative values directly using month_num
-            cumulative_value = current_cumulative_data.get(month_num, 0) # Default to 0 if not found
+            cumulative_value = current_cumulative_data.get(month_num, 0)
             cumulative_prev_year_value = prev_year_cumulative_data.get(
-                month_num, 0 # Default to 0 if not found for prev year
+                month_num, 0  # Default to 0 if not found for prev year
             )
             cumulative_avg_5_years_value = avg_5_years_cumulative_data.get(
-                month_num, 0 # Default to 0 if not found for 5yr avg
+                month_num, 0  # Default to 0 if not found for 5yr avg
             )
 
             # In annual view, 'daily' represents the total for the month
             # Only get monthly total if the month is not in the future
             monthly_total_value = None
             # Use <= comparison to include the current month fully
-            is_future_month = current_month_start_date.replace(day=1) > today.replace(day=1)
+            is_future_month = (
+                current_month_start_date.replace(day=1)
+                > today.replace(day=1)
+            )
             if not is_future_month:
                 monthly_total_value = current_monthly_totals.get(month_num, 0)
             # Set cumulative value to None for future months
             else:
-                 cumulative_value = None # Set to None for future months
+                cumulative_value = None  # Set to None for future months
 
             data.append({
                 'date': month_iso,  # Use start of month date for X-axis
@@ -507,3 +526,16 @@ class SalesRecordItemViewSet(viewsets.ModelViewSet):
     serializer_class = SalesRecordItemSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["sales_record", "fulfillment_status"]
+
+
+# New view for Sales Flow placeholder
+def sales_flow_view(request):
+    """
+    Placeholder view for the Sales Flow page.
+    """
+    context = {
+        'page_title': 'Sales Flow',  # Example context
+        'content': 'This is the placeholder for the Sales Flow page.'
+    }
+    # Assuming the template will be in sales/templates/sales/sales_flow.html
+    return render(request, 'sales/sales_flow.html', context)

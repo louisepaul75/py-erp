@@ -7,6 +7,7 @@ from .views import (
     AddressViewSet,
     SalesRecordViewSet,
     SalesRecordItemViewSet,
+    sales_flow_view,
 )
 
 app_name = "sales"
@@ -36,4 +37,5 @@ urlpatterns = [
     path("", include(router.urls)),
     path("status/", placeholder_view, name="status"),
     path("placeholder/", placeholder_view, name="placeholder"),
+    path("flow/", sales_flow_view, name="sales_flow"),
 ]
