@@ -17,6 +17,7 @@ services:
       - "6379:6379"
     volumes:
       - ..:/app
+      - node_modules_volume:/app/frontend-react/node_modules
       - filebeat_data:/var/lib/filebeat
     environment:
       - DJANGO_SETTINGS_MODULE=pyerp.config.settings.development
@@ -153,6 +154,7 @@ volumes:
   pyerp_data:
   filebeat_data:
   es_data:
+  node_modules_volume: {}
 
 networks:
   pyerp-network:
