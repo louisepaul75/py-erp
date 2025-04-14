@@ -1,4 +1,7 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, mixins
+from rest_framework.response import Response
+from .models import SalesRecordRelationship
+from .serializers import SalesRecordRelationshipSerializer
 
 
 class DummySalesViewSet(viewsets.ViewSet):
@@ -29,3 +32,42 @@ class DummySalesViewSet(viewsets.ViewSet):
 
 # This helps other modules check if this module is available
 API_VERSION = "0.1.0"
+
+
+# Change to use GenericAPIView and ListModelMixin for more explicit control
+class SalesRecordRelationshipViewSet(mixins.ListModelMixin,
+                                   mixins.RetrieveModelMixin,
+                                   mixins.CreateModelMixin,
+                                   mixins.UpdateModelMixin,
+                                   mixins.DestroyModelMixin,
+                                   viewsets.GenericViewSet):
+    """
+    API endpoint that allows Sales Record Relationships to be viewed or edited.
+    (Using GenericViewSet for more explicit control)
+    """
+    # Keep for router introspection
+    queryset = SalesRecordRelationship.objects.all()
+    serializer_class = SalesRecordRelationshipSerializer
+    # permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        """Ensure queryset is evaluated per request, respecting transactions."""
+        # This overrides the class attribute for actual data fetching
+        print("[DEBUG VIEWSET] get_queryset called")  # Add debug print
+        qs = SalesRecordRelationship.objects.all()
+        # Add debug print
+        print(f"[DEBUG VIEWSET] get_queryset returning count: {qs.count()}")
+        return qs
+
+    # Explicitly define list to bypass mixin behavior
+    def list(self, request, *args, **kwargs):
+        print("[DEBUG VIEWSET] list method called")
+        queryset = self.get_queryset()
+        print(f"[DEBUG VIEWSET] list method queryset count: {queryset.count()}")
+        serializer = self.get_serializer(queryset, many=True)
+        # Add debug for serializer data length
+        print(
+            f"[DEBUG VIEWSET] list method serializer data length: "
+            f"{len(serializer.data)}"
+        )
+        return Response(serializer.data)

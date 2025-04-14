@@ -9,6 +9,7 @@ from .views import (
     SalesRecordViewSet,
     SalesRecordItemViewSet,
 )
+from .api import SalesRecordRelationshipViewSet
 
 app_name = "sales_api"
 
@@ -18,6 +19,7 @@ router.register(r"customers", CustomerViewSet, basename='customers')
 router.register(r"addresses", AddressViewSet)
 router.register(r"records", SalesRecordViewSet)
 router.register(r"record-items", SalesRecordItemViewSet)
+router.register(r"relationships", SalesRecordRelationshipViewSet)
 
 # URL patterns for the sales API
 urlpatterns = [

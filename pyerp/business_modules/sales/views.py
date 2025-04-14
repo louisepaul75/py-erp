@@ -1,11 +1,12 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Customer, Address, SalesRecord, SalesRecordItem
+from .models import Customer, Address, SalesRecord, SalesRecordItem, SalesRecordRelationship
 from .serializers import (
     CustomerSerializer,
     AddressSerializer,
     SalesRecordSerializer,
     SalesRecordItemSerializer,
+    SalesRecordRelationshipSerializer
 )
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -120,6 +121,87 @@ class SalesRecordViewSet(viewsets.ModelViewSet):
         serializer = SalesRecordItemSerializer(items, many=True)
         return Response(serializer.data)
         
+    @action(detail=True, methods=['get'], url_path='flow-data')
+    def flow_data(self, request, pk=None):
+        """
+        Retrieve data formatted for React Flow visualization, showing the
+        target SalesRecord and its direct relationships (incoming/outgoing).
+        """
+        try:
+            record = self.get_object()
+        except SalesRecord.DoesNotExist:
+            return Response({"error": "SalesRecord not found."}, status=404)
+
+        nodes = []
+        edges = []
+        processed_record_ids = set() # Keep track to avoid duplicate nodes
+
+        # Function to add a node if not already added
+        def add_node(sales_record):
+            if sales_record.pk not in processed_record_ids:
+                nodes.append({
+                    'id': f'record_{sales_record.pk}',
+                    'type': 'salesRecordNode', # Or your preferred node type
+                    'position': {'x': 0, 'y': 0}, # Initial position
+                    'data': {
+                        'pk': sales_record.pk,
+                        'record_number': sales_record.record_number,
+                        'record_type': sales_record.get_record_type_display(),
+                        'record_date': sales_record.record_date,
+                        'total_amount': sales_record.total_amount,
+                        'delivery_status': sales_record.get_delivery_status_display(),
+                        # Add other relevant data for the node display
+                    }
+                })
+                processed_record_ids.add(sales_record.pk)
+
+        # Add the central node
+        add_node(record)
+
+        # Get outgoing relationships (relationships FROM this record)
+        outgoing_rels = SalesRecordRelationship.objects.filter(
+            from_record=record
+        ).select_related('to_record') # Optimize query
+
+        for rel in outgoing_rels:
+            related_record = rel.to_record
+            add_node(related_record) # Add the related node
+
+            edges.append({
+                'id': f'rel_{rel.pk}',
+                'source': f'record_{record.pk}', # Source is the main record
+                'target': f'record_{related_record.pk}', # Target is the related record
+                'type': 'relationshipEdge', # Or your preferred edge type
+                'label': rel.get_relationship_type_display(), # Optional label
+                'data': {
+                    'pk': rel.pk,
+                    'relationship_type': rel.relationship_type,
+                }
+            })
+
+        # Get incoming relationships (relationships TO this record)
+        incoming_rels = SalesRecordRelationship.objects.filter(
+            to_record=record
+        ).select_related('from_record') # Optimize query
+
+        for rel in incoming_rels:
+            related_record = rel.from_record
+            add_node(related_record) # Add the related node
+
+            edges.append({
+                'id': f'rel_{rel.pk}',
+                'source': f'record_{related_record.pk}', # Source is the related record
+                'target': f'record_{record.pk}', # Target is the main record
+                'type': 'relationshipEdge', # Or your preferred edge type
+                'label': rel.get_relationship_type_display(), # Optional label
+                'data': {
+                    'pk': rel.pk,
+                    'relationship_type': rel.relationship_type,
+                }
+            })
+
+        return Response({'nodes': nodes, 'edges': edges})
+
     @action(detail=False, methods=["get"])
     def monthly_analysis(self, request):
         """
