@@ -432,7 +432,7 @@ export function DocumentFlowTable({ initialDocumentId, onViewDocument }: Documen
                 <span className="text-muted-foreground">Datum:</span> {formatDate(doc.document.date)}
               </div>
               <div>
-                <span className="text-muted-foreground">Betrag:</span> {doc.document.amount.toFixed(2)} €
+                <span className="text-muted-foreground">Betrag:</span> {(doc.document.amount ?? 0).toFixed(2)} €
               </div>
             </div>
           </div>

@@ -142,7 +142,7 @@ export function DocumentTable({
                   )
                 ) : null}
               </TableCell>
-              <TableCell>{document.amount.toFixed(2)} €</TableCell>
+              <TableCell>{(document.amount ?? 0).toFixed(2)} €</TableCell>
               <TableCell className="text-right">
                 <DocumentActions
                   document={document}
