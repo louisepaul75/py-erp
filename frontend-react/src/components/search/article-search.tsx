@@ -1,5 +1,7 @@
+"use client";
+
+var _s = $RefreshSig$();
 import React from "react";
-"use client"
 
 import { useState, useRef, useEffect } from "react"
 import { Input } from "@/components/ui/input"

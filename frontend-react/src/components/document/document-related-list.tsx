@@ -1,6 +1,6 @@
 "use client"
 
-import { useDocumentRelationships } from "@/hooks/use-document-relationships"
+import { useDocumentRelationships } from "@/hooks/document/use-document-relationships"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

@@ -5,7 +5,11 @@ import { Badge } from "@/components/ui/badge"
 import type { Document, DocumentType, PaymentStatus } from "@/types/document/document"
 import { formatDate } from "@/lib/utils"
 import { DocumentActions } from "@/components/document/document-actions"
-import { calculatePaymentStatus, getPaymentStatusText, getPaymentStatusColor } from "@/lib/payment-utils"
+import {
+  calculatePaymentStatus,
+  getPaymentStatusText,
+  getPaymentStatusColor,
+} from "@/lib/payment-utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Clock } from "lucide-react"
 
