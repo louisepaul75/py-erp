@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PlusCircle, Trash2, Search, ArrowDown, ArrowUp, HelpCircle } from "lucide-react"
 import type { DocumentItem } from "@/types/document/document"
 import { Badge } from "@/components/ui/badge"
-import { ArticleSearch, type Article } from "@/components/articles/article-search"
+import { ArticleSearch, type Article } from "@/components/search/article-search"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 

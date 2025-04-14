@@ -4,8 +4,8 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
-import { useDocuments } from "@/hooks/use-documents"
-import { useCreateDocument } from "@/hooks/use-documents"
+import { useDocuments } from "@/hooks/document/use-documents"
+import { useCreateDocument } from "@/hooks/document/use-documents"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -55,7 +55,7 @@ export function DeliveryNoteCreateView({ onClose, sourceDocumentId }: DeliveryNo
   // Initialize items when source document changes
   useEffect(() => {
     if (sourceDocument) {
-      const initialItems: SelectedItem[] = sourceDocument.items.map((item) => ({
+      const initialItems: SelectedItem[] = sourceDocument.items.map((item: DocumentItem) => ({
         ...item,
         selected: true, // Default to selected
         deliveryQuantity: item.quantity, // Default to full quantity
@@ -134,7 +134,7 @@ export function DeliveryNoteCreateView({ onClose, sourceDocumentId }: DeliveryNo
         {
           type: "DELIVERY",
           number: deliveryNoteNumber,
-          customerId: sourceDocument.customer.id,
+          customer: sourceDocument.customer,
           date: deliveryNoteDate,
           status: deliveryNoteStatus,
           notes: deliveryNoteNotes || `Lieferschein erstellt für Auftrag ${sourceDocument.number}`,
