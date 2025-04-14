@@ -37,7 +37,7 @@ function WarehousePageContent() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-7xl pb-20">
+    <div className="container mx-auto p-4 max-w-7xl pb-20 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Warehouse Goods Movement</h1>
         <Link href="/history" className="flex items-center text-sm hover:underline">

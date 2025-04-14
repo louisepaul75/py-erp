@@ -57,11 +57,11 @@ export function TwoPaneLayout({
   };
 
   return (
-    <div className={cn("flex flex-col md:flex-row flex-1", containerClassName)}>
+    <div className={cn("flex flex-col md:flex-row flex-1  h-full", containerClassName)}>
       {/* Left Pane */}
       {!isRightMaximized && (
         <Card className={cn(
-          "flex flex-col relative h-full overflow-hidden",
+          "flex flex-col relative max-md:max-h-[85vh] h-full overflow-hidden",
           isLeftMaximized ? "w-full" : `w-full ${initialLeftPaneWidth}`,
           leftPaneClassName
         )}>
