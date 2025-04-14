@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react"
 import { DocumentList } from "@/components/document/document-list" // Assuming this exists or will be created
-import { SalesFlow } from "@/components/sales-flow/document-flow" // Updated path
+import { DocumentFlow } from "@/components/sales-flow/document-flow" // Updated path
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SearchFilters } from "@/components/search/search-filters" // Updated path
 import { DocumentHeader } from "@/components/document/document-header" // Updated path
@@ -46,7 +46,7 @@ export default function SalesFlowPage() {
         </TabsContent>
 
         <TabsContent value="flow" className="mt-0">
-          <SalesFlow initialDocumentId={selectedDocumentId} />
+          <DocumentFlow initialDocumentId={selectedDocumentId} />
         </TabsContent>
       </Tabs>
     </div>
