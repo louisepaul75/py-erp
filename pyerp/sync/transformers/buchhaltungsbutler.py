@@ -17,7 +17,15 @@ class BuchhaltungsButlerCreditorTransformer(BaseTransformer):
     - name -> name
     - email -> email
     - contact_person_name -> contact_person
-    - street, zip, city, country, additional_addressline -> address
+    - street -> street
+    - zip -> zip_code
+    - city -> city
+    - country -> country
+    - additional_addressline -> additional_addressline
+    - iban -> iban
+    - bic -> bic
+    - customer_number -> accounting_id
+    - sales_tax_id_eu -> tax_id
     """
 
     def transform(self, data: dict):
@@ -55,29 +63,20 @@ class BuchhaltungsButlerCreditorTransformer(BaseTransformer):
             )
             return None
 
-        # Construct address string
-        address_parts = [
-            data.get('contact_person_name', ''),
-            data.get('additional_addressline', ''),
-            data.get('street', ''),
-            f"{data.get('zip', '')} {data.get('city', '')}".strip(),
-            data.get('country', '')
-        ]
-        # Filter out empty parts and join with newline
-        address = "\n".join(part for part in address_parts if part and part.strip())
-        
         transformed_data = {
-            # Ensure creditor_id is a string
             'creditor_id': str(posting_account_number),  
             'name': name.strip() if name else None,
             'email': data.get('email', '').strip() or None,
             'contact_person': data.get('contact_person_name', '').strip() or None,
-            'address': address or None, # Use the constructed address
+            'street': data.get('street', '').strip() or None,
+            'additional_addressline': data.get('additional_addressline', '').strip() or None,
+            'zip_code': data.get('zip', '').strip() or None,
+            'city': data.get('city', '').strip() or None,
+            'country': data.get('country', '').strip() or None,
             'iban': data.get('iban', '').strip() or None,
             'bic': data.get('bic', '').strip() or None,
-            'accounting_id': data.get('customer_number'), # Map customer_number
-            'tax_id': data.get('sales_tax_id_eu', '').strip() or None, # Map EU VAT ID
-            # Add other default/optional fields for Supplier model if needed
+            'accounting_id': data.get('customer_number'),
+            'tax_id': data.get('sales_tax_id_eu', '').strip() or None,
         }
         
         # Remove keys with None values if desired, though Django handles them

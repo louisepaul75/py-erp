@@ -213,13 +213,48 @@ class Supplier(models.Model):
     phone = models.CharField(
         max_length=50,
         blank=True,
+        null=True,
         verbose_name=_("Phone"),
     )
-    address = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name=_("Address"),
+    # Remove combined address field
+    # address = models.TextField(
+    #     blank=True,
+    #     null=True, 
+    #     verbose_name=_("Address"),
+    # )
+    
+    # Add individual address fields
+    street = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name=_("Street")
     )
+    additional_addressline = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        verbose_name=_("Additional Address Line")
+    )
+    zip_code = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True, 
+        verbose_name=_("Zip Code")
+    )
+    city = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        verbose_name=_("City")
+    )
+    country = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True, 
+        verbose_name=_("Country")
+    )
+    
     tax_id = models.CharField(
         max_length=100,
         blank=True,

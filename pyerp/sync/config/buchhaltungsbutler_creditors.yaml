@@ -32,7 +32,11 @@ loader:
       - name
       - email
       - contact_person
-      - address
+      - street
+      - additional_addressline
+      - zip_code
+      - city
+      - country
       - iban
       - bic
       - accounting_id
