@@ -20,6 +20,9 @@ export interface Article {
   name: string
   description?: string
   price: number
+  retail_price?: number | null
+  wholesale_price?: number | null
+  variant_code?: string | null
   unit?: string
   inStock?: number
   quantity?: number
@@ -111,7 +114,10 @@ export function ArticleSearch({
       oldArticleNumber: product.legacy_sku,
       name: product.name || 'Unknown Product',
       description: product.name,
-      price: 0,
+      price: product.retail_price || 0,
+      retail_price: product.retail_price,
+      wholesale_price: product.wholesale_price,
+      variant_code: product.variant_code,
       quantity: 1,
     }
     onArticleSelect(selectedArticle)
@@ -309,6 +315,11 @@ export function ArticleSearch({
                       <div className="flex-grow flex flex-col overflow-hidden">
                         <div className="flex items-baseline">
                           <span className="font-medium truncate" title={product.sku || 'N/A'}>{product.sku || 'N/A'}</span>
+                          {product.variant_code && (
+                            <span className="ml-2 text-xs text-muted-foreground truncate" title={`Code: ${product.variant_code}`}>
+                              (Code: {product.variant_code})
+                            </span>
+                          )}
                           {product.legacy_sku && (
                             <span className="ml-2 text-xs text-muted-foreground truncate" title={`(alt: ${product.legacy_sku})`}>
                               (alt: {product.legacy_sku})
@@ -316,6 +327,20 @@ export function ArticleSearch({
                           )}
                         </div>
                         <span className="text-sm text-muted-foreground truncate" title={product.name || 'No Name'}>{product.name || 'No Name'}</span>
+                        {(product.retail_price || product.wholesale_price) && (
+                          <div className="text-xs text-muted-foreground flex gap-2 mt-0.5">
+                            {product.retail_price && (
+                              <span title={`Retail: ${formatCurrency(product.retail_price)}`}>
+                                VK: {formatCurrency(product.retail_price)}
+                              </span>
+                            )}
+                            {product.wholesale_price && (
+                              <span title={`Wholesale: ${formatCurrency(product.wholesale_price)}`}>
+                                EK: {formatCurrency(product.wholesale_price)}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </CommandItem>
                   ))}

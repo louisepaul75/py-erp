@@ -176,9 +176,9 @@ class GlobalSearchViewSet(viewsets.ViewSet):
                 "sku": product.sku,
                 "name": product.name,
                 "type": "parent_product",
-                "primary_image_thumbnail_url": self._get_primary_image_url(
-                    product
-                ),
+                # "primary_image_thumbnail_url": self._get_primary_image_url(
+                #     product
+                # ),
             }
             for product in products
         ]
@@ -206,9 +206,12 @@ class GlobalSearchViewSet(viewsets.ViewSet):
                 "name": product.name,
                 "legacy_sku": product.legacy_sku,
                 "type": "variant_product",
-                "primary_image_thumbnail_url": self._get_primary_image_url(
-                    product
-                ),
+                "retail_price": product.retail_price,
+                "wholesale_price": product.wholesale_price,
+                "variant_code": product.variant_code,
+                # "primary_image_thumbnail_url": self._get_primary_image_url(
+                #     product
+                # ),
             }
             for product in products
         ]

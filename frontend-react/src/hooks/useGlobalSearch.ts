@@ -19,6 +19,9 @@ export interface SearchResult {
   box_code?: string;
   slot_code?: string;
   location_code?: string;
+  retail_price?: number | null;
+  wholesale_price?: number | null;
+  variant_code?: string | null;
 }
 
 export interface SearchResponse {
@@ -60,7 +63,7 @@ export function useGlobalSearch() {
 
       try {
         const response = await api.get(`search/search/?q=${query}`);
-        const data = await response.json();
+        const data = await response.json() as SearchResponse;
         setResults(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'API error');
