@@ -26,73 +26,55 @@ class SalesRecordTransformer(BaseTransformer):
         """
         super().__init__(config)
 
-    def transform(self, data: Any) -> List[Dict[str, Any]]:
-        """
-        Transform data from legacy format to Django model format.
-        Detects if data represents parent records or child line items and routes accordingly.
-
-        Args:
-            data: Raw data from the legacy system (list of dicts or single dict)
-
-        Returns:
-            List of transformed data ready for loading into Django models
-        """
-        if not data:
-            logger.warning("Received empty data for transformation.")
+    def transform(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Transform sales record data."""
+        transformed_data = []
+        # Ensure necessary lookups are configured
+        if "customer" not in self.config.get("lookups", {}):
+            logger.error("Customer lookup configuration is missing")
+            # Optionally raise an error or handle appropriately
             return []
 
-        # Determine if data is a list or single dict
-        is_list = isinstance(data, list)
-        first_record = data[0] if is_list else data
-
-        if not isinstance(first_record, dict):
-            logger.warning(
-                f"Received non-dictionary data: {type(first_record)}"
+        for record in data:
+            # Log key details of the record being processed
+            legacy_id = record.get("AbsNr", "N/A")
+            record_num = record.get("PapierNr", "N/A")
+            record_date = record.get("Datum", "N/A")
+            logger.info(
+                f"Transforming parent record: AbsNr={legacy_id}, "
+                f"PapierNr={record_num}, Datum={record_date}"
             )
-            return []
+            
+            try:
+                transformed_record = self._transform_single_record(record)
+                if transformed_record:
+                    transformed_data.append(transformed_record)
+            except Exception as e:
+                legacy_id = record.get("AbsNr", "unknown ID")
+                logger.error(
+                    f"Failed to transform sales record with legacy_id "
+                    f"{legacy_id}: {e}",
+                    exc_info=True,
+                )
+                # Depending on requirements, you might skip this record,
+                # add error details, or halt the process.
+                # Here, we skip the record by not adding it to transformed_data.
 
-        # Detect if it's child item data (presence of 'PosNr')
-        is_child_item_data = "PosNr" in first_record
-
-        transformed_records = []
-
-        if is_child_item_data:
-            # Data contains child line items
-            logger.debug(
-                "Detected child item data, calling transform_line_items."
-            )
-            items_to_transform = data if is_list else [data]
-            # Note: transform_line_items expects a list
-            transformed_records = self.transform_line_items(items_to_transform)
-        else:
-            # Data contains parent sales records
-            logger.debug(
-                "Detected parent record data, calling "
-                "_transform_single_record."
-            )
-            records_to_transform = data if is_list else [data]
-            for record in records_to_transform:
-                if isinstance(record, dict):
-                    transformed = self._transform_single_record(record)
-                    if transformed:
-                        transformed_records.append(transformed)
-                else:
-                    logger.warning(
-                        f"Skipping non-dictionary item in parent record list: "
-                        f"{type(record)}"
-                    )
-
-        return transformed_records
+        logger.info(
+            f"Transformation complete for {len(data)} records. "
+            f"{len(transformed_data)} successfully transformed."
+        )
+        return transformed_data
 
     def _transform_single_record(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Transform a single sales record from legacy format to Django model format.
+        Transform a single sales record from legacy format.
 
         Args:
             data: Raw data for a single record from the legacy system
 
         Returns:
-            Transformed data ready for loading into Django models or None if error
+            Transformed data for loading or None if error.
         """
         try:
             # Basic validation
@@ -398,7 +380,8 @@ class SalesRecordTransformer(BaseTransformer):
                                     f"{product.id if product else 'None'}"
                                 )
                         except VariantProduct.MultipleObjectsReturned:
-                            # If multiple found by legacy_sku, get the most recently updated one
+                            # If multiple found by legacy_sku, get the
+                            # most recently updated one
                             product = (
                                 VariantProduct.objects.filter(
                                     legacy_sku=product_code
@@ -408,7 +391,8 @@ class SalesRecordTransformer(BaseTransformer):
                             )
                             logger.warning(
                                 f"Multiple products found for legacy_sku "
-                                f"{product_code}, using most recent: {product.id}"
+                                f"{product_code}, using most recent: "
+                                f"{product.id}"
                             )
 
                     # Calculate line item values
@@ -417,7 +401,7 @@ class SalesRecordTransformer(BaseTransformer):
                     tax_amount = self._calculate_line_item_tax(item)
                     line_total = calculated_subtotal + tax_amount
 
-                    # Define the quantization pattern for rounding to 2 decimal places
+                    # Define quantization pattern for 2 decimal places
                     TWO_PLACES = Decimal('0.01')
 
                     # Get raw unit price
@@ -555,43 +539,42 @@ class SalesRecordTransformer(BaseTransformer):
         return "PAID" if paid else "PENDING"
 
     def _to_decimal(self, value) -> Decimal:
-        """Convert value to Decimal, handling various input types and ensuring values fit in database fields."""
+        """Convert value to Decimal, ensuring it fits database fields."""
         if value is None:
             return Decimal("0")
         try:
             decimal_value = Decimal(str(value))
-            
-            # Check if the value exceeds 12 digits total (10 before decimal, 2 after)
-            # Count digits before decimal point
+
+            # Check if value exceeds 12 digits total (10 before decimal)
             str_value = str(decimal_value)
             parts = str_value.split('.')
             digits_before_decimal = len(parts[0].replace('-', ''))
-            
-            # If value has more than 10 digits before decimal point (12 total with 2 decimal places)
+
+            # If value > 10 digits before decimal (12 total w/ 2 places)
             if digits_before_decimal > 10:
                 logger.warning(
-                    f"Value {decimal_value} exceeds maximum allowed digits "
+                    f"Value {decimal_value} exceeds max allowed digits "
                     f"(10), rounding to 10 digits"
                 )
-                
+
                 # Define quantization pattern for rounding
                 TWO_PLACES = Decimal('0.01')
                 rounded_value = decimal_value.quantize(
                     TWO_PLACES, rounding=ROUND_HALF_UP
                 )
-                
-                # We need to truncate to 10 digits (8 before decimal for safety)
+
+                # Truncate to 10 digits (8 before decimal for safety)
                 max_value = Decimal('99999999.99')
                 if abs(rounded_value) > max_value:
                     logger.warning(
-                        f"Value {decimal_value} still exceeds maximum after "
+                        f"Value {decimal_value} still exceeds max after "
                         f"rounding, capping to {max_value}"
                     )
                     return max_value if rounded_value > 0 else -max_value
-                    
+
                 return rounded_value
-                
-            # If the value fits within the constraint, return it as is
+
+            # If the value fits, return it as is
             return decimal_value
         except (ValueError, TypeError, InvalidOperation):
             return Decimal("0")
@@ -785,7 +768,8 @@ class SalesRecordTransformer(BaseTransformer):
                     )
                     return existing_address
 
-                # Get or create address with is_primary=False to avoid unique constraint violation
+                # Get or create address, ensure is_primary=False first
+                # to avoid potential unique constraint violation.
                 address, created = Address.objects.get_or_create(
                     customer=customer,
                     legacy_id=f"shipping_{address_hash}",
@@ -831,7 +815,8 @@ class SalesRecordTransformer(BaseTransformer):
                             exc_info=True,
                         )
 
-                # Fallback: Create a minimal valid address with unique legacy_id
+                # Fallback: Create minimal valid address
+                # with unique legacy_id
                 try:
                     import uuid
 
@@ -942,7 +927,8 @@ class SalesRecordTransformer(BaseTransformer):
                     )
                     return existing_address
 
-                # Get or create address with is_primary=False to avoid unique constraint violation
+                # Get or create address, ensure is_primary=False first
+                # to avoid potential unique constraint violation.
                 address, created = Address.objects.get_or_create(
                     customer=customer,
                     legacy_id=f"billing_{address_hash}",
@@ -988,7 +974,8 @@ class SalesRecordTransformer(BaseTransformer):
                             exc_info=True,
                         )
 
-                # Fallback: Create a minimal valid address with unique legacy_id
+                # Fallback: Create minimal valid address
+                # with unique legacy_id
                 try:
                     import uuid
 
@@ -1040,7 +1027,7 @@ class SalesRecordTransformer(BaseTransformer):
             # Try to split by commas if no line breaks
             parts = address_str.split(",")
 
-        # Basic parsing - this would need to be enhanced based on actual data format
+        # Basic parsing - enhance based on actual data format
         result = {
             "raw": address_str,
             "name": parts[0].strip() if len(parts) > 0 else "",
@@ -1053,7 +1040,7 @@ class SalesRecordTransformer(BaseTransformer):
         # Try to extract postal code and city from the third line
         if len(parts) > 2:
             city_line = parts[2].strip()
-            # Look for German postal code pattern (5 digits followed by city name)
+            # Look for German postal code (5 digits + city)
             postal_match = re.search(r"(\d{5})\s+(.*)", city_line)
             if postal_match:
                 result["postal_code"] = postal_match.group(1)
@@ -1104,7 +1091,7 @@ class SalesRecordTransformer(BaseTransformer):
         tax_rate = self._extract_line_item_tax_rate(item)
         # Calculate tax precisely first
         tax_amount = (subtotal * tax_rate) / Decimal("100")
-        return tax_amount # Rounding happens in the main transform_line_items method
+        return tax_amount  # Rounding happens later
 
     def _calculate_line_subtotal(self, item: Dict[str, Any]) -> Decimal:
         """Calculate subtotal for line item (before tax)."""
@@ -1166,15 +1153,17 @@ class SalesRecordTransformer(BaseTransformer):
                     customer = Customer.objects.get(
                         customer_number=str(customer_id)
                     )
-                    logger.info(f"Found customer by customer_number: {customer_id}")
+                    logger.info(
+                        f"Found customer by customer_number: {customer_id}"
+                    )
 
                     # Update legacy_id if it's not set
                     if not customer.legacy_id:
                         customer.legacy_id = customer_id
                         customer.save(update_fields=["legacy_id"])
                         logger.info(
-                            f"Updated customer {customer.id} with legacy_id "
-                            f"{customer_id}"
+                            f"Updated customer {customer.id} with "
+                            f"legacy_id {customer_id}"
                         )
 
                     return customer
@@ -1194,8 +1183,8 @@ class SalesRecordTransformer(BaseTransformer):
                             customer.legacy_id = customer_id
                             customer.save(update_fields=["legacy_id"])
                             logger.info(
-                                f"Updated customer {customer.id} with legacy_id "
-                                f"{customer_id}"
+                                f"Updated customer {customer.id} with "
+                                f"legacy_id {customer_id}"
                             )
 
                         return customer
@@ -1204,10 +1193,10 @@ class SalesRecordTransformer(BaseTransformer):
                         name = ""
                         if data.get("Lief_Adr"):
                             parts = data.get("Lief_Adr").split("\r")
-                            name = parts[0] if parts else f"Customer {customer_id}"
+                            name = parts[0] if parts else f"Cust {customer_id}"
                         elif data.get("Rech_Adr"):
                             parts = data.get("Rech_Adr").split("\r")
-                            name = parts[0] if parts else f"Customer {customer_id}"
+                            name = parts[0] if parts else f"Cust {customer_id}"
 
                         logger.info(
                             f"Creating new customer with legacy_id "
