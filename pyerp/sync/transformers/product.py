@@ -181,6 +181,13 @@ class ProductTransformer(BaseTransformer):
             # Handle SKU and variant information
             if "Nummer" in record:
                 transformed["sku"] = str(record["Nummer"]).strip()
+                
+            # Handle legacy_sku field from alteNummer
+            if "alteNummer" in record and record["alteNummer"]:
+                transformed["legacy_sku"] = str(record["alteNummer"]).strip()
+                logger.debug(
+                    "Set legacy_sku from alteNummer: %s", transformed["legacy_sku"]
+                )
 
             # Get legacy_base_sku from fk_ArtNr if available
             if "fk_ArtNr" in record and record["fk_ArtNr"]:
