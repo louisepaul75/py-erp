@@ -77,7 +77,7 @@ cron-descriptor==1.4.5
     # via django-celery-beat
 cssselect2==0.8.0
     # via weasyprint
-ddtrace==3.3.2
+ddtrace==3.4.1
     # via -r requirements/requirements.prod.in
 deprecated==1.2.18
     # via opentelemetry-api

@@ -126,7 +126,7 @@ cryptography==44.0.2
     #   types-redis
 cssselect2==0.8.0
     # via weasyprint
-ddtrace==3.3.1
+ddtrace==3.4.1
     # via -r requirements/requirements.prod.in
 decorator==5.2.1
     # via ipython
