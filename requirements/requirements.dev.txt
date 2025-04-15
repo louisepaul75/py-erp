@@ -161,7 +161,7 @@ django==5.1.8
     #   djangorestframework-simplejwt
     #   drf-spectacular
     #   sentry-sdk
-django-allauth==65.6.0
+django-allauth==65.7.0
     # via -r requirements/requirements.prod.in
 django-anymail==13.0
     # via -r requirements/requirements.prod.in
