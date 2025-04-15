@@ -8,7 +8,7 @@ alabaster==1.0.0
     # via sphinx
 amqp==5.3.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   kombu
 annotated-types==0.7.0
     # via pydantic
@@ -20,25 +20,37 @@ asgiref==3.8.1
     #   django-allauth
     #   django-browser-reload
     #   django-cors-headers
+astor==0.8.1
+    # via flake8-simplify
+astroid==2.15.8
+    # via
+    #   flake8-django
+    #   pylint
 asttokens==3.0.0
     # via stack-data
 attrs==25.3.0
     # via
+    #   flake8-bugbear
+    #   flake8-eradicate
     #   hypothesis
     #   jsonschema
     #   referencing
 babel==2.17.0
-    # via sphinx
+    # via
+    #   mkdocs-material
+    #   sphinx
+backrefs==5.8
+    # via mkdocs-material
 bandit[toml]==1.8.3
     # via -r requirements/requirements.dev.in
 billiard==4.2.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
-black==25.1.0
+black==23.1.0
     # via -r requirements/requirements.dev.in
 boto3==1.37.28
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 botocore==1.37.28
     # via
     #   boto3
@@ -51,7 +63,7 @@ bytecode==0.16.1
     # via ddtrace
 celery==5.4.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-celery-beat
     #   django-celery-results
 certifi==2025.1.31
@@ -59,8 +71,13 @@ certifi==2025.1.31
     #   httpcore
     #   httpx
     #   requests
+    #   sentry-sdk
 cffi==1.17.1
-    # via weasyprint
+    # via
+    #   cryptography
+    #   weasyprint
+cfgv==3.4.0
+    # via pre-commit
 chardet==5.2.0
     # via reportlab
 charset-normalizer==3.4.1
@@ -72,43 +89,58 @@ click==8.1.8
     #   click-didyoumean
     #   click-plugins
     #   click-repl
+    #   mkdocs
     #   mutmut
     #   pip-tools
 click-didyoumean==0.3.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
 click-plugins==1.1.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
 click-repl==0.3.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
+colorama==0.4.6
+    # via
+    #   griffe
+    #   mkdocs-material
 coreapi==2.3.3
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
     #   -r requirements/requirements.dev.in
+    #   -r requirements/requirements.prod.in
 coreschema==0.0.4
     # via coreapi
 coverage[toml]==7.7.1
-    # via pytest-cov
+    # via
+    #   -r requirements/requirements.dev.in
+    #   pytest-cov
 cron-descriptor==1.4.5
     # via django-celery-beat
+cryptography==44.0.2
+    # via
+    #   types-pyopenssl
+    #   types-redis
 cssselect2==0.8.0
     # via weasyprint
 ddtrace==3.3.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 decorator==5.2.1
     # via ipython
 deprecated==1.2.18
     # via opentelemetry-api
+dill==0.3.9
+    # via pylint
+distlib==0.3.9
+    # via virtualenv
 dj-database-url==2.3.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django==5.1.8
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   dj-database-url
     #   django-allauth
     #   django-anymail
@@ -122,59 +154,74 @@ django==5.1.8
     #   django-guardian
     #   django-redis
     #   django-storages
+    #   django-stubs
+    #   django-stubs-ext
     #   django-timezone-field
     #   djangorestframework
     #   djangorestframework-simplejwt
     #   drf-spectacular
+    #   sentry-sdk
 django-allauth==65.6.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-anymail==13.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-browser-reload==1.18.0
     # via -r requirements/requirements.dev.in
 django-celery-beat==2.7.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-celery-results==2.5.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-cors-headers==4.7.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-debug-toolbar==5.1.0
     # via -r requirements/requirements.dev.in
 django-environ==0.11.2
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
     #   -r requirements/requirements.dev.in
+    #   -r requirements/requirements.prod.in
 django-extensions==3.2.3
     # via -r requirements/requirements.dev.in
 django-filter==25.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-guardian==2.4.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 django-redis==5.4.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
     #   -r requirements/requirements.dev.in
+    #   -r requirements/requirements.prod.in
 django-storages==1.14.6
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
+django-stubs[compatible-mypy]==1.15.0
+    # via
+    #   -r requirements/requirements.dev.in
+    #   djangorestframework-stubs
+django-stubs-ext==5.1.3
+    # via django-stubs
 django-timezone-field==7.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-celery-beat
 djangorestframework==3.16.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   djangorestframework-simplejwt
     #   drf-spectacular
 djangorestframework-simplejwt==5.5.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
+djangorestframework-stubs[compatible-mypy]==1.9.1
+    # via -r requirements/requirements.dev.in
 docutils==0.21.2
     # via
     #   sphinx
     #   sphinx-rtd-theme
 drf-spectacular==0.27.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 envier==0.6.1
     # via ddtrace
+eradicate==2.3.0
+    # via flake8-eradicate
+execnet==2.1.1
+    # via pytest-xdist
 executing==2.2.0
     # via stack-data
 factory-boy==3.3.3
@@ -183,12 +230,72 @@ faker==37.1.0
     # via
     #   -r requirements/requirements.dev.in
     #   factory-boy
-flake8==7.2.0
+filelock==3.18.0
+    # via virtualenv
+flake8==6.1.0
+    # via
+    #   -r requirements/requirements.dev.in
+    #   flake8-bugbear
+    #   flake8-builtins
+    #   flake8-commas
+    #   flake8-comprehensions
+    #   flake8-debugger
+    #   flake8-django
+    #   flake8-docstrings
+    #   flake8-eradicate
+    #   flake8-isort
+    #   flake8-mutable
+    #   flake8-print
+    #   flake8-simplify
+    #   flake8-tidy-imports
+    #   flake8-unused-arguments
+    #   pep8-naming
+flake8-blind-except==0.2.1
+    # via -r requirements/requirements.dev.in
+flake8-bugbear==23.12.2
+    # via -r requirements/requirements.dev.in
+flake8-builtins==2.5.0
+    # via -r requirements/requirements.dev.in
+flake8-commas==4.0.0
+    # via -r requirements/requirements.dev.in
+flake8-comprehensions==3.16.0
+    # via -r requirements/requirements.dev.in
+flake8-debugger==4.1.2
+    # via -r requirements/requirements.dev.in
+flake8-django==1.4
+    # via -r requirements/requirements.dev.in
+flake8-docstrings==1.7.0
+    # via -r requirements/requirements.dev.in
+flake8-eradicate==1.5.0
+    # via -r requirements/requirements.dev.in
+flake8-isort==6.1.2
+    # via -r requirements/requirements.dev.in
+flake8-logging-format==2024.24.12
+    # via -r requirements/requirements.dev.in
+flake8-mutable==1.2.0
+    # via -r requirements/requirements.dev.in
+flake8-plugin-utils==1.3.3
+    # via flake8-pytest-style
+flake8-print==5.0.0
+    # via -r requirements/requirements.dev.in
+flake8-pytest-style==2.1.0
+    # via -r requirements/requirements.dev.in
+flake8-simplify==0.21.0
+    # via -r requirements/requirements.dev.in
+flake8-tidy-imports==4.11.0
+    # via -r requirements/requirements.dev.in
+flake8-unused-arguments==0.0.13
     # via -r requirements/requirements.dev.in
 fonttools[woff]==4.56.0
     # via weasyprint
+freezegun==1.5.1
+    # via -r requirements/requirements.dev.in
+ghp-import==2.1.0
+    # via mkdocs
+griffe==1.7.2
+    # via mkdocstrings-python
 gunicorn==23.0.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 h11==0.14.0
     # via httpcore
 httpcore==0.16.3
@@ -197,6 +304,8 @@ httpx==0.23.3
     # via onepasswordconnectsdk
 hypothesis==6.130.9
     # via -r requirements/requirements.dev.in
+identify==2.6.9
+    # via pre-commit
 idna==3.10
     # via
     #   anyio
@@ -208,7 +317,7 @@ importlib-metadata==8.6.1
     # via opentelemetry-api
 inflection==0.5.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   drf-spectacular
 iniconfig==2.1.0
     # via pytest
@@ -216,8 +325,11 @@ ipython==9.0.2
     # via -r requirements/requirements.dev.in
 ipython-pygments-lexers==1.1.1
     # via ipython
-isort==6.0.1
-    # via -r requirements/requirements.dev.in
+isort==5.12.0
+    # via
+    #   -r requirements/requirements.dev.in
+    #   flake8-isort
+    #   pylint
 itypes==1.2.0
     # via coreapi
 jedi==0.19.2
@@ -225,6 +337,9 @@ jedi==0.19.2
 jinja2==3.1.6
     # via
     #   coreschema
+    #   mkdocs
+    #   mkdocs-material
+    #   mkdocstrings
     #   sphinx
 jmespath==1.0.1
     # via
@@ -238,10 +353,20 @@ junit-xml==1.8
     # via mutmut
 kombu==5.5.2
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   celery
+lazy-object-proxy==1.10.0
+    # via astroid
 linkify-it-py==2.0.3
     # via markdown-it-py
+markdown==3.5.2
+    # via
+    #   mkdocs
+    #   mkdocs-autorefs
+    #   mkdocs-material
+    #   mkdocstrings
+    #   mkdocstrings-python
+    #   pymdown-extensions
 markdown-it-py[linkify,plugins]==3.0.0
     # via
     #   mdit-py-plugins
@@ -250,29 +375,63 @@ markdown-it-py[linkify,plugins]==3.0.0
 markupsafe==3.0.2
     # via
     #   jinja2
+    #   mkdocs
+    #   mkdocs-autorefs
+    #   mkdocstrings
     #   werkzeug
 matplotlib-inline==0.1.7
     # via ipython
 mccabe==0.7.0
-    # via flake8
+    # via
+    #   flake8
+    #   pylint
 mdit-py-plugins==0.4.2
     # via markdown-it-py
 mdurl==0.1.2
     # via markdown-it-py
+mergedeep==1.3.4
+    # via
+    #   mkdocs
+    #   mkdocs-get-deps
+mkdocs==1.6.1
+    # via
+    #   -r requirements/requirements.dev.in
+    #   mkdocs-autorefs
+    #   mkdocs-material
+    #   mkdocstrings
+mkdocs-autorefs==1.4.1
+    # via mkdocstrings
+mkdocs-get-deps==0.2.0
+    # via mkdocs
+mkdocs-material==9.6.11
+    # via -r requirements/requirements.dev.in
+mkdocs-material-extensions==1.3.1
+    # via mkdocs-material
+mkdocstrings[python]==0.20.0
+    # via
+    #   -r requirements/requirements.dev.in
+    #   mkdocstrings-python
+mkdocstrings-python==1.9.1
+    # via mkdocstrings
 mutmut==3.2.3
     # via -r requirements/requirements.dev.in
-mypy==1.15.0
-    # via -r requirements/requirements.dev.in
+mypy==1.0.1
+    # via
+    #   -r requirements/requirements.dev.in
+    #   django-stubs
+    #   djangorestframework-stubs
 mypy-extensions==1.0.0
     # via
     #   black
     #   mypy
+nodeenv==1.9.1
+    # via pre-commit
 numpy==2.2.4
     # via pandas
 onepasswordconnectsdk==1.5.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
     #   -r requirements/requirements.dev.in
+    #   -r requirements/requirements.prod.in
 opentelemetry-api==1.31.1
     # via ddtrace
 packaging==24.2
@@ -280,23 +439,30 @@ packaging==24.2
     #   black
     #   build
     #   gunicorn
+    #   mkdocs
     #   pytest
     #   sphinx
+paginate==0.5.7
+    # via mkdocs-material
 pandas==2.2.3
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 parso==0.8.4
     # via
     #   jedi
     #   mutmut
 pathspec==0.12.1
-    # via black
+    # via
+    #   black
+    #   mkdocs
 pbr==6.1.1
     # via stevedore
+pep8-naming==0.14.1
+    # via -r requirements/requirements.dev.in
 pexpect==4.9.0
     # via ipython
 pillow==11.1.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   reportlab
     #   weasyprint
 pip-tools==7.4.1
@@ -304,9 +470,14 @@ pip-tools==7.4.1
 platformdirs==4.3.7
     # via
     #   black
+    #   mkdocs-get-deps
+    #   pylint
     #   textual
+    #   virtualenv
 pluggy==1.5.0
     # via pytest
+pre-commit==3.8.0
+    # via -r requirements/requirements.dev.in
 prompt-toolkit==3.0.50
     # via
     #   click-repl
@@ -314,89 +485,127 @@ prompt-toolkit==3.0.50
 protobuf==6.30.2
     # via ddtrace
 psutil==7.0.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 psycopg2-binary==2.9.10
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
-pycodestyle==2.13.0
-    # via flake8
+pycodestyle==2.11.1
+    # via
+    #   flake8
+    #   flake8-debugger
+    #   flake8-print
 pycparser==2.22
     # via cffi
 pydantic==2.11.2
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 pydantic-core==2.33.1
     # via pydantic
+pydocstyle==6.3.0
+    # via flake8-docstrings
 pydyf==0.11.0
     # via weasyprint
-pyflakes==3.3.2
+pyflakes==3.1.0
     # via flake8
 pygments==2.19.1
     # via
     #   ipython
     #   ipython-pygments-lexers
+    #   mkdocs-material
     #   rich
     #   sphinx
 pyjwt==2.9.0
     # via djangorestframework-simplejwt
+pylint==2.17.7
+    # via -r requirements/requirements.dev.in
+pymdown-extensions==10.7.1
+    # via
+    #   mkdocs-material
+    #   mkdocstrings
 pyphen==0.17.2
     # via weasyprint
 pyproject-hooks==1.2.0
     # via
     #   build
     #   pip-tools
-pytest==8.3.5
+pytest==7.4.4
     # via
     #   -r requirements/requirements.dev.in
+    #   pytest-asyncio
     #   pytest-cov
     #   pytest-django
+    #   pytest-env
+    #   pytest-mock
+    #   pytest-xdist
+pytest-asyncio==0.20.3
+    # via -r requirements/requirements.dev.in
 pytest-cov==6.1.1
     # via -r requirements/requirements.dev.in
 pytest-django==4.11.1
     # via -r requirements/requirements.dev.in
+pytest-env==1.1.3
+    # via -r requirements/requirements.dev.in
+pytest-mock==3.14.0
+    # via -r requirements/requirements.dev.in
+pytest-xdist==3.6.1
+    # via -r requirements/requirements.dev.in
 python-crontab==3.2.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-celery-beat
 python-dateutil==2.9.0.post0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   botocore
     #   celery
+    #   freezegun
+    #   ghp-import
     #   onepasswordconnectsdk
     #   pandas
     #   python-crontab
 python-dotenv==1.1.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 python-json-logger==3.3.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 pytz==2025.2
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   pandas
 pyyaml==6.0.2
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   bandit
     #   drf-spectacular
+    #   mkdocs
+    #   mkdocs-get-deps
+    #   pre-commit
+    #   pymdown-extensions
+    #   pyyaml-env-tag
+pyyaml-env-tag==0.1
+    # via mkdocs
 redis==5.2.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   django-redis
 referencing==0.36.2
     # via
     #   jsonschema
     #   jsonschema-specifications
 reportlab==4.3.1
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 requests==2.32.3
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   coreapi
     #   django-anymail
+    #   djangorestframework-stubs
+    #   mkdocs-material
+    #   requests-mock
     #   sphinx
+requests-mock==1.12.1
+    # via -r requirements/requirements.dev.in
 rfc3986[idna2008]==1.5.0
     # via httpx
 rich==13.9.4
@@ -413,6 +622,8 @@ ruff==0.11.4
     # via -r requirements/requirements.dev.in
 s3transfer==0.11.4
     # via boto3
+sentry-sdk[django]==2.25.1
+    # via -r requirements/requirements.dev.in
 setproctitle==1.3.5
     # via mutmut
 six==1.17.0
@@ -425,7 +636,9 @@ sniffio==1.3.1
     #   httpcore
     #   httpx
 snowballstemmer==2.2.0
-    # via sphinx
+    # via
+    #   pydocstyle
+    #   sphinx
 sortedcontainers==2.4.0
     # via hypothesis
 sphinx==8.2.3
@@ -458,9 +671,9 @@ stack-data==0.6.3
 stevedore==5.4.1
     # via bandit
 structlog==25.2.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 tabulate==0.9.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 textual==3.0.0
     # via mutmut
 tinycss2==1.4.0
@@ -469,15 +682,44 @@ tinycss2==1.4.0
     #   weasyprint
 tinyhtml5==2.0.0
     # via weasyprint
+tomli==2.2.1
+    # via django-stubs
+tomlkit==0.13.2
+    # via pylint
 traitlets==5.14.3
     # via
     #   ipython
     #   matplotlib-inline
+types-cffi==1.17.0.20250326
+    # via types-pyopenssl
+types-freezegun==1.1.10
+    # via -r requirements/requirements.dev.in
+types-pyopenssl==24.1.0.20240722
+    # via types-redis
+types-pytz==2025.2.0.20250326
+    # via
+    #   -r requirements/requirements.dev.in
+    #   django-stubs
+types-pyyaml==6.0.12.20250402
+    # via
+    #   django-stubs
+    #   djangorestframework-stubs
+types-redis==4.6.0.20241004
+    # via -r requirements/requirements.dev.in
+types-requests==2.32.0.20250328
+    # via
+    #   -r requirements/requirements.dev.in
+    #   djangorestframework-stubs
+types-setuptools==78.1.0.20250329
+    # via types-cffi
 typing-extensions==4.13.0
     # via
     #   anyio
     #   ddtrace
     #   dj-database-url
+    #   django-stubs
+    #   django-stubs-ext
+    #   djangorestframework-stubs
     #   mypy
     #   pydantic
     #   pydantic-core
@@ -497,7 +739,7 @@ uc-micro-py==1.0.3
     # via linkify-it-py
 uritemplate==4.1.1
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   coreapi
     #   drf-spectacular
 urllib3==2.3.0
@@ -505,18 +747,24 @@ urllib3==2.3.0
     #   botocore
     #   django-anymail
     #   requests
+    #   sentry-sdk
+    #   types-requests
 vine==5.1.0
     # via
-    #   -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    #   -r requirements/requirements.prod.in
     #   amqp
     #   celery
     #   kombu
-watchdog==6.0.0
-    # via -r requirements/requirements.dev.in
+virtualenv==20.30.0
+    # via pre-commit
+watchdog==2.3.1
+    # via
+    #   -r requirements/requirements.dev.in
+    #   mkdocs
 wcwidth==0.2.13
     # via prompt-toolkit
 weasyprint==65.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 webencodings==0.5.1
     # via
     #   cssselect2
@@ -527,9 +775,10 @@ werkzeug==3.1.3
 wheel==0.45.1
     # via pip-tools
 whitenoise==6.9.0
-    # via -r /Users/joan/VSProjects/pyERP/requirements/requirements.prod.in
+    # via -r requirements/requirements.prod.in
 wrapt==1.17.2
     # via
+    #   astroid
     #   ddtrace
     #   deprecated
 xmltodict==0.14.2
