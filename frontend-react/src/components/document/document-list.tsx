@@ -208,13 +208,6 @@ export function DocumentList({ onDocumentSelect }: DocumentListProps) {
 
   return (
     <div className="rounded-md border">
-      <div className="p-4 flex justify-end">
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Document
-        </Button>
-      </div>
-
       <DocumentTable
         documents={enrichedDocuments || []}
         onView={handleView}

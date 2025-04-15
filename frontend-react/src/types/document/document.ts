@@ -20,6 +20,7 @@ export interface DocumentItem {
  */
 export interface Customer {
   id: string
+  customer_number?: string // Added customer number
   name: string
 }
 

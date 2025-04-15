@@ -11,11 +11,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCreateDocument } from "@/hooks/document/use-documents"
-import type { DocumentType } from "@/types/document/document"
+import type { DocumentType, Customer } from "@/types/document/document"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DocumentItemsForm } from "@/components/document/document-items-form"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CollectiveInvoiceHierarchicalView } from "@/components/document/collective-invoice-hierarchical-view"
+import { useCustomers } from "@/hooks/customer/use-customers"
 
 /**
  * Schema for document creation form validation
@@ -51,6 +52,9 @@ export function DocumentCreateModal({ open, onOpenChange }: DocumentCreateModalP
 
   // State for document items
   const [items, setItems] = useState<any[]>([])
+
+  // Fetch customers
+  const { data: customersData, isLoading: isLoadingCustomers, error: customerError } = useCustomers()
 
   // Initialize form with react-hook-form and zod validation
   const form = useForm<FormValues>({
@@ -147,14 +151,6 @@ export function DocumentCreateModal({ open, onOpenChange }: DocumentCreateModalP
     }
   }
 
-  // Mock customer data
-  const customers = [
-    { id: "1", name: "Acme Inc." },
-    { id: "2", name: "Globex Corporation" },
-    { id: "3", name: "Initech" },
-    { id: "4", name: "Umbrella Corporation" },
-  ]
-
   // If in collective invoice mode, show the hierarchical view
   if (collectiveInvoiceMode && documentType === "INVOICE") {
     return (
@@ -240,16 +236,26 @@ export function DocumentCreateModal({ open, onOpenChange }: DocumentCreateModalP
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Customer</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          disabled={isLoadingCustomers}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select customer" />
+                              <SelectValue placeholder={isLoadingCustomers ? "Loading customers..." : "Select customer"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {customers.map((customer) => (
+                            {customerError && (
+                              <p className="px-4 py-2 text-sm text-destructive">Error loading customers</p>
+                            )}
+                            {!isLoadingCustomers && !customerError && !customersData?.results?.length && (
+                               <p className="px-4 py-2 text-sm text-muted-foreground">No customers found</p>
+                            )}
+                            {customersData?.results?.map((customer: Customer) => (
                               <SelectItem key={customer.id} value={customer.id}>
-                                {customer.name}
+                                {customer.customer_number ? `${customer.customer_number} - ` : ''}{customer.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
