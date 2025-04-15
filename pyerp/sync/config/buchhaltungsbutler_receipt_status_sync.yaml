@@ -1,0 +1,27 @@
+# pyerp/sync/config/buchhaltungsbutler_receipt_status_sync.yaml
+
+pipeline:
+  name: BuchhaltungsButler Receipt Status Sync
+  description: >
+    Fetches inbound receipts from BuchhaltungsButler API and updates the 
+    payment status and payment date of corresponding SalesRecord invoices.
+  steps:
+    - name: extract_receipts
+      module: pyerp.sync.extractors.buchhaltungsbutler
+      class: BuchhaltungsButlerReceiptExtractor
+      config:
+        # page_size: 500 # Optional: Override default page size if needed
+
+    # No transformer needed for this simple status update
+    
+    - name: load_sales_record_status
+      module: pyerp.sync.loaders.sales
+      class: SalesRecordStatusLoader
+      input: extract_receipts # Takes output from the extractor step
+      config:
+        # field_mapping: # Optional: if API field names differ from defaults
+        #   invoice_number: 'invoiceId' 
+        #   amount: 'totalAmount'
+        #   amount_paid: 'paidAmount'
+        #   payment_date: 'lastPaymentDate'
+        pass # No specific config needed unless overriding field mapping 

@@ -88,4 +88,81 @@ class BuchhaltungsButlerCreditorExtractor(BaseExtractor):
             )
             # Decide on error handling: re-raise, return empty list, or custom exception?
             # Re-raising allows Celery retry mechanisms to work.
+            raise
+
+class BuchhaltungsButlerReceiptExtractor(BaseExtractor):
+    """
+    Extracts 'inbound' receipts from the BuchhaltungsButler API to update
+    SalesRecord payment status.
+    Implements the abstract methods from BaseExtractor.
+    """
+
+    def __init__(self, config: dict):
+        """
+        Initializes the extractor with necessary configuration.
+
+        Args:
+            config: Configuration dictionary.
+        """
+        super().__init__(config)
+        self.client = BuchhaltungsButlerClient()
+        self.page_size = self.config.get('page_size', 500)
+        # Direction is fixed for this use case, but could be configurable
+        self.list_direction = "inbound"
+
+    def get_required_config_fields(self) -> List[str]:
+        """Returns a list of required configuration fields."""
+        # API keys are handled globally by the client
+        return []
+
+    def connect(self) -> None:
+        """Establish connection to the data source (not needed)."""
+        logger.debug("Connect method called, but no explicit connection needed.")
+        pass
+
+    def extract(self, query_params: Optional[Dict[str, Any]] = None, fail_on_filter_error: bool = False) -> List[Dict[str, Any]]:
+        """
+        Fetches all 'inbound' receipts using the client's pagination helper.
+
+        Args:
+            query_params: Optional parameters (not used by this extractor).
+            fail_on_filter_error: Whether to fail if filter query fails (not used).
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries, each representing an
+                                  inbound receipt.
+        """
+        if query_params:
+            logger.warning("query_params provided but not used by BuchhaltungsButlerReceiptExtractor: %s", query_params)
+        if fail_on_filter_error:
+            logger.warning("fail_on_filter_error=True provided but not used by BuchhaltungsButlerReceiptExtractor.")
+
+        try:
+            logger.info(
+                "Starting extraction of BuchhaltungsButler \'%s\' receipts...",
+                self.list_direction
+            )
+            # Use the client method to fetch all receipts with pagination handled
+            all_receipts = self.client.get_all_receipts(
+                list_direction=self.list_direction,
+                limit=self.page_size
+            )
+            logger.info(
+                "Successfully fetched %d \'%s\' receipts.",
+                len(all_receipts), self.list_direction
+            )
+
+            return all_receipts
+
+        except BuchhaltungsButlerError as e:
+            logger.error(
+                "BuchhaltungsButler API error during receipt extraction (%s): %s",
+                self.list_direction, e, exc_info=True
+            )
+            raise
+        except Exception as e:
+            logger.error(
+                "Unexpected error during BuchhaltungsButler receipt extraction (%s): %s",
+                self.list_direction, e, exc_info=True
+            )
             raise 

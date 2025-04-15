@@ -1254,46 +1254,42 @@ def run_pipeline_from_config(config_path: str, task_name: str) -> Dict:
     retry_backoff=True,
 )
 def sync_bhb_creditors_to_supplier(self) -> Dict:
+    """Runs the BHB Creditor to Business Supplier sync pipeline."""
+    config_path = os.path.join(
+        os.path.dirname(__file__),
+        "config",
+        "buchhaltungsbutler_creditor_sync.yaml"
+    )
+    return run_pipeline_from_config(
+        config_path=config_path,
+        task_name=self.name # Pass task name for logging
+    )
+
+
+@shared_task(
+    bind=True,
+    name="sync.sync_buchhaltungsbutler_receipt_status",
+    max_retries=2,
+    default_retry_delay=300,  # Retry after 5 minutes
+    autoretry_for=(Exception,),  # Retry on any exception
+    retry_backoff=True,
+)
+def sync_buchhaltungsbutler_receipt_status(self) -> Dict:
     """
-    Runs the sync pipeline to fetch BuchhaltungsButler creditors 
-    and load them into the Supplier model.
-    Uses the configuration file.
+    Runs the BuchhaltungsButler Receipt to SalesRecord Status sync pipeline.
     """
-    config_file = "buchhaltungsbutler_creditors.yaml"
-    task_name = "sync_bhb_creditors_to_supplier"
-    
-    return run_pipeline_from_config(config_file, task_name)
+    config_path = os.path.join(
+        os.path.dirname(__file__),
+        "config",
+        "buchhaltungsbutler_receipt_status_sync.yaml"
+    )
+    return run_pipeline_from_config(
+        config_path=config_path,
+        task_name=self.name # Pass task name for logging
+    )
 
 
-# --- Celery Beat Schedule ---
-# Example: Add the new task to the schedule
-# settings.CELERY_BEAT_SCHEDULE['sync-bhb-creditors-daily'] = {
-#     'task': 'sync.sync_bhb_creditors_to_supplier',
-#     'schedule': crontab(hour=2, minute=30), # Run daily at 2:30 AM
-# }
+# --- Periodic Task Schedule ---
 
-
-# Add scheduled tasks for molds and mold products
-# settings.CELERY_BEAT_SCHEDULE['sync-molds-incremental-hourly'] = {
-#     'task': 'sync.sync_molds',
-#     'schedule': crontab(minute=0), # Run every hour
-#     'kwargs': {'incremental': True}
-# }
-
-# settings.CELERY_BEAT_SCHEDULE['sync-molds-full-nightly'] = {
-#     'task': 'sync.sync_molds',
-#     'schedule': crontab(hour=3, minute=0), # Run daily at 3 AM
-#     'kwargs': {'incremental': False}
-# }
-
-# settings.CELERY_BEAT_SCHEDULE['sync-mold-products-incremental-hourly'] = {
-#     'task': 'sync.sync_mold_products',
-#     'schedule': crontab(minute=15), # Run every hour at 15 past
-#     'kwargs': {'incremental': True}
-# }
-
-# settings.CELERY_BEAT_SCHEDULE['sync-mold-products-full-nightly'] = {
-#     'task': 'sync.sync_mold_products',
-#     'schedule': crontab(hour=3, minute=15), # Run daily at 3:15 AM
-#     'kwargs': {'incremental': False}
-# }
+# Add new tasks to Celery Beat schedule in django settings
+# (e.g., settings/base.py -> CELERY_BEAT_SCHEDULE)

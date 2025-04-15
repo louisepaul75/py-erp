@@ -479,6 +479,114 @@ class BuchhaltungsButlerClient:
                     len(all_creditors))
         return all_creditors
 
+    def get_all_receipts(self, list_direction, limit=500):
+        """Gets ALL receipts for a given direction by handling pagination.
+
+        Args:
+            list_direction (str): Required. 'inbound' or 'outbound'.
+            limit (int, optional): The number of items to fetch per page.
+                                 Defaults to 500.
+
+        Returns:
+            list: A list containing all receipt dictionaries for the direction.
+
+        Raises:
+            ValueError: If list_direction is invalid.
+            BuchhaltungsButlerError: For API or request errors during fetching.
+        """
+        import time
+
+        valid_directions = ["inbound", "outbound"]
+        if list_direction not in valid_directions:
+            raise ValueError(
+                f"Invalid list_direction: '{list_direction}'. "
+                f"Must be one of {valid_directions}"
+            )
+
+        all_receipts = []
+        offset = 0
+        logger.info(
+            "Starting fetch for all '{}' receipts with limit=%d...",
+            list_direction,
+            limit
+        )
+
+        while True:
+            try:
+                logger.debug(
+                    "Fetching '{}' receipts page: offset=%d, limit=%d",
+                    list_direction, offset, limit
+                )
+                # Call list_receipts which uses POST /receipts/get
+                response = self.list_receipts(
+                    list_direction=list_direction,
+                    limit=limit,
+                    offset=offset
+                )
+
+                if not isinstance(response, dict) or 'data' not in response:
+                    logger.error(
+                        "Unexpected response format received for receipts: %s", response
+                    )
+                    raise BuchhaltungsButlerError(
+                        "Unexpected response format from list_receipts"
+                    )
+
+                current_page_receipts = response.get('data', [])
+                total_rows = response.get('rows') # Get total rows if available
+
+                if not current_page_receipts:
+                    logger.info(
+                        "No more '{}' receipts found. Fetch complete.",
+                        list_direction
+                    )
+                    break
+
+                logger.info(
+                    "Fetched %d '{}' receipts from offset %d (Total rows: %s).",
+                    len(current_page_receipts), list_direction, total_rows or 'N/A'
+                )
+                all_receipts.extend(current_page_receipts)
+
+                # Check if this was the last page based on fetched count vs limit
+                # Or if total rows were returned and we've fetched enough
+                if len(current_page_receipts) < limit:
+                     logger.info(
+                         "Last page reached for '{}' receipts (fetched < limit).",
+                         list_direction
+                     )
+                     break
+                if total_rows is not None and len(all_receipts) >= total_rows:
+                    logger.info(
+                        "Fetched total rows (%d) for '{}' receipts.",
+                        total_rows, list_direction
+                    )
+                    break
+
+                offset += limit
+                time.sleep(0.5) # Be kind to the API
+
+            except BuchhaltungsButlerError as e:
+                logger.error(
+                    "API error fetching '{}' receipts at offset %d: %s",
+                    list_direction, offset, e, exc_info=True
+                )
+                raise
+            except Exception as e:
+                logger.error(
+                    "Unexpected error fetching '{}' receipts at offset %d: %s",
+                    list_direction, offset, e, exc_info=True
+                )
+                raise BuchhaltungsButlerError(
+                    f"Unexpected error during '{list_direction}' receipt pagination: {e}"
+                ) from e
+
+        logger.info(
+            "Successfully fetched a total of %d '{}' receipts.",
+            len(all_receipts), list_direction
+        )
+        return all_receipts
+
     # Add other methods like put, delete, patch as needed
 
 
@@ -628,6 +736,37 @@ if __name__ == '__main__':
                  
         except BuchhaltungsButlerError as e:
             print(f"API Error fetching creditors: {e}")
+            if isinstance(e, APIRequestError):
+                 print(f"Status Code: {e.status_code}")
+                 print(f"Response Text: {e.text}")
+
+        print("\n--- Testing list_receipts (Sample Request) ---")
+        try:
+            # Fetch a small sample of inbound receipts
+            receipts_response = client.list_receipts(
+                list_direction='inbound',
+                limit=5
+            )
+            print("Raw receipts_response (inbound, limit=5):")
+            pprint.pprint(receipts_response)
+
+            # Try to extract and print the first receipt if available
+            if isinstance(receipts_response, dict):
+                receipts_list = receipts_response.get('data', [])
+                if receipts_list:
+                    print("\nExample Receipt Structure:")
+                    pprint.pprint(receipts_list[0])
+                else:
+                    print("\nNo receipts found in the sample response.")
+            elif isinstance(receipts_response, list) and receipts_response:
+                 print("\nExample Receipt Structure:")
+                 pprint.pprint(receipts_response[0])
+            else:
+                 print("\nUnexpected or empty response format for receipts:")
+                 pprint.pprint(receipts_response)
+
+        except BuchhaltungsButlerError as e:
+            print(f"API Error fetching receipts: {e}")
             if isinstance(e, APIRequestError):
                  print(f"Status Code: {e.status_code}")
                  print(f"Response Text: {e.text}")
