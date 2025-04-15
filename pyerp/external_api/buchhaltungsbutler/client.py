@@ -2,7 +2,7 @@
 
 import requests
 import logging
-import json  # Added for handling order parameter
+import json  # Keep for potential use, though direct JSON payload preferred now
 from requests.auth import HTTPBasicAuth
 
 from django.conf import settings
@@ -16,8 +16,8 @@ from pyerp.external_api.buchhaltungsbutler.exceptions import (
 
 logger = logging.getLogger(__name__)
 
-# TODO: Confirm the correct base URL
-DEFAULT_BASE_URL = "https://app.buchhaltungsbutler.de/api/v1/"
+# Correct base URL based on the working example
+DEFAULT_BASE_URL = "https://webapp.buchhaltungsbutler.de/api/v1/"
 # TODO: Implement more robust rate limiting if needed
 # API allows 100 requests per customer per minute.
 
@@ -38,7 +38,6 @@ class BuchhaltungsButlerClient:
                 "CUSTOMER_API_KEY) are not fully configured in settings."
             )
             logger.error(msg)
-            # Optionally raise an error or handle incomplete config
             raise BuchhaltungsButlerError(msg)
 
         self.auth = HTTPBasicAuth(self.api_client, self.api_secret)
@@ -49,26 +48,36 @@ class BuchhaltungsButlerClient:
         """Makes a request to the BuchhaltungsButler API."""
         url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
 
-        # Prepare data payload for POST/PUT etc.
-        request_data = data.copy() if data else {}
+        # Add api_key to payload or params consistently
+        # The example shows api_key needed *in addition* to Basic Auth
+        payload_to_send = json_payload.copy() if json_payload else {}
+        form_data_to_send = data.copy() if data else {} # Keep for potential non-JSON POSTs
+
         if method.upper() in ["POST", "PUT", "PATCH"]:
-            # Add api_key to data payload for POST/PUT/PATCH
-            request_data['api_key'] = self.customer_api_key
+            if payload_to_send:
+                payload_to_send['api_key'] = self.customer_api_key
+            elif form_data_to_send:
+                 form_data_to_send['api_key'] = self.customer_api_key
+            else:
+                # If sending empty POST/PUT/PATCH, add api_key to json_payload
+                payload_to_send = {'api_key': self.customer_api_key}
+
         elif params:
-            # Add api_key to query params for GET/DELETE if not already present
             if 'api_key' not in params:
                 params['api_key'] = self.customer_api_key
         else:
-            # Add api_key to query params for GET/DELETE if no other params
-            params = {'api_key': self.customer_api_key}
+             params = {'api_key': self.customer_api_key}
+
 
         headers = {
             'Accept': 'application/json',
             'User-Agent': f'pyERP/{settings.APP_VERSION}'
         }
-        # Content-Type might be needed for POST with form data
-        # if method.upper() == 'POST' and request_data:
-        #     headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        # Set Content-Type if sending JSON
+        if payload_to_send:
+            headers['Content-Type'] = 'application/json'
+        # requests might set Content-Type for form data automatically if needed
+
 
         try:
             response = requests.request(
@@ -76,10 +85,10 @@ class BuchhaltungsButlerClient:
                 url=url,
                 auth=self.auth,
                 headers=headers,
-                params=params,         # For GET/DELETE query parameters
-                data=request_data,     # For POST/PUT form data
-                json=json_payload,       # For sending JSON payload
-                timeout=30             # Standard timeout
+                params=params,            # For GET/DELETE query parameters
+                data=form_data_to_send,   # For POST/PUT form data (use sparingly)
+                json=payload_to_send,     # For sending JSON payload (preferred for POST/PUT)
+                timeout=30                # Standard timeout
             )
 
             # Check for common error status codes
@@ -104,24 +113,35 @@ class BuchhaltungsButlerClient:
             # Handle potential empty response body for success codes like 204
             if response.status_code == 204:
                 return None
+
+            # Handle potential empty response for success with no content
+            if not response.content:
+                 return None # Or return {} if an empty dict is preferred
+
             return response.json()
 
         except requests.exceptions.HTTPError as e:
             # Raised by response.raise_for_status() for 4xx/5xx
             status = e.response.status_code
-            text = e.response.text
+            # Try to get JSON error details first
+            try:
+                error_details = e.response.json()
+                text = json.dumps(error_details) # Format JSON for logging
+            except json.JSONDecodeError:
+                text = e.response.text # Fallback to raw text
+
             logger.error(
                 "HTTP error during BuchhaltungsButler API request "
                 "to %s: %s - %s",
                 url, status, text,
-                exc_info=True
+                exc_info=True # Add traceback only for HTTP errors
             )
             raise APIRequestError(status, text) from e
         except requests.exceptions.RequestException as e:
             # Catch other requests errors (timeout, connection error, etc.)
             logger.error(
                 "Error during BuchhaltungsButler API request to %s: %s",
-                url, e, exc_info=True
+                url, e, exc_info=True # Add traceback for request exceptions
             )
             raise BuchhaltungsButlerError(f"Request failed: {e}") from e
         except Exception as e:
@@ -129,21 +149,29 @@ class BuchhaltungsButlerClient:
             msg = f"An unexpected error occurred: {e}"
             logger.error(
                 "Unexpected error during BuchhaltungsButler API request: %s",
-                msg, exc_info=True
+                msg, exc_info=True # Add traceback for general exceptions
             )
             raise BuchhaltungsButlerError(msg) from e
 
-    # --- Public Methods ---
+    # --- Public Methods ---\
 
     def get(self, endpoint, params=None):
         """Perform a GET request."""
         return self._request("GET", endpoint, params=params)
 
     def post(self, endpoint, data=None, json_payload=None):
-        """Perform a POST request."""
-        return self._request(
-            "POST", endpoint, data=data, json_payload=json_payload
-        )
+        """Perform a POST request. Prefers sending json_payload if provided."""
+        if json_payload is not None:
+             return self._request("POST", endpoint, json_payload=json_payload)
+        elif data is not None:
+             # Fallback for form data if explicitly needed, though JSON is preferred
+             logger.warning("Sending POST request with form data to %s. "
+                            "Consider using json_payload.", endpoint)
+             return self._request("POST", endpoint, data=data)
+        else:
+             # POST request with no body (just api_key added in _request)
+             return self._request("POST", endpoint)
+
 
     def list_receipts(
         self,
@@ -160,7 +188,7 @@ class BuchhaltungsButlerClient:
         invoicenumber=None,
         due_date=None
     ):
-        """Gets receipts based on specified criteria.
+        """Gets receipts based on specified criteria using POST with JSON body.
 
         Args:
             list_direction (str): Required. 'inbound' or 'outbound'.
@@ -168,11 +196,10 @@ class BuchhaltungsButlerClient:
             counterparty (str, optional): Filter by counterparty name.
             date_from (str, optional): Start date filter (YYYY-MM-DD).
             date_to (str, optional): End date filter (YYYY-MM-DD).
-            limit (int, optional): Max number of results (default 500).
+            limit (int, optional): Max number of results (default 500 in API).
             offset (int, optional): Pagination offset (default 0).
             order (dict, optional): Sorting criteria, e.g., {'field': 'date',
-                                    'sort': 'ASC'}. The dict will be JSON
-                                    encoded.
+                                    'sort': 'ASC'}.
             include_offers (bool, optional): Include offers (default False).
             deleted (bool, optional): Include deleted receipts (default False).
             invoicenumber (str, optional): Filter by invoice number.
@@ -211,11 +238,10 @@ class BuchhaltungsButlerClient:
         if offset is not None:
             payload["offset"] = offset
         if order is not None:
-            # API expects 'order' as a JSON string in the form data
-            try:
-                payload["order"] = json.dumps(order)
-            except TypeError as e:
-                raise ValueError(f"Invalid format for 'order' parameter: {e}")
+            # Pass the dict directly, it will be JSON encoded
+            if not isinstance(order, dict):
+                 raise ValueError("Invalid format for 'order' parameter, must be a dict")
+            payload["order"] = order
         if include_offers is not None:
             payload["include_offers"] = include_offers
         if deleted is not None:
@@ -226,15 +252,76 @@ class BuchhaltungsButlerClient:
             payload["due_date"] = due_date
 
         logger.debug("Listing receipts with payload: %s", payload)
-        return self._request("POST", endpoint, data=payload)
+        # Use post method which now defaults to sending JSON payload
+        return self.post(endpoint, json_payload=payload)
+
+    def list_postings(
+        self,
+        date_from,
+        date_to,
+        limit=None,
+        offset=None,
+        # Add other relevant filters based on API docs if needed
+    ):
+        """Gets postings within a date range using POST with JSON body.
+
+        Args:
+            date_from (str): Required. Start date filter (YYYY-MM-DD).
+            date_to (str): Required. End date filter (YYYY-MM-DD).
+            limit (int, optional): Max number of results.
+            offset (int, optional): Pagination offset.
+
+        Returns:
+            dict: The API response containing the list of postings.
+
+        Raises:
+            BuchhaltungsButlerError: For API or request errors.
+        """
+        endpoint = "/postings/get"
+        payload = {
+            "date_from": date_from,
+            "date_to": date_to,
+        }
+        if limit is not None:
+            payload["limit"] = limit
+        if offset is not None:
+            payload["offset"] = offset
+
+        logger.debug("Listing postings with payload: %s", payload)
+        return self.post(endpoint, json_payload=payload)
+
+    def get_posting_accounts(self, limit=None, offset=None):
+        """Gets posting accounts (chart of accounts) using POST with JSON body.
+
+        Args:
+            limit (int, optional): Max number of results.
+            offset (int, optional): Pagination offset.
+
+        Returns:
+            dict: The API response containing the list of posting accounts.
+
+        Raises:
+            BuchhaltungsButlerError: For API or request errors.
+        """
+        endpoint = "/settings/get/postingaccounts"
+        payload = {}
+        if limit is not None:
+            payload["limit"] = limit
+        if offset is not None:
+            payload["offset"] = offset
+
+        logger.debug("Getting posting accounts with payload: %s", payload)
+        # Even if payload is empty, post() handles adding api_key correctly
+        return self.post(endpoint, json_payload=payload)
+
 
     # Add other methods like put, delete, patch as needed
 
 
-# Example usage (for testing/demonstration - remove later)
+# Example usage (for testing/demonstration - requires Django setup)
 if __name__ == '__main__':
     # This requires Django settings to be configured
-    # You might run this via 'python -m 
+    # You might run this via 'python -m
     # pyerp.external_api.buchhaltungsbutler.client'
     # after setting up DJANGO_SETTINGS_MODULE environment variable.
     import os
@@ -249,7 +336,7 @@ if __name__ == '__main__':
     try:
         django.setup()
     except RuntimeError as e:
-        # Handle cases where settings might already be configured 
+        # Handle cases where settings might already be configured
         # (e.g., if run via manage.py)
         if "Settings already configured" not in str(e):
             print(f"Error configuring Django: {e}")
@@ -258,11 +345,68 @@ if __name__ == '__main__':
     try:
         client = BuchhaltungsButlerClient()
         print("Client initialized successfully.")
-        receipts = client.list_receipts(list_direction='inbound', limit=5)
-        print(f"Found {receipts.get('rows')} receipts:")
-        for receipt in receipts.get('data', []):
+
+        print("\\n--- Testing list_receipts ---")
+        receipts_response = client.list_receipts(list_direction='inbound', limit=5)
+        # Adjust based on actual API response structure - check logs if needed
+        # Assuming response might be {'data': [...], 'rows': X} or just [...]
+        if isinstance(receipts_response, dict):
+            receipts_list = receipts_response.get('data', [])
+            total_rows = receipts_response.get('rows', 'N/A')
+            print(f"Found {total_rows} total receipts (showing {len(receipts_list)}):")
+        elif isinstance(receipts_response, list):
+             receipts_list = receipts_response
+             print(f"Found {len(receipts_list)} receipts:")
+        else:
+             receipts_list = []
+             print("Unexpected response format for receipts:", receipts_response)
+
+        for receipt in receipts_list:
             print(f" - {receipt.get('filename')} ({receipt.get('date')})")
+
+        print("\\n--- Testing list_postings ---")
+        # Use appropriate dates
+        postings_response = client.list_postings(date_from="2024-01-01", date_to="2024-12-31", limit=5)
+        if isinstance(postings_response, dict):
+            postings_list = postings_response.get('data', [])
+            total_rows = postings_response.get('rows', 'N/A')
+            print(f"Found {total_rows} total postings (showing {len(postings_list)}):")
+        elif isinstance(postings_response, list):
+             postings_list = postings_response
+             print(f"Found {len(postings_list)} postings:")
+        else:
+             postings_list = []
+             print("Unexpected response format for postings:", postings_response)
+
+        for posting in postings_list:
+            # Print relevant posting info, e.g., description, amount
+            print(f" - Posting ID: {posting.get('uuid', 'N/A')}, Amount: {posting.get('action_amount', 'N/A')}") # Adjust fields as needed
+
+
+        print("\\n--- Testing get_posting_accounts ---")
+        accounts_response = client.get_posting_accounts(limit=10)
+        if isinstance(accounts_response, dict):
+            # Check common keys seen in example or typical API responses
+            accounts_list = accounts_response.get('data', accounts_response.get('postingaccounts', []))
+            total_rows = accounts_response.get('rows', 'N/A')
+            print(f"Found {total_rows} total accounts (showing {len(accounts_list)}):")
+        elif isinstance(accounts_response, list):
+             accounts_list = accounts_response
+             print(f"Found {len(accounts_list)} accounts:")
+        else:
+             accounts_list = []
+             print("Unexpected response format for accounts:", accounts_response)
+
+        for account in accounts_list:
+            print(f" - Account: {account.get('postingaccount', 'N/A')} - {account.get('description', 'N/A')}") # Adjust field names if needed
+
     except BuchhaltungsButlerError as e:
         print(f"API Error: {e}")
+        # Log detailed error if available from APIRequestError
+        if isinstance(e, APIRequestError):
+             print(f"Status Code: {e.status_code}")
+             print(f"Response Text: {e.text}")
     except Exception as e:
         print(f"General Error: {e}")
+        import traceback
+        traceback.print_exc() # Print traceback for unexpected errors
