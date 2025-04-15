@@ -505,17 +505,16 @@ class BuchhaltungsButlerClient:
 
         all_receipts = []
         offset = 0
+        # Use f-string for clarity and type safety
         logger.info(
-            "Starting fetch for all '{}' receipts with limit=%d...",
-            list_direction,
-            limit
+            f"Starting fetch for all '{list_direction}' receipts with limit={limit}..."
         )
 
         while True:
             try:
+                # Use f-string
                 logger.debug(
-                    "Fetching '{}' receipts page: offset=%d, limit=%d",
-                    list_direction, offset, limit
+                    f"Fetching '{list_direction}' receipts page: offset={offset}, limit={limit}"
                 )
                 # Call list_receipts which uses POST /receipts/get
                 response = self.list_receipts(
@@ -542,26 +541,21 @@ class BuchhaltungsButlerClient:
                     )
                     break
 
+                # Use f-string
                 logger.info(
-                    "Fetched %d '{}' receipts from offset %d (Total rows: %s).",
-                    len(current_page_receipts), list_direction, total_rows or 'N/A'
+                    f"Fetched {len(current_page_receipts)} '{list_direction}' receipts "
+                    f"from offset {offset} (Total rows: {total_rows or 'N/A'})."
                 )
                 all_receipts.extend(current_page_receipts)
 
                 # Check if this was the last page based on fetched count vs limit
                 # Or if total rows were returned and we've fetched enough
                 if len(current_page_receipts) < limit:
+                     # Use f-string
                      logger.info(
-                         "Last page reached for '{}' receipts (fetched < limit).",
-                         list_direction
+                         f"Last page reached for '{list_direction}' receipts (fetched < limit)."
                      )
                      break
-                if total_rows is not None and len(all_receipts) >= total_rows:
-                    logger.info(
-                        "Fetched total rows (%d) for '{}' receipts.",
-                        total_rows, list_direction
-                    )
-                    break
 
                 offset += limit
                 time.sleep(0.5) # Be kind to the API
@@ -581,9 +575,9 @@ class BuchhaltungsButlerClient:
                     f"Unexpected error during '{list_direction}' receipt pagination: {e}"
                 ) from e
 
+        # Use f-string
         logger.info(
-            "Successfully fetched a total of %d '{}' receipts.",
-            len(all_receipts), list_direction
+            f"Successfully fetched a total of {len(all_receipts)} '{list_direction}' receipts."
         )
         return all_receipts
 

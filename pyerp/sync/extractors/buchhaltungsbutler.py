@@ -92,8 +92,8 @@ class BuchhaltungsButlerCreditorExtractor(BaseExtractor):
 
 class BuchhaltungsButlerReceiptExtractor(BaseExtractor):
     """
-    Extracts 'inbound' receipts from the BuchhaltungsButler API to update
-    SalesRecord payment status.
+    Extracts receipts from the BuchhaltungsButler API based on configuration.
+    Can fetch 'inbound' or 'outbound' receipts.
     Implements the abstract methods from BaseExtractor.
     """
 
@@ -102,18 +102,27 @@ class BuchhaltungsButlerReceiptExtractor(BaseExtractor):
         Initializes the extractor with necessary configuration.
 
         Args:
-            config: Configuration dictionary.
+            config: Configuration dictionary. Expects 'list_direction'
+                    ('inbound' or 'outbound') and optional 'page_size'.
         """
         super().__init__(config)
         self.client = BuchhaltungsButlerClient()
         self.page_size = self.config.get('page_size', 500)
-        # Direction is fixed for this use case, but could be configurable
-        self.list_direction = "inbound"
+        
+        # Get direction from config, default to 'inbound' if not specified
+        self.list_direction = self.config.get('list_direction', 'inbound')
+        valid_directions = ["inbound", "outbound"]
+        if self.list_direction not in valid_directions:
+             raise ConfigurationError(
+                 f"Invalid list_direction '{self.list_direction}' provided in config. "
+                 f"Must be one of {valid_directions}."
+             )
+        logger.info(f"Initialized BuchhaltungsButlerReceiptExtractor for direction: {self.list_direction}")
 
     def get_required_config_fields(self) -> List[str]:
         """Returns a list of required configuration fields."""
-        # API keys are handled globally by the client
-        return []
+        # list_direction is now effectively required for clarity, though it has a default.
+        return ['list_direction']
 
     def connect(self) -> None:
         """Establish connection to the data source (not needed)."""
@@ -122,18 +131,19 @@ class BuchhaltungsButlerReceiptExtractor(BaseExtractor):
 
     def extract(self, query_params: Optional[Dict[str, Any]] = None, fail_on_filter_error: bool = False) -> List[Dict[str, Any]]:
         """
-        Fetches all 'inbound' receipts using the client's pagination helper.
+        Fetches all receipts for the configured direction using the client's
+        pagination helper.
 
         Args:
             query_params: Optional parameters (not used by this extractor).
             fail_on_filter_error: Whether to fail if filter query fails (not used).
 
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries, each representing an
-                                  inbound receipt.
+            List[Dict[str, Any]]: A list of dictionaries, each representing a
+                                  receipt for the configured direction.
         """
         if query_params:
-            logger.warning("query_params provided but not used by BuchhaltungsButlerReceiptExtractor: %s", query_params)
+            logger.warning(f"query_params provided but not used by BuchhaltungsButlerReceiptExtractor: {query_params}")
         if fail_on_filter_error:
             logger.warning("fail_on_filter_error=True provided but not used by BuchhaltungsButlerReceiptExtractor.")
 

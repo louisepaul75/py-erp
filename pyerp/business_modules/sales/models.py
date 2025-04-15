@@ -420,6 +420,16 @@ class SalesRecord(SalesModel):
         blank=True,
         help_text=_("Date of payment (maps to ZahlungsDat in legacy system)"),
     )
+    amount_paid_external = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None, # Explicitly allow NULL
+        help_text=_(
+            "Amount reported as paid by the external system (e.g., BuchhaltungsButler)"
+        ),
+    )
     currency = models.CharField(
         max_length=3,
         default="EUR",

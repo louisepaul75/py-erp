@@ -298,14 +298,23 @@ class SyncPipeline:
             logger.debug("==> [_process_batch] Loading %s transformed records...", len(all_transformed_records))
             try:
                 load_result = self.loader.load(all_transformed_records) # Load collected records
-                logger.debug("<== [_process_batch] Completed loading. Created: %s, Updated: %s, Errors: %s", load_result.created, load_result.updated, load_result.errors)
-                created_count = load_result.created
-                updated_count = load_result.updated
-                # Add any load errors to the failure count
-                failure_count += load_result.errors
-                # Log details if available and needed (optional)
-                # if load_result.errors > 0 and hasattr(load_result, 'error_details'):
-                #     logger.warning(f"Loading errors encountered: {load_result.error_details}")
+                # Safely access results from the returned dict
+                created_in_batch = load_result.get('created', 0)  # Default to 0 if key missing
+                updated_in_batch = load_result.get('updated', 0)
+                failed_in_batch = load_result.get('failed', 0)
+                # Log using the retrieved values
+                logger.debug(
+                    "<== [_process_batch] Completed loading. Created: %s, Updated: %s, Failed: %s", 
+                    created_in_batch, updated_in_batch, failed_in_batch
+                )
+                created_count += created_in_batch
+                updated_count += updated_in_batch
+                failure_count += failed_in_batch
+                
+                # Optionally log error details if provided by the loader
+                # if failed_in_batch > 0 and 'error_details' in load_result:
+                #     logger.warning(f"Loading errors encountered: {load_result['error_details']}")
+
             except Exception as load_error:
                 # Log batch loading failure
                 logger.error("<== [_process_batch] Error loading batch: %s", load_error, exc_info=True)
