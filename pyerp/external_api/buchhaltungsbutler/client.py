@@ -314,6 +314,79 @@ class BuchhaltungsButlerClient:
         # Even if payload is empty, post() handles adding api_key correctly
         return self.post(endpoint, json_payload=payload)
 
+    def get_all_posting_accounts(self, limit=500):
+        """Gets ALL posting accounts by handling pagination automatically.
+
+        Args:
+            limit (int, optional): The number of items to fetch per page.
+                                 Defaults to 500.
+
+        Returns:
+            list: A list containing all posting account dictionaries.
+
+        Raises:
+            BuchhaltungsButlerError: For API or request errors during fetching.
+        """
+        import time # Import time for sleep
+
+        all_accounts = []
+        offset = 0
+        logger.info("Starting fetch for all posting accounts with limit=%d...", limit)
+
+        while True:
+            try:
+                logger.debug("Fetching posting accounts page: offset=%d, limit=%d",
+                             offset, limit)
+                response = self.get_posting_accounts(limit=limit, offset=offset)
+
+                # Check response structure
+                if not isinstance(response, dict) or 'data' not in response:
+                    logger.error(
+                        "Unexpected response format received: %s", response
+                    )
+                    # Optionally raise an error or return partial results
+                    raise BuchhaltungsButlerError(
+                        "Unexpected response format from get_posting_accounts"
+                    )
+
+                current_page_accounts = response.get('data', [])
+
+                if not current_page_accounts:
+                    logger.info("No more accounts found. Fetch complete.")
+                    break # No more accounts on this page
+
+                logger.info("Fetched %d accounts from offset %d.",
+                            len(current_page_accounts), offset)
+                all_accounts.extend(current_page_accounts)
+
+                # Check if this was the last page
+                if len(current_page_accounts) < limit:
+                    logger.info("Last page reached (fetched < limit).")
+                    break
+
+                # Prepare for the next page
+                offset += limit
+                time.sleep(0.5) # Small delay to be kind to the API
+
+            except BuchhaltungsButlerError as e:
+                logger.error(
+                    "API error fetching posting accounts at offset %d: %s",
+                    offset, e, exc_info=True
+                )
+                raise # Re-raise the exception to signal failure
+            except Exception as e:
+                logger.error(
+                    "Unexpected error fetching posting accounts at offset %d: %s",
+                    offset, e, exc_info=True
+                )
+                raise BuchhaltungsButlerError(
+                    f"Unexpected error during pagination: {e}"
+                ) from e
+
+        logger.info("Successfully fetched a total of %d posting accounts.",
+                    len(all_accounts))
+        return all_accounts
+
 
     # Add other methods like put, delete, patch as needed
 
@@ -327,10 +400,11 @@ if __name__ == '__main__':
     import os
     # Use the base settings file which handles .env loading and 1Password
     os.environ.setdefault(
-        'DJANGO_SETTINGS_MODULE', 'config.settings.base'
+        'DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.base' # Ensure correct settings path
     )
     import django
     import sys  # Import sys for exit
+    import pprint # Import pprint for better dict printing
 
     # Need to configure Django settings explicitly when running script directly
     try:
@@ -346,59 +420,92 @@ if __name__ == '__main__':
         client = BuchhaltungsButlerClient()
         print("Client initialized successfully.")
 
-        print("\\n--- Testing list_receipts ---")
-        receipts_response = client.list_receipts(list_direction='inbound', limit=5)
-        # Adjust based on actual API response structure - check logs if needed
-        # Assuming response might be {'data': [...], 'rows': X} or just [...]
-        if isinstance(receipts_response, dict):
-            receipts_list = receipts_response.get('data', [])
-            total_rows = receipts_response.get('rows', 'N/A')
-            print(f"Found {total_rows} total receipts (showing {len(receipts_list)}):")
-        elif isinstance(receipts_response, list):
-             receipts_list = receipts_response
-             print(f"Found {len(receipts_list)} receipts:")
+        # print("\\n--- Testing list_receipts ---")
+        # receipts_response = client.list_receipts(list_direction='inbound', limit=5)
+        # # Adjust based on actual API response structure - check logs if needed
+        # # Assuming response might be {'data': [...], 'rows': X} or just [...]
+        # if isinstance(receipts_response, dict):
+        #     receipts_list = receipts_response.get('data', [])
+        #     total_rows = receipts_response.get('rows', 'N/A')
+        #     print(f"Found {total_rows} total receipts (showing {len(receipts_list)}):")
+        # elif isinstance(receipts_response, list):
+        #      receipts_list = receipts_response
+        #      print(f"Found {len(receipts_list)} receipts:")
+        # else:
+        #      receipts_list = []
+        #      print("Unexpected response format for receipts:", receipts_response)
+        #
+        # for receipt in receipts_list:
+        #     print(f" - {receipt.get('filename')} ({receipt.get('date')})")
+
+        # print("\\n--- Testing list_postings ---")
+        # # Use appropriate dates
+        # postings_response = client.list_postings(date_from="2024-01-01", date_to="2024-12-31", limit=5)
+        # if isinstance(postings_response, dict):
+        #     postings_list = postings_response.get('data', [])
+        #     total_rows = postings_response.get('rows', 'N/A')
+        #     print(f"Found {total_rows} total postings (showing {len(postings_list)}):")
+        # elif isinstance(postings_response, list):
+        #      postings_list = postings_response
+        #      print(f"Found {len(postings_list)} postings:")
+        # else:
+        #      postings_list = []
+        #      print("Unexpected response format for postings:", postings_response)
+        #
+        # for posting in postings_list:
+        #     # Print relevant posting info, e.g., description, amount
+        #     print(f" - Posting ID: {posting.get('uuid', 'N/A')}, Amount: {posting.get('action_amount', 'N/A')}") # Adjust fields as needed
+
+
+        print("\\n--- Testing get_all_posting_accounts (with pagination) ---")
+        # Use the new method that handles pagination
+        all_accounts_list = client.get_all_posting_accounts()
+
+        print(f"\\nSuccessfully fetched {len(all_accounts_list)} total accounts.")
+
+        # Optionally print the first few accounts to verify structure
+        if all_accounts_list:
+            print("\\nExample first 5 accounts:")
+            for account in all_accounts_list[:5]:
+                pprint.pprint(account)
+                print("---")
         else:
-             receipts_list = []
-             print("Unexpected response format for receipts:", receipts_response)
+            print("\\nNo accounts were retrieved.")
 
-        for receipt in receipts_list:
-            print(f" - {receipt.get('filename')} ({receipt.get('date')})")
+        # --- Previous single-page test (commented out) ---
+        # print("\\n--- Testing get_posting_accounts ---")
+        # # Use default limit by not specifying it
+        # accounts_response = client.get_posting_accounts()
+        #
+        # # Print the raw response for inspection
+        # print("\\nRaw accounts_response:")
+        # pprint.pprint(accounts_response)
+        #
+        # if isinstance(accounts_response, dict):
+        #     # Check common keys seen in example or typical API responses
+        #     accounts_list = accounts_response.get('data', accounts_response.get('postingaccounts', []))
+        #     total_rows = accounts_response.get('rows', 'N/A')
+        #     print(f"\\nFound {total_rows} total accounts (showing {len(accounts_list)}):")
+        #     if accounts_list:
+        #          print("Example account structure:")
+        #          pprint.pprint(accounts_list[0]) # Print first account structure
+        # elif isinstance(accounts_response, list):
+        #      accounts_list = accounts_response
+        #      print(f"\\nFound {len(accounts_list)} accounts:")
+        #      if accounts_list:
+        #          print("Example account structure:")
+        #          pprint.pprint(accounts_list[0]) # Print first account structure
+        # else:
+        #      accounts_list = []
+        #      print("\\nUnexpected response format for accounts:", accounts_response)
+        #
+        # # Keep the loop but print using pprint for better readability if needed
+        # # print("\\nAccount Details:")
+        # # for account in accounts_list:
+        # #     # print(f" - Account: {account.get('postingaccount', 'N/A')} - {account.get('description', 'N/A')}") # Adjust field names if needed
+        # #     pprint.pprint(account)
+        # #     print("---")
 
-        print("\\n--- Testing list_postings ---")
-        # Use appropriate dates
-        postings_response = client.list_postings(date_from="2024-01-01", date_to="2024-12-31", limit=5)
-        if isinstance(postings_response, dict):
-            postings_list = postings_response.get('data', [])
-            total_rows = postings_response.get('rows', 'N/A')
-            print(f"Found {total_rows} total postings (showing {len(postings_list)}):")
-        elif isinstance(postings_response, list):
-             postings_list = postings_response
-             print(f"Found {len(postings_list)} postings:")
-        else:
-             postings_list = []
-             print("Unexpected response format for postings:", postings_response)
-
-        for posting in postings_list:
-            # Print relevant posting info, e.g., description, amount
-            print(f" - Posting ID: {posting.get('uuid', 'N/A')}, Amount: {posting.get('action_amount', 'N/A')}") # Adjust fields as needed
-
-
-        print("\\n--- Testing get_posting_accounts ---")
-        accounts_response = client.get_posting_accounts(limit=10)
-        if isinstance(accounts_response, dict):
-            # Check common keys seen in example or typical API responses
-            accounts_list = accounts_response.get('data', accounts_response.get('postingaccounts', []))
-            total_rows = accounts_response.get('rows', 'N/A')
-            print(f"Found {total_rows} total accounts (showing {len(accounts_list)}):")
-        elif isinstance(accounts_response, list):
-             accounts_list = accounts_response
-             print(f"Found {len(accounts_list)} accounts:")
-        else:
-             accounts_list = []
-             print("Unexpected response format for accounts:", accounts_response)
-
-        for account in accounts_list:
-            print(f" - Account: {account.get('postingaccount', 'N/A')} - {account.get('description', 'N/A')}") # Adjust field names if needed
 
     except BuchhaltungsButlerError as e:
         print(f"API Error: {e}")
