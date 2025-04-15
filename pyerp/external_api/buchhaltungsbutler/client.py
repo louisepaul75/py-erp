@@ -2,6 +2,7 @@
 
 import requests
 import logging
+import json # Added for handling order parameter
 from requests.auth import HTTPBasicAuth
 
 from django.conf import settings
@@ -31,28 +32,41 @@ class BuchhaltungsButlerClient:
         self.base_url = base_url or DEFAULT_BASE_URL
 
         if not all([self.api_client, self.api_secret, self.customer_api_key]):
-            logger.error(
+            msg = (
                 "BuchhaltungsButler API credentials (API_CLIENT, API_SECRET, "
                 "CUSTOMER_API_KEY) are not fully configured in settings."
             )
+            logger.error(msg)
             # Optionally raise an error or handle incomplete config
-            raise BuchhaltungsButlerError("API credentials not fully configured.")
+            raise BuchhaltungsButlerError(msg)
 
         self.auth = HTTPBasicAuth(self.api_client, self.api_secret)
 
-    def _request(self, method, endpoint, params=None, data=None, json=None):
+    def _request(self, method, endpoint, params=None, data=None, json_payload=None):
         """Makes a request to the BuchhaltungsButler API."""
         url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
 
-        # Add the customer-specific API key to the request data/params
-        # Documentation mentions 'form field', implying 'data'
+        # Prepare data payload for POST/PUT etc.
         request_data = data.copy() if data else {}
-        request_data['api_key'] = self.customer_api_key
+        if method.upper() in ["POST", "PUT", "PATCH"]:
+            # Add api_key to data payload for POST/PUT/PATCH
+            request_data['api_key'] = self.customer_api_key
+        elif params:
+             # Add api_key to query params for GET/DELETE if not already present
+             if 'api_key' not in params:
+                 params['api_key'] = self.customer_api_key
+        else:
+             # Add api_key to query params for GET/DELETE if no other params
+             params = {'api_key': self.customer_api_key}
+
 
         headers = {
             'Accept': 'application/json',
             'User-Agent': f'pyERP/{settings.APP_VERSION}'
         }
+        # Content-Type might be needed for POST with form data
+        # if method.upper() == 'POST' and request_data:
+        #     headers['Content-Type'] = 'application/x-www-form-urlencoded'
 
         try:
             response = requests.request(
@@ -60,21 +74,23 @@ class BuchhaltungsButlerClient:
                 url=url,
                 auth=self.auth,
                 headers=headers,
-                params=params, # Use params for GET request query parameters
-                data=request_data, # Use data for POST/PUT form data
-                json=json, # Use json for sending JSON payload if needed
-                timeout=30 # Standard timeout
+                params=params,         # For GET/DELETE query parameters
+                data=request_data,     # For POST/PUT form data
+                json=json_payload,       # For sending JSON payload
+                timeout=30             # Standard timeout
             )
 
             # Check for common error status codes
             if response.status_code == 401:
-                raise AuthenticationError("Authentication failed. Check API Client/Secret.")
+                raise AuthenticationError(
+                    "Authentication failed. Check API Client/Secret."
+                )
             if response.status_code == 403:
                 # Could be auth error or invalid customer api_key
-                 raise AuthenticationError(
-                     f"Forbidden (403). Check credentials and customer API key. "
-                     f"Response: {response.text[:200]}"
-                 )
+                raise AuthenticationError(
+                    f"Forbidden (403). Check credentials/customer API key. "
+                    f"Response: {response.text[:200]}"
+                )
             if response.status_code == 429:
                 # TODO: Implement proper backoff/retry logic
                 logger.warning("Rate limit likely exceeded (429).")
@@ -90,12 +106,14 @@ class BuchhaltungsButlerClient:
 
         except requests.exceptions.HTTPError as e:
             # Raised by response.raise_for_status() for 4xx/5xx
+            status = e.response.status_code
+            text = e.response.text
             logger.error(
                 "HTTP error during BuchhaltungsButler API request to %s: %s - %s",
-                url, e.response.status_code, e.response.text,
+                url, status, text,
                 exc_info=True
             )
-            raise APIRequestError(e.response.status_code, e.response.text) from e
+            raise APIRequestError(status, text) from e
         except requests.exceptions.RequestException as e:
             # Catch other requests errors (timeout, connection error, etc.)
             logger.error(
@@ -105,38 +123,125 @@ class BuchhaltungsButlerClient:
             raise BuchhaltungsButlerError(f"Request failed: {e}") from e
         except Exception as e:
             # Catch unexpected errors
+            msg = f"An unexpected error occurred: {e}"
             logger.error(
                 "Unexpected error during BuchhaltungsButler API request: %s",
-                e, exc_info=True
+                msg, exc_info=True
             )
-            raise BuchhaltungsButlerError(f"An unexpected error occurred: {e}") from e
+            raise BuchhaltungsButlerError(msg) from e
 
-    # --- Public Methods (Examples) ---
+    # --- Public Methods ---
 
     def get(self, endpoint, params=None):
         """Perform a GET request."""
-        # Note: api_key should likely be in params for GET, not data.
-        # Adjusting _request or this method might be needed based on API behavior.
-        # For now, assuming _request handles adding api_key correctly, even to params if needed.
-        # If GET requires api_key in query string, update _request.
         return self._request("GET", endpoint, params=params)
 
-    def post(self, endpoint, data=None, json=None):
+    def post(self, endpoint, data=None, json_payload=None):
         """Perform a POST request."""
-        return self._request("POST", endpoint, data=data, json=json)
+        return self._request("POST", endpoint, data=data, json_payload=json_payload)
+
+    def list_receipts(
+        self,
+        list_direction,
+        payment_status=None,
+        counterparty=None,
+        date_from=None,
+        date_to=None,
+        limit=None,
+        offset=None,
+        order=None, # Expects a dict like {"field": "date", "sort": "ASC"}
+        include_offers=None,
+        deleted=None,
+        invoicenumber=None,
+        due_date=None
+    ):
+        """Gets receipts based on specified criteria.
+
+        Args:
+            list_direction (str): Required. 'inbound' or 'outbound'.
+            payment_status (str, optional): 'paid' or 'unpaid'.
+            counterparty (str, optional): Filter by counterparty name.
+            date_from (str, optional): Start date filter (YYYY-MM-DD).
+            date_to (str, optional): End date filter (YYYY-MM-DD).
+            limit (int, optional): Max number of results (default 500).
+            offset (int, optional): Pagination offset (default 0).
+            order (dict, optional): Sorting criteria, e.g., {'field': 'date', 'sort': 'ASC'}.
+                                     The dict will be JSON encoded.
+            include_offers (bool, optional): Include offers (default False).
+            deleted (bool, optional): Include deleted receipts (default False).
+            invoicenumber (str, optional): Filter by invoice number.
+            due_date (str, optional): Filter by due date (YYYY-MM-DD).
+
+        Returns:
+            dict: The API response containing the list of receipts.
+
+        Raises:
+            ValueError: If list_direction is invalid.
+            BuchhaltungsButlerError: For API or request errors.
+        """
+        endpoint = "/receipts/get"
+        valid_directions = ["inbound", "outbound"]
+        if list_direction not in valid_directions:
+            raise ValueError(f"Invalid list_direction: '{list_direction}'. Must be one of {valid_directions}")
+
+        payload = {
+            "list_direction": list_direction,
+        }
+
+        # Add optional parameters if provided
+        if payment_status is not None:
+            payload["payment_status"] = payment_status
+        if counterparty is not None:
+            payload["counterparty"] = counterparty
+        if date_from is not None:
+            payload["date_from"] = date_from
+        if date_to is not None:
+            payload["date_to"] = date_to
+        if limit is not None:
+            payload["limit"] = limit
+        if offset is not None:
+            payload["offset"] = offset
+        if order is not None:
+            # API expects 'order' as a JSON string in the form data
+            try:
+                payload["order"] = json.dumps(order)
+            except TypeError as e:
+                raise ValueError(f"Invalid format for 'order' parameter: {e}")
+        if include_offers is not None:
+            payload["include_offers"] = include_offers
+        if deleted is not None:
+            payload["deleted"] = deleted
+        if invoicenumber is not None:
+            payload["invoicenumber"] = invoicenumber
+        if due_date is not None:
+            payload["due_date"] = due_date
+
+        logger.debug("Listing receipts with payload: %s", payload)
+        return self._request("POST", endpoint, data=payload)
 
     # Add other methods like put, delete, patch as needed
 
 # Example usage (for testing/demonstration - remove later)
-# if __name__ == '__main__':
-#     # This requires Django settings to be configured
-#     # You might run this via 'python -m pyerp.buchhaltungsbutler.client'
-#     # after setting up DJANGO_SETTINGS_MODULE environment variable.
-#     try:
-#         client = BuchhaltungsButlerClient()
-#         # Replace with a real endpoint once known
-#         # data = client.get('some_endpoint')
-#         # print(data)
-#         print("Client initialized successfully.")
-#     except Exception as e:
-#         print(f"Error: {e}") 
+if __name__ == '__main__':
+    # This requires Django settings to be configured
+    # You might run this via 'python -m pyerp.external_api.buchhaltungsbutler.client'
+    # after setting up DJANGO_SETTINGS_MODULE environment variable.
+    import os
+    # Ensure this points to your actual settings file
+    os.environ.setdefault(
+        'DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.development'  # Corrected path
+    )
+    import django
+    import sys # Import sys for exit
+
+    try:
+        client = BuchhaltungsButlerClient()
+        print("Client initialized successfully.")
+        receipts = client.list_receipts(list_direction='inbound', limit=5)
+        print(f"Found {receipts.get('rows')} receipts:")
+        for receipt in receipts.get('data', []):
+            print(f" - {receipt.get('filename')} ({receipt.get('date')})")
+    except BuchhaltungsButlerError as e:
+        print(f"API Error: {e}")
+    except Exception as e:
+        print(f"General Error: {e}") 

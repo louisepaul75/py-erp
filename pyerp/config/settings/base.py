@@ -31,21 +31,37 @@ logging.basicConfig(
 )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# Correct BASE_DIR to point to the project root (/Users/joan/VSProjects/pyERP)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 # Initialize django-environ
 env = environ.Env()
 
-# Attempt to read .env file, if it exists
-# Corrected path joining for .env file
-env_file_path = BASE_DIR / ".env"
-if env_file_path.exists():
-    with open(env_file_path, encoding='utf-8') as f:  # Specify encoding
-        environ.Env.read_env(env_file=f)
-    logging.info(f"Loaded environment variables from: {env_file_path}")
-else:
+# Attempt to read environment-specific .env file first, then root .env
+env_dev_file_path = BASE_DIR / "config" / "env" / ".env.dev"
+env_root_file_path = BASE_DIR / ".env"
+loaded_env_file = None
+
+if env_dev_file_path.exists():
+    try:
+        with open(env_dev_file_path, encoding='utf-8') as f:
+            environ.Env.read_env(env_file=f)
+        loaded_env_file = env_dev_file_path
+        logging.info(f"Loaded environment variables from: {loaded_env_file}")
+    except Exception as e:
+        logging.error(f"Error loading {env_dev_file_path}: {e}", exc_info=True)
+elif env_root_file_path.exists():
+    try:
+        with open(env_root_file_path, encoding='utf-8') as f:
+            environ.Env.read_env(env_file=f)
+        loaded_env_file = env_root_file_path
+        logging.info(f"Loaded environment variables from: {loaded_env_file}")
+    except Exception as e:
+        logging.error(f"Error loading {env_root_file_path}: {e}", exc_info=True)
+
+if not loaded_env_file:
     logging.warning(
-        f".env file not found at {env_file_path}. "
+        f"No .env file found at {env_dev_file_path} or {env_root_file_path}. "
         "Relying on system environment variables."
     )
 
@@ -225,6 +241,73 @@ def get_vault_uuid_by_name(client, vault_name):
         )
         return None
 
+
+# --- Helper Function to get Item Fields from 1Password ---
+
+
+def get_op_item_fields(client, vault_name, item_name):
+    """Fetches fields from a specific item in a 1Password vault."""
+    if not client:
+        logging.warning("1Password client not initialized. Cannot fetch item.")
+        return None, None  # Return None for fields and vault_uuid
+
+    vault_uuid = get_vault_uuid_by_name(client, vault_name)
+    if not vault_uuid:
+        logging.warning(
+            "Could not find vault '%s' UUID. Cannot fetch item '%s'.",
+            vault_name, item_name
+        )
+        return None, None
+
+    try:
+        logging.info(
+            "Attempting to fetch item from 1Password: Vault='%s', Item='%s'",
+            vault_name, item_name
+        )
+        # Fetch all items first, then filter by title
+        all_items = client.get_items(vault_uuid)
+        target_item = None
+        for item in all_items:
+            if item.title == item_name:
+                target_item = item
+                break # Found the item
+
+        if not target_item:
+            logging.warning(
+                "Item '%s' not found in vault '%s' after checking all items.",
+                item_name, vault_name
+            )
+            return None, vault_uuid
+
+        # Get the full details of the found item
+        item_detail = client.get_item(target_item.id, vault_uuid)
+
+        if item_detail and item_detail.fields:
+            item_fields = {
+                field.label: field.value
+                for field in item_detail.fields
+                if field.value is not None
+            }
+            logging.info(
+                "Successfully retrieved fields for item '%s' from vault '%s'.",
+                item_name, vault_name
+            )
+            return item_fields, vault_uuid
+        else:
+            logging.warning(
+                "Item '%s' found in vault '%s' but has no fields or could "
+                "not be fully retrieved.", item_name, vault_name
+            )
+            return None, vault_uuid
+
+    except Exception as e:
+        logging.error(
+            "Error fetching item '%s' from 1Password vault '%s': %s",
+            item_name, vault_name, e, exc_info=True
+        )
+        return None, vault_uuid
+
+
 # --- Fetch Database Credentials ---
 db_host = os.environ.get("DB_HOST")
 db_port = os.environ.get("DB_PORT")
@@ -233,111 +316,64 @@ db_user = os.environ.get("DB_USER")
 db_password = os.environ.get("DB_PASSWORD")
 db_engine = os.environ.get("DB_ENGINE", "django.db.backends.postgresql")
 db_credentials_source = "environment variables"
+db_vault_name = "dev"  # Define vault name
+db_item_name = "postgres_db"  # Define item name
 
-# Try fetching from 1Password (dev vault)
-if op_client:
-    db_vault_name = "dev"
-    db_item_name = "postgres_db"
-    db_vault_uuid = get_vault_uuid_by_name(op_client, db_vault_name)
+# Try fetching from 1Password using the helper function
+# The underscore '_' is intentionally used to discard the vault_uuid
+# We use '_' because gettext_lazy was imported as _ earlier
+db_item_fields, _vault_uuid_db = get_op_item_fields(
+    op_client, db_vault_name, db_item_name
+)
 
-    if db_vault_uuid:
-        try:
-            logging.info(
-                "Attempting to fetch DB credentials from 1Password: "
-                "Vault='%s', Item='%s'", db_vault_name, db_item_name
-            )
-            # Get item details
-            item_list = op_client.get_items(db_vault_uuid, title=db_item_name)
-            if item_list:
-                # Assume first item is the one we want if title matches
-                db_item = op_client.get_item(item_list[0].id, db_vault_uuid)
+if db_item_fields:
+    # Get values using expected labels
+    fetched_host = db_item_fields.get("server")
+    fetched_port = db_item_fields.get("port")
+    fetched_user = db_item_fields.get("username")
+    fetched_password = db_item_fields.get("password")
+    fetched_name = db_item_fields.get("database")
 
-                if db_item and db_item.fields:
-                    item_fields = {
-                        field.label: field.value
-                        for field in db_item.fields
-                        if field.value is not None
-                    }
-
-                    # Get values
-                    fetched_host = item_fields.get("server")
-                    fetched_port = item_fields.get("port")
-                    fetched_user = item_fields.get("username")
-                    fetched_password = item_fields.get("password")
-                    fetched_name = item_fields.get("database")
-
-                    # Update if fetched
-                    if fetched_host is not None:
-                        db_host = fetched_host
-                        logging.info(
-                            "Using 1Password value for DB_HOST."
-                        )
-                    if fetched_port is not None:
-                        db_port = fetched_port
-                        logging.info(
-                            "Using 1Password value for DB_PORT."
-                        )
-                    if fetched_user is not None:
-                        db_user = fetched_user
-                        logging.info(
-                            "Using 1Password value for DB_USER."
-                        )
-                    if fetched_password is not None:
-                        db_password = fetched_password
-                        logging.info(
-                            "Using 1Password value for DB_PASSWORD: ***"
-                        )
-                    else:
-                        logging.warning(
-                            "DB password field not found in 1Password item '%s' "
-                            "or is empty", db_item_name
-                        )
-                    if fetched_name is not None:
-                        db_name = fetched_name
-                        logging.info(
-                            "Using 1Password value for DB_NAME."
-                        )
-
-                    # Update source
-                    if any(val is not None for val in [
-                        fetched_host, fetched_port, fetched_user,
-                        fetched_password, fetched_name
-                    ]):
-                        db_credentials_source = "1Password (dev vault)"
-                        logging.info(
-                            "Successfully retrieved DB credentials from "
-                            "1Password."
-                        )
-                    else:
-                        logging.warning(
-                            "Could not find expected fields (server, port, "
-                            "username, password, database) in 1Password item "
-                            "'%s' in vault '%s'.", db_item_name, db_vault_name
-                        )
-                else:
-                    logging.warning(
-                        "Item '%s' found in vault '%s' but has no fields "
-                        "or could not be fully retrieved.",
-                        db_item_name, db_vault_name
-                    )
-            else:
-                logging.warning(
-                    "Item '%s' not found in vault '%s'.",
-                    db_item_name, db_vault_name
-                )
-        except Exception as e:
-            logging.error(
-                "Error fetching DB credentials from 1Password vault '%s': %s",
-                db_vault_name, e, exc_info=True
-            )
-            logging.warning(
-                "Falling back to environment variables for DB credentials."
-            )
+    # Update settings if values were fetched
+    if fetched_host is not None:
+        db_host = fetched_host
+        logging.info("Using 1Password value for DB_HOST.")
+    if fetched_port is not None:
+        db_port = fetched_port
+        logging.info("Using 1Password value for DB_PORT.")
+    if fetched_user is not None:
+        db_user = fetched_user
+        logging.info("Using 1Password value for DB_USER.")
+    if fetched_password is not None:
+        db_password = fetched_password
+        logging.info("Using 1Password value for DB_PASSWORD: ***")
     else:
         logging.warning(
-            "Could not find '%s' vault UUID, falling back to environment "
-            "variables for DB credentials.", db_vault_name
+            "DB password field ('password') not found in 1Password item '%s' "
+            "or is empty.", db_item_name
         )
+    if fetched_name is not None:
+        db_name = fetched_name
+        logging.info("Using 1Password value for DB_NAME.")
+
+    # Update source if any value was successfully fetched
+    if any(val is not None for val in [
+        fetched_host, fetched_port, fetched_user, fetched_password, fetched_name
+    ]):
+        db_credentials_source = f"1Password ({db_vault_name} vault)"
+    else:
+        logging.warning(
+            "Could not find expected fields (server, port, username, password, "
+            "database) in 1Password item '%s' in vault '%s'. Falling back to "
+            "environment variables.",
+            db_item_name, db_vault_name
+        )
+else:
+    logging.warning(
+        "Failed to retrieve DB credentials from 1Password. "
+        "Falling back to environment variables."
+    )
+
 
 # Use fetched or environment variable values
 DATABASES = {
@@ -722,96 +758,63 @@ logs_dir.mkdir(exist_ok=True)
 # }
 # End of commented out LOGGING dict
 
+
 # --- Fetch Image API Credentials ---
 image_api_url = os.environ.get("IMAGE_API_URL", "http://db07.wsz.local/api/")
 image_api_username = os.environ.get("IMAGE_API_USERNAME", "admin")
 image_api_password = os.environ.get("IMAGE_API_PASSWORD", "")
 image_api_credentials_source = "environment variables"
+image_api_vault_name = "dev"  # Use the same vault as DB for this example
+image_api_item_name = "image_cms_api"
 
-# Try to get Image API credentials from 1Password if the client is initialized
-if op_client and db_vault_uuid:  # Use db_vault_uuid from db credentials section
-    try:
-        op_image_item_name = "image_cms_api"
+# Try fetching from 1Password using the helper function
+# The underscore '_' is intentionally used to discard the vault_uuid
+# We use '_' because gettext_lazy was imported as _ earlier
+image_item_fields, _vault_uuid_img = get_op_item_fields(
+    op_client, image_api_vault_name, image_api_item_name
+)
+
+if image_item_fields:
+    # Get values using expected labels
+    fetched_url = image_item_fields.get("URL")
+    fetched_username = image_item_fields.get("username")
+    fetched_password = image_item_fields.get("password")
+
+    # Update settings if values were fetched
+    if fetched_url is not None:
+        image_api_url = fetched_url
+        logging.info("Using 1Password value for IMAGE_API_URL: %s", image_api_url)
+    if fetched_username is not None:
+        image_api_username = fetched_username
         logging.info(
-            "Attempting to fetch Image API credentials from 1Password: "
-            f"Vault='{db_vault_name}', Item='{op_image_item_name}'"
+            "Using 1Password value for IMAGE_API_USERNAME: %s", image_api_username
         )
-        
-        # Get all items in the vault (reusing items list if available)
-        items = globals().get('items') or op_client.get_items(db_vault_uuid)
-        
-        # Find the target item
-        image_target_item = None
-        for item in items:
-            if item.title == op_image_item_name:
-                image_target_item = item
-                break
-                
-        if image_target_item:
-            # Get the complete item with all fields
-            image_item = op_client.get_item(image_target_item.id, db_vault_uuid)
-            
-            if image_item and image_item.fields:
-                image_item_fields = {
-                    field.label: field.value
-                    for field in image_item.fields
-                    if field.value is not None
-                }
-                
-                # Get values from 1Password fields
-                fetched_url = image_item_fields.get("URL")
-                fetched_username = image_item_fields.get("username")
-                fetched_password = image_item_fields.get("password")
-                
-                # Update values if they were fetched
-                if fetched_url is not None:
-                    image_api_url = fetched_url
-                    logging.info(
-                        "Using 1Password value for IMAGE_API_URL: %s", image_api_url
-                    )
-                if fetched_username is not None:
-                    image_api_username = fetched_username
-                    logging.info(
-                        "Using 1Password value for IMAGE_API_USERNAME: %s",
-                        image_api_username
-                    )
-                if fetched_password is not None:
-                    image_api_password = fetched_password
-                    # Log password presence but not the actual value
-                    img_pw_display = '*' * (
-                        len(image_api_password) if image_api_password else 0
-                    )
-                    logging.info(
-                        "Using 1Password value for IMAGE_API_PASSWORD: %s",
-                        img_pw_display
-                    )
-                
-                # Set credential source if at least one value was fetched
-                if any(val is not None for val in [
-                    fetched_url, fetched_username, fetched_password
-                ]):
-                    image_api_credentials_source = "1Password (dev vault)"
-                    logging.info(
-                        "Successfully retrieved Image API credentials "
-                        "from 1Password."
-                    )
-        else:
-            logging.warning(
-                "Item '%s' not found in vault '%s'.",
-                op_image_item_name, db_vault_name
-            )
-            
-    except Exception as e:
-        logging.error(
-            f"Error fetching Image API credentials from 1Password: {e}",
-            exc_info=True
-        )
-        logging.warning(
-            "Falling back to environment variables for Image API credentials."
+    if fetched_password is not None:
+        image_api_password = fetched_password
+        img_pw_display = '*' * (len(image_api_password) if image_api_password else 0)
+        logging.info(
+            "Using 1Password value for IMAGE_API_PASSWORD: %s", img_pw_display
         )
 
-# Update the initial Image API settings - these might be used directly in
-# some code
+    # Update source if any value was successfully fetched
+    if any(val is not None for val in [fetched_url, fetched_username, fetched_password]):
+        image_api_credentials_source = f"1Password ({image_api_vault_name} vault)"
+    else:
+        logging.warning(
+            "Could not find expected fields (URL, username, password) in "
+            "1Password item '%s' in vault '%s'. Falling back to "
+            "environment variables.",
+            image_api_item_name, image_api_vault_name
+        )
+else:
+    logging.warning(
+        "Failed to retrieve Image API credentials from 1Password. "
+        "Falling back to environment variables."
+    )
+
+
+# Update the initial Image API settings - these might be used directly in some code # noqa E501
+# Ensure these are set regardless of the source
 IMAGE_API_URL = image_api_url
 IMAGE_API_USERNAME = image_api_username
 IMAGE_API_PASSWORD = image_api_password
@@ -852,97 +855,55 @@ bb_api_client = os.environ.get("BUCHHALTUNGSBUTLER_API_CLIENT")
 bb_api_secret = os.environ.get("BUCHHALTUNGSBUTLER_API_SECRET")
 bb_customer_key = os.environ.get("BUCHHALTUNGSBUTLER_CUSTOMER_KEY")
 bb_credentials_source = "environment variables"
+bb_vault_name = "dev-high"
+bb_item_name = "buchhaltungsbutler_api"
 
-# Try fetching from 1Password (dev-high vault)
-if op_client:
-    bb_vault_name = "dev-high"
-    bb_item_name = "buchhaltungsbutler_api"
-    bb_vault_uuid = get_vault_uuid_by_name(op_client, bb_vault_name)
+# Try fetching from 1Password using the helper function
+# The underscore '_' is intentionally used to discard the vault_uuid
+# We use '_' because gettext_lazy was imported as _ earlier
+bb_item_fields, _vault_uuid_bb = get_op_item_fields(
+    op_client, bb_vault_name, bb_item_name
+)
 
-    if bb_vault_uuid:
-        try:
-            logging.info(
-                "Attempting to fetch BuchhaltungsButler API credentials from "
-                "1Password: Vault='%s', Item='%s'", bb_vault_name, bb_item_name
-            )
-            # Get item details
-            bb_item_list = op_client.get_items(bb_vault_uuid, title=bb_item_name)
-            if bb_item_list:
-                bb_item = op_client.get_item(bb_item_list[0].id, bb_vault_uuid)
+if bb_item_fields:
+    # Get values using expected labels (adjust if needed)
+    fetched_client = bb_item_fields.get("username")  # API Client
+    fetched_secret = bb_item_fields.get("API Secret")
+    fetched_customer_key = bb_item_fields.get("API-Key")  # API Key
 
-                if bb_item and bb_item.fields:
-                    bb_item_fields = {
-                        field.label: field.value
-                        for field in bb_item.fields
-                        if field.value is not None
-                    }
+    # Update settings if values were fetched
+    if fetched_client is not None:
+        bb_api_client = fetched_client
+        logging.info("Using 1Password value for BUCHHALTUNGSBUTLER_API_CLIENT.")
+    if fetched_secret is not None:
+        bb_api_secret = fetched_secret
+        logging.info("Using 1Password value for BUCHHALTUNGSBUTLER_API_SECRET: ***")
+    if fetched_customer_key is not None:
+        bb_customer_key = fetched_customer_key
+        logging.info("Using 1Password value for BUCHHALTUNGSBUTLER_CUSTOMER_KEY: ***")
 
-                    # Get values using labels from screenshot
-                    fetched_client = bb_item_fields.get("username")  # API Client
-                    fetched_secret = bb_item_fields.get("API Secret")
-                    fetched_customer_key = bb_item_fields.get("API-Key")
-
-                    # Update values if they were fetched
-                    if fetched_client is not None:
-                        bb_api_client = fetched_client
-                        logging.info(
-                            "Using 1Password value for "
-                            "BUCHHALTUNGSBUTLER_API_CLIENT."
-                        )
-                    if fetched_secret is not None:
-                        bb_api_secret = fetched_secret
-                        logging.info(
-                            "Using 1Password value for "
-                            "BUCHHALTUNGSBUTLER_API_SECRET: ***"
-                        )
-                    if fetched_customer_key is not None:
-                        bb_customer_key = fetched_customer_key
-                        logging.info(
-                            "Using 1Password value for "
-                            "BUCHHALTUNGSBUTLER_CUSTOMER_KEY: ***"
-                        )
-
-                    # Set credential source if at least one value was fetched
-                    if any(val is not None for val in [
-                        fetched_client, fetched_secret, fetched_customer_key
-                    ]):
-                        bb_credentials_source = "1Password (dev-high vault)"
-                        logging.info(
-                            "Successfully retrieved BuchhaltungsButler API "
-                            "credentials from 1Password."
-                        )
-                else:
-                    logging.warning(
-                        "Item '%s' found in vault '%s' but has no fields "
-                        "or could not be fully retrieved.",
-                        bb_item_name, bb_vault_name
-                    )
-            else:
-                logging.warning(
-                    "Item '%s' not found in vault '%s'.",
-                    bb_item_name, bb_vault_name
-                )
-        except Exception as e:
-            logging.error(
-                "Error fetching BuchhaltungsButler API credentials from "
-                "1Password vault '%s': %s",
-                bb_vault_name, e, exc_info=True
-            )
-            logging.warning(
-                "Falling back to environment variables for BuchhaltungsButler "
-                "API credentials."
-            )
+    # Update source if any value was successfully fetched
+    if any(val is not None for val in [fetched_client, fetched_secret, fetched_customer_key]):
+        bb_credentials_source = f"1Password ({bb_vault_name} vault)"
     else:
         logging.warning(
-            "Could not find '%s' vault UUID, falling back to environment "
-            "variables for BuchhaltungsButler API credentials.", bb_vault_name
+            "Could not find expected fields (username, API Secret, API-Key) "
+            "in 1Password item '%s' in vault '%s'. Falling back to "
+            "environment variables.",
+            bb_item_name, bb_vault_name
         )
+else:
+    logging.warning(
+        "Failed to retrieve BuchhaltungsButler API credentials from 1Password. "
+        "Falling back to environment variables."
+    )
+
 
 # Store BuchhaltungsButler API Configuration
 BUCHHALTUNGSBUTLER_API = {
-    "API_CLIENT": bb_api_client,        # For Basic Auth username
-    "API_SECRET": bb_api_secret,        # For Basic Auth password
-    "CUSTOMER_API_KEY": bb_customer_key  # For customer selection param
+    "API_CLIENT": bb_api_client,  # For Basic Auth username
+    "API_SECRET": bb_api_secret,  # For Basic Auth password
+    "CUSTOMER_API_KEY": bb_customer_key,  # For customer selection param
 }
 
 # Print BuchhaltungsButler API info for debugging
@@ -956,7 +917,7 @@ logging.info(
 if not BUCHHALTUNGSBUTLER_API["API_SECRET"]:
     logging.warning("BuchhaltungsButler API Secret is NOT SET.")
 
-# Update loggers for image API - COMMENTED OUT, handled by pyerp.utils.logging
+# Update loggers for image API - COMMENTED OUT, handled by pyerp.utils.logging # noqa E501
 # LOGGING["loggers"]["pyerp.external_api.images_cms"] = {
 #     "handlers": ["console", "data_sync_file"],
 #     "level": LOG_LEVEL,
