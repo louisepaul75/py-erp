@@ -2,13 +2,14 @@
 
 import React from "react";
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent } from "@/components/ui/popover"
-import { Search } from "lucide-react"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Search, Loader2, ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useGlobalSearch, type SearchResult } from "@/hooks/useGlobalSearch"
 
 // Artikel-Typ
 export interface Article {
@@ -20,95 +21,9 @@ export interface Article {
   price: number
   unit?: string
   inStock?: number
+  quantity?: number
   category?: string
 }
-
-// Mock-Artikel für die Demo
-const mockArticles: Article[] = [
-  {
-    id: "1",
-    currentArticleNumber: "A1001",
-    oldArticleNumber: "10-001",
-    name: "Premium Bürostuhl",
-    price: 299.99,
-    inStock: 15,
-    category: "Büromöbel",
-  },
-  {
-    id: "2",
-    currentArticleNumber: "A1002",
-    oldArticleNumber: "10-002",
-    name: "Schreibtisch Executive",
-    price: 599.99,
-    inStock: 8,
-    category: "Büromöbel",
-  },
-  {
-    id: "3",
-    currentArticleNumber: "A1003",
-    name: "Monitorständer",
-    price: 59.99,
-    inStock: 25,
-    category: "Bürozubehör",
-  },
-  {
-    id: "4",
-    currentArticleNumber: "A2001",
-    oldArticleNumber: "20-001",
-    name: "Wireless Tastatur",
-    price: 49.99,
-    inStock: 30,
-    category: "Hardware",
-  },
-  {
-    id: "5",
-    currentArticleNumber: "A2002",
-    name: "Wireless Maus",
-    price: 39.99,
-    inStock: 35,
-    category: "Hardware",
-  },
-  {
-    id: "6",
-    currentArticleNumber: "A3001",
-    name: "Monitorkabel HDMI",
-    price: 12.99,
-    inStock: 50,
-    category: "Kabel",
-  },
-  {
-    id: "7",
-    currentArticleNumber: "A3002",
-    name: "USB-Hub 4-Port",
-    price: 29.99,
-    inStock: 18,
-    category: "Hardware",
-  },
-  {
-    id: "8",
-    currentArticleNumber: "A4001",
-    name: "Höhenverstellbarer Schreibtisch",
-    price: 399.99,
-    inStock: 5,
-    category: "Büromöbel",
-  },
-  {
-    id: "9",
-    currentArticleNumber: "A5001",
-    name: "Dokumentenablage",
-    price: 14.99,
-    inStock: 40,
-    category: "Bürozubehör",
-  },
-  {
-    id: "10",
-    currentArticleNumber: "A6001",
-    name: "Laptop Computer",
-    price: 1299.99,
-    inStock: 12,
-    category: "Hardware",
-  },
-]
 
 interface ArticleSearchProps {
   value: string
@@ -119,7 +34,7 @@ interface ArticleSearchProps {
   className?: string
   placeholder?: string
   inputRef?: React.RefObject<HTMLInputElement>
-  autoOpenOnInput?: boolean // Neue Prop hinzufügen
+  autoOpenOnInput?: boolean
 }
 
 export function ArticleSearch({
@@ -131,103 +46,108 @@ export function ArticleSearch({
   className,
   placeholder = "Artikelnummer",
   inputRef,
-  autoOpenOnInput = false, // Standardwert hinzufügen
+  autoOpenOnInput = false,
 }: ArticleSearchProps) {
   const [open, setOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filteredArticles, setFilteredArticles] = useState<Article[]>([])
+  const {
+    query: searchTerm,
+    setQuery: setSearchTerm,
+    results,
+    isLoading,
+    error,
+    reset: resetSearch,
+  } = useGlobalSearch()
+
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const inputInnerRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
+  const popoverContentRef = useRef<HTMLDivElement>(null)
 
-  // Kombiniere den externen Ref mit unserem internen Ref
   const combinedRef = inputRef || inputInnerRef
 
-  // Automatisch öffnen, wenn der Wert nicht leer ist
-  useEffect(() => {
-    if (value && value.length > 0) {
-      setOpen(true)
-      setSearchTerm(value)
-    }
-  }, [value])
+  const filteredProducts = useMemo(() => {
+    if (!results?.results) return []
+    return [
+      ...(results.results.parent_products || []),
+      ...(results.results.variant_products || [])
+    ].filter(p => p.type === 'parent_product' || p.type === 'variant_product')
+  }, [results])
 
-  // Öffne das Popover automatisch, wenn sich der Wert ändert und autoOpenOnInput aktiviert ist
   useEffect(() => {
-    if (autoOpenOnInput && value && value.length > 0 && !open) {
-      setOpen(true)
-      setSearchTerm(value)
-    }
-  }, [value, autoOpenOnInput, open])
+    setHighlightedIndex(0)
+  }, [filteredProducts])
 
-  // Artikel filtern basierend auf Suchbegriff
-  useEffect(() => {
-    if (searchTerm) {
-      const lowercaseSearch = searchTerm.toLowerCase()
-      const filtered = mockArticles.filter(
-        (article) =>
-          article.currentArticleNumber.toLowerCase().includes(lowercaseSearch) ||
-          (article.oldArticleNumber && article.oldArticleNumber.toLowerCase().includes(lowercaseSearch)) ||
-          article.name.toLowerCase().includes(lowercaseSearch) ||
-          (article.description && article.description.toLowerCase().includes(lowercaseSearch)),
-      )
-      setFilteredArticles(filtered)
-      setHighlightedIndex(0) // Reset highlighted index when search changes
-    } else {
-      setFilteredArticles(mockArticles)
+  const handleSelect = (product: SearchResult) => {
+    const selectedArticle: Article = {
+      id: product.id.toString(),
+      currentArticleNumber: product.sku || '',
+      oldArticleNumber: product.legacy_sku,
+      name: product.name || 'Unknown Product',
+      description: product.name,
+      price: 0,
+      quantity: 1,
     }
-  }, [searchTerm])
-
-  // Artikel auswählen
-  const handleSelect = (article: Article) => {
-    onArticleSelect(article)
-    onValueChange(article.currentArticleNumber)
+    onArticleSelect(selectedArticle)
+    onValueChange(selectedArticle.currentArticleNumber)
     setOpen(false)
-    setSearchTerm("")
   }
 
-  // Tastaturnavigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return
+
     if (!open) {
       if (e.key === "ArrowDown" || e.key === "Enter") {
         e.preventDefault()
         setOpen(true)
+        if (value) {
+          setSearchTerm(value)
+        }
+        return
+      }
+      if (e.key === 'Tab') {
+        onTabNavigation?.()
         return
       }
     }
 
-    if (open) {
-      // Navigiere durch die Liste mit Pfeiltasten
-      if (e.key === "ArrowDown") {
-        e.preventDefault()
-        setHighlightedIndex((prevIndex) => (prevIndex < filteredArticles.length - 1 ? prevIndex + 1 : prevIndex))
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault()
-        setHighlightedIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : 0))
-      } else if (e.key === "Enter" && filteredArticles.length > 0) {
-        e.preventDefault()
-        handleSelect(filteredArticles[highlightedIndex])
-      } else if (e.key === "Tab") {
-        e.preventDefault()
-        if (filteredArticles.length > 0) {
-          handleSelect(filteredArticles[highlightedIndex])
-        }
-        onTabNavigation?.()
-      } else if (e.key === "Escape") {
-        e.preventDefault()
-        setOpen(false)
+    if (open && filteredProducts.length > 0) {
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault()
+          setHighlightedIndex((prevIndex) =>
+            prevIndex < filteredProducts.length - 1 ? prevIndex + 1 : prevIndex
+          )
+          commandRef.current?.querySelector(`[data-rk-value="${filteredProducts[highlightedIndex + 1]?.id}"]`)?.scrollIntoView({ block: 'nearest' })
+          break
+        case "ArrowUp":
+          e.preventDefault()
+          setHighlightedIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : 0))
+          commandRef.current?.querySelector(`[data-rk-value="${filteredProducts[highlightedIndex - 1]?.id}"]`)?.scrollIntoView({ block: 'nearest' })
+          break
+        case "Enter":
+          e.preventDefault()
+          if (highlightedIndex >= 0 && highlightedIndex < filteredProducts.length) {
+            handleSelect(filteredProducts[highlightedIndex])
+          }
+          break
+        case "Tab":
+          e.preventDefault()
+          if (highlightedIndex >= 0 && highlightedIndex < filteredProducts.length) {
+            handleSelect(filteredProducts[highlightedIndex])
+          }
+          onTabNavigation?.()
+          break
+        case "Escape":
+          e.preventDefault()
+          setOpen(false)
+          break
       }
+    } else if (open && e.key === 'Escape') {
+      e.preventDefault()
+      setOpen(false)
     }
   }
 
-  // Bestandsfarbe basierend auf Menge
-  const getStockColor = (stock?: number) => {
-    if (!stock) return "text-gray-500"
-    if (stock > 20) return "text-green-600"
-    if (stock > 5) return "text-orange-500"
-    return "text-red-600"
-  }
-
-  // Formatieren von Währungsbeträgen
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("de-DE", {
       style: "currency",
@@ -240,113 +160,129 @@ export function ArticleSearch({
       <Popover
         open={open}
         onOpenChange={(newOpen) => {
-          // Wenn das Popover geschlossen wird, setzen wir den Fokus zurück auf das Eingabefeld
-          if (!newOpen && combinedRef.current) {
-            // Kurze Verzögerung, um sicherzustellen, dass das Popover vollständig geschlossen ist
-            setTimeout(() => {
-              combinedRef.current?.focus()
-            }, 10)
-          }
           setOpen(newOpen)
+          if (!newOpen) {
+          }
         }}
+        modal={false}
       >
-        <div className="flex" onClick={(e) => e.stopPropagation()}>
-          <Input
-            ref={combinedRef}
-            value={value}
-            onChange={(e) => {
-              const newValue = e.target.value
-              onValueChange(newValue)
-              setSearchTerm(newValue)
-
-              // Immer das Popover öffnen, wenn etwas eingegeben wird
-              if (newValue.length > 0) {
-                setOpen(true)
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            onClick={(e) => {
-              e.stopPropagation()
-              // Öffne das Popover beim Klicken und behalte den Fokus
-              if (!disabled) {
-                setOpen(true)
-              }
-            }}
-            onFocus={() => {
-              if (!disabled) {
-                setOpen(true)
-              }
-            }}
-            placeholder={placeholder}
-            disabled={disabled}
-            className="w-full"
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setOpen(!open)
-            }}
-            disabled={disabled}
-            className="ml-1"
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-        </div>
+        <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+          <div className="flex">
+            <Input
+              ref={combinedRef}
+              value={value}
+              onChange={(e) => {
+                const newValue = e.target.value
+                onValueChange(newValue)
+                setSearchTerm(newValue)
+                if (newValue && !open) {
+                  setOpen(true)
+                } else if (!newValue) {
+                  setOpen(false)
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!disabled && !open) {
+                  setOpen(true)
+                  if (value) {
+                    setSearchTerm(value)
+                  }
+                }
+              }}
+              onFocus={() => {
+                if (!disabled && autoOpenOnInput) {
+                  setOpen(true)
+                  if (value) {
+                    setSearchTerm(value)
+                  }
+                }
+              }}
+              placeholder={placeholder}
+              disabled={disabled}
+              className="w-full"
+              autoComplete="off"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!disabled) {
+                  setOpen(!open)
+                  if (!open && value) {
+                    setSearchTerm(value)
+                  }
+                }
+              }}
+              disabled={disabled}
+              className="ml-1"
+              aria-label="Search articles"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </PopoverTrigger>
         <PopoverContent
-          className="p-0 w-[400px]"
+          ref={popoverContentRef}
+          className="p-0 w-[500px] max-h-[60vh] overflow-y-auto"
           align="start"
           sideOffset={5}
           onInteractOutside={(e) => {
-            // Verhindern, dass das Popover geschlossen wird, wenn auf das Eingabefeld geklickt wird
             if (combinedRef.current?.contains(e.target as Node)) {
               e.preventDefault()
             }
           }}
+          onCloseAutoFocus={(e) => e.preventDefault()}
         >
-          <Command ref={commandRef}>
-            <div className="flex items-center border-b px-3">
-              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Suche nach Artikelnummer oder Beschreibung..."
-                autoFocus
-              />
-            </div>
+          <Command ref={commandRef} shouldFilter={false}>
             <CommandList>
-              <CommandEmpty>Keine Artikel gefunden</CommandEmpty>
-              <CommandGroup heading="Artikel">
-                {filteredArticles.map((article, index) => (
-                  <CommandItem
-                    key={article.id}
-                    onSelect={() => handleSelect(article)}
-                    className={cn("flex flex-col items-start py-2", highlightedIndex === index ? "bg-accent" : "")}
-                  >
-                    <div className="flex w-full justify-between">
-                      <div className="flex flex-col">
-                        <div className="flex items-center">
-                          <span className="font-medium">{article.currentArticleNumber}</span>
-                          {article.oldArticleNumber && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              (alt: {article.oldArticleNumber})
+              {isLoading && (
+                <div className="p-4 flex items-center justify-center text-sm text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
+                </div>
+              )}
+              {error && !isLoading && (
+                <div className="p-4 text-center text-sm text-destructive">
+                  Error: {error}
+                </div>
+              )}
+              {!isLoading && !error && filteredProducts.length === 0 && searchTerm && (
+                <CommandEmpty>Keine Artikel gefunden für "{searchTerm}"</CommandEmpty>
+              )}
+              {!isLoading && !error && filteredProducts.length === 0 && !searchTerm && (
+                <CommandEmpty>Bitte Suchbegriff eingeben.</CommandEmpty>
+              )}
+              {!isLoading && !error && filteredProducts.length > 0 && (
+                <CommandGroup heading="Artikel">
+                  {filteredProducts.map((product, index) => (
+                    <CommandItem
+                      key={product.id}
+                      value={product.id.toString()}
+                      onSelect={() => handleSelect(product)}
+                      className={cn("flex flex-row items-center gap-3 py-2 cursor-pointer data-[selected=true]:bg-accent", highlightedIndex === index ? "bg-accent" : "")}
+                      data-rk-value={product.id}
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 bg-muted rounded flex items-center justify-center">
+                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-grow flex flex-col overflow-hidden">
+                        <div className="flex items-baseline">
+                          <span className="font-medium truncate" title={product.sku || 'N/A'}>{product.sku || 'N/A'}</span>
+                          {product.legacy_sku && (
+                            <span className="ml-2 text-xs text-muted-foreground truncate" title={`(alt: ${product.legacy_sku})`}>
+                              (alt: {product.legacy_sku})
                             </span>
                           )}
                         </div>
-                        <span>{article.name}</span>
+                        <span className="text-sm text-muted-foreground truncate" title={product.name || 'No Name'}>{product.name || 'No Name'}</span>
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className="font-medium">{formatCurrency(article.price)}</span>
-                        <span className={getStockColor(article.inStock)}>Bestand: {article.inStock} Stück</span>
-                      </div>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
