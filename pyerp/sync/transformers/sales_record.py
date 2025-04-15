@@ -3,7 +3,7 @@
 import re
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
 
 from pyerp.utils.logging import get_logger, log_data_sync_event
 
@@ -46,7 +46,9 @@ class SalesRecordTransformer(BaseTransformer):
         first_record = data[0] if is_list else data
 
         if not isinstance(first_record, dict):
-            logger.warning(f"Received non-dictionary data: {type(first_record)}")
+            logger.warning(
+                f"Received non-dictionary data: {type(first_record)}"
+            )
             return []
 
         # Detect if it's child item data (presence of 'PosNr')
@@ -56,13 +58,18 @@ class SalesRecordTransformer(BaseTransformer):
 
         if is_child_item_data:
             # Data contains child line items
-            logger.debug("Detected child item data, calling transform_line_items.")
+            logger.debug(
+                "Detected child item data, calling transform_line_items."
+            )
             items_to_transform = data if is_list else [data]
             # Note: transform_line_items expects a list
             transformed_records = self.transform_line_items(items_to_transform)
         else:
             # Data contains parent sales records
-            logger.debug("Detected parent record data, calling _transform_single_record.")
+            logger.debug(
+                "Detected parent record data, calling "
+                "_transform_single_record."
+            )
             records_to_transform = data if is_list else [data]
             for record in records_to_transform:
                 if isinstance(record, dict):
@@ -71,7 +78,8 @@ class SalesRecordTransformer(BaseTransformer):
                         transformed_records.append(transformed)
                 else:
                     logger.warning(
-                        f"Skipping non-dictionary item in parent record list: {type(record)}"
+                        f"Skipping non-dictionary item in parent record list: "
+                        f"{type(record)}"
                     )
 
         return transformed_records
@@ -119,14 +127,18 @@ class SalesRecordTransformer(BaseTransformer):
 
             # Ensure it's not accidentally processing child data here
             if "PosNr" in data:
-                 logger.error(f"_transform_single_record called with child item data: {data.get('AbsNr')}_{data.get('PosNr')}")
-                 return None
+                logger.error(
+                    f"_transform_single_record called with child item data: "
+                    f"{data.get('AbsNr')}_{data.get('PosNr')}"
+                )
+                return None
 
             # Get or create customer
             customer = self._get_or_create_customer(data)
             if not customer:
                 logger.warning(
-                    f"Could not find or create customer for record {data.get('AbsNr')}"
+                    f"Could not find or create customer for record "
+                    f"{data.get('AbsNr')}"
                 )
                 log_data_sync_event(
                     source="legacy_erp",
@@ -146,7 +158,8 @@ class SalesRecordTransformer(BaseTransformer):
             payment_terms = self._extract_payment_terms(data)
             if not payment_terms:
                 logger.warning(
-                    f"Could not create payment terms for record {data.get('AbsNr')}"
+                    f"Could not create payment terms for record "
+                    f"{data.get('AbsNr')}"
                 )
                 return None
 
@@ -154,7 +167,8 @@ class SalesRecordTransformer(BaseTransformer):
             payment_method = self._extract_payment_method(data)
             if not payment_method:
                 logger.warning(
-                    f"Could not create payment method for record {data.get('AbsNr')}"
+                    f"Could not create payment method for record "
+                    f"{data.get('AbsNr')}"
                 )
                 return None
 
@@ -162,7 +176,8 @@ class SalesRecordTransformer(BaseTransformer):
             shipping_method = self._extract_shipping_method(data)
             if not shipping_method:
                 logger.warning(
-                    f"Could not create shipping method for record {data.get('AbsNr')}"
+                    f"Could not create shipping method for record "
+                    f"{data.get('AbsNr')}"
                 )
                 return None
 
@@ -170,7 +185,8 @@ class SalesRecordTransformer(BaseTransformer):
             shipping_address = self._extract_shipping_address(data)
             if not shipping_address:
                 logger.warning(
-                    f"Could not create shipping address for record {data.get('AbsNr')}"
+                    f"Could not create shipping address for record "
+                    f"{data.get('AbsNr')}"
                 )
                 # Continue without shipping address since it's now optional
 
@@ -178,7 +194,8 @@ class SalesRecordTransformer(BaseTransformer):
             billing_address = self._extract_billing_address(data)
             if not billing_address:
                 logger.warning(
-                    f"Could not create billing address for record {data.get('AbsNr')}"
+                    f"Could not create billing address for record "
+                    f"{data.get('AbsNr')}"
                 )
                 # Continue without billing address since it's now optional
 
@@ -186,7 +203,8 @@ class SalesRecordTransformer(BaseTransformer):
             record_date = self._parse_legacy_date(data.get("Datum"))
             if not record_date:
                 logger.warning(
-                    f"Could not parse record date for record {data.get('AbsNr')}"
+                    f"Could not parse record date for record "
+                    f"{data.get('AbsNr')}"
                 )
                 return None
 
@@ -198,10 +216,13 @@ class SalesRecordTransformer(BaseTransformer):
                     from datetime import datetime, timedelta
 
                     date_obj = datetime.strptime(record_date, "%Y-%m-%d")
-                    due_date = (date_obj + timedelta(days=30)).strftime("%Y-%m-%d")
+                    due_date = (
+                        date_obj + timedelta(days=30)
+                    ).strftime("%Y-%m-%d")
                 except Exception:
                     logger.warning(
-                        f"Could not calculate due date for record {data.get('AbsNr')}"
+                        f"Could not calculate due date for record "
+                        f"{data.get('AbsNr')}"
                     )
                     return None
 
@@ -212,38 +233,39 @@ class SalesRecordTransformer(BaseTransformer):
                 "record_date": record_date,
                 "record_type": self._map_record_type(data.get("Papierart")),
                 "customer": customer,
-                "status": self._map_status(data),
                 # Financial fields
                 "subtotal": self._to_decimal(data.get("Netto", 0)),
                 "tax_amount": self._to_decimal(data.get("MWST_EUR", 0)),
                 "shipping_cost": self._to_decimal(data.get("Frachtkosten", 0)),
-                "handling_fee": self._to_decimal(data.get("Bearbeitungskos", 0)),
-                "discount_amount": self._calculate_discount(data),
+                "handling_fee": self._to_decimal(
+                    data.get("Bearbeitungskos", 0)
+                ),
                 "total_amount": self._to_decimal(data.get("Endbetrag", 0)),
                 # Payment information
                 "payment_terms": payment_terms,
                 "payment_method": payment_method,
-                "payment_status": self._map_payment_status(data.get("bezahlt", False)),
-                "payment_date": self._parse_legacy_date(data.get("ZahlungsDat")),
-                "due_date": due_date,
+                "payment_status": self._map_payment_status(
+                    data.get("bezahlt", False)
+                ),
+                "payment_date": self._parse_legacy_date(
+                    data.get("ZahlungsDat")
+                ),
                 # Currency information
                 "currency": self._map_currency(data.get("Währung")),
-                "exchange_rate": self._get_exchange_rate(data.get("Währung")),
                 # Shipping information
                 "shipping_method": shipping_method,
                 "shipping_address": shipping_address,
                 "billing_address": billing_address,
                 # Tax information
                 "tax_type": data.get("MWSt_Art", ""),
-                "tax_rate": self._extract_tax_rate(data),
                 # Additional information
                 "notes": data.get("Text", ""),
-                "internal_notes": "",
-                # Source information
-                "source_system": "LEGACY",
+                # delivery_status will use model default
             }
 
-            logger.debug(f"Transformed record {data.get('AbsNr')}: {transformed}")
+            logger.debug(
+                f"Transformed record {data.get('AbsNr')}: {transformed}"
+            )
 
             # Log successful transformation
             log_data_sync_event(
@@ -262,7 +284,8 @@ class SalesRecordTransformer(BaseTransformer):
 
         except Exception as e:
             logger.error(
-                f"Error transforming sales record {data.get('AbsNr', 'unknown')}: {str(e)}"
+                f"Error transforming sales record "
+                f"{data.get('AbsNr', 'unknown')}: {str(e)}"
             )
             logger.exception("Transformation error details:")
 
@@ -289,7 +312,10 @@ class SalesRecordTransformer(BaseTransformer):
         for item in data:
             parent_legacy_id = item.get("AbsNr")
             if not parent_legacy_id:
-                logger.warning(f"Skipping item with missing parent legacy ID (AbsNr): {item.get('PosNr')}")
+                logger.warning(
+                    f"Skipping item with missing parent legacy ID (AbsNr): "
+                    f"{item.get('PosNr')}"
+                )
                 continue
             if parent_legacy_id not in grouped_items:
                 grouped_items[parent_legacy_id] = []
@@ -304,14 +330,25 @@ class SalesRecordTransformer(BaseTransformer):
             successful_items_group = 0
             failed_items_group = 0
 
-            logger.info(f"Processing {len(items_for_parent)} items for parent {parent_legacy_id}")
+            logger.info(
+                f"Processing {len(items_for_parent)} items for parent "
+                f"{parent_legacy_id}"
+            )
 
             # Get the parent sales record first
             try:
-                parent_record = SalesRecord.objects.get(legacy_id=parent_legacy_id)
-                logger.info(f"Found parent sales record {parent_record.id} for legacy_id {parent_legacy_id}")
+                parent_record = SalesRecord.objects.get(
+                    legacy_id=parent_legacy_id
+                )
+                logger.info(
+                    f"Found parent sales record {parent_record.id} for "
+                    f"legacy_id {parent_legacy_id}"
+                )
             except SalesRecord.DoesNotExist:
-                logger.error(f"Parent sales record not found for legacy_id {parent_legacy_id}")
+                logger.error(
+                    f"Parent sales record not found for legacy_id "
+                    f"{parent_legacy_id}"
+                )
                 continue
 
             for item in items_for_parent:
@@ -324,39 +361,54 @@ class SalesRecordTransformer(BaseTransformer):
                     if product_code:
                         try:
                             # First try exact match on legacy_sku
-                            product = VariantProduct.objects.get(legacy_sku=product_code)
+                            product = VariantProduct.objects.get(
+                                legacy_sku=product_code
+                            )
                             logger.info(
-                                f"Found product by legacy_sku: {product.id} ({product.name}) for {product_code}"
+                                f"Found product by legacy_sku: {product.id} "
+                                f"({product.name}) for {product_code}"
                             )
                         except VariantProduct.DoesNotExist:
                             # Try by SKU as fallback
                             try:
-                                product = VariantProduct.objects.get(sku=product_code)
+                                product = VariantProduct.objects.get(
+                                    sku=product_code
+                                )
                                 logger.info(
-                                    f"Found product by SKU: {product.id} ({product.name}) for {product_code}"
+                                    f"Found product by SKU: {product.id} "
+                                    f"({product.name}) for {product_code}"
                                 )
                             except VariantProduct.DoesNotExist:
                                 logger.warning(
-                                    f"No product found for legacy_sku or SKU {product_code} (item {item.get('AbsNr')}_{item.get('PosNr')})"
+                                    f"No product found for legacy_sku or SKU "
+                                    f"{product_code} (item {item.get('AbsNr')}"
+                                    f"_{item.get('PosNr')})"
                                 )
                             except VariantProduct.MultipleObjectsReturned:
-                                 product = (
-                                    VariantProduct.objects.filter(sku=product_code)
+                                product = (
+                                    VariantProduct.objects.filter(
+                                        sku=product_code
+                                    )
                                     .order_by("-modified_date")
                                     .first()
                                 )
-                                 logger.warning(
-                                    f"Multiple products found for SKU {product_code}, using most recent: {product.id if product else 'None'}"
-                                 )
+                                logger.warning(
+                                    f"Multiple products found for SKU "
+                                    f"{product_code}, using most recent: "
+                                    f"{product.id if product else 'None'}"
+                                )
                         except VariantProduct.MultipleObjectsReturned:
                             # If multiple found by legacy_sku, get the most recently updated one
                             product = (
-                                VariantProduct.objects.filter(legacy_sku=product_code)
+                                VariantProduct.objects.filter(
+                                    legacy_sku=product_code
+                                )
                                 .order_by("-modified_date")
                                 .first()
                             )
                             logger.warning(
-                                f"Multiple products found for legacy_sku {product_code}, using most recent: {product.id}"
+                                f"Multiple products found for legacy_sku "
+                                f"{product_code}, using most recent: {product.id}"
                             )
 
                     # Calculate line item values
@@ -368,9 +420,24 @@ class SalesRecordTransformer(BaseTransformer):
                     # Define the quantization pattern for rounding to 2 decimal places
                     TWO_PLACES = Decimal('0.01')
 
+                    # Get raw unit price
+                    unit_price = self._to_decimal(item.get("Preis", 0))
+
                     # Round tax_amount and line_total
-                    rounded_tax_amount = tax_amount.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
-                    rounded_line_total = line_total.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+                    rounded_tax_amount = tax_amount.quantize(
+                        TWO_PLACES, rounding=ROUND_HALF_UP
+                    )
+                    rounded_line_total = line_total.quantize(
+                        TWO_PLACES, rounding=ROUND_HALF_UP
+                    )
+
+                    # Round unit_price and line_subtotal as well
+                    rounded_unit_price = unit_price.quantize(
+                        TWO_PLACES, rounding=ROUND_HALF_UP
+                    )
+                    rounded_line_subtotal = calculated_subtotal.quantize(
+                        TWO_PLACES, rounding=ROUND_HALF_UP
+                    )
 
                     # Construct the legacy ID for the item
                     item_legacy_id = f"{parent_legacy_id}_{item.get('PosNr')}"
@@ -379,49 +446,68 @@ class SalesRecordTransformer(BaseTransformer):
                     transformed_item = {
                         "legacy_id": item_legacy_id,
                         "parent_legacy_id": parent_legacy_id,
-                        "sales_record": parent_record,  # Add the parent record reference
+                        "sales_record": parent_record,
+                        # Add the parent record reference
                         "position": item.get("PosNr"),
                         "legacy_sku": product_code,
                         "description": item.get("Bezeichnung", ""),
                         "quantity": self._to_decimal(item.get("Menge", 0)),
-                        "unit_price": self._to_decimal(item.get("Preis", 0)),
-                        "discount_percentage": self._to_decimal(item.get("Rabatt", 0)),
+                        "unit_price": rounded_unit_price,
+                        "discount_percentage": self._to_decimal(
+                            item.get("Rabatt", 0)
+                        ),
                         "tax_rate": tax_rate,
                         "tax_amount": rounded_tax_amount,
-                        "line_subtotal": calculated_subtotal,
+                        "line_subtotal": rounded_line_subtotal,
                         "line_total": rounded_line_total,
                         "notes": item.get("Anmerkung", ""),
-                        "fulfillment_status": self._map_fulfillment_status(item),
-                        "fulfilled_quantity": self._to_decimal(item.get("Pick_Menge", 0)),
+                        "fulfillment_status": (
+                            self._map_fulfillment_status(item)
+                        ),
+                        "fulfilled_quantity": self._to_decimal(
+                            item.get("Pick_Menge", 0)
+                        ),
                     }
 
                     # Add product reference if found
                     if product:
-                        transformed_item["product"] = product  # Change from product_id to product
+                        transformed_item["product"] = product
+                        # Change from product_id to product
                         logger.info(
-                            f"Added product reference: ID={product.id}, SKU={product.sku} to item {transformed_item['legacy_id']}"
+                            f"Added product reference: ID={product.id}, "
+                            f"SKU={product.sku} to item "
+                            f"{transformed_item['legacy_id']}"
                         )
                     else:
                         logger.warning(
-                            f"No product reference added for item {transformed_item['legacy_id']} with legacy_sku {product_code}"
+                            f"No product reference added for item "
+                            f"{transformed_item['legacy_id']} with legacy_sku "
+                            f"{product_code}"
                         )
 
                     transformed_items_group.append(transformed_item)
                     successful_items_group += 1
                 except Exception as e:
-                    logger.error(f"Error transforming line item {item.get('AbsNr')}_{item.get('PosNr')}: {e}", exc_info=True)
+                    logger.error(
+                        f"Error transforming line item "
+                        f"{item.get('AbsNr')}_{item.get('PosNr')}: {e}",
+                        exc_info=True
+                    )
                     failed_items_group += 1
 
             logger.info(
                 f"Finished processing for parent {parent_legacy_id}: "
-                f"{successful_items_group} successful, {failed_items_group} failed."
+                f"{successful_items_group} successful, "
+                f"{failed_items_group} failed."
             )
             transformed_items_final.extend(transformed_items_group)
             total_successful += successful_items_group
             total_failed += failed_items_group
 
         logger.info(
-            f"Overall line item transformation: {total_successful} successful, {total_failed} failed across {len(grouped_items)} parents."
+            f"Overall line item transformation: {total_successful} "
+            f"successful, {total_failed} failed across {len(grouped_items)} "
+            f"parents."
         )
 
         return transformed_items_final
@@ -473,27 +559,34 @@ class SalesRecordTransformer(BaseTransformer):
         if value is None:
             return Decimal("0")
         try:
-            # Convert to Decimal first
             decimal_value = Decimal(str(value))
             
             # Check if the value exceeds 12 digits total (10 before decimal, 2 after)
             # Count digits before decimal point
             str_value = str(decimal_value)
             parts = str_value.split('.')
-            digits_before_decimal = len(parts[0].replace('-', ''))  # Remove minus sign when counting
+            digits_before_decimal = len(parts[0].replace('-', ''))
             
             # If value has more than 10 digits before decimal point (12 total with 2 decimal places)
             if digits_before_decimal > 10:
-                logger.warning(f"Value {decimal_value} exceeds maximum allowed digits (10), rounding to 10 digits")
+                logger.warning(
+                    f"Value {decimal_value} exceeds maximum allowed digits "
+                    f"(10), rounding to 10 digits"
+                )
                 
                 # Define quantization pattern for rounding
                 TWO_PLACES = Decimal('0.01')
-                rounded_value = decimal_value.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+                rounded_value = decimal_value.quantize(
+                    TWO_PLACES, rounding=ROUND_HALF_UP
+                )
                 
                 # We need to truncate to 10 digits (8 before decimal for safety)
                 max_value = Decimal('99999999.99')
                 if abs(rounded_value) > max_value:
-                    logger.warning(f"Value {decimal_value} still exceeds maximum after rounding, capping to {max_value}")
+                    logger.warning(
+                        f"Value {decimal_value} still exceeds maximum after "
+                        f"rounding, capping to {max_value}"
+                    )
                     return max_value if rounded_value > 0 else -max_value
                     
                 return rounded_value
@@ -527,7 +620,10 @@ class SalesRecordTransformer(BaseTransformer):
                 discount_days=discount_days,
                 discount_percent=discount_percent,
                 defaults={
-                    "name": f"{discount_percent}% {discount_days} days, net {days_due}"
+                    "name": (
+                        f"{discount_percent}% {discount_days} days, "
+                        f"net {days_due}"
+                    )
                 },
             )
 
@@ -639,13 +735,15 @@ class SalesRecordTransformer(BaseTransformer):
                         )
                     except Customer.DoesNotExist:
                         logger.warning(
-                            f"Customer not found for shipping address, record {data.get('AbsNr')}"
+                            f"Customer not found for shipping address, "
+                            f"record {data.get('AbsNr')}"
                         )
                         return None
 
             if not customer:
                 logger.warning(
-                    f"No customer found for shipping address, record {data.get('AbsNr')}"
+                    f"No customer found for shipping address, "
+                    f"record {data.get('AbsNr')}"
                 )
                 return None
 
@@ -670,7 +768,8 @@ class SalesRecordTransformer(BaseTransformer):
 
                 if existing_address:
                     logger.info(
-                        f"Found existing shipping address for customer {customer.id}"
+                        f"Found existing shipping address for customer "
+                        f"{customer.id}"
                     )
                     return existing_address
 
@@ -681,7 +780,8 @@ class SalesRecordTransformer(BaseTransformer):
 
                 if existing_address:
                     logger.info(
-                        f"Found existing shipping address by street/city for customer {customer.id}"
+                        f"Found existing shipping address by street/city "
+                        f"for customer {customer.id}"
                     )
                     return existing_address
 
@@ -701,7 +801,9 @@ class SalesRecordTransformer(BaseTransformer):
 
                 return address
             except Exception as e:
-                logger.error(f"Error creating shipping address: {e}", exc_info=True)
+                logger.error(
+                    f"Error creating shipping address: {e}", exc_info=True
+                )
 
                 # Check if the error is due to unique constraint on is_primary
                 if "unique_primary_address_per_customer" in str(e):
@@ -718,12 +820,14 @@ class SalesRecordTransformer(BaseTransformer):
                             is_primary=False,
                         )
                         logger.info(
-                            f"Created non-primary shipping address for customer {customer.id}"
+                            f"Created non-primary shipping address for "
+                            f"customer {customer.id}"
                         )
                         return address
                     except Exception as e2:
                         logger.error(
-                            f"Failed to create non-primary shipping address: {e2}",
+                            f"Failed to create non-primary shipping "
+                            f"address: {e2}",
                             exc_info=True,
                         )
 
@@ -743,16 +847,20 @@ class SalesRecordTransformer(BaseTransformer):
                         is_primary=False,
                     )
                     logger.info(
-                        f"Created fallback shipping address for customer {customer.id}"
+                        f"Created fallback shipping address for customer "
+                        f"{customer.id}"
                     )
                     return address
                 except Exception as e2:
                     logger.error(
-                        f"Fallback address creation failed: {e2}", exc_info=True
+                        f"Fallback address creation failed: {e2}",
+                        exc_info=True
                     )
                     return None
         except Exception as e:
-            logger.error(f"Error extracting shipping address: {e}", exc_info=True)
+            logger.error(
+                f"Error extracting shipping address: {e}", exc_info=True
+            )
             return None
 
     def _extract_billing_address(self, data: Dict[str, Any]) -> Optional[Any]:
@@ -784,13 +892,15 @@ class SalesRecordTransformer(BaseTransformer):
                         )
                     except Customer.DoesNotExist:
                         logger.warning(
-                            f"Customer not found for billing address, record {data.get('AbsNr')}"
+                            f"Customer not found for billing address, "
+                            f"record {data.get('AbsNr')}"
                         )
                         return None
 
             if not customer:
                 logger.warning(
-                    f"No customer found for billing address, record {data.get('AbsNr')}"
+                    f"No customer found for billing address, "
+                    f"record {data.get('AbsNr')}"
                 )
                 return None
 
@@ -815,7 +925,8 @@ class SalesRecordTransformer(BaseTransformer):
 
                 if existing_address:
                     logger.info(
-                        f"Found existing billing address for customer {customer.id}"
+                        f"Found existing billing address for customer "
+                        f"{customer.id}"
                     )
                     return existing_address
 
@@ -826,7 +937,8 @@ class SalesRecordTransformer(BaseTransformer):
 
                 if existing_address:
                     logger.info(
-                        f"Found existing billing address by street/city for customer {customer.id}"
+                        f"Found existing billing address by street/city "
+                        f"for customer {customer.id}"
                     )
                     return existing_address
 
@@ -846,7 +958,9 @@ class SalesRecordTransformer(BaseTransformer):
 
                 return address
             except Exception as e:
-                logger.error(f"Error creating billing address: {e}", exc_info=True)
+                logger.error(
+                    f"Error creating billing address: {e}", exc_info=True
+                )
 
                 # Check if the error is due to unique constraint on is_primary
                 if "unique_primary_address_per_customer" in str(e):
@@ -863,12 +977,14 @@ class SalesRecordTransformer(BaseTransformer):
                             is_primary=False,
                         )
                         logger.info(
-                            f"Created non-primary billing address for customer {customer.id}"
+                            f"Created non-primary billing address for "
+                            f"customer {customer.id}"
                         )
                         return address
                     except Exception as e2:
                         logger.error(
-                            f"Failed to create non-primary billing address: {e2}",
+                            f"Failed to create non-primary billing "
+                            f"address: {e2}",
                             exc_info=True,
                         )
 
@@ -888,16 +1004,20 @@ class SalesRecordTransformer(BaseTransformer):
                         is_primary=False,
                     )
                     logger.info(
-                        f"Created fallback billing address for customer {customer.id}"
+                        f"Created fallback billing address for customer "
+                        f"{customer.id}"
                     )
                     return address
                 except Exception as e2:
                     logger.error(
-                        f"Fallback address creation failed: {e2}", exc_info=True
+                        f"Fallback address creation failed: {e2}",
+                        exc_info=True
                     )
                     return None
         except Exception as e:
-            logger.error(f"Error extracting billing address: {e}", exc_info=True)
+            logger.error(
+                f"Error extracting billing address: {e}", exc_info=True
+            )
             return None
 
     def _parse_address(self, address_str: str) -> Dict[str, Any]:
@@ -1030,7 +1150,9 @@ class SalesRecordTransformer(BaseTransformer):
 
             customer_id = data.get("KundenNr")
             if not customer_id:
-                logger.warning(f"No KundenNr found in record data: {data.get('AbsNr')}")
+                logger.warning(
+                    f"No KundenNr found in record data: {data.get('AbsNr')}"
+                )
                 return None
 
             # Try to find by legacy_id
@@ -1041,7 +1163,9 @@ class SalesRecordTransformer(BaseTransformer):
             except Customer.DoesNotExist:
                 # Try to find by customer_number
                 try:
-                    customer = Customer.objects.get(customer_number=str(customer_id))
+                    customer = Customer.objects.get(
+                        customer_number=str(customer_id)
+                    )
                     logger.info(f"Found customer by customer_number: {customer_id}")
 
                     # Update legacy_id if it's not set
@@ -1049,7 +1173,8 @@ class SalesRecordTransformer(BaseTransformer):
                         customer.legacy_id = customer_id
                         customer.save(update_fields=["legacy_id"])
                         logger.info(
-                            f"Updated customer {customer.id} with legacy_id {customer_id}"
+                            f"Updated customer {customer.id} with legacy_id "
+                            f"{customer_id}"
                         )
 
                     return customer
@@ -1060,7 +1185,8 @@ class SalesRecordTransformer(BaseTransformer):
                             legacy_address_number=str(customer_id)
                         )
                         logger.info(
-                            f"Found customer by legacy_address_number: {customer_id}"
+                            f"Found customer by legacy_address_number: "
+                            f"{customer_id}"
                         )
 
                         # Update legacy_id if it's not set
@@ -1068,7 +1194,8 @@ class SalesRecordTransformer(BaseTransformer):
                             customer.legacy_id = customer_id
                             customer.save(update_fields=["legacy_id"])
                             logger.info(
-                                f"Updated customer {customer.id} with legacy_id {customer_id}"
+                                f"Updated customer {customer.id} with legacy_id "
+                                f"{customer_id}"
                             )
 
                         return customer
@@ -1083,7 +1210,8 @@ class SalesRecordTransformer(BaseTransformer):
                             name = parts[0] if parts else f"Customer {customer_id}"
 
                         logger.info(
-                            f"Creating new customer with legacy_id {customer_id} and name '{name}'"
+                            f"Creating new customer with legacy_id "
+                            f"{customer_id} and name '{name}'"
                         )
                         customer = Customer.objects.create(
                             legacy_id=customer_id,
@@ -1092,5 +1220,7 @@ class SalesRecordTransformer(BaseTransformer):
                         )
                         return customer
         except Exception as e:
-            logger.error(f"Error getting or creating customer: {e}", exc_info=True)
+            logger.error(
+                f"Error getting or creating customer: {e}", exc_info=True
+            )
             return None

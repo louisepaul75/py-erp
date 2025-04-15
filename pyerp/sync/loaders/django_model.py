@@ -322,22 +322,17 @@ class DjangoModelLoader(BaseLoader):
                             f" -> Saved instance with update_fields: "
                             f"{update_fields_list}"
                         )
-                    elif instance:  # No fields changed or new instance
+                    elif instance and instance._state.adding:  # This is a new instance
+                        instance.full_clean()
+                        instance.save()
+                        logger.debug(" -> Saved new instance.")
+                    elif instance:  # Existing instance but no fields changed
                         logger.debug(
                             " -> No fields changed in this update, "
                             "skipping save."
                         )
                     else:  # This should not normally be reached
-                        instance.full_clean()
-                        instance.save()
-                        logger.debug(" -> Saved new instance.")
-                    
-                    # # Simplified save for debugging (REMOVE/COMMENT THIS):
-                    # instance.full_clean()
-                    # instance.save()
-                    # logger.debug(
-                    #     f" -> Called instance.save() for {lookup_criteria}"
-                    # )
+                        logger.error(" -> No instance to save. This is unexpected.")
                     
                 except DjangoValidationError as e:
                     # Log validation errors more explicitly

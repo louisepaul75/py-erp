@@ -22,7 +22,7 @@ class Command(BaseSyncCommand):
     PARENT_ENTITY_TYPE = "sales_records"
     PARENT_LEGACY_KEY_FIELD = "AbsNr"  # Key field in Belege
     CHILD_ENTITY_TYPE = "sales_record_items"
-    CHILD_PARENT_LINK_FIELD = "AbsNr" # Field in Belege_Pos linking to Belege
+    CHILD_PARENT_LINK_FIELD = "AbsNr"  # Field in Belege_Pos linking to Belege
 
     def add_arguments(self, parser):
         """Add command arguments, inheriting from BaseSyncCommand."""
@@ -63,14 +63,15 @@ class Command(BaseSyncCommand):
         # Build initial query parameters from common args
         initial_query_params = self.build_query_params(options, parent_mapping)
         logger.info(
-            f"{log_prefix} Initial query parameters built: {initial_query_params}"
+            f"{log_prefix} Initial query parameters built: "
+            f"{initial_query_params}"
         )
         
         # Get batch size from options
         batch_size = options.get("batch_size", 100)
         self.stdout.write(f"{log_prefix} Using batch size: {batch_size}")
         
-        # --- Step 1: Fetch All Parent Record IDs (AbsNr) using initial filters ---
+        # --- Step 1: Fetch All Parent Record IDs (AbsNr) using initial filters --- # noqa E501
         self.stdout.write(self.style.NOTICE(
             f"\n{log_prefix} === Step 1: Fetching parent record IDs "
             f"({self.PARENT_LEGACY_KEY_FIELD}) ==="
@@ -84,7 +85,8 @@ class Command(BaseSyncCommand):
             )
             id_fetch_params = {
                 **initial_query_params,  # Include filters like --top, --days
-                "select_fields": [self.PARENT_LEGACY_KEY_FIELD],  # Only fetch the key
+                "select_fields": [self.PARENT_LEGACY_KEY_FIELD],
+                # Only fetch the key
             }
             logger.info(
                 f"{log_prefix} Querying extractor for parent IDs with params: "
@@ -94,8 +96,8 @@ class Command(BaseSyncCommand):
             # Clear cache if requested (only for this first extractor call)
             if options.get("clear_cache"):
                 self.stdout.write(
-                    f"{log_prefix} Clearing parent ({self.PARENT_ENTITY_TYPE}) "
-                    f"extractor cache..."
+                    f"{log_prefix} Clearing parent "
+                    f"({self.PARENT_ENTITY_TYPE}) extractor cache..."
                 )
                 parent_pipeline_for_id_fetch.extractor.clear_cache()
 
@@ -131,13 +133,14 @@ class Command(BaseSyncCommand):
             )
             if self.debug and parent_record_ids:
                 self.stdout.write(
-                    f"{log_prefix} Sample Parent IDs: {parent_record_ids[:10]}..."
+                    f"{log_prefix} Sample Parent IDs: "
+                    f"{parent_record_ids[:10]}..."
                 )
 
         except Exception as e:
             self.stderr.write(self.style.ERROR(
-                f"{log_prefix} Step 1 Failed: Could not fetch parent record IDs "
-                f"({self.PARENT_LEGACY_KEY_FIELD}): {e}"
+                f"{log_prefix} Step 1 Failed: Could not fetch parent "
+                f"record IDs ({self.PARENT_LEGACY_KEY_FIELD}): {e}"
             ))
             logger.error(
                 f"{log_prefix} Step 1: Failed to fetch parent IDs: {e}",
@@ -152,7 +155,8 @@ class Command(BaseSyncCommand):
             
         # --- Step 2: Process Belege and Belege_Pos records in batches ---
         self.stdout.write(self.style.NOTICE(
-            f"\n{log_prefix} === Step 2: Processing parent and child records in batches ==="
+            f"\n{log_prefix} === Step 2: Processing parent and child "
+            f"records in batches ==="
         ))
         logger.info(f"{log_prefix} Starting Step 2: Batch processing")
         
@@ -162,14 +166,18 @@ class Command(BaseSyncCommand):
             if len(parent_record_ids) > top_limit:
                 parent_record_ids = parent_record_ids[:top_limit]
                 self.stdout.write(
-                    f"{log_prefix} Applied top limit: Processing only first {top_limit} parent IDs."
+                    f"{log_prefix} Applied top limit: Processing only first "
+                    f"{top_limit} parent IDs."
                 )
                 
         # Process records in batches
-        total_parent_batches = (len(parent_record_ids) + batch_size - 1) // batch_size
+        total_parent_batches = (
+            len(parent_record_ids) + batch_size - 1
+        ) // batch_size
         self.stdout.write(
-            f"{log_prefix} Will process {len(parent_record_ids)} parent records "
-            f"in {total_parent_batches} batches of ~{batch_size} records each."
+            f"{log_prefix} Will process {len(parent_record_ids)} parent "
+            f"records in {total_parent_batches} batches of ~{batch_size} "
+            f"records each."
         )
         
         # Initialize statistics
@@ -193,11 +201,12 @@ class Command(BaseSyncCommand):
             batch_parent_ids = parent_record_ids[start_idx:end_idx]
             
             self.stdout.write(self.style.NOTICE(
-                f"\n{log_prefix} --- Processing Batch {batch_index + 1}/{total_parent_batches} "
+                f"\n{log_prefix} --- Processing Batch "
+                f"{batch_index + 1}/{total_parent_batches} "
                 f"({start_idx+1}-{end_idx} of {len(parent_record_ids)}) ---"
             ))
             
-            # ----- Step 2.1: Process parent records (Belege) for this batch -----
+            # ----- Step 2.1: Process parent records (Belege) for this batch ----- # noqa E501
             try:
                 # Prepare filters for this batch of parent records
                 parent_batch_filters = {
@@ -206,8 +215,9 @@ class Command(BaseSyncCommand):
                 }
                 
                 self.stdout.write(
-                    f"{log_prefix} Extracting {len(batch_parent_ids)} parent records "
-                    f"(Batch {batch_index + 1}/{total_parent_batches})..."
+                    f"{log_prefix} Extracting {len(batch_parent_ids)} parent "
+                    f"records (Batch {batch_index + 1}/{total_parent_batches}"
+                    f")..."
                 )
                 
                 # Extract parent records for this batch
@@ -227,12 +237,15 @@ class Command(BaseSyncCommand):
                 if parent_source_data:
                     # Transform parent records
                     transformed_parent_data = (
-                        parent_pipeline.transformer.transform(parent_source_data)
+                        parent_pipeline.transformer.transform(
+                            parent_source_data
+                        )
                     )
                     
                     self.stdout.write(
-                        f"{log_prefix} Transformed {len(transformed_parent_data)} "
-                        f"parent records for batch {batch_index + 1}."
+                        f"{log_prefix} Transformed "
+                        f"{len(transformed_parent_data)} parent records for "
+                        f"batch {batch_index + 1}."
                     )
                     
                     # Load transformed parent records
@@ -249,50 +262,80 @@ class Command(BaseSyncCommand):
                     parent_stats["skipped"] += load_result.skipped
                     parent_stats["errors"] += load_result.errors
                     
+                    # Identify legacy IDs of parents that failed to load
+                    failed_parent_legacy_ids = set()
+                    unique_field = parent_pipeline.loader.config.get(
+                        "unique_field", "legacy_id"
+                    )
+                    if load_result.error_details:
+                        for error_detail in load_result.error_details:
+                            record_data = error_detail.get("record")
+                            if record_data and unique_field in record_data:
+                                failed_parent_legacy_ids.add(
+                                    str(record_data[unique_field])
+                                )
+                            else:
+                                logger.warning(
+                                    f"{log_prefix} Could not extract unique ID "
+                                    f"({unique_field}) from parent load error "
+                                    f"detail in batch {batch_index + 1}: "
+                                    f"{error_detail}"
+                                )
+                    
                     self.stdout.write(self.style.SUCCESS(
-                        f"{log_prefix} Parent load for batch {batch_index + 1} finished: "
+                        f"{log_prefix} Parent load for batch "
+                        f"{batch_index + 1} finished: "
                         f"{load_result.created} created, "
-                        f"{load_result.updated} updated, {load_result.skipped} skipped, "
+                        f"{load_result.updated} updated, "
+                        f"{load_result.skipped} skipped, "
                         f"{load_result.errors} errors."
                     ))
                     
                     # Display errors for this batch if any
                     if load_result.error_details:
                         self.stdout.write(self.style.WARNING(
-                            f"{log_prefix} Parent Load Errors in batch {batch_index + 1}:"
+                            f"{log_prefix} Parent Load Errors in batch "
+                            f"{batch_index + 1}:"
                         ))
                         for i, err in enumerate(load_result.error_details):
                             if i < 5:  # Show only first 5 errors per batch
                                 self.stdout.write(f"- {err}")
                             else:
                                 self.stdout.write(
-                                    f"... and {len(load_result.error_details) - 5} "
-                                    f"more errors."
+                                    f"... and "
+                                    f"{len(load_result.error_details) - 5}"
+                                    f" more errors."
                                 )
                                 break
                 else:
                     self.stdout.write(
-                        f"{log_prefix} No parent records extracted for batch {batch_index + 1}, "
-                        f"skipping transform and load."
+                        f"{log_prefix} No parent records extracted for batch "
+                        f"{batch_index + 1}, skipping transform and load."
                     )
                 
-                # ----- Step 2.2: Process child records (Belege_Pos) for this batch -----
-                # Get the actual AbsNr values from this batch's extracted data
-                batch_abs_nr_values = [
-                    str(record.get(self.PARENT_LEGACY_KEY_FIELD))
-                    for record in parent_source_data
-                    if record.get(self.PARENT_LEGACY_KEY_FIELD) is not None
+                # ----- Step 2.2: Process child records (Belege_Pos) for this batch ----- # noqa E501
+                # Get legacy IDs from successfully transformed parent records
+                intended_parent_ids = [
+                    str(record.get(unique_field))
+                    for record in transformed_parent_data
+                    if record.get(unique_field) is not None
                 ]
                 
-                if batch_abs_nr_values:
+                # Determine IDs of successfully loaded parents
+                successful_parent_ids = list(
+                    set(intended_parent_ids) - failed_parent_legacy_ids
+                )
+                
+                if successful_parent_ids:
                     self.stdout.write(
-                        f"{log_prefix} Fetching child records for {len(batch_abs_nr_values)} "
-                        f"parent AbsNr values from batch {batch_index + 1}..."
+                        f"{log_prefix} Fetching child records for "
+                        f"{len(successful_parent_ids)} parent AbsNr values "
+                        f"from batch {batch_index + 1}..."
                     )
                     
-                    # Prepare filters for child records using only this batch's parent IDs
+                    # Prepare filters for child records using only this batch's parent IDs # noqa E501
                     child_batch_filters = {
-                        "parent_record_ids": batch_abs_nr_values,
+                        "parent_record_ids": successful_parent_ids,
                         "parent_field": self.CHILD_PARENT_LINK_FIELD
                     }
                     
@@ -306,26 +349,30 @@ class Command(BaseSyncCommand):
                         )
                     
                     self.stdout.write(
-                        f"{log_prefix} Extracted {len(child_source_data)} child records "
-                        f"for batch {batch_index + 1}."
+                        f"{log_prefix} Extracted {len(child_source_data)} "
+                        f"child records for batch {batch_index + 1}."
                     )
                     
                     if child_source_data:
                         # Transform child records
                         transformed_child_data = (
-                            child_pipeline.transformer.transform(child_source_data)
+                            child_pipeline.transformer.transform(
+                                child_source_data
+                            )
                         )
                         
                         self.stdout.write(
-                            f"{log_prefix} Transformed {len(transformed_child_data)} "
-                            f"child records for batch {batch_index + 1}."
+                            f"{log_prefix} Transformed "
+                            f"{len(transformed_child_data)} child records for "
+                            f"batch {batch_index + 1}."
                         )
                         
                         # Load transformed child records
                         load_result = child_pipeline.loader.load(
                             transformed_child_data,
                             update_existing=(
-                                options.get("force_update") or options.get("full")
+                                options.get("force_update")
+                                or options.get("full")
                             ),
                         )
                         
@@ -336,35 +383,40 @@ class Command(BaseSyncCommand):
                         child_stats["errors"] += load_result.errors
                         
                         self.stdout.write(self.style.SUCCESS(
-                            f"{log_prefix} Child load for batch {batch_index + 1} finished: "
+                            f"{log_prefix} Child load for batch "
+                            f"{batch_index + 1} finished: "
                             f"{load_result.created} created, "
-                            f"{load_result.updated} updated, {load_result.skipped} skipped, "
+                            f"{load_result.updated} updated, "
+                            f"{load_result.skipped} skipped, "
                             f"{load_result.errors} errors."
                         ))
                         
                         # Display errors for this batch if any
                         if load_result.error_details:
                             self.stdout.write(self.style.WARNING(
-                                f"{log_prefix} Child Load Errors in batch {batch_index + 1}:"
+                                f"{log_prefix} Child Load Errors in batch "
+                                f"{batch_index + 1}:"
                             ))
                             for i, err in enumerate(load_result.error_details):
                                 if i < 5:  # Show only first 5 errors per batch
                                     self.stdout.write(f"- {err}")
                                 else:
                                     self.stdout.write(
-                                        f"... and {len(load_result.error_details) - 5} "
-                                        f"more errors."
+                                        f"... and "
+                                        f"{len(load_result.error_details) - 5}"
+                                        f" more errors."
                                     )
                                     break
                     else:
                         self.stdout.write(
-                            f"{log_prefix} No child records extracted for batch {batch_index + 1}, "
-                            f"skipping transform and load."
+                            f"{log_prefix} No child records extracted for "
+                            f"batch {batch_index + 1}, skipping transform "
+                            f"and load."
                         )
                 else:
                     self.stdout.write(
-                        f"{log_prefix} No valid parent AbsNr values in batch {batch_index + 1}, "
-                        f"skipping child record processing."
+                        f"{log_prefix} No valid parent AbsNr values in batch "
+                        f"{batch_index + 1}, skipping child record processing."
                     )
                 
             except Exception as e:
@@ -372,10 +424,12 @@ class Command(BaseSyncCommand):
                 parent_sync_successful = False
                 child_sync_successful = False
                 self.stderr.write(self.style.ERROR(
-                    f"{log_prefix} Error processing batch {batch_index + 1}: {e}"
+                    f"{log_prefix} Error processing batch "
+                    f"{batch_index + 1}: {e}"
                 ))
                 logger.error(
-                    f"{log_prefix} Batch {batch_index + 1} processing failed: {e}",
+                    f"{log_prefix} Batch {batch_index + 1} processing "
+                    f"failed: {e}",
                     exc_info=self.debug
                 )
                 if self.debug:
@@ -420,7 +474,8 @@ class Command(BaseSyncCommand):
 
         if parent_sync_successful and child_sync_successful:
             success_msg = (
-                f"{log_prefix} All sales record sync steps completed successfully."
+                f"{log_prefix} All sales record sync steps completed "
+                f"successfully."
             )
             self.stdout.write(self.style.SUCCESS(success_msg))
             logger.info(success_msg)
