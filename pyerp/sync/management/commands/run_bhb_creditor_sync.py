@@ -1,13 +1,13 @@
 """
-Management command to trigger the BuchhaltungsButler Posting Accounts to Supplier sync task.
+Management command to trigger the BuchhaltungsButler Creditor to Supplier sync task.
 """
 
 from django.core.management.base import BaseCommand, CommandError
-from pyerp.sync.tasks import sync_bhb_posting_accounts_to_supplier
+from pyerp.sync.tasks import sync_bhb_creditors_to_supplier
 
 class Command(BaseCommand):
     help = (
-        'Triggers the Celery task to sync BuchhaltungsButler posting accounts '
+        'Triggers the Celery task to sync BuchhaltungsButler creditors '
         'to pyERP Supplier models.'
     )
 
@@ -28,7 +28,7 @@ class Command(BaseCommand):
                 )
             )
             try:
-                result = sync_bhb_posting_accounts_to_supplier() 
+                result = sync_bhb_creditors_to_supplier() 
                 self.stdout.write(
                     self.style.SUCCESS(
                         f"Sync task finished synchronously. Status: {result.get('status')}"
@@ -45,7 +45,7 @@ class Command(BaseCommand):
                 )
             )
             try:
-                task_result = sync_bhb_posting_accounts_to_supplier.delay()
+                task_result = sync_bhb_creditors_to_supplier.delay()
                 self.stdout.write(
                     self.style.SUCCESS(
                         f"Successfully dispatched task. Task ID: {task_result.id}"

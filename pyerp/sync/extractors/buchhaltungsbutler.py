@@ -2,16 +2,16 @@
 Extractors for fetching data from BuchhaltungsButler API.
 """
 
-from pyerp.external_api.buchhaltungsbutler import BuchhaltungsButlerClient
+from pyerp.external_api.buchhaltungsbutler import BuchhaltungsButlerClient, BuchhaltungsButlerError
 from pyerp.sync.extractors.base import BaseExtractor
 from pyerp.utils.logging import get_logger
 from typing import List, Optional, Dict, Any
 
 logger = get_logger(__name__)
 
-class BuchhaltungsButlerPostingAccountExtractor(BaseExtractor):
+class BuchhaltungsButlerCreditorExtractor(BaseExtractor):
     """
-    Extracts posting accounts from the BuchhaltungsButler API.
+    Extracts creditors from the BuchhaltungsButler API.
     Implements the abstract methods from BaseExtractor.
     """
 
@@ -42,7 +42,7 @@ class BuchhaltungsButlerPostingAccountExtractor(BaseExtractor):
 
     def extract(self, query_params: Optional[Dict[str, Any]] = None, fail_on_filter_error: bool = False) -> List[Dict[str, Any]]:
         """
-        Fetches all posting accounts from the API using the client's pagination helper.
+        Fetches all creditors from the API using the client's pagination helper.
 
         Args:
             query_params: Optional parameters (not used by this extractor).
@@ -50,32 +50,39 @@ class BuchhaltungsButlerPostingAccountExtractor(BaseExtractor):
 
         Returns:
             List[Dict[str, Any]]: A list of dictionaries, each representing a 
-                                  posting account.
+                                  creditor.
         """
         # Log if query_params are provided but unused
         if query_params:
-            logger.warning("query_params provided but not used by BuchhaltungsButlerPostingAccountExtractor: %s", query_params)
+            logger.warning("query_params provided but not used by BuchhaltungsButlerCreditorExtractor: %s", query_params)
         if fail_on_filter_error:
-            logger.warning("fail_on_filter_error=True provided but not used by BuchhaltungsButlerPostingAccountExtractor.")
+            logger.warning("fail_on_filter_error=True provided but not used by BuchhaltungsButlerCreditorExtractor.")
             
         try:
             logger.info(
-                "Starting extraction of BuchhaltungsButler posting accounts..."
+                "Starting extraction of BuchhaltungsButler creditors..."
             )
-            # Use the client method to fetch all accounts with pagination handled
-            all_accounts = self.client.get_all_posting_accounts(
+            # Use the client method to fetch all creditors with pagination handled
+            all_creditors = self.client.get_all_creditors(
                 limit=self.page_size
             )
             logger.info(
-                "Successfully fetched %d posting accounts.", len(all_accounts)
+                "Successfully fetched %d creditors.", len(all_creditors)
             )
             
             # Return the list directly, not yield
-            return all_accounts
+            return all_creditors
 
-        except Exception as e:
+        except BuchhaltungsButlerError as e: # Catch specific API errors
             logger.error(
-                "Error during BuchhaltungsButler posting account extraction: %s",
+                "BuchhaltungsButler API error during creditor extraction: %s",
+                e,
+                exc_info=True
+            )
+            raise # Re-raise API errors
+        except Exception as e: # Catch other potential errors
+            logger.error(
+                "Unexpected error during BuchhaltungsButler creditor extraction: %s",
                 e,
                 exc_info=True
             )

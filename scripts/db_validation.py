@@ -34,14 +34,9 @@ parent_dir = str(Path(__file__).resolve().parent.parent)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-# Set up Django environment
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.settings.development")
-try:
-    django.setup()
-except ImportError:
-    print("Error: Django environment not set up correctly.")
-    print(f"Python path: {sys.path}")
-    sys.exit(1)
+# Setup Django environment
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pyerp.config.settings.development")
+django.setup()
 
 try:
     # Now that Django is set up, we can import Django models and utilities

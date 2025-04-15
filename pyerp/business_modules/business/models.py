@@ -202,10 +202,12 @@ class Supplier(models.Model):
     contact_person = models.CharField(
         max_length=255,
         blank=True,
+        null=True,
         verbose_name=_("Contact Person"),
     )
     email = models.EmailField(
         blank=True,
+        null=True,
         verbose_name=_("Email"),
     )
     phone = models.CharField(
@@ -215,12 +217,26 @@ class Supplier(models.Model):
     )
     address = models.TextField(
         blank=True,
+        null=True,
         verbose_name=_("Address"),
     )
     tax_id = models.CharField(
         max_length=100,
         blank=True,
+        null=True,
         verbose_name=_("Tax ID"),
+    )
+    iban = models.CharField(
+        max_length=34,  # Standard max IBAN length
+        blank=True,
+        null=True, 
+        verbose_name=_("IBAN")
+    )
+    bic = models.CharField(
+        max_length=11,  # Standard BIC length
+        blank=True,
+        null=True, 
+        verbose_name=_("BIC (Swift)")
     )
     accounting_id = models.CharField(
         max_length=100,

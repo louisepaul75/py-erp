@@ -387,6 +387,97 @@ class BuchhaltungsButlerClient:
                     len(all_accounts))
         return all_accounts
 
+    def get_creditors(self, limit=None, offset=None):
+        """Gets creditors using POST with JSON body.
+
+        Args:
+            limit (int, optional): Max number of results.
+            offset (int, optional): Pagination offset.
+
+        Returns:
+            dict: The API response containing the list of creditors.
+
+        Raises:
+            BuchhaltungsButlerError: For API or request errors.
+        """
+        endpoint = "/settings/get/creditors"
+        payload = {}
+        if limit is not None:
+            payload["limit"] = limit
+        if offset is not None:
+            payload["offset"] = offset
+
+        logger.debug("Getting creditors with payload: %s", payload)
+        return self.post(endpoint, json_payload=payload)
+
+    def get_all_creditors(self, limit=500):
+        """Gets ALL creditors by handling pagination automatically.
+
+        Args:
+            limit (int, optional): The number of items to fetch per page.
+                                 Defaults to 500.
+
+        Returns:
+            list: A list containing all creditor dictionaries.
+
+        Raises:
+            BuchhaltungsButlerError: For API or request errors during fetching.
+        """
+        import time
+
+        all_creditors = []
+        offset = 0
+        logger.info("Starting fetch for all creditors with limit=%d...", limit)
+
+        while True:
+            try:
+                logger.debug("Fetching creditors page: offset=%d, limit=%d",
+                             offset, limit)
+                response = self.get_creditors(limit=limit, offset=offset)
+
+                if not isinstance(response, dict) or 'data' not in response:
+                    logger.error(
+                        "Unexpected response format received for creditors: %s", response
+                    )
+                    raise BuchhaltungsButlerError(
+                        "Unexpected response format from get_creditors"
+                    )
+
+                current_page_creditors = response.get('data', [])
+
+                if not current_page_creditors:
+                    logger.info("No more creditors found. Fetch complete.")
+                    break
+
+                logger.info("Fetched %d creditors from offset %d.",
+                            len(current_page_creditors), offset)
+                all_creditors.extend(current_page_creditors)
+
+                if len(current_page_creditors) < limit:
+                    logger.info("Last page reached (fetched < limit).")
+                    break
+
+                offset += limit
+                time.sleep(0.5) # Be kind to the API
+
+            except BuchhaltungsButlerError as e:
+                logger.error(
+                    "API error fetching creditors at offset %d: %s",
+                    offset, e, exc_info=True
+                )
+                raise
+            except Exception as e:
+                logger.error(
+                    "Unexpected error fetching creditors at offset %d: %s",
+                    offset, e, exc_info=True
+                )
+                raise BuchhaltungsButlerError(
+                    f"Unexpected error during creditor pagination: {e}"
+                ) from e
+
+        logger.info("Successfully fetched a total of %d creditors.",
+                    len(all_creditors))
+        return all_creditors
 
     # Add other methods like put, delete, patch as needed
 
@@ -399,9 +490,9 @@ if __name__ == '__main__':
     # after setting up DJANGO_SETTINGS_MODULE environment variable.
     import os
     # Use the base settings file which handles .env loading and 1Password
-    os.environ.setdefault(
-        'DJANGO_SETTINGS_MODULE', 'pyerp.config.settings.base' # Ensure correct settings path
-    )
+    # Force the setting instead of using setdefault to override external env vars
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'pyerp.config.settings.base'
+    print(f"DJANGO_SETTINGS_MODULE forced to: {os.environ['DJANGO_SETTINGS_MODULE']}")
     import django
     import sys  # Import sys for exit
     import pprint # Import pprint for better dict printing
@@ -509,6 +600,37 @@ if __name__ == '__main__':
         # #     # print(f" - Account: {account.get('postingaccount', 'N/A')} - {account.get('description', 'N/A')}") # Adjust field names if needed
         # #     pprint.pprint(account)
         # #     print("---")
+
+        print("\n--- Testing get_creditors (Sample Request) ---")
+        try:
+            # Use POST based on pattern for other /get endpoints
+            creditors_response = client.post(
+                "/settings/get/creditors", 
+                json_payload={"limit": 5} # Fetch a small sample
+            )
+            print("Raw creditors_response:")
+            pprint.pprint(creditors_response)
+            
+            # Try to extract and print the first creditor if available
+            if isinstance(creditors_response, dict):
+                creditors_list = creditors_response.get('data', [])
+                if creditors_list:
+                    print("\nExample Creditor Structure:")
+                    pprint.pprint(creditors_list[0])
+                else:
+                    print("\nNo creditors found in the sample response.")
+            elif isinstance(creditors_response, list) and creditors_response:
+                 print("\nExample Creditor Structure:")
+                 pprint.pprint(creditors_response[0])
+            else:
+                 print("\nUnexpected or empty response format for creditors:")
+                 pprint.pprint(creditors_response)
+                 
+        except BuchhaltungsButlerError as e:
+            print(f"API Error fetching creditors: {e}")
+            if isinstance(e, APIRequestError):
+                 print(f"Status Code: {e.status_code}")
+                 print(f"Response Text: {e.text}")
 
 
     except BuchhaltungsButlerError as e:

@@ -1247,28 +1247,28 @@ def run_pipeline_from_config(config_path: str, task_name: str) -> Dict:
 
 @shared_task(
     bind=True,
-    name="sync.sync_bhb_posting_accounts_to_supplier",
+    name="sync.sync_bhb_creditors_to_supplier",
     max_retries=2,
     default_retry_delay=300,  # Retry after 5 minutes
     autoretry_for=(Exception,),  # Retry on any exception
     retry_backoff=True,
 )
-def sync_bhb_posting_accounts_to_supplier(self) -> Dict:
+def sync_bhb_creditors_to_supplier(self) -> Dict:
     """
-    Runs the sync pipeline to fetch BuchhaltungsButler posting accounts 
-    and load them into the Supplier model using creditor_id.
+    Runs the sync pipeline to fetch BuchhaltungsButler creditors 
+    and load them into the Supplier model.
     Uses the configuration file.
     """
-    config_file = "buchhaltungsbutler_posting_accounts.yaml"
-    task_name = "sync_bhb_posting_accounts_to_supplier"
+    config_file = "buchhaltungsbutler_creditors.yaml"
+    task_name = "sync_bhb_creditors_to_supplier"
     
     return run_pipeline_from_config(config_file, task_name)
 
 
 # --- Celery Beat Schedule ---
 # Example: Add the new task to the schedule
-# settings.CELERY_BEAT_SCHEDULE['sync-bhb-posting-accounts-daily'] = {
-#     'task': 'sync.sync_bhb_posting_accounts_to_supplier',
+# settings.CELERY_BEAT_SCHEDULE['sync-bhb-creditors-daily'] = {
+#     'task': 'sync.sync_bhb_creditors_to_supplier',
 #     'schedule': crontab(hour=2, minute=30), # Run daily at 2:30 AM
 # }
 
