@@ -29,6 +29,7 @@ logger.debug(f"CONNECTIONS_FILE: {CONNECTIONS_FILE}")
 DEFAULT_CONNECTIONS = {
     "legacy_erp": False,
     "images_cms": False,
+    "fx_sync": True
 }
 
 

@@ -71,80 +71,22 @@ urlpatterns = [
     ),
 
     # Other included apps
-    path(
-        "monitoring/",
-        include("pyerp.monitoring.urls", namespace="api_monitoring")
-    ),
-    path(
-        "v1/monitoring/",
-        include("pyerp.monitoring.urls", namespace="api_monitoring_v1"),
-    ),
-    path(
-        "external/",
-        include("pyerp.external_api.urls", namespace="external_api")
-    ),
-    path(
-        "v1/external/",
-        include("pyerp.external_api.urls", namespace="external_api_v1"),
-    ),
-    path(
-        "email/",
-        include("pyerp.utils.email_system.urls", namespace="email_system"),
-    ),
-    path(
-        "v1/email/",
-        include("pyerp.utils.email_system.urls", namespace="email_system_v1"),
-    ),
-    path(
-        "products/",
-        include(
-            "pyerp.business_modules.products.api_urls", namespace="products_api"
-        ),
-    ),
-    path(
-        "v1/products/",
-        include(
-            "pyerp.business_modules.products.api_urls", namespace="products_api_v1"
-        ),
-    ),
-    path(
-        "sales/",
-        include("pyerp.business_modules.sales.api_urls", namespace="sales_api"),
-    ),
-    path(
-        "v1/sales/",
-        include("pyerp.business_modules.sales.api_urls", namespace="sales_api_v1"),
-    ),
-    path(
-        "production/",
-        include(
-            "pyerp.business_modules.production.urls", namespace="production_api"
-        ),
-    ),
-    path(
-        "v1/production/",
-        include(
-            "pyerp.business_modules.production.urls", namespace="production_api_v1"
-        ),
-    ),
-    path(
-        "inventory/",
-        include((
-            "pyerp.business_modules.inventory.urls", "inventory"
-        ), namespace="inventory"),
-    ),
-    path(
-        "v1/inventory/",
-        include((
-            "pyerp.business_modules.inventory.urls", "inventory_v1"
-        ), namespace="inventory_v1"),
-    ),
-    path(
-        "v1/business/",
-        include(
-            "pyerp.business_modules.business.api_urls", namespace="business_api_v1"
-        ),
-    ),
+    path("monitoring/", include("pyerp.monitoring.urls", namespace="api_monitoring")),
+    path("v1/monitoring/", include("pyerp.monitoring.urls", namespace="api_monitoring_v1")),
+    path("external/", include("pyerp.external_api.urls", namespace="external_api")),
+    path("v1/external/", include("pyerp.external_api.urls", namespace="external_api_v1")),
+    path("email/", include("pyerp.utils.email_system.urls", namespace="email_system")),
+    path("v1/email/", include("pyerp.utils.email_system.urls", namespace="email_system_v1")),
+    path("products/", include("pyerp.business_modules.products.api_urls", namespace="products_api")),
+    path("currency/", include("pyerp.business_modules.currency.urls", namespace="currency_api")),
+    # path("currency/", include(('pyerp.business_modules.currency.urls', 'currency_api'), namespace="currency_api")),
+    path("v1/products/", include("pyerp.business_modules.products.api_urls", namespace="products_api_v1")),
+    path("sales/", include("pyerp.business_modules.sales.api_urls", namespace="sales_api")),
+    path("v1/sales/", include("pyerp.business_modules.sales.api_urls", namespace="sales_api_v1")),
+    path("production/", include("pyerp.business_modules.production.urls", namespace="production_api")),
+    path("v1/production/", include("pyerp.business_modules.production.urls", namespace="production_api_v1")),
+    path("inventory/", include(("pyerp.business_modules.inventory.urls", "inventory"), namespace="inventory")),
+    path("v1/inventory/", include(("pyerp.business_modules.inventory.urls", "inventory_v1"), namespace="inventory_v1")),
     path("users/", include("users.urls", namespace="users")),
     path("v1/users/", include("users.urls", namespace="users_v1")),
     path("admin/", include("admin_tools.urls")),

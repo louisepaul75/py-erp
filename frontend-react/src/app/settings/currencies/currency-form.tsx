@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { useCurrencyContext } from "./currency-provider"
-import { useAddCurrency, useUpdateCurrency, useFetchExchangeRate } from "@/hooks/use-currencies"
+import { useAddCurrency, useCurrenciesList, useUpdateCurrency, useFetchExchangeRate } from "@/hooks/use-currencies"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,6 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/hooks/use-toast"
@@ -35,6 +42,7 @@ export default function CurrencyForm() {
   const { selectedCurrency, isAddingCurrency, setIsAddingCurrency } = useCurrencyContext()
   const addCurrency = useAddCurrency()
   const updateCurrency = useUpdateCurrency()
+  const { data: showCurrencyList = [], isLoading } = useCurrenciesList();
   const { fetchRate, isLoading: isFetchingRate } = useFetchExchangeRate()
 
   const { t } = useAppTranslation("settings_currency");
@@ -79,13 +87,15 @@ export default function CurrencyForm() {
           description: `${data.name} (${data.code}) ${t("was_successfully_updated")}`,
         })
       } else {
+
         await addCurrency.mutateAsync(data)
+        console.log("addCurrency", addCurrency)
         toast({
           title:  t("currency_added"),
           description: `${data.name} (${data.code}) ${t("was_successfully_added")}`,
         })
       }
-      setIsAddingCurrency(false)
+      // setIsAddingCurrency(false)
     } catch (error) {
       toast({
         title: t("error"),
@@ -118,9 +128,20 @@ export default function CurrencyForm() {
       return
     }
 
+    console.log("handleFetchRate", code)
     try {
-      const rate = await fetchRate(code)
+      let rate = null;
+      const eurCurrency = showCurrencyList.find((currency) => currency.code === "EUR");
+      if (eurCurrency) {
+        const match = eurCurrency.exchange_rates.find(
+          (exchange_rate) => exchange_rate.target_currency?.includes(code)
+        );
+
+        rate = match?.rate ?? null;
+      }
       form.setValue("realTimeRate", rate)
+      form.setValue("calculationRate", rate)
+
       toast({
         title: t("rate_updated"),
         description: `${t("the_current_rate_for")} ${code} t("was_successfully_retrieved")}`,
@@ -148,21 +169,38 @@ export default function CurrencyForm() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("currency_code")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="EUR"
-                        {...field}
-                        disabled={!!selectedCurrency}
-                        maxLength={3}
-                        className="uppercase"
-                      />
-                    </FormControl>
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("currency_code")}</FormLabel>
+                    <Select
+                      onValueChange={(val) => {
+                        field.onChange(val)
+                        const selected = showCurrencyList.find((opt) => opt.code === val)
+                        if (selected) {
+                          form.setValue("name", selected.name)
+                          form.setValue("code", selected.code)
+                          handleFetchRate()
+                        }
+                      }}
+                      value={field.value}
+                      disabled={!!selectedCurrency}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="EUR" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {showCurrencyList?.map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>{t("currency_code_description")}</FormDescription>
                     <FormMessage />
                   </FormItem>

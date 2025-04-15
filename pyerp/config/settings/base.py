@@ -117,6 +117,7 @@ LOCAL_APPS = [
     "admin_tools",  # Admin tools app for database table view
     "pyerp.business_modules.business",  # Business management
     "sync_manager",  # App for managing sync workflows
+    "pyerp.business_modules.currency"
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

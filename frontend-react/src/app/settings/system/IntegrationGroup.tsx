@@ -60,6 +60,7 @@ export function IntegrationGroup({
     setIsLoadingToggle(true);
     try {
       const updatedData = await updateConnectionStatus(connectionName, checked);
+      console.log("WORKFLOW API", updatedData)
       onStatusChange(updatedData); // Update parent state
       toast({
         title: t("connection_status_updated.title"),
@@ -107,12 +108,13 @@ export function IntegrationGroup({
   }, [workflows]);
 
   // Handle running a workflow
-  const handleRunWorkflow = async (workflow: SyncWorkflow) => {
+  const handleRunWorkflow = async (workflow: SyncWorkflow) => { 
     setRunningWorkflow(workflow.slug);
     try {
       const payload: TriggerWorkflowPayload = {
         parameters: workflowParameters[workflow.slug] || {}
       };
+      console.log("handleRunWorkflow", workflow, payload)
       const job = await triggerWorkflowRun(workflow.slug, payload);
       toast({
         title: t("workflow_triggered.title"),
