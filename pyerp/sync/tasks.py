@@ -120,7 +120,9 @@ def run_entity_sync(
         # Create pipeline and run sync
         pipeline = PipelineFactory.create_pipeline(mapping)
         sync_log = pipeline.run(
-            incremental=incremental, batch_size=batch_size, query_params=query_params
+            incremental=incremental, 
+            batch_size=batch_size, 
+            query_params=query_params
         )
 
         result = {
@@ -198,7 +200,9 @@ def run_all_mappings(
     # Launch a task for each mapping
     results = []
     for mapping in mappings:
-        task_result = run_entity_sync.delay(mapping.id, incremental=incremental)
+        task_result = run_entity_sync.delay(
+            mapping.id, incremental=incremental
+        )
         results.append(
             {
                 "mapping_id": mapping.id,
@@ -427,7 +431,8 @@ def create_production_mappings():
     """Create or update production related sync mappings in the database.
     
     Returns:
-        Tuple containing (production_order_mapping_id, production_order_item_mapping_id)
+        Tuple containing (production_order_mapping_id, 
+                        production_order_item_mapping_id)
     """
     try:
         production_order_config, production_order_item_config = \
@@ -455,7 +460,8 @@ def create_production_mappings():
                 target__name=production_order_item_config["target"],
                 entity_type=production_order_item_config["entity_type"],
                 defaults={
-                    "mapping_config": production_order_item_config["mapping_config"]
+                    "mapping_config": 
+                        production_order_item_config["mapping_config"]
                 },
             )
         
@@ -818,7 +824,8 @@ def sync_employees(
             "mapping_id": mapping.id,
             "sync_log_id": result.id,
             "records_processed": result.records_processed,
-            "records_succeeded": result.records_succeeded,
+            "records_created": getattr(result, 'records_created', 0),
+            "records_updated": getattr(result, 'records_updated', 0),
             "records_failed": result.records_failed
         }
         
@@ -876,7 +883,6 @@ def sync_molds(
     # For now, we fetch all records but could add timestamp filtering based 
     # on last successful sync
     fetch_all = not incremental  # Simplistic approach for now
-    last_sync_time = None
     # TODO: Get last successful sync time for 'mold' entity
 
     try:
@@ -1149,3 +1155,145 @@ def sync_mold_products(
         details=result,
     )
     return result
+
+
+def run_pipeline_from_config(config_path: str, task_name: str) -> Dict:
+    """Helper function to load config and run a pipeline."""
+    logger.info(f"Starting pipeline run for task: {task_name}")
+    
+    # Construct full path to config file
+    full_config_path = os.path.join(
+        os.path.dirname(__file__), "config", config_path
+    )
+    
+    try:
+        with open(full_config_path, "r") as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        logger.error(f"Configuration file not found: {full_config_path}")
+        return {
+            "status": "failed", 
+            "error": f"Config file not found: {config_path}"
+        }
+    except Exception as e:
+        logger.error(
+            f"Error loading configuration from {full_config_path}: {e}"
+        )
+        return {"status": "failed", "error": f"Error loading config: {e}"}
+
+    if not config:
+        logger.error(
+            f"Configuration file {full_config_path} is empty or invalid."
+        )
+        return {"status": "failed", "error": "Empty or invalid config file"}
+    
+    pipeline_name = config.get("pipeline_name", "Unnamed Pipeline")
+    logger.info(f"Loaded config for pipeline: {pipeline_name}")
+
+    try:
+        pipeline = PipelineFactory.create_pipeline_from_config(config)
+        # For now, config-based pipelines run full sync by default
+        # TODO: Add support for incremental sync based on config?
+        sync_log = pipeline.run(incremental=False) 
+
+        result = {
+            "status": sync_log.status,
+            "pipeline_name": pipeline_name,
+            "records_processed": sync_log.records_processed,
+            "records_created": getattr(sync_log, 'records_created', 0),
+            "records_updated": getattr(sync_log, 'records_updated', 0),
+            "records_failed": sync_log.records_failed,
+            "sync_log_id": sync_log.id,
+        }
+
+        log_data_sync_event(
+            source=config.get('extractor', {}).get('class', 'unknown'),
+            destination=config.get('loader', {}).get('class', 'unknown'),
+            record_count=sync_log.records_processed,
+            status=sync_log.status,
+            details={
+                "pipeline_name": pipeline_name,
+                "config_file": config_path,
+                "sync_log_id": sync_log.id,
+                **result,
+            },
+        )
+        logger.info(
+            f"Pipeline {pipeline_name} finished with status: {sync_log.status}"
+        )
+        return result
+
+    except Exception as e:
+        logger.error(
+            f"Error running pipeline {pipeline_name} from "
+            f"config {config_path}: {e}",
+            exc_info=True
+        )
+        error_msg = f"Error running pipeline {pipeline_name}: {e}"
+        log_data_sync_event(
+            source=config.get('extractor', {}).get('class', 'unknown'),
+            destination=config.get('loader', {}).get('class', 'unknown'),
+            record_count=0,
+            status="failed",
+            details={
+                "pipeline_name": pipeline_name,
+                "config_file": config_path,
+                "error": error_msg
+            },
+        )
+        # Depending on celery config, this might trigger retry
+        raise 
+
+
+@shared_task(
+    bind=True,
+    name="sync.sync_bhb_posting_accounts_to_supplier",
+    max_retries=2,
+    default_retry_delay=300,  # Retry after 5 minutes
+    autoretry_for=(Exception,),  # Retry on any exception
+    retry_backoff=True,
+)
+def sync_bhb_posting_accounts_to_supplier(self) -> Dict:
+    """
+    Runs the sync pipeline to fetch BuchhaltungsButler posting accounts 
+    and load them into the Supplier model using creditor_id.
+    Uses the configuration file.
+    """
+    config_file = "buchhaltungsbutler_posting_accounts.yaml"
+    task_name = "sync_bhb_posting_accounts_to_supplier"
+    
+    return run_pipeline_from_config(config_file, task_name)
+
+
+# --- Celery Beat Schedule ---
+# Example: Add the new task to the schedule
+# settings.CELERY_BEAT_SCHEDULE['sync-bhb-posting-accounts-daily'] = {
+#     'task': 'sync.sync_bhb_posting_accounts_to_supplier',
+#     'schedule': crontab(hour=2, minute=30), # Run daily at 2:30 AM
+# }
+
+
+# Add scheduled tasks for molds and mold products
+# settings.CELERY_BEAT_SCHEDULE['sync-molds-incremental-hourly'] = {
+#     'task': 'sync.sync_molds',
+#     'schedule': crontab(minute=0), # Run every hour
+#     'kwargs': {'incremental': True}
+# }
+
+# settings.CELERY_BEAT_SCHEDULE['sync-molds-full-nightly'] = {
+#     'task': 'sync.sync_molds',
+#     'schedule': crontab(hour=3, minute=0), # Run daily at 3 AM
+#     'kwargs': {'incremental': False}
+# }
+
+# settings.CELERY_BEAT_SCHEDULE['sync-mold-products-incremental-hourly'] = {
+#     'task': 'sync.sync_mold_products',
+#     'schedule': crontab(minute=15), # Run every hour at 15 past
+#     'kwargs': {'incremental': True}
+# }
+
+# settings.CELERY_BEAT_SCHEDULE['sync-mold-products-full-nightly'] = {
+#     'task': 'sync.sync_mold_products',
+#     'schedule': crontab(hour=3, minute=15), # Run daily at 3:15 AM
+#     'kwargs': {'incremental': False}
+# }

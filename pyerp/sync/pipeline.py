@@ -47,7 +47,14 @@ class SyncPipeline:
         self.transformer = transformer
         self.loader = loader
         self.sync_log = None
-        self.sync_state, _ = SyncState.objects.get_or_create(mapping=mapping)
+        
+        # Check if this pipeline was created from config (using the flag)
+        if getattr(mapping, 'is_config_based', False):
+            self.sync_state = None # No persistent state for config-based pipelines
+            logger.info("Running pipeline from config, SyncState will not be used.")
+        else:
+            # Only get/create SyncState if using a real DB mapping
+            self.sync_state, _ = SyncState.objects.get_or_create(mapping=mapping)
 
     def run(
         self,
@@ -86,13 +93,13 @@ class SyncPipeline:
             error_message=""
         )
 
-        # Update sync state
-        self.sync_state.update_sync_started()
+        # Update sync state only if it exists (i.e., not a config-based run)
+        if self.sync_state:
+            self.sync_state.update_sync_started()
 
         # Build query parameters
         params = query_params or {}
-        if incremental and self.sync_state.last_sync_time:
-            # Add timestamp filter for incremental sync
+        if incremental and self.sync_state and self.sync_state.last_sync_time:
             params["timestamp_filter"] = self.sync_state.last_sync_time
 
         log_data_sync_event(
@@ -110,8 +117,7 @@ class SyncPipeline:
         try:
             # Build query parameters
             params = query_params or {}
-            if incremental and self.sync_state.last_sync_time:
-                # Add timestamp filter for incremental sync
+            if incremental and self.sync_state and self.sync_state.last_sync_time:
                 params["timestamp_filter"] = self.sync_state.last_sync_time
 
             log_data_sync_event(
@@ -192,9 +198,10 @@ class SyncPipeline:
                     ]
                 )
 
-            # Update sync state on successful completion
+            # Update sync state on successful completion only if state exists
             success = total_failed == 0
-            self.sync_state.update_sync_completed(success=success)
+            if self.sync_state:
+                self.sync_state.update_sync_completed(success=success)
 
             # Update final sync log status and completion time
             self.sync_log.status = SyncStatus.COMPLETED if success else SyncStatus.COMPLETED_WITH_ERRORS
@@ -221,8 +228,9 @@ class SyncPipeline:
             logger.exception("Error in sync pipeline")
             error_msg = str(e)
 
-            # Update sync state
-            self.sync_state.update_sync_completed(success=False)
+            # Update sync state only if it exists
+            if self.sync_state:
+                self.sync_state.update_sync_completed(success=False)
             
             # Update error in sync log
             if self.sync_log:
@@ -457,7 +465,8 @@ class SyncPipeline:
         )
         
         # Update the sync state
-        self.sync_state.update_sync_started()
+        if self.sync_state:
+            self.sync_state.update_sync_started()
         
         # Log the event
         log_data_sync_event(
@@ -475,7 +484,7 @@ class SyncPipeline:
 
 
 class PipelineFactory:
-    """Factory for creating sync pipelines from configurations."""
+    """Factory for creating SyncPipeline instances."""
 
     @classmethod
     def create_pipeline(
@@ -485,152 +494,141 @@ class PipelineFactory:
         transformer_class: Optional[Type[BaseTransformer]] = None,
         loader_class: Optional[Type[BaseLoader]] = None,
     ) -> SyncPipeline:
-        """Create a sync pipeline from a mapping configuration.
+        """Create a pipeline instance based on a SyncMapping.
 
         Args:
-            mapping: SyncMapping instance with configuration
-            extractor_class: Optional extractor class override
-            transformer_class: Optional transformer class override
-            loader_class: Optional loader class override
+            mapping: The SyncMapping object containing configuration
+            extractor_class: Override extractor class (optional)
+            transformer_class: Override transformer class (optional)
+            loader_class: Override loader class (optional)
 
         Returns:
-            SyncPipeline: Configured pipeline instance
+            A configured SyncPipeline instance
         """
-        try:
-            # Get source and target configs
-            source_config = mapping.source.config
-            target_config = mapping.target.config
-            mapping_config = mapping.mapping_config
+        # Extract config from SyncMapping
+        source_config = mapping.source.config or {}
+        target_config = mapping.target.config or {}
+        mapping_config = mapping.mapping_config or {}
 
-            logger.info("Creating pipeline components...")
-            logger.info(f"Source config: {source_config}")
-            logger.info(f"Target config: {target_config}")
-            logger.info(f"Mapping config: {mapping_config}")
+        # Determine classes
+        extractor_cls = extractor_class or cls._import_class(
+            source_config.get("extractor_class")
+        )
+        transformer_cls = transformer_class or cls._import_class(
+            mapping_config.get("transformer_class")
+        )
+        loader_cls = loader_class or cls._import_class(
+            target_config.get("loader_class")
+        )
 
-            # Determine the extractor class
-            if extractor_class and isinstance(extractor_class, type):
-                extractor_class_instance = extractor_class
-            else:
-                extractor_class_instance = cls._import_class(
-                    # Use provided path string or path from config
-                    extractor_class or source_config.get("extractor_class")
-                )
+        # Prepare configs for each component
+        extractor_config = source_config.get("config", {})
+        transformer_config = mapping_config.get("config", {})
+        loader_config = target_config.get("config", {})
+        
+        # Add mapping-specific loader config if available
+        loader_config.update(mapping_config.get("loader_config", {}))
 
-            # Extract the inner config values from source_config
-            base_extractor_config = source_config.copy() if source_config else {}
+        # Instantiate components
+        extractor = cls._create_component(extractor_cls, extractor_config)
+        transformer = cls._create_component(transformer_cls, transformer_config)
+        loader = cls._create_component(loader_cls, loader_config)
+
+        # Create and return pipeline
+        return SyncPipeline(
+            mapping=mapping,
+            extractor=extractor,
+            transformer=transformer,
+            loader=loader
+        )
+
+    @classmethod
+    def create_pipeline_from_config(cls, config: Dict[str, Any]) -> SyncPipeline:
+        """Create a pipeline instance directly from a configuration dictionary.
+
+        This method is useful for running pipelines defined purely in config files
+        without needing database SyncMapping objects.
+
+        Args:
+            config: A dictionary containing the pipeline configuration, similar 
+                    in structure to the YAML files (extractor, transformer, loader sections).
+
+        Returns:
+            A configured SyncPipeline instance.
             
-            # Check if config field exists and extract it
-            if "config" in base_extractor_config:
-                inner_config = base_extractor_config.pop("config", {})
-                merged_extractor_config = inner_config.copy()  # Start with inner config values
-                # Add the rest of the source_config fields
-                merged_extractor_config.update(base_extractor_config)
-            else:
-                merged_extractor_config = base_extractor_config.copy()
+        Raises:
+            ValueError: If required configuration sections or classes are missing.
+        """
+        logger.debug("Creating pipeline from configuration dictionary.")
+        
+        # Extract component configurations
+        extractor_config_section = config.get('extractor')
+        transformer_config_section = config.get('transformer')
+        loader_config_section = config.get('loader')
 
-            # Merge with mapping's extractor_config if present
-            if mapping_config and "extractor_config" in mapping_config:
-                merged_extractor_config.update(mapping_config["extractor_config"])
-
-            logger.info(f"Extractor config after merging: {merged_extractor_config}")
-
-            # Create the extractor using the merged config
-            extractor = cls._create_component(
-                extractor_class_instance,
-                merged_extractor_config,
+        if not all([extractor_config_section, transformer_config_section, loader_config_section]):
+            raise ValueError(
+                "Configuration must include 'extractor', 'transformer', and 'loader' sections."
             )
-            logger.info(
-                f"Created extractor: {extractor.__class__.__name__} "
-                f"with config: {merged_extractor_config}"
-            )
+        
+        # Get class paths
+        extractor_class_path = extractor_config_section.get('class')
+        transformer_class_path = transformer_config_section.get('class')
+        loader_class_path = loader_config_section.get('class')
 
-            # Get transformer class
-            transformer_instance = None
-            if transformer_class and isinstance(transformer_class, type):
-                transformer_instance = transformer_class
-            else:
-                # Determine path from argument or config
-                transformer_class_path = (
-                    transformer_class  # String path from arg
-                    or mapping_config.get("transformer_class")
-                    or mapping_config.get("transformation", {}).get(
-                        "transformer_class"
-                    )
-                    or mapping_config.get("transformation", {}).get("class")
-                    or mapping_config.get("transformer", {}).get("class")
-                )
-                if transformer_class_path:
-                    transformer_instance = cls._import_class(
-                        transformer_class_path
-                    )
-                else:
-                    # Handle case where no transformer class is defined
-                    # You might want a default or raise an error
-                    logger.warning(
-                        "No transformer class defined for mapping."
-                    )
-                    # Assign a default pass-through transformer?
-                    # from .transformers.base import BaseTransformer
-                    # transformer_instance = BaseTransformer
-                    raise ValueError(
-                        "Transformer class must be provided or "
-                        "defined in mapping config."
-                    )
-
-            transformer = cls._create_component(
-                transformer_instance,
-                mapping_config.get("transformer", {}),
-            )
-            logger.info(
-                f"Created transformer: {transformer.__class__.__name__}"
+        if not all([extractor_class_path, transformer_class_path, loader_class_path]):
+            raise ValueError(
+                "Each configuration section ('extractor', 'transformer', 'loader') must specify a 'class' path."
             )
 
-            # Get loader class
-            loader_instance = None
-            if loader_class and isinstance(loader_class, type):
-                loader_instance = loader_class
-            else:
-                # Determine path from argument or config
-                loader_class_path = (
-                    loader_class  # String path from arg
-                    or target_config.get("loader_class")
-                    or mapping_config.get("loader", {}).get("class")
-                    # Consider removing default fallback
-                    or "pyerp.sync.loaders.django_model.DjangoModelLoader"
-                )
-                if loader_class_path:
-                    loader_instance = cls._import_class(loader_class_path)
-                else:
-                    raise ValueError(
-                        "Loader class must be provided or "
-                        "defined in target/mapping config."
-                    )
+        # Import classes
+        try:
+            extractor_cls = cls._import_class(extractor_class_path)
+            transformer_cls = cls._import_class(transformer_class_path)
+            loader_cls = cls._import_class(loader_class_path)
+        except ImportError as e:
+            logger.error(f"Failed to import class: {e}")
+            raise ValueError(f"Could not import specified class: {e}") from e
+        
+        # Get component-specific configs
+        extractor_config = extractor_config_section.get('config', {})
+        transformer_config = transformer_config_section.get('config', {})
+        loader_config = loader_config_section.get('config', {})
+        
+        # Instantiate components
+        try:
+            extractor = cls._create_component(extractor_cls, extractor_config)
+            transformer = cls._create_component(transformer_cls, transformer_config)
+            loader = cls._create_component(loader_cls, loader_config)
+        except Exception as e:
+            logger.error(f"Failed to instantiate pipeline component: {e}", exc_info=True)
+            raise ValueError(f"Error creating pipeline component: {e}") from e
 
-            logger.info(
-                f"Using loader class: "
-                f"{loader_instance.__name__ if loader_instance else 'None'}"
-            )
+        # Create a dummy/placeholder SyncMapping if needed by SyncPipeline constructor
+        # This assumes SyncPipeline needs *something* for now.
+        # We might need to adjust SyncPipeline later if it relies heavily on DB mapping.
+        class DummySyncMapping:
+            def __init__(self, config):
+                self.entity_type = config.get('pipeline_name', 'config_based_pipeline')
+                self.is_config_based = True # Add a flag
+                # Add minimal source/target placeholders if SyncPipeline accesses them
+                class DummySource:
+                    name = config.get('extractor',{}).get('class', 'unknown_source').split('.')[-1]
+                class DummyTarget:
+                    name = config.get('loader',{}).get('class', 'unknown_target').split('.')[-1]
+                self.source = DummySource()
+                self.target = DummyTarget()
 
-            # Merge target_config with mapping's loader config
-            merged_loader_config = target_config.copy()
-            if mapping_config and "loader" in mapping_config:
-                loader_config_from_mapping = mapping_config.get("loader", {}).get("config", {})
-                merged_loader_config.update(loader_config_from_mapping)
+        dummy_mapping = DummySyncMapping(config)
 
-            loader = cls._create_component(
-                loader_instance,
-                merged_loader_config,
-            )
-            logger.info(
-                f"Created loader: {loader.__class__.__name__} "
-                f"with config: {merged_loader_config}"
-            )
-
-            return SyncPipeline(mapping, extractor, transformer, loader)
-
-        except Exception:
-            logger.exception("Error creating pipeline components")
-            raise
+        logger.info("Successfully created pipeline components from config.")
+        # Create and return pipeline instance
+        return SyncPipeline(
+            mapping=dummy_mapping, # Use the dummy mapping
+            extractor=extractor,
+            transformer=transformer,
+            loader=loader
+        )
 
     @staticmethod
     def _import_class(class_path: str) -> Type:

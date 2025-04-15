@@ -405,6 +405,7 @@ if __name__ == '__main__':
     import django
     import sys  # Import sys for exit
     import pprint # Import pprint for better dict printing
+    import pandas as pd # Import pandas
 
     # Need to configure Django settings explicitly when running script directly
     try:
@@ -463,14 +464,17 @@ if __name__ == '__main__':
 
         print(f"\\nSuccessfully fetched {len(all_accounts_list)} total accounts.")
 
-        # Optionally print the first few accounts to verify structure
+        # Create and print DataFrame
         if all_accounts_list:
-            print("\\nExample first 5 accounts:")
-            for account in all_accounts_list[:5]:
-                pprint.pprint(account)
-                print("---")
+            print("\\nAccounts as Pandas DataFrame:")
+            df = pd.DataFrame(all_accounts_list)
+            # Optionally set display options for better console output
+            pd.set_option('display.max_rows', None) # Show all rows
+            pd.set_option('display.max_columns', None) # Show all columns
+            pd.set_option('display.width', 1000) # Adjust width
+            print(df.tail(20)) # Print only the last 20 rows
         else:
-            print("\\nNo accounts were retrieved.")
+            print("\\nCannot create DataFrame: No accounts were retrieved.")
 
         # --- Previous single-page test (commented out) ---
         # print("\\n--- Testing get_posting_accounts ---")
